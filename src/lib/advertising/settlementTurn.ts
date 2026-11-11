@@ -22,8 +22,6 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
-  ADVERTISING_AGREEMENTS_COLLECTION,
-  ADVERTISING_SETTLEMENTS_COLLECTION,
   isAgreementSettling,
   type AdvertisingAgreement,
   type AdvertisingSettlement,
@@ -42,6 +40,8 @@ import {
 } from "./rules/coverage";
 import { hasTermEnded, normalizeAgreementTerm } from "./rules/term";
 import { finalizeAdvertisingAgreementLifecycle, pruneAdvertisingSettlements } from "./persistence";
+import { advertisingSettlementsCollection } from "@/lib/db/repositories/advertisingSettlements";
+import { advertisingAgreementsCollection } from "@/lib/db/repositories/advertisingAgreements";
 
 export interface ProcessAdvertisingTurnArgs {
   /** Resolved `mediaOperatingModelsEnabled`; false performs zero DB access. */
@@ -119,9 +119,7 @@ export async function processAdvertisingTurn(
     return { enabled: true, ...ZERO_RESULT, effectiveAnchorByCorpId: new Map() };
   }
 
-  const agreementCollection = db.collection<AdvertisingAgreement>(
-    ADVERTISING_AGREEMENTS_COLLECTION
-  );
+  const agreementCollection = advertisingAgreementsCollection<AdvertisingAgreement>(db);
   const allLive = await agreementCollection
     .find({ status: { $in: ["active", "cancelling"] } } as never)
     .toArray();
@@ -288,9 +286,7 @@ export async function processAdvertisingTurn(
   }
 
   if (settlementOps.length > 0) {
-    await db
-      .collection<AdvertisingSettlement>(ADVERTISING_SETTLEMENTS_COLLECTION)
-      .bulkWrite(settlementOps);
+    await advertisingSettlementsCollection<AdvertisingSettlement>(db).bulkWrite(settlementOps);
   }
   if (agreementOps.length > 0) {
     await agreementCollection.bulkWrite(agreementOps);

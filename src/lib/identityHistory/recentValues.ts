@@ -1,9 +1,9 @@
 import type { Db, ObjectId } from "mongodb";
 import {
   IDENTITY_HISTORY_MAX_AGE_MS,
-  IDENTITY_OBSERVATIONS_COLLECTION,
   type IdentityObservation,
 } from "@/lib/db/types/identityObservation";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 
 /** Most recent values per track per user handed to the client grouper. Bounds
  * the list payload: 500 users x 2 tracks x 20 values. */
@@ -41,8 +41,7 @@ export async function loadRecentIdentityValues(
   //
   // The first $group collapses repeat runs on one value to its most recent
   // sighting, so the $slice keeps 20 DISTINCT values rather than 20 rows.
-  const grouped = await db
-    .collection<IdentityObservation>(IDENTITY_OBSERVATIONS_COLLECTION)
+  const grouped = await identityObservationsCollection<IdentityObservation>(db)
     .aggregate<{ _id: { userId: ObjectId; track: string }; values: string[] }>([
       { $match: { userId: { $in: userIds }, lastSeen: { $gte: cutoff } } },
       {

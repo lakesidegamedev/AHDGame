@@ -25,7 +25,6 @@ import {
   primaryFinancingRate,
 } from "@/lib/bonds/sovereignPrimarySettlement";
 import {
-  BANK_TREASURY_TRADES_COLLECTION,
   type BankState,
   type BankTreasuryPosition,
   type BankTreasuryOverview,
@@ -47,6 +46,7 @@ import { markBankTreasury, runReceipt } from "./bankTreasuryReceipt";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankTreasuryTradesCollection } from "@/lib/db/repositories/bankTreasuryTrades";
 
 /** Load only same-currency sovereign bills and pool cash while the feature is enabled. */
 export async function getBankTreasuryOverview(
@@ -237,9 +237,9 @@ export async function tradeBankTreasuryBill(
       error: "Units must be a positive whole number",
     };
   const tradeId = input.tradeId ?? new ObjectId().toHexString();
-  const prior = await db
-    .collection<BankTreasuryTradeReceipt>(BANK_TREASURY_TRADES_COLLECTION)
-    .findOne({ _id: tradeId });
+  const prior = await bankTreasuryTradesCollection<BankTreasuryTradeReceipt>(db).findOne({
+    _id: tradeId,
+  });
   if (prior) {
     if (
       prior.bankId.toString() !== input.bankId.toString() ||
@@ -509,18 +509,16 @@ export async function tradeBankTreasuryBill(
     updatedAt: now,
   };
   try {
-    await db
-      .collection<BankTreasuryTradeReceipt>(BANK_TREASURY_TRADES_COLLECTION)
-      .insertOne(receipt);
+    await bankTreasuryTradesCollection<BankTreasuryTradeReceipt>(db).insertOne(receipt);
   } catch (error) {
     const code =
       typeof error === "object" && error !== null && "code" in error
         ? (error as { code?: unknown }).code
         : undefined;
     if (code !== 11000) throw error;
-    const saved = await db
-      .collection<BankTreasuryTradeReceipt>(BANK_TREASURY_TRADES_COLLECTION)
-      .findOne({ _id: tradeId });
+    const saved = await bankTreasuryTradesCollection<BankTreasuryTradeReceipt>(db).findOne({
+      _id: tradeId,
+    });
     if (
       !saved ||
       saved.bankId.toString() !== input.bankId.toString() ||
@@ -547,8 +545,7 @@ export async function recoverBankTreasuryTrades(
   limit = 100
 ): Promise<{ completed: number; pending: number; rejected: number }> {
   if (!policy.bankTreasury) return { completed: 0, pending: 0, rejected: 0 };
-  const receipts = await db
-    .collection<BankTreasuryTradeReceipt>(BANK_TREASURY_TRADES_COLLECTION)
+  const receipts = await bankTreasuryTradesCollection<BankTreasuryTradeReceipt>(db)
     .find({ status: "open" })
     .sort({ createdAt: 1, _id: 1 })
     .limit(limit)
@@ -624,15 +621,15 @@ export async function liquidateFailedBankTreasury(
       const quoteState = await loadQuoteForTrade(db, bond, charter.currency, turn);
       const units = Math.min(lots, quoteState.quote.depthUnitsAtBid);
       if (units <= 0) break;
-      const receiptSequence = await db
-        .collection<BankTreasuryTradeReceipt>(BANK_TREASURY_TRADES_COLLECTION)
-        .countDocuments({
-          bankId,
-          charteredTurn: charter.charteredTurn,
-          bondId: bond._id,
-          turn,
-          resolutionSale: true,
-        });
+      const receiptSequence = await bankTreasuryTradesCollection<BankTreasuryTradeReceipt>(
+        db
+      ).countDocuments({
+        bankId,
+        charteredTurn: charter.charteredTurn,
+        bondId: bond._id,
+        turn,
+        resolutionSale: true,
+      });
       const result = await tradeBankTreasuryBill(db, {
         bankId,
         bondId: bond._id,

@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
-import { listFunds, FUND_POSITION_COLLECTION } from "@/lib/indexFunds/fundQueries";
+import { listFunds } from "@/lib/indexFunds/fundQueries";
 import { INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 import { computeHoldingsValueAnchor } from "@/lib/indexFunds/fundAllocation";
 import { sumFundBondHoldingsValueAnchor } from "@/lib/bonds/fundBondHoldings";
@@ -12,6 +12,8 @@ import {
   loadOpenOrdersEscrowByFundId,
   loadQueuedRedemptionUnitsByFundId,
 } from "@/lib/indexFunds/fundValuation";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import type { Document } from "mongodb";
 
 // GET /api/admin/investment-funds — Admin list of all funds (including paused/delisted)
 export async function GET() {
@@ -30,8 +32,7 @@ export async function GET() {
     // reading it back reported the seed figure forever even after retirement
     // releases moved units into the reserve. Derive it from the reserve
     // positions, which are the thing that actually moves.
-    const reservePositions = await db
-      .collection(FUND_POSITION_COLLECTION)
+    const reservePositions = await indexFundPositionsCollection<Document>(db)
       .find(
         { fundId: { $in: funds.map((f) => f._id) }, holderKind: "fund_reserve" },
         { projection: { fundId: 1, units: 1 } }

@@ -4,12 +4,9 @@
  * commits list transfers atomically and journals unavailable winners for retry.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { NPP, ElectedOfficial, CountryGameState } from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import {
-  RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION,
-  RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION,
   type RussianAssemblySeatingRecord,
   type RussianAssemblyOfficeArchive,
 } from "./assemblySeating";
@@ -24,6 +21,8 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { russianAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/russianAssemblyOfficeArchives";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
 
 export async function materializeRussianAssemblyVacancySeating(input: {
   db: Db;
@@ -59,8 +58,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
   const previewRoot = preview.ruFirstDumaElectionCohortId,
     previewCouncil = preview.ruFirstCouncilElectionCohortId;
   const previewJournal = (
-    await db
-      .collection<RussianAssemblySeatingRecord>(RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION)
+    await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db)
       .find(
         {
           countryId: "RU",
@@ -126,9 +124,7 @@ export async function materializeRussianAssemblyVacancySeating(input: {
     governmentOffices,
   } = loaded;
   const rootId = `${dumaRoot.toHexString()}:${councilRoot.toHexString()}`;
-  const journals = db.collection<RussianAssemblySeatingRecord>(
-    RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION
-  );
+  const journals = russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db);
   const root = await journals.findOne({ _id: rootId }, { session });
   const latest = (
     await journals
@@ -251,20 +247,18 @@ export async function materializeRussianAssemblyVacancySeating(input: {
   const officials = electedOfficialsCollection(db);
   if (delta.retire.length) {
     const retireIds = delta.retire.map((row) => russianAssemblyOfficialId(rootId, row.candidateId));
-    await db
-      .collection<RussianAssemblyOfficeArchive>(RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION)
-      .insertMany(
-        physical
-          .filter((row) => retireIds.some((id) => id.equals(row._id)))
-          .map((official) => ({
-            _id: `${seatingId}:${official._id.toHexString()}`,
-            preset: "1991-default",
-            seatingId,
-            turn,
-            official,
-          })),
-        { session }
-      );
+    await russianAssemblyOfficeArchivesCollection<RussianAssemblyOfficeArchive>(db).insertMany(
+      physical
+        .filter((row) => retireIds.some((id) => id.equals(row._id)))
+        .map((official) => ({
+          _id: `${seatingId}:${official._id.toHexString()}`,
+          preset: "1991-default",
+          seatingId,
+          turn,
+          official,
+        })),
+      { session }
+    );
     const removed = await officials.deleteMany(
       { _id: { $in: retireIds }, countryId: "RU", officeType: "dumaDeputy" },
       { session }

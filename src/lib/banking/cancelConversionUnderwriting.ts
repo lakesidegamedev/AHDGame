@@ -2,12 +2,13 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
 import { boundSession } from "@/lib/db/sessionDb";
-import { MONEY_MOVE_COLLECTION, legStamp, type MoneyMoveRecordLeg } from "./moneyMove";
+import { legStamp, type MoneyMoveRecordLeg } from "./moneyMove";
 import { projectionStamp, resumeSettlement } from "./settlementJournal";
 import { reviveObjectIds } from "./settlementEncoding";
 import { quoteUnpublishedUnderwritingRefund } from "./rules/conversionRefund";
 import type { TransitionProjection } from "./rules/boundary";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 type TargetCollection = "corporations" | "bonds" | "equityMarketPools" | "bondMarketPools";
 interface Target {
   _id: ObjectId | string;
@@ -83,7 +84,7 @@ async function refundLeg(
 }
 async function cancelLease(db: Db, bank: Corporation, turn: number): Promise<void> {
   const lease = bank.bankUnderwritingFunding!;
-  const journals = db.collection<Journal>(MONEY_MOVE_COLLECTION);
+  const journals = bankMoneyMovesCollection<Journal>(db);
   const journal = await journals.findOne({ _id: lease.key });
   if (
     journal &&

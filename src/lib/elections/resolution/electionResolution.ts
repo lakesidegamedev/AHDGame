@@ -6,7 +6,6 @@
 import { bindBgFoundingCampaigns } from "@/lib/countries/bg/foundingCampaignBinding1990";
 import {
   certifyBgFoundingFirstCount,
-  BG_FOUNDING_COUNTS_COLLECTION,
   type BgFoundingAssemblyRecord,
 } from "@/lib/countries/bg/foundingCount1990";
 import {
@@ -17,29 +16,24 @@ import { seatBgFoundingAssembly } from "@/lib/countries/bg/foundingSeating1990";
 import { isBgOrdinaryCapacity } from "@/lib/countries/bg/rules/assemblyTransition";
 import {
   certifyHu2011Count,
-  HU_2011_COUNTS_COLLECTION,
   type Hu2011AssemblyRecord,
 } from "@/lib/countries/hu/assemblyCount2011";
 import {
   resolveHuModernByElection,
-  HU_2011_BY_ELECTIONS_COLLECTION,
   type HuModernByElectionRecord,
 } from "@/lib/countries/hu/constituencyByElections2011";
 import { seatHu2011Assembly } from "@/lib/countries/hu/assemblySeating2011";
 import { bindHu1991Campaigns } from "@/lib/countries/hu/assemblyCampaignBinding1991";
 import {
   certifyHu1991FirstCount,
-  HU_1991_COUNTS_COLLECTION,
   type Hu1991AssemblyRecord,
 } from "@/lib/countries/hu/assemblyCount1991";
 import { openHu1991Runoff, certifyHu1991Runoff } from "@/lib/countries/hu/assemblyRunoff1991";
 import {
   resolveHu1991ByElection,
-  HU_1991_BY_ELECTIONS_COLLECTION,
   type Hu1991ByElectionRecord,
 } from "@/lib/countries/hu/constituencyByElections1991";
 import { seatHu1991Assembly } from "@/lib/countries/hu/assemblySeating1991";
-import type { ElectedOfficial } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import {
@@ -48,12 +42,9 @@ import {
 } from "@/lib/countries/ru/rules/assemblyDispatch";
 import { resolveRussianCouncilGenerations } from "@/lib/countries/ru/councilResolution";
 import { certifyRussianDumaRepeat } from "@/lib/countries/ru/dumaRepeatResult";
-import {
-  RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION,
-  type RussianDumaRepeatOpeningRecord,
-} from "@/lib/countries/ru/dumaRepeatOpening";
+import { type RussianDumaRepeatOpeningRecord } from "@/lib/countries/ru/dumaRepeatOpening";
 import { certifyRussianDumaElection } from "@/lib/countries/ru/dumaElectionResult";
-import type { Election, ElectionVoteTally, State } from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import { generateElectionNews } from "@/lib/news";
 import { HOUSE_SEATS, UK_COMMONS_SEATS } from "@/lib/constants";
 import {
@@ -73,7 +64,6 @@ import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { resolvePresidentialWinnerCandidateId } from "@/lib/elections/presidentialResolutionDisplay";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import {
-  BG_ORDINARY_PLANS_COLLECTION,
   readBgOrdinaryElectionPlan,
   type BgOrdinaryPlanRecord,
 } from "@/lib/elections/resolution/bgOrdinaryEligibility";
@@ -93,6 +83,13 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import type { Document } from "mongodb";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { russianDumaRepeatOpeningsCollection } from "@/lib/db/repositories/russianDumaRepeatOpenings";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
+import { hu1991ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu1991ConstituencyByElections";
+import { hu2011ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu2011ConstituencyByElections";
+import { bgOrdinaryElectionPlansCollection } from "@/lib/db/repositories/bgOrdinaryElectionPlans";
 
 export { HOUSE_SEATS, UK_COMMONS_SEATS };
 export { spawnHouseElection, spawnCommonsElection };
@@ -322,9 +319,9 @@ export async function resolveGeneralElections(
       if (await seatBgOrdinaryAssembly(db, cycle, currentTurn, now)) {
         resolved += 5;
         resolvedElections.push(...bgOrdinaryRaces.filter((row) => row.cycle === cycle));
-        const receipt = await db
-          .collection<BgOrdinaryPlanRecord>(BG_ORDINARY_PLANS_COLLECTION)
-          .findOne({ _id: `BG:ordinary:${cycle}` });
+        const receipt = await bgOrdinaryElectionPlansCollection<BgOrdinaryPlanRecord>(db).findOne({
+          _id: `BG:ordinary:${cycle}`,
+        });
         if (!receipt?.settledCandidateSeats)
           throw new Error("Committed Bulgarian seating receipt is missing");
         for (const election of bgOrdinaryRaces.filter((row) => row.cycle === cycle)) {
@@ -354,9 +351,9 @@ export async function resolveGeneralElections(
   )) {
     try {
       if (onlyElectionIds) {
-        const job = await db
-          .collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION)
-          .findOne({ _id: receiptId }, { projection: { electionIds: 1 } });
+        const job = await hu2011ConstituencyByElectionsCollection<HuModernByElectionRecord>(
+          db
+        ).findOne({ _id: receiptId }, { projection: { electionIds: 1 } });
         const selected = new Set(onlyElectionIds.map((id) => id.toHexString()));
         if (!job || job.electionIds.some((id) => !selected.has(id))) continue;
       }
@@ -368,9 +365,9 @@ export async function resolveGeneralElections(
             (row) => row.hungarianModernByElection!.receiptId === receiptId
           )
         );
-        const job = await db
-          .collection<HuModernByElectionRecord>(HU_2011_BY_ELECTIONS_COLLECTION)
-          .findOne({ _id: receiptId }, { projection: { officialIds: 1 } });
+        const job = await hu2011ConstituencyByElectionsCollection<HuModernByElectionRecord>(
+          db
+        ).findOne({ _id: receiptId }, { projection: { officialIds: 1 } });
         if (job?.officialIds?.length) {
           const winners = await electedOfficialsCollection(db)
             .find(
@@ -404,9 +401,9 @@ export async function resolveGeneralElections(
   )) {
     try {
       if (onlyElectionIds) {
-        const job = await db
-          .collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION)
-          .findOne({ _id: receiptId });
+        const job = await hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(
+          db
+        ).findOne({ _id: receiptId });
         const selected = new Set(onlyElectionIds.map((id) => id.toHexString()));
         if (!job || job.electionIds.some((id) => !selected.has(id))) continue;
       }
@@ -416,9 +413,9 @@ export async function resolveGeneralElections(
         resolvedElections.push(
           ...huByElectionRaces.filter((row) => row.hungarianAssemblyRound!.receiptId === receiptId)
         );
-        const job = await db
-          .collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION)
-          .findOne({ _id: receiptId }, { projection: { officialIds: 1 } });
+        const job = await hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(
+          db
+        ).findOne({ _id: receiptId }, { projection: { officialIds: 1 } });
         if (job?.officialIds?.length) {
           const winners = await electedOfficialsCollection(db)
             .find(
@@ -445,9 +442,9 @@ export async function resolveGeneralElections(
     try {
       const receipt = await certifyHu2011Count(db, cycle, currentTurn, now);
       if (!receipt || !(await seatHu2011Assembly(db, cycle, currentTurn, now))) continue;
-      const committed = await db
-        .collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION)
-        .findOne({ _id: receipt._id });
+      const committed = await hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db).findOne({
+        _id: receipt._id,
+      });
       if (!committed?.settled) throw new Error("Hungarian modern handover receipt is missing");
       resolved += committed.electionIds.length;
       resolvedElections.push(...hu2011Races.filter((row) => row.cycle === cycle));
@@ -475,9 +472,9 @@ export async function resolveGeneralElections(
         await certifyBgFoundingRunoff(db, cycle, currentTurn, now);
       }
       if (await seatBgFoundingAssembly(db, cycle, currentTurn, now)) {
-        const settled = await db
-          .collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION)
-          .findOne({ _id: receipt._id });
+        const settled = await bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(
+          db
+        ).findOne({ _id: receipt._id });
         if (!settled?.settled) throw new Error("Bulgarian committed founding receipt is missing");
         resolved += settled.electionIds.length + (settled.runoffElectionIds?.length ?? 0);
         resolvedElections.push(...bgFoundingRaces.filter((row) => row.cycle === cycle));
@@ -507,9 +504,9 @@ export async function resolveGeneralElections(
         await certifyHu1991Runoff(db, cycle, currentTurn, now);
       }
       if (await seatHu1991Assembly(db, cycle, currentTurn, now)) {
-        const settled = await db
-          .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-          .findOne({ _id: receipt._id });
+        const settled = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne({
+          _id: receipt._id,
+        });
         if (!settled?.settled) throw new Error("Hungarian committed handover receipt is missing");
         resolved += settled.electionIds.length + (settled.runoffElectionIds?.length ?? 0);
         resolvedElections.push(...hu1991Races.filter((row) => row.cycle === cycle));
@@ -581,8 +578,7 @@ export async function resolveGeneralElections(
           )
         ),
       ];
-      const openings = await db
-        .collection<RussianDumaRepeatOpeningRecord>(RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION)
+      const openings = await russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(db)
         .find(
           { _id: { $in: openingIds } },
           {

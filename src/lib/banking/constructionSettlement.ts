@@ -1,7 +1,5 @@
 /** Settle an already reserved construction claim from actual delivered cash. */
 import { ObjectId, type Db } from "mongodb";
-import type { CorporateSector } from "@/lib/db/types/corporation";
-import type { BankLoan } from "@/lib/db/types/bank";
 import type { BankingSnapshot, BorrowerSnapshot } from "./rules/boundary";
 import { oid } from "./rules/boundary";
 import { decideBankCommand } from "./rules/decide";
@@ -18,10 +16,10 @@ import {
   releaseCompletedConstructionFunding,
 } from "./constructionFundingLease";
 import { acquireConstructionAdmission } from "./constructionAdmission";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { settleTransition, resumeSettlement, type SettlementResult } from "./settlementJournal";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 const complete = (result: SettlementResult) =>
   !result.error && (result.status === "applied" || result.status === "replayed");
@@ -99,9 +97,10 @@ export async function settleReservedConstruction(input: {
   const fundingKey = `named_loan_disbursement:${claim.bankId}:${claim.loanId}`;
   // An original partial journal owns its quote even if today's bank is no
   // longer eligible. Finish that delivery before evaluating a new command.
-  const existing = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: fundingKey }, { projection: { _id: 1 } });
+  const existing = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: fundingKey },
+    { projection: { _id: 1 } }
+  );
   if (existing) {
     const resumed = await resumeSettlement(db, fundingKey);
     if (!complete(resumed)) {

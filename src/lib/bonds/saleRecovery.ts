@@ -27,6 +27,7 @@
 import { ObjectId, type Db, type Document, type Filter } from "mongodb";
 import { SETTLED_KEYS_CAP, SETTLED_KEYS_FIELD } from "@/lib/banking/moneyMove";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondSaleIntentsCollection } from "@/lib/db/repositories/bondSaleIntents";
 
 /** Collection holding the durable sale intents. Also the repair queue. */
 export const BOND_SALE_INTENT_COLLECTION = "bondSaleIntents";
@@ -94,7 +95,7 @@ export async function createBondSaleIntent(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION).insertOne(intent);
+  await bondSaleIntentsCollection<BondSaleIntent>(db).insertOne(intent);
   return intent;
 }
 
@@ -105,8 +106,7 @@ export async function loadPendingBondSaleIntents(
   holderKey: BondSaleHolderKey,
   holderId: ObjectId
 ): Promise<BondSaleIntent[]> {
-  return db
-    .collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION)
+  return bondSaleIntentsCollection<BondSaleIntent>(db)
     .find({ bondId, holderKey, holderId, status: "claimed" })
     .toArray();
 }
@@ -118,9 +118,10 @@ async function markBondSaleIntent(
     Pick<BondSaleIntent, "status" | "claimApplied" | "poolDebited" | "payoutApplied" | "error">
   >
 ): Promise<void> {
-  await db
-    .collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION)
-    .updateOne({ _id: intentId }, { $set: { ...update, updatedAt: new Date() } });
+  await bondSaleIntentsCollection<BondSaleIntent>(db).updateOne(
+    { _id: intentId },
+    { $set: { ...update, updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -259,8 +260,7 @@ export async function listUnfinishedBondSales(
   db: Db,
   options: { limit?: number } = {}
 ): Promise<BondSaleRepairRow[]> {
-  const rows = await db
-    .collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION)
+  const rows = await bondSaleIntentsCollection<BondSaleIntent>(db)
     .find({ status: "claimed" })
     .sort({ createdAt: 1 })
     .limit(Math.max(1, options.limit ?? 100))

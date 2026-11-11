@@ -13,10 +13,10 @@ import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote, advanceBondPoolSnapshot } from "@/lib/bonds/marketPool";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 export type PurchaseBondUnitsForFundResult =
   | {
@@ -395,9 +395,10 @@ export async function settleBondPurchasesInTransaction(
   if (reserved.matchedCount !== reservations.length) throw new BondBatchGuardMiss("bond float");
 
   if (poolCredits.length > 0) {
-    const credited = await db
-      .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-      .bulkWrite(poolCredits, { ordered: true, session });
+    const credited = await bondMarketPoolsCollection<BondMarketPool>(db).bulkWrite(poolCredits, {
+      ordered: true,
+      session,
+    });
     if (credited.matchedCount + credited.upsertedCount !== poolCredits.length) {
       throw new BondBatchGuardMiss("bond pool");
     }

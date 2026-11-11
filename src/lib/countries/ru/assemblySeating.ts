@@ -3,17 +3,10 @@
  * Archives Congress and commits seating atomically.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { NPP, CountryGameState, ElectedOfficial, State } from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_COUNCIL_RESULTS_COLLECTION,
-  type RussianCouncilResultRecord,
-} from "./councilElectionResult";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
+import { type RussianCouncilResultRecord } from "./councilElectionResult";
 import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import { loadRussianAssemblySeatingInputs } from "./assemblySeatingInputs";
 import type { RussianAssemblySeat } from "./rules/assemblySeating";
@@ -24,6 +17,10 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/russianAssemblyOfficeArchives";
 export const RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION = "russianAssemblySeatings";
 export const RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION = "russianAssemblyOfficeArchives";
 export interface RussianAssemblySeatingRecord {
@@ -92,9 +89,10 @@ export async function materializeRussianAssemblySeating(input: {
   } = loaded;
   const seatingId = `${dumaRoot.toHexString()}:${councilRoot.toHexString()}`;
   if (
-    await db
-      .collection<RussianAssemblySeatingRecord>(RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION)
-      .findOne({ _id: seatingId }, { session, projection: { _id: 1 } })
+    await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db).findOne(
+      { _id: seatingId },
+      { session, projection: { _id: 1 } }
+    )
   )
     throw new Error("Assembly seating receipt exists without its activation marker");
   const rows: ElectedOfficial[] = plan.seats.map((row) => ({
@@ -120,18 +118,16 @@ export async function materializeRussianAssemblySeating(input: {
     ),
   }));
   if (congress.length) {
-    await db
-      .collection<RussianAssemblyOfficeArchive>(RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION)
-      .insertMany(
-        congress.map((official) => ({
-          _id: `${seatingId}:${official._id.toHexString()}`,
-          preset: "1991-default",
-          seatingId,
-          turn,
-          official,
-        })),
-        { session }
-      );
+    await russianAssemblyOfficeArchivesCollection<RussianAssemblyOfficeArchive>(db).insertMany(
+      congress.map((official) => ({
+        _id: `${seatingId}:${official._id.toHexString()}`,
+        preset: "1991-default",
+        seatingId,
+        turn,
+        official,
+      })),
+      { session }
+    );
     await electedOfficialsCollection(db).deleteMany(
       {
         _id: { $in: congress.map((row) => row._id) },
@@ -266,20 +262,16 @@ export async function materializeRussianAssemblySeating(input: {
   }
   // Mark every predecessor as seated, so an unseated-only lookup cannot fall
   // back to an obsolete generation after the latest receipt has been seated.
-  await db
-    .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-    .updateMany(
-      { countryId: "RU", $or: [{ cohortId: dumaRoot }, { rootCohortId: dumaRoot }] },
-      { $set: { seatedOnTurn: turn } },
-      { session }
-    );
-  await db
-    .collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION)
-    .updateMany(
-      { countryId: "RU", $or: [{ cohortId: councilRoot }, { rootCohortId: councilRoot }] },
-      { $set: { seatedOnTurn: turn } },
-      { session }
-    );
+  await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db).updateMany(
+    { countryId: "RU", $or: [{ cohortId: dumaRoot }, { rootCohortId: dumaRoot }] },
+    { $set: { seatedOnTurn: turn } },
+    { session }
+  );
+  await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(db).updateMany(
+    { countryId: "RU", $or: [{ cohortId: councilRoot }, { rootCohortId: councilRoot }] },
+    { $set: { seatedOnTurn: turn } },
+    { session }
+  );
   const activated = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
@@ -302,7 +294,7 @@ export async function materializeRussianAssemblySeating(input: {
     { session }
   );
   if (activated.matchedCount !== 1) throw new Error("Assembly handover mandate changed");
-  await db.collection<RussianAssemblySeatingRecord>(RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION).insertOne(
+  await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db).insertOne(
     {
       _id: seatingId,
       countryId: "RU",

@@ -49,9 +49,10 @@ import {
 } from "./engine";
 import { availableVentureLines, liftedSectorIds } from "./lines";
 import { sectorTurnProfitAnchor, sectorTurnRevenueAnchor } from "./revenue";
-import { PRODUCT_VENTURES, ventureDocument } from "./store";
+import { ventureDocument } from "./store";
 import { ventureSector } from "./turn";
 import type { ProductVenture, VentureDomain } from "./types";
+import { productVenturesCollection } from "@/lib/db/repositories/productVentures";
 
 /** Share of eligible NPP companies with a product in development at steady state. */
 const NPP_VENTURE_STEADY_SHARE = 1 / 3;
@@ -281,8 +282,7 @@ export async function startNppVentures(
   // Pure rolls first: most turns nobody rolls a start and no query is made.
   const probe = selectNppVentureStarts(args);
   if (probe.length === 0) return [];
-  const busy = await db
-    .collection<ProductVenture>(PRODUCT_VENTURES)
+  const busy = await productVenturesCollection<ProductVenture>(db)
     .find({ stage: "development" }, { projection: { activeKey: 1 } })
     .toArray();
   const busyKeys = new Set(busy.flatMap((row) => (row.activeKey ? [row.activeKey] : [])));
@@ -302,9 +302,9 @@ export async function startNppVentures(
     return { _id: venture._id, ...ventureDocument(venture) };
   });
   try {
-    await db
-      .collection<ProductVenture>(PRODUCT_VENTURES)
-      .insertMany(docs as never, { ordered: false });
+    await productVenturesCollection<ProductVenture>(db).insertMany(docs as never, {
+      ordered: false,
+    });
   } catch (error) {
     // A duplicate activeKey means that company already has one: not an error.
     const writeErrors = (error as { writeErrors?: Array<{ code?: number }> }).writeErrors;

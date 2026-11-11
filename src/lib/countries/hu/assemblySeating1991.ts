@@ -5,19 +5,10 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
+import { type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { settleHu1991Mandates } from "./rules/mandates1991";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -30,8 +21,9 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
+import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
-const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
   _id: string;
   countryId: "HU";
@@ -60,7 +52,7 @@ async function materializeHu1991AssemblySeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian handover needs an active transaction, cycle, turn and time");
-  const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
+  const journal = hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `HU:mixed1989:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "counted") return false;
   const game = await gameStateCollection(db).findOne(
@@ -206,7 +198,7 @@ async function materializeHu1991AssemblySeating(input: {
     )
     .toArray();
   if (incumbents.length)
-    await db.collection<Hu1991AssemblyArchive>(HU_1991_OFFICE_ARCHIVES_COLLECTION).insertMany(
+    await hu1991AssemblyOfficeArchivesCollection<Hu1991AssemblyArchive>(db).insertMany(
       incumbents.map((official) => ({
         _id: `${receipt._id}:${official._id.toHexString()}`,
         countryId: "HU" as const,

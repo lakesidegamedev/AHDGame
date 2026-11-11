@@ -1,10 +1,10 @@
 import type { Db } from "mongodb";
 import type { SentimentPulse } from "@/lib/db/types/sentimentPulse";
-
-const COLLECTION = "sentimentPulses";
+import { sentimentPulsesCollection } from "@/lib/db/repositories/sentimentPulses";
+import type { Document } from "mongodb";
 
 async function insertPulse(db: Db, pulse: Omit<SentimentPulse, "_id">): Promise<void> {
-  await db.collection(COLLECTION).insertOne(pulse as SentimentPulse);
+  await sentimentPulsesCollection<Document>(db).insertOne(pulse as SentimentPulse);
 }
 
 /** Bond default: corp-scoped, −15%, fast decay */

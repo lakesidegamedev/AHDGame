@@ -9,7 +9,7 @@ import {
 } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { loadLocSettlement, locReceiptId, settleLocPlan } from "@/lib/lineOfCredit/settlement";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface ReceiptRequest {
   characterId: ObjectId;
@@ -162,7 +162,7 @@ export async function recordMarketMakerRefusal(
   p: ReceiptRequest,
   result: Record<string, unknown>
 ) {
-  await db.collection<{ _id: string }>(MONEY_MOVE_COLLECTION).updateOne(
+  await bankMoneyMovesCollection<{ _id: string }>(db).updateOne(
     { _id: marketReceiptKey(p) },
     {
       $setOnInsert: {

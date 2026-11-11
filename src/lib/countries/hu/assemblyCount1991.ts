@@ -4,7 +4,6 @@
  * reuse that count instead of recalculating after withdrawals or partial seating.
  */
 import { type ClientSession, type Db } from "mongodb";
-import type { Election, ElectionCandidate, ElectionVoteTally, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { buildHu1991Slates } from "./rules/slates1991";
@@ -21,6 +20,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
 export const HU_1991_COUNTS_COLLECTION = "hu1991AssemblyCounts";
 export interface Hu1991AssemblyRecord {
@@ -76,7 +76,7 @@ async function materializeHu1991FirstCount(input: {
   )
     throw new Error("Hungarian certification needs an active transaction, cycle, turn and time");
   const receiptId = `HU:mixed1989:${cycle}`;
-  const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
+  const journal = hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db);
   const saved = await journal.findOne({ _id: receiptId }, { session });
   if (saved) return saved;
   const game = await gameStateCollection(db).findOne(

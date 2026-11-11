@@ -6,8 +6,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { sellBondSchema } from "@/lib/api/schemas/bonds";
 import { badRequest, handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Bond, ExchangeRate, User } from "@/lib/db/types";
-import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import type { Bond } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
@@ -41,7 +40,6 @@ import {
   loadPendingBondSaleIntents,
   markBondSaleIntentBestEffort,
   settledKeyPush,
-  BOND_SALE_INTENT_COLLECTION,
   type BondSaleIntent,
   type BondSaleSettlementOps,
 } from "@/lib/bonds/saleRecovery";
@@ -52,6 +50,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { bondSaleIntentsCollection } from "@/lib/db/repositories/bondSaleIntents";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -340,9 +339,9 @@ async function runBondSaleFallbackSettlement(
     claimConfirmed: true,
   });
   if (outcome === "reverted") {
-    const settled = await db
-      .collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION)
-      .findOne({ _id: intent._id });
+    const settled = await bondSaleIntentsCollection<BondSaleIntent>(db).findOne({
+      _id: intent._id,
+    });
     // Only the seller-missing path reverts with the pool still debited, and
     // only the pool-dry path reverts without it.
     if (settled?.poolDebited) throw args.throwSellerMissing();
@@ -448,9 +447,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // refusal into a message that says how much the market can take.
     const pricePerUnitLocal = quote.bidPerUnit;
     const fillableUnits = bondPoolFillableUnits(quote.poolCashLocal, pricePerUnitLocal, units);
-    const pendingSale = await db
-      .collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION)
-      .findOne({ bondId: bond._id, status: "claimed" }, { projection: { _id: 1 } });
+    const pendingSale = await bondSaleIntentsCollection<BondSaleIntent>(db).findOne(
+      { bondId: bond._id, status: "claimed" },
+      { projection: { _id: 1 } }
+    );
     // A pending sale may itself account for the apparent pool shortfall. Let
     // its seller-specific branch resume the stamped debit instead of rejecting
     // the retry from a newly observed pool balance.

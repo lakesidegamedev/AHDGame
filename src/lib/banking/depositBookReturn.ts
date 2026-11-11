@@ -73,7 +73,7 @@
 
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { DepositInsuranceFund, InterbankLoan } from "@/lib/db/types/bank";
+import type { InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -85,7 +85,6 @@ import { getNationalBudgetId, issueDepositInsuranceBackstopBond } from "@/lib/bo
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
-import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import { BANK_FAILURE_EVENTS } from "./failurePolitics";
 import type { BankFailurePoliticalEvent } from "./rules/failurePolitics";
 import { CENTRAL_BANK_HOLDER } from "@/lib/savings/rules/accounts";
@@ -96,6 +95,7 @@ import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
+import { bankFailurePoliticalEventsCollection } from "@/lib/db/repositories/bankFailurePoliticalEvents";
 
 /** Budget spending line a deposit insurance backstop is booked against. */
 export const DEPOSIT_INSURANCE_SPENDING_KEY = "depositInsurance";
@@ -772,12 +772,10 @@ async function returnDepositBookInner(
   if (policy.failurePolitics && options.cause === "failure") {
     // Activation follows completed cash and liability settlement, including replay.
     // A delayed payout starts its decay when delivered, not when first claimed.
-    await db
-      .collection<BankFailurePoliticalEvent>(BANK_FAILURE_EVENTS)
-      .updateOne(
-        { _id: `bank-failure:${bankIdHex}:${charter.charteredTurn}`, paidTurn: null },
-        { $set: { paidTurn: options.effectsTurn ?? options.turn } }
-      );
+    await bankFailurePoliticalEventsCollection<BankFailurePoliticalEvent>(db).updateOne(
+      { _id: `bank-failure:${bankIdHex}:${charter.charteredTurn}`, paidTurn: null },
+      { $set: { paidTurn: options.effectsTurn ?? options.turn } }
+    );
   }
   if (settled.status === "replayed") {
     // The cash moved on an earlier attempt and any projections that attempt

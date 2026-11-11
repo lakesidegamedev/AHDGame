@@ -48,8 +48,7 @@ import { MS_PER_TURN, getStartingYearForPreset } from "@/lib/constants/turnTime"
 import { getCycleAnchors } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
-import type { Election, GameConfig } from "@/lib/db/types";
-import type { GameState } from "@/lib/db/types/gameState";
+import type { Election } from "@/lib/db/types";
 import { seedColdWarFoundations } from "@/lib/admin/seed/seedColdWarFoundations";
 import { seedHistoricalOfficials, seedFromSeats } from "@/lib/npp/seedHistorical";
 import { getPresetSeats } from "@/lib/constants/historicalSeats";
@@ -205,10 +204,6 @@ import { seedEasternBlocCountry, seedEasternBlocBudget } from "@/lib/admin/seed/
 import { seedEasternBlocStatePartyOrg } from "@/lib/admin/seed/seedEasternBlocStatePartyOrg";
 import { seedCountryGameStates } from "@/lib/admin/seed/seedCountryGameStates";
 import { seedMacroCountries } from "@/lib/world/macro";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  WORLD_ENTITY_STATES_COLLECTION,
-} from "@/lib/world/succession/runtimeEntities";
 import { getHuSeedConfig } from "@/lib/seeds/hu/huSeed";
 import { getPlSeedConfig } from "@/lib/seeds/pl/plSeed";
 import { getRoSeedConfig } from "@/lib/seeds/ro/roSeed";
@@ -236,6 +231,8 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { seatsCollection } from "@/lib/db/repositories/seats";
 import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { worldEntityStatesCollection } from "@/lib/db/repositories/worldEntityStates";
 
 async function seedInitialBudgetSnapshots(db: Db, log: (msg: string) => void): Promise<void> {
   const budgets = await federalBudgetCollection(db).find({}).toArray();
@@ -833,8 +830,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // open with a bond float matching their debt rather than orphaned principal.
   await guarded("seedSovereignBondInstruments", () => seedSovereignBondInstruments(db, log, 0));
   await seedCountryGameStates(db, preset, getStartingYearForPreset(preset), log);
-  await db.collection(WORLD_ENTITY_STATES_COLLECTION).deleteMany({});
-  await db.collection(FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION).deleteMany({});
+  await worldEntityStatesCollection<Document>(db).deleteMany({});
+  await federationSettlementApplicationsCollection<Document>(db).deleteMany({});
   await seedMacroCountries(db, preset, log);
   await reconcileSignedTariffBills(db);
 

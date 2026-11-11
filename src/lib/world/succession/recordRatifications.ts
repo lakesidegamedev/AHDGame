@@ -1,23 +1,17 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bill } from "@/lib/db/types/legislation";
-import type { State } from "@/lib/db/types/state";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import { buildBackgroundMacroCountry } from "@/lib/world/macro/backgroundSeed";
 import { getWorldEntityOrThrow } from "@/lib/world/worldEntityManifest";
 import { allocateSuccessionAmount } from "./rules/financialSettlement";
 import { decideAutonomousFederationConsent } from "./rules/autonomousConsent";
-import {
-  FEDERATION_POLITICAL_PROPOSALS_COLLECTION,
-  type FederationPoliticalProposalRecord,
-} from "./politicalProposal";
-import {
-  FEDERATION_RATIFICATIONS_COLLECTION,
-  type FederationRatificationRecord,
-} from "./ratificationStore";
+import { type FederationPoliticalProposalRecord } from "./politicalProposal";
+import { type FederationRatificationRecord } from "./ratificationStore";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationRatificationsCollection } from "@/lib/db/repositories/federationRatifications";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
 
 /** Record consent after the source legislature enacts the exact mandate. An
  * interrupted run resumes without revising any participant's first decision. */
@@ -37,13 +31,13 @@ export async function recordFederationRatifications(input: {
     currentTurn < 1
   )
     throw new Error("Federation ratification needs a valid settlement and turn");
-  const proposal = await db
-    .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
-    .findOne({
-      _id: `1991-default:${settlementId}:${revision}`,
-      sourceEntityId: sourceCountryId,
-      status: "open",
-    });
+  const proposal = await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(
+    db
+  ).findOne({
+    _id: `1991-default:${settlementId}:${revision}`,
+    sourceEntityId: sourceCountryId,
+    status: "open",
+  });
   if (!proposal || proposal.terms.sourceEntityId !== sourceCountryId)
     throw new Error("Federation ratification has no open matching proposal");
   const bill = await billsCollection(db).findOne({
@@ -100,7 +94,7 @@ export async function recordFederationRatifications(input: {
     })
     .toArray();
   const macroById = new Map(macros.map((macro) => [macro.entityId, macro]));
-  const records = db.collection<FederationRatificationRecord>(FEDERATION_RATIFICATIONS_COLLECTION);
+  const records = federationRatificationsCollection<FederationRatificationRecord>(db);
   const saved: FederationRatificationRecord[] = [];
   for (const entityId of participants) {
     const existingMacro = entityId === sourceCountryId ? null : macroById.get(entityId);

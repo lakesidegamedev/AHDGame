@@ -1,8 +1,7 @@
 import type { Db } from "mongodb";
 import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies";
-import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameConfig, MoneySupplySnapshot, OrganizationFund } from "@/lib/db/types";
+import type { GameConfig, MoneySupplySnapshot } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { annualizedMoneyGrowthPct, MONEY_ACCOUNTING_VERSION } from "./calculate";
 import { seedMoneySupplyBaselines } from "./seed";
@@ -43,6 +42,7 @@ import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools
 import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
 import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 import { productAdvertisingClearingCollection } from "@/lib/db/repositories/productAdvertisingClearing";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -390,16 +390,14 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
   ): Promise<void> {
     const currencyCode = currencyFor(countryId);
     const aggregates = aggregatesForCurrency(byCurrency, currencyCode);
-    const prior = await db
-      .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
-      .findOne(
-        {
-          currencyCode,
-          accountingVersion: MONEY_ACCOUNTING_VERSION,
-          turn: { $lte: Math.max(0, turn - 12) },
-        },
-        { sort: { turn: -1 } }
-      );
+    const prior = await moneySupplySnapshotsCollection<MoneySupplySnapshot>(db).findOne(
+      {
+        currencyCode,
+        accountingVersion: MONEY_ACCOUNTING_VERSION,
+        turn: { $lte: Math.max(0, turn - 12) },
+      },
+      { sort: { turn: -1 } }
+    );
     const doc: MoneySupplySnapshot = {
       _id: `${turn}:${currencyCode}`,
       turn,
@@ -418,9 +416,11 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       netMoneyCreatedLifetime,
       createdAt: now,
     };
-    await db
-      .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
-      .replaceOne({ _id: doc._id }, doc, { upsert: true });
+    await moneySupplySnapshotsCollection<MoneySupplySnapshot>(db).replaceOne(
+      { _id: doc._id },
+      doc,
+      { upsert: true }
+    );
     written++;
   }
 

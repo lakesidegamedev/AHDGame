@@ -5,20 +5,11 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Election,
-  ElectionCandidate,
-  ElectedOfficial,
-  ElectionVoteTally,
-  NPP,
-  GameState,
-  State,
-  StateRegistrationPool,
-} from "@/lib/db/types";
+import type { Election, ElectionCandidate, ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
-import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
+import { type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { HU_1991_CONSTITUENCIES } from "./data/electoralDistricts1991";
 import {
   countHu1991ByElection,
@@ -47,6 +38,8 @@ import { governmentFormationsCollection } from "@/lib/db/repositories/government
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { hu1991ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu1991ConstituencyByElections";
 export const HU_1991_BY_ELECTIONS_COLLECTION = "hu1991ConstituencyByElections";
 export interface Hu1991ByElectionRecord {
   _id: string;
@@ -88,13 +81,11 @@ async function cancelByElection(
   now: Date
 ): Promise<void> {
   const ids = job.electionIds.map((id) => new ObjectId(id));
-  await db
-    .collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION)
-    .updateOne(
-      { _id: job._id, completedAtTurn: { $exists: false } },
-      { $set: { completedAtTurn: turn } },
-      { session }
-    );
+  await hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(db).updateOne(
+    { _id: job._id, completedAtTurn: { $exists: false } },
+    { $set: { completedAtTurn: turn } },
+    { session }
+  );
   await electionsCollection(db).updateMany(
     { _id: { $in: ids } },
     { $set: { status: "cancelled", resolving: false, updatedAt: now } },
@@ -119,11 +110,12 @@ async function materializeHu1991ByElectionOpening(input: {
     { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
   );
   if (game?.preset !== "1991-default") return [];
-  const parent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne({ seatedAtTurn: { $exists: true } }, { session, sort: { seatedAtTurn: -1 } });
+  const parent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { session, sort: { seatedAtTurn: -1 } }
+  );
   if (!parent?.settled || parent.seatedAtTurn == null) return [];
-  const journal = db.collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION);
+  const journal = hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(db);
   const modernChamber = game.huAssemblyReformedAtYear != null;
   const superseded = await journal
     .find(
@@ -320,13 +312,11 @@ async function materializeHu1991ByElectionOpening(input: {
     }
   }
   const ids = polls.map((row) => row._id.toHexString());
-  const claim = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .updateOne(
-      { _id: parent._id, byElectionGeneration: parent.byElectionGeneration ?? { $exists: false } },
-      { $set: { byElectionGeneration: generation } },
-      { session }
-    );
+  const claim = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).updateOne(
+    { _id: parent._id, byElectionGeneration: parent.byElectionGeneration ?? { $exists: false } },
+    { $set: { byElectionGeneration: generation } },
+    { session }
+  );
   if (claim.modifiedCount !== 1)
     throw new Error("Hungarian by-election opening changed concurrently");
   await journal.insertOne(
@@ -368,12 +358,10 @@ async function materializeHu1991ByElectionOpening(input: {
 }
 export async function openHu1991ByElections(db: Db, turn: number, now: Date): Promise<string[]> {
   // Worlds without a certified native Assembly need no transaction or by-election.
-  const parent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne(
-      { seatedAtTurn: { $exists: true } },
-      { projection: { _id: 1 }, sort: { seatedAtTurn: -1 } }
-    );
+  const parent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { projection: { _id: 1 }, sort: { seatedAtTurn: -1 } }
+  );
   if (!parent) return [];
   return runRequiredTransaction((session) =>
     materializeHu1991ByElectionOpening({ db, session, turn, now })
@@ -389,7 +377,7 @@ async function materializeHu1991ByElectionResolution(input: {
 }): Promise<number> {
   const { db, session, receiptId, turn, now } = input;
   assertTransaction(session, turn, now);
-  const journal = db.collection<Hu1991ByElectionRecord>(HU_1991_BY_ELECTIONS_COLLECTION);
+  const journal = hu1991ConstituencyByElectionsCollection<Hu1991ByElectionRecord>(db);
   const job = await journal.findOne({ _id: receiptId }, { session });
   if (!job || job.completedAtTurn != null) return 0;
   const chamberLock = await governmentFormationsCollection<{
@@ -397,17 +385,16 @@ async function materializeHu1991ByElectionResolution(input: {
     hu1991MandateGeneration?: number;
   }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
   if (chamberLock.matchedCount !== 1) throw new Error("Hungarian chamber authority is missing");
-  const parent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne({ _id: job.parentReceiptId }, { session });
+  const parent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { _id: job.parentReceiptId },
+    { session }
+  );
   if (!parent?.settled || parent.seatedAtTurn == null)
     throw new Error("Hungarian by-election lost its certified parent");
-  const latestParent = await db
-    .collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION)
-    .findOne(
-      { seatedAtTurn: { $exists: true } },
-      { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
-    );
+  const latestParent = await hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db).findOne(
+    { seatedAtTurn: { $exists: true } },
+    { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
+  );
   const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     { session, projection: { huAssemblyReformedAtYear: 1 } }

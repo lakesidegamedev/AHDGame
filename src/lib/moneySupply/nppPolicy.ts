@@ -10,8 +10,6 @@ import { currentMoneyGrowth } from "./rules/growthSignal";
 import { MONEY_ACCOUNTING_VERSION } from "./calculate";
 import type { Db } from "mongodb";
 import type {
-  GameConfig,
-  GameState,
   MonetaryPolicyDecision,
   MonetaryPolicyEvaluation,
   MoneySupplySnapshot,
@@ -28,13 +26,13 @@ import { getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { executeMonetaryOperation, MONETARY_OPERATION_COOLDOWN_TURNS } from "./operations";
 import { LiquidityAdvanceRejected } from "./liquidityAdvance";
 import { MonetaryOperationRejected } from "./monetaryOperationJournal";
-import { MONEY_SUPPLY_SNAPSHOTS_COLLECTION } from "./snapshot";
 import { isMoneySupplyEnabledFromConfig } from "./featureFlag";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 interface NppMonetaryConditions {
   inflation: number;
@@ -185,8 +183,7 @@ export async function processNppMonetaryOperations(
   const commonMoneyGrowth = union
     ? euroMoneyGrowth(
         union,
-        await db
-          .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
+        await moneySupplySnapshotsCollection<MoneySupplySnapshot>(db)
           .find(
             {
               currencyCode: {
@@ -251,12 +248,10 @@ export async function processNppMonetaryOperations(
         .next(),
       member
         ? Promise.resolve(null)
-        : db
-            .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
-            .findOne(
-              { currencyCode, turn: { $lte: turn } },
-              { sort: { turn: -1 }, projection: { accountingVersion: 1, annualizedM2GrowthPct: 1 } }
-            ),
+        : moneySupplySnapshotsCollection<MoneySupplySnapshot>(db).findOne(
+            { currencyCode, turn: { $lte: turn } },
+            { sort: { turn: -1 }, projection: { accountingVersion: 1, annualizedM2GrowthPct: 1 } }
+          ),
     ]);
     if (!budget) continue;
     const inflation =

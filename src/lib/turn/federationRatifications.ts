@@ -1,15 +1,10 @@
 import type { Db } from "mongodb";
-import type { Bill } from "@/lib/db/types/legislation";
-import {
-  FEDERATION_POLITICAL_PROPOSALS_COLLECTION,
-  type FederationPoliticalProposalRecord,
-} from "@/lib/world/succession/politicalProposal";
+import { type FederationPoliticalProposalRecord } from "@/lib/world/succession/politicalProposal";
 import { recordFederationRatifications } from "@/lib/world/succession/recordRatifications";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "@/lib/world/succession/runtimeEntities";
+import { type FederationSettlementApplicationRecord } from "@/lib/world/succession/runtimeEntities";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 /** Run after the ordinary bill lifecycle: only a signed settlement mandate
  * can trigger autonomous decisions, and replay preserves the first decision. */
@@ -21,16 +16,14 @@ export async function processFederationRatifications(
   if (preset !== "1991-default") return 0;
   if (!Number.isSafeInteger(currentTurn) || currentTurn < 1)
     throw new Error("Federation ratification needs a valid turn");
-  const proposals = await db
-    .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
+  const proposals = await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(
+    db
+  )
     .find({ presetId: "1991-default", status: "open" })
     .toArray();
   if (proposals.length === 0) return 0;
   const [applications, bills] = await Promise.all([
-    db
-      .collection<FederationSettlementApplicationRecord>(
-        FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-      )
+    federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(db)
       .find(
         {
           presetId: "1991-default",
@@ -82,12 +75,10 @@ export async function processFederationRatifications(
     processed += 1;
   }
   if (closed.length)
-    await db
-      .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
-      .bulkWrite(
-        closed.map(({ id, status }) => ({
-          updateOne: { filter: { _id: id, status: "open" }, update: { $set: { status } } },
-        }))
-      );
+    await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(db).bulkWrite(
+      closed.map(({ id, status }) => ({
+        updateOne: { filter: { _id: id, status: "open" }, update: { $set: { status } } },
+      }))
+    );
   return processed;
 }

@@ -16,7 +16,6 @@ import {
   type Db,
   type Document,
 } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import { collectBalances } from "@/lib/ledger/balanceSnapshot";
 import { LEDGER_ENTRIES_COLLECTION, finalizeLedgerEntry } from "@/lib/ledger/emit";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
@@ -75,6 +74,8 @@ import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
 import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
 import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 type Log = (message: string) => void;
 
@@ -227,9 +228,7 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
     await bondsCollection<Document>(db).deleteMany({ _id: { $in: ids }, ...CORPORATE_BOND_FILTER });
   }
 
-  const claims = db.collection<{ _id: string; claim: Document }>(
-    SOVEREIGN_COUPON_CLAIMS_COLLECTION
-  );
+  const claims = sovereignCouponClaimsCollection<{ _id: string; claim: Document }>(db);
   const deleteIds = plan.couponClaims.filter((c) => c.action === "delete").map((c) => c.id);
   for (const ids of chunks(deleteIds, 5000)) await claims.deleteMany({ _id: { $in: ids } });
   const trimIds = plan.couponClaims.filter((c) => c.action === "trim").map((c) => c.id);
@@ -546,10 +545,7 @@ async function phaseWitness(
   if (!plan.ledgerShadow) return 0;
   const [closing, emitted, rates] = await Promise.all([
     collectBalances(db, { treasuryCashLedgerEnabled: plan.treasuryCashLedgerEnabled }),
-    db
-      .collection<{ legs: { account: string; anchorAmount: number; role: string }[] }>(
-        LEDGER_ENTRIES_COLLECTION
-      )
+    ledgerEntriesCollection<{ legs: { account: string; anchorAmount: number; role: string }[] }>(db)
       .find(
         {
           turn: plan.ledgerTurn,

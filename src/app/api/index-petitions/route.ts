@@ -4,9 +4,9 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
-import { INDEX_LISTING_PETITIONS } from "@/lib/indexFunds/petitions/service";
 import type { IndexListingPetition } from "@/lib/db/types/indexListingPetition";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexListingPetitionsCollection } from "@/lib/db/repositories/indexListingPetitions";
 
 /**
  * The committee's own inbox: petitions waiting on the seat this character
@@ -31,8 +31,7 @@ export async function GET() {
       return NextResponse.json({ seat: null, petitions: [] });
     }
 
-    const petitions = await db
-      .collection<IndexListingPetition>(INDEX_LISTING_PETITIONS)
+    const petitions = await indexListingPetitionsCollection<IndexListingPetition>(db)
       .find({ status: "pending", countryId: character.countryId })
       .sort({ deadlineAtTurn: 1 })
       .toArray();

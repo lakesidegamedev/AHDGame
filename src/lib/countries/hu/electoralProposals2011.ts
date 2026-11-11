@@ -4,16 +4,16 @@
  * for later campaigns; rejected decisions remain visible and can be revised by legislators.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Bill, Character, CountryGameState, GameState } from "@/lib/db/types";
+import type { Bill, Character, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { passesHuElectoralAmendment } from "./rules/electoralLaw";
 import { hu2011DecisionAvailability } from "./rules/electoralTransition2011";
-import type { CountryState } from "@/lib/db/types/countryState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { hu2011ElectoralProposalsCollection } from "@/lib/db/repositories/hu2011ElectoralProposals";
 
 export const HU_2011_PROPOSALS_COLLECTION = "hu2011ElectoralProposals";
 const ID = "1991-default:hu-electoral:system2011";
@@ -79,7 +79,7 @@ export async function materializeHu2011ElectoralProposal(input: {
     throw new Error("Hungarian electoral proposal needs a transaction, turn and time");
   const allowed = await availability(db, game, turn, session);
   if (!allowed.available) throw new Hu2011ElectoralConflict(allowed.reason);
-  const proposals = db.collection<Hu2011ElectoralProposal>(HU_2011_PROPOSALS_COLLECTION);
+  const proposals = hu2011ElectoralProposalsCollection<Hu2011ElectoralProposal>(db);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
     if (!Number.isSafeInteger(prior.revision) || prior.revision < 1)
@@ -165,7 +165,7 @@ async function authorizeHu2011ElectoralProposal(
 ) {
   if (!session.inTransaction())
     throw new Error("Hungarian electoral authorization needs a transaction");
-  const proposals = db.collection<Hu2011ElectoralProposal>(HU_2011_PROPOSALS_COLLECTION);
+  const proposals = hu2011ElectoralProposalsCollection<Hu2011ElectoralProposal>(db);
   const proposal = await proposals.findOne({ _id: ID, status: "open" }, { session });
   if (!proposal || !(await availability(db, game, turn, session)).available) return false;
   if (
@@ -215,9 +215,9 @@ async function authorizeHu2011ElectoralProposal(
 export async function loadHu2011ElectoralDecision(db: Db, game: Calendar, turn: number) {
   if (game.preset !== "1991-default") return null;
   const allowed = await availability(db, game, turn);
-  const proposal = await db
-    .collection<Hu2011ElectoralProposal>(HU_2011_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID });
+  const proposal = await hu2011ElectoralProposalsCollection<Hu2011ElectoralProposal>(db).findOne({
+    _id: ID,
+  });
   const bill = proposal
     ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
@@ -244,9 +244,10 @@ export async function processHu2011ElectoralMandate(
   now: Date
 ) {
   if (game.preset !== "1991-default") return false;
-  const proposal = await db
-    .collection<Hu2011ElectoralProposal>(HU_2011_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
+  const proposal = await hu2011ElectoralProposalsCollection<Hu2011ElectoralProposal>(db).findOne(
+    { _id: ID, status: "open" },
+    { projection: { billId: 1 } }
+  );
   if (
     !proposal ||
     !(await billsCollection(db).findOne(

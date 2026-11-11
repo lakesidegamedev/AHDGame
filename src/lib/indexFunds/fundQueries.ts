@@ -9,6 +9,11 @@ import type {
 } from "@/lib/db/types";
 import { isDuplicateKeyError } from "@/lib/api/errors";
 import { resolveFundMandate } from "./mandate";
+import { indexFundSnapshotsCollection } from "@/lib/db/repositories/indexFundSnapshots";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 // ── Collection names ──────────────────────────────────────────────────
 
@@ -45,9 +50,7 @@ export async function getFundById(
   fundId: ObjectId,
   options?: FundQueryOptions
 ): Promise<IndexFund | null> {
-  return db
-    .collection<IndexFund>(FUND_COLLECTION)
-    .findOne({ _id: fundId }, fundReadOptions(options));
+  return indexFundsCollection<IndexFund>(db).findOne({ _id: fundId }, fundReadOptions(options));
 }
 
 /** Batch-load funds by _id. Preferred over per-element `getFundById` in loops. */
@@ -57,8 +60,7 @@ export async function listFundsByIds(
   options?: FundQueryOptions
 ): Promise<IndexFund[]> {
   if (fundIds.length === 0) return [];
-  return db
-    .collection<IndexFund>(FUND_COLLECTION)
+  return indexFundsCollection<IndexFund>(db)
     .find({ _id: { $in: fundIds } }, fundReadOptions(options))
     .toArray();
 }
@@ -69,7 +71,7 @@ async function getFundBySlug(
   slug: string,
   options?: FundQueryOptions
 ): Promise<IndexFund | null> {
-  return db.collection<IndexFund>(FUND_COLLECTION).findOne({ slug }, fundReadOptions(options));
+  return indexFundsCollection<IndexFund>(db).findOne({ slug }, fundReadOptions(options));
 }
 
 /** Resolve a fund from a URL segment (slug, or legacy Mongo _id). */
@@ -103,8 +105,7 @@ export async function listFunds(
   if (filter?.kind) query.kind = filter.kind;
   if (filter?.countryId) query.countryId = filter.countryId;
   if (filter?.sectorType) query.sectorType = filter.sectorType;
-  return db
-    .collection<IndexFund>(FUND_COLLECTION)
+  return indexFundsCollection<IndexFund>(db)
     .find(query, { projection: FUND_READ_PROJECTION })
     .sort({ scope: 1, kind: 1, countryId: 1, sectorType: 1 })
     .toArray();
@@ -123,8 +124,7 @@ export async function listActiveFunds(db: Db): Promise<IndexFund[]> {
  * them.
  */
 export async function listServiceableFunds(db: Db): Promise<IndexFund[]> {
-  return db
-    .collection<IndexFund>(FUND_COLLECTION)
+  return indexFundsCollection<IndexFund>(db)
     .find(
       { $or: [{ status: "active" }, { status: "paused", pauseReason: "backing_ratio" }] },
       { projection: FUND_READ_PROJECTION }
@@ -141,8 +141,7 @@ export async function listFundsBySponsor(
   db: Db,
   sponsorCorporationId: ObjectId
 ): Promise<IndexFund[]> {
-  return db
-    .collection<IndexFund>(FUND_COLLECTION)
+  return indexFundsCollection<IndexFund>(db)
     .find(
       { sponsorCorporationId, status: { $ne: "delisted" } },
       { projection: FUND_READ_PROJECTION }
@@ -155,7 +154,7 @@ export async function listFundsBySponsor(
 
 /** Insert a new fund definition. Returns the inserted _id. */
 export async function insertFund(db: Db, fund: Omit<IndexFund, "_id">): Promise<ObjectId> {
-  const result = await db.collection<IndexFund>(FUND_COLLECTION).insertOne({
+  const result = await indexFundsCollection<IndexFund>(db).insertOne({
     ...fund,
     mandate: resolveFundMandate(fund),
   } as IndexFund);
@@ -179,7 +178,7 @@ export async function updateFundConstituents(
   listingFailureStreaks?: IndexFund["listingFailureStreaks"],
   mandate?: IndexFund["mandate"]
 ): Promise<void> {
-  await db.collection<IndexFund>(FUND_COLLECTION).updateOne(
+  await indexFundsCollection<IndexFund>(db).updateOne(
     { _id: fundId },
     {
       $set: {
@@ -217,9 +216,10 @@ export async function updateFundNav(
   fundId: ObjectId,
   update: FundNavUpdate
 ): Promise<void> {
-  await db
-    .collection<IndexFund>(FUND_COLLECTION)
-    .updateOne({ _id: fundId }, { $set: fundNavSet(update, new Date()) });
+  await indexFundsCollection<IndexFund>(db).updateOne(
+    { _id: fundId },
+    { $set: fundNavSet(update, new Date()) }
+  );
 }
 
 /**
@@ -233,7 +233,7 @@ export async function updateFundNavsBulk(
 ): Promise<void> {
   if (entries.length === 0) return;
   const now = new Date();
-  await db.collection<IndexFund>(FUND_COLLECTION).bulkWrite(
+  await indexFundsCollection<IndexFund>(db).bulkWrite(
     entries.map(({ fundId, update }) => ({
       updateOne: { filter: { _id: fundId }, update: { $set: fundNavSet(update, now) } },
     })),
@@ -256,7 +256,7 @@ export async function updateFundHoldings(
   holdings: IndexFundHolding[],
   options?: FundQueryOptions
 ): Promise<void> {
-  await db.collection<IndexFund>(FUND_COLLECTION).updateOne(
+  await indexFundsCollection<IndexFund>(db).updateOne(
     { _id: fundId },
     {
       $set: {
@@ -284,19 +284,17 @@ export async function setFundStatus(
     $set.pauseReason = reason ?? "manual";
     $set.pausedAt = new Date();
     if (pausedByUserId) $set.pausedByUserId = pausedByUserId;
-    await db.collection<IndexFund>(FUND_COLLECTION).updateOne({ _id: fundId }, { $set });
+    await indexFundsCollection<IndexFund>(db).updateOne({ _id: fundId }, { $set });
     return;
   }
 
   // Reactivating must REMOVE the pause fields. `$set: undefined` leaves them in
   // place on the stored document, which is why the paused-fund heal script had
   // to `$unset` them by hand after an unpause that looked like it worked.
-  await db
-    .collection<IndexFund>(FUND_COLLECTION)
-    .updateOne(
-      { _id: fundId },
-      { $set, $unset: { pauseReason: "", pausedAt: "", pausedByUserId: "" } }
-    );
+  await indexFundsCollection<IndexFund>(db).updateOne(
+    { _id: fundId },
+    { $set, $unset: { pauseReason: "", pausedAt: "", pausedByUserId: "" } }
+  );
 }
 
 // ── Position (investor holding) queries ────────────────────────────────
@@ -326,9 +324,7 @@ export async function getPosition(
   } else if (holderKind === "fund_reserve") {
     // fund_reserve positions match on fundId only (no holder-specific id)
   }
-  return db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-    .findOne(query, mongoOptions(options));
+  return indexFundPositionsCollection<IndexFundPosition>(db).findOne(query, mongoOptions(options));
 }
 
 /** Load all positions for a given fund. */
@@ -337,8 +333,7 @@ export async function listFundPositions(
   fundId: ObjectId,
   options?: FundQueryOptions
 ): Promise<IndexFundPosition[]> {
-  return db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
+  return indexFundPositionsCollection<IndexFundPosition>(db)
     .find({ fundId }, mongoOptions(options))
     .toArray();
 }
@@ -348,8 +343,7 @@ export async function listCharacterPositions(
   db: Db,
   characterId: ObjectId
 ): Promise<IndexFundPosition[]> {
-  return db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
+  return indexFundPositionsCollection<IndexFundPosition>(db)
     .find({ holderKind: "character", characterId })
     .toArray();
 }
@@ -384,37 +378,35 @@ export async function creditFundPosition(
   if (holderFilter.pensionSchemeId) identityFields.pensionSchemeId = holderFilter.pensionSchemeId;
 
   // Try to increment an existing position.
-  const incResult = await db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-    .findOneAndUpdate(
-      { fundId, ...identityFields },
-      [
-        {
-          $set: {
-            avgNavAnchor: {
-              $cond: [
-                { $gt: [{ $add: ["$units", units] }, 0] },
-                {
-                  $divide: [
-                    {
-                      $add: [
-                        { $multiply: ["$units", { $ifNull: ["$avgNavAnchor", nav] }] },
-                        units * nav,
-                      ],
-                    },
-                    { $add: ["$units", units] },
-                  ],
-                },
-                nav,
-              ],
-            },
-            units: { $add: ["$units", units] },
-            updatedAt: now,
+  const incResult = await indexFundPositionsCollection<IndexFundPosition>(db).findOneAndUpdate(
+    { fundId, ...identityFields },
+    [
+      {
+        $set: {
+          avgNavAnchor: {
+            $cond: [
+              { $gt: [{ $add: ["$units", units] }, 0] },
+              {
+                $divide: [
+                  {
+                    $add: [
+                      { $multiply: ["$units", { $ifNull: ["$avgNavAnchor", nav] }] },
+                      units * nav,
+                    ],
+                  },
+                  { $add: ["$units", units] },
+                ],
+              },
+              nav,
+            ],
           },
+          units: { $add: ["$units", units] },
+          updatedAt: now,
         },
-      ],
-      { returnDocument: "after", ...mongoOptions(options) }
-    );
+      },
+    ],
+    { returnDocument: "after", ...mongoOptions(options) }
+  );
 
   if (incResult) return incResult;
 
@@ -432,45 +424,44 @@ export async function creditFundPosition(
   };
 
   try {
-    const insertResult = await db
-      .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-      .insertOne(newPosition as IndexFundPosition, mongoOptions(options));
+    const insertResult = await indexFundPositionsCollection<IndexFundPosition>(db).insertOne(
+      newPosition as IndexFundPosition,
+      mongoOptions(options)
+    );
 
     return { ...newPosition, _id: insertResult.insertedId } as IndexFundPosition;
   } catch (err) {
     if (isDuplicateKeyError(err)) {
       // Another request won the race - retry the increment.
-      const retry = await db
-        .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-        .findOneAndUpdate(
-          { fundId, ...identityFields },
-          [
-            {
-              $set: {
-                avgNavAnchor: {
-                  $cond: [
-                    { $gt: [{ $add: ["$units", units] }, 0] },
-                    {
-                      $divide: [
-                        {
-                          $add: [
-                            { $multiply: ["$units", { $ifNull: ["$avgNavAnchor", nav] }] },
-                            units * nav,
-                          ],
-                        },
-                        { $add: ["$units", units] },
-                      ],
-                    },
-                    nav,
-                  ],
-                },
-                units: { $add: ["$units", units] },
-                updatedAt: now,
+      const retry = await indexFundPositionsCollection<IndexFundPosition>(db).findOneAndUpdate(
+        { fundId, ...identityFields },
+        [
+          {
+            $set: {
+              avgNavAnchor: {
+                $cond: [
+                  { $gt: [{ $add: ["$units", units] }, 0] },
+                  {
+                    $divide: [
+                      {
+                        $add: [
+                          { $multiply: ["$units", { $ifNull: ["$avgNavAnchor", nav] }] },
+                          units * nav,
+                        ],
+                      },
+                      { $add: ["$units", units] },
+                    ],
+                  },
+                  nav,
+                ],
               },
+              units: { $add: ["$units", units] },
+              updatedAt: now,
             },
-          ],
-          { returnDocument: "after", ...mongoOptions(options) }
-        );
+          },
+        ],
+        { returnDocument: "after", ...mongoOptions(options) }
+      );
       if (retry) return retry;
     }
     throw err;
@@ -494,9 +485,10 @@ export async function upsertFundHoldingShares(
   if (!Number.isFinite(shares) || shares <= 0) return;
   const safePrice = Number.isFinite(pricePerShareAnchor) ? Math.max(0, pricePerShareAnchor) : 0;
 
-  const fund = await db
-    .collection<IndexFund>(FUND_COLLECTION)
-    .findOne({ _id: fundId }, { projection: { holdings: 1 }, ...mongoOptions(options) });
+  const fund = await indexFundsCollection<IndexFund>(db).findOne(
+    { _id: fundId },
+    { projection: { holdings: 1 }, ...mongoOptions(options) }
+  );
   const existing = fund?.holdings?.find(
     (h) => h.corporationId.toString() === corporationId.toString()
   );
@@ -507,7 +499,7 @@ export async function upsertFundHoldingShares(
       existing.avgCostPerShareAnchor !== undefined
         ? (existing.shares * existing.avgCostPerShareAnchor + shares * safePrice) / newShares
         : safePrice;
-    await db.collection<IndexFund>(FUND_COLLECTION).updateOne(
+    await indexFundsCollection<IndexFund>(db).updateOne(
       { _id: fundId, "holdings.corporationId": corporationId },
       {
         $inc: { "holdings.$.shares": shares },
@@ -522,7 +514,7 @@ export async function upsertFundHoldingShares(
     return;
   }
 
-  await db.collection<IndexFund>(FUND_COLLECTION).updateOne(
+  await indexFundsCollection<IndexFund>(db).updateOne(
     { _id: fundId },
     {
       $push: {
@@ -555,7 +547,7 @@ export async function debitFundHoldingShares(
 ): Promise<boolean> {
   if (!Number.isFinite(shares) || shares <= 0) return false;
   const safePrice = Number.isFinite(pricePerShareAnchor) ? Math.max(0, pricePerShareAnchor) : 0;
-  const result = await db.collection<IndexFund>(FUND_COLLECTION).updateOne(
+  const result = await indexFundsCollection<IndexFund>(db).updateOne(
     {
       _id: fundId,
       holdings: { $elemMatch: { corporationId, shares: { $gte: shares } } },
@@ -571,17 +563,15 @@ export async function debitFundHoldingShares(
   );
   if (result.matchedCount === 0) return false;
 
-  const holding = await db
-    .collection<IndexFund>(FUND_COLLECTION)
-    .findOne(
-      { _id: fundId, "holdings.corporationId": corporationId },
-      { projection: { holdings: 1 }, ...mongoOptions(options) }
-    );
+  const holding = await indexFundsCollection<IndexFund>(db).findOne(
+    { _id: fundId, "holdings.corporationId": corporationId },
+    { projection: { holdings: 1 }, ...mongoOptions(options) }
+  );
   const remaining = holding?.holdings.find(
     (row) => row.corporationId.toString() === corporationId.toString()
   );
   if (!remaining || remaining.shares <= 0) {
-    await db.collection<IndexFund>(FUND_COLLECTION).updateOne(
+    await indexFundsCollection<IndexFund>(db).updateOne(
       { _id: fundId },
       {
         $pull: {
@@ -591,13 +581,11 @@ export async function debitFundHoldingShares(
       mongoOptions(options)
     );
   } else {
-    await db
-      .collection<IndexFund>(FUND_COLLECTION)
-      .updateOne(
-        { _id: fundId, "holdings.corporationId": corporationId },
-        { $set: { "holdings.$.lastValueAnchor": remaining.shares * safePrice } },
-        mongoOptions(options)
-      );
+    await indexFundsCollection<IndexFund>(db).updateOne(
+      { _id: fundId, "holdings.corporationId": corporationId },
+      { $set: { "holdings.$.lastValueAnchor": remaining.shares * safePrice } },
+      mongoOptions(options)
+    );
   }
   return true;
 }
@@ -639,7 +627,7 @@ export async function debitFundPosition(
   // pipeline drains legacy units first; absent legacyUnits defaults to the full
   // position (conservative: all legacy, never over-pays) - see the type.
   const now = new Date();
-  const before = await db.collection<IndexFundPosition>(FUND_POSITION_COLLECTION).findOneAndUpdate(
+  const before = await indexFundPositionsCollection<IndexFundPosition>(db).findOneAndUpdate(
     { ...identityFields, units: { $gte: units } },
     [
       {
@@ -663,9 +651,10 @@ export async function debitFundPosition(
 
   // If position reached zero, remove the document.
   if (unitsAfter <= 0) {
-    await db
-      .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-      .deleteOne({ _id: before._id }, mongoOptions(options));
+    await indexFundPositionsCollection<IndexFundPosition>(db).deleteOne(
+      { _id: before._id },
+      mongoOptions(options)
+    );
     return { ok: true, position: null, legacyUnitsRedeemed };
   }
 
@@ -687,9 +676,10 @@ export async function insertFundTransaction(
   tx: Omit<IndexFundTransaction, "_id">,
   options?: FundQueryOptions
 ): Promise<ObjectId> {
-  const result = await db
-    .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
-    .insertOne(tx as IndexFundTransaction, mongoOptions(options));
+  const result = await indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne(
+    tx as IndexFundTransaction,
+    mongoOptions(options)
+  );
   return result.insertedId;
 }
 
@@ -704,9 +694,10 @@ export async function insertFundTransactionsBulk(
   options?: FundQueryOptions
 ): Promise<void> {
   if (txs.length === 0) return;
-  await db
-    .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
-    .insertMany(txs as IndexFundTransaction[], mongoOptions(options));
+  await indexFundTransactionsCollection<IndexFundTransaction>(db).insertMany(
+    txs as IndexFundTransaction[],
+    mongoOptions(options)
+  );
 }
 
 /** Load recent transactions for a fund, ordered by creation time descending. */
@@ -715,8 +706,7 @@ export async function listFundTransactions(
   fundId: ObjectId,
   limit = 50
 ): Promise<IndexFundTransaction[]> {
-  return db
-    .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
+  return indexFundTransactionsCollection<IndexFundTransaction>(db)
     .find({ fundId })
     .sort({ createdAt: -1 })
     .limit(limit)
@@ -729,8 +719,7 @@ export async function listCharacterFundTransactions(
   characterId: ObjectId,
   limit = 50
 ): Promise<IndexFundTransaction[]> {
-  return db
-    .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
+  return indexFundTransactionsCollection<IndexFundTransaction>(db)
     .find({ characterId })
     .sort({ createdAt: -1 })
     .limit(limit)
@@ -745,9 +734,9 @@ export async function enqueueRedemption(
   entry: Omit<IndexFundRedemptionQueueEntry, "_id">,
   options?: FundQueryOptions
 ): Promise<ObjectId> {
-  const result = await db
-    .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-    .insertOne(entry as IndexFundRedemptionQueueEntry, mongoOptions(options));
+  const result = await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(
+    db
+  ).insertOne(entry as IndexFundRedemptionQueueEntry, mongoOptions(options));
   return result.insertedId;
 }
 
@@ -756,8 +745,7 @@ export async function listPendingRedemptions(
   db: Db,
   fundId: ObjectId
 ): Promise<IndexFundRedemptionQueueEntry[]> {
-  return db
-    .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+  return indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db)
     .find({ fundId, status: { $in: ["queued", "partial"] } })
     .sort({ createdAt: 1 })
     .toArray();
@@ -775,13 +763,11 @@ export async function updateRedemptionEntry(
   >,
   options?: FundQueryOptions
 ): Promise<void> {
-  await db
-    .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-    .updateOne(
-      { _id: entryId },
-      { $set: { ...update, updatedAt: new Date() } },
-      mongoOptions(options)
-    );
+  await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).updateOne(
+    { _id: entryId },
+    { $set: { ...update, updatedAt: new Date() } },
+    mongoOptions(options)
+  );
 }
 
 // ── NAV snapshots ─────────────────────────────────────────────────────
@@ -791,7 +777,7 @@ export async function insertFundSnapshot(
   db: Db,
   snapshot: Omit<IndexFundSnapshot, "_id">
 ): Promise<void> {
-  await db.collection<IndexFundSnapshot>(FUND_SNAPSHOT_COLLECTION).updateOne(
+  await indexFundSnapshotsCollection<IndexFundSnapshot>(db).updateOne(
     { fundId: snapshot.fundId, turn: snapshot.turn },
     {
       $set: {
@@ -809,7 +795,7 @@ export async function insertFundSnapshotsBulk(
   snapshots: Omit<IndexFundSnapshot, "_id">[]
 ): Promise<void> {
   if (snapshots.length === 0) return;
-  await db.collection<IndexFundSnapshot>(FUND_SNAPSHOT_COLLECTION).bulkWrite(
+  await indexFundSnapshotsCollection<IndexFundSnapshot>(db).bulkWrite(
     snapshots.map((snapshot) => ({
       updateOne: {
         filter: { fundId: snapshot.fundId, turn: snapshot.turn },
@@ -827,8 +813,7 @@ export async function listFundSnapshots(
   fundId: ObjectId,
   limit = 30
 ): Promise<IndexFundSnapshot[]> {
-  return db
-    .collection<IndexFundSnapshot>(FUND_SNAPSHOT_COLLECTION)
+  return indexFundSnapshotsCollection<IndexFundSnapshot>(db)
     .find({ fundId })
     .sort({ turn: -1 })
     .limit(limit)
@@ -844,8 +829,7 @@ export async function listSnapshotsForFunds(
   const result = new Map<string, IndexFundSnapshot[]>();
   if (fundIds.length === 0) return result;
 
-  const rows = await db
-    .collection<IndexFundSnapshot>(FUND_SNAPSHOT_COLLECTION)
+  const rows = await indexFundSnapshotsCollection<IndexFundSnapshot>(db)
     .aggregate<{ _id: ObjectId; snapshots: IndexFundSnapshot[] }>([
       { $match: { fundId: { $in: fundIds } } },
       // Group key first so the {fundId, turn} index supplies the order.

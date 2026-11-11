@@ -27,12 +27,13 @@ import {
   AD_AGREEMENT_INDEX_PARTIES,
   AD_AGREEMENT_MIN_SHARE_BPS,
   AD_SETTLEMENT_INDEX_CORP_TURN,
-  ADVERTISING_AGREEMENTS_COLLECTION,
-  ADVERTISING_SETTLEMENTS_COLLECTION,
   type AdvertisingAgreement,
   type AdvertisingAgreementOffer,
   type AdvertisingSettlement,
 } from "./types";
+import { advertisingSettlementsCollection } from "@/lib/db/repositories/advertisingSettlements";
+import { advertisingAgreementsCollection } from "@/lib/db/repositories/advertisingAgreements";
+import type { Document } from "mongodb";
 
 export type ProposeAdvertisingAgreementResult =
   | { ok: true; agreement: AdvertisingAgreement }
@@ -105,8 +106,8 @@ function makeOffer(args: {
  * safe on standalone Mongo.
  */
 export async function ensureAdvertisingAgreementIndexes(db: Db): Promise<string[]> {
-  const agreements = db.collection(ADVERTISING_AGREEMENTS_COLLECTION);
-  const settlements = db.collection(ADVERTISING_SETTLEMENTS_COLLECTION);
+  const agreements = advertisingAgreementsCollection<Document>(db);
+  const settlements = advertisingSettlementsCollection<Document>(db);
   await agreements.createIndex(
     { buyerCorpId: 1, supplierCorpId: 1, status: 1 },
     { name: AD_AGREEMENT_INDEX_PARTIES }
@@ -177,7 +178,7 @@ export async function proposeAdvertisingAgreementPersistent(
     createdAt: now,
     updatedAt: now,
   };
-  const collection = db.collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION);
+  const collection = advertisingAgreementsCollection<AdvertisingAgreement>(db);
   await collection.insertOne(doc as never);
   return { ok: true, agreement: doc };
 }
@@ -208,7 +209,7 @@ export async function updateAdvertisingAgreementPersistent(
   db: Db,
   args: UpdateAdvertisingAgreementArgs
 ): Promise<UpdateAdvertisingAgreementResult> {
-  const collection = db.collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION);
+  const collection = advertisingAgreementsCollection<AdvertisingAgreement>(db);
   const agreement = await collection.findOne({ _id: args.agreementId } as never);
   if (!agreement) return { ok: false, reason: "not_found" };
 
@@ -355,7 +356,7 @@ export async function getAdvertisingAgreementsForCorp(
   db: Db,
   corpId: string
 ): Promise<AdvertisingAgreement[]> {
-  const collection = db.collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION);
+  const collection = advertisingAgreementsCollection<AdvertisingAgreement>(db);
   return collection
     .find({ $or: [{ buyerCorpId: corpId }, { supplierCorpId: corpId }] } as never)
     .toArray();
@@ -367,7 +368,7 @@ export async function getBuyerCommittedShareBps(
   buyerCorpId: string,
   turn: number
 ): Promise<number> {
-  const collection = db.collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION);
+  const collection = advertisingAgreementsCollection<AdvertisingAgreement>(db);
   const active = await collection
     .find({ buyerCorpId, status: { $in: ["active", "cancelling"] } } as never)
     .toArray();
@@ -392,7 +393,7 @@ export async function finalizeAdvertisingAgreementLifecycle(
   db: Db,
   turn: number
 ): Promise<{ expired: number; cancelled: number }> {
-  const collection = db.collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION);
+  const collection = advertisingAgreementsCollection<AdvertisingAgreement>(db);
   const now = new Date();
   // Legacy documents (no termVersion) carry boundaries one turn early.
   const expired = await collection.updateMany(
@@ -423,7 +424,7 @@ export async function upsertAdvertisingSettlement(
   db: Db,
   settlement: Omit<AdvertisingSettlement, "_id" | "updatedAt">
 ): Promise<void> {
-  const collection = db.collection<AdvertisingSettlement>(ADVERTISING_SETTLEMENTS_COLLECTION);
+  const collection = advertisingSettlementsCollection<AdvertisingSettlement>(db);
   await collection.updateOne(
     { corporationId: settlement.corporationId, turn: settlement.turn } as never,
     {
@@ -439,9 +440,9 @@ const AD_SETTLEMENT_RETENTION_TURNS = 8;
 /** One bounded deleteMany keeps the settlement collection from growing per turn. */
 export async function pruneAdvertisingSettlements(db: Db, turn: number): Promise<void> {
   if (!Number.isFinite(turn)) return;
-  await db
-    .collection<AdvertisingSettlement>(ADVERTISING_SETTLEMENTS_COLLECTION)
-    .deleteMany({ turn: { $lt: turn - AD_SETTLEMENT_RETENTION_TURNS } } as never);
+  await advertisingSettlementsCollection<AdvertisingSettlement>(db).deleteMany({
+    turn: { $lt: turn - AD_SETTLEMENT_RETENTION_TURNS },
+  } as never);
 }
 
 /**
@@ -455,8 +456,7 @@ export async function loadAdvertisingEfficacyByCorp(
 ): Promise<Map<string, { turn: number; factor: number }>> {
   const out = new Map<string, { turn: number; factor: number }>();
   if (!Number.isFinite(turn)) return out;
-  const rows = await db
-    .collection<AdvertisingSettlement>(ADVERTISING_SETTLEMENTS_COLLECTION)
+  const rows = await advertisingSettlementsCollection<AdvertisingSettlement>(db)
     .find(
       { turn } as never,
       {

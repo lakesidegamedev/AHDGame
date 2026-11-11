@@ -6,7 +6,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import { sectorCapacityBookAnchor } from "@/lib/corporations/sectorProfitBasis";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -22,12 +21,10 @@ import {
   getManufacturingProductKind,
 } from "@/lib/products/manufacturingCatalog";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
+import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -138,7 +135,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       })
       .toArray();
     const [project] = await Promise.all([
-      db.collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2).findOne({
+      manufacturingProductProjectsV2Collection<ManufacturingProductProject>(db).findOne({
         activeCorporationId: corporationId,
       }),
     ]);

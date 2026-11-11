@@ -21,6 +21,7 @@ import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { equityLiquidityFacilitySnapshotsCollection } from "@/lib/db/repositories/equityLiquidityFacilitySnapshots";
 
 // Each worker owns one fund's cash, escrow and inventory. Eight overlaps the
 // remote Mongo waits while remaining far below the driver's connection pool;
@@ -516,8 +517,10 @@ export async function refreshEquityLiquidityFacility(input: {
     snapshot.participatingFunds = participatingFunds.size;
   }
 
-  await db
-    .collection<EquityLiquidityFacilitySnapshot>(EQUITY_LIQUIDITY_SNAPSHOTS_COLLECTION)
-    .replaceOne({ turn }, snapshot, { upsert: true });
+  await equityLiquidityFacilitySnapshotsCollection<EquityLiquidityFacilitySnapshot>(db).replaceOne(
+    { turn },
+    snapshot,
+    { upsert: true }
+  );
   return snapshot;
 }

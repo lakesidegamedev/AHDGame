@@ -28,7 +28,6 @@ import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
 import {
   applyMoneyMove,
   resumeMoneyMove,
-  MONEY_MOVE_COLLECTION,
   type MoneyMove,
   type MoneyMoveLeg,
 } from "@/lib/banking/moneyMove";
@@ -74,10 +73,7 @@ import {
   idleRetireActive,
   idleRetireSectorShare,
 } from "@/lib/market/producerMarket/idleRetirementRules";
-import {
-  fundedLedgerRows,
-  PRODUCER_MARKET_OUTCOMES,
-} from "@/lib/market/producerMarket/fundedLedgerRules";
+import { fundedLedgerRows } from "@/lib/market/producerMarket/fundedLedgerRules";
 import type { ShadowCarryState } from "@/lib/market/producerMarket/shadowCarryRules";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
@@ -138,6 +134,10 @@ import type { Document } from "mongodb";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
 import { producerHouseholdSourceCollection } from "@/lib/db/repositories/producerHouseholdSource";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { producerPublicCarryCollection } from "@/lib/db/repositories/producerPublicCarry";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -157,8 +157,6 @@ export interface FundedProducerTurnResult {
 }
 
 export { producerStageEnv } from "./producerStageEnv";
-
-const PUBLIC_CARRY = "producerPublicCarry";
 
 /** The funded receipt a sector's settlement publishes to its own accounts. */
 export function fundedReceiptOf(
@@ -254,13 +252,13 @@ async function readPublicCarryIn(
   walletOf: (countryId: string) => string,
   rateOfCountry: (countryId: string) => number
 ): Promise<Map<string, LineCarry>> {
-  const doc = await db
-    .collection<{ _id: string; byCountry?: Record<string, LineCarry> }>(PUBLIC_CARRY)
-    .findOne({ _id: `${worldEpoch}:${openingTurn}` });
+  const doc = await producerPublicCarryCollection<{
+    _id: string;
+    byCountry?: Record<string, LineCarry>;
+  }>(db).findOne({ _id: `${worldEpoch}:${openingTurn}` });
   const out = new Map<string, LineCarry>();
   if (!doc?.byCountry) return out;
-  const wallets = await db
-    .collection<{ _id: string; cash: number }>(PRODUCER_ACCOUNTS)
+  const wallets = await producerEconomyAccountsCollection<{ _id: string; cash: number }>(db)
     .find({ _id: { $in: countryIds.map(walletOf) } }, { projection: { cash: 1 } })
     .toArray();
   const cash = new Map(wallets.map((w) => [w._id, w.cash]));
@@ -363,17 +361,15 @@ export async function runFundedProducerTurn(
   // from one read.
   const clearingOn = (input.env.clearingReferenceStage ?? 0) >= 1;
   const shortageOn = (input.env.shortageGrowthStage ?? 0) >= 1;
-  const lastOutcome = await db
-    .collection<{
-      _id: string;
-      clearingPrices?: Record<string, number>;
-      laneClearingPrices?: Record<string, number>;
-      bookPressure?: Record<string, number>;
-    }>(PRODUCER_MARKET_OUTCOMES)
-    .findOne(
-      { _id: `${worldEpoch}:${openingTurn}` },
-      { projection: { clearingPrices: 1, laneClearingPrices: 1, bookPressure: 1 } }
-    );
+  const lastOutcome = await producerMarketOutcomesCollection<{
+    _id: string;
+    clearingPrices?: Record<string, number>;
+    laneClearingPrices?: Record<string, number>;
+    bookPressure?: Record<string, number>;
+  }>(db).findOne(
+    { _id: `${worldEpoch}:${openingTurn}` },
+    { projection: { clearingPrices: 1, laneClearingPrices: 1, bookPressure: 1 } }
+  );
   const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
   const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
   const demandEnv = {
@@ -1251,7 +1247,7 @@ export async function runFundedProducerTurn(
       } as never,
       { upsert: true }
     );
-  await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).replaceOne(
+  await producerMarketOutcomesCollection<{ _id: string }>(db).replaceOne(
     { _id: `${worldEpoch}:${turn}` },
     {
       _id: `${worldEpoch}:${turn}`,
@@ -1310,7 +1306,7 @@ export async function runFundedProducerTurn(
   const paidByCountry = new Map(
     Object.entries((close?.meta?.paidByCountry as Record<string, number> | undefined) ?? {})
   );
-  await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).updateOne(
+  await producerMarketOutcomesCollection<{ _id: string }>(db).updateOne(
     { _id: `${worldEpoch}:${turn}` },
     {
       $set: {
@@ -1345,8 +1341,7 @@ export async function runFundedProducerTurn(
   ];
   const heldLocal = new Map(
     (
-      await db
-        .collection<{ _id: string; cash: number }>(PRODUCER_ACCOUNTS)
+      await producerEconomyAccountsCollection<{ _id: string; cash: number }>(db)
         .find(
           {
             _id: {
@@ -1382,7 +1377,7 @@ export async function runFundedProducerTurn(
     keptLocal.set(id, Math.min(held, keptTotal * rate));
   }
   if (carryShare > 0)
-    await db.collection<{ _id: string }>(PUBLIC_CARRY).replaceOne(
+    await producerPublicCarryCollection<{ _id: string }>(db).replaceOne(
       { _id: `${worldEpoch}:${turn}` },
       {
         _id: `${worldEpoch}:${turn}`,
@@ -1750,13 +1745,13 @@ const walletKey = (leg: { collection?: string; filter?: Record<string, unknown>;
 export async function reconcileAppliedFunding(db: Db, move: MoneyMove): Promise<boolean> {
   if (move.turn === undefined || !move.legs.every((l) => l.kind === "mint" || l.kind === "credit"))
     return false;
-  const records = db.collection<{
+  const records = bankMoneyMovesCollection<{
     _id: string;
     kind: string;
     turn?: number;
     status: string;
     legs: RecordedLeg[];
-  }>(MONEY_MOVE_COLLECTION);
+  }>(db);
   const original = await records.findOne({ _id: move.key });
   if (
     !original ||

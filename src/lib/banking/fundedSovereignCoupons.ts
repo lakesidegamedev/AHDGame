@@ -36,6 +36,7 @@ import {
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
@@ -87,7 +88,7 @@ let claimIndexReady: Promise<unknown> | null = null;
 
 /** The claim store, with its indexes ensured once per process. */
 export function sovereignCouponClaimStore(db: Db) {
-  const store = db.collection<SovereignCouponClaimRecord>(SOVEREIGN_COUPON_CLAIMS_COLLECTION);
+  const store = sovereignCouponClaimsCollection<SovereignCouponClaimRecord>(db);
   claimIndexReady ??= Promise.all([
     store.createIndex(
       { budgetId: 1, settledTurn: 1 },

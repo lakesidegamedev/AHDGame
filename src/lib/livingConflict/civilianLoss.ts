@@ -5,7 +5,6 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisInteraction, GlobalResponseOutcome } from "@/lib/db/types/crisis";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { ensureDemographicWorldEpoch } from "@/lib/demographics/worldEpoch";
@@ -18,8 +17,8 @@ import {
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { conflictCivilianLossHistoryCollection } from "@/lib/db/repositories/conflictCivilianLossHistory";
 
-const CONFLICT_CIVILIAN_LOSS_HISTORY = "conflictCivilianLossHistory";
 interface CivilianLossHistory extends ConflictCivilianLossResult {
   batchId: string;
   createdAt: Date;
@@ -132,7 +131,7 @@ export async function materializeConflictCivilianLossResults(
   createdAt: Date
 ): Promise<void> {
   if (!results.length) return;
-  await db.collection<CivilianLossHistory>(CONFLICT_CIVILIAN_LOSS_HISTORY).bulkWrite(
+  await conflictCivilianLossHistoryCollection<CivilianLossHistory>(db).bulkWrite(
     results.map((result) => ({
       updateOne: {
         filter: { _id: result._id, batchId },
@@ -142,8 +141,7 @@ export async function materializeConflictCivilianLossResults(
     })),
     { ordered: true }
   );
-  const recorded = await db
-    .collection<CivilianLossHistory>(CONFLICT_CIVILIAN_LOSS_HISTORY)
+  const recorded = await conflictCivilianLossHistoryCollection<CivilianLossHistory>(db)
     .find(
       { _id: { $in: results.map((result) => result._id) }, batchId },
       { projection: { _id: 1 } }

@@ -4,20 +4,11 @@
  * after a failed election, retaining the original registered electorate.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Campaign,
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-} from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { planRussianPresidentialBallot } from "./rules/presidentialSchedule";
-import {
-  RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION,
-  type RussianPresidentialResultRecord,
-} from "./presidentialElectionResult";
+import { type RussianPresidentialResultRecord } from "./presidentialElectionResult";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electionsCollection } from "@/lib/db/repositories/elections";
@@ -25,6 +16,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianPresidentialElectionResultsCollection } from "@/lib/db/repositories/russianPresidentialElectionResults";
 
 export async function materializeRussianPresidentialFollowup(input: {
   db: Db;
@@ -38,9 +30,7 @@ export async function materializeRussianPresidentialFollowup(input: {
   const { db, session, predecessorElectionId, electionId, candidateIds, turn, now } = input;
   if (!session.inTransaction() || !Number.isFinite(now.getTime()))
     throw new Error("Russian followup needs an active transaction and time");
-  const results = db.collection<RussianPresidentialResultRecord>(
-    RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION
-  );
+  const results = russianPresidentialElectionResultsCollection<RussianPresidentialResultRecord>(db);
   const result = await results.findOne(
     { _id: predecessorElectionId.toHexString(), preset: "1991-default", countryId: "RU" },
     { session }

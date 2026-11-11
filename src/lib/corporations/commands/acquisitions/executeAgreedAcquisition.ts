@@ -9,12 +9,8 @@ import {
 import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, ImperialCharacter } from "@/lib/db/types";
-import type { IndexFund } from "@/lib/db/types";
-import {
-  EQUITY_MARKET_POOLS_COLLECTION,
-  type EquityMarketPool,
-} from "@/lib/db/types/equityMarketPool";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { type EquityMarketPool } from "@/lib/db/types/equityMarketPool";
 import { equityPoolCurrency } from "@/lib/equities/marketPool";
 import type { AcquisitionOffer, AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";
 import {
@@ -48,7 +44,6 @@ import { assertMergerClearance } from "@/lib/corporations/mergerReview/gate";
 import { attachMergerRemedy } from "@/lib/corporations/mergerReview/lifecycle";
 import type { AcquisitionSettlement } from "@/lib/db/types/acquisitionSettlement";
 import type { MergerReview } from "@/lib/db/types/mergerReview";
-import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
 import {
   bankTransferConflict,
   hasFundedSovereignEscrow,
@@ -81,6 +76,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -421,9 +418,10 @@ async function runAgreedAcquisition(
         )
       : null,
     floatPaid
-      ? db
-          .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-          .findOne({ _id: equityPoolCurrency(target) }, { projection: { _id: 1 } })
+      ? equityMarketPoolsCollection<EquityMarketPool>(db).findOne(
+          { _id: equityPoolCurrency(target) },
+          { projection: { _id: 1 } }
+        )
       : null,
   ]);
   const currencyByHolderHex: Record<string, string> = {};
@@ -942,9 +940,9 @@ async function finishCommitTail(
   currentTurn: number
 ): Promise<ExecuteAgreedAcquisitionResult> {
   if (settlement.remedyReviewId) {
-    const review = await db
-      .collection<MergerReview>(MERGER_REVIEWS)
-      .findOne({ _id: new ObjectId(settlement.remedyReviewId) });
+    const review = await mergerReviewsCollection<MergerReview>(db).findOne({
+      _id: new ObjectId(settlement.remedyReviewId),
+    });
     if (review) {
       await attachMergerRemedy(db, review, settlement.acquirerCorporationId, currentTurn);
     }

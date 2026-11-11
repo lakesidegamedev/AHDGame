@@ -5,11 +5,10 @@
  * country flickering across the line does not repeat the headline).
  */
 import type { Db } from "mongodb";
-import type { Crisis } from "@/lib/db/types/crisis";
 import { createSystemNewsPost } from "@/lib/news";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./template";
-import { MARKET_ADJUSTMENT_SIGNALS } from "./signals";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { marketAdjustmentSignalsCollection } from "@/lib/db/repositories/marketAdjustmentSignals";
 
 const HEADLINE_OPEN_AT = 3;
 const HEADLINE_CLOSE_BELOW = 2;
@@ -29,7 +28,7 @@ export async function syncWorldHeadline(db: Db): Promise<"opened" | "closed" | n
     )
     .toArray();
   const countriesOpen = new Set(crises.flatMap((c) => c.countryIds ?? [])).size;
-  const docs = db.collection<{ _id: string; headlineOpen?: boolean }>(MARKET_ADJUSTMENT_SIGNALS);
+  const docs = marketAdjustmentSignalsCollection<{ _id: string; headlineOpen?: boolean }>(db);
   const wasOpen = (await docs.findOne({ _id: WORLD_DOC_ID }))?.headlineOpen === true;
   const nowOpen = nextHeadlineState(wasOpen, countriesOpen);
   if (nowOpen === wasOpen) return null;

@@ -15,8 +15,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { collectBalances } from "@/lib/ledger/balanceSnapshot";
-import { SOVEREIGN_COUPON_CLAIMS_COLLECTION } from "@/lib/banking/fundedSovereignCoupons";
-import { NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION } from "@/lib/db/nonAtomicMoneyFlow";
 import type { GameState } from "@/lib/db/types/gameState";
 import {
   economyResetFullWipeCollections,
@@ -44,6 +42,8 @@ import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/play
 import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { nonAtomicMoneyFlowReceiptsCollection } from "@/lib/db/repositories/nonAtomicMoneyFlowReceipts";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -318,8 +318,7 @@ async function loadSource(
         }
       )
       .toArray(),
-    db
-      .collection<Document>(SOVEREIGN_COUPON_CLAIMS_COLLECTION)
+    sovereignCouponClaimsCollection<Document>(db)
       .find({ settledTurn: { $exists: false } })
       .toArray(),
     federalBudgetCollection<Document>(db)
@@ -355,9 +354,7 @@ async function loadSource(
       .toArray(),
     playerIncomeTaxAssessmentsCollection<Document>(db).countDocuments(VOIDED_INCOME_TAX_FILTER),
     playerIncomeTaxAssessmentsCollection<Document>(db).countDocuments({ status: "collected" }),
-    db
-      .collection(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION)
-      .countDocuments({ status: "in_progress" }),
+    nonAtomicMoneyFlowReceiptsCollection<Document>(db).countDocuments({ status: "in_progress" }),
     bankMoneyMovesCollection(db)
       .find({ status: "partial" }, { projection: { kind: 1, turn: 1, legs: 1 } })
       .toArray(),

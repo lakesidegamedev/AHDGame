@@ -5,19 +5,10 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { settleBgFoundingMandates } from "./rules/foundingMandates1990";
 import { BG_1990_REGION_CAPACITY } from "./data/foundingDistricts1990";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -31,6 +22,8 @@ import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVot
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
+import { bgFoundingAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/bgFoundingAssemblyOfficeArchives";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -61,7 +54,7 @@ async function materializeBgFoundingAssemblySeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Bulgarian handover needs an active transaction, cycle, turn and time");
-  const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
+  const journal = bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `BG:founding1990:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "certified") return false;
   const game = await gameStateCollection(db).findOne(
@@ -218,18 +211,16 @@ async function materializeBgFoundingAssemblySeating(input: {
     .find({ countryId: "BG", officeType: { $in: ["assemblyDeputy"] } }, { session })
     .toArray();
   if (incumbents.length)
-    await db
-      .collection<BgFoundingAssemblyArchive>(BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION)
-      .insertMany(
-        incumbents.map((official) => ({
-          _id: `${receipt._id}:${official._id.toHexString()}`,
-          countryId: "BG" as const,
-          receiptId: receipt._id,
-          turn,
-          official,
-        })),
-        { session }
-      );
+    await bgFoundingAssemblyOfficeArchivesCollection<BgFoundingAssemblyArchive>(db).insertMany(
+      incumbents.map((official) => ({
+        _id: `${receipt._id}:${official._id.toHexString()}`,
+        countryId: "BG" as const,
+        receiptId: receipt._id,
+        turn,
+        official,
+      })),
+      { session }
+    );
   for (const isNpc of [false, true]) {
     const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.updateMany(

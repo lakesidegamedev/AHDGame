@@ -5,23 +5,15 @@
  */
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CountryGameState } from "@/lib/db/types";
 import type { Bond } from "@/lib/db/types/bond";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { CURRENCY_ANCHOR_COUNTRY, type CurrencyCode } from "@/lib/constants/currencies";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { resolveBondCurrency } from "@/lib/bonds/resolveBondCurrency";
 import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import { hashSettlementPayload, type FederationSettlementIntentRecord } from "./settlementIntent";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "./runtimeEntities";
-import {
-  FEDERATION_FISCAL_ACCOUNTS_COLLECTION,
-  type FederationFiscalAccount,
-} from "./materializeFiscalAccounts";
+import { type FederationSettlementApplicationRecord } from "./runtimeEntities";
+import { type FederationFiscalAccount } from "./materializeFiscalAccounts";
 import type { SuccessionAccountingSnapshot } from "./normalizeLiveFinances";
 import {
   allocateSuccessionAmount,
@@ -39,8 +31,10 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 import { federationSettlementIntentsCollection } from "@/lib/db/repositories/federationSettlementIntents";
+import { federationFiscalAccountsCollection } from "@/lib/db/repositories/federationFiscalAccounts";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { federationContinuingServiceTurnsCollection } from "@/lib/db/repositories/federationContinuingServiceTurns";
 
-const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
 export interface FederationContinuingServiceTurn {
   _id: string;
   applicationId: string;
@@ -77,17 +71,14 @@ export async function materializeContinuingFederationServiceTurn(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Continuing service needs a transaction, application, turn and time");
-  const receipts = db.collection<FederationContinuingServiceTurn>(
-    FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION
-  );
+  const receipts = federationContinuingServiceTurnsCollection<FederationContinuingServiceTurn>(db);
   const receiptId = `${applicationId}:${turn}`;
   const existing = await receipts.findOne({ _id: receiptId }, { session });
   if (existing) return existing;
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
   if (!application || application.appliedOnTurn > turn)
     throw new Error("Continuing service needs an applied federation settlement");
   const sourceCountryId = application.sourceEntityId as CountryId;
@@ -124,8 +115,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
     Object.values(originalPrincipal).some((value) => !Number.isSafeInteger(value) || value < 0)
   )
     throw new Error("Continuing service lacks approved inherited creditor contracts");
-  const accounts = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
+  const accounts = await federationFiscalAccountsCollection<FederationFiscalAccount>(db)
     .find({ applicationId }, { session })
     .toArray();
   const issuer = accounts.filter((account) => account.kind === "continuing-state");
@@ -283,9 +273,9 @@ export async function materializeContinuingFederationServiceTurn(input: {
       },
     },
   }));
-  const accountUpdated = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
-    .bulkWrite(accountWrites, { session });
+  const accountUpdated = await federationFiscalAccountsCollection<FederationFiscalAccount>(
+    db
+  ).bulkWrite(accountWrites, { session });
   if (accountUpdated.matchedCount !== accounts.length)
     throw new Error("Continuing successor duty changed during service");
   // The ordinary sovereign budget already expenses coupons and retires maturity
@@ -323,8 +313,7 @@ export async function processContinuingFederationServiceTurn(
   now: Date,
   bondSnapshot?: readonly Bond[]
 ): Promise<number> {
-  const accounts = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
+  const accounts = await federationFiscalAccountsCollection<FederationFiscalAccount>(db)
     .find({ kind: "continuing-state" }, { projection: { applicationId: 1 } })
     .toArray();
   for (const account of accounts)

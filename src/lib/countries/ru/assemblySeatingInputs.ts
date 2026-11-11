@@ -4,14 +4,7 @@
  * missing or incompatible winners as explicit vacancies in the seating plan.
  */
 import { type ClientSession, type Db, ObjectId } from "mongodb";
-import type {
-  NPP,
-  CountryGameState,
-  ElectedOfficial,
-  State,
-  GameState,
-  Election,
-} from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
@@ -23,14 +16,8 @@ import {
   russianFirstAssemblyTermEndTurn,
   russianFirstAssemblyOfficeCompatible,
 } from "./rules/assemblyOwnerEligibility";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_COUNCIL_RESULTS_COLLECTION,
-  type RussianCouncilResultRecord,
-} from "./councilElectionResult";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
+import { type RussianCouncilResultRecord } from "./councilElectionResult";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -40,6 +27,8 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 function currentOfficeType(office: NPP["currentOffice"] | string) {
   return typeof office === "string" ? office : office?.type;
 }
@@ -91,26 +80,24 @@ export async function loadRussianAssemblySeatingInputs(
     return null;
   const dumaRoot = country.ruFirstDumaElectionCohortId;
   const councilRoot = country.ruFirstCouncilElectionCohortId;
-  const duma = await db
-    .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-    .findOne(
-      {
-        countryId: "RU",
-        preset: "1991-default",
-        $or: [{ cohortId: dumaRoot }, { rootCohortId: dumaRoot }],
-      },
-      { session, sort: { generation: -1 } }
-    );
-  const council = await db
-    .collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION)
-    .findOne(
-      {
-        countryId: "RU",
-        preset: "1991-default",
-        $or: [{ cohortId: councilRoot }, { rootCohortId: councilRoot }],
-      },
-      { session, sort: { generation: -1 } }
-    );
+  const duma = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db).findOne(
+    {
+      countryId: "RU",
+      preset: "1991-default",
+      $or: [{ cohortId: dumaRoot }, { rootCohortId: dumaRoot }],
+    },
+    { session, sort: { generation: -1 } }
+  );
+  const council = await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(
+    db
+  ).findOne(
+    {
+      countryId: "RU",
+      preset: "1991-default",
+      $or: [{ cohortId: councilRoot }, { rootCohortId: councilRoot }],
+    },
+    { session, sort: { generation: -1 } }
+  );
   if (!duma || !council) return null;
   for (const [receipt, root] of [
     [duma, dumaRoot],

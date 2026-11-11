@@ -10,7 +10,6 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getRateDoc, rateFromDoc } from "@/lib/world/forex";
-import type { ExchangeRate } from "@/lib/db/types";
 import { buildSeedExpectations, expectedPrimeRate, type SeedExpectations } from "./expectations";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -21,8 +20,8 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { seedDiagnosticBaselinesCollection } from "@/lib/db/repositories/seedDiagnosticBaselines";
 
-const BASELINE_COLLECTION = "seedDiagnosticBaselines";
 export const BASELINE_ID = "current" as const;
 
 export interface SeedDiagnosticBaseline {
@@ -198,9 +197,9 @@ export function reconstructMetricsFromExpectations(
  * Load the singleton baseline, or null if missing.
  */
 export async function loadSeedBaseline(db: Db): Promise<SeedDiagnosticBaseline | null> {
-  const doc = await db
-    .collection<SeedDiagnosticBaseline>(BASELINE_COLLECTION)
-    .findOne({ _id: BASELINE_ID });
+  const doc = await seedDiagnosticBaselinesCollection<SeedDiagnosticBaseline>(db).findOne({
+    _id: BASELINE_ID,
+  });
   if (!doc || typeof doc.metrics !== "object" || doc.metrics == null) return null;
   return doc;
 }
@@ -236,9 +235,11 @@ export async function captureSeedBaseline(
     metrics,
   };
 
-  await db
-    .collection<SeedDiagnosticBaseline>(BASELINE_COLLECTION)
-    .replaceOne({ _id: BASELINE_ID }, baseline, { upsert: true });
+  await seedDiagnosticBaselinesCollection<SeedDiagnosticBaseline>(db).replaceOne(
+    { _id: BASELINE_ID },
+    baseline,
+    { upsert: true }
+  );
 
   return baseline;
 }

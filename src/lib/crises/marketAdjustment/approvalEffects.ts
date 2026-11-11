@@ -5,15 +5,14 @@
  * `approvalRules.ts`.
  */
 import type { Db } from "mongodb";
-import type { Crisis } from "@/lib/db/types/crisis";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { FADE_TURNS, marketAdjustmentApproval } from "./approvalRules";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./template";
-import { MARKET_ADJUSTMENT_SIGNALS } from "./signals";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { macroMetricsHistoryCollection } from "@/lib/db/repositories/macroMetricsHistory";
+import { marketAdjustmentSignalsCollection } from "@/lib/db/repositories/marketAdjustmentSignals";
 
 /** marketAdjustmentStage at which the unemployment term counts. */
 const UNEMPLOYMENT_TERM_STAGE = 2;
@@ -67,8 +66,7 @@ export async function loadMarketAdjustmentEffects(
   }
   const docIds = [...new Set(docIdOf.values())];
   const [signals, histories, metrics] = await Promise.all([
-    db
-      .collection<{ _id: string; points?: Point[] }>(MARKET_ADJUSTMENT_SIGNALS)
+    marketAdjustmentSignalsCollection<{ _id: string; points?: Point[] }>(db)
       .find({ _id: { $in: countryIds } })
       .toArray(),
     macroMetricsHistoryCollection<{ _id: string; economic?: { unemploymentRate?: Point[] } }>(db)

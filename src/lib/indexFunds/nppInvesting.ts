@@ -23,16 +23,11 @@ import type { NPP, IndexFund, IndexFundPosition, IndexFundTransaction } from "@/
 import { isIndexFundsEnabled } from "@/lib/indexFunds/featureFlag";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import {
-  FUND_POSITION_COLLECTION,
-  FUND_TRANSACTION_COLLECTION,
-  listActiveFunds,
-} from "@/lib/indexFunds/fundQueries";
+import { listActiveFunds } from "@/lib/indexFunds/fundQueries";
 import { processNppFundRedemptions, type NppRiskArchetype } from "@/lib/indexFunds/nppRedemption";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { JP_NPP_INVESTING_MINIMUM } from "@/lib/countries/jp/economy";
-import type { GameConfig } from "@/lib/db/types";
 import { accountId } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import { isLedgerShadowEnabledFromConfig } from "@/lib/ledger/featureFlag";
@@ -40,6 +35,8 @@ import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 // ── GDP per capita by country (USD-equivalent, annual) ────────────────
 // These are approximate 2024 GDP per capita figures used to determine NPP
@@ -394,9 +391,10 @@ export async function processNPPFundInvestments(
   const navByFundId = new Map(activeFunds.map((f) => [String(f._id), f.quotedNav]));
   const fundValueByNpp = new Map<string, number>();
   if (npps.length > 0) {
-    const positionCursor = db
-      .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-      .find({ holderKind: "npp" }, { projection: { nppId: 1, fundId: 1, units: 1 } });
+    const positionCursor = indexFundPositionsCollection<IndexFundPosition>(db).find(
+      { holderKind: "npp" },
+      { projection: { nppId: 1, fundId: 1, units: 1 } }
+    );
     for await (const pos of positionCursor) {
       if (!pos.nppId) continue;
       const nav = navByFundId.get(String(pos.fundId));
@@ -627,8 +625,7 @@ export async function processNPPFundInvestments(
   const distinctNppIds = [...new Set(planned.map((p) => String(p.nppId)))].map(
     (id) => new ObjectId(id)
   );
-  const existingPositions = await db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
+  const existingPositions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find(
       { holderKind: "npp", nppId: { $in: distinctNppIds } },
       { projection: { fundId: 1, nppId: 1, units: 1, avgNavAnchor: 1 } }
@@ -701,9 +698,9 @@ export async function processNPPFundInvestments(
 
     if (completed.transactions !== "none") {
       await attempt("remove subscription transactions", async () => {
-        const result = await db
-          .collection(FUND_TRANSACTION_COLLECTION)
-          .deleteMany({ _id: { $in: txDocs.map((doc) => doc._id) } });
+        const result = await indexFundTransactionsCollection<Document>(db).deleteMany({
+          _id: { $in: txDocs.map((doc) => doc._id) },
+        });
         assertCompensationCount(
           "transaction compensation",
           result.deletedCount,
@@ -714,9 +711,9 @@ export async function processNPPFundInvestments(
     }
     if (completed.positionInserts !== "none") {
       await attempt("remove inserted NPP positions", async () => {
-        const result = await db
-          .collection(FUND_POSITION_COLLECTION)
-          .deleteMany({ _id: { $in: positionInsertDocs.map((doc) => doc._id) } });
+        const result = await indexFundPositionsCollection<Document>(db).deleteMany({
+          _id: { $in: positionInsertDocs.map((doc) => doc._id) },
+        });
         assertCompensationCount(
           "inserted-position compensation",
           result.deletedCount,
@@ -750,9 +747,9 @@ export async function processNPPFundInvestments(
             },
           };
         });
-        const result = await db
-          .collection(FUND_POSITION_COLLECTION)
-          .bulkWrite(undoOps, { ordered: false });
+        const result = await indexFundPositionsCollection<Document>(db).bulkWrite(undoOps, {
+          ordered: false,
+        });
         assertCompensationCount(
           "position compensation",
           result.modifiedCount,
@@ -825,17 +822,16 @@ export async function processNPPFundInvestments(
     }
     if (positionUpdateOps.length > 0) {
       completed.positionUpdates = "uncertain";
-      const result = await db
-        .collection(FUND_POSITION_COLLECTION)
-        .bulkWrite(positionUpdateOps, { ordered: false });
+      const result = await indexFundPositionsCollection<Document>(db).bulkWrite(positionUpdateOps, {
+        ordered: false,
+      });
       assertBulkWriteCount("NPP position credits", result.modifiedCount, positionUpdateOps.length);
       completed.positionUpdates = "confirmed";
     }
     if (positionInsertDocs.length > 0) {
       completed.positionInserts = "uncertain";
-      const result = await db
-        .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
-        .insertMany(positionInsertDocs);
+      const result =
+        await indexFundPositionsCollection<IndexFundPosition>(db).insertMany(positionInsertDocs);
       assertBulkWriteCount(
         "NPP position inserts",
         Object.keys(result.insertedIds).length,
@@ -845,9 +841,8 @@ export async function processNPPFundInvestments(
     }
     if (txDocs.length > 0) {
       completed.transactions = "uncertain";
-      const result = await db
-        .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
-        .insertMany(txDocs);
+      const result =
+        await indexFundTransactionsCollection<IndexFundTransaction>(db).insertMany(txDocs);
       assertBulkWriteCount(
         "NPP transaction inserts",
         Object.keys(result.insertedIds).length,

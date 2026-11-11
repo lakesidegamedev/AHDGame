@@ -13,7 +13,6 @@
 import type { Db } from "mongodb";
 import type { Character, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { bankBalanceSheet } from "@/lib/banking/rules/balanceSheet";
 import { getReserveRequirement } from "@/lib/banking/reserves";
 import { loadBankingTelemetry, type BankingTelemetryDoc } from "@/lib/banking/telemetry";
@@ -24,6 +23,7 @@ import { buildSavingsComparison, readCohort, type SavingsComparison } from "@/li
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface CurrencyBankingHealth {
   currency: CurrencyCode;
@@ -163,10 +163,13 @@ export async function buildBankingHealth(db: Db, now = new Date()): Promise<Bank
     currencies.push(health);
   }
 
-  const unfinished = await db
-    .collection<{ _id: string; kind: string; turn?: number; createdAt: Date; status: string }>(
-      MONEY_MOVE_COLLECTION
-    )
+  const unfinished = await bankMoneyMovesCollection<{
+    _id: string;
+    kind: string;
+    turn?: number;
+    createdAt: Date;
+    status: string;
+  }>(db)
     .find({ status: "partial" })
     .sort({ createdAt: 1 })
     .limit(500)

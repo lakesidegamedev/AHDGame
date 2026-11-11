@@ -12,7 +12,7 @@ import { settleTransition } from "@/lib/banking/settlementJournal";
 import { snapshotTreasuryCurrency } from "@/lib/ledger/balanceSnapshot";
 import type { BankingTransition } from "@/lib/banking/rules/boundary";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface FiscalImpact {
   fromSurplus: number;
@@ -224,14 +224,14 @@ export async function refundTreasurySpend(
     return;
   }
   if (!context) throw new Error("Funded Treasury refund requires its frozen cash context");
-  const spend = await db
-    .collection<{ _id: string; status?: string; legs?: { applied?: boolean }[] }>(
-      MONEY_MOVE_COLLECTION
-    )
-    .findOne(
-      { _id: `treasury-spend:${witness.key}` },
-      { projection: { status: 1, "legs.applied": 1 } }
-    );
+  const spend = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    legs?: { applied?: boolean }[];
+  }>(db).findOne(
+    { _id: `treasury-spend:${witness.key}` },
+    { projection: { status: 1, "legs.applied": 1 } }
+  );
   const landed =
     !!spend && spend.status !== "rejected" && (spend.legs ?? []).every((leg) => leg.applied);
   if (!landed) return;

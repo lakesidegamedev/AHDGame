@@ -3,11 +3,11 @@
 import { calibratedPoolTarget } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
 import type { EquityMarketPool } from "@/lib/db/types";
-import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { debitEquityPoolGated, EQUITY_POOL_M2_SHARE } from "./marketPool";
 import { poolConservationResidual } from "./poolConservation";
 import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 const EQUITY_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
 const EQUITY_POOL_SWEEP_TO_MULTIPLE = 1.5;
@@ -56,10 +56,7 @@ export async function processEquityMarketPoolTurn(
   activeCurrencies: CurrencyCode[];
   sweptLocalByCurrency: Record<string, number>;
 }> {
-  const pools = await db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-    .find({})
-    .toArray();
+  const pools = await equityMarketPoolsCollection<EquityMarketPool>(db).find({}).toArray();
   const result = {
     poolsProcessed: 0,
     activeCurrencies: pools.map((pool) => pool._id),
@@ -105,7 +102,7 @@ export async function processEquityMarketPoolTurn(
           `more than seed + inflows - outflows`
       );
     }
-    await db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).updateOne(
+    await equityMarketPoolsCollection<EquityMarketPool>(db).updateOne(
       { _id: pool._id },
       {
         $set: {

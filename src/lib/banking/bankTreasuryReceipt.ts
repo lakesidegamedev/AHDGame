@@ -30,6 +30,8 @@ import {
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bankTreasuryTradesCollection } from "@/lib/db/repositories/bankTreasuryTrades";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 export function reserveTransition(
   receipt: BankTreasuryTradeReceipt,
@@ -519,21 +521,19 @@ export function cashTransition(
 }
 
 export async function ensurePoolExists(db: Db, currency: CurrencyCode, now: Date): Promise<void> {
-  await db
-    .collection<{ _id: CurrencyCode } & Record<string, unknown>>(BOND_MARKET_POOLS_COLLECTION)
-    .updateOne(
-      { _id: currency },
-      {
-        $setOnInsert: {
-          cashLocal: 0,
-          targetCashLocal: 0,
-          lifetime: {},
-          createdAt: now,
-          updatedAt: now,
-        },
+  await bondMarketPoolsCollection<{ _id: CurrencyCode } & Record<string, unknown>>(db).updateOne(
+    { _id: currency },
+    {
+      $setOnInsert: {
+        cashLocal: 0,
+        targetCashLocal: 0,
+        lifetime: {},
+        createdAt: now,
+        updatedAt: now,
       },
-      { upsert: true }
-    );
+    },
+    { upsert: true }
+  );
 }
 
 export async function finishTransition(
@@ -732,12 +732,10 @@ export async function updateReceipt(
   status: BankTreasuryTradeReceipt["status"],
   error?: string
 ): Promise<void> {
-  await db
-    .collection<BankTreasuryTradeReceipt>(BANK_TREASURY_TRADES_COLLECTION)
-    .updateOne(
-      { _id: receipt._id, status: "open" },
-      { $set: { status, updatedAt: new Date(), ...(error ? { error } : {}) } }
-    );
+  await bankTreasuryTradesCollection<BankTreasuryTradeReceipt>(db).updateOne(
+    { _id: receipt._id, status: "open" },
+    { $set: { status, updatedAt: new Date(), ...(error ? { error } : {}) } }
+  );
 }
 
 export async function runReceipt(

@@ -4,7 +4,7 @@
  * authorizeRussianConstitutionalMandate records only its bound enacted decision.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Bill, Character, CountryGameState, GameState } from "@/lib/db/types";
+import type { Bill, Character, GameState } from "@/lib/db/types";
 import { getCountryConfigForRuntime } from "@/lib/constants/countries";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
@@ -14,8 +14,8 @@ import {
 } from "./rules/constitutionalDecisions";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianConstitutionalProposalsCollection } from "@/lib/db/repositories/russianConstitutionalProposals";
 
-const RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION = "russianConstitutionalProposals";
 export interface RussianConstitutionalProposal {
   _id: string;
   preset: "1991-default";
@@ -78,9 +78,7 @@ export async function materializeRussianConstitutionalProposal(input: {
     config.legislature.lowerChamber.seats < 1
   )
     throw new RussianConstitutionalDecisionConflict("no-legislature");
-  const proposals = db.collection<RussianConstitutionalProposal>(
-    RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION
-  );
+  const proposals = russianConstitutionalProposalsCollection<RussianConstitutionalProposal>(db);
   const proposalId = `1991-default:ru-constitution:${kind}`;
   const existing = await proposals.findOne({ _id: proposalId }, { session });
   if (existing) {
@@ -172,9 +170,7 @@ export async function authorizeRussianConstitutionalMandate(input: {
   const { db, session, proposalId, game, turn, now } = input;
   if (!session.inTransaction() || !Number.isFinite(now.getTime()))
     throw new Error("Constitutional authorization needs a transaction and time");
-  const proposals = db.collection<RussianConstitutionalProposal>(
-    RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION
-  );
+  const proposals = russianConstitutionalProposalsCollection<RussianConstitutionalProposal>(db);
   const proposal = await proposals.findOne(
     { _id: proposalId, status: "open", preset: "1991-default" },
     { session }
@@ -252,8 +248,9 @@ export async function processRussianConstitutionalMandates(
   now: Date
 ): Promise<number> {
   if (game.preset !== "1991-default") return 0;
-  const proposals = await db
-    .collection<RussianConstitutionalProposal>(RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION)
+  const proposals = await russianConstitutionalProposalsCollection<RussianConstitutionalProposal>(
+    db
+  )
     .find(
       {
         preset: "1991-default",
@@ -301,8 +298,9 @@ export async function loadRussianConstitutionalDecisions(
     { _id: "RU" },
     { projection: markerProjection }
   );
-  const proposals = await db
-    .collection<RussianConstitutionalProposal>(RUSSIAN_CONSTITUTIONAL_PROPOSALS_COLLECTION)
+  const proposals = await russianConstitutionalProposalsCollection<RussianConstitutionalProposal>(
+    db
+  )
     .find(
       { _id: { $in: kinds.map((kind) => `1991-default:ru-constitution:${kind}`) } },
       { projection: { kind: 1, billId: 1, revision: 1, status: 1 } }

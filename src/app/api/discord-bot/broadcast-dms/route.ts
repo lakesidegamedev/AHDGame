@@ -6,7 +6,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
-import { BROADCAST_DMS_COLLECTION, type BroadcastDmDoc } from "@/lib/broadcastDms";
+import { type BroadcastDmDoc } from "@/lib/broadcastDms";
+import { broadcastDmsCollection } from "@/lib/db/repositories/broadcastDms";
 
 // GET /api/discord-bot/broadcast-dms - Returns queued, unsent broadcast DMs for the bot to deliver.
 // Auth: requireBotToken (private key only)
@@ -25,8 +26,7 @@ export async function GET(request: Request) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();
-    const docs = await db
-      .collection<BroadcastDmDoc>(BROADCAST_DMS_COLLECTION)
+    const docs = await broadcastDmsCollection<BroadcastDmDoc>(db)
       .find({
         deliveredAt: null,
         $or: [{ failedAt: null }, { failedAt: { $exists: false } }],
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const collection = db.collection<BroadcastDmDoc>(BROADCAST_DMS_COLLECTION);
+    const collection = broadcastDmsCollection<BroadcastDmDoc>(db);
     const now = new Date();
     let marked = 0;
 

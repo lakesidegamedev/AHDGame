@@ -5,23 +5,16 @@
  */
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, ElectedOfficial, Election, NPP, GameState } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import {
   RUSSIAN_DUMA_AUTHORITY_PROJECTION,
-  RUSSIAN_DUMA_CONVOCATIONS_COLLECTION,
   loadRussianDumaAuthority,
   type RussianDumaConvocationRecord,
 } from "./dumaConvocationAuthority";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION,
-  RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION,
   type RussianAssemblySeatingRecord,
   type RussianAssemblyOfficeArchive,
 } from "./assemblySeating";
@@ -42,6 +35,10 @@ import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
 import type { Document } from "mongodb";
 import { russianCouncilCompositionSeatingsCollection } from "@/lib/db/repositories/russianCouncilCompositionSeatings";
+import { russianDumaConvocationsCollection } from "@/lib/db/repositories/russianDumaConvocations";
+import { russianAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/russianAssemblyOfficeArchives";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -72,9 +69,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
   if (!authority?.record) throw new Error("Ordinary Duma seating lacks its bound authority");
   const opening = authority.record;
   if (turn >= opening.termEndTurn) return false;
-  const journals = db.collection<RussianAssemblySeatingRecord>(
-    RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION
-  );
+  const journals = russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db);
   const latest = (
     await journals
       .find(
@@ -96,7 +91,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
       .limit(1)
       .toArray()
   )[0];
-  const receipts = db.collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION);
+  const receipts = russianDumaElectionResultsCollection<RussianDumaResultRecord>(db);
   const preview = (
     await receipts
       .find(
@@ -441,18 +436,16 @@ export async function materializeRussianDumaConvocationSeating(input: {
   const retired = physical.filter((row) => retireIds.some((id) => id.equals(row._id)));
   const officials = electedOfficialsCollection(db);
   if (retired.length) {
-    await db
-      .collection<RussianAssemblyOfficeArchive>(RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION)
-      .insertMany(
-        retired.map((official) => ({
-          _id: `${seatingId}:${official._id.toHexString()}`,
-          preset: "1991-default",
-          seatingId,
-          turn,
-          official,
-        })),
-        { session }
-      );
+    await russianAssemblyOfficeArchivesCollection<RussianAssemblyOfficeArchive>(db).insertMany(
+      retired.map((official) => ({
+        _id: `${seatingId}:${official._id.toHexString()}`,
+        preset: "1991-default",
+        seatingId,
+        turn,
+        official,
+      })),
+      { session }
+    );
     const deleted = await officials.deleteMany(
       { countryId: "RU" as const, officeType: "dumaDeputy" as const, _id: { $in: retireIds } },
       { session }
@@ -650,19 +643,17 @@ export async function materializeRussianDumaConvocationSeating(input: {
     },
     { session }
   );
-  const bound = await db
-    .collection<RussianDumaConvocationRecord>(RUSSIAN_DUMA_CONVOCATIONS_COLLECTION)
-    .updateOne(
-      { _id: opening._id, revision: opening.revision ?? { $exists: false } },
-      {
-        $set: {
-          ...(opening.seatedOnTurn == null ? { seatedOnTurn: turn } : {}),
-          resultId: receipt._id,
-          revision,
-        },
+  const bound = await russianDumaConvocationsCollection<RussianDumaConvocationRecord>(db).updateOne(
+    { _id: opening._id, revision: opening.revision ?? { $exists: false } },
+    {
+      $set: {
+        ...(opening.seatedOnTurn == null ? { seatedOnTurn: turn } : {}),
+        resultId: receipt._id,
+        revision,
       },
-      { session }
-    );
+    },
+    { session }
+  );
   if (bound.matchedCount !== 1) throw new Error("Duma seating journal changed at final receipt");
   return true;
 }

@@ -38,6 +38,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-stranded-payout";
 const PAYOUT_KIND = "sovereign_maturity_payout";
@@ -111,8 +112,7 @@ export function repairStrandedPayoutLeg(
 }
 
 async function survey(db: Db): Promise<PayoutPatch[]> {
-  const records = await db
-    .collection<PayoutRecord>(MONEY_MOVE_COLLECTION)
+  const records = await bankMoneyMovesCollection<PayoutRecord>(db)
     .find({ kind: PAYOUT_KIND, status: "partial" })
     .toArray();
   // Batch every read: one $in for the bonds, one per holder kind for targets.
@@ -224,7 +224,7 @@ async function apply(db: Db, healPlan: HealPlan, _ctx: HealContext): Promise<Hea
   for (const payout of payouts) {
     for (const { index, from, to } of payout.patches) {
       const path = `legs.${index}`;
-      const result = await db.collection<PayoutRecord>(MONEY_MOVE_COLLECTION).updateOne(
+      const result = await bankMoneyMovesCollection<PayoutRecord>(db).updateOne(
         {
           _id: payout.key,
           kind: PAYOUT_KIND,

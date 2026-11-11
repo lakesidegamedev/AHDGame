@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { GameConfig } from "@/lib/db/types";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import {
   BANK_FAILURE_MEMORY_TURNS,
@@ -8,6 +7,7 @@ import {
   type BankFailurePoliticalEffects,
 } from "./rules/failurePolitics";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bankFailurePoliticalEventsCollection } from "@/lib/db/repositories/bankFailurePoliticalEvents";
 
 export const BANK_FAILURE_EVENTS = "bankFailurePoliticalEvents";
 export async function loadBankFailureEffects(
@@ -23,8 +23,7 @@ export async function loadBankFailureEffects(
     enabled = config?.privateBankingEnabled === true;
   }
   if (!enabled) return new Map();
-  let events = await db
-    .collection<BankFailurePoliticalEvent>(BANK_FAILURE_EVENTS)
+  let events = await bankFailurePoliticalEventsCollection<BankFailurePoliticalEvent>(db)
     .find(
       {
         $or: [
@@ -48,7 +47,7 @@ export async function loadBankFailureEffects(
   // already cleared its book. Activate that cohort in one write, not per bank.
   const pending = events.filter((event) => event.paidTurn == null);
   if (pending.length > 0) {
-    const collection = db.collection<BankFailurePoliticalEvent>(BANK_FAILURE_EVENTS);
+    const collection = bankFailurePoliticalEventsCollection<BankFailurePoliticalEvent>(db);
     const activated = await collection.bulkWrite(
       pending.map((event) => ({
         updateOne: {

@@ -15,6 +15,7 @@ import {
   validateRussianDumaConvocationClock,
 } from "./rules/dumaConvocation";
 import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
+import { russianDumaConvocationsCollection } from "@/lib/db/repositories/russianDumaConvocations";
 
 export const RUSSIAN_DUMA_CONVOCATIONS_COLLECTION = "russianDumaConvocations";
 export interface RussianDumaConvocationRecord {
@@ -135,9 +136,10 @@ export async function loadCurrentRussianDumaClock(input: {
     return null;
   const current = country.ruDumaCurrentConvocationCohortId;
   if (current) {
-    const row = await db
-      .collection<RussianDumaConvocationRecord>(RUSSIAN_DUMA_CONVOCATIONS_COLLECTION)
-      .findOne({ _id: current.toHexString() }, { session });
+    const row = await russianDumaConvocationsCollection<RussianDumaConvocationRecord>(db).findOne(
+      { _id: current.toHexString() },
+      { session }
+    );
     if (!row) throw new Error("Current Duma lacks its seating journal");
     validateRecord(row, country, turn);
     if (
@@ -231,9 +233,10 @@ export async function loadRussianDumaAuthority(input: {
   if (!country.ruDumaConvocationCohortId) return { number: 1, record: null };
   if (!country.ruFirstDumaElectionCohortId || !country.ruFirstCouncilElectionCohortId)
     throw new Error("Ordinary Duma cannot replace missing first Assembly roots");
-  const record = await db
-    .collection<RussianDumaConvocationRecord>(RUSSIAN_DUMA_CONVOCATIONS_COLLECTION)
-    .findOne({ _id: root.toHexString() }, { session });
+  const record = await russianDumaConvocationsCollection<RussianDumaConvocationRecord>(db).findOne(
+    { _id: root.toHexString() },
+    { session }
+  );
   if (!record) throw new Error("Ordinary Duma campaign lacks its immutable journal");
   validateRecord(record, country, turn);
   if (record.electoralMandate) {

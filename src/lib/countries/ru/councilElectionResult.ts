@@ -4,18 +4,8 @@
  * actual owners, records vacancies and keeps Congress until joint chamber handover.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
 import { loadRussianCouncilCertificationInputs } from "./councilCertificationInputs";
 import {
   resolveRussianCouncilCohort,
@@ -28,6 +18,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
 export const RUSSIAN_COUNCIL_RESULTS_COLLECTION = "russianCouncilElectionResults";
 export interface RussianCouncilResultRecord {
   _id: string;
@@ -66,7 +58,7 @@ export async function materializeRussianCouncilElectionResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Council certification needs an active transaction, turn and time");
-  const results = db.collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION);
+  const results = russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(db);
   const previous = await results.findOne({ _id: cohortId.toHexString() }, { session });
   if (previous) {
     if (
@@ -107,22 +99,22 @@ export async function materializeRussianCouncilElectionResult(input: {
     )
   )
     throw new Error("The first Council constitutional mandate changed");
-  const opening = await db
-    .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
-    .findOne(
-      { _id: cohortId.toHexString() },
-      {
-        session,
-        projection: {
-          cohortId: 1,
-          countryId: 1,
-          preset: 1,
-          mandateSinceTurn: 1,
-          electionIds: 1,
-          registeredBySubject: 1,
-        },
-      }
-    );
+  const opening = await russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(
+    db
+  ).findOne(
+    { _id: cohortId.toHexString() },
+    {
+      session,
+      projection: {
+        cohortId: 1,
+        countryId: 1,
+        preset: 1,
+        mandateSinceTurn: 1,
+        electionIds: 1,
+        registeredBySubject: 1,
+      },
+    }
+  );
   if (
     !opening ||
     opening.countryId !== "RU" ||

@@ -4,11 +4,12 @@
  * contract; completed legacy modern settlements never reuse an older slate.
  */
 import type { ClientSession, Collection, Db } from "mongodb";
-import type { GameState } from "@/lib/db/types";
 import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { HU_2011_COUNTS_COLLECTION } from "./assemblyCount2011";
 import type { HuListNominations } from "./rules/listVacancies1991";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
 export type HuListAssemblyReceipt = Pick<
   Hu1991AssemblyRecord,
   | "_id"
@@ -25,9 +26,9 @@ export function huListParentCollection(
   receiptId: string
 ): Collection<HuListAssemblyReceipt> {
   if (receiptId.startsWith("HU:mixed2011:"))
-    return db.collection<HuListAssemblyReceipt>(HU_2011_COUNTS_COLLECTION);
+    return hu2011AssemblyCountsCollection<HuListAssemblyReceipt>(db);
   if (receiptId.startsWith("HU:mixed1989:"))
-    return db.collection<HuListAssemblyReceipt>(HU_1991_COUNTS_COLLECTION);
+    return hu1991AssemblyCountsCollection<HuListAssemblyReceipt>(db);
   throw new Error("Unknown Hungarian list parent receipt");
 }
 export async function readHuListAssemblyReceipt(db: Db, session?: ClientSession) {

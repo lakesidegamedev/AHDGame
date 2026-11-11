@@ -48,7 +48,6 @@ import {
   computeBlocStress,
   type BlocStressBreakdown,
 } from "@/lib/alignment/blocStress";
-import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { resolveGameYear } from "@/lib/era/era";
 import { getAllCountryAccess } from "@/lib/countryAccess";
@@ -67,13 +66,13 @@ import { getOrganizationProposalsCollection } from "@/lib/db/collections";
 import { ORG_PROPOSAL_VOTING_TURNS } from "@/lib/constants/internationalOrganizations";
 import {
   saveSphereMembership,
-  SPHERE_MEMBERSHIPS_COLLECTION,
   type PersistedSphereMembership,
 } from "@/lib/world/spheres/membershipStore";
 import { loadAlignmentTopology } from "@/lib/alignment/topology";
 import { loadBackgroundStancePulls } from "@/lib/alignment/backgroundStancePulls";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMemberships";
 
 // Membership pull lives in `drift.ts` as `membershipPullForTurn`, alongside the
 // ceiling it is bounded by.
@@ -233,8 +232,7 @@ async function processEnabledAlignmentTurn(
 
   // Sphere memberships exist for macro-tier entities, every one of which
   // alignment now seeds. Loaded once rather than per row.
-  const sphereDocs = await db
-    .collection<PersistedSphereMembership>(SPHERE_MEMBERSHIPS_COLLECTION)
+  const sphereDocs = await sphereMembershipsCollection<PersistedSphereMembership>(db)
     .find({})
     .toArray();
   const sphereByEntity = new Map(sphereDocs.map((d) => [d.entityId, d]));

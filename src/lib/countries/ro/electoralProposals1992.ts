@@ -4,14 +4,7 @@
  * for later campaigns; both chambers and presidential promulgation are required.
  */
 import { ObjectId, type AnyBulkWriteOperation, type ClientSession, type Db } from "mongodb";
-import type {
-  Bill,
-  Character,
-  CountryGameState,
-  GameState,
-  Election,
-  ElectionVoteTally,
-} from "@/lib/db/types";
+import type { Bill, Character, GameState, Election } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { calendarTurn } from "@/lib/utils/gameDate";
@@ -21,7 +14,6 @@ import {
 } from "./rules/electoralDecision1992";
 
 import { RO_1992_DEPUTIES_BY_REGION, RO_1992_SENATORS_BY_REGION } from "./rules/parliament1992";
-import type { CountryState } from "@/lib/db/types/countryState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
@@ -30,6 +22,7 @@ import { billsCollection } from "@/lib/db/repositories/bills";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { ro1992ElectoralProposalsCollection } from "@/lib/db/repositories/ro1992ElectoralProposals";
 
 export const RO_1992_PROPOSALS_COLLECTION = "ro1992ElectoralProposals";
 const ID = "1991-default:ro-electoral:parliament1992";
@@ -93,7 +86,7 @@ export async function materializeRo1992ElectoralProposal(input: {
     throw new Error("Romanian electoral proposal needs a transaction, turn and time");
   const allowed = await availability(db, game, turn, session);
   if (!allowed.available) throw new Ro1992ElectoralConflict(allowed.reason);
-  const proposals = db.collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION);
+  const proposals = ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
     if (!Number.isSafeInteger(prior.revision) || prior.revision < 1)
@@ -193,7 +186,7 @@ async function authorizeRo1992ElectoralProposal(
 ) {
   if (!session.inTransaction())
     throw new Error("Romanian electoral authorization needs a transaction");
-  const proposals = db.collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION);
+  const proposals = ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db);
   const proposal = await proposals.findOne({ _id: ID, status: "open" }, { session });
   if (!proposal || !(await availability(db, game, turn, session)).available) return false;
   if (
@@ -256,9 +249,9 @@ async function authorizeRo1992ElectoralProposal(
 export async function loadRo1992ElectoralDecision(db: Db, game: Calendar, turn: number) {
   if (game.preset !== "1991-default") return null;
   const allowed = await availability(db, game, turn);
-  const proposal = await db
-    .collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID });
+  const proposal = await ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db).findOne({
+    _id: ID,
+  });
   const bill = proposal
     ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
@@ -288,9 +281,10 @@ export async function processRo1992ElectoralMandate(
   now: Date
 ) {
   if (game.preset !== "1991-default") return false;
-  const proposal = await db
-    .collection<Ro1992ElectoralProposal>(RO_1992_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
+  const proposal = await ro1992ElectoralProposalsCollection<Ro1992ElectoralProposal>(db).findOne(
+    { _id: ID, status: "open" },
+    { projection: { billId: 1 } }
+  );
   if (
     !proposal ||
     !(await billsCollection(db).findOne(

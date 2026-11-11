@@ -11,9 +11,10 @@ import {
   computeEvidenceBasedPremiumAnnualRate,
   computeInsurancePremium,
 } from "@/lib/banking/rules/insurance";
-import { MONEY_MOVE_COLLECTION, turnMoveKey } from "@/lib/banking/moneyMove";
+import { turnMoveKey } from "@/lib/banking/moneyMove";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Banking-turn inputs and compare filters for the insurance premium stage.
@@ -74,8 +75,7 @@ export async function loadInsurancePremiumReceiptsForTurn(
   const keys = banks.map(({ bankId, charteredTurn }) =>
     insurancePremiumReceiptKey(bankId, charteredTurn, turn)
   );
-  const receipts = await db
-    .collection<FrozenInsurancePremiumReceipt>(MONEY_MOVE_COLLECTION)
+  const receipts = await bankMoneyMovesCollection<FrozenInsurancePremiumReceipt>(db)
     .find({ _id: { $in: keys } })
     .toArray();
   return new Map(receipts.map((receipt) => [receipt._id, receipt]));
@@ -304,9 +304,9 @@ export async function settleInsurancePremiumForTurn(
   const key = insurancePremiumReceiptKey(input.bankId, input.charteredTurn, input.turn);
   let existing = priorReceipt;
   if (existing === undefined) {
-    existing = await db
-      .collection<FrozenInsurancePremiumReceipt>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: key });
+    existing = await bankMoneyMovesCollection<FrozenInsurancePremiumReceipt>(db).findOne({
+      _id: key,
+    });
   }
 
   if (existing) {
@@ -440,9 +440,9 @@ export async function settleInsurancePremiumForTurn(
   });
 
   if (receipt.status === "replayed") {
-    const winner = await db
-      .collection<FrozenInsurancePremiumReceipt>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: key });
+    const winner = await bankMoneyMovesCollection<FrozenInsurancePremiumReceipt>(db).findOne({
+      _id: key,
+    });
     const quote = winner ? quoteFromReceipt(winner) : null;
     if (!winner || !quote) {
       throw new Error("Concurrent insurance premium receipt has no valid frozen quote");

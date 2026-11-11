@@ -3,7 +3,7 @@
  * resumeLiquidityAdvances completes admitted commands after interrupted delivery.
  */
 import { type Db, type Document } from "mongodb";
-import type { CentralBank, GameConfig, MonetaryOperationRecord } from "@/lib/db/types";
+import type { CentralBank, MonetaryOperationRecord } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -27,6 +27,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { monetaryOperationCommandsCollection } from "@/lib/db/repositories/monetaryOperationCommands";
+import { bankLiquidityOperationsCollection } from "@/lib/db/repositories/bankLiquidityOperations";
 
 const COLLECTION = "bankLiquidityOperations";
 export class LiquidityAdvanceRejected extends Error {}
@@ -68,7 +69,9 @@ export async function existingLiquidityAdvance(
   db: Db,
   input: Pick<LiquidityAdvanceCommand, "operationId" | "countryId" | "amount" | "reason">
 ): Promise<boolean> {
-  const receipt = await db.collection<Receipt>(COLLECTION).findOne({ _id: input.operationId });
+  const receipt = await bankLiquidityOperationsCollection<Receipt>(db).findOne({
+    _id: input.operationId,
+  });
   if (!receipt) return false;
   matches(receipt, input);
   return receipt.status !== "rejected";
@@ -91,7 +94,7 @@ export async function executeLiquidityAdvance(
     )
   )
     throw new LiquidityAdvanceRejected("Operation ID already belongs to another monetary command");
-  const receipts = db.collection<Receipt>(COLLECTION);
+  const receipts = bankLiquidityOperationsCollection<Receipt>(db);
   let receipt = await receipts.findOne({ _id: input.operationId });
   if (!receipt) {
     const config = await gameConfigCollection(db).findOne(
@@ -182,7 +185,7 @@ async function finishLiquidityAdvance(
   receipt: Receipt,
   cooldownTurns: number
 ): Promise<MonetaryOperationRecord> {
-  const receipts = db.collection<Receipt>(COLLECTION);
+  const receipts = bankLiquidityOperationsCollection<Receipt>(db);
   if (receipt.status === "applied" && receipt.result) {
     await releaseMonetaryCommandReservation(db, receipt.bankId, receipt._id);
     return receipt.result;
@@ -411,8 +414,7 @@ async function finishLiquidityAdvance(
 
 /** Recover durable pending commands before new banking flows inspect their cash. */
 export async function resumeLiquidityAdvances(db: Db, cooldownTurns: number): Promise<void> {
-  const pending = await db
-    .collection<Receipt>(COLLECTION)
+  const pending = await bankLiquidityOperationsCollection<Receipt>(db)
     .find({ status: { $in: ["planning", "admitted"] } })
     .limit(100)
     .toArray();
@@ -420,9 +422,10 @@ export async function resumeLiquidityAdvances(db: Db, cooldownTurns: number): Pr
     try {
       await finishLiquidityAdvance(db, receipt, cooldownTurns);
     } catch (error) {
-      const current = await db
-        .collection<Receipt>(COLLECTION)
-        .findOne({ _id: receipt._id }, { projection: { status: 1 } });
+      const current = await bankLiquidityOperationsCollection<Receipt>(db).findOne(
+        { _id: receipt._id },
+        { projection: { status: 1 } }
+      );
       if (current?.status !== "rejected") throw error;
     }
   }

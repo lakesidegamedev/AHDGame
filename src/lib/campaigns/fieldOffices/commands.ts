@@ -35,6 +35,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 export const FIELD_OFFICES_COLLECTION = "campaignFieldOffices";
 
@@ -125,7 +126,7 @@ export async function openFieldOffice(params: {
     subdivisionId: params.subdivisionId ?? null,
   });
 
-  const offices = db.collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION);
+  const offices = campaignFieldOfficesCollection<CampaignFieldOffice>(db);
   const cap = FIELD_OFFICE_CAP;
   const cost = getFieldOfficeCostAnchor(rules);
   const [rates, priceLevel, preset, turn] = await Promise.all([
@@ -265,9 +266,10 @@ export async function closeFieldOffice(params: {
 }): Promise<{ closed: boolean }> {
   const { db, campaignId, officeId, user } = params;
   await loadContext(db, campaignId, user);
-  const res = await db
-    .collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION)
-    .deleteOne({ _id: officeId, campaignId });
+  const res = await campaignFieldOfficesCollection<CampaignFieldOffice>(db).deleteOne({
+    _id: officeId,
+    campaignId,
+  });
   if (res.deletedCount === 0) throw notFound("Field office not found");
   await campaignsCollection(db).updateOne(
     { _id: campaignId, fieldOfficeCount: { $gt: 0 } },

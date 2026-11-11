@@ -5,20 +5,12 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  GameState,
-  NPP,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { ensureBoundedNpcCandidateGuards } from "@/lib/admin/seed/indexes/boundedNpcCandidates";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import {
   materializeRussianCouncilElectionOpening,
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
   type RussianCouncilOpeningRecord,
 } from "./councilElectionOpening";
 import { loadRussianCouncilOpeningBinding } from "./councilOpeningBinding";
@@ -31,6 +23,7 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export async function materializeRussianCouncilNpcAdmission(input: {
   db: Db;
@@ -75,7 +68,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     !country.ruDumaNpcAdmissionCohortId?.equals(country.ruFirstDumaElectionCohortId)
   )
     return null;
-  const openings = db.collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION);
+  const openings = russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(db);
   const binding = await loadRussianCouncilOpeningBinding({ db, session, country, cohortId, turn });
   if (!binding) throw new Error("Council admission lost its opening receipt");
   const { opening: receipt, rootCohortId } = binding;

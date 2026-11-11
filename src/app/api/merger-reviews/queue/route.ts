@@ -6,7 +6,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
 import type { CountryId } from "@/lib/constants/countries";
 import type { MergerReview } from "@/lib/db/types/mergerReview";
-import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
 import { getGameState } from "@/lib/gameState";
 import { getEnactedLevel } from "@/lib/politicalLegislation/enactedLevels";
@@ -23,6 +22,7 @@ import {
 } from "@/lib/corporations/mergerReview/constants";
 import type { MergerReviewSummary } from "../route";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
 
 /**
  * National referral queue for the officeholder's seat, plus referrals that
@@ -70,7 +70,7 @@ async function handleGET() {
     ]);
     if (blocked.has(authority.countryId as CountryId)) return NextResponse.json({ applies: false });
 
-    const reviews = db.collection<MergerReview>(MERGER_REVIEWS);
+    const reviews = mergerReviewsCollection<MergerReview>(db);
     const [pendingDocs, decidedDocs] = await Promise.all([
       reviews
         .find({ status: "pending", countryId: authority.countryId })

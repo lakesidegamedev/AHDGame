@@ -19,7 +19,7 @@ import {
 } from "./treasuryLedger";
 import type { BankingTransition, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
-import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
@@ -1075,8 +1075,7 @@ export async function loadSoeRemittanceReceipts(
   corpIds: readonly ObjectId[]
 ): Promise<Map<string, SoeRemittanceReceipt>> {
   if (corpIds.length === 0) return new Map();
-  const rows = await db
-    .collection<SoeRemittanceReceipt>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<SoeRemittanceReceipt>(db)
     .find(
       { _id: { $in: corpIds.map((id) => soeRemittanceKey(turn, id)) } },
       {
@@ -1185,11 +1184,11 @@ async function resumeSoeRemittanceReceipt(
  * the same key. Partial receipts and malformed transitions do not qualify.
  */
 async function refusedBeforeAnyCashMoved(db: Db, key: string): Promise<boolean> {
-  const receipt = await db
-    .collection<{ _id: string; status?: string; legs?: MoneyMoveRecordLeg[] }>(
-      MONEY_MOVE_COLLECTION
-    )
-    .findOne({ _id: key }, { projection: { status: 1, legs: 1 } });
+  const receipt = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    legs?: MoneyMoveRecordLeg[];
+  }>(db).findOne({ _id: key }, { projection: { status: 1, legs: 1 } });
   const legs = receipt?.legs ?? [];
   return (
     receipt?.status === "rejected" &&

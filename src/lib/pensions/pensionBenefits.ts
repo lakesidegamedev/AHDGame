@@ -23,7 +23,7 @@ import {
   pensionBenefitsDueForTurn,
   pensionRetirementsForTurn,
 } from "./rules";
-import { PENSION_SCHEMES } from "./schemeAssets";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 export interface PensionBenefitsResult {
   schemesPaying: number;
@@ -57,8 +57,7 @@ export async function runPensionBenefitsTurn(
     errors: [],
   };
 
-  const schemes = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
+  const schemes = await pensionSchemesCollection<PensionScheme>(db)
     .find({ liabilitiesAnchor: { $gt: 0 } })
     .toArray();
   if (schemes.length === 0) return result;
@@ -85,7 +84,7 @@ export async function runPensionBenefitsTurn(
       // between the read and the write, the payment simply does not happen
       // rather than driving the balance negative. A pension scheme with
       // negative assets would be a mint wearing a disguise.
-      const update = await db.collection<PensionScheme>(PENSION_SCHEMES).updateOne(
+      const update = await pensionSchemesCollection<PensionScheme>(db).updateOne(
         { _id: scheme._id, assetsAnchor: { $gte: payment.paidAnchor } },
         {
           $inc: {

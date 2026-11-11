@@ -11,10 +11,8 @@ import type { Db } from "mongodb";
 import { BOND_UNIT_FACE_VALUE, perTurnCouponPayment } from "@/lib/constants/bonds";
 import { getSecurityTelemetryCollection } from "@/lib/db/collections/researchTelemetry";
 import type { Bond } from "@/lib/db/types/bond";
-import { BOND_MARKET_POOLS_COLLECTION, type BondMarketPool } from "@/lib/db/types/bondMarketPool";
+import { type BondMarketPool } from "@/lib/db/types/bondMarketPool";
 import type { ShareOrder } from "@/lib/db/types/corporation";
-import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import type { LongHorizonContext } from "@/lib/telemetry/longHorizon/telemetry";
 import {
@@ -34,6 +32,7 @@ import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /** Trade kinds that are price-forming executions between two parties. */
 const EXECUTION_KINDS = ["market_buy", "market_sell", "limit_fill", "peer_fill", "listing_fill"];
@@ -115,7 +114,7 @@ export async function buildSecurityTelemetryRowForTurn(
         holders: 1,
       })
       .toArray(),
-    db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).find({}).toArray(),
+    bondMarketPoolsCollection<BondMarketPool>(db).find({}).toArray(),
     exchangeRatesCollection(db).find({}).toArray(),
   ]);
 

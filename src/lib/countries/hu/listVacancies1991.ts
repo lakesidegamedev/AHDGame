@@ -5,7 +5,7 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { Character, ElectedOfficial, NPP } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { huListParentCollection, readHuListAssemblyReceipt } from "./listAssemblyReceipt";
@@ -22,6 +22,7 @@ import { governmentFormationsCollection } from "@/lib/db/repositories/government
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import type { Document } from "mongodb";
 import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
+import { hu1991ListReplacementsCollection } from "@/lib/db/repositories/hu1991ListReplacements";
 
 export const HU_1991_LIST_REPLACEMENTS_COLLECTION = "hu1991ListReplacements";
 interface ReplacementReceipt {
@@ -60,8 +61,7 @@ async function readContext(db: Db, turn: number, session?: ClientSession) {
       }
     )
     .toArray();
-  const history = await db
-    .collection<ReplacementReceipt>(HU_1991_LIST_REPLACEMENTS_COLLECTION)
+  const history = await hu1991ListReplacementsCollection<ReplacementReceipt>(db)
     .find(
       { parentReceiptId: parent._id },
       { session, projection: { replacement: 1, generation: 1, reason: 1, turn: 1 } }
@@ -369,7 +369,7 @@ export async function designateHu1991ListDeputy(input: {
         },
         { session }
       );
-    await db.collection<ReplacementReceipt>(HU_1991_LIST_REPLACEMENTS_COLLECTION).insertOne(
+    await hu1991ListReplacementsCollection<ReplacementReceipt>(db).insertOne(
       {
         _id: id,
         parentReceiptId: context.parent._id,
@@ -431,8 +431,7 @@ export async function advanceHu1991ListVacancy(db: Db, turn: number, now: Date):
 }
 
 export async function loadHu1991ListReplacementHistory(db: Db) {
-  return db
-    .collection<ReplacementReceipt>(HU_1991_LIST_REPLACEMENTS_COLLECTION)
+  return hu1991ListReplacementsCollection<ReplacementReceipt>(db)
     .find(
       {},
       {

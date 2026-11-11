@@ -17,7 +17,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { CollectiveAgreement, Union } from "@/lib/db/types";
+import type { Union } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -45,6 +45,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
 import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 export { PENSION_SCHEMES };
 
@@ -68,9 +69,9 @@ async function ensurePensionScheme(
   union: Pick<Union, "_id" | "countryId" | "name">,
   currentTurn: number
 ): Promise<PensionScheme> {
-  const existing = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
-    .findOne({ unionId: union._id });
+  const existing = await pensionSchemesCollection<PensionScheme>(db).findOne({
+    unionId: union._id,
+  });
   if (existing) return existing;
 
   const now = new Date();
@@ -88,14 +89,12 @@ async function ensurePensionScheme(
     updatedAt: now,
   };
   try {
-    await db.collection<PensionScheme>(PENSION_SCHEMES).insertOne(scheme);
+    await pensionSchemesCollection<PensionScheme>(db).insertOne(scheme);
     return scheme;
   } catch {
     // Lost the race against a concurrent settlement; the unique index did its
     // job and the other writer's document is the one that counts.
-    const raced = await db
-      .collection<PensionScheme>(PENSION_SCHEMES)
-      .findOne({ unionId: union._id });
+    const raced = await pensionSchemesCollection<PensionScheme>(db).findOne({ unionId: union._id });
     if (raced) return raced;
     throw new Error(`Could not create or load a pension scheme for union ${union._id.toString()}`);
   }
@@ -256,7 +255,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
         fxRate
       );
 
-      await db.collection<PensionScheme>(PENSION_SCHEMES).updateOne(
+      await pensionSchemesCollection<PensionScheme>(db).updateOne(
         { _id: scheme._id },
         {
           $inc: {

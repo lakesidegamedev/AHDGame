@@ -6,7 +6,6 @@
  * copyDoc / scaleNumeric). Task 5 adds the bulk/composite/re-home policies.
  */
 import { BSON, ObjectId } from "mongodb";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { splitExtractionFields } from "./rules/extraction";
 import { splitRegionalFinance } from "./rules/regionalFinance";
 import { ENERGY_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetEnergy";
@@ -18,6 +17,7 @@ import type { FanoutScope } from "./fanoutPolicy";
 import { CAPITAL_SUBREGION, secessionSource, type SecedingCountryId } from "./subRegions";
 import { gdpWeights, partitionByGdp, populationWeights, splitCountVector } from "./apportion";
 import { getPath, setPath, scaleDeep } from "./docScale";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface FanoutContext {
   /** The successor country every fanned-out document joins. */
@@ -192,12 +192,11 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
             : []
         );
         if (keys.length) {
-          const receipts = await db
-            .collection<{
-              _id: string;
-              status: string;
-              projections?: Array<{ applied?: boolean }>;
-            }>(MONEY_MOVE_COLLECTION)
+          const receipts = await bankMoneyMovesCollection<{
+            _id: string;
+            status: string;
+            projections?: Array<{ applied?: boolean }>;
+          }>(db)
             .find({ _id: { $in: keys } }, { projection: { status: 1, projections: 1 } })
             .toArray();
           if (

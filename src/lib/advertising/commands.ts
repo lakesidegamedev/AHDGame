@@ -17,17 +17,13 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { CorporateSector } from "@/lib/db/types";
 import { effectiveMediaOperatingModelId } from "@/lib/mediaOperatingModels/catalog";
 import { isAdvertisingAgreementsEnabled } from "@/lib/advertising/featureFlag";
 import {
   advertisingAgreementProposalSchema,
   advertisingAgreementUpdateSchema,
 } from "@/lib/api/schemas/advertisingAgreements";
-import {
-  ADVERTISING_AGREEMENTS_COLLECTION,
-  type AdvertisingAgreement,
-} from "@/lib/advertising/types";
+import { type AdvertisingAgreement } from "@/lib/advertising/types";
 import {
   getAdvertisingAgreementsForCorp,
   getBuyerCommittedShareBps,
@@ -37,6 +33,7 @@ import {
 import { countAdvertisingMediaSectorModels } from "@/lib/advertising/suppliers";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { advertisingAgreementsCollection } from "@/lib/db/repositories/advertisingAgreements";
 
 function serializeAdvertisingAgreement(agreement: AdvertisingAgreement) {
   return {
@@ -258,9 +255,9 @@ export async function updateAdvertisingAgreement(
       return errorResponse(403, "Advertising agreements are not enabled in this world");
     }
 
-    const agreement = await db
-      .collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION)
-      .findOne({ _id: agreementId } as never);
+    const agreement = await advertisingAgreementsCollection<AdvertisingAgreement>(db).findOne({
+      _id: agreementId,
+    } as never);
     if (!agreement) {
       return errorResponse(404, "Agreement not found");
     }

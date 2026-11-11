@@ -4,11 +4,7 @@ import { type Db, type ObjectId, type Document, type AnyBulkWriteOperation } fro
 import type { IndexFund, IndexFundRedemptionQueueEntry } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import {
-  getFundById,
-  listPendingRedemptions,
-  FUND_REDEMPTION_QUEUE_COLLECTION,
-} from "./fundQueries";
+import { getFundById, listPendingRedemptions } from "./fundQueries";
 import { loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "./fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
@@ -28,6 +24,7 @@ import {
 } from "./queuedPayoutSettlement";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
 
 /**
  * Queue claims one redemption pass may make, shared by every fund in the pass.
@@ -74,8 +71,7 @@ export async function prepareQueuedRedemptionPass(
     loadedPending ??
     (fundIds.length === 0
       ? []
-      : await db
-          .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+      : await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db)
           .find({ fundId: { $in: fundIds }, status: { $in: ["queued", "partial"] } })
           .sort({ createdAt: 1 })
           .toArray());
@@ -287,52 +283,48 @@ export async function processQueuedRedemptions(
     // Fence this claim before liquidation or payout. Its frozen journal, not
     // current prices or an acknowledgement, determines every recovery.
     const claimId = randomUUID();
-    const entry = await db
-      .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-      .findOneAndUpdate(
-        {
-          _id: pendingEntry._id,
-          status: pendingEntry.status,
-          units: pendingEntry.units,
-          paidAmountAnchor: pendingEntry.paidAmountAnchor,
-          pendingSettlementProjection: { $exists: false },
+    const entry = await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(
+      db
+    ).findOneAndUpdate(
+      {
+        _id: pendingEntry._id,
+        status: pendingEntry.status,
+        units: pendingEntry.units,
+        paidAmountAnchor: pendingEntry.paidAmountAnchor,
+        pendingSettlementProjection: { $exists: false },
+      },
+      {
+        $set: {
+          status: "processing",
+          settlementClaimId: claimId,
+          processingTurn: currentTurn,
+          processingStartedAt: new Date(),
+          updatedAt: new Date(),
         },
-        {
-          $set: {
-            status: "processing",
-            settlementClaimId: claimId,
-            processingTurn: currentTurn,
-            processingStartedAt: new Date(),
-            updatedAt: new Date(),
-          },
-          $unset: { payoutPlan: "" },
-        },
-        { returnDocument: "before" }
-      );
+        $unset: { payoutPlan: "" },
+      },
+      { returnDocument: "before" }
+    );
     if (!entry) continue;
     const restoreQueueClaim = async () => {
-      await db
-        .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-        .updateOne(
-          { _id: entry._id, status: "processing", settlementClaimId: claimId },
-          {
-            $set: { status: entry.status, updatedAt: new Date() },
-            $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
-          }
-        );
+      await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).updateOne(
+        { _id: entry._id, status: "processing", settlementClaimId: claimId },
+        {
+          $set: { status: entry.status, updatedAt: new Date() },
+          $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
+        }
+      );
     };
 
     const unitsRemaining = remainingRedemptionUnits(entry);
     if (unitsRemaining <= 0) {
-      await db
-        .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-        .updateOne(
-          { _id: entry._id, status: "processing", settlementClaimId: claimId },
-          {
-            $set: { status: "paid", updatedAt: new Date() },
-            $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
-          }
-        );
+      await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).updateOne(
+        { _id: entry._id, status: "processing", settlementClaimId: claimId },
+        {
+          $set: { status: "paid", updatedAt: new Date() },
+          $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
+        }
+      );
       continue;
     }
 
@@ -465,9 +457,10 @@ export async function processQueuedRedemptions(
   await flushBatch();
 
   if (cancellations.length > 0) {
-    const cancelled = await db
-      .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
-      .bulkWrite(cancellations);
+    const cancelled =
+      await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).bulkWrite(
+        cancellations
+      );
     if (cancelled.matchedCount > 0)
       console.warn(
         `[indexfund-cron] cancelled queued redemptions for ${fund.slug}: ${cancelled.matchedCount} holder_missing claims with units burned at request`

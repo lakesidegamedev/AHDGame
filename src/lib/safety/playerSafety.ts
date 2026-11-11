@@ -1,16 +1,11 @@
 import { ObjectId, type Db } from "mongodb";
 import { ApiError, badRequest, notFound } from "@/lib/api/errors";
 import { createNotifications } from "@/lib/notifications";
-import type {
-  PlayerContentReport,
-  PlayerMail,
-  PlayerReportContext,
-  PlayerReportReason,
-  User,
-} from "@/lib/db/types";
+import type { PlayerContentReport, PlayerReportContext, PlayerReportReason } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { playerContentReportsCollection } from "@/lib/db/repositories/playerContentReports";
 
 /**
  * Player-to-player safety: reporting objectionable content and blocking
@@ -69,7 +64,7 @@ export async function reportPlayer(
   const reporter = new ObjectId(reporterUserId);
   if (target.userId.equals(reporter)) throw badRequest("You cannot report yourself");
 
-  const reports = db.collection<Omit<PlayerContentReport, "_id">>(PLAYER_CONTENT_REPORTS);
+  const reports = playerContentReportsCollection<Omit<PlayerContentReport, "_id">>(db);
   const open = await reports.findOne({
     reportedByUserId: reporter,
     targetUserId: target.userId,

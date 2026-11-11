@@ -7,8 +7,7 @@ import type {
   ShareTradeStructureChangeMeta,
 } from "@/lib/db/types/shareTradeHistory";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-
-const COLL = "shareTradeHistory";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const STRUCTURE_CHANGE_KINDS = new Set<ShareTradeKind>(["stock_split", "reverse_split"]);
 
@@ -77,9 +76,10 @@ export async function recordShareTrade(
 ): Promise<RecordShareTradeOutcome> {
   if (input.shares === 0 && !STRUCTURE_CHANGE_KINDS.has(input.kind)) return "applied";
   try {
-    await db
-      .collection<ShareTradeHistory>(COLL)
-      .insertOne({ ...buildShareTradeDocument(input), _id: options?._id ?? new ObjectId() });
+    await shareTradeHistoryCollection<ShareTradeHistory>(db).insertOne({
+      ...buildShareTradeDocument(input),
+      _id: options?._id ?? new ObjectId(),
+    });
     return "applied";
   } catch (err) {
     if (isDuplicateKeyError(err)) return "already-applied";
@@ -102,9 +102,9 @@ export async function recordShareTrades(db: Db, inputs: RecordShareTradeInput[])
   }
   if (documents.length === 0) return;
   try {
-    await db
-      .collection<Omit<ShareTradeHistory, "_id">>(COLL)
-      .insertMany(documents, { ordered: false });
+    await shareTradeHistoryCollection<Omit<ShareTradeHistory, "_id">>(db).insertMany(documents, {
+      ordered: false,
+    });
   } catch (err) {
     Sentry.captureException(err, { tags: { module: "shareTradeHistory" } });
   }

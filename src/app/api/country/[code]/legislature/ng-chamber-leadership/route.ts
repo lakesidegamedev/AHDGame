@@ -35,21 +35,16 @@ import type {
   NgChamberLeadershipElection,
   NgChamberLeadershipNomination,
   NgChamberLeadershipRole,
-  Character,
-  ElectedOfficial,
 } from "@/lib/db/types";
-import {
-  NG_ROLES,
-  NG_ROLE_CONFIG,
-  NG_ELECTION_COLLECTION,
-  NG_NOMINATION_COLLECTION,
-} from "@/lib/congress/ngChamberLeadership/config";
+import { NG_ROLES, NG_ROLE_CONFIG } from "@/lib/congress/ngChamberLeadership/config";
 import { getNgChamberComposition } from "@/lib/congress/ngChamberLeadership/composition";
 import { resolveNgChamberLeadershipElection } from "@/lib/congress/ngChamberLeadership/resolveElection";
 import { handleNgChamberLeadershipAction } from "@/lib/congress/ngChamberLeadership/actions";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { ngChamberLeadershipNominationsCollection } from "@/lib/db/repositories/ngChamberLeadershipNominations";
+import { ngChamberLeadershipElectionsCollection } from "@/lib/db/repositories/ngChamberLeadershipElections";
 
 const actionSchema = z.object({
   role: z.enum(["speaker_ng_reps", "president_ng_senate"]),
@@ -100,9 +95,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         const cfg = NG_ROLE_CONFIG[role];
 
         // Auto-resolve an expired election before responding.
-        const electionDoc = await db
-          .collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION)
-          .findOne({ _id: role });
+        const electionDoc =
+          await ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(db).findOne({
+            _id: role,
+          });
         if (
           electionDoc?.status === "voting" &&
           isLeadershipElectionClosed(electionDoc, gameTime.currentTurn, gameTime.effectiveNow)
@@ -115,9 +111,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
             officeType: cfg.officerOfficeType,
             countryId: "NG",
           }),
-          db.collection<NgChamberLeadershipElection>(NG_ELECTION_COLLECTION).findOne({ _id: role }),
-          db
-            .collection<NgChamberLeadershipNomination>(NG_NOMINATION_COLLECTION)
+          ngChamberLeadershipElectionsCollection<NgChamberLeadershipElection>(db).findOne({
+            _id: role,
+          }),
+          ngChamberLeadershipNominationsCollection<NgChamberLeadershipNomination>(db)
             .find({ role, status: { $in: ["open", "voting"] } })
             .sort({ votesFor: -1 })
             .toArray(),

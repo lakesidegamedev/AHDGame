@@ -4,25 +4,10 @@
  * inserts one player candidacy atomically and preserves profiles and financial accounts.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Campaign,
-  Character,
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { Character, Election, ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import { decideRussianCouncilFiling } from "./rules/councilFiling";
 import { planRussianCouncilPlayerAdmission } from "./rules/councilPlayerAdmission";
 import { loadRussianCouncilOpeningBinding } from "./councilOpeningBinding";
@@ -41,6 +26,8 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 export async function validateRussianCouncilPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -155,8 +142,7 @@ export async function validateRussianCouncilPlayerFiling(input: {
   if (!admission.allowed) return admission;
   const dumaRoot = russianDumaBoundRoot(country);
   const dumaResults = dumaRoot
-    ? await db
-        .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
+    ? await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db)
         .find(
           {
             countryId: "RU",
@@ -330,13 +316,13 @@ export async function materializeRussianCouncilPlayerFiling(input: {
     { $set: { party: candidate.party, updatedAt: now } },
     { session }
   );
-  const receipt = await db
-    .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
-    .updateOne(
-      { cohortId: binding.cohortId, mandateSinceTurn: binding.mandateSinceTurn },
-      { $inc: { playerFilings: 1 } },
-      { session }
-    );
+  const receipt = await russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(
+    db
+  ).updateOne(
+    { cohortId: binding.cohortId, mandateSinceTurn: binding.mandateSinceTurn },
+    { $inc: { playerFilings: 1 } },
+    { session }
+  );
   if (receipt.matchedCount !== 1)
     throw new Error("Council opening receipt changed during admission");
   return { allowed: true as const, insertedId: candidateId };

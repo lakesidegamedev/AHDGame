@@ -20,7 +20,7 @@
 import * as Sentry from "@sentry/nextjs";
 import type { Db, Document, Filter, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { resumeSettlement, unfinishedSettlementFilter } from "@/lib/banking/settlementJournal";
 import { resolveFailedBankDepositors } from "@/lib/banking/insurance";
 import { revokeCharter } from "@/lib/banking/charter";
@@ -37,6 +37,7 @@ import { listDefaultedConstructionCollateral } from "./constructionForeclosure";
 import { recoverConstructionCancellations } from "./constructionCancellation";
 import { resumePrimaryUnderwritingLeases } from "./underwritingSettlement";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface BankingRecoverySummary {
   turn: number;
@@ -206,8 +207,7 @@ export async function recoverBankingSettlements(
     }
   }
 
-  const partial = await db
-    .collection<UnfinishedMoveRow>(MONEY_MOVE_COLLECTION)
+  const partial = await bankMoneyMovesCollection<UnfinishedMoveRow>(db)
     .find(
       { ...unfinishedSettlementFilter(), turn: { $lt: turn } },
       {

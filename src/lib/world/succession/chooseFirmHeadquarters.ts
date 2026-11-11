@@ -2,33 +2,25 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Corporation } from "@/lib/db/types/corporation";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { State } from "@/lib/db/types/state";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
+import { type FederationSettlementApplicationRecord } from "./runtimeEntities";
+import { type FederationPrivateFirmHold } from "./materializePrivateFirms";
 import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "./runtimeEntities";
-import {
-  FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION,
-  type FederationPrivateFirmHold,
-} from "./materializePrivateFirms";
-import {
-  FEDERATION_FACILITY_CLAIMS_COLLECTION,
   activateFederationFacilityClaim,
   type FederationFacilityClaimRecord,
 } from "./facilityClaimLedger";
-import {
-  FEDERATION_RELOCATIONS_COLLECTION,
-  type FederationRelocationRecord,
-} from "./relocationLedger";
+import { type FederationRelocationRecord } from "./relocationLedger";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { federationRelocationsCollection } from "@/lib/db/repositories/federationRelocations";
+import { federationFacilityClaimsCollection } from "@/lib/db/repositories/federationFacilityClaims";
+import { federationPrivateFirmHoldsCollection } from "@/lib/db/repositories/federationPrivateFirmHolds";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export interface ChosenFederationHeadquarters {
   countryId: CountryId;
@@ -59,20 +51,18 @@ async function lockConversion(
   const toCurrency = budgets[0].currencyCode;
   const fromCurrency = resolveCorpLiquidCurrencyCode(corporation) ?? null;
   if (fromCurrency === toCurrency) {
-    await db
-      .collection<FederationPrivateFirmHold>(FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION)
-      .updateOne(
-        { _id: hold._id, lockedConversion: { $exists: false } },
-        {
-          $set: {
-            selectedDestination: destination,
-            lockedConversion: { fromCurrency, toCurrency, fromRate: 1, toRate: 1 },
-          },
-        }
-      );
-    const saved = await db
-      .collection<FederationPrivateFirmHold>(FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION)
-      .findOne({ _id: hold._id });
+    await federationPrivateFirmHoldsCollection<FederationPrivateFirmHold>(db).updateOne(
+      { _id: hold._id, lockedConversion: { $exists: false } },
+      {
+        $set: {
+          selectedDestination: destination,
+          lockedConversion: { fromCurrency, toCurrency, fromRate: 1, toRate: 1 },
+        },
+      }
+    );
+    const saved = await federationPrivateFirmHoldsCollection<FederationPrivateFirmHold>(db).findOne(
+      { _id: hold._id }
+    );
     if (
       !saved ||
       !sameDestination(saved.selectedDestination, destination) ||
@@ -100,15 +90,13 @@ async function lockConversion(
     fromRate: fromCurrency ? byCode.get(fromCurrency)! : 1,
     toRate: byCode.get(toCurrency as CurrencyCode)!,
   };
-  await db
-    .collection<FederationPrivateFirmHold>(FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION)
-    .updateOne(
-      { _id: hold._id, lockedConversion: { $exists: false } },
-      { $set: { selectedDestination: destination, lockedConversion } }
-    );
-  const saved = await db
-    .collection<FederationPrivateFirmHold>(FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION)
-    .findOne({ _id: hold._id });
+  await federationPrivateFirmHoldsCollection<FederationPrivateFirmHold>(db).updateOne(
+    { _id: hold._id, lockedConversion: { $exists: false } },
+    { $set: { selectedDestination: destination, lockedConversion } }
+  );
+  const saved = await federationPrivateFirmHoldsCollection<FederationPrivateFirmHold>(db).findOne({
+    _id: hold._id,
+  });
   if (!saved || !sameDestination(saved.selectedDestination, destination) || !saved.lockedConversion)
     throw new Error("Federation headquarters choice conflicted with another writer");
   return saved;
@@ -135,11 +123,10 @@ export async function chooseFederationFirmHeadquarters(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Federation headquarters choice needs a firm, owner and destination");
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied" });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied" });
   if (!application) throw new Error("Federation headquarters choice awaits settlement");
   const state = await statesCollection(db).findOne({
     _id: destination.stateId,
@@ -147,9 +134,7 @@ export async function chooseFederationFirmHeadquarters(input: {
   });
   if (!state || !(await getRegisteredCountryIds(db)).includes(destination.countryId))
     throw new Error("Federation headquarters destination is not playable");
-  const holdCollection = db.collection<FederationPrivateFirmHold>(
-    FEDERATION_PRIVATE_FIRM_HOLDS_COLLECTION
-  );
+  const holdCollection = federationPrivateFirmHoldsCollection<FederationPrivateFirmHold>(db);
   let hold = await holdCollection.findOne({ _id: `${applicationId}:${corporationId}` });
   const corporations = corporationsCollection(db);
   let corporation = await corporations.findOne({ _id: new ObjectId(corporationId) });
@@ -203,8 +188,7 @@ export async function chooseFederationFirmHeadquarters(input: {
     if (moved.matchedCount !== 1)
       throw new Error("Federation firm changed while applying headquarters choice");
   }
-  const claims = await db
-    .collection<FederationFacilityClaimRecord>(FEDERATION_FACILITY_CLAIMS_COLLECTION)
+  const claims = await federationFacilityClaimsCollection<FederationFacilityClaimRecord>(db)
     .find({ applicationId, corporationId })
     .toArray();
   for (const claim of claims) {
@@ -217,7 +201,7 @@ export async function chooseFederationFirmHeadquarters(input: {
     );
   }
   const relocationId = `${applicationId}:firm:${corporationId}`;
-  const relocations = db.collection<FederationRelocationRecord>(FEDERATION_RELOCATIONS_COLLECTION);
+  const relocations = federationRelocationsCollection<FederationRelocationRecord>(db);
   const relocation = await relocations.findOne({ _id: relocationId });
   if (
     !relocation ||

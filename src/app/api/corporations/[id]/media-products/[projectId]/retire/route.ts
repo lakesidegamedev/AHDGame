@@ -5,9 +5,9 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { marketAtLeast, getMarketSystemMode } from "@/lib/market/featureFlag";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
-import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
+import { type MediaProductProject } from "@/lib/products/mediaProduct";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { mediaProductProjectsV1Collection } from "@/lib/db/repositories/mediaProductProjectsV1";
 
 interface RouteParams {
   params: Promise<{ id: string; projectId: string }>;
@@ -53,7 +53,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     ) {
       return errorResponse(409, "Media product slates are not enabled");
     }
-    const result = await db.collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS).updateOne(
+    const result = await mediaProductProjectsV1Collection<MediaProductProject>(db).updateOne(
       {
         _id: projectId,
         corporationId: corporation._id.toString(),

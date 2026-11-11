@@ -7,12 +7,12 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { MergerReview } from "@/lib/db/types/mergerReview";
-import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
 import { decideMergerReview } from "@/lib/corporations/mergerReview/lifecycle";
 import { getGameState } from "@/lib/gameState";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -45,9 +45,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const review = await db
-      .collection<MergerReview>(MERGER_REVIEWS)
-      .findOne({ _id: new ObjectId(id) });
+    const review = await mergerReviewsCollection<MergerReview>(db).findOne({
+      _id: new ObjectId(id),
+    });
     if (!review) return errorResponse(404, "Review not found");
 
     const gameState = await getGameState(db);

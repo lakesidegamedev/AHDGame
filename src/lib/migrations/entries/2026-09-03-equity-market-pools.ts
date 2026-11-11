@@ -1,12 +1,12 @@
 import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { EquityMarketPool } from "@/lib/db/types";
-import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { EQUITY_POOL_M2_SHARE } from "@/lib/equities/marketPool";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 /** Seed the real cash counterpart to existing corporation public-float inventory. */
 async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
@@ -41,8 +41,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
 
   const existing = new Set(
     (
-      await db
-        .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
+      await equityMarketPoolsCollection<EquityMarketPool>(db)
         .find({}, { projection: { _id: 1 } })
         .toArray()
     ).map((pool) => String(pool._id))
@@ -79,7 +78,7 @@ async function seedEquityMarketPools(db: Db, ctx: MigrationContext): Promise<Mig
     };
   }
   if (docs.length > 0) {
-    await db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).insertMany(docs);
+    await equityMarketPoolsCollection<EquityMarketPool>(db).insertMany(docs);
   }
   return {
     documentsScanned: currencies.size,

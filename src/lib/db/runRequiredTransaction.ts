@@ -2,6 +2,7 @@ import type { ClientSession, MongoClient, TransactionOptions } from "mongodb";
 import { ReadPreference } from "mongodb";
 import { getMongoClient, resolveMongoDbName } from "@/lib/mongodb";
 import { serverEnv } from "@/lib/config/read";
+import { turnWorkerControlCollection } from "@/lib/db/repositories/turnWorkerControl";
 
 const DEFAULT_TRANSACTION_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_COMMIT_TIME_MS = 5_000;
@@ -142,7 +143,6 @@ export async function runRequiredTransaction<T>(
 }
 
 /** Where the barrier write lands: one document, never read. */
-const BARRIER_COLLECTION = "turnWorkerControl";
 const BARRIER_ID = "transactionMajorityBarrier";
 
 /**
@@ -156,14 +156,13 @@ const BARRIER_ID = "transactionMajorityBarrier";
  */
 async function awaitMajorityBarrier(client: MongoClient): Promise<void> {
   if (!acknowledgesBelowMajority(client)) return;
-  await client
-    .db(resolveMongoDbName(serverEnv() as Parameters<typeof resolveMongoDbName>[0]))
-    .collection<{ _id: string; at: Date }>(BARRIER_COLLECTION)
-    .updateOne(
-      { _id: BARRIER_ID },
-      { $set: { at: new Date() } },
-      { upsert: true, writeConcern: { w: "majority" } }
-    );
+  await turnWorkerControlCollection<{ _id: string; at: Date }>(
+    client.db(resolveMongoDbName(serverEnv() as Parameters<typeof resolveMongoDbName>[0]))
+  ).updateOne(
+    { _id: BARRIER_ID },
+    { $set: { at: new Date() } },
+    { upsert: true, writeConcern: { w: "majority" } }
+  );
 }
 
 function acknowledgesBelowMajority(client: MongoClient): boolean {

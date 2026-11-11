@@ -10,7 +10,6 @@ import {
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import { accountId } from "@/lib/ledger/accounts";
 import type { BalanceSnapshot } from "@/lib/ledger/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
@@ -28,6 +27,8 @@ import { producerEconomyAccountsCollection } from "@/lib/db/repositories/produce
 import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
 import { customInternationalOrganizationsCollection } from "@/lib/db/repositories/customInternationalOrganizations";
+import { balanceSnapshotCheckpointsCollection } from "@/lib/db/repositories/balanceSnapshotCheckpoints";
+import { balanceSnapshotsCollection } from "@/lib/db/repositories/balanceSnapshots";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
@@ -433,7 +434,7 @@ export async function writeBalanceSnapshot(
     const now = new Date();
     // Keep the stored identity on replay. A replacement carrying a new _id is
     // rejected by Mongo as an immutable-field change.
-    await db.collection<BalanceSnapshot>(BALANCE_SNAPSHOTS_COLLECTION).updateOne(
+    await balanceSnapshotsCollection<BalanceSnapshot>(db).updateOne(
       { turn },
       {
         $set: {
@@ -471,7 +472,7 @@ export async function writePreForexBalanceCheckpoint(
       opts.treasuryCashLedgerEnabled === true
     );
     const now = new Date();
-    await db.collection<BalanceSnapshot>(BALANCE_CHECKPOINTS_COLLECTION).updateOne(
+    await balanceSnapshotCheckpointsCollection<BalanceSnapshot>(db).updateOne(
       { turn },
       {
         $set: { createdAt: now, balances, anchorRates, accountValuations },
@@ -487,12 +488,12 @@ export async function writePreForexBalanceCheckpoint(
 }
 
 export async function loadBalanceSnapshot(db: Db, turn: number): Promise<BalanceSnapshot | null> {
-  return db.collection<BalanceSnapshot>(BALANCE_SNAPSHOTS_COLLECTION).findOne({ turn });
+  return balanceSnapshotsCollection<BalanceSnapshot>(db).findOne({ turn });
 }
 
 export async function loadPreForexBalanceCheckpoint(
   db: Db,
   turn: number
 ): Promise<BalanceSnapshot | null> {
-  return db.collection<BalanceSnapshot>(BALANCE_CHECKPOINTS_COLLECTION).findOne({ turn });
+  return balanceSnapshotCheckpointsCollection<BalanceSnapshot>(db).findOne({ turn });
 }

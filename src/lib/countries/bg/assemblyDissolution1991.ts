@@ -4,11 +4,9 @@
  * recorded ballots; an enacted bound result advances only untouched campaigns.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Bill, Character, CountryGameState, GameState } from "@/lib/db/types";
-import type { CountryState } from "@/lib/db/types/countryState";
+import type { Bill, Character, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import {
-  BG_1991_PROPOSALS_COLLECTION,
   Bg1991ConstitutionalConflict,
   rebindBg1991PrimaryCohort,
   type Bg1991ConstitutionalProposal,
@@ -24,6 +22,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { bg1991ConstitutionalProposalsCollection } from "@/lib/db/repositories/bg1991ConstitutionalProposals";
 
 export const BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID =
   "1991-default:bg-constitutional:dissolution1991";
@@ -72,9 +71,9 @@ async function availability(db: Db, turn: number, session?: ClientSession) {
 
 export async function loadBg1991AssemblyDissolutionDecision(db: Db, turn: number) {
   const allowed = await availability(db, turn);
-  const proposal = await db
-    .collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION)
-    .findOne({ _id: BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID });
+  const proposal = await bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(
+    db
+  ).findOne({ _id: BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID });
   const bill = proposal
     ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
@@ -108,7 +107,7 @@ export async function openBg1991AssemblyDissolution(input: {
     async (session) => {
       const allowed = await availability(db, turn, session);
       if (!allowed.available) throw new Bg1991ConstitutionalConflict(allowed.reason);
-      const journal = db.collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION);
+      const journal = bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(db);
       const prior = await journal.findOne(
         { _id: BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID },
         { session }
@@ -230,7 +229,7 @@ export async function processBg1991AssemblyDissolution(
   if (game.preset !== "1991-default") return false;
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))
     throw new Error("Invalid Bulgarian dissolution clock");
-  const journal = db.collection<Bg1991ConstitutionalProposal>(BG_1991_PROPOSALS_COLLECTION);
+  const journal = bg1991ConstitutionalProposalsCollection<Bg1991ConstitutionalProposal>(db);
   const pending = await journal.findOne(
     { _id: BG_CONTINUED_ASSEMBLY_DISSOLUTION_ID, status: "open" },
     { projection: { billId: 1 } }

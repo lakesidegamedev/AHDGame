@@ -16,7 +16,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
 import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { sovereignPrimaryTransition, type SovereignPrimaryFunding } from "./rules/sovereignPrimary";
 import {
@@ -28,6 +27,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface PrimaryAccountingContext {
   ledgerShadow: boolean;
@@ -146,11 +146,11 @@ export function primaryDocumentId(key: string): ObjectId {
 
 /** A recorded intent wins over any freshly recomputed quote. */
 export async function primarySettlementExists(db: Db, key: string): Promise<boolean> {
-  const record = await db
-    .collection<{ _id: string; status: string; projectionsCompletedAt?: Date }>(
-      MONEY_MOVE_COLLECTION
-    )
-    .findOne({ _id: key }, { projection: { status: 1, projectionsCompletedAt: 1 } });
+  const record = await bankMoneyMovesCollection<{
+    _id: string;
+    status: string;
+    projectionsCompletedAt?: Date;
+  }>(db).findOne({ _id: key }, { projection: { status: 1, projectionsCompletedAt: 1 } });
   if (!record) return false;
   if (record.status !== "applied" || !record.projectionsCompletedAt) {
     throw new Error(`Sovereign placement ${key} awaits settlement recovery`);
@@ -168,8 +168,7 @@ export async function existingPrimarySettlementKeys(
   keys: readonly string[]
 ): Promise<Set<string>> {
   if (keys.length === 0) return new Set();
-  const rows = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<{ _id: string }>(db)
     .find({ _id: { $in: [...keys] } }, { projection: { _id: 1 } })
     .toArray();
   return new Set(rows.map((row) => String(row._id)));

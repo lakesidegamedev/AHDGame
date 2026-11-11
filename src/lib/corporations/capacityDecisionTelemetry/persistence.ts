@@ -4,6 +4,7 @@ import {
   aggregateCapacityDecisions,
   type CapacityDecisionObservation,
 } from "./rules";
+import { capacityDecisionFunnelsCollection } from "@/lib/db/repositories/capacityDecisionFunnels";
 
 export const CAPACITY_DECISION_COLLECTION = "capacityDecisionFunnels";
 export const CAPACITY_DECISION_RETENTION_TURNS = 48;
@@ -46,7 +47,7 @@ export async function recordCapacityDecisionBulkBestEffort(
   if (observations.length === 0) return;
   try {
     const buckets = aggregateCapacityDecisions(observations);
-    const collection = db.collection<CapacityDecisionFunnelDocument>(CAPACITY_DECISION_COLLECTION);
+    const collection = capacityDecisionFunnelsCollection<CapacityDecisionFunnelDocument>(db);
     await collection.bulkWrite(
       Object.entries(buckets).map(([key, values]) => ({
         updateOne: {

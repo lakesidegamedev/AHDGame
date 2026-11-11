@@ -9,7 +9,6 @@
 
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
-  GameConfig,
   IndexFund,
   IndexFundPosition,
   IndexFundRedemptionQueueEntry,
@@ -17,10 +16,6 @@ import type {
 } from "@/lib/db/types";
 import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
 import {
-  FUND_COLLECTION,
-  FUND_POSITION_COLLECTION,
-  FUND_REDEMPTION_QUEUE_COLLECTION,
-  FUND_TRANSACTION_COLLECTION,
   creditFundPosition,
   debitFundPosition,
   enqueueRedemption,
@@ -29,6 +24,11 @@ import {
 import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import type { Document } from "mongodb";
 
 /** Mirrors `NPRiskArchetype` in nppInvesting.ts (kept local to avoid an import cycle). */
 export type NppRiskArchetype = "conservative" | "moderate" | "aggressive";
@@ -167,8 +167,7 @@ export async function processNppFundRedemptions(
 
   const fundById = new Map(options.activeFunds.map((fund) => [fund._id.toString(), fund]));
 
-  const positions = await db
-    .collection<IndexFundPosition>(FUND_POSITION_COLLECTION)
+  const positions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find({ holderKind: "npp" }, { projection: { nppId: 1, fundId: 1, units: 1 } })
     .toArray();
 
@@ -311,7 +310,7 @@ export async function writeNppRedemptionBatch(
   // Same balance-gated pipeline debit as debitFundPosition, in intent order,
   // stamped with the clock at the debit as debitFundPosition stamps it.
   const debitedAt = new Date();
-  const debit = await db.collection(FUND_POSITION_COLLECTION).bulkWrite(
+  const debit = await indexFundPositionsCollection<Document>(db).bulkWrite(
     planned.map((p) => ({
       updateOne: {
         filter: { ...identity(p), units: { $gte: p.intent.units } },
@@ -333,13 +332,13 @@ export async function writeNppRedemptionBatch(
   if (debit.matchedCount !== planned.length) throw new NppRedemptionGuardMiss();
 
   // debitFundPosition removes a position the debit took to zero.
-  await db.collection(FUND_POSITION_COLLECTION).bulkWrite(
+  await indexFundPositionsCollection<Document>(db).bulkWrite(
     planned.map((p) => ({ deleteOne: { filter: { ...identity(p), units: { $lte: 0 } } } })),
     { ordered: true, ...opts }
   );
 
   // Guarded supply burn per intent, as the per-intent path does it.
-  const burn = await db.collection<IndexFund>(FUND_COLLECTION).bulkWrite(
+  const burn = await indexFundsCollection<IndexFund>(db).bulkWrite(
     planned.map((p) => ({
       updateOne: {
         filter: { _id: p.intent.fundId, unitSupply: { $gte: p.intent.units } },
@@ -350,11 +349,11 @@ export async function writeNppRedemptionBatch(
   );
   if (burn.matchedCount !== planned.length) throw new NppRedemptionGuardMiss();
 
-  await db.collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION).insertMany(
+  await indexFundRedemptionQueueCollection<IndexFundRedemptionQueueEntry>(db).insertMany(
     planned.map((p) => queueEntryFor(p, now) as IndexFundRedemptionQueueEntry),
     { ordered: true, ...opts }
   );
-  await db.collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION).insertMany(
+  await indexFundTransactionsCollection<IndexFundTransaction>(db).insertMany(
     planned.map((p) => queuedTransactionFor(p, now) as IndexFundTransaction),
     { ordered: true, ...opts }
   );
@@ -436,12 +435,10 @@ export async function applyNppRedemptionsSequentially(
           // Burn the redeemed units from fund supply at request time, mirroring
           // the player route; the cron then only pays cash. Guarded; if supply
           // moved under us, restore the position and skip.
-          const burn = await db
-            .collection<IndexFund>(FUND_COLLECTION)
-            .updateOne(
-              { _id: intent.fundId, unitSupply: { $gte: intent.units } },
-              { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } }
-            );
+          const burn = await indexFundsCollection<IndexFund>(db).updateOne(
+            { _id: intent.fundId, unitSupply: { $gte: intent.units } },
+            { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } }
+          );
           if (burn.matchedCount === 0) {
             await creditFundPosition(
               db,

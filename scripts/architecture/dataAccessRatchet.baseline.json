@@ -1,12 +1,6 @@
 {
   "note": "Data access ratchet. Direct .collection() calls on front-door collections outside src/lib/db/collections, and untyped .collection() calls, may only go down. Use the getter in src/lib/db/collections; after converting call sites run `npm run data-access:lower`.",
   "files": {
-    "src/app/api/admin/client-diagnostics/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/admin/investment-funds/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/admin/leadership-elections/route.ts": {
       "untyped": 9
     },
@@ -16,17 +10,8 @@
     "src/app/api/admin/migrations/create-indexes/route.ts": {
       "untyped": 1
     },
-    "src/app/api/admin/users/delete/route.ts": {
-      "untyped": 1
-    },
-    "src/app/api/auth/delete-account/route.ts": {
-      "untyped": 1
-    },
     "src/app/api/bonds/[bondId]/sell/route.ts": {
       "untyped": 2
-    },
-    "src/app/api/client/diagnostics/route.ts": {
-      "untyped": 1
     },
     "src/app/api/corporations/[id]/bond-default/cash/route.ts": {
       "untyped": 2
@@ -49,9 +34,6 @@
     "src/lib/actions/officePoolTopUp.ts": {
       "untyped": 1
     },
-    "src/lib/admin/bootstrapGameWorld.ts": {
-      "untyped": 2
-    },
     "src/lib/admin/countryReadinessReport.ts": {
       "untyped": 1
     },
@@ -59,7 +41,7 @@
       "untyped": 3
     },
     "src/lib/admin/economyReset/census.ts": {
-      "untyped": 3
+      "untyped": 2
     },
     "src/lib/admin/recover1991Bootstrap.ts": {
       "untyped": 1
@@ -97,20 +79,11 @@
     "src/lib/admin/seedDiagnostic/conformance.ts": {
       "untyped": 3
     },
-    "src/lib/admin/seedDiagnostic/index.ts": {
-      "untyped": 3
-    },
     "src/lib/admin/seedDiagnostic/regionDerivedCoverage.ts": {
       "untyped": 1
     },
     "src/lib/admin/startingParties.ts": {
       "untyped": 3
-    },
-    "src/lib/advertising/persistence.ts": {
-      "untyped": 2
-    },
-    "src/lib/auth/sourceOwnershipProof.ts": {
-      "untyped": 2
     },
     "src/lib/banking/atomicDocumentSettlement.ts": {
       "untyped": 3
@@ -131,9 +104,6 @@
       "untyped": 1
     },
     "src/lib/bonds/saleRecovery.ts": {
-      "untyped": 1
-    },
-    "src/lib/budget/treasuryReserveTransfer.ts": {
       "untyped": 1
     },
     "src/lib/congress/billProposalLimits.ts": {
@@ -158,9 +128,6 @@
       "corporations": 3,
       "federalBudget": 1,
       "untyped": 4
-    },
-    "src/lib/corporations/sentimentEvents.ts": {
-      "untyped": 1
     },
     "src/lib/countries/hu/constituencyByElections1991.ts": {
       "untyped": 1
@@ -210,20 +177,11 @@
     "src/lib/debate/debateSessionLifecycle.ts": {
       "untyped": 1
     },
-    "src/lib/demographics/flowJournal.ts": {
-      "untyped": 5
-    },
     "src/lib/forex/fillRecovery.ts": {
       "untyped": 1
     },
     "src/lib/indexFunds/fundFloatSettlement.ts": {
       "untyped": 1
-    },
-    "src/lib/indexFunds/nppInvesting.ts": {
-      "untyped": 4
-    },
-    "src/lib/indexFunds/nppRedemption.ts": {
-      "untyped": 2
     },
     "src/lib/indexFunds/playerCommandAudit.ts": {
       "untyped": 1
@@ -232,15 +190,9 @@
       "untyped": 1
     },
     "src/lib/indexFunds/queuedPayoutBatch.ts": {
-      "untyped": 3
-    },
-    "src/lib/indexFunds/queuedPayoutSettlement.ts": {
-      "untyped": 3
-    },
-    "src/lib/indexFunds/sponsorship/holderPayout.ts": {
       "untyped": 1
     },
-    "src/lib/indexFunds/sponsorship/windUp.ts": {
+    "src/lib/indexFunds/sponsorship/holderPayout.ts": {
       "untyped": 1
     },
     "src/lib/influence/simpleInfluence.ts": {
@@ -251,9 +203,6 @@
     },
     "src/lib/lineOfCredit/settlement.ts": {
       "untyped": 1
-    },
-    "src/lib/market/producerMarket/openingApply.ts": {
-      "untyped": 2
     },
     "src/lib/migrations/entries/2026-06-01-index-fund-foundation.ts": {
       "untyped": 1
@@ -268,9 +217,6 @@
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-08-31-intelligence-indexes.ts": {
-      "untyped": 1
-    },
-    "src/lib/migrations/entries/2026-09-06-client-statistics-ttl-index.ts": {
       "untyped": 1
     },
     "src/lib/migrations/entries/2026-09-09-unique-voting-party-elections.ts": {
@@ -294,9 +240,6 @@
     "src/lib/migrations/entries/2026-10-04-media-discriminator-market-indexes.ts": {
       "untyped": 2
     },
-    "src/lib/migrations/entries/2026-10-04-media-product-projects-v1-index.ts": {
-      "untyped": 1
-    },
     "src/lib/migrations/entries/2026-10-04-political-media-order-indexes.ts": {
       "untyped": 1
     },
@@ -313,12 +256,6 @@
       "untyped": 1
     },
     "src/lib/policyShift.ts": {
-      "untyped": 1
-    },
-    "src/lib/products/manufacturingProjectPersistence.ts": {
-      "untyped": 1
-    },
-    "src/lib/products/venture/store.ts": {
       "untyped": 1
     },
     "src/lib/propagateNameChange.ts": {
@@ -348,9 +285,6 @@
     "src/lib/remediation/defects/AHD-1266-tr-repudiation-restitution.ts": {
       "untyped": 1
     },
-    "src/lib/remediation/defects/AHD-951-orphan-null-party-seats.ts": {
-      "untyped": 2
-    },
     "src/lib/remediation/defects/AHD-command-economy-private-sector-ownership.ts": {
       "untyped": 2
     },
@@ -366,12 +300,6 @@
     "src/lib/retention/retention.ts": {
       "untyped": 2
     },
-    "src/lib/savings/shadow.ts": {
-      "untyped": 1
-    },
-    "src/lib/sidebarWidgets/widgetData.ts": {
-      "untyped": 1
-    },
     "src/lib/sim/materializeSyntheticActors.ts": {
       "untyped": 2
     },
@@ -381,17 +309,8 @@
     "src/lib/turn/atomicClaim.ts": {
       "untyped": 1
     },
-    "src/lib/turn/bankingTurn.ts": {
-      "untyped": 1
-    },
     "src/lib/turn/corporation/migrateEntertainmentRemoval.ts": {
-      "untyped": 3
-    },
-    "src/lib/turn/corporation/producerMarketShadowPhase.ts": {
-      "untyped": 1
-    },
-    "src/lib/turn/decolonizationTurn.ts": {
-      "untyped": 1
+      "untyped": 2
     },
     "src/lib/turn/history/freezeOfficeHistoryIterations.ts": {
       "untyped": 2

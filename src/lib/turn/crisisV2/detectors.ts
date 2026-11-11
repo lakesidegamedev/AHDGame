@@ -8,7 +8,6 @@ import {
   type ResolvedCrisisRecord,
 } from "@/lib/crises/v2/detector";
 import { DEFAULT_REOPEN_COOLDOWN_TURNS } from "@/lib/crises/v2/types";
-import type { Crisis } from "@/lib/db/types/crisis";
 import type { StreakRecord } from "@/lib/crises/v2/streak";
 import {
   bankStressProvider,
@@ -26,6 +25,7 @@ import {
   type CrisisOpenCandidateProvider,
 } from "./registry";
 import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisDetectorStreaksCollection } from "@/lib/db/repositories/crisisDetectorStreaks";
 
 export const DETECTOR_STREAK_COLLECTION = "crisisDetectorStreaks";
 
@@ -81,7 +81,7 @@ function loadStreaksByDetector(db: Db, turn: number): Promise<Map<string, Streak
   const cached = streakCache.get(db);
   if (cached?.turn === turn) return cached.byDetector;
   const byDetector = (async () => {
-    const docs = await db.collection<StreakDoc>(DETECTOR_STREAK_COLLECTION).find({}).toArray();
+    const docs = await crisisDetectorStreaksCollection<StreakDoc>(db).find({}).toArray();
     const grouped = new Map<string, StreakDoc[]>();
     for (const doc of docs) {
       const list = grouped.get(doc.detectorId) ?? [];
@@ -241,7 +241,7 @@ async function saveStreaks(
     });
   }
   if (ops.length > 0) {
-    await db.collection<StreakDoc>(DETECTOR_STREAK_COLLECTION).bulkWrite(ops, { ordered: false });
+    await crisisDetectorStreaksCollection<StreakDoc>(db).bulkWrite(ops, { ordered: false });
   }
 }
 

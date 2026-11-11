@@ -4,14 +4,6 @@
  * mandate and preserves existing office holders until a separate certified handover.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-} from "@/lib/db/types";
 
 import {
   decideRussianPresidentialResult,
@@ -25,6 +17,7 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianPresidentialElectionResultsCollection } from "@/lib/db/repositories/russianPresidentialElectionResults";
 export const RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION = "russianPresidentialElectionResults";
 export interface RussianPresidentialResultRecord {
   _id: string;
@@ -66,9 +59,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Russian result certification needs a transaction, turn and time");
-  const results = db.collection<RussianPresidentialResultRecord>(
-    RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION
-  );
+  const results = russianPresidentialElectionResultsCollection<RussianPresidentialResultRecord>(db);
   const previous = await results.findOne({ _id: electionId.toHexString() }, { session });
   if (previous) {
     if (previous.countryId !== "RU" || !previous.electionId.equals(electionId))

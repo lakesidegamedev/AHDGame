@@ -8,13 +8,13 @@ import {
   fxRateForCorpFromMap,
   loadValuationFxRates,
 } from "@/lib/currency/corporationCapital";
-import { NPP_OPERATOR_TELEMETRY_COLLECTION } from "@/lib/corporations/nppOperatorTelemetry/persistence";
 import type { NppOperatorAggregate } from "@/lib/corporations/nppOperatorTelemetry/rules";
 import {
   computeNppCorporationHealth,
   type NppCorporationHealthCorporation,
 } from "@/lib/economy/nppCorporationHealth";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppOperatorDiagnosticsCollection } from "@/lib/db/repositories/nppOperatorDiagnostics";
 
 const querySchema = z.object({
   turn: z.coerce.number().int().nonnegative().optional(),
@@ -38,9 +38,9 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   }
 
   const db = await getDb();
-  const diagnosticsCollection = db.collection<
+  const diagnosticsCollection = nppOperatorDiagnosticsCollection<
     NppOperatorAggregate & { _id?: string; turn?: number }
-  >(NPP_OPERATOR_TELEMETRY_COLLECTION);
+  >(db);
   if (parsed.data.turn !== undefined) {
     const diagnostics = await diagnosticsCollection.findOne({ _id: `turn:${parsed.data.turn}` });
     const counts = computeNppCorporationHealth({

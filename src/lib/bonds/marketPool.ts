@@ -14,11 +14,11 @@
 import type { ClientSession, Db, Filter, UpdateFilter } from "mongodb";
 import { SETTLED_KEYS_CAP, SETTLED_KEYS_FIELD } from "@/lib/banking/moneyMove";
 import type { Bond, BondMarketPool, BondMarketPoolFlowKind } from "@/lib/db/types";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { witnessBondPoolCash, type BondPoolLedgerContext } from "./marketPoolLedger";
 import { quoteBondPrices, type BondPoolQuote } from "@/lib/bonds/marketPoolQuotes";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /** Share of a currency's broad money (M2) the pool is seeded with and steered toward. */
 export const BOND_POOL_M2_SHARE = 0.05;
@@ -36,9 +36,10 @@ export function bondPoolCurrency(bond: Pick<Bond, "currencyCode" | "countryId">)
 }
 
 export async function readBondPoolCash(db: Db, currency: CurrencyCode): Promise<number> {
-  const pool = await db
-    .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-    .findOne({ _id: currency }, { projection: { cashLocal: 1 } });
+  const pool = await bondMarketPoolsCollection<BondMarketPool>(db).findOne(
+    { _id: currency },
+    { projection: { cashLocal: 1 } }
+  );
   const cash = pool?.cashLocal;
   return Number.isFinite(cash) && cash! > 0 ? cash! : 0;
 }
@@ -58,7 +59,7 @@ export async function creditBondPool(
 ): Promise<void> {
   const amount = roundCents(amountLocal);
   if (!Number.isFinite(amount) || amount <= 0) return;
-  await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).updateOne(
+  await bondMarketPoolsCollection<BondMarketPool>(db).updateOne(
     { _id: currency },
     {
       $inc: { cashLocal: amount, [`lifetime.${kind}`]: amount },
@@ -91,7 +92,7 @@ export async function debitBondPoolGated(
   if (!Number.isFinite(amount) || amount < 0) return { ok: false };
   if (amount === 0) return { ok: true, cashAfter: await readBondPoolCash(db, currency) };
   const stamp = options?.stamp;
-  const result = await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).findOneAndUpdate(
+  const result = await bondMarketPoolsCollection<BondMarketPool>(db).findOneAndUpdate(
     {
       _id: currency,
       cashLocal: { $gte: amount },
@@ -133,7 +134,7 @@ export async function refundBondPoolDebit(
 ): Promise<void> {
   const amount = roundCents(amountLocal);
   if (!Number.isFinite(amount) || amount <= 0) return;
-  const result = await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).updateOne(
+  const result = await bondMarketPoolsCollection<BondMarketPool>(db).updateOne(
     {
       _id: currency,
       ...(options?.stamp ? { [SETTLED_KEYS_FIELD]: options.stamp } : {}),
@@ -219,10 +220,7 @@ export interface LoadedBondQuote extends BondPoolQuote {
  * skew a per-bond read would.
  */
 export async function loadBondPoolsByCurrency(db: Db): Promise<Map<CurrencyCode, BondMarketPool>> {
-  const pools = await db
-    .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-    .find({})
-    .toArray();
+  const pools = await bondMarketPoolsCollection<BondMarketPool>(db).find({}).toArray();
   return new Map(pools.map((pool) => [pool._id as CurrencyCode, pool]));
 }
 
@@ -253,12 +251,10 @@ export async function loadBondQuote(
   const currency = bondPoolCurrency(bond);
   const pool = options?.pools
     ? (options.pools.get(currency) ?? null)
-    : await db
-        .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-        .findOne(
-          { _id: currency },
-          { projection: { cashLocal: 1, targetCashLocal: 1, appetiteByCountry: 1 } }
-        );
+    : await bondMarketPoolsCollection<BondMarketPool>(db).findOne(
+        { _id: currency },
+        { projection: { cashLocal: 1, targetCashLocal: 1, appetiteByCountry: 1 } }
+      );
   const poolCashLocal =
     Number.isFinite(pool?.cashLocal) && pool!.cashLocal > 0 ? pool!.cashLocal : 0;
   const targetCashLocal =

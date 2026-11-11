@@ -5,19 +5,18 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import { isBankHolder } from "./rules/accounts";
-import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { toAccountSnapshot } from "./snapshot";
 import { savingsClosureTransition } from "./rules/closure";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export async function closeCharacterSavings(
   db: Db,
@@ -56,9 +55,10 @@ export async function closeCharacterSavings(
     if (!account || account.status !== "frozen" || account.closureClaimedTurn === undefined)
       throw new Error("Savings closure claim is unavailable");
     const key = `savings-close:${account._id}:${account.version}`;
-    const recorded = await db
-      .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const recorded = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     if (recorded) {
       const resumed = await resumeSettlement(db, key);
       if (resumed.status !== "applied" && resumed.status !== "replayed")

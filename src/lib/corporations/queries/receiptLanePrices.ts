@@ -7,7 +7,7 @@
  * receipt, no epoch, or the receipt is older than last turn.
  */
 import type { Db } from "mongodb";
-import { PRODUCER_MARKET_OUTCOMES } from "@/lib/market/producerMarket/fundedLedgerRules";
+import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 export async function loadReceiptLanePrices(
   db: Db,
@@ -20,10 +20,12 @@ export async function loadReceiptLanePrices(
   const { worldEpochId, receiptTurn, currentTurn } = args;
   if (!worldEpochId || typeof receiptTurn !== "number" || !(receiptTurn >= currentTurn - 1))
     return {};
-  const doc = await db
-    .collection<{ _id: string; laneClearingPrices?: Record<string, number> }>(
-      PRODUCER_MARKET_OUTCOMES
-    )
-    .findOne({ _id: `${worldEpochId}:${receiptTurn}` }, { projection: { laneClearingPrices: 1 } });
+  const doc = await producerMarketOutcomesCollection<{
+    _id: string;
+    laneClearingPrices?: Record<string, number>;
+  }>(db).findOne(
+    { _id: `${worldEpochId}:${receiptTurn}` },
+    { projection: { laneClearingPrices: 1 } }
+  );
   return doc?.laneClearingPrices ? { laneClearingPrices: doc.laneClearingPrices } : {};
 }

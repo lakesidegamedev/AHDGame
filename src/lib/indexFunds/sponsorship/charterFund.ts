@@ -39,8 +39,7 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
 import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
-
-const FUND_TX = "indexFundTransactions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 export interface CharterFundInput {
   sponsor: Corporation;
@@ -403,7 +402,7 @@ async function commitCharter(
         seedCapitalAnchor: input.seedCapitalAnchor,
       },
     }),
-    db.collection<IndexFundTransaction>(FUND_TX).insertOne({
+    indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne({
       _id: new ObjectId(),
       fundId,
       kind: "sponsor_seed_capital",

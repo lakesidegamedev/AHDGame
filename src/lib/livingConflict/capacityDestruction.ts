@@ -7,7 +7,6 @@
 import type { Db } from "mongodb";
 import type { Crisis, GlobalResponseOutcome } from "@/lib/db/types/crisis";
 import type { GameState } from "@/lib/db/types/gameState";
-import type { State } from "@/lib/db/types/state";
 import type {
   CapacityDestructionSpec,
   CapacityDestructionSummary,
@@ -22,15 +21,13 @@ import {
 } from "./rules/capacityDestruction";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
-
-const CONFLICT_CAPACITY_OBLIGATIONS = "conflictCapacityObligations";
+import { conflictCapacityObligationsCollection } from "@/lib/db/repositories/conflictCapacityObligations";
 
 const indexReadiness = new WeakMap<Db, Promise<void>>();
 async function ensureCapacityIndexes(db: Db): Promise<void> {
   let ready = indexReadiness.get(db);
   if (!ready) {
-    ready = db
-      .collection<ConflictCapacityObligation>(CONFLICT_CAPACITY_OBLIGATIONS)
+    ready = conflictCapacityObligationsCollection<ConflictCapacityObligation>(db)
       .createIndex({ status: 1, createdTurn: 1 }, { name: "capacity_status_turn" })
       .then(() => undefined)
       .catch((error) => {
@@ -106,7 +103,7 @@ export async function applyCapacityDestructionSpec(
 ): Promise<CapacityDestructionSummary | undefined> {
   const { spec, conflictKey, resolutionId } = request;
   await ensureCapacityIndexes(db);
-  const obligations = db.collection<ConflictCapacityObligation>(CONFLICT_CAPACITY_OBLIGATIONS);
+  const obligations = conflictCapacityObligationsCollection<ConflictCapacityObligation>(db);
   const existing = await obligations.find({ resolutionId, conflictKey }).toArray();
   if (existing.length > 0 && existing.length >= spec.regions.length) return summarize(existing);
 
@@ -180,8 +177,7 @@ export async function loadRealizedCapacityFraction(
   conflictKey: string,
   resolutionId: string
 ): Promise<number> {
-  const rows = await db
-    .collection<ConflictCapacityObligation>(CONFLICT_CAPACITY_OBLIGATIONS)
+  const rows = await conflictCapacityObligationsCollection<ConflictCapacityObligation>(db)
     .find({ conflictKey, resolutionId }, { projection: { realizedFraction: 1 } })
     .toArray();
   return Math.max(0, ...rows.map((row) => row.realizedFraction));
@@ -192,8 +188,7 @@ export async function loadRepairingCapacityObligations(
   db: Db,
   turn: number
 ): Promise<ConflictCapacityObligation[]> {
-  return db
-    .collection<ConflictCapacityObligation>(CONFLICT_CAPACITY_OBLIGATIONS)
+  return conflictCapacityObligationsCollection<ConflictCapacityObligation>(db)
     .find({ status: "repairing", createdTurn: { $lte: turn } })
     .toArray();
 }
@@ -201,12 +196,10 @@ export async function loadRepairingCapacityObligations(
 /** Mark obligations whose destruction and full repair are in the stock. */
 export async function settleCapacityObligations(db: Db, ids: readonly string[]): Promise<void> {
   if (ids.length === 0) return;
-  await db
-    .collection<ConflictCapacityObligation>(CONFLICT_CAPACITY_OBLIGATIONS)
-    .updateMany(
-      { _id: { $in: [...ids] }, status: "repairing" },
-      { $set: { status: "repaired", updatedAt: new Date() } }
-    );
+  await conflictCapacityObligationsCollection<ConflictCapacityObligation>(db).updateMany(
+    { _id: { $in: [...ids] }, status: "repairing" },
+    { $set: { status: "repaired", updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -216,8 +209,7 @@ export async function settleCapacityObligations(db: Db, ids: readonly string[]):
  */
 export async function loadCapacityRepairSpending(db: Db): Promise<Record<string, number>> {
   // Most worlds carry no obligations; the common case costs one empty read.
-  const rows = await db
-    .collection<ConflictCapacityObligation>(CONFLICT_CAPACITY_OBLIGATIONS)
+  const rows = await conflictCapacityObligationsCollection<ConflictCapacityObligation>(db)
     .find(
       { status: "repairing" },
       {

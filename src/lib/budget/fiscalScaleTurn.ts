@@ -10,7 +10,6 @@ import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
 import {
-  PRODUCER_ACCOUNTS,
   fiscalTaxMove,
   producerMoveLedgerLegs,
 } from "@/lib/market/producerMarket/liveFundingRules";
@@ -29,6 +28,7 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 type ScaleBudget = Pick<
   FederalBudget,
@@ -180,10 +180,12 @@ export async function collectFiscalTaxes(
 ): Promise<Map<string, number>> {
   const collected = new Map<string, number>();
   if (!input.worldEpoch) return collected;
-  const wallets = await db
-    .collection<{ _id: string; countryId: string; cash: number; currency: string }>(
-      PRODUCER_ACCOUNTS
-    )
+  const wallets = await producerEconomyAccountsCollection<{
+    _id: string;
+    countryId: string;
+    cash: number;
+    currency: string;
+  }>(db)
     .find(
       { kind: "households", worldEpoch: input.worldEpoch },
       { projection: { countryId: 1, cash: 1, currency: 1 } }

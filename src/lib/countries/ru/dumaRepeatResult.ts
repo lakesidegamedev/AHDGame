@@ -5,23 +5,10 @@
  */
 import { type ClientSession, type Db, type ObjectId } from "mongodb";
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { loadRussianDumaCertificationInputs } from "./dumaCertificationInputs";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION,
-  type RussianDumaRepeatOpeningRecord,
-} from "./dumaRepeatOpening";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
+import { type RussianDumaRepeatOpeningRecord } from "./dumaRepeatOpening";
 import {
   resolveRussianDumaRepeatGeneration,
   russianDumaProtectedConstituencyOwners,
@@ -38,6 +25,8 @@ import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianDumaRepeatOpeningsCollection } from "@/lib/db/repositories/russianDumaRepeatOpenings";
 
 export async function materializeRussianDumaRepeatResult(input: {
   db: Db;
@@ -57,9 +46,9 @@ export async function materializeRussianDumaRepeatResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Duma repeat certification needs a transaction, generation, turn and time");
-  const opening = await db
-    .collection<RussianDumaRepeatOpeningRecord>(RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION)
-    .findOne({ _id: `${rootCohortId.toHexString()}:repeat:${generation}` }, { session });
+  const opening = await russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(
+    db
+  ).findOne({ _id: `${rootCohortId.toHexString()}:repeat:${generation}` }, { session });
   if (
     !opening ||
     !opening.rootCohortId.equals(rootCohortId) ||
@@ -73,7 +62,7 @@ export async function materializeRussianDumaRepeatResult(input: {
     opening.openedOnTurn > turn
   )
     throw new Error("Duma repeat certification has no valid generation opening");
-  const results = db.collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION);
+  const results = russianDumaElectionResultsCollection<RussianDumaResultRecord>(db);
   const id = opening.cohortId.toHexString();
   const replay = await results.findOne({ _id: id }, { session });
   if (replay) {

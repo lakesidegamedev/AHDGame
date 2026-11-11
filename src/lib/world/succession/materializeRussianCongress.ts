@@ -4,16 +4,7 @@
  * government formation in the same transaction as the territorial settlement.
  */
 import { ObjectId, type AnyBulkWriteOperation, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  CountryGameState,
-  ElectedOfficial,
-  Election,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { CountryState } from "@/lib/db/types/countryState";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { Character, ElectedOfficial, NPP } from "@/lib/db/types";
 import { invalidateCachedCountryState } from "@/lib/countryState/cache";
 import { PM_VACANCY_DEADLINE_TURNS } from "@/lib/constants/turnTime";
 import type { FederationStateTransferPlan } from "./territoryTransferPlan";
@@ -31,6 +22,7 @@ import type { Document } from "mongodb";
 import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
 import { pmAppointmentVotesCollection } from "@/lib/db/repositories/pmAppointmentVotes";
 import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { federationArchivedPoliticalRowsCollection } from "@/lib/db/repositories/federationArchivedPoliticalRows";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -150,12 +142,12 @@ export async function materializeProvisionalRussianCongress(input: {
     npps.length !== new Set(nppIds.map(String)).size
   )
     throw new Error("A retained deputy is missing or awaiting residence choice");
-  const archive = db.collection<{
+  const archive = federationArchivedPoliticalRowsCollection<{
     _id: string;
     applicationId: string;
     sourceCountryId: string;
     value: ElectedOfficial;
-  }>(FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION);
+  }>(db);
   if (officials.length)
     await archive.insertMany(
       officials.map((value) => ({
@@ -369,22 +361,20 @@ async function preserveEstablishedRussianConstitution(input: {
     ),
   ].map((id) => new ObjectId(id));
   if (retired.length) {
-    await db
-      .collection<{
-        _id: string;
-        applicationId: string;
-        sourceCountryId: string;
-        value: ElectedOfficial;
-      }>(FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION)
-      .insertMany(
-        retired.map((value) => ({
-          _id: `${applicationId}:electedOfficials:${value._id.toHexString()}`,
-          applicationId,
-          sourceCountryId: "RU",
-          value,
-        })),
-        { session }
-      );
+    await federationArchivedPoliticalRowsCollection<{
+      _id: string;
+      applicationId: string;
+      sourceCountryId: string;
+      value: ElectedOfficial;
+    }>(db).insertMany(
+      retired.map((value) => ({
+        _id: `${applicationId}:electedOfficials:${value._id.toHexString()}`,
+        applicationId,
+        sourceCountryId: "RU",
+        value,
+      })),
+      { session }
+    );
     await electedOfficialsCollection(db).deleteMany(
       { countryId: "RU", _id: { $in: retired.map((row) => row._id) } },
       { session }

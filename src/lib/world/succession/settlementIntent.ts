@@ -17,12 +17,9 @@ import {
   type FederationStateTransferPlan,
 } from "./territoryTransferPlan";
 import { planLiveSuccessionActivation, type SuccessionActivationInput } from "./planActivation";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "./runtimeEntities";
-
-const FEDERATION_SETTLEMENT_INTENTS_COLLECTION = "federationSettlementIntents";
+import { type FederationSettlementApplicationRecord } from "./runtimeEntities";
+import { federationSettlementIntentsCollection } from "@/lib/db/repositories/federationSettlementIntents";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 type LiveActivationInput = Omit<SuccessionActivationInput, "sourceRegions" | "custodyAssets">;
 
@@ -218,9 +215,9 @@ export async function verifyLiveFederationSettlementIntent(input: {
   session?: ClientSession;
 }): Promise<{ intent: FederationSettlementIntentRecord; snapshot: LiveSettlementSnapshot }> {
   const { db, intentId, sourceCountryId, appliedOnTurn, session } = input;
-  const intent = await db
-    .collection<FederationSettlementIntentRecord>(FEDERATION_SETTLEMENT_INTENTS_COLLECTION)
-    .findOne({ _id: intentId, status: "staged" }, { session });
+  const intent = await federationSettlementIntentsCollection<FederationSettlementIntentRecord>(
+    db
+  ).findOne({ _id: intentId, status: "staged" }, { session });
   if (
     !intent ||
     intent.presetId !== "1991-default" ||
@@ -309,11 +306,10 @@ export async function stageLiveFederationSettlementIntent(input: {
     Object.values(activation.macroTerms).some((terms) => terms.currentTurn !== appliedOnTurn)
   )
     throw new Error("Federation intent needs a valid 1991 turn and approved revision");
-  const applied = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ presetId, sourceEntityId: sourceCountryId, status: "applied" }, { session });
+  const applied =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ presetId, sourceEntityId: sourceCountryId, status: "applied" }, { session });
   if (applied) throw new Error("Federation source already has an applied settlement");
 
   const ratified = await loadPersistedFederationApproval({
@@ -346,9 +342,7 @@ export async function stageLiveFederationSettlementIntent(input: {
     payload,
     createdAt: activation.now,
   };
-  const collection = db.collection<FederationSettlementIntentRecord>(
-    FEDERATION_SETTLEMENT_INTENTS_COLLECTION
-  );
+  const collection = federationSettlementIntentsCollection<FederationSettlementIntentRecord>(db);
   await collection.updateOne({ _id }, { $setOnInsert: intended }, { upsert: true, session });
   const stored = await collection.findOne({ _id }, { session });
   if (

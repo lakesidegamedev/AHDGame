@@ -1,12 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
-import type { User } from "@/lib/db/types/user";
-import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
-import type { StockExchangeSnapshot } from "@/lib/db/types/stockExchangeSnapshot";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
-import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
 import { loadWatchlist } from "./data/watchlist";
 import { loadKeirPet } from "./keirPet";
@@ -25,6 +21,7 @@ import { corporationHistoryCollection } from "@/lib/db/repositories/corporationH
 import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 import type { Document } from "mongodb";
 import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import { playerContentReportsCollection } from "@/lib/db/repositories/playerContentReports";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -194,7 +191,7 @@ async function loadStaffQueues(
   const [wikiReview, altClusters, playerReports] = await Promise.all([
     wikiPagesCollection<Document>(db).countDocuments({ status: "pending_review" }),
     getAltClustersCollection(db).then((clusters) => clusters.countDocuments({ status: "open" })),
-    db.collection(PLAYER_CONTENT_REPORTS).countDocuments({ status: "pending" }),
+    playerContentReportsCollection<Document>(db).countDocuments({ status: "pending" }),
   ]);
   return { admin: viewer.isAdmin, wikiReview, altClusters, playerReports };
 }

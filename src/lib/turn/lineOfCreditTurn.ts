@@ -1,5 +1,4 @@
 import type { Db, ObjectId } from "mongodb";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import type { Character, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { FOREX_ACTIVE_CURRENCIES, getCountryIdForCurrency } from "@/lib/constants/currencies";
@@ -35,6 +34,7 @@ import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -164,8 +164,7 @@ export async function processLineOfCreditTurn(
   // always found nothing. settleLocPlan still claims each key itself.
   const startedKeys = new Set(
     (
-      await db
-        .collection<{ _id: string; kind: string }>(MONEY_MOVE_COLLECTION)
+      await bankMoneyMovesCollection<{ _id: string; kind: string }>(db)
         .find(
           {
             _id: { $in: chars.map((char) => `loc:service:${turn}:${char._id}`) },

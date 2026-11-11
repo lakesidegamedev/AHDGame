@@ -36,8 +36,7 @@ import {
   type IntraGroupPosition,
 } from "./transferPricing";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-
-const AGREEMENTS = "supplyAgreements";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 export interface TransferPricingResult {
   positionsTracked: number;
@@ -126,9 +125,8 @@ export async function applyTransferPricingAudit(
       },
     })
   );
-  await db.collection<SupplyAgreement>(AGREEMENTS).bulkWrite(accrualOps, { ordered: true });
-  const exposureDocs = await db
-    .collection<SupplyAgreement>(AGREEMENTS)
+  await supplyAgreementsCollection<SupplyAgreement>(db).bulkWrite(accrualOps, { ordered: true });
+  const exposureDocs = await supplyAgreementsCollection<SupplyAgreement>(db)
     .find(
       { _id: { $in: tracked.map(({ premium }) => new ObjectId(premium.agreementId)) } },
       { projection: { transferPricingExposureAnchor: 1 } }
@@ -221,7 +219,7 @@ export async function applyTransferPricingAudit(
         });
       }
 
-      await db.collection<SupplyAgreement>(AGREEMENTS).updateOne(
+      await supplyAgreementsCollection<SupplyAgreement>(db).updateOne(
         { _id: new ObjectId(premium.agreementId) },
         {
           $set: {

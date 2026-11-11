@@ -4,18 +4,19 @@
  * See recomputeNav and restoreFundCashBuffer.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { IndexFund, ShareOrder } from "@/lib/db/types";
+import type { IndexFund } from "@/lib/db/types";
 import { INDEX_FUND_INITIAL_NAV, calculateBackingRatio } from "./unitAccounting";
 import {
   computeHoldingsValueAnchor,
   INDEX_FUND_RESERVE_CASH_BUFFER_FRACTION,
 } from "./fundAllocation";
-import { FUND_COLLECTION, getFundById, listFundsByIds, updateFundNav } from "./fundQueries";
+import { getFundById, listFundsByIds, updateFundNav } from "./fundQueries";
 import { loadOpenOrdersEscrowByFundId, loadQueuedRedemptionUnitsByFundId } from "./fundValuation";
 import { cancelFundShareOrder } from "./fundShareOrders";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { sumFundBondHoldingsValueAnchor } from "@/lib/bonds/fundBondHoldings";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export function recomputeNav(
   fund: IndexFund,
@@ -153,7 +154,7 @@ export async function refreshFundNavsAfterBondDeployment(
   }
 
   if (updates.length > 0) {
-    await db.collection<IndexFund>(FUND_COLLECTION).bulkWrite(updates);
+    await indexFundsCollection<IndexFund>(db).bulkWrite(updates);
   }
   return { updated, failed };
 }

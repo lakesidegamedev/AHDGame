@@ -13,7 +13,6 @@ import {
   applyIdempotentLeg,
   applyKeyedUpdate,
   deriveMoneyFlowKey,
-  NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION,
   type MoneyFlowLeg,
   type MoneyFlowLegOutcome,
   type MoneyFlowReceipt,
@@ -22,6 +21,7 @@ import {
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { nonAtomicMoneyFlowReceiptsCollection } from "@/lib/db/repositories/nonAtomicMoneyFlowReceipts";
 
 /** Cap-table entry discriminator inside `corporations.shareholders`. */
 export type ShareFillCapEntryField =
@@ -160,11 +160,11 @@ export function buildShareFillMoneyFingerprint(plan: ShareFillMoneyPlan): string
 export type ShareFillMoneyReceipt = MoneyFlowReceipt & { shareFillMoneyPlan?: ShareFillMoneyPlan };
 
 export function receipts(db: Db): Collection<MoneyFlowReceipt> {
-  return db.collection<MoneyFlowReceipt>(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION);
+  return nonAtomicMoneyFlowReceiptsCollection<MoneyFlowReceipt>(db);
 }
 
 export function receiptsEx(db: Db): Collection<ShareFillMoneyReceipt> {
-  return db.collection<ShareFillMoneyReceipt>(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION);
+  return nonAtomicMoneyFlowReceiptsCollection<ShareFillMoneyReceipt>(db);
 }
 
 /**

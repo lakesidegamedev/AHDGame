@@ -24,7 +24,6 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { ensureFund } from "@/lib/banking/insurance";
 import { loanCharterEpoch } from "@/lib/banking/loanEpoch";
 import { getCreditBand } from "@/lib/banking/rules/creditBands";
@@ -48,6 +47,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { bankCharterHistoryCollection } from "@/lib/db/repositories/bankCharterHistory";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -1110,8 +1110,7 @@ async function clearStaleConstructionBatchLocks(
     ),
   ];
   if (stale.length === 0) return;
-  const records = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
+  const records = await bankMoneyMovesCollection<{ _id: string }>(db)
     .find({ _id: { $in: stale } }, { projection: { _id: 1 } })
     .toArray();
   const claimed = new Set(records.map((record) => record._id));

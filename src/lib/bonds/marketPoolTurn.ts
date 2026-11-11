@@ -18,7 +18,6 @@
 import { calibratedPoolTarget, poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
 import type { BondMarketPool } from "@/lib/db/types";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { BOND_POOL_M2_SHARE, debitBondPoolGated } from "@/lib/bonds/marketPool";
@@ -32,6 +31,7 @@ import {
 import { SOVEREIGN_ISSUANCE_INTERVAL_TURNS } from "@/lib/bonds/sovereign";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /** Cash above this multiple of target triggers a sweep... */
 export const BOND_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
@@ -155,10 +155,7 @@ export async function processBondMarketPoolTurn(
   now: Date,
   ledgerContext?: BondPoolLedgerContext | null
 ): Promise<BondMarketPoolTurnResult> {
-  const pools = await db
-    .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-    .find({})
-    .toArray();
+  const pools = await bondMarketPoolsCollection<BondMarketPool>(db).find({}).toArray();
   const result: BondMarketPoolTurnResult = {
     poolsProcessed: 0,
     sweptLocalByCurrency: {},
@@ -224,7 +221,7 @@ export async function processBondMarketPoolTurn(
         }
       }
 
-      await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).updateOne(
+      await bondMarketPoolsCollection<BondMarketPool>(db).updateOne(
         { _id: currency },
         {
           $set: {

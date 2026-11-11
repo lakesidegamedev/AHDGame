@@ -5,6 +5,7 @@ import type { SuccessionAccountingSnapshot } from "./normalizeLiveFinances";
 import type { SuccessionFiscalShare } from "./rules/fiscalShares";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationFiscalAccountsCollection } from "@/lib/db/repositories/federationFiscalAccounts";
 
 export const FEDERATION_FISCAL_ACCOUNTS_COLLECTION = "federationFiscalAccounts";
 
@@ -125,8 +126,8 @@ export async function materializeFederationFiscalAccounts(input: {
   );
   if (sourceUpdate.matchedCount !== 1)
     throw new Error("Federation source treasury changed during settlement");
-  await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
-    .insertMany(accounts, { session });
+  await federationFiscalAccountsCollection<FederationFiscalAccount>(db).insertMany(accounts, {
+    session,
+  });
   return accounts;
 }

@@ -16,6 +16,7 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bankFailurePoliticalEventsCollection } from "@/lib/db/repositories/bankFailurePoliticalEvents";
 
 // Frozen turn-601 waterfall resolution: vault plus USD insurance fund
 // paid the household book into the central bank. The 22,150.23 household
@@ -120,9 +121,10 @@ async function loadRecord(db: Db): Promise<FrozenRecord | null> {
 }
 async function eventExists(db: Db): Promise<boolean> {
   return Boolean(
-    await db
-      .collection<{ _id: string }>(BANK_FAILURE_EVENTS)
-      .findOne({ _id: FAILURE_EVENT_ID }, { projection: { _id: 1 } })
+    await bankFailurePoliticalEventsCollection<{ _id: string }>(db).findOne(
+      { _id: FAILURE_EVENT_ID },
+      { projection: { _id: 1 } }
+    )
   );
 }
 function readPlayerBook(record: FrozenRecord): number {
@@ -498,9 +500,9 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // TransitionProjection has no delete form. The failure is reversed, so the
   // political event must not keep weighing on approval. Guarded by _id, and a
   // second run simply deletes nothing.
-  const deleted = await db
-    .collection<{ _id: string }>(BANK_FAILURE_EVENTS)
-    .deleteOne({ _id: FAILURE_EVENT_ID });
+  const deleted = await bankFailurePoliticalEventsCollection<{ _id: string }>(db).deleteOne({
+    _id: FAILURE_EVENT_ID,
+  });
 
   const existing = await financialTxLogCollection(db).findOne({
     type: "restitution_credit",
