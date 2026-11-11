@@ -27,6 +27,7 @@ import { voidDebateSessionsForElection } from "@/lib/debate/debateSessionLifecyc
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface OneElectionResult {
   resolved: boolean;
@@ -306,12 +307,10 @@ export async function resolveElectionWithNoTally(
   if (isCommonsGeneralElection(election.electionType) && election.state) {
     await spawnCommonsElection(db, election, now);
   }
-  await db
-    .collection<Election>("elections")
-    .updateOne(
-      { _id: election._id },
-      { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-    );
+  await electionsCollection(db).updateOne(
+    { _id: election._id },
+    { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+  );
   await voidDebateSessionsForElection(db, election._id, now);
   return { resolved: false, newsOutcomes: [] };
 }
@@ -418,12 +417,10 @@ export async function resolveElectionWithZeroVotes(
   if (isCommonsGeneralElection(election.electionType) && election.state) {
     await spawnCommonsElection(db, election, now);
   }
-  await db
-    .collection<Election>("elections")
-    .updateOne(
-      { _id: election._id },
-      { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-    );
+  await electionsCollection(db).updateOne(
+    { _id: election._id },
+    { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+  );
   await voidDebateSessionsForElection(db, election._id, now);
   return { resolved: true, newsOutcomes: [] };
 }
@@ -530,12 +527,10 @@ export async function resolveElectionWithNoRankedCandidates(
   if (isSpecialCommonsElection(election.electionType)) {
     await reopenCommonsVacanciesForRetry(db, election._id, now);
   }
-  await db
-    .collection<Election>("elections")
-    .updateOne(
-      { _id: election._id },
-      { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-    );
+  await electionsCollection(db).updateOne(
+    { _id: election._id },
+    { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+  );
   await voidDebateSessionsForElection(db, election._id, now);
   return { resolved: true, newsOutcomes: [] };
 }

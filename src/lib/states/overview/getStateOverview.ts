@@ -38,6 +38,7 @@ import { raceHref } from "@/lib/campaignManager/links";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -99,8 +100,7 @@ export async function getStateOverview(
     politicalPartiesCollection(db).find({ countryId }).toArray(),
     statesCollection(db).findOne({ _id: stateId, countryId }),
     getRegionalExecutive(db, countryId, stateId),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({
         countryId,
         state: stateId,

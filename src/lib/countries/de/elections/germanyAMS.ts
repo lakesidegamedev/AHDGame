@@ -35,6 +35,7 @@ import { reconcileBundestagHolderOffices } from "./bundestagHolderOffices";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
@@ -220,8 +221,7 @@ async function fetchDirectMandates(db: Db): Promise<DirectMandates> {
 
 export async function computeZweitstimmen(db: Db, cycle: number): Promise<ZweitstimmenByLand> {
   // Fetch all Bundestag elections and their tallies for this cycle.
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: { $in: ["bundestag", "snap_bundestag"] },
@@ -511,7 +511,7 @@ export async function maybeReconcileBundestag(
   cycle: number,
   now: Date = new Date()
 ): Promise<BundestagElectionResult | null> {
-  const pending = await db.collection<Election>("elections").countDocuments({
+  const pending = await electionsCollection(db).countDocuments({
     countryId: "DE",
     electionType: { $in: ["bundestag", "snap_bundestag"] },
     cycle,
@@ -532,8 +532,7 @@ export async function maybeReconcileBundestag(
     gs?.currentTurn ?? 0,
     telemetryActors
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "DE",

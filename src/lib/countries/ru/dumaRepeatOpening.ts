@@ -34,6 +34,7 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION = "russianDumaRepeatOpenings";
 export interface RussianDumaRepeatOpeningRecord {
@@ -257,7 +258,7 @@ export async function materializeRussianDumaRepeatOpening(input: {
     electionIds: [...electionIds],
     seatIds: pending.map((row) => row.seatId),
   };
-  await db.collection<Election>("elections").insertMany(ballots, { session });
+  await electionsCollection(db).insertMany(ballots, { session });
   await openings.insertOne(record, { session });
   const bound = await db.collection<CountryGameState>("countryGameStates").updateOne(
     {

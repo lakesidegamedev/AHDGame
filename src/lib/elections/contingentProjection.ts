@@ -57,6 +57,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 
@@ -228,8 +229,7 @@ async function buildProjectedChamber(
   sittingHouseStates: number;
 }> {
   const windowEnd = president.endTurn;
-  const races = await db
-    .collection<Election>("elections")
+  const races = await electionsCollection(db)
     .find({
       countryId: countryId as CountryId,
       electionType: { $in: [...CHAMBER_TYPES] },

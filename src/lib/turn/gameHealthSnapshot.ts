@@ -36,6 +36,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 type SeatScopedOfficial = ElectedOfficial & { seatId?: string };
 
@@ -281,8 +282,7 @@ async function runIntegrityChecks(
     // are active for many turns before nominations open, so they are not gaps yet.
     // Project to the join key after the status match so full election documents
     // never cross the $lookup.
-    db
-      .collection("elections")
+    electionsCollection<Document>(db)
       .aggregate([
         {
           $match: {
@@ -545,7 +545,7 @@ async function collectPopulationStats(db: Db): Promise<PopulationStats> {
     nppsCollection<Document>(db).countDocuments(),
     db.collection("seats").countDocuments(),
     politicalPartiesCollection<Document>(db).countDocuments(),
-    db.collection("elections").countDocuments({ status: "active" }),
+    electionsCollection<Document>(db).countDocuments({ status: "active" }),
     electedOfficialsCollection<Document>(db).countDocuments(),
     // Simulated roster for the per-country breakdown below.
     getSimulatedCountryIds(db),

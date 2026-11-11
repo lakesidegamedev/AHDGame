@@ -12,6 +12,7 @@ import {
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { planNextLowerChamberCycle } from "@/lib/elections/snapShift";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Convert a prior endTime to a LARP turn number, anchored on `nowRef`'s
@@ -65,7 +66,7 @@ function foundingPhaseActive(ctx: CycleAnchorContext): boolean {
  * "active" once the canonical window opens.
  */
 export async function spawnHouseElection(db: Db, fromElection: Election, now: Date): Promise<void> {
-  const existing = await db.collection<Election>("elections").findOne({
+  const existing = await electionsCollection(db).findOne({
     electionType: "house",
     state: fromElection.state,
     status: { $in: ["active", "upcoming"] },
@@ -126,9 +127,9 @@ export async function spawnHouseElection(db: Db, fromElection: Election, now: Da
     updatedAt: now,
   };
 
-  const inserted = await db
-    .collection<Election>("elections")
-    .insertOne(withCampaignRules(newElection) as Election);
+  const inserted = await electionsCollection(db).insertOne(
+    withCampaignRules(newElection) as Election
+  );
   console.log(
     `[Turn] House election spawned for ${fromElection.state} cycle ${spawn.cycle} status=${status} — id ${inserted.insertedId}`
   );
@@ -150,7 +151,7 @@ export async function spawnCommonsElection(
   fromElection: Election,
   now: Date
 ): Promise<void> {
-  const existing = await db.collection<Election>("elections").findOne({
+  const existing = await electionsCollection(db).findOne({
     electionType: "commons",
     state: fromElection.state,
     status: { $in: ["active", "upcoming"] },
@@ -218,9 +219,9 @@ export async function spawnCommonsElection(
     updatedAt: now,
   };
 
-  const inserted = await db
-    .collection<Election>("elections")
-    .insertOne(withCampaignRules(newElection) as Election);
+  const inserted = await electionsCollection(db).insertOne(
+    withCampaignRules(newElection) as Election
+  );
   console.log(
     `[Turn] Commons election spawned for ${fromElection.state} cycle ${spawn.cycle} status=${status} — id ${inserted.insertedId}`
   );

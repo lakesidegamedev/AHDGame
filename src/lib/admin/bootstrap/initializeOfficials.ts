@@ -20,6 +20,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function initializeOfficials(db: Db): Promise<{
   message: string;
@@ -133,7 +134,7 @@ export async function initializeOfficials(db: Db): Promise<{
   await electedOfficialsCollection<Document>(db).insertMany(officialsToInsert);
 
   // Create cycle-1 elections
-  const existingElections = await db.collection("elections").countDocuments({ cycle: 1 });
+  const existingElections = await electionsCollection<Document>(db).countDocuments({ cycle: 1 });
   let electionsCreated = 0;
 
   if (existingElections === 0) {
@@ -204,7 +205,7 @@ export async function initializeOfficials(db: Db): Promise<{
     }
 
     if (electionsToInsert.length > 0) {
-      await db.collection("elections").insertMany(electionsToInsert.map(withCampaignRules));
+      await electionsCollection<Document>(db).insertMany(electionsToInsert.map(withCampaignRules));
       electionsCreated = electionsToInsert.length;
     }
   }

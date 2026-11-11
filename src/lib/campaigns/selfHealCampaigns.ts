@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { ensureCampaignForCandidate } from "@/lib/campaigns/createInitialCampaign";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Standing backstop: guarantee every active player candidate in a
@@ -30,8 +31,7 @@ export async function selfHealMissingCampaigns(db: Db, now: Date = new Date()): 
   const electionIds = [...new Set(activeCandidates.map((c) => c.electionId.toString()))].map(
     (id) => activeCandidates.find((c) => c.electionId.toString() === id)!.electionId
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { _id: { $in: electionIds } },
       { projection: { _id: 1, countryId: 1, electionType: 1, russianPresidentialRound: 1 } }

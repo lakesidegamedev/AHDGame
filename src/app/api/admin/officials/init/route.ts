@@ -13,6 +13,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // POST /api/admin/officials/init — Initializes elected official positions and cycle-1 elections for senate, house, or executive offices.
 // Auth: requireAdmin
@@ -189,7 +190,9 @@ export async function POST(request: Request) {
     const houseDur = DEFAULT_DURATIONS.house;
 
     // Check if elections already exist for cycle 1
-    const existingElectionsCount = await db.collection("elections").countDocuments({ cycle: 1 });
+    const existingElectionsCount = await electionsCollection<Document>(db).countDocuments({
+      cycle: 1,
+    });
 
     if (existingElectionsCount === 0) {
       // Cycle-1 LARP years anchor to the active preset's calendar (1991-default
@@ -262,7 +265,9 @@ export async function POST(request: Request) {
       }
 
       if (electionsToInsert.length > 0) {
-        await db.collection("elections").insertMany(electionsToInsert.map(withCampaignRules));
+        await electionsCollection<Document>(db).insertMany(
+          electionsToInsert.map(withCampaignRules)
+        );
       }
     }
 

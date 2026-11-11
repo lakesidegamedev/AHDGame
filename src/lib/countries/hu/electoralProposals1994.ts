@@ -17,6 +17,7 @@ import { calendarTurn } from "@/lib/utils/gameDate";
 import { hu1994DecisionAvailability, passesHuElectoralAmendment } from "./rules/electoralLaw";
 import type { CountryState } from "@/lib/db/types/countryState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const HU_1994_PROPOSALS_COLLECTION = "hu1994ElectoralProposals";
 const ID = "1991-default:hu-electoral:threshold1994";
@@ -220,8 +221,7 @@ export async function authorizeHu1994ElectoralProposal(
 
 /** An existing primary can adopt the law only before any general ballot exists. */
 async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, session: ClientSession) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -306,7 +306,7 @@ async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, sessi
     { $set: { updatedAt: now } },
     { session }
   );
-  const changed = await db.collection<Election>("elections").updateMany(
+  const changed = await electionsCollection(db).updateMany(
     {
       _id: { $in: eligible.map((row) => row._id) },
       status: { $in: ["active", "upcoming"] },

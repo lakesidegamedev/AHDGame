@@ -13,6 +13,7 @@ import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assembly
 import { hu1991RunoffCampaigns } from "./rules/assemblyCampaign1991";
 import { projectHu1991Runoff } from "./rules/campaignBallots1991";
 import { countHuMixed1991 } from "./rules/mixedElection1991";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -44,8 +45,7 @@ async function materializeHu1991RunoffOpening(input: {
   const namespace = generation === 1 ? receipt._id : `${receipt._id}:generation:${generation}`;
   const planned = hu1991RunoffCampaigns(receipt.count, receipt.nominations);
   const allowed = new Set(planned.flatMap((row) => row.candidateIds));
-  const roots = await db
-    .collection<Election>("elections")
+  const roots = await electionsCollection(db)
     .find(
       {
         _id: { $in: receipt.electionIds.map((id) => new ObjectId(id)) },
@@ -142,7 +142,7 @@ async function materializeHu1991RunoffOpening(input: {
     { session }
   );
   if (updated.modifiedCount !== 1) throw new Error("Hungarian runoff opening changed concurrently");
-  await db.collection<Election>("elections").insertMany(polls, { session });
+  await electionsCollection(db).insertMany(polls, { session });
   if (renewedCandidates.length) {
     await db
       .collection<ElectionCandidate>("electionCandidates")
@@ -229,8 +229,7 @@ async function materializeHu1991RunoffCount(input: {
       ? receipt._id
       : `${receipt._id}:generation:${receipt.runoffGeneration}`;
   const ids = activeIds.map((id) => new ObjectId(id));
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { _id: { $in: ids } },
       { session, projection: { state: 1, status: 1, endTurn: 1, hungarianAssemblyRound: 1 } }

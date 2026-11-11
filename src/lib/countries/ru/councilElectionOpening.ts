@@ -16,6 +16,7 @@ import { planRussianDumaBallot } from "./rules/assemblySchedule";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const RUSSIAN_COUNCIL_OPENINGS_COLLECTION = "russianCouncilElectionOpenings";
 export interface RussianCouncilOpeningRecord {
@@ -90,7 +91,7 @@ export async function materializeRussianCouncilElectionOpening(input: {
     )
   )
     return null;
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const openings = db.collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION);
   if (country.ruFirstCouncilElectionCohortId) {
     const opening = await openings.findOne(

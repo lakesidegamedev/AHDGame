@@ -13,6 +13,7 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
 import { partiesMatchInCountry } from "@/lib/parties/partyMatch";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface CreateExecutiveEndorsementInput {
   countryId: CountryId;
@@ -39,7 +40,7 @@ export async function createExecutiveEndorsement(
 ): Promise<{ status: number; body: { endorsementId?: string; error?: string } }> {
   const { countryId, character, electionId, candidateId } = input;
 
-  const election = await db.collection<Election>("elections").findOne({ _id: electionId });
+  const election = await electionsCollection(db).findOne({ _id: electionId });
   if (!election || election.status !== "active") {
     return { status: 400, body: { error: "Election is not active." } };
   }

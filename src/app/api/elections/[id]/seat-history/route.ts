@@ -21,6 +21,7 @@ import {
 } from "@/lib/campaignManager/rules";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 
@@ -75,8 +76,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return errorResponse(resolved.reason === "invalid_id" ? 400 : 404, "Election not found");
     }
 
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find(adjacentElectionsQuery(resolved.election))
       .project<SeatElection>({
         _id: 1,

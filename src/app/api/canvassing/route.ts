@@ -38,6 +38,7 @@ import {
   CANVASS_ELIGIBILITY_MESSAGE,
 } from "@/lib/canvassing/eligibility";
 import { getGameTime } from "@/lib/time/gameTime";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const COST_ACTIONS = 1;
 
@@ -427,7 +428,7 @@ async function checkActiveCampaignSeason(stateId: string, countryId?: string): P
       location.push({ electionType: "president", countryId });
     }
 
-    const activeElection = await db.collection<Election>("elections").findOne({
+    const activeElection = await electionsCollection(db).findOne({
       status: "active",
       $and: [endingSoon, { $or: location }],
     });

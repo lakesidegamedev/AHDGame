@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Election } from "@/lib/db/types";
 import { isSeatId } from "@/lib/elections/resolveElection";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,16 +41,13 @@ export async function generateMetadata({
   // ObjectId. The old ObjectId-only guard bailed on those, so the pages that
   // players actually share shipped no title and no OG tags at all.
   const election = isSeatId(id)
-    ? await db
-        .collection<Election>("elections")
+    ? await electionsCollection(db)
         .find({ seatId: id }, { projection })
         .sort({ cycle: -1 })
         .limit(1)
         .next()
     : ObjectId.isValid(id)
-      ? await db
-          .collection<Election>("elections")
-          .findOne({ _id: new ObjectId(id) }, { projection })
+      ? await electionsCollection(db).findOne({ _id: new ObjectId(id) }, { projection })
       : null;
   if (!election) return {};
 

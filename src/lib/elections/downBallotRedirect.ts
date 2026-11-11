@@ -6,6 +6,7 @@ import {
 } from "@/lib/elections/electionParamResolution";
 import { campaignManagerHref, primaryTierHref } from "@/lib/campaignManager/links";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Down-ballot races live in Campaign Manager; the old election pages redirect
@@ -25,12 +26,10 @@ export async function downBallotRedirectTarget(
 ): Promise<string | null> {
   let election: Pick<Election, "_id" | "electionType"> | null = null;
   if (cycle != null && isElectionRouteSeatId(idParam)) {
-    election = await db
-      .collection<Election>("elections")
-      .findOne(
-        { seatId: idParam, cycle, status: { $ne: "cancelled" } },
-        { projection: { _id: 1, electionType: 1 } }
-      );
+    election = await electionsCollection(db).findOne(
+      { seatId: idParam, cycle, status: { $ne: "cancelled" } },
+      { projection: { _id: 1, electionType: 1 } }
+    );
   } else {
     const resolved = await resolveElectionRouteParam(db, idParam);
     election = resolved.ok ? resolved.election : null;

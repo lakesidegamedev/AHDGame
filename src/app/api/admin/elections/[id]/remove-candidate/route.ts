@@ -11,6 +11,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const removeCandidateSchema = z.object({
   candidateId: z.string().min(1),
@@ -45,7 +46,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const now = new Date();
 
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 

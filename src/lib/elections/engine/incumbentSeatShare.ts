@@ -16,6 +16,7 @@ import type { Election, ElectionVoteTally } from "@/lib/db/types";
 import { getElectionSeatKey } from "@/lib/turn/autoReelectionEntry";
 import { SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES } from "@/lib/constants/countries";
 import { isSingleSeatLegislativeRace } from "./singleSeatIncumbency";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * False for the races that have a dedicated OFFICEHOLDER incumbency path, so
@@ -127,8 +128,7 @@ export async function getIncumbentSeatShareByParty(
   // `officeKeyForElectionType`. A snap-followed-by-regular cycle on the
   // same seat must match. The in-memory `find` filter below applies the
   // canonical seat-key match.
-  const priorElections = await db
-    .collection<Election>("elections")
+  const priorElections = await electionsCollection(db)
     .find({
       countryId: election.countryId ?? "US",
       state: election.state,
@@ -172,8 +172,7 @@ export async function preloadIncumbentSeatShares(
   if (eligible.length === 0) return result;
 
   const states = [...new Set(eligible.map((election) => election.state))];
-  const resolved = await db
-    .collection<Election>("elections")
+  const resolved = await electionsCollection(db)
     .find({ status: "resolved", state: { $in: states } })
     .sort({ cycle: -1 })
     .toArray();

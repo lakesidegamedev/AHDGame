@@ -48,6 +48,8 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
 
 // Sync-date bootstrap anchors are now derived from the active preset's
 // `getCycleAnchors(ctx)` inside the POST handler (see ctx-build below).
@@ -126,8 +128,7 @@ export const POST = withAdminRoute(async (_auth) => {
   //    that a failed insertMany leaves the existing data untouched. A failed deleteMany
   //    after a successful insert is recoverable — a retry of sync-date will include the
   //    old elections in oldElectionIds and clean them up correctly.
-  const oldElectionIds = await db
-    .collection<Election>("elections")
+  const oldElectionIds = await electionsCollection(db)
     .find({}, { projection: { _id: 1 } })
     .toArray()
     .then((docs) => docs.map((d) => d._id));
@@ -773,9 +774,7 @@ export const POST = withAdminRoute(async (_auth) => {
   //    admin can safely retry. Any partial inserts from a prior failed attempt will be
   //    treated as "old" elections and cleaned up by the delete step that follows.
   if (toInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toInsert.map(withCampaignRules) as Election[]);
   }
 
   // 4. Delete old elections and all their linked data (candidates, tallies, etc.).
@@ -793,9 +792,9 @@ export const POST = withAdminRoute(async (_auth) => {
       db.collection("nppEndorsements").deleteMany({ electionId: { $in: oldElectionIds } }),
       db.collection("playerEndorsements").deleteMany({ electionId: { $in: oldElectionIds } }),
     ]);
-    const deleteResult = await db
-      .collection("elections")
-      .deleteMany({ _id: { $in: oldElectionIds } });
+    const deleteResult = await electionsCollection<Document>(db).deleteMany({
+      _id: { $in: oldElectionIds },
+    });
     deletedCount = deleteResult.deletedCount;
   }
 

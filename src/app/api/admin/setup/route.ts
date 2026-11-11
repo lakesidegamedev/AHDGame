@@ -58,6 +58,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function GET() {
   try {
@@ -86,7 +87,7 @@ export async function GET() {
       db.collection<{ _id: string }>("gameConfig").findOne({ _id: "default" }),
       gameStateCollection(db).findOne({ _id: "current" }),
       electedOfficialsCollection<Document>(db).countDocuments(),
-      db.collection("elections").countDocuments(),
+      electionsCollection<Document>(db).countDocuments(),
       politicalPartiesCollection<Document>(db).countDocuments(),
       db.collection("stateDemographics").countDocuments(),
       db.collection("seats").countDocuments(),

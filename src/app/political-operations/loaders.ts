@@ -3,6 +3,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { ensureCampaignForCandidate } from "@/lib/campaigns/createInitialCampaign";
 import type { ElectionCandidate, Election } from "@/lib/db/types";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface PoliticalOperationsPageData {
   character: {
@@ -45,7 +46,7 @@ export async function loadPoliticalOperationsData(): Promise<PoliticalOperations
     null;
   if (candidacies.length > 0) {
     const electionIds = candidacies.map((c) => c.electionId);
-    const election = await db.collection<Election>("elections").findOne(
+    const election = await electionsCollection(db).findOne(
       {
         _id: { $in: electionIds },
         electionType: "president",

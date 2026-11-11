@@ -19,6 +19,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** Minimum candidates per party per race. Races below this get filled. */
 const MIN_CANDIDATES_PER_PARTY = 1;
@@ -37,8 +38,7 @@ export async function POST() {
     // All active elections (including general phase). Presidential races are
     // excluded — NPPs are barred from presidential elections by design, so even
     // this admin bypass must not create NPP presidential candidates.
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({
         status: { $in: ["active", "upcoming"] },
         electionType: { $ne: "president" },

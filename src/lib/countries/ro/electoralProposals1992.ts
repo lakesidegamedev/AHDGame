@@ -25,6 +25,7 @@ import type { CountryState } from "@/lib/db/types/countryState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const RO_1992_PROPOSALS_COLLECTION = "ro1992ElectoralProposals";
 const ID = "1991-default:ro-electoral:parliament1992";
@@ -308,8 +309,7 @@ export async function processRo1992ElectoralMandate(
 
 /** Only an untouched complete bicameral primary cohort may accept new capacity. */
 async function rebindRo1992PrimaryCohort(db: Db, turn: number, now: Date, session: ClientSession) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "RO",
@@ -380,5 +380,5 @@ async function rebindRo1992PrimaryCohort(db: Db, turn: number, now: Date, sessio
       },
     }));
   });
-  if (updates.length) await db.collection<Election>("elections").bulkWrite(updates, { session });
+  if (updates.length) await electionsCollection(db).bulkWrite(updates, { session });
 }

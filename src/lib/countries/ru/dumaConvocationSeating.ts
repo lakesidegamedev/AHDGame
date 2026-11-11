@@ -35,6 +35,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -137,8 +138,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
       ownerId: row.ownerId.toHexString(),
     })),
   });
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "RU" as const,

@@ -28,6 +28,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface Lock {
   _id: string;
@@ -46,9 +47,7 @@ export async function materializeBgGrandPartialPlayerFiling(
   const { db, session, electionId, candidateId, candidate, requestedDistrictId, turn, now } = input;
   const reject = (reason: BgFoundingFilingFailure) => ({ allowed: false as const, reason });
   if (!session.inTransaction()) throw new Error("Bulgarian partial filing requires a transaction");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: electionId }, { session });
+  const election = await electionsCollection(db).findOne({ _id: electionId }, { session });
   const binding = election?.bulgarianFoundingRound;
   if (
     !election ||

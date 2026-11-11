@@ -16,6 +16,7 @@ import { getUkCommonsSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RegionDiagnostic {
   region: string;
@@ -39,8 +40,7 @@ export async function GET() {
     const commonsSeats = getUkCommonsSeats(await getGameStatePreset(db));
 
     // Find most recent resolved commons elections per UK region
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: "commons",
         countryId: "UK",
@@ -141,8 +141,7 @@ export async function POST() {
     const now = new Date();
 
     // Find most recent resolved commons elections per UK region
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: "commons",
         countryId: "UK",

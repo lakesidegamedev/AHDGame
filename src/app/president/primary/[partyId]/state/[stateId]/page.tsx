@@ -41,6 +41,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -98,7 +99,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     findParty(db, partyId),
     // Presidential primaries are US-only.
     statesCollection(db).findOne({ _id: stateId, countryId: "US" }),
-    db.collection<Election>("elections").findOne({
+    electionsCollection(db).findOne({
       electionType: "president",
       countryId: "US",
       status: "active",

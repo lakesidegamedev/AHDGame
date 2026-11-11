@@ -24,6 +24,8 @@ import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorCont
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
 
 // GET - List all elections
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -53,8 +55,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     if (state) query.state = state;
 
     const [elections, gameState] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .find(query)
         .sort({ state: 1, electionType: 1, senateClass: 1, chamberClass: 1 })
         .toArray(),
@@ -122,7 +123,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     // Check if elections for this cycle already exist
-    const existingCount = await db.collection("elections").countDocuments({ cycle });
+    const existingCount = await electionsCollection<Document>(db).countDocuments({ cycle });
     if (existingCount > 0) {
       return errorResponse(
         409,
@@ -209,9 +210,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
     }
 
-    const result = await db
-      .collection("elections")
-      .insertMany(electionsToInsert.map(withCampaignRules));
+    const result = await electionsCollection<Document>(db).insertMany(
+      electionsToInsert.map(withCampaignRules)
+    );
 
     const senateCount = electionsToInsert.filter((e) => e.electionType === "senate").length;
     const houseCount = electionsToInsert.filter((e) => e.electionType === "house").length;
@@ -273,7 +274,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     if (chamberClass) query.chamberClass = chamberClass;
     if (cycle) query.cycle = cycle;
 
-    const elections = await db.collection<Election>("elections").find(query).toArray();
+    const elections = await electionsCollection(db).find(query).toArray();
 
     if (elections.length === 0) {
       return errorResponse(404, "No elections found matching criteria");
@@ -333,7 +334,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
         updates.status = "active";
       }
 
-      await db.collection("elections").updateOne({ _id: election._id }, { $set: updates });
+      await electionsCollection<Document>(db).updateOne({ _id: election._id }, { $set: updates });
       updatedCount++;
     }
 
@@ -368,10 +369,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
     const cycleNum = parseInt(cycle, 10);
 
     // Get election IDs for this cycle
-    const elections = await db
-      .collection<Election>("elections")
-      .find({ cycle: cycleNum })
-      .toArray();
+    const elections = await electionsCollection(db).find({ cycle: cycleNum }).toArray();
 
     const electionIds = elections.map((e) => e._id);
 
@@ -383,7 +381,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
     ]);
 
     // Delete all elections for this cycle
-    const electionsResult = await db.collection("elections").deleteMany({ cycle: cycleNum });
+    const electionsResult = await electionsCollection<Document>(db).deleteMany({ cycle: cycleNum });
 
     return NextResponse.json({
       success: true,

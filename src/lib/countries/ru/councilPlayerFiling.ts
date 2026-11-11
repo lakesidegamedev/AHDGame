@@ -36,6 +36,7 @@ import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export async function validateRussianCouncilPlayerFiling(input: {
   db: Db;
   election: Election;
@@ -245,9 +246,7 @@ export async function materializeRussianCouncilPlayerFiling(input: {
     !candidate.electionId.equals(electionId)
   )
     throw new Error("Council player filing needs a transaction and one player identity");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: electionId }, { session });
+  const election = await electionsCollection(db).findOne({ _id: electionId }, { session });
   const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
     {

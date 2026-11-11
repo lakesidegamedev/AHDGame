@@ -11,6 +11,7 @@ import {
   sweepExpiredDebates,
 } from "./debateSessionLifecycle";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const CHALLENGE_THRESHOLD = Math.round(DEBATE_CHALLENGE_CHANCE * 100);
 
@@ -62,8 +63,7 @@ export async function processDebateChallenges(
   const electionIds = [...byElection.keys()].map((id) => new ObjectId(id));
   const elections =
     electionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             { _id: { $in: electionIds } },
             { projection: { _id: 1, primaryEndTurn: 1, primaryEndTime: 1 } }

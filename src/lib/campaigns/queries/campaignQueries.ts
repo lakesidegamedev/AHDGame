@@ -66,6 +66,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface CampaignListItem {
   id: string;
@@ -104,7 +105,7 @@ export async function getCampaignDetail(
     campaign.managerCharacterId
       ? charactersCollection(db).findOne({ _id: campaign.managerCharacterId })
       : Promise.resolve(null),
-    db.collection<Election>("elections").findOne({ _id: campaign.electionId }),
+    electionsCollection(db).findOne({ _id: campaign.electionId }),
   ]);
   if (!candidate) {
     throw notFound("Campaign candidate not found");
@@ -770,8 +771,7 @@ export async function getViewerCampaigns(
     .find({ userId: userOid }, { projection: { _id: 1 } })
     .toArray();
   const candidateIds = ownedCharacterIds.map((character) => character._id);
-  const countryElections = await db
-    .collection<Election>("elections")
+  const countryElections = await electionsCollection(db)
     .find(
       { countryId: characterCountryId },
       { projection: { _id: 1, countryId: 1, electionType: 1 } }
@@ -815,8 +815,7 @@ export async function getViewerCampaigns(
   const eligibleElectionCountryMap = new Map<string, string>();
   const eligibleElectionTypeMap = new Map<string, string>();
   if (electionIds.length > 0) {
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find(
         { _id: { $in: electionIds } },
         { projection: { _id: 1, countryId: 1, electionType: 1 } }

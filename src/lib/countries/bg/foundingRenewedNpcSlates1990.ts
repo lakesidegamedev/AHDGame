@@ -14,6 +14,7 @@ import {
 import { BG_1990_CONSTITUENCIES } from "./data/foundingDistricts1990";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 function stableId(key: string) {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -60,8 +61,7 @@ export async function planBgFoundingRenewedNpcSlates(input: {
     )
     .sort({ _id: 1 })
     .toArray();
-  const liveRaces = await db
-    .collection<Election>("elections")
+  const liveRaces = await electionsCollection(db)
     .find(
       { countryId: "BG", status: { $in: ["upcoming", "active", "completed"] } },
       { session, projection: { _id: 1 } }

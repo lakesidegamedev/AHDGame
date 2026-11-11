@@ -14,6 +14,7 @@ import { planRussianPresidentialBallot } from "./rules/presidentialSchedule";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianPresidentialElectionOpening(input: {
   db: Db;
@@ -54,7 +55,7 @@ export async function materializeRussianPresidentialElectionOpening(input: {
     )
   )
     return null;
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   if (country.ruPresidencyFirstElectionId) {
     const existing = await elections.findOne(
       { _id: country.ruPresidencyFirstElectionId, countryId: "RU", electionType: "president" },

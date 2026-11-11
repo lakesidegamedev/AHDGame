@@ -5,6 +5,7 @@
 import type { Db, ObjectId } from "mongodb";
 import { editorialAudienceFavorabilityNudge, type EditorialPosition } from "./rules";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface ActiveElection {
   _id: ObjectId;
@@ -54,8 +55,7 @@ export async function applyMediaEditorialEffects(args: {
   const { db, turn, outletsByState } = args;
   if (!Number.isInteger(turn) || outletsByState.size === 0) return;
 
-  const elections = await db
-    .collection<ActiveElection>("elections")
+  const elections = await electionsCollection<ActiveElection>(db)
     .find({ status: "active" }, { projection: { _id: 1, countryId: 1, state: 1 } })
     .toArray();
   const relevantElections = elections.filter((election) => outletsByState.has(election.state));

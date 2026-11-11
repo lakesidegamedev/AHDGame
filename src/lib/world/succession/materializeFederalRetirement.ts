@@ -19,6 +19,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 type HistoricalPoliticalRow = { _id: ObjectId | string; [key: string]: unknown };
 
@@ -72,8 +73,7 @@ export async function materializeFederationFederalRetirement(input: {
           { session }
         );
   }
-  const activeElectionIds = await db
-    .collection<Election>("elections")
+  const activeElectionIds = await electionsCollection(db)
     .find(
       { countryId: sourceCountryId, status: { $in: ["upcoming", "active"] } },
       { session, projection: { _id: 1 } }
@@ -108,13 +108,11 @@ export async function materializeFederationFederalRetirement(input: {
       );
   await db.collection("cabinetMembers").deleteMany({ countryId: sourceCountryId }, { session });
   await db.collection("ukCabinetCooldowns").deleteMany({ countryId: sourceCountryId }, { session });
-  const elections = await db
-    .collection<Election>("elections")
-    .updateMany(
-      { countryId: sourceCountryId, status: { $in: ["upcoming", "active"] } },
-      { $set: { status: "cancelled", updatedAt: now } },
-      { session }
-    );
+  const elections = await electionsCollection(db).updateMany(
+    { countryId: sourceCountryId, status: { $in: ["upcoming", "active"] } },
+    { $set: { status: "cancelled", updatedAt: now } },
+    { session }
+  );
   const offices = await electedOfficialsCollection(db).deleteMany(
     { countryId: sourceCountryId },
     { session }

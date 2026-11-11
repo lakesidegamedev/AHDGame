@@ -7,6 +7,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -50,8 +51,7 @@ export async function queryParty(
       .sort({ nationalInfluence: -1 })
       .limit(5)
       .toArray(),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({ countryId: country, status: { $in: ["completed", "resolved"] } } as Filter<Election>)
       .sort({ endTime: -1 })
       .limit(3)

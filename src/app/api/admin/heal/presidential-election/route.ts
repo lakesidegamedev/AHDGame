@@ -6,6 +6,7 @@ import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { Election, GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * GET /api/admin/heal/presidential-election
@@ -19,9 +20,10 @@ export async function GET() {
 
     const db = await getDb();
 
-    const liveElection = await db
-      .collection<Election>("elections")
-      .findOne({ electionType: "president", status: { $in: ["active", "upcoming"] } });
+    const liveElection = await electionsCollection(db).findOne({
+      electionType: "president",
+      status: { $in: ["active", "upcoming"] },
+    });
 
     const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
@@ -94,9 +96,10 @@ export async function POST() {
     const correctDur = DEFAULT_DURATIONS.president.durationHours;
     const correctPrimary = DEFAULT_DURATIONS.president.primaryDurationHours;
 
-    const liveElection = await db
-      .collection<Election>("elections")
-      .findOne({ electionType: "president", status: { $in: ["active", "upcoming"] } });
+    const liveElection = await electionsCollection(db).findOne({
+      electionType: "president",
+      status: { $in: ["active", "upcoming"] },
+    });
 
     if (!liveElection) {
       return NextResponse.json({
@@ -110,7 +113,7 @@ export async function POST() {
     const newPrimaryEndTime = new Date(now.getTime() + correctPrimary * 3_600_000);
     const newEndTime = new Date(now.getTime() + correctDur * 3_600_000);
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: liveElection._id },
       {
         $set: {

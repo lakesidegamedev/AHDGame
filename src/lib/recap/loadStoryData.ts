@@ -21,6 +21,7 @@ import type { CharacterRecap, RecapCorporation, RecapRaces, RecapWorld } from ".
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -246,8 +247,7 @@ export async function loadStoryData(
       if (ObjectId.isValid(id)) electionIds.set(id, new ObjectId(id));
     const oids = [...electionIds.values()];
     const [elections, snapshots] = await Promise.all([
-      db
-        .collection<ElectionRow>("elections")
+      electionsCollection<ElectionRow>(db)
         .find(
           { _id: { $in: oids } },
           {
@@ -500,7 +500,7 @@ export async function loadStoryData(
   if (opts.includeWorld) {
     world = await section("world", warn, null, async () => {
       const [electionsHeld, conflicts, crises] = await Promise.all([
-        db.collection("elections").countDocuments({ status: { $in: FINISHED_ELECTION } }),
+        electionsCollection<Document>(db).countDocuments({ status: { $in: FINISHED_ELECTION } }),
         db.collection("conflicts").countDocuments({}),
         db.collection("crises").countDocuments({}),
       ]);

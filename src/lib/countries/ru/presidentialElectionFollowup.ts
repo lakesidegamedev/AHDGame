@@ -20,6 +20,7 @@ import {
 } from "./presidentialElectionResult";
 import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianPresidentialFollowup(input: {
   db: Db;
@@ -53,7 +54,7 @@ export async function materializeRussianPresidentialFollowup(input: {
       { session, projection: { _id: 1 } }
     );
   if (!country) throw new Error("Russian followup mandate changed");
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const predecessor = await elections.findOne(
     { _id: predecessorElectionId, countryId: "RU", electionType: "president", status: "resolved" },
     { session, projection: { cycle: 1, electionYear: 1 } }

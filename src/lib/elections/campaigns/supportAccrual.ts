@@ -19,6 +19,7 @@ import {
   RALLY_IMMEDIATE_SHARE,
   RALLY_SPREAD_TURNS,
 } from "@/lib/elections/engine/electionFormulaFactors";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface SupportAccrualTickResult {
   candidatesUpdated: number;
@@ -92,8 +93,7 @@ export async function processSupportAccrualTick(
 ): Promise<SupportAccrualTickResult> {
   const db = injectedDb ?? (await getDb());
 
-  const activeElections = await db
-    .collection<Election>("elections")
+  const activeElections = await electionsCollection(db)
     .find({ status: "active" }, { projection: { _id: 1 } })
     .toArray();
   if (activeElections.length === 0) return { candidatesUpdated: 0 };

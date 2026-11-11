@@ -22,6 +22,7 @@ import {
   type CommonsByElectionGate,
 } from "@/lib/turn/commonsByElections";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface CommonsVacancyDto {
   id: string;
@@ -105,8 +106,7 @@ export async function loadCommonsVacancyStatus(
   const states = [...new Set([...vacancies.map((v) => v.state), ...petitions.map((p) => p.state)])];
   const elections =
     states.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find({
             countryId: "UK",
             electionType: SPECIAL_COMMONS_ELECTION_TYPE,
@@ -119,8 +119,7 @@ export async function loadCommonsVacancyStatus(
   const openStates = [...new Set(vacancies.filter((v) => v.status === "open").map((v) => v.state))];
   const liveGenerals =
     openStates.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             {
               countryId: "UK",

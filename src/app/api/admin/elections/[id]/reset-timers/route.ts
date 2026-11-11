@@ -23,6 +23,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import type { Election } from "@/lib/db/types";
 import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { getGameTime } from "@/lib/time/gameTime";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,7 +54,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const election = await db.collection<Election>("elections").findOne({ _id: electionObjectId });
+    const election = await electionsCollection(db).findOne({ _id: electionObjectId });
 
     if (!election) {
       return errorResponse(404, "Election not found");
@@ -76,7 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // at the current turn and runs the requested number of turns from there.
     const { currentTurn } = await getGameTime();
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionObjectId },
       {
         $set: {

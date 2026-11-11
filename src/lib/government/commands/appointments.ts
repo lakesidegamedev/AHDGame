@@ -18,6 +18,8 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
 
 export async function adminAppointPrimeMinister(
   db: Db,
@@ -316,7 +318,7 @@ export async function appointSenator(
     appointeeUserId = appointee.userId;
   }
 
-  const nextClassElection = await db.collection("elections").findOne(
+  const nextClassElection = await electionsCollection<Document>(db).findOne(
     {
       electionType: "senate",
       state: governorOfficial.state,

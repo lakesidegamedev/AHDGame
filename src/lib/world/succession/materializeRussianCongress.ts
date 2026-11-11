@@ -23,6 +23,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const FEDERATION_ARCHIVED_POLITICAL_ROWS_COLLECTION = "federationArchivedPoliticalRows";
 const UNION_OFFICES = ["unionCongressDeputy", "chairmanOfCabinet", "sovietPresident"];
@@ -217,13 +218,11 @@ export async function materializeProvisionalRussianCongress(input: {
       { $set: { officeType: "congressDeputy", updatedAt: now } },
       { session }
     );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { countryId: "RU", status: { $in: ["upcoming", "active"] } },
-      { $set: { status: "cancelled", updatedAt: now } },
-      { session }
-    );
+  await electionsCollection(db).updateMany(
+    { countryId: "RU", status: { $in: ["upcoming", "active"] } },
+    { $set: { status: "cancelled", updatedAt: now } },
+    { session }
+  );
   for (const collection of ["pmAppointmentVotes", "noConfidenceVotes"])
     await db
       .collection(collection)
@@ -404,7 +403,7 @@ async function preserveEstablishedRussianConstitution(input: {
       { session }
     );
   }
-  await db.collection<Election>("elections").updateMany(
+  await electionsCollection(db).updateMany(
     {
       countryId: "RU",
       officeType: { $in: UNION_OFFICES },

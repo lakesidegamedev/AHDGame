@@ -33,6 +33,7 @@ import {
 import { loadFieldOfficeRegionMap } from "./subdivisions";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const FIELD_OFFICES_COLLECTION = "campaignFieldOffices";
 
@@ -79,7 +80,7 @@ export async function loadCampaignOrientation(
 async function loadContext(db: Db, campaignId: ObjectId, user: Actor) {
   const campaign = await getCampaignOrThrow(db, campaignId);
   await assertCampaignManagerOrNominee(db, campaign, user);
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) throw notFound("Election not found");
   if (!user.isAdmin) {
     assertSameCountry(user.character, election, {

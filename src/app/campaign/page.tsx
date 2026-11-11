@@ -9,6 +9,7 @@ import { resolveCampaignRedirect } from "@/lib/campaigns/queries/campaignRedirec
 import { standaloneCampaignHref } from "@/lib/campaignManager/links";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** The viewer's campaign on its race page in Campaign mode, else the standalone page. */
 async function campaignDestination(db: Db, campaignId: string) {
@@ -55,8 +56,7 @@ export default async function CampaignPage() {
 
   if (candidateCampaigns.length > 0) {
     const electionIds = candidateCampaigns.map((c) => c.electionId);
-    const eligibleElections = await db
-      .collection<Election>("elections")
+    const eligibleElections = await electionsCollection(db)
       .find({ _id: { $in: electionIds } })
       .toArray();
     const target = eligibleElections.find((e) => isCampaignEligibleElection(e));
@@ -74,8 +74,7 @@ export default async function CampaignPage() {
   // presidential candidate routes to that campaign even when not nominee/manager.
   // Mirrors the visibility check in /api/client-nav.
   if (characterOids.length > 0) {
-    const presElections = await db
-      .collection<Election>("elections")
+    const presElections = await electionsCollection(db)
       .find({ electionType: "president", status: "active" })
       .project({ _id: 1, countryId: 1 })
       .toArray();

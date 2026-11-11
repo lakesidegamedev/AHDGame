@@ -51,6 +51,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -494,7 +495,7 @@ export async function resetGameWorld(
   // These counts are surfaced in the result + adminLog, so we delete them
   // explicitly to capture deletedCount (and exclude them from the sweep).
   const officialsResult = await electedOfficialsCollection<Document>(db).deleteMany({});
-  const electionsResult = await db.collection("elections").deleteMany({});
+  const electionsResult = await electionsCollection<Document>(db).deleteMany({});
   const candidatesResult = await db.collection("electionCandidates").deleteMany({});
   const nppsResult = await nppsCollection<Document>(db).deleteMany({});
   const logsResult = await db.collection("actionLogs").deleteMany({});

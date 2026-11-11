@@ -17,6 +17,7 @@ import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeHu1991CampaignBinding(input: {
   db: Db;
@@ -37,8 +38,7 @@ export async function materializeHu1991CampaignBinding(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return false;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -133,7 +133,7 @@ export async function materializeHu1991CampaignBinding(input: {
       return [String(row._id), voters];
     })
   );
-  const result = await db.collection<Election>("elections").bulkWrite(
+  const result = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, hungarianAssemblyRound: { $exists: false } },
@@ -178,8 +178,7 @@ export async function bindHu1991Campaigns(
     { projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return 0;
-  const unbound = await db
-    .collection<Election>("elections")
+  const unbound = await electionsCollection(db)
     .find(
       {
         countryId: "HU",

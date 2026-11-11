@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import type { Campaign, Election } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Archive campaigns in races Campaign Manager no longer covers.
@@ -27,8 +28,7 @@ export const migration: Migration = {
     const electionIds = [
       ...new Map(campaigns.map((c) => [c.electionId.toString(), c.electionId])).values(),
     ];
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find(
         { _id: { $in: electionIds } },
         { projection: { _id: 1, countryId: 1, electionType: 1, russianPresidentialRound: 1 } }

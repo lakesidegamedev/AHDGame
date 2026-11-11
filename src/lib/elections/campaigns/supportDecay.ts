@@ -12,6 +12,7 @@ import {
   DEFAULT_CANDIDATE_SUPPORT,
   SUPPORT_DECAY_PER_TURN,
 } from "@/lib/elections/engine/electionFormulaFactors";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface SupportDecayResult {
   candidatesUpdated: number;
@@ -32,8 +33,7 @@ export async function processSupportDecay(
   // Pull active elections — only their candidates decay. `status` widens
   // to string in the type union; the literal "active" is what tally /
   // resolution code uses elsewhere.
-  const activeElections = await db
-    .collection<Election>("elections")
+  const activeElections = await electionsCollection(db)
     .find({ status: "active" }, { projection: { _id: 1 } })
     .toArray();
   if (activeElections.length === 0) return { candidatesUpdated: 0 };
@@ -98,8 +98,7 @@ export async function processClearResolvedSupport(
 ): Promise<ClearResolvedSupportResult> {
   const db = injectedDb ?? (await getDb());
 
-  const resolvedElections = await db
-    .collection<Election>("elections")
+  const resolvedElections = await electionsCollection(db)
     .find({ status: "resolved" }, { projection: { _id: 1 } })
     .toArray();
   if (resolvedElections.length === 0) return { candidatesCleared: 0 };

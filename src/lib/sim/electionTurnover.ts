@@ -10,6 +10,7 @@ import {
 } from "./rules/electionTurnoverRecords";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 type ElectionRow = Omit<ElectionRecord, "_id"> & { _id: ObjectId; status: string };
 type CandidateRow = Omit<CandidateRecord, "_id" | "electionId" | "characterId" | "nppId"> & {
   _id: ObjectId;
@@ -26,8 +27,7 @@ export interface ElectionTurnoverWindow {
   electionFamily?: string;
 }
 export async function collectElectionTurnoverReport(db: Db, window: ElectionTurnoverWindow = {}) {
-  const elections = await db
-    .collection<ElectionRow>("elections")
+  const elections = await electionsCollection<ElectionRow>(db)
     .find(
       {
         status: "resolved",

@@ -14,6 +14,7 @@ import { countBgFoundingElection, type BgFoundingCount } from "./rules/foundingC
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import type { BgFoundingBallots } from "./rules/foundingBallots1990";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const BG_FOUNDING_COUNTS_COLLECTION = "bgFoundingAssemblyCounts";
 export interface BgFoundingAssemblyRecord {
@@ -77,8 +78,7 @@ async function materializeBgFoundingFirstCount(input: {
     { session, projection: { preset: 1 } }
   );
   if (game?.preset !== "1991-default") return null;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "BG",

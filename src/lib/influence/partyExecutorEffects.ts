@@ -16,6 +16,7 @@ import { advertiseFavorabilityGain, campaignInfluenceGain } from "@/lib/actions"
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // Loyalty and stubbornness have no per-turn decay, so their boosts stay flat.
 // Influence and favorability DO decay every turn (see actionRefresh), so their
@@ -122,7 +123,7 @@ export async function applyPartyInfluenceEffects(
       });
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
-          db.collection<Election>("elections").findOne({ _id: candidate.electionId }),
+          electionsCollection(db).findOne({ _id: candidate.electionId }),
           db
             .collection<ElectionCandidate>("electionCandidates")
             .countDocuments({ electionId: candidate.electionId, status: "active" }),

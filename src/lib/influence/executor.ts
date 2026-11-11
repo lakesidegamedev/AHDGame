@@ -34,6 +34,7 @@ import {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface ExecuteInfluenceInput {
   characterId: ObjectId;
@@ -372,7 +373,7 @@ async function applyInfluenceEffects(
       });
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
-          db.collection<Election>("elections").findOne({ _id: candidate.electionId }),
+          electionsCollection(db).findOne({ _id: candidate.electionId }),
           db
             .collection<ElectionCandidate>("electionCandidates")
             .countDocuments({ electionId: candidate.electionId, status: "active" }),

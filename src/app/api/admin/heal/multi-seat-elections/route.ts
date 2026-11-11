@@ -19,6 +19,7 @@ import type {
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface MisallocatedElection {
   electionId: string;
@@ -51,8 +52,7 @@ export async function GET() {
     const db = await getDb();
 
     // Find recently resolved House/State Senate elections
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: { $in: ["house", "stateSenate"] },
         status: "resolved",
@@ -179,8 +179,7 @@ export async function POST() {
     const now = new Date();
 
     // Find resolved House/State Senate elections
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: { $in: ["house", "stateSenate"] },
         status: "resolved",

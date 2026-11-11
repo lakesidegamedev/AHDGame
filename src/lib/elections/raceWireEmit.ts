@@ -12,6 +12,7 @@ import type { Election, PrimaryStateActionKind } from "@/lib/db/types";
 import { campaignPageHref } from "@/lib/campaignManager/links";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Emitters for the per-race wire.
@@ -77,9 +78,10 @@ async function candidateName(db: Db, candidateId: ObjectId): Promise<string | nu
 
 /** Where a wire item sends a reader: the campaign on its race page (Russia keeps its own). */
 async function campaignWireHref(db: Db, campaign: CampaignLike): Promise<string> {
-  const race = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+  const race = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1 } }
+  );
   return campaignPageHref({
     campaignId: campaign._id.toString(),
     electionId: campaign.electionId.toString(),

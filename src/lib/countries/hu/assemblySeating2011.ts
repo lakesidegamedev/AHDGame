@@ -25,6 +25,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const HU_2011_OFFICE_ARCHIVES_COLLECTION = "hu2011AssemblyOfficeArchives";
 interface Hu2011AssemblyArchive {
@@ -72,8 +73,7 @@ async function materializeHu2011AssemblySeating(input: {
   );
   if (game?.preset !== "1991-default") throw new Error("No native Hungarian mandate in this world");
   const ids = receipt.electionIds.map((id) => new ObjectId(id));
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         _id: { $in: ids },
@@ -346,7 +346,7 @@ async function materializeHu2011AssemblySeating(input: {
     },
     { session }
   );
-  const finalizedElections = await db.collection<Election>("elections").bulkWrite(
+  const finalizedElections = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, status: { $in: ["completed", "resolved"] } },

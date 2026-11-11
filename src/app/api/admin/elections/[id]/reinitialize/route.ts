@@ -19,6 +19,7 @@ import type { Election, GameState } from "@/lib/db/types";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -55,7 +56,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const election = await db.collection<Election>("elections").findOne({ _id: electionObjectId });
+    const election = await electionsCollection(db).findOne({ _id: electionObjectId });
 
     if (!election) {
       return errorResponse(404, "Election not found");
@@ -86,7 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now.getTime() + (DEFAULT_PRIMARY_HOURS + DEFAULT_CAMPAIGN_HOURS) * 3_600_000
     );
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionObjectId },
       {
         $set: {

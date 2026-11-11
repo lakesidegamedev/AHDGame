@@ -28,6 +28,7 @@ import {
 } from "./rules";
 import { loadFieldOfficeRegionMap } from "./subdivisions";
 import { countyLeanSourceLabel } from "@/lib/maps/countyLeans";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface FieldOfficeDto {
   id: string;
@@ -114,12 +115,10 @@ export async function getFieldOfficeView(
     }
   );
   if (!campaign) throw notFound("Campaign not found");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne(
-      { _id: campaign.electionId },
-      { projection: { countryId: 1, electionType: 1, state: 1, status: 1 } }
-    );
+  const election = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1, electionType: 1, state: 1, status: 1 } }
+  );
   if (!election) throw notFound("Election not found");
 
   const rules = getFieldOfficeRules(election.countryId);

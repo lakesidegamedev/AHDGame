@@ -48,6 +48,7 @@ import { countedTurns } from "@/lib/elections/snapshotTurns";
 import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
@@ -75,8 +76,7 @@ export async function GET(request: Request) {
     if (status) query.status = status;
     if (state) query.state = state.toUpperCase();
 
-    const allElections = await db
-      .collection<Election>("elections")
+    const allElections = await electionsCollection(db)
       .find(query)
       .sort({ updatedAt: -1, state: 1 })
       .toArray();

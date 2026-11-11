@@ -6,6 +6,7 @@ import { officeLabelFor } from "@/lib/utils/officeLabel";
 import { raceLabel } from "@/components/state/overview/raceLabel";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -164,8 +165,7 @@ export async function getStateRoster(
       .toArray();
     if (candidates.length > 0) {
       const electionIds = candidates.map((c) => c.electionId);
-      const elections = await db
-        .collection<Election>("elections")
+      const elections = await electionsCollection(db)
         .find({ _id: { $in: electionIds } })
         .toArray();
       const electionById = new Map(elections.map((e) => [e._id.toString(), e]));

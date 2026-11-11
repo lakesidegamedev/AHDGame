@@ -15,6 +15,7 @@ import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const placeCandidateSchema = z
   .object({
@@ -55,7 +56,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const now = new Date();
 
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 

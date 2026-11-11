@@ -30,6 +30,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Directly-elected SINGLE-SEAT offices that need a bench challenger to be
@@ -177,8 +178,7 @@ export async function processChallengerGeneration(now: Date): Promise<number> {
           { primaryEndTurn: { $exists: false }, primaryEndTime: { $gt: now } },
         ]
       : [{ primaryEndTime: { $gt: now } }];
-  const openPrimaries = await db
-    .collection<Election>("elections")
+  const openPrimaries = await electionsCollection(db)
     .find(
       founding
         ? {

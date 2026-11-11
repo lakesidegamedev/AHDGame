@@ -37,6 +37,8 @@ import { carryOverOfficials } from "./carryOverOfficials";
 import { promoteResetV2ForIndependence } from "./promoteResetV2";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
 
 export interface SecedeRegionArgs {
   regionId: string;
@@ -87,8 +89,7 @@ async function secedeRegionInTransaction(
   // 1. Register the country at runtime.
   await activateCountry(db, toCountryId);
 
-  const oldRaces = await db
-    .collection("elections")
+  const oldRaces = await electionsCollection<Document>(db)
     .find(
       {
         countryId: fromCountryId,
@@ -100,7 +101,7 @@ async function secedeRegionInTransaction(
     .toArray();
   const electionIds = oldRaces.map((row) => row._id);
   await db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } });
-  await db.collection("elections").deleteMany({ _id: { $in: electionIds } });
+  await electionsCollection<Document>(db).deleteMany({ _id: { $in: electionIds } });
 
   // 2-3. Stand up the data + economy.
   const expanded = await expandToSubRegions(db, toCountryId);

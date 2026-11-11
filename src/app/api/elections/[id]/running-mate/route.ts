@@ -21,6 +21,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -69,7 +70,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Resolve election by seatId or ObjectId
     let election: Election | null = null;
     if (isSeatId(electionId)) {
-      election = await db.collection<Election>("elections").findOne({
+      election = await electionsCollection(db).findOne({
         seatId: electionId,
         status: { $in: ["active", "upcoming"] },
       });
@@ -80,7 +81,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       } catch {
         return errorResponse(400, "Invalid election ID");
       }
-      election = await db.collection<Election>("elections").findOne({ _id: electionObjectId });
+      election = await electionsCollection(db).findOne({ _id: electionObjectId });
     }
     if (!election || election.electionType !== "president") {
       return errorResponse(400, "Not a presidential election");

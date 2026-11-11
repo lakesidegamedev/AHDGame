@@ -60,6 +60,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export type {
   PollingData,
@@ -121,10 +122,9 @@ export async function resolveElection(
       const query: Record<string, unknown> = { seatId: id, status: { $ne: "cancelled" } };
       if (cycle != null) {
         query.cycle = cycle;
-        election = await db.collection<Election>("elections").findOne(query);
+        election = await electionsCollection(db).findOne(query);
       } else {
-        const candidates = await db
-          .collection<Election>("elections")
+        const candidates = await electionsCollection(db)
           .find(query)
           .sort({ cycle: -1 })
           .limit(10)
@@ -143,7 +143,7 @@ export async function resolveElection(
       } catch {
         return null; // invalid ObjectId
       }
-      election = await db.collection<Election>("elections").findOne({ _id: oid });
+      election = await electionsCollection(db).findOne({ _id: oid });
     }
   } else {
     election = idOrElection;
@@ -169,8 +169,7 @@ export async function resolveElection(
   let adjacentElections: Array<{ _id: MongoObjectId; cycle: number; seatId?: string }> | null =
     null;
   if (isFull) {
-    adjacentElections = await db
-      .collection<Election>("elections")
+    adjacentElections = await electionsCollection(db)
       .find(adjacentElectionsQuery(election))
       .sort({ cycle: 1 })
       .project<{ _id: MongoObjectId; cycle: number; seatId?: string }>({

@@ -28,6 +28,7 @@ import {
   sendBatchedElectionAnnouncements,
 } from "./engine";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Config for one country's per-region multi-seat delegate election family.
@@ -169,8 +170,7 @@ export async function ensureRegionalDelegateElections(
   if (regions.length === 0) return;
   const seatMap = spec.seatsForRegions(regions as State[], ctx.preset, ctx, currentYear);
 
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       countryId: spec.countryId,
       electionType: spec.electionType,
@@ -186,14 +186,13 @@ export async function ensureRegionalDelegateElections(
     ? []
     : buildDelegateSeatHealOps(liveElections, seatMap, now);
   if (healOps.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(healOps);
+    await electionsCollection(db).bulkWrite(healOps);
     console.log(
       `[Turn] ensureRegionalDelegateElections(${spec.countryId}/${spec.electionType}): healed ${healOps.length} in-flight ${spec.label} seat count(s)`
     );
   }
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       countryId: spec.countryId,
       electionType: spec.electionType,
@@ -256,17 +255,14 @@ export async function ensureRegionalDelegateElections(
     state: e.state,
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureRegionalDelegateElections(${spec.countryId}/${spec.electionType}): spawned ${toActuallyInsert.length} missing ${spec.label} election(s)`
     );
@@ -437,14 +433,12 @@ export async function ensureSecededChamberElections(
 
   const chamber = electionType === "holyrood" || electionType === "senedd";
   const types = chamber ? [electionType, `snap_${electionType}`] : [electionType];
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({ countryId, electionType: { $in: types }, status: { $in: ["active", "upcoming"] } })
     .toArray();
   const liveRegions = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({ countryId, electionType: { $in: types }, status: { $in: ["completed", "resolved"] } })
     .sort({ updatedAt: -1 })
     .toArray();
@@ -504,16 +498,13 @@ export async function ensureSecededChamberElections(
     state: e.state,
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ countryId, $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureSecededChamberElections(${countryId}): spawned ${toActuallyInsert.length} ${electionType} election(s)`
     );
@@ -569,8 +560,7 @@ export async function ensureRegionalGovernorElections(
     .filter((id) => !allowedStateIds || allowedStateIds.has(id));
   if (stateIds.length === 0) return;
 
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       countryId,
       electionType: "governor",
@@ -579,8 +569,7 @@ export async function ensureRegionalGovernorElections(
     .toArray();
   const liveGov = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       countryId,
       electionType: "governor",
@@ -669,17 +658,14 @@ export async function ensureRegionalGovernorElections(
     state: e.state,
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureRegionalGovernorElections(${countryId}): spawned ${toActuallyInsert.length} missing governor election(s)`
     );
@@ -707,7 +693,7 @@ export async function ensurePresidentialElection(
   inFlightTurn?: number
 ): Promise<{ message: string; electionId: string; created: boolean }> {
   const db = await getDb();
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
 
   // Compute the next cycle from the most recent completed/resolved race.
   // Doesn't need to be atomic — concurrent callers will compute the same

@@ -22,6 +22,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Move an Independent player's live governmental candidacies onto the party
@@ -52,8 +53,7 @@ export async function transferIndependentCandidaciesToParty(
   const electionIds = [
     ...new Map(candidacies.map((c) => [c.electionId.toString(), c.electionId])).values(),
   ];
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         _id: { $in: electionIds },
@@ -148,8 +148,7 @@ export async function withdrawFromMismatchedPrimaries(
 
   // Get the elections to check if they're still active
   const electionIds = candidacies.map((c) => c.electionId);
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       _id: { $in: electionIds },
       status: { $in: ["upcoming", "active", "completed"] },
@@ -234,8 +233,7 @@ export async function withdrawNPPFromMismatchedPrimaries(
 
   // Get the elections to check if they're still active
   const electionIds = candidacies.map((c) => c.electionId);
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       _id: { $in: electionIds },
       status: { $in: ["upcoming", "active", "completed"] },
@@ -575,8 +573,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
   const now = new Date();
 
   // Get all active candidacies in non-resolved elections
-  const activeElections = await db
-    .collection<Election>("elections")
+  const activeElections = await electionsCollection(db)
     .find({ status: { $in: ["upcoming", "active", "completed"] } })
     .project({ _id: 1 })
     .toArray();
@@ -721,8 +718,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   let withdrawnGeneralElections = 0;
   if (generalCandidacies.length > 0) {
     const electionIds = [...new Set(generalCandidacies.map((c) => c.electionId))];
-    const openElections = await db
-      .collection<Election>("elections")
+    const openElections = await electionsCollection(db)
       .find({
         _id: { $in: electionIds },
         status: { $in: ["upcoming", "active", "completed"] },

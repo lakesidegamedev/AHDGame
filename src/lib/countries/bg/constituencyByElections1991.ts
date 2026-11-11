@@ -43,6 +43,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -160,13 +161,11 @@ async function cancelJobs(
       { $set: { status: "cancelled", completedAtTurn: turn } },
       { session }
     );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { _id: { $in: ids }, status: { $nin: ["resolved", "cancelled"] } },
-      { $set: { status: "cancelled", resolving: false, updatedAt: now } },
-      { session }
-    );
+  await electionsCollection(db).updateMany(
+    { _id: { $in: ids }, status: { $nin: ["resolved", "cancelled"] } },
+    { $set: { status: "cancelled", resolving: false, updatedAt: now } },
+    { session }
+  );
   await db
     .collection<ElectionCandidate>("electionCandidates")
     .updateMany(
@@ -428,7 +427,7 @@ export async function openBgGrandConstituencyByElections(
         });
       }
       await journal.insertMany(records, { session });
-      await db.collection<Election>("elections").insertMany(polls, { session });
+      await electionsCollection(db).insertMany(polls, { session });
       if (candidates.length)
         await db
           .collection<ElectionCandidate>("electionCandidates")
@@ -476,8 +475,7 @@ export async function resolveBgGrandConstituencyByElections(
       await cancelJobs(db, session, stale, turn, now);
       const usable = jobs.filter((row) => !stale.includes(row));
       if (!usable.length) return 0;
-      const polls = await db
-        .collection<Election>("elections")
+      const polls = await electionsCollection(db)
         .find(
           {
             _id: { $in: usable.map((row) => row.activeElectionId) },
@@ -990,8 +988,7 @@ export async function resolveBgGrandConstituencyByElections(
           }));
         if (notices.length) await db.collection("notifications").insertMany(notices, { session });
       }
-      if (newPolls.length)
-        await db.collection<Election>("elections").insertMany(newPolls, { session });
+      if (newPolls.length) await electionsCollection(db).insertMany(newPolls, { session });
       if (newCandidates.length)
         await db
           .collection<ElectionCandidate>("electionCandidates")
@@ -1011,13 +1008,11 @@ export async function resolveBgGrandConstituencyByElections(
       if (campaignUpdates.length)
         await db.collection("campaigns").bulkWrite(campaignUpdates, { session });
       if (completedIds.length) {
-        await db
-          .collection<Election>("elections")
-          .updateMany(
-            { _id: { $in: completedIds } },
-            { $set: { status: "resolved", resolving: false, updatedAt: now } },
-            { session }
-          );
+        await electionsCollection(db).updateMany(
+          { _id: { $in: completedIds } },
+          { $set: { status: "resolved", resolving: false, updatedAt: now } },
+          { session }
+        );
         await db
           .collection<ElectionCandidate>("electionCandidates")
           .updateMany(

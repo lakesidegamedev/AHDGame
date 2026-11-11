@@ -22,6 +22,7 @@ import {
 } from "./dumaConvocationAuthority";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianDumaConvocationOpening(input: {
   db: Db;
@@ -84,7 +85,7 @@ export async function materializeRussianDumaConvocationOpening(input: {
     throw new Error("An ordinary Duma requires 226 distinct ballot identities");
   const electoralLaw = await loadEnactedRussianDumaLaw({ db, session, country, turn });
   const lawFields = electoralLaw === "law1995" ? { electoralLaw } : {};
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   // Let a current family's last pending repeat certify before changing its authority.
   if (
     await elections.findOne(

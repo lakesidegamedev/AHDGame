@@ -58,6 +58,7 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import type { Document } from "mongodb";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -713,8 +714,7 @@ async function cancelAbsorbedElections(
   const live = { status: { $in: ["active", "upcoming"] as const } };
 
   // 1. Every live race still keyed to the country being absorbed.
-  const strays = await db
-    .collection<{ _id: import("mongodb").ObjectId }>("elections")
+  const strays = await electionsCollection<{ _id: import("mongodb").ObjectId }>(db)
     .find({ countryId: fromCountryId, ...live })
     .project<{ _id: import("mongodb").ObjectId }>({ _id: 1 })
     .toArray();
@@ -729,8 +729,10 @@ async function cancelAbsorbedElections(
   //    machinery would not re-run.
   const table = officeRemapFor(fromCountryId, toCountryId);
   const absorbedTypes = new Set(table ? Object.keys(table) : []);
-  const survivorLive = await db
-    .collection<{ _id: import("mongodb").ObjectId; electionType: string }>("elections")
+  const survivorLive = await electionsCollection<{
+    _id: import("mongodb").ObjectId;
+    electionType: string;
+  }>(db)
     .find({ countryId: toCountryId, ...live })
     .project<{ _id: import("mongodb").ObjectId; electionType: string }>({ _id: 1, electionType: 1 })
     .toArray();
@@ -740,7 +742,7 @@ async function cancelAbsorbedElections(
   if (ids.length === 0) return 0;
 
   await db.collection("electionCandidates").deleteMany({ electionId: { $in: ids } });
-  const res = await db.collection("elections").deleteMany({ _id: { $in: ids } });
+  const res = await electionsCollection<Document>(db).deleteMany({ _id: { $in: ids } });
   if ((res?.deletedCount ?? 0) > 0) {
     console.log(
       `[mergeCountry] ${fromCountryId}->${toCountryId}: cancelled ${res.deletedCount} in-flight ` +

@@ -33,6 +33,7 @@ import {
 } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 type Actor = AuthUserWithCharacter & { hasCharacter: true; character: Character };
 
@@ -45,7 +46,7 @@ export async function loadTargetedAdContext(db: Db, campaignId: ObjectId, user: 
   )
     throw forbidden("Not authorized");
   const [election, candidate, time] = await Promise.all([
-    db.collection<Election>("elections").findOne({ _id: campaign.electionId }),
+    electionsCollection(db).findOne({ _id: campaign.electionId }),
     db.collection<ElectionCandidate>("electionCandidates").findOne({
       electionId: campaign.electionId,
       characterId: campaign.candidateId,

@@ -43,6 +43,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import type { Document } from "mongodb";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export const BG_1991_PROPOSALS_COLLECTION = "bg1991ConstitutionalProposals";
 const ID = "1991-default:bg-constitutional:constitution1991";
@@ -490,8 +491,7 @@ export async function rebindBg1991PrimaryCohort(
   session: ClientSession,
   disposition: Bg1991ConstituentDisposition = "dissolve"
 ) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "BG",
@@ -633,7 +633,7 @@ export async function rebindBg1991PrimaryCohort(
     }));
   });
   if (updates.length) {
-    await db.collection<Election>("elections").bulkWrite(updates, { session });
+    await electionsCollection(db).bulkWrite(updates, { session });
     await db
       .collection<ElectionVoteTally>("electionVoteTallies")
       .updateMany(

@@ -33,6 +33,7 @@ import { loadPrimaryPartyData, type PrimaryDetailViewer } from "@/lib/elections/
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // Presidential primary standings can change every turn and after live player
 // actions (endorsements, surge, in-state campaigning), so cached route output
@@ -98,7 +99,7 @@ const STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 async function loadPrimaryData(partySlug: string, viewer: PrimaryDetailViewer | null) {
   const db = await getDb();
 
-  const election = await db.collection<Election>("elections").findOne({
+  const election = await electionsCollection(db).findOne({
     electionType: "president",
     countryId: "US",
     status: "active",

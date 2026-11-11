@@ -11,6 +11,7 @@ import { resolveElection, resolveElections } from "@/lib/elections/resolveElecti
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import { withApiMetrics } from "@/lib/observability/apiMetrics";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // GET /api/elections — Unified election data endpoint. Single mode (?id=X) or list mode (?country=X).
 // Auth: public (optional auth for user-specific fields)
@@ -137,7 +138,7 @@ async function handleGet(request: Request) {
     if (stateParam) query.state = stateParam;
     if (typeParam) query.electionType = typeParam;
 
-    const collection = db.collection<Election>("elections");
+    const collection = electionsCollection(db);
 
     const [total, elections] = await Promise.all([
       collection.countDocuments(query),

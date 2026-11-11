@@ -21,6 +21,7 @@ import { resolveElection } from "@/lib/elections/resolveElection";
 import { mapElectionResponseToDisplay } from "@/lib/elections/mapElectionResponseToDisplay";
 import { getSlateAssignerRoleLabel, resolveSlateAuthority } from "@/lib/slateAuthority";
 import { countSlateAssignmentUsage } from "@/lib/slateAssignmentCap";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -50,7 +51,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
     const partyId = String(party.sequentialId);
     const electionObjId = new ObjectId(electionId);
-    const election = await db.collection<Election>("elections").findOne({ _id: electionObjId });
+    const election = await electionsCollection(db).findOne({ _id: electionObjId });
     if (!election || election.countryId !== countryId) {
       return errorResponse(404, "Election not found");
     }
@@ -219,9 +220,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (!party) return errorResponse(404, "Party not found");
     const partyId = String(party.sequentialId);
     const electionObjId = new ObjectId(electionId);
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: electionObjId, countryId });
+    const election = await electionsCollection(db).findOne({ _id: electionObjId, countryId });
     if (!election) return errorResponse(404, "Election not found");
     const authority = await resolveSlateAuthority({
       db,

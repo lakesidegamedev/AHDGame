@@ -32,6 +32,7 @@ import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState"
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianCouncilRepeatOpening(input: {
   db: Db;
@@ -228,7 +229,7 @@ export async function materializeRussianCouncilRepeatOpening(input: {
       pending.map((row) => [row.seatId, register[row.seatId]])
     ),
   };
-  await db.collection<Election>("elections").insertMany(ballots, { session });
+  await electionsCollection(db).insertMany(ballots, { session });
   await openings.insertOne(record, { session });
   const bound = await countries.updateOne(
     {

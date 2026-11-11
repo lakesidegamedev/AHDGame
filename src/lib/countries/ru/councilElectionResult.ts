@@ -24,6 +24,7 @@ import {
 import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export const RUSSIAN_COUNCIL_RESULTS_COLLECTION = "russianCouncilElectionResults";
 export interface RussianCouncilResultRecord {
   _id: string;
@@ -132,7 +133,7 @@ export async function materializeRussianCouncilElectionResult(input: {
   const boundaries = new Map(
     planRussianCouncilDistricts(opening.registeredBySubject).map((row) => [row.seatId, row])
   );
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const cohort = await elections
     .find(
       { countryId: "RU", "russianCouncilRound.cohortId": cohortId },

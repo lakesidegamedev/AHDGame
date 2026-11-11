@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * County drift from the world's own history.
@@ -38,8 +39,7 @@ export interface LiveStateLean {
 const FINISHED: Election["status"][] = ["completed", "resolved"];
 
 export async function loadLiveStateLean(db: Db, countryId: string): Promise<LiveStateLean | null> {
-  const races = await db
-    .collection<Election>("elections")
+  const races = await electionsCollection(db)
     .find(
       {
         countryId: countryId as Election["countryId"],

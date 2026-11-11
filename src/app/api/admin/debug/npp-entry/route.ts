@@ -8,6 +8,7 @@ import { getRacePriority, isNPPAvailable } from "@/lib/turn/nppEntryLogic";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Debug endpoint to diagnose why NPPs aren't entering primaries.
@@ -33,8 +34,7 @@ export async function GET() {
     const currentTurn = gameState?.currentTurn ?? 1;
 
     // 1. Open primaries query (same as nppBehavior.ts) — turn-first w/ Date fallback
-    const openPrimaries = await db
-      .collection<Election>("elections")
+    const openPrimaries = await electionsCollection(db)
       .find({
         status: "active",
         ...primaryOpenFilter(currentTurn, gameNow),
@@ -42,10 +42,7 @@ export async function GET() {
       .toArray();
 
     // 2. All active elections (for comparison)
-    const allActiveElections = await db
-      .collection<Election>("elections")
-      .find({ status: "active" })
-      .toArray();
+    const allActiveElections = await electionsCollection(db).find({ status: "active" }).toArray();
 
     // 3. Non-retired NPPs
     const allNPPs = await nppsCollection(db).find({ retiredAt: null }).toArray();

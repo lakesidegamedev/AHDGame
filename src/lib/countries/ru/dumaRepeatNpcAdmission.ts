@@ -25,6 +25,7 @@ import {
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianDumaRepeatNpcAdmission(input: {
   db: Db;
@@ -124,8 +125,7 @@ export async function materializeRussianDumaRepeatNpcAdmission(input: {
     turn,
     previous,
   });
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": opening.cohortId },
       {

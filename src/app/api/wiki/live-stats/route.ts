@@ -6,6 +6,7 @@ import type { ElectedOfficial, Election } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // GET /api/wiki/live-stats — Returns live congressional composition counts and active election summaries.
 // Auth: public; blocked when wiki is disabled
@@ -44,8 +45,7 @@ export async function GET() {
     );
 
     // Get active elections
-    const activeElections = await db
-      .collection<Election>("elections")
+    const activeElections = await electionsCollection(db)
       .find({ status: { $in: ["active", "upcoming"] } })
       .limit(10)
       .sort({ startTime: 1 })

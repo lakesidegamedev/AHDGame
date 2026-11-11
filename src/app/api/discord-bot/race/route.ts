@@ -35,6 +35,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -75,9 +76,7 @@ export async function GET(request: Request) {
       if (!ObjectId.isValid(electionId)) {
         return errorResponse(400, "Invalid electionId");
       }
-      election = await db
-        .collection<Election>("elections")
-        .findOne({ _id: new ObjectId(electionId) });
+      election = await electionsCollection(db).findOne({ _id: new ObjectId(electionId) });
     } else {
       // Find by country + state + race
       const query: Record<string, unknown> = {
@@ -89,8 +88,7 @@ export async function GET(request: Request) {
 
       // If no state or race given, just return the list of active races for this country
       if (!state && !race) {
-        const elections = await db
-          .collection<Election>("elections")
+        const elections = await electionsCollection(db)
           .find(query)
           .sort({ endTime: 1 })
           .limit(30)
@@ -117,9 +115,7 @@ export async function GET(request: Request) {
       }
 
       // Find the best matching election
-      election = await db
-        .collection<Election>("elections")
-        .findOne(query, { sort: { endTime: 1 } });
+      election = await electionsCollection(db).findOne(query, { sort: { endTime: 1 } });
     }
 
     if (!election) {

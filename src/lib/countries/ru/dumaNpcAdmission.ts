@@ -16,6 +16,7 @@ import {
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export async function materializeRussianDumaNpcAdmission(input: {
   db: Db;
   session: ClientSession;
@@ -69,8 +70,7 @@ export async function materializeRussianDumaNpcAdmission(input: {
   if (!authority) throw new Error("Duma campaign authority changed");
   if (country.ruDumaNpcAdmissionCohortId?.equals(cohortId))
     return { created: 0, unrepresentedParties: country.ruDumaUnrepresentedParties ?? [] };
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": cohortId },
       {

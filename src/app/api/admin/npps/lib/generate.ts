@@ -9,6 +9,7 @@ import { getEraContext } from "@/lib/era/context";
 import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 type PartyData = { countryId: string; partyId: string };
 
@@ -29,7 +30,7 @@ export async function handleGenerateNPPs(
     electionQuery.state = { $in: stateFilter };
   }
 
-  const elections = await db.collection<Election>("elections").find(electionQuery).toArray();
+  const elections = await electionsCollection(db).find(electionQuery).toArray();
 
   if (elections.length === 0) {
     return NextResponse.json({

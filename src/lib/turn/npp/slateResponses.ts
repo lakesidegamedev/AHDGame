@@ -38,6 +38,7 @@ import {
   canFieldLegislativeCandidate,
 } from "@/lib/turn/onePartyConstraints";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface SlateResponseSummary {
   rowsConsidered: number;
@@ -512,8 +513,7 @@ export async function fileAcceptedSlateRows(ctx: NPPContext): Promise<SlateFilin
   const electionIds = Array.from(new Set(accepted.map((r) => r.electionId.toString()))).map(
     (s) => new ObjectId(s)
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ _id: { $in: electionIds } })
     .toArray();
   const electionById = new Map(elections.map((e) => [e._id.toString(), e]));

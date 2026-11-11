@@ -9,6 +9,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { Campaign, CampaignFieldOffice, Election } from "@/lib/db/types";
 import { FIELD_OFFICES_COLLECTION } from "./commands";
 import { getFieldOfficeCostAnchor, getFieldOfficeRules } from "./rules";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface FieldOfficeUpkeepResult {
   campaignsCharged: number;
@@ -45,8 +46,7 @@ export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkee
       .collection<Campaign>("campaigns")
       .find({ _id: { $in: campaignIds } }, { projection: { funds: 1, status: 1 } })
       .toArray(),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find(
         { _id: { $in: electionIds } },
         { projection: { status: 1, countryId: 1, electionType: 1, russianPresidentialRound: 1 } }

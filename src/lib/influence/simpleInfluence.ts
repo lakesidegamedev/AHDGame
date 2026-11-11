@@ -19,6 +19,7 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } from "./rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Maximum NET favorability any one target can be moved by player support/attack
@@ -238,7 +239,7 @@ async function isTargetMediaSustainedAtCap(db: Db, target: Character | NPP): Pro
   const campaigns = allCampaigns.filter((c) => getMediaFavPerTurn(c) >= MEDIA_SUSTAIN_FAV_PER_TURN);
   if (campaigns.length === 0) return false;
 
-  const presidentialMatch = await db.collection<Election>("elections").findOne(
+  const presidentialMatch = await electionsCollection(db).findOne(
     {
       _id: { $in: campaigns.map((c) => c.electionId) },
       status: "active",

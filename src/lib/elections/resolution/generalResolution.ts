@@ -60,6 +60,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export type { OneElectionResult } from "./generalResolutionHelpers";
 
@@ -89,12 +90,10 @@ export async function resolveOneGeneralElection(
 
   // Atomic claim: prevent concurrent resolution from corrupting office data.
   // Only the first process to flip resolving=true proceeds; others bail out.
-  const claimed = await db
-    .collection<Election>("elections")
-    .updateOne(
-      { _id: election._id, status: "completed", resolving: { $ne: true } },
-      { $set: { resolving: true, updatedAt: now } }
-    );
+  const claimed = await electionsCollection(db).updateOne(
+    { _id: election._id, status: "completed", resolving: { $ne: true } },
+    { $set: { resolving: true, updatedAt: now } }
+  );
   if (claimed.modifiedCount === 0) {
     console.log(
       `[Turn] Election ${election._id} (${election.electionType}/${election.state ?? "?"}) already being resolved by another process — skipping`
@@ -123,9 +122,10 @@ export async function resolveOneGeneralElection(
         currentTurn
       );
       if (resolved) {
-        await db
-          .collection<Election>("elections")
-          .updateOne({ _id: election._id }, { $set: { status: "resolved", updatedAt: now } });
+        await electionsCollection(db).updateOne(
+          { _id: election._id },
+          { $set: { status: "resolved", updatedAt: now } }
+        );
         await voidDebateSessionsForElection(db, election._id, now);
       }
       return { resolved, newsOutcomes: [] };
@@ -171,9 +171,10 @@ export async function resolveOneGeneralElection(
       if (!tally?.finalized) {
         await resolveDELandtagElection(db, election, now, currentTurn);
       }
-      await db
-        .collection<Election>("elections")
-        .updateOne({ _id: election._id }, { $set: { status: "resolved", updatedAt: now } });
+      await electionsCollection(db).updateOne(
+        { _id: election._id },
+        { $set: { status: "resolved", updatedAt: now } }
+      );
       await voidDebateSessionsForElection(db, election._id, now);
       if (tally) {
         await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
@@ -239,12 +240,10 @@ export async function resolveOneGeneralElection(
         await spawnHouseElection(db, election, now);
       }
       await recordJapanShugiinRegionalCapacity(db, election, currentTurn, now);
-      await db
-        .collection<Election>("elections")
-        .updateOne(
-          { _id: election._id },
-          { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-        );
+      await electionsCollection(db).updateOne(
+        { _id: election._id },
+        { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+      );
       await voidDebateSessionsForElection(db, election._id, now);
       await reconcileGermanElection(db, election, now);
       console.log(
@@ -275,12 +274,10 @@ export async function resolveOneGeneralElection(
         ? await resolveNGPresidentElection(db, election, tally, now, currentTurn)
         : await resolvePresidentElection(db, election, tally, now, currentTurn);
       if (presidentResolved) {
-        await db
-          .collection<Election>("elections")
-          .updateOne(
-            { _id: election._id },
-            { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
-          );
+        await electionsCollection(db).updateOne(
+          { _id: election._id },
+          { $set: { status: "resolved" satisfies ElectionStatus, updatedAt: now } }
+        );
         await voidDebateSessionsForElection(db, election._id, now);
       }
       return { resolved: presidentResolved, newsOutcomes: [] };
@@ -994,8 +991,9 @@ export async function resolveOneGeneralElection(
 
     return { resolved: true, newsOutcomes };
   } finally {
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: election._id }, { $set: { resolving: false, updatedAt: now } });
+    await electionsCollection(db).updateOne(
+      { _id: election._id },
+      { $set: { resolving: false, updatedAt: now } }
+    );
   }
 }

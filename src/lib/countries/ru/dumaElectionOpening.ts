@@ -17,6 +17,7 @@ import { RU_1991_ECONOMIC_REGION_POPULATION } from "./data/ruPopulation1991";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function materializeRussianDumaElectionOpening(input: {
   db: Db;
@@ -63,7 +64,7 @@ export async function materializeRussianDumaElectionOpening(input: {
     )
   )
     return null;
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   if (country.ruFirstDumaElectionCohortId) {
     const existing = await elections
       .find(

@@ -38,6 +38,7 @@ import { getOppoDrainPerTurn } from "@/lib/campaigns/opsEffects";
 import { getEffectiveBranchCost } from "@/lib/campaigns/upgradeCosts";
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { assertKnownActorMechanic } from "./actorCoverage";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /** World preset the bounded experiment runs against. */
 export const OPPO_DRIVER_PRESET = "1953-default";
@@ -246,7 +247,7 @@ export async function runOppositionResearchFlow(
   const mechanicId = assertKnownActorMechanic("campaigns-player-actions");
   const { electionId, actors, gameTime } = options;
 
-  const election = await db.collection<Election>("elections").findOne({ _id: electionId });
+  const election = await electionsCollection(db).findOne({ _id: electionId });
   if (!election) {
     throw new OppoDriverError("race election not found in the sandbox world");
   }

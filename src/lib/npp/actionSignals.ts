@@ -20,6 +20,7 @@ import type { NPP } from "@/lib/db/types/npp";
 import type { CountryId } from "@/lib/constants/countries";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * The race an NPP is currently running in, for engine 6.2 rallies (v6). Built
@@ -102,8 +103,7 @@ export async function buildNppSignalLookup(
   const countryFilter = countryScope ? { countryId: { $in: countryScope } } : {};
 
   const [elections, candidates, formations] = await Promise.all([
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find(
         { status: { $in: ["upcoming", "active"] }, ...countryFilter },
         {

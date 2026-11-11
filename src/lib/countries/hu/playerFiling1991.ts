@@ -13,6 +13,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import type { Document } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -69,9 +70,7 @@ export async function materializeHu1991PlayerFiling(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian filing needs an active transaction and time");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: electionId }, { session });
+  const election = await electionsCollection(db).findOne({ _id: electionId }, { session });
   const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     { session, projection: { preset: 1, currentTurn: 1, huAssemblyReformedAtYear: 1 } }

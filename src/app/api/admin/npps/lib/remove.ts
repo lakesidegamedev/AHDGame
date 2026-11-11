@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NPP, Election, ElectionCandidate } from "@/lib/db/types";
 import type { Db } from "@/lib/mongodb";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function handleRemoveNPPs(
   db: Db,
@@ -15,7 +16,7 @@ export async function handleRemoveNPPs(
     electionQuery.state = { $in: stateFilter };
   }
 
-  const elections = await db.collection<Election>("elections").find(electionQuery).toArray();
+  const elections = await electionsCollection(db).find(electionQuery).toArray();
 
   const electionIds = elections.map((e) => e._id);
 

@@ -24,6 +24,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function readUKDevolutionState(
   db: Db,
@@ -105,8 +106,7 @@ export async function reconcileEnactedUKDevolution(db: Db, now: Date): Promise<v
       { _id: "current" },
       { projection: { startingYear: 1, preset: 1 } }
     ),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find(
         { countryId: "UK", electionType: "governor", status: { $in: ["completed", "resolved"] } },
         { projection: { state: 1, cycle: 1, _id: 0 } }
@@ -162,7 +162,7 @@ export async function vacateUKRegionalExecutives(
       official.characterId ? [official.characterId] : []
     );
     const npps = officials.flatMap((official) => (official.nppId ? [official.nppId] : []));
-    await db.collection("elections").updateMany(
+    await electionsCollection<Document>(db).updateMany(
       {
         countryId: "UK",
         electionType: "governor",

@@ -42,6 +42,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Region-scoped party collections.
@@ -276,8 +277,7 @@ export async function evacuateRegionPolitics(
   // 4b. Dissolve the region's source-country races + their candidates so they
   //     don't resolve into phantom source-country officeholders after it leaves;
   //     the target's election engine re-spawns the region's own races next turn.
-  const regionElections = await db
-    .collection<{ _id: ObjectId }>("elections")
+  const regionElections = await electionsCollection<{ _id: ObjectId }>(db)
     .find({
       countryId: fromCountryId,
       state: regionId,
@@ -289,7 +289,7 @@ export async function evacuateRegionPolitics(
   let electionsDissolved = 0;
   if (electionIds.length > 0) {
     await db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } });
-    const res = await db.collection("elections").deleteMany({ _id: { $in: electionIds } });
+    const res = await electionsCollection<Document>(db).deleteMany({ _id: { $in: electionIds } });
     electionsDissolved = res?.deletedCount ?? 0;
   }
 

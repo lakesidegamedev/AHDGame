@@ -20,6 +20,7 @@ import type {
   ElectionCandidate,
   StatePartyOrg,
 } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const BodySchema = z.object({ districtIndex: z.number().int().min(1) });
 const CAMPAIGN_BASE_PS_COST = 2;
@@ -60,7 +61,7 @@ export async function POST(
     }
 
     // Active house race for this state.
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       countryId: countryId as CountryId,
       state: stateId,
       electionType: "house",
@@ -110,9 +111,10 @@ export async function POST(
     const current =
       election.districtCampaignBoosts?.[String(districtIndex)]?.[String(party.sequentialId)] ?? 0;
     const next = applyCampaignBoost(current, CAMPAIGN_BOOST_PER_ACTION * efficiency);
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: election._id }, { $set: { [key]: next, updatedAt: new Date() } });
+    await electionsCollection(db).updateOne(
+      { _id: election._id },
+      { $set: { [key]: next, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ ok: true, boost: next, psCost: spend.effectiveCost, efficiency });
   } catch (error) {

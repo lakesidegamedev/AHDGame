@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Election } from "@/lib/db/types";
 import { isHexObjectIdString } from "@/lib/utils/objectIdHex";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * True when `id` is a seat slug (e.g. US-president), not a 24-char hex ObjectId.
@@ -15,8 +16,7 @@ export function isElectionRouteSeatId(id: string): boolean {
 }
 
 async function findElectionForSeatId(db: Db, seatId: string): Promise<Election | null> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ seatId })
     .sort({ cycle: -1 })
     .limit(10)
@@ -46,7 +46,7 @@ export async function resolveElectionRouteParam(
   }
   try {
     const oid = new ObjectId(electionId);
-    const election = await db.collection<Election>("elections").findOne({ _id: oid });
+    const election = await electionsCollection(db).findOne({ _id: oid });
     return election ? { ok: true, election } : { ok: false, reason: "not_found" };
   } catch {
     return { ok: false, reason: "invalid_id" };

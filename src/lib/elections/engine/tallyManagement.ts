@@ -124,6 +124,7 @@ import {
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // ─── Accumulate one turn of votes into a tally ───────────────────────────────
 
@@ -221,7 +222,7 @@ export async function accumulateVoteTurn(
   const { slicePart, fraction: sliceFraction } = slicePlan;
 
   const election =
-    options?.election ?? (await db.collection<Election>("elections").findOne({ _id: electionId }));
+    options?.election ?? (await electionsCollection(db).findOne({ _id: electionId }));
   if (!election || !election.endTime) return;
   // Ranked ballots split cleanly: each half casts its own first-preference
   // increments, and identical rankings merge by adding weights.
@@ -1347,7 +1348,7 @@ export async function initElectionVoteTally(
       Object.values(existing?.totalVotes ?? {}).some((votes) => votes > 0)
     )
       throw new Error("Cannot reinitialize a PR-STV tally after ballots were cast");
-    const election = await db.collection<Election>("elections").findOne({ _id: electionId });
+    const election = await electionsCollection(db).findOne({ _id: electionId });
     if (
       !countryHasFeature("ieElections", election?.countryId) ||
       !["dail", "localCouncil"].includes(election.electionType)

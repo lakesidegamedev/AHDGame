@@ -20,13 +20,13 @@ import {
 } from "@/lib/turn/onePartyConstraints";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function withdrawOpsIneligibleCandidacies(
   db: Db,
   now: Date
 ): Promise<{ withdrawn: number }> {
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({ status: { $in: ["upcoming", "active", "completed"] } })
     .toArray();
   if (liveElections.length === 0) return { withdrawn: 0 };

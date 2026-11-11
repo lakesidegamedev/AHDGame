@@ -38,6 +38,7 @@ import {
   NG_CAMPAIGN_TURNOUT_RATE,
 } from "./rules";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function projectCampaignPoll(
   db: Db,
@@ -47,9 +48,10 @@ export async function projectCampaignPoll(
   partyOrgs: StatePartyOrg[],
   inPrimary: boolean
 ) {
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: new ObjectId(electionId), countryId: character.countryId });
+  const election = await electionsCollection(db).findOne({
+    _id: new ObjectId(electionId),
+    countryId: character.countryId,
+  });
   if (!election) return null;
   const candidates = await db
     .collection<ElectionCandidate>("electionCandidates")

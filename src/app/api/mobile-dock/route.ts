@@ -28,6 +28,7 @@ import type { DesktopNavMenu } from "@/components/navbar/desktopNavModel";
 import { buildMobileDock } from "@/components/navbar/mobileDockBuilder";
 import { buildNationalDetailsSections } from "@/components/navbar/nationDetailsSections";
 import { viewerIsSingleplayerOwner, visibleStaffNavItems } from "@/components/navbar/staffNavItems";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 const MENU_KEYS: DesktopMenuKey[] = ["state", "nation", "world", "help", "staff"];
@@ -102,8 +103,7 @@ export async function GET(request: Request) {
     ) as CountryId;
 
     const [presidentElection, referendumCount] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .findOne(
           {
             electionType: "president",

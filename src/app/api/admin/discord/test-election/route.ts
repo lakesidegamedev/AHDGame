@@ -39,6 +39,7 @@ import type {
 } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * `electionType` is intentionally an open string here rather than a hardcoded
@@ -121,8 +122,7 @@ export async function POST(request: Request) {
     };
 
     // Find most recent resolved elections of this type
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find(electionQuery)
       .sort({ updatedAt: -1 })
       .limit(50)

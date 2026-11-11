@@ -19,6 +19,7 @@ import type {
 } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function GET() {
   try {
@@ -42,8 +43,7 @@ export async function GET() {
     const secondaryOfficeType = countryConfig.legislature.upperChamber?.key ?? null;
 
     // Active elections feed — filtered by enabled countries, sorted soonest first
-    const activeFeedRaw = await db
-      .collection<Election>("elections")
+    const activeFeedRaw = await electionsCollection(db)
       .find({
         status: { $in: ["active", "upcoming"] },
         ...(enabledCountries !== undefined && { countryId: { $in: enabledCountries } }),
@@ -116,9 +116,10 @@ export async function GET() {
         .findOne({ characterId: character._id, status: "active" });
 
       if (candidacy) {
-        const election = await db
-          .collection<Election>("elections")
-          .findOne({ _id: candidacy.electionId, status: { $in: ["active", "upcoming"] } });
+        const election = await electionsCollection(db).findOne({
+          _id: candidacy.electionId,
+          status: { $in: ["active", "upcoming"] },
+        });
 
         if (election) {
           const inPrimary =

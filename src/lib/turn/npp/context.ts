@@ -41,6 +41,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -406,7 +407,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
         }
       )
       .toArray() as Promise<NPP[]>,
-    db.collection<Election>("elections").find(electionFilter).toArray(),
+    electionsCollection(db).find(electionFilter).toArray(),
     electedOfficialsCollection(db)
       .find({ isNPP: true, nppId: { $exists: true } })
       .toArray(),

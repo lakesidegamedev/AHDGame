@@ -7,6 +7,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Election } from "@/lib/db/types";
 import { badRequest } from "@/lib/api/errors";
 import { usesCampaignRules } from "@/lib/campaignTargeting/rules";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export async function canUseNativeCanvassTargets(
   db: Db,
@@ -14,8 +15,7 @@ export async function canUseNativeCanvassTargets(
   stateId: string,
   electionId?: string
 ): Promise<boolean> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId,

@@ -40,6 +40,7 @@ import { hasElectionStarted, isElectionEnded } from "@/lib/elections/phases";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * NG elections run once Nigeria is off "coming-soon". Gated on the RUNTIME
@@ -255,8 +256,7 @@ export async function advanceElectionTimers(
 ): Promise<void> {
   const db = await getDb();
 
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       ...(onlyElectionIds ? { _id: { $in: onlyElectionIds } } : {}),
       status: { $in: ["active", "upcoming"] },
@@ -296,7 +296,7 @@ export async function advanceElectionTimers(
   }
 
   if (ops.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(ops);
+    await electionsCollection(db).bulkWrite(ops);
     console.log(`[Turn] Advanced timers for ${ops.length} election(s)`);
   }
 
@@ -314,8 +314,7 @@ export async function cleanupDuplicateElections(
   db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
   now: Date
 ): Promise<void> {
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({ status: { $in: ["active", "upcoming"] } })
     .sort({ createdAt: 1 }) // Oldest first
     .toArray();
@@ -381,7 +380,7 @@ export async function cleanupDuplicateElections(
         },
       }
     );
-    await db.collection<Election>("elections").updateMany(
+    await electionsCollection(db).updateMany(
       {
         _id: { $in: toCancel },
         status: { $in: ["active", "upcoming"] as ElectionStatus[] },
@@ -649,8 +648,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
     );
   }
 
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({ status: { $in: ["active", "upcoming"] } })
     .toArray();
 
@@ -675,8 +673,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
     (e) => e.electionType === "president" && countryHasFeature("usElections", e.countryId ?? "US")
   );
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({ status: { $in: ["completed", "resolved"] } })
     .sort({ updatedAt: -1 })
     .toArray();
@@ -710,7 +707,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
   // (#1190). Correct them before anything reads `totalSeats` this turn.
   const houseSeatHealOps = buildHouseSeatHealOps(liveElections, liveHouseSeats, now);
   if (houseSeatHealOps.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(houseSeatHealOps);
+    await electionsCollection(db).bulkWrite(houseSeatHealOps);
     console.log(
       `[Turn] ensurePerpetualElections: healed totalSeats on ${houseSeatHealOps.length} live US House race(s)`
     );
@@ -893,8 +890,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
     return filter;
   });
 
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { electionType: 1, state: 1, senateClass: 1 } })
     .toArray();
 
@@ -915,7 +911,7 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
   });
 
   if (toActuallyInsert.length > 0) {
-    await db.collection<Election>("elections").insertMany(toActuallyInsert as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert as Election[]);
     console.log(
       `[Turn] ensurePerpetualElections: spawned ${toActuallyInsert.length} missing election(s)`
     );
@@ -951,8 +947,7 @@ export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
     ])
   );
 
-  const completedElectionIds = await db
-    .collection<Election>("elections")
+  const completedElectionIds = await electionsCollection(db)
     .find({ status: "completed" }, { projection: { _id: 1 } })
     .toArray()
     .then((docs) => docs.map((d) => d._id).filter((id) => !heldBgIds.has(id.toHexString())));
