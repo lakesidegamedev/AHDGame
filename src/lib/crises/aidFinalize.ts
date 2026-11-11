@@ -2,7 +2,7 @@ import { type Db } from "mongodb";
 import type { Bill } from "@/lib/db/types";
 import type { CrisisAidCommitment } from "@/lib/db/types/crisisAid";
 import { AID_FAILED_PENALTY, AID_PENALTY_TURNS } from "@/lib/constants/crises";
-import { creditTreasury } from "@/lib/budget/treasurySpend";
+import { refundTreasurySpend } from "@/lib/budget/treasurySpend";
 import { applyEffectsForCrisis } from "@/lib/crises/interactionEngine";
 import { applyCrisisEffects } from "@/lib/crises/applyEffects";
 import { logWireEvent } from "@/lib/wireEvent";
@@ -64,16 +64,8 @@ async function finalizeCrisisAid(
     return;
   }
 
-  // Clawback: reverse provisional effects, refund treasury, apply penalty.
-  await applyEffectsForCrisis(db, commitment.crisisId, negate(commitment.recoveryEffects));
-  await applyCrisisEffects(db, negate(commitment.senderEffects), [], [commitment.senderCountryId]);
-  await creditTreasury(db, commitment.senderCountryId, commitment.treasuryDebited, {
-    resyncDerived: true,
-    witness: { flow: "crisis_aid", site: "crises/aidFinalize" },
-  });
-  await incApproval(db, commitment.senderCountryId, -AID_FAILED_PENALTY);
-
-  await db.collection<CrisisAidCommitment>("crisisAidCommitments").updateOne(
+  // Claim the clawback first, so a failure below cannot repeat the reversal next turn.
+  const claimed = await db.collection<CrisisAidCommitment>("crisisAidCommitments").updateOne(
     { _id: commitment._id, status: "pending" },
     {
       $set: {
@@ -85,6 +77,17 @@ async function finalizeCrisisAid(
       },
     }
   );
+  if (claimed.modifiedCount === 0) return;
+
+  // The refund reverses the pledge's own keyed spend, so it lands once.
+  await refundTreasurySpend(db, commitment.senderCountryId, commitment.treasuryDebited, {
+    flow: "crisis_aid",
+    key: `crisis-aid:${commitment.crisisId.toString()}:${commitment.senderCountryId}`,
+    site: "crises/aidFinalize",
+  });
+  await applyEffectsForCrisis(db, commitment.crisisId, negate(commitment.recoveryEffects));
+  await applyCrisisEffects(db, negate(commitment.senderEffects), [], [commitment.senderCountryId]);
+  await incApproval(db, commitment.senderCountryId, -AID_FAILED_PENALTY);
   await logWireEvent(
     "crisis_aid_failed",
     `${commitment.senderCountryId}'s aid bill failed; the pledge was clawed back.`,

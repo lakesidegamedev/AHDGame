@@ -9,13 +9,13 @@ import {
 } from "@/lib/turn/crisisV2/registry";
 
 const spendFromTreasury = vi.hoisted(() => vi.fn());
-const creditTreasury = vi.hoisted(() => vi.fn());
+const refundTreasurySpend = vi.hoisted(() => vi.fn());
 const debitCorp = vi.hoisted(() => vi.fn());
 const refundCorp = vi.hoisted(() => vi.fn());
 const roles = vi.hoisted(() => ({ derived: [] as string[] }));
 const rates = vi.hoisted(() => ({ current: {} as Record<string, number> }));
 
-vi.mock("@/lib/budget/treasurySpend", () => ({ spendFromTreasury, creditTreasury }));
+vi.mock("@/lib/budget/treasurySpend", () => ({ spendFromTreasury, refundTreasurySpend }));
 vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
   atomicallyDebitCorpLiquidCapital: debitCorp,
   refundCorpLiquidCapital: refundCorp,
@@ -159,7 +159,7 @@ beforeEach(() => {
   rates.current = {};
   roles.derived = ["any", "headOfState"];
   spendFromTreasury.mockResolvedValue({});
-  creditTreasury.mockResolvedValue({});
+  refundTreasurySpend.mockResolvedValue(undefined);
   debitCorp.mockResolvedValue({ ok: true, newBalance: 0 });
   resetCrisisV2RegistryForTests();
   registerCrisisDefinition(makeDefinition());
@@ -181,7 +181,11 @@ describe("pullLever", () => {
       expect.objectContaining({
         witness: expect.objectContaining({
           flow: "crisis_response",
-          key: `crisis-lever:${crisisId.toString()}:stimulus:${characterId.toString()}:10`,
+          key: expect.stringMatching(
+            new RegExp(
+              `^crisis-lever:${crisisId.toString()}:stimulus:${characterId.toString()}:10:[0-9a-f]{24}$`
+            )
+          ),
         }),
       })
     );
@@ -238,9 +242,39 @@ describe("pullLever", () => {
     const store = freshStore({ corporation: { _id: new ObjectId(), countryId: "US" } });
     const result = await pull(store, "bailout", { corporationId: new ObjectId() });
     expect(result).toMatchObject({ ok: false, code: "insufficient_funds" });
-    expect(creditTreasury).toHaveBeenCalledWith(expect.anything(), "US", 500, expect.anything());
+    expect(refundTreasurySpend).toHaveBeenCalledWith(
+      expect.anything(),
+      "US",
+      500,
+      expect.objectContaining({ key: spendFromTreasury.mock.calls[0][3].witness.key })
+    );
     expect(store.uses).toHaveLength(0);
     expect(store.approvals).toEqual([]);
+  });
+
+  it("gives a re-pull after a refund its own receipt key so it is charged again", async () => {
+    debitCorp.mockResolvedValueOnce({ ok: false, error: "Insufficient" });
+    registerCrisisDefinition(
+      makeDefinition({
+        levers: [
+          {
+            id: "bailout",
+            role: "corpCeo",
+            label: "Bailout",
+            mitigation: 5,
+            cost: { treasuryCash: 500, corpCash: 200 },
+          },
+        ],
+      })
+    );
+    roles.derived = ["any"];
+    const store = freshStore({ corporation: { _id: new ObjectId(), countryId: "US" } });
+    const corporationId = new ObjectId();
+    expect(await pull(store, "bailout", { corporationId })).toMatchObject({ ok: false });
+    expect(await pull(store, "bailout", { corporationId })).toMatchObject({ ok: true });
+    const keys = spendFromTreasury.mock.calls.map((call) => call[3].witness.key);
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).not.toBe(keys[1]);
   });
 
   it("refunds everything taken when the release write throws", async () => {
@@ -261,7 +295,7 @@ describe("pullLever", () => {
     };
     const result = await pullLever(db as never, { crisisId, leverId: "stimulus", characterId });
     expect(result).toMatchObject({ ok: false, code: "charge_failed" });
-    expect(creditTreasury).toHaveBeenCalledTimes(1);
+    expect(refundTreasurySpend).toHaveBeenCalledTimes(1);
     expect(store.approvals).toEqual([
       { id: "US", delta: -2 },
       { id: "US", delta: 2 },
@@ -289,8 +323,11 @@ describe("pullLever", () => {
     const result = await pullLever(db as never, { crisisId, leverId: "stimulus", characterId });
     expect(result).toMatchObject({ ok: false, code: "charge_failed" });
     expect(spendFromTreasury).toHaveBeenCalledTimes(1);
-    expect(creditTreasury).toHaveBeenCalledTimes(1);
-    expect(creditTreasury.mock.calls[0][2]).toBe(spendFromTreasury.mock.calls[0][2]);
+    expect(refundTreasurySpend).toHaveBeenCalledTimes(1);
+    expect(refundTreasurySpend.mock.calls[0][2]).toBe(spendFromTreasury.mock.calls[0][2]);
+    expect(refundTreasurySpend.mock.calls[0][3].key).toBe(
+      spendFromTreasury.mock.calls[0][3].witness.key
+    );
     expect(store.actions).toBe(actionsBefore);
     expect(store.uses).toHaveLength(0);
   });

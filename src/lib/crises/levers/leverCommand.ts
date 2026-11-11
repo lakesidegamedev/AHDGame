@@ -1,7 +1,7 @@
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { ObjectId, type Db } from "mongodb";
-import { creditTreasury, spendFromTreasury } from "@/lib/budget/treasurySpend";
+import { refundTreasurySpend, spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { campaignAnchorToLocal, loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { getEraContext } from "@/lib/era/context";
 import type { CountryId } from "@/lib/constants/countries";
@@ -221,9 +221,10 @@ async function chargeCostSteps(
     const amount = cost.treasuryCash;
     applied.push({
       undo: async () => {
-        await creditTreasury(db, countryId as CountryId, amount, {
-          resyncDerived: true,
-          witness: { flow: "crisis_response", site: "crises/levers/leverCommand" },
+        await refundTreasurySpend(db, countryId as CountryId, amount, {
+          flow: "crisis_response",
+          key: receiptKey,
+          site: "crises/levers/leverCommand",
         });
       },
     });
@@ -343,7 +344,8 @@ export async function commitLeverUse(
       cost: chargeable,
       countryId: args.countryId,
       corporationId: args.corporationId,
-      receiptKey: `crisis-lever:${crisis._id.toString()}:${lever.id}:${holder}:${turn}`,
+      // The claim id keeps a re-pull after a refund from replaying the refunded receipt.
+      receiptKey: `crisis-lever:${crisis._id.toString()}:${lever.id}:${holder}:${turn}:${row._id.toString()}`,
       actions: { characterId: holderId, count: actionsSpent },
     });
     if (!charged.ok) {
