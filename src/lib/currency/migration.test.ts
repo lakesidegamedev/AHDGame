@@ -481,7 +481,11 @@ describe("updateCentralBanks", () => {
     expect(ops.map(({ updateOne }) => updateOne.filter._id)).toEqual(
       expect.arrayContaining(["RU", "DD"])
     );
-    expect(db.collection("centralBanks").deleteMany).not.toHaveBeenCalled();
+    // Only a bank outside the era's roster (Canada before 2027) is removed.
+    const deleted = db
+      .collection("centralBanks")
+      .deleteMany.mock.calls.flatMap(([filter]) => (filter as { _id: { $in: string[] } })._id.$in);
+    expect(deleted).toEqual(["CA"]);
   });
 });
 
