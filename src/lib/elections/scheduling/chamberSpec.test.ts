@@ -22,6 +22,7 @@ import { CN_CHAMBER_SPECS } from "@/lib/countries/cn/elections/chamberSpecs";
 import { BR_CHAMBER_SPECS } from "@/lib/countries/br/elections/chamberSpecs";
 import { DE_CHAMBER_SPECS } from "@/lib/countries/de/elections/chamberSpecs";
 import { JP_CHAMBER_SPECS } from "@/lib/countries/jp/elections/chamberSpecs";
+import { CA_CHAMBER_SPECS } from "@/lib/countries/ca/elections/chamberSpecs";
 import { defineChamberSpec, seatsForRegion, type ChamberSpec } from "./chamberSpec";
 
 const ALL_SPECS: readonly ChamberSpec[] = [
@@ -31,6 +32,7 @@ const ALL_SPECS: readonly ChamberSpec[] = [
   ...BR_CHAMBER_SPECS,
   ...DE_CHAMBER_SPECS,
   ...JP_CHAMBER_SPECS,
+  ...CA_CHAMBER_SPECS,
   ...BETA_SENATE_SPECS,
   FR_LOWER_CHAMBER_SPEC,
   IT_LOWER_CHAMBER_SPEC,
