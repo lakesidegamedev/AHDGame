@@ -178,6 +178,11 @@ export const COUNTRY_BILL_PHASES: Partial<Record<CountryId, CountryBillPhaseEntr
     fn: (now, context) => runBillLifecycleForConfiguredCountry("WAL", now, context),
     emptyResult: { enacted: 0, failed: 0 },
   },
+  CA: {
+    phaseName: "caBillLifecycle",
+    fn: (now, context) => runBillLifecycleForConfiguredCountry("CA", now, context),
+    emptyResult: { enacted: 0, failed: 0 },
+  },
   UK: {
     phaseName: "ukBillLifecycle",
     fn: (now, context) => runBillLifecycleForCountry(UK_NATIONAL_CONFIG, now, context),
