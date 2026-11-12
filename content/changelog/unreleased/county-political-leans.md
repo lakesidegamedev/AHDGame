@@ -47,3 +47,6 @@ areas: [engine]
   Saved law boards now omit absent restrictions and accept older BSON nulls.
 - Preserves US 2027 regional opening services and their category mix through
   fiscal rollover, funding them alongside newly enacted regional programs.
+- Keeps budget healing from restoring superseded law catalogs or erasing
+  regional services and cash. Regional budget views now show cash separately
+  from annual surplus and label formula-based grant program estimates.

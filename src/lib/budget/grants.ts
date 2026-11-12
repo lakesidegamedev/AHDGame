@@ -16,7 +16,12 @@ import type { Document } from "mongodb";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
-import { allocateFormulaGrants, grantPovertyRate, type GrantRegion } from "./rules/formulaGrants";
+import {
+  allocateFormulaGrants,
+  formulaGrantBreakdown,
+  grantPovertyRate,
+  type GrantRegion,
+} from "./rules/formulaGrants";
 
 async function getStateData(db: Db, countryId?: CountryId): Promise<GrantRegion[]> {
   const states = await statesCollection<Document>(db)
@@ -52,6 +57,10 @@ export async function processFormulaGrants(
 ): Promise<Record<string, number>> {
   const states = await getStateData(db, countryId);
   return allocateFormulaGrants(federalBudgetTotal, formulaGrants, states);
+}
+
+export async function loadFormulaGrantBreakdown(db: Db, stateId: string, booked: number) {
+  return formulaGrantBreakdown(booked, stateId, formulaGrants, await getStateData(db, "US"));
 }
 
 export async function updateStateGrantRevenue(

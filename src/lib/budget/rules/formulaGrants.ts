@@ -55,6 +55,22 @@ export function allocateFormulaGrants(
   return result;
 }
 
+/** Current formula estimate, normalized to the actual booked regional receipt. */
+export function formulaGrantBreakdown(
+  booked: number,
+  regionId: string,
+  programs: readonly FormulaGrant[],
+  regions: readonly GrantRegion[]
+) {
+  const weights = programs.map((program) => ({
+    program: program.programName,
+    weight: allocateFormulaGrants(1, [program], regions)[regionId] ?? 0,
+  }));
+  const total = weights.reduce((sum, p) => sum + p.weight, 0);
+  if (!(total > 0)) return [{ program: "Unallocated grants", amount: booked }];
+  return weights.map((p) => ({ program: p.program, amount: (booked * p.weight) / total }));
+}
+
 /** Preserve a balanced modeled region's service mix when its opening grant is reconciled. */
 export function openingRegionalGrantBudget(input: {
   revenue: number;
