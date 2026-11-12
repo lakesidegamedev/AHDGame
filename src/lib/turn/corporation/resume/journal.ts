@@ -258,3 +258,8 @@ export async function runJournaledStepWithOutput<T>(
   // when the caller declared the step safe to repeat).
   return result;
 }
+
+/** A fresh start of a turn number drops any journal left from an earlier run of that number. */
+export async function clearJournalForTurn(ctx: JournalContext): Promise<void> {
+  await corporationTurnJournalCollection<Document>(ctx.db).deleteMany({ turn: ctx.turn });
+}

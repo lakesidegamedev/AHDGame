@@ -1,3 +1,5 @@
+import { corporationTurnRerunSet, startFreshJournal } from "@/simulation/engine/corporationResume";
+import { resilienceStageOf } from "@/lib/turn/corporation/resume/rules";
 import { drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import {
   executeTurnAdapters,
@@ -516,7 +518,11 @@ async function processTurnImpl(
     // dependent explicitly rather than rerunning or assuming zero. The race
     // guard (target === currentTurn+1 against the freshly locked state) prevents
     // a spurious resume when a concurrent completion races the lock.
-    const crashedTurnRecovery = validateLockedResume(gameState, preLockRecoveryTarget);
+    const crashedTurnRecovery = validateLockedResume(
+      gameState,
+      preLockRecoveryTarget,
+      await corporationTurnRerunSet(db, gameState)
+    );
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
       const message =
@@ -558,6 +564,13 @@ async function processTurnImpl(
     // One read of the selector per turn, before any phase runs. A resume pins the
     // engine recorded by the holder that died, so config can only choose the engine
     // for the NEXT turn — never for a turn that is already in progress.
+    if (!resumedFromCrash)
+      await startFreshJournal(
+        db,
+        resilienceStageOf(config),
+        gameState.currentTurn + 1,
+        gameState.worldEpochId
+      );
     const engineResolution = selectEngineForAttempt({
       configured: config?.turnEngineVersion,
       inFlightEngine: gameState.processingEngine,

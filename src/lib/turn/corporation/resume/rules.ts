@@ -247,22 +247,22 @@ export function decodeOutput(value: unknown): unknown {
 export type ResumeVerdict = { resume: true } | { resume: false; reason: string };
 
 /**
- * An interrupted corporation turn may resume only when every step it had begun
- * is journaled chunk by chunk. Work done outside the journaled steps is not yet
- * covered, so the caller passes whether the turn reached the first unjournaled
- * write (`unjournaledWritesStarted`).
+ * An interrupted corporation turn is rerun (instead of refused) only at stage 2,
+ * with a journal for this very turn whose stored plans can all be replayed. Steps
+ * the journal cannot cover refuse on their own when the rerun reaches them.
  */
 export function corporationTurnResumeVerdict(args: {
   stage: number;
   journal: CorporationTurnJournal | null;
   turn: number;
-  unjournaledWritesStarted: boolean;
 }): ResumeVerdict {
   if (args.stage < 2) return { resume: false, reason: "turn resilience stage below 2" };
   if (!args.journal) return { resume: false, reason: "no journal for this turn" };
   if (args.journal.turn !== args.turn)
     return { resume: false, reason: "journal belongs to another turn" };
-  if (args.unjournaledWritesStarted)
-    return { resume: false, reason: "writes outside the journaled steps already started" };
+  const unreplayable = Object.entries(args.journal.steps).find(
+    ([, entry]) => entry?.replayable === false
+  );
+  if (unreplayable) return { resume: false, reason: `plan ${unreplayable[0]} cannot be replayed` };
   return { resume: true };
 }

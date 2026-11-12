@@ -45,16 +45,18 @@ describe("corporation turn resume rules", () => {
     });
   });
 
-  it("only allows resume at stage 2 with a matching journal and no unjournaled writes", () => {
+  it("only allows resume at stage 2 with a replayable journal for the same turn", () => {
     const journal = { turn: 7, steps: {} };
-    const ok = { stage: 2, journal, turn: 7, unjournaledWritesStarted: false };
+    const ok = { stage: 2, journal, turn: 7 };
     expect(corporationTurnResumeVerdict(ok)).toEqual({ resume: true });
     expect(corporationTurnResumeVerdict({ ...ok, stage: 1 }).resume).toBe(false);
     expect(corporationTurnResumeVerdict({ ...ok, journal: null }).resume).toBe(false);
     expect(corporationTurnResumeVerdict({ ...ok, turn: 8 }).resume).toBe(false);
-    expect(corporationTurnResumeVerdict({ ...ok, unjournaledWritesStarted: true }).resume).toBe(
-      false
-    );
+    const stuck = {
+      turn: 7,
+      steps: { sectorWrites: { chunks: 1, applied: [], replayable: false } },
+    };
+    expect(corporationTurnResumeVerdict({ ...ok, journal: stuck }).resume).toBe(false);
   });
 
   it("numbers ops per document and flags unstampable ops", () => {
