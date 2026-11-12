@@ -183,6 +183,8 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
       "Turn-runner lease heartbeat owned by processTurn and its shutdown recovery.",
     processingAbandonedAt:
       "Evidence for an interrupted partially committed turn; shutdown recovery owns it.",
+    lastTurnFailure:
+      "Diagnostic record of the last failed turn, owned by the turn runner; kept across a reset so the failure stays readable.",
     processingPhase:
       "Turn-runner recovery evidence owned by processTurn and its shutdown recovery.",
     processingPhaseStatuses:
