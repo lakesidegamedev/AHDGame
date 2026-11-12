@@ -202,7 +202,7 @@
     "happy-dom": "^21.0.4",
     "husky": "^9.1.7",
     "knip": "^6.41.0",
-    "lighthouse": "^12.8.2",
+    "lighthouse": "^13.6.0",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4",
