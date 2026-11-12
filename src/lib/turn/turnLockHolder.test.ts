@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { TURN_HOLDER_ID, tryFastStaleLockTakeover } from "./turnLockHolder";
 
+// A pid that is certainly not running: above any pid_max.
+const deadPid = 4_194_999;
 const selfHost = TURN_HOLDER_ID.split(":").slice(0, -2).join(":");
 
 function dbWith(lock: Record<string, unknown> | null, modifiedCount = 1) {
@@ -13,7 +15,7 @@ const stale = new Date(now.getTime() - 5 * 60_000);
 const staleLock = {
   isProcessing: true,
   processingKind: "turn",
-  processingHolderId: `${selfHost}:1:previous-boot`,
+  processingHolderId: `${selfHost}:${deadPid}:previous-boot`,
   processingHeartbeatAt: stale,
 };
 
@@ -22,13 +24,21 @@ describe("tryFastStaleLockTakeover", () => {
     const { db, updateOne } = dbWith(staleLock);
     await expect(tryFastStaleLockTakeover(db, 1, now)).resolves.toBe(true);
     expect(updateOne.mock.calls[0][0]).toMatchObject({
-      processingHolderId: `${selfHost}:1:previous-boot`,
+      processingHolderId: `${selfHost}:${deadPid}:previous-boot`,
       processingHeartbeatAt: stale,
     });
   });
   it("loses cleanly when the holder renewed between read and write", async () => {
     const { db } = dbWith(staleLock, 0);
     await expect(tryFastStaleLockTakeover(db, 1, now)).resolves.toBe(false);
+  });
+  it("never takes over a holder whose pid is alive", async () => {
+    const { db, updateOne } = dbWith({
+      ...staleLock,
+      processingHolderId: `${selfHost}:${process.ppid}:other-boot`,
+    });
+    await expect(tryFastStaleLockTakeover(db, 1, now)).resolves.toBe(false);
+    expect(updateOne).not.toHaveBeenCalled();
   });
   it("leaves a holder on another host to the long stale window", async () => {
     const { db, updateOne } = dbWith({ ...staleLock, processingHolderId: "elsewhere:1:x" });

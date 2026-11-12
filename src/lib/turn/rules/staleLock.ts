@@ -50,16 +50,18 @@ export function parseHolderId(id: string | null | undefined): ParsedHolderId | n
 /**
  * A lock the watchdog may take over before the long stale window: a turn lock
  * whose heartbeat is older than the fast window AND whose holder is provably
- * dead. There is one worker process per host, so a holder on this host with a
- * different boot id than ours belongs to a process that has gone. A holder on
- * another host, or one that cannot be identified, may merely be blocked, so it
- * keeps the long window (the ordinary stale-lock rules) even at stage 1.
+ * dead. That is only provable for a holder on this host, whose pid can be
+ * probed: a pid that is not alive is a dead holder, a live one (including a
+ * stopped process) is never taken over early. A holder on another host, or one
+ * that cannot be identified, may merely be blocked, so it keeps the long window
+ * (the ordinary stale-lock rules) even at stage 1.
  */
 export function shouldFastTakeOverStaleLock(
   lock: FastTakeoverLockView | null | undefined,
   now: Date,
   stage: number,
-  self: { host: string; bootId: string },
+  self: { host: string },
+  isPidAlive: (pid: number) => boolean,
   staleMs = TURN_LOCK_FAST_STALE_MS
 ): boolean {
   if (stage < 1 || !lock) return false;
@@ -67,6 +69,9 @@ export function shouldFastTakeOverStaleLock(
   if (lock.processingAbandonedAt != null) return false;
   if (!lock.processingHeartbeatAt) return false;
   const holder = parseHolderId(lock.processingHolderId);
-  if (!holder || holder.host !== self.host || holder.bootId === self.bootId) return false;
-  return now.getTime() - new Date(lock.processingHeartbeatAt).getTime() > staleMs;
+  if (!holder || holder.host !== self.host) return false;
+  const pid = Number(holder.pid);
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  if (now.getTime() - new Date(lock.processingHeartbeatAt).getTime() <= staleMs) return false;
+  return !isPidAlive(pid);
 }
