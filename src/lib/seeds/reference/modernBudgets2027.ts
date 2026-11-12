@@ -6,19 +6,20 @@ import { ruRegions2027 } from "@/lib/countries/ru/data/ruRegions2027";
 import { easternBlocPolicyConfig } from "@/lib/seeds/shared/easternBlocLegislation";
 
 /**
- * 2027 national fiscal books for Russia, Poland and Romania. Population and
- * GDP are the sums of each country's authored 2027 regions, so the national
- * row and its regions cannot drift apart.
- *
- * Revenue, expenditure and gross debt shares of GDP, growth and inflation are
- * authored estimates in the range of each country's recent general government
- * accounts. They are opening assumptions, not sourced projections or outturns,
- * and should be replaced when a cited 2027 series is authored.
- *
- * Tax bases, effective opening rates, the functional spending split, the debt
- * service rate and the ceiling are game calibrations. The category split sums
- * to expenditure after modeled interest, and other receipts close to revenue.
+ * 2027 fiscal books for Russia, Poland and Romania. Population and GDP are
+ * summed from the authored regions. The ratios, growth, inflation, tax rates
+ * and spending split are authored estimates and game calibrations, not
+ * sourced projections.
  */
+const RU_TAX_POLICY_IDS = {
+  incomeTax: "ru.tax.incomeTax",
+  domesticCorporateTax: "ru.tax.domesticCorporateTax",
+  foreignCorporateTax: "ru.tax.foreignCorporateTax",
+  payrollTax: "ru.tax.payrollTax",
+  tariffs: "ru.tax.tariffs",
+  salesTax: "ru.tax.salesTax",
+};
+
 const FISCAL = {
   RU: {
     regions: ruRegions2027,
@@ -30,6 +31,7 @@ const FISCAL = {
     growth: 1.1,
     inflation: 4.6,
     rating: "BB",
+    taxPolicyIds: RU_TAX_POLICY_IDS,
   },
   PL: {
     regions: plRegions2027,
@@ -41,6 +43,7 @@ const FISCAL = {
     growth: 3.0,
     inflation: 2.9,
     rating: "A",
+    taxPolicyIds: easternBlocPolicyConfig("pl").taxPolicyIds,
   },
   RO: {
     regions: roRegions2027,
@@ -52,6 +55,7 @@ const FISCAL = {
     growth: 1.6,
     inflation: 3.8,
     rating: "BBB",
+    taxPolicyIds: easternBlocPolicyConfig("ro").taxPolicyIds,
   },
 } as const;
 
@@ -88,15 +92,6 @@ const spendingShares = {
   other: 0.13,
   stateGrants: 0.08,
 } as const;
-
-const RU_TAX_POLICY_IDS = {
-  incomeTax: "ru.tax.incomeTax",
-  domesticCorporateTax: "ru.tax.domesticCorporateTax",
-  foreignCorporateTax: "ru.tax.foreignCorporateTax",
-  payrollTax: "ru.tax.payrollTax",
-  tariffs: "ru.tax.tariffs",
-  salesTax: "ru.tax.salesTax",
-};
 
 function sum(regions: readonly State[], field: "population" | "gdp"): number {
   return regions.reduce((total, region) => total + (region[field] ?? 0), 0);
@@ -147,10 +142,7 @@ export const MODERN_NATIONAL_BUDGETS_2027: NationalBudgetSeedConfig[] = (
     policyDefaults: {},
     policyOptionOverrides: {},
     skipLegacyLegislation: true,
-    taxPolicyIds:
-      countryId === "RU"
-        ? RU_TAX_POLICY_IDS
-        : easternBlocPolicyConfig(countryId.toLowerCase()).taxPolicyIds,
+    taxPolicyIds: fiscal.taxPolicyIds,
     taxRateOverrides,
   };
 });
