@@ -3,8 +3,7 @@ import { clientAvatarUrl } from "@/lib/client/avatarUrl";
 import { NextResponse } from "next/server";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
-import type { User } from "@/lib/db/types";
-import { isPatreonActive, isPlusOrBetter } from "@/lib/db/types";
+import { isPatreonActive, tierIncludesSingleplayer } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { cookies } from "next/headers";
 import { getAuthUserFromToken } from "@/lib/auth";
@@ -58,7 +57,10 @@ export async function GET() {
   const avatarUrl = clientAvatarUrl(character?.avatarUrl) ?? clientAvatarUrl(discordAvatar);
   const nowMs = Date.now();
   const supporter = isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null);
-  const plusActive = supporter && isPlusOrBetter(user.patreonTier ?? null);
+  const tierActive = tierIncludesSingleplayer(
+    user.patreonTier ?? null,
+    user.patreonExpiresAt ?? null
+  );
   const tempExpiresMs = user.clientAccessExpiresAt
     ? new Date(user.clientAccessExpiresAt).getTime()
     : 0;
@@ -66,12 +68,12 @@ export async function GET() {
   const singleplayerEntitled =
     auth.user.isModerator === true ||
     Boolean(user.singleplayerEntitledAt) ||
-    plusActive ||
+    tierActive ||
     tempActive;
 
   const graceEnd = nowMs + OFFLINE_ENTITLEMENT_GRACE_MS;
   const tempOnly =
-    tempActive && auth.user.isModerator !== true && !user.singleplayerEntitledAt && !plusActive;
+    tempActive && auth.user.isModerator !== true && !user.singleplayerEntitledAt && !tierActive;
 
   return NextResponse.json(
     {

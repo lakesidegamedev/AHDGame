@@ -47,7 +47,12 @@ describe("POST /api/webhooks/lakeside-subscription", () => {
     const { POST } = await import("./route");
     const res = await POST(
       makeRequest(
-        { email: "a@b.com", tier: "supporter", active: true, currentPeriodEnd: null },
+        {
+          ahdUserId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+          tier: "supporter",
+          active: true,
+          currentPeriodEnd: null,
+        },
         null
       )
     );
@@ -58,22 +63,81 @@ describe("POST /api/webhooks/lakeside-subscription", () => {
     const { POST } = await import("./route");
     const res = await POST(
       makeRequest(
-        { email: "a@b.com", tier: "supporter", active: true, currentPeriodEnd: null },
+        {
+          ahdUserId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+          tier: "supporter",
+          active: true,
+          currentPeriodEnd: null,
+        },
         "wrong-token"
       )
     );
     expect(res.status).toBe(401);
   });
 
-  it("returns 404 for an unknown email", async () => {
+  it("returns 404 for an unknown account id", async () => {
     vi.mocked(db.collection("users").findOne).mockResolvedValue(null);
     const { POST } = await import("./route");
     const res = await POST(
-      makeRequest({ email: "ghost@b.com", tier: "supporter", active: true, currentPeriodEnd: null })
+      makeRequest({
+        ahdUserId: "bbbbbbbbbbbbbbbbbbbbbbbb",
+        tier: "supporter",
+        active: true,
+        currentPeriodEnd: null,
+      })
     );
     expect(res.status).toBe(404);
     const json = await res.json();
-    expect(json.error).toBe("unknown_email");
+    expect(json.error).toBe("unknown_user");
+    const service = await import("@/lib/patreon/service");
+    expect(service.applyPatreonStatus).not.toHaveBeenCalled();
+    expect(service.startPatreonGracePeriod).not.toHaveBeenCalled();
+  });
+
+  it("rejects a body without ahdUserId with 400 and no write", async () => {
+    const service = await import("@/lib/patreon/service");
+    const { POST } = await import("./route");
+    const res = await POST(
+      makeRequest({ email: "a@b.com", tier: "supporter", active: true, currentPeriodEnd: null })
+    );
+    expect(res.status).toBe(400);
+    expect(db.collection("users").findOne).not.toHaveBeenCalled();
+    expect(service.applyPatreonStatus).not.toHaveBeenCalled();
+    expect(service.startPatreonGracePeriod).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed ahdUserId with 400 and no write", async () => {
+    const service = await import("@/lib/patreon/service");
+    const { POST } = await import("./route");
+    const res = await POST(
+      makeRequest({ ahdUserId: "nope", tier: "supporter", active: true, currentPeriodEnd: null })
+    );
+    expect(res.status).toBe(400);
+    expect(service.applyPatreonStatus).not.toHaveBeenCalled();
+  });
+
+  it("looks up by _id only and changes only the account the id names, ignoring email", async () => {
+    const userB = new ObjectId();
+    vi.mocked(db.collection("users").findOne).mockResolvedValue({ _id: userB });
+    const service = await import("@/lib/patreon/service");
+    const { POST } = await import("./route");
+    const res = await POST(
+      makeRequest({
+        email: "user-a@example.com",
+        ahdUserId: userB.toHexString(),
+        tier: "supporter",
+        active: true,
+        currentPeriodEnd: null,
+      })
+    );
+    expect(res.status).toBe(200);
+    const filter = vi.mocked(db.collection("users").findOne).mock.calls[0][0];
+    expect(filter).toEqual({ _id: userB });
+    expect(service.applyPatreonStatus).toHaveBeenCalledTimes(1);
+    expect(service.applyPatreonStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: userB })
+    );
   });
 
   it("grants benefits with stripe provider, ad-free default, and periodEnd + grace expiry", async () => {
@@ -85,7 +149,7 @@ describe("POST /api/webhooks/lakeside-subscription", () => {
     const { POST } = await import("./route");
     const res = await POST(
       makeRequest({
-        email: "A@B.com", // mixed case: must match case-insensitively
+        ahdUserId: "aaaaaaaaaaaaaaaaaaaaaaaa",
         tier: "supporter-plus",
         active: true,
         currentPeriodEnd: periodEnd,
@@ -113,7 +177,12 @@ describe("POST /api/webhooks/lakeside-subscription", () => {
 
     const { POST } = await import("./route");
     await POST(
-      makeRequest({ email: "a@b.com", tier: "supporter", active: true, currentPeriodEnd: null })
+      makeRequest({
+        ahdUserId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+        tier: "supporter",
+        active: true,
+        currentPeriodEnd: null,
+      })
     );
 
     expect(service.applyPatreonStatus).toHaveBeenCalledWith(
@@ -130,7 +199,7 @@ describe("POST /api/webhooks/lakeside-subscription", () => {
     const { POST } = await import("./route");
     const res = await POST(
       makeRequest({
-        email: "a@b.com",
+        ahdUserId: "aaaaaaaaaaaaaaaaaaaaaaaa",
         tier: "supporter",
         active: false,
         currentPeriodEnd: "2026-08-01T00:00:00.000Z",
@@ -150,7 +219,7 @@ describe("POST /api/webhooks/lakeside-subscription", () => {
     const service = await import("@/lib/patreon/service");
 
     const body = {
-      email: "a@b.com",
+      ahdUserId: "aaaaaaaaaaaaaaaaaaaaaaaa",
       tier: "supporter" as const,
       active: true,
       currentPeriodEnd: "2026-08-01T00:00:00.000Z",
