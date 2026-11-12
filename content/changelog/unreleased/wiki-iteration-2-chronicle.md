@@ -7,7 +7,7 @@ summary: >-
   the United States, and the companies and fortunes built along the way.
 tags: [wiki, history]
 badges: [patch]
-areas: [content]
+areas: [frontend]
 ---
 
 ## What changed
