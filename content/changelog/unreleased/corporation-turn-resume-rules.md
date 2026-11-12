@@ -1,9 +1,10 @@
 ---
 date: 2026-11-12
-title: "Groundwork for resuming an interrupted company turn"
+title: "Company turn writes are journaled so an interrupted turn can resume"
 summary: >-
-  Adds the rules and a switch for safely resuming a company turn that was
-  interrupted partway. Nothing changes for players while the switch is off.
+  Behind a switch that is off, the company turn now stores its planned money
+  writes before applying them, so an interrupted turn can finish the same plan
+  without paying anyone twice. Nothing changes for players while the switch is off.
 tags: [engineering]
 badges: [patch]
 areas: [engine]
@@ -12,4 +13,5 @@ areas: [engine]
 ## What changed
 
 - Added a turn resilience switch, off by default.
-- Added the rules that decide whether an interrupted company turn can resume and that stop a retried payment from applying twice.
+- With the switch on, sector, company cash and product development writes are stored in chunks first, stamped per company, and marked as they land.
+- With the switch off, the writes behave exactly as before.

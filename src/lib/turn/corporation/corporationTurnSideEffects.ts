@@ -19,7 +19,10 @@ import { groupForecastWriteOps } from "./groupSupplyTurn";
 import { deleteDivestedNppSectors } from "../npp/divestmentPersistence";
 import { persistLabourIndices, persistLabourDemand } from "./corporationTurnPhases";
 import { partitionedBulkWrite } from "./partitionedBulkWrite";
+import { applyJournaledOps, type JournalContext } from "./resume/journal";
+import { resilienceStageOf } from "./resume/rules";
 import { applyOperatingCashThenDevelopmentCash } from "./manufacturingDevelopmentCashSettlement";
+import { mergeCorporationCashOps } from "./mergeCorporationCashOps";
 import { applyCorporationCashWrites } from "@/lib/turn/npp/foundingCashLedger";
 import { startNppVentures } from "@/lib/products/venture/nppStart";
 import { getNppCashFloorAnchor } from "@/lib/turn/npp/nppCashReserve";
@@ -305,14 +308,19 @@ export async function runCorporationTurnSideEffects({
     turn,
   });
 
+  const journal: JournalContext = {
+    db,
+    stage: resilienceStageOf(marketGovernorConfig),
+    turn: typeof turn === "number" ? turn : (gameState?.currentTurn ?? 0),
+    worldEpoch: gameState?.worldEpochId,
+  };
   // Phase 3: Bulk write sector and corp updates
-  if (sectorOps.length > 0) {
-    // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid.
-    // Every op is keyed by its sector `_id`; ops on one sector (the flip-turn
-    // `$push` after the main update) stay together and in order.
+  // Every op is keyed by its sector `_id`; ops on one sector (the flip-turn
+  // `$push` after the main update) stay together and in order.
+  await applyJournaledOps(journal, "sectorWrites", sectorOps as Document[], (chunk) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await partitionedBulkWrite(corporateSectorsCollection<Document>(db), sectorOps as any[]);
-  }
+    partitionedBulkWrite(corporateSectorsCollection<Document>(db), chunk as any[])
+  );
   // After the sector writes, which carry each sector's own stamp: a sector
   // founded before the next run catches its builds up from this turn.
   if (typeof turn === "number") {
@@ -337,15 +345,21 @@ export async function runCorporationTurnSideEffects({
       sectorsByCorp: lookups.sectorsByCorp,
       constructionLoanDebtByCorpId: lookups.constructionLoanDebtByCorpId,
       mediaProductSlatesEnabled,
+      journal,
       applyOperatingCashWrites: async () => {
         if (corpOps.length === 0) return;
-        // bulkWrite op array type does not satisfy AnyBulkWriteOperation narrowing, runtime shape is valid.
-        await applyCorporationCashWrites(
-          db,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          corpOps as any[],
-          foundingCashWitnesses,
-          reinvestmentCashWitnesses
+        // Merged first so the per-document merge still sees plain `_id` filters;
+        // the journal then stamps the merged ops.
+        const plan = journal.stage >= 2 ? mergeCorporationCashOps(corpOps) : corpOps;
+        await applyJournaledOps(journal, "corporationCash", plan as Document[], (chunk) =>
+          applyCorporationCashWrites(
+            db,
+            // bulkWrite op array type does not satisfy AnyBulkWriteOperation narrowing, runtime shape is valid.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            chunk as any[],
+            foundingCashWitnesses,
+            reinvestmentCashWitnesses
+          ).then(() => undefined)
         );
         mark("corpCashWrites");
         if (treasuryCashLedgerEnabled) {

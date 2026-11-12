@@ -4,7 +4,9 @@ import {
   corporationTurnResumeVerdict,
   remainingChunks,
   resilienceStageOf,
+  chunkBySize,
   stampOp,
+  stampPlan,
   stepStatus,
 } from "./rules";
 
@@ -32,11 +34,11 @@ describe("corporation turn resume rules", () => {
     );
     expect(op.updateOne.filter).toEqual({
       _id: "c1",
-      "corpTurnApplied.corporationCash": { $ne: 42 },
+      "corpTurnApplied.corporationCash.0": { $ne: 42 },
     });
     expect(op.updateOne.update).toEqual({
       $inc: { cash: 5 },
-      $set: { x: 1, "corpTurnApplied.corporationCash": 42 },
+      $set: { x: 1, "corpTurnApplied.corporationCash.0": 42 },
     });
   });
 
@@ -50,5 +52,28 @@ describe("corporation turn resume rules", () => {
     expect(corporationTurnResumeVerdict({ ...ok, unjournaledWritesStarted: true }).resume).toBe(
       false
     );
+  });
+
+  it("numbers ops per document and flags unstampable ops", () => {
+    const mk = (id: string) => ({ updateOne: { filter: { _id: id }, update: { $inc: { a: 1 } } } });
+    const plan = stampPlan(
+      [mk("a"), mk("a"), mk("b"), { insertOne: { document: {} } }],
+      "sectorWrites",
+      3
+    );
+    expect(plan.unstamped).toBe(1);
+    const slots = plan.ops
+      .slice(0, 3)
+      .map((op) => Object.keys((op as ReturnType<typeof mk>).updateOne.filter)[1]);
+    expect(slots).toEqual([
+      "corpTurnApplied.sectorWrites.0",
+      "corpTurnApplied.sectorWrites.1",
+      "corpTurnApplied.sectorWrites.0",
+    ]);
+  });
+
+  it("chunks by count and bytes", () => {
+    expect(chunkBySize([1, 1, 1, 1, 1], () => 1, 2, 100)).toEqual([[1, 1], [1, 1], [1]]);
+    expect(chunkBySize([5, 5, 5], (n) => n, 10, 10)).toEqual([[5, 5], [5]]);
   });
 });
