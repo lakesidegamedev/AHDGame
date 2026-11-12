@@ -20,6 +20,8 @@ export interface TurnLog {
   durationMs: number;
   /** The turn committed. A committed turn can still be degraded; see `outcome`. */
   success: boolean;
+  /** Top-level failure text (message plus first stack frames) when the turn threw. */
+  error?: string;
   /** `degraded` when a phase failed or was skipped after an upstream failure. Absent before v2.10. */
   outcome?: TurnOutcome;
   failedPhases?: string[];

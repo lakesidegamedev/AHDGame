@@ -192,6 +192,8 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
       "Diagnostic record of the last automatic turn retry, owned by the turn runner; kept across a reset so it stays readable.",
     processingHolderId:
       "Identity of the process holding the turn lock; owned by processTurn and its recovery.",
+    lastTurnFailure:
+      "Diagnostic record of the last failed turn, owned by the turn runner; kept across a reset so the failure stays readable.",
     processingPhase:
       "Turn-runner recovery evidence owned by processTurn and its shutdown recovery.",
     processingPhaseStatuses:

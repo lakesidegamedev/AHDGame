@@ -17,7 +17,7 @@ import dynamic from "next/dynamic";
 import { LandingIntakeBeacon } from "@/components/intake/LandingIntakeBeacon";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CDN_WORLD_GEO_URL } from "@/lib/images/cdnUrls";
 import {
@@ -67,6 +67,34 @@ const FlavorCardCarousel = dynamic(() =>
 const CommunitySupportSection = dynamic(() =>
   import("@/components/landing/CommunitySupportSection").then((m) => m.CommunitySupportSection)
 );
+
+/** True once the page has loaded and the main thread has gone idle, so the globe
+ * bundle and its first frames never compete with hydration and first paint. */
+function useAfterLoadIdle(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    let idle: number | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const go = () => {
+      if (cancelled) return;
+      if ("requestIdleCallback" in window) {
+        idle = window.requestIdleCallback(() => setReady(true), { timeout: 2_500 });
+      } else {
+        timer = setTimeout(() => setReady(true), 300);
+      }
+    };
+    if (document.readyState === "complete") go();
+    else window.addEventListener("load", go, { once: true });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", go);
+      if (idle !== undefined) window.cancelIdleCallback(idle);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+  return ready;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Shared styles + links                                                       */
@@ -306,6 +334,7 @@ export function SandboxHome({
   // until the deadline, after which both revert to normal behaviour with no
   // deploy needed.
   const countdown = useCrtCountdown();
+  const globeReady = useAfterLoadIdle();
   const l = links(isSignedIn);
 
   // Signal-field star scatter: a full-viewport layer independent of the
@@ -424,27 +453,29 @@ export function SandboxHome({
             wireframeColor ? { filter: `drop-shadow(0 0 18px ${wireframeColor}55)` } : undefined
           }
         >
-          <LandingGlobe
-            bare
-            enhanced
-            hideLiveIndicator
-            gameDate={eraConfig.gameDate}
-            countryAccess={eraConfig.accessMap}
-            geoUrl={CDN_WORLD_GEO_URL}
-            initialRotation={eraConfig.initialRotation ?? DEFAULT_GLOBE_ROTATION}
-            initialZoom={1.05}
-            wireframeColor={wireframeColor}
-            playerCounts={playerCounts}
-            battlegroundFeatureIds={battlegroundFeatureIds}
-            economicPowerFeatureIds={economicPowerFeatureIds}
-            onShowcaseActiveChange={setShowcaseActive}
-            showcasePaused={countdown !== null}
-            broadcast={broadcast}
-            hideTierLegend={Boolean(broadcast)}
-            markersFromSm={Boolean(broadcast)}
-            backgroundMacroFeatureIds={backgroundMacroFeatureIds}
-            successorProxies={successorProxies}
-          />
+          {globeReady ? (
+            <LandingGlobe
+              bare
+              enhanced
+              hideLiveIndicator
+              gameDate={eraConfig.gameDate}
+              countryAccess={eraConfig.accessMap}
+              geoUrl={CDN_WORLD_GEO_URL}
+              initialRotation={eraConfig.initialRotation ?? DEFAULT_GLOBE_ROTATION}
+              initialZoom={1.05}
+              wireframeColor={wireframeColor}
+              playerCounts={playerCounts}
+              battlegroundFeatureIds={battlegroundFeatureIds}
+              economicPowerFeatureIds={economicPowerFeatureIds}
+              onShowcaseActiveChange={setShowcaseActive}
+              showcasePaused={countdown !== null}
+              broadcast={broadcast}
+              hideTierLegend={Boolean(broadcast)}
+              markersFromSm={Boolean(broadcast)}
+              backgroundMacroFeatureIds={backgroundMacroFeatureIds}
+              successorProxies={successorProxies}
+            />
+          ) : null}
         </div>
 
         {/* Radial vignette fades globe into page background at edges. */}

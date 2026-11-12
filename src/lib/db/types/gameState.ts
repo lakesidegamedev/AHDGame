@@ -402,6 +402,8 @@ export interface GameState {
     at: Date;
     note?: string;
   } | null;
+  /** Most recent top-level turn failure: target turn, message with stack head, time. */
+  lastTurnFailure?: { turn: number | null; message: string; at: Date } | null;
   /** Last phase name to refresh the processing heartbeat; helps debug stuck turns */
   processingPhase?: string | null;
   /** Per-phase lifecycle state for the active turn; used to debug skips, failures, and stalls */

@@ -51,6 +51,13 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import {
+  CorporationTurnStepRefusedError,
+  runJournaledStep,
+  runJournaledStepWithOutput,
+  type JournalContext,
+} from "./resume/journal";
+import { resilienceStageOf } from "./resume/rules";
 
 // Optional sim-run salt, same convention as nppActionProcessing.ts's RNG.
 export const CORP_TURN_RNG_SALT = workerConfig.simRngSalt() ? `:${workerConfig.simRngSalt()}` : "";
@@ -91,6 +98,7 @@ export async function settleCorporationTurnPayouts({
   capitalDividendPayments,
   passThroughTaxedDividendPayments,
   forexEnabled,
+  resilienceStage,
 }: {
   capacityBindingEvents: {
     sectorId: string;
@@ -132,7 +140,14 @@ export async function settleCorporationTurnPayouts({
   capitalDividendPayments: Map<string, Map<CurrencyCode, number>>;
   passThroughTaxedDividendPayments: Map<string, Map<CurrencyCode, number>>;
   forexEnabled: boolean;
+  resilienceStage?: number;
 }) {
+  const journal: JournalContext = {
+    db,
+    stage: resilienceStageOf({ turnResilienceStage: resilienceStage }),
+    turn: turn ?? gameState?.currentTurn ?? 0,
+    worldEpoch: gameState?.worldEpochId,
+  };
   if (capacityBindingEvents.length > 0) {
     const capacityNotifications = capacityBindingEvents.flatMap((ev) => {
       const corp = lookups.corpById.get(ev.corporationId);
@@ -160,7 +175,9 @@ export async function settleCorporationTurnPayouts({
       ];
     });
     if (capacityNotifications.length > 0) {
-      await createNotifications(capacityNotifications);
+      await runJournaledStep(journal, "capacityNotifications", "refuse", () =>
+        createNotifications(capacityNotifications)
+      );
     }
   }
 
@@ -174,7 +191,11 @@ export async function settleCorporationTurnPayouts({
   // the operative figure. The quantity that matters is written by the builder,
   // not here.
   if (nppNewSectors.length > 0) {
-    await corporateSectorsCollection<Document>(db).insertMany(nppNewSectors);
+    await runJournaledStep(journal, "nppNewSectors", "refuse", () =>
+      corporateSectorsCollection<Document>(db)
+        .insertMany(nppNewSectors)
+        .then(() => undefined)
+    );
   }
 
   // Business Acumen use-growth: each turn, every active player CEO accrues
@@ -195,18 +216,20 @@ export async function settleCorporationTurnPayouts({
     }
   }
   if (ceoBestMarginById.size > 0) {
-    await charactersCollection(db).bulkWrite(
-      [...ceoBestMarginById.values()].map(({ id, margin }) => ({
-        updateOne: {
-          filter: { _id: id, stats: { $exists: true } },
-          update: {
-            $inc: {
-              "statXp.businessAcumen":
-                USE_GROWTH_INCREMENT * businessAcumenGrowthMultiplier(margin),
-            },
+    const acumenOps = [...ceoBestMarginById.values()].map(({ id, margin }) => ({
+      updateOne: {
+        filter: { _id: id, stats: { $exists: true } },
+        update: {
+          $inc: {
+            "statXp.businessAcumen": USE_GROWTH_INCREMENT * businessAcumenGrowthMultiplier(margin),
           },
         },
-      }))
+      },
+    }));
+    await runJournaledStep(journal, "businessAcumen", "refuse", () =>
+      charactersCollection(db)
+        .bulkWrite(acumenOps)
+        .then(() => undefined)
     );
   }
 
@@ -216,15 +239,17 @@ export async function settleCorporationTurnPayouts({
   // reflects this turn's result, within the corp turn so metric writes
   // precede the late state-metrics phase.
   mark("acumen+fxSpread+newSectors");
-  const soeSweepAudit = await runSoeBackingSweep({
-    db,
-    now,
-    turn: turn ?? gameState?.currentTurn,
-    currentYear,
-    corpSnapshots,
-    corpById: lookups.corpById,
-    mark,
-  });
+  const soeSweepAudit = await runJournaledStepWithOutput(journal, "soeBackingSweep", "refuse", () =>
+    runSoeBackingSweep({
+      db,
+      now,
+      turn: turn ?? gameState?.currentTurn,
+      currentYear,
+      corpSnapshots,
+      corpById: lookups.corpById,
+      mark,
+    })
+  );
   if (soeSweepAudit) corpAuditEntries.push(soeSweepAudit);
 
   // Phase 3b: R&D innovation, every 6 turns, corps with accumulated R&D score
@@ -240,13 +265,21 @@ export async function settleCorporationTurnPayouts({
       seedDepositLookup(gameState?.preset)
     );
     if (sectorBoostOps.length > 0) {
-      // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await corporateSectorsCollection<Document>(db).bulkWrite(sectorBoostOps as any[]);
+      await runJournaledStep(journal, "rdSectorBoosts", "refuse", () =>
+        corporateSectorsCollection<Document>(db)
+          // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing, runtime shape is valid
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .bulkWrite(sectorBoostOps as any[])
+          .then(() => undefined)
+      );
     }
     if (capacityBoostOps.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await stateResourceCapacityCollection<Document>(db).bulkWrite(capacityBoostOps as any[]);
+      await runJournaledStep(journal, "rdCapacityBoosts", "refuse", () =>
+        stateResourceCapacityCollection<Document>(db)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .bulkWrite(capacityBoostOps as any[])
+          .then(() => undefined)
+      );
     }
     if (innovationsTriggered > 0) {
       console.log(
@@ -259,23 +292,28 @@ export async function settleCorporationTurnPayouts({
   // Grouped by fund and run concurrently; within a fund accruals stay sequential
   // because they touch the same fund cash/positions and ordering must be exact.
   mark("rdInnovations");
-  await settleFundDividendAccruals(db, fundDividendAccruals, turn);
+  await runJournaledStep(journal, "fundDividends", "refuse", () =>
+    settleFundDividendAccruals(db, fundDividendAccruals, turn)
+  );
   mark("fundDividends");
   // Phase 3c: Credit dividends to corporate shareholders, see
   // creditCorpDividends (FX spread skim, 50% dividend-received deduction tax,
   // corp_dividend ledger rows, same-turn corporationHistory tax record).
   // Returns the per-corp dividend-received tax so the ledger emission below
   // can fold it into the per-country gov_tax_revenue totals.
-  const { dividendTaxPaidByCountry, dividendIncomeReceivedByCorpId } = await creditCorpDividends({
-    db,
-    lookups,
-    corpDividendPaymentsAnchorByCorpId,
-    corpDividendPaymentsAnchorByCorpCurrency,
-    corpDividendTaxedAtSourceAnchorByCorpId,
-    turn,
-    now,
-    thresholds,
-  });
+  const { dividendTaxPaidByCountry, dividendIncomeReceivedByCorpId } =
+    await runJournaledStepWithOutput(journal, "corpDividends", "refuse", () =>
+      creditCorpDividends({
+        db,
+        lookups,
+        corpDividendPaymentsAnchorByCorpId,
+        corpDividendPaymentsAnchorByCorpCurrency,
+        corpDividendTaxedAtSourceAnchorByCorpId,
+        turn,
+        now,
+        thresholds,
+      })
+    );
 
   mark("corpDividends");
   // Phase 3c2: settle bilateral supply-agreement price premiums (contract-for-
@@ -283,20 +321,26 @@ export async function settleCorporationTurnPayouts({
   // supplier is credited and the buyer debited the same ₳ premium delta.
   if (supplyAgreementsEnabled && settleableAgreements && settleableAgreements.length > 0) {
     try {
-      const { settledCount, settledPremiums } = await settleSupplyAgreements({
-        db,
-        lookups,
-        agreements: settleableAgreements,
-        contractSettlementByCorp,
-        buyerDemandByCorpCommodity,
-        producedByCorpCommodity: market.plantsEnabled ? producedByCorpCommodity : undefined,
-        achievableByCorpCommodity: market.plantsEnabled ? achievableByCorpCommodity : undefined,
-        plantsEnabled: market.plantsEnabled,
-        priceRatioByCommodity: lookups.priceRatioByCommodity,
-        turn: turn ?? 0,
-        now,
-        thresholds,
-      });
+      const { settledCount, settledPremiums } = await runJournaledStepWithOutput(
+        journal,
+        "supplyAgreementSettlement",
+        "refuse",
+        () =>
+          settleSupplyAgreements({
+            db,
+            lookups,
+            agreements: settleableAgreements,
+            contractSettlementByCorp,
+            buyerDemandByCorpCommodity,
+            producedByCorpCommodity: market.plantsEnabled ? producedByCorpCommodity : undefined,
+            achievableByCorpCommodity: market.plantsEnabled ? achievableByCorpCommodity : undefined,
+            plantsEnabled: market.plantsEnabled,
+            priceRatioByCommodity: lookups.priceRatioByCommodity,
+            turn: turn ?? 0,
+            now,
+            thresholds,
+          })
+      );
       if (settledCount > 0) {
         console.log(`[corporationTurn] settled ${settledCount} supply-agreement premium(s)`);
       }
@@ -341,6 +385,7 @@ export async function settleCorporationTurnPayouts({
         }
       }
     } catch (err) {
+      if (err instanceof CorporationTurnStepRefusedError) throw err;
       console.error("[corporationTurn] supply-agreement settlement failed:", err);
     }
   }
@@ -348,7 +393,9 @@ export async function settleCorporationTurnPayouts({
   // Phase 3d: IMF facility remittances (after operating income is written to liquidCapital).
   // WHY: Payment cap uses the same per-turn `income` as corp snapshots; cash moves rescued → IMF (USD).
   if (typeof turn === "number" && corpSnapshots.length > 0) {
-    await processImfBailoutPayments(db, turn, corpSnapshots, lookups.corporations);
+    await runJournaledStep(journal, "imfBailout", "refuse", () =>
+      processImfBailoutPayments(db, turn, corpSnapshots, lookups.corporations)
+    );
   }
   mark("imfBailout");
 
@@ -361,16 +408,18 @@ export async function settleCorporationTurnPayouts({
   if (typeof turn === "number" && corpSnapshots.length > 0) {
     try {
       const { applyGroupLossRelief } = await import("@/lib/corporations/groups/applyGroupRelief");
-      const relief = await applyGroupLossRelief(
-        db,
-        corpSnapshots.map((snap) => ({
-          corpId: snap.corpId,
-          incomePreDividends: snap.incomePreDividends,
-          federalTaxPaid: snap.federalTaxPaid,
-          stateTaxPaid: snap.stateTaxPaid,
-        })),
-        turn,
-        now
+      const relief = await runJournaledStepWithOutput(journal, "groupLossRelief", "refuse", () =>
+        applyGroupLossRelief(
+          db,
+          corpSnapshots.map((snap) => ({
+            corpId: snap.corpId,
+            incomePreDividends: snap.incomePreDividends,
+            federalTaxPaid: snap.federalTaxPaid,
+            stateTaxPaid: snap.stateTaxPaid,
+          })),
+          turn,
+          now
+        )
       );
       if (relief.corpsCredited > 0) {
         console.log(
@@ -394,6 +443,7 @@ export async function settleCorporationTurnPayouts({
         console.error("[corporationTurn] group relief errors:", relief.errors.slice(0, 5));
       }
     } catch (err) {
+      if (err instanceof CorporationTurnStepRefusedError) throw err;
       console.error("[corporationTurn] group loss relief failed:", err);
     }
   }
@@ -405,7 +455,9 @@ export async function settleCorporationTurnPayouts({
   if (typeof turn === "number") {
     try {
       const { applyGroupSynergies } = await import("@/lib/corporations/groups/applySynergies");
-      const synergies = await applyGroupSynergies(db, turn);
+      const synergies = await runJournaledStepWithOutput(journal, "groupSynergies", "refuse", () =>
+        applyGroupSynergies(db, turn)
+      );
       if (synergies.corpsLifted > 0) {
         console.log(
           `[corporationTurn] group synergies: lifted ${synergies.corpsLifted} corp(s) across ${synergies.groupsProcessed} group(s)`
@@ -415,6 +467,7 @@ export async function settleCorporationTurnPayouts({
         console.error("[corporationTurn] group synergy errors:", synergies.errors.slice(0, 5));
       }
     } catch (err) {
+      if (err instanceof CorporationTurnStepRefusedError) throw err;
       console.error("[corporationTurn] group synergies failed:", err);
     }
   }
@@ -424,14 +477,16 @@ export async function settleCorporationTurnPayouts({
   // bases (75% GDP-derived floor + 25% actual annualised corp income), see
   // updateCorporateTaxBases for the currency convention (v0.2.6 locked
   // decision #3) and the per-turn income-split diagnostic log.
-  await updateCorporateTaxBases({
-    db,
-    lookups,
-    domesticIncomeByCountry,
-    foreignIncomeByCountry,
-    domesticIncomeByOperatingState,
-    foreignIncomeByOperatingState,
-  });
+  await runJournaledStep(journal, "corporateTaxBases", "refuse", () =>
+    updateCorporateTaxBases({
+      db,
+      lookups,
+      domesticIncomeByCountry,
+      foreignIncomeByCountry,
+      domesticIncomeByOperatingState,
+      foreignIncomeByOperatingState,
+    })
+  );
 
   // O1c (design §5): persist paid growth investment per operating state, turn-
   // tagged so the metric engine only counts THIS turn's flow (fresh-or-zero).
@@ -446,7 +501,11 @@ export async function settleCorporationTurnPayouts({
         },
       },
     }));
-    await statesCollection(db).bulkWrite(stateInvestOps);
+    await runJournaledStep(journal, "growthInvestment", "rerun", () =>
+      statesCollection(db)
+        .bulkWrite(stateInvestOps)
+        .then(() => undefined)
+    );
   }
 
   mark("taxBases(fed+state)");
@@ -535,7 +594,9 @@ export async function settleCorporationTurnPayouts({
   }
   if (typeof turn !== "number" && payoutCredits.length)
     throw new Error("Income payout needs a turn identity");
-  const netCredits = await creditIncomeAfterTax(db, "corporation", turn ?? 0, now, payoutCredits);
+  const netCredits = await creditIncomeAfterTax(db, "corporation", turn ?? 0, now, payoutCredits, {
+    acceptAppliedReceipt: journal.stage >= 2,
+  });
   for (const credit of netCredits) {
     const id = credit.characterId.toHexString();
     const payments = credit.ownerCollection === "characters" ? charPayments : imperialPayments;
@@ -577,7 +638,11 @@ export async function settleCorporationTurnPayouts({
       }
     }
     if (nppOps.length > 0) {
-      await nppsCollection<Document>(db).bulkWrite(nppOps);
+      await runJournaledStep(journal, "nppPayments", "refuse", () =>
+        nppsCollection<Document>(db)
+          .bulkWrite(nppOps)
+          .then(() => undefined)
+      );
     }
   }
   mark("imperial+nppPayments");
@@ -625,49 +690,56 @@ export async function settleCorporationTurnPayouts({
   }
 
   mark("marketMakerDividendConv");
-  await settleShareMarketTurn({
-    db,
-    now,
-    turn,
-    lookups,
-    corpSnapshots,
-    dividendIncomeReceivedByCorpId,
-    dividendTaxPaidByCountry,
-    rng: makeSeededRng(`marketCapCandle:${turn}${CORP_TURN_RNG_SALT}`),
-    mark,
-  });
+  await runJournaledStep(journal, "shareMarketTurn", "refuse", () =>
+    settleShareMarketTurn({
+      db,
+      now,
+      turn,
+      lookups,
+      corpSnapshots,
+      dividendIncomeReceivedByCorpId,
+      dividendTaxPaidByCountry,
+      rng: makeSeededRng(`marketCapCandle:${turn}${CORP_TURN_RNG_SALT}`),
+      mark,
+    })
+  );
 
   // Emit corp_revenue / corp_tax_paid (per corp), corp_salary / corp_dividend
   // (per character) and gov_tax_revenue (per country) ledger rows, see
   // emitCorporationTurnTx for the Phase-3 split rationale and tax fold-in.
-  await emitCorporationTurnTx({
-    db,
-    lookups,
-    corpSnapshots,
-    ceoSalaryPayments,
-    dividendPayments: taxableDividendPayments,
-    passThroughTaxedDividendPayments,
-    dividendTaxPaidByCountry,
-    capitalDividendPayments:
-      lookups.stockHoldingTaxStartTurn !== undefined &&
-      (turn ?? 0) >= lookups.stockHoldingTaxStartTurn
-        ? capitalDividendPayments
-        : undefined,
-    turn,
-    now,
-    thresholds,
-    incomeTaxAtSource: true,
-  });
+  // Ledger rows dedupe on their key, so a repeat after an interruption is safe.
+  await runJournaledStep(journal, "emitTx", "rerun", () =>
+    emitCorporationTurnTx({
+      db,
+      lookups,
+      corpSnapshots,
+      ceoSalaryPayments,
+      dividendPayments: taxableDividendPayments,
+      passThroughTaxedDividendPayments,
+      dividendTaxPaidByCountry,
+      capitalDividendPayments:
+        lookups.stockHoldingTaxStartTurn !== undefined &&
+        (turn ?? 0) >= lookups.stockHoldingTaxStartTurn
+          ? capitalDividendPayments
+          : undefined,
+      turn,
+      now,
+      thresholds,
+      incomeTaxAtSource: true,
+    })
+  );
   mark("emitTx(revenue/salary/tax)");
 
   // Phase 9: Auto-finalize due/certain shareholder votes, then send closing reminders.
   if (typeof turn === "number") {
     // Await the resolver so vote effects are part of the completed corporation turn.
-    await processVoteAutoResolve(
-      db,
-      turn,
-      forexEnabled,
-      lookups.stockHoldingTaxStartTurn !== undefined && turn >= lookups.stockHoldingTaxStartTurn
+    await runJournaledStep(journal, "voteAutoResolve", "refuse", () =>
+      processVoteAutoResolve(
+        db,
+        turn,
+        forexEnabled,
+        lookups.stockHoldingTaxStartTurn !== undefined && turn >= lookups.stockHoldingTaxStartTurn
+      )
     );
     void processVoteReminders(db, turn).catch((error: unknown) =>
       console.error("[corporationTurn] vote reminder sweep failed:", error)
@@ -675,10 +747,14 @@ export async function settleCorporationTurnPayouts({
     mark("voteAutoResolve");
     // Resolve nationalizations whose notice window has elapsed (spec §14): cure-cancel
     // or complete the taking. Awaited so its effects land within this corp turn.
-    await processPendingNationalizations(db, turn);
+    await runJournaledStep(journal, "pendingNationalizations", "refuse", () =>
+      processPendingNationalizations(db, turn)
+    );
     // Resolve privatization auctions whose bid window has closed (spec §13.3):
     // sell to the top bidder or re-absorb the unsold carve-out.
-    await processNationalizationAuctions(db, turn);
+    await runJournaledStep(journal, "nationalizationAuctions", "refuse", () =>
+      processNationalizationAuctions(db, turn)
+    );
     mark("nationalizations");
 
     // Financial-distress clock for the executive-nationalization grace window.
@@ -686,8 +762,11 @@ export async function settleCorporationTurnPayouts({
     // liquidCapital writes have settled, so it reads each surviving player corp's
     // post-turn cash. Best-effort: a hiccup must not fail the turn.
     try {
-      await trackFinancialDistress(db, turn);
+      await runJournaledStep(journal, "financialDistress", "refuse", () =>
+        trackFinancialDistress(db, turn)
+      );
     } catch (err) {
+      if (err instanceof CorporationTurnStepRefusedError) throw err;
       logger.error("corporationTurn", "financial-distress tracking failed", err);
     }
     mark("financialDistress");
@@ -699,7 +778,9 @@ export async function settleCorporationTurnPayouts({
     try {
       const { cleanupZombieSubsidiaries } =
         await import("@/lib/corporations/subsidiaries/turnCleanup");
-      const cleared = await cleanupZombieSubsidiaries(db, lookups.corporations, now);
+      const cleared = await runJournaledStepWithOutput(journal, "subsidiaryCleanup", "refuse", () =>
+        cleanupZombieSubsidiaries(db, lookups.corporations, now)
+      );
       if (cleared > 0) {
         console.log(`[corporationTurn] cleared ${cleared} zombie subsidiary marker(s)/floor(s)`);
         corpAuditEntries.push({
@@ -713,6 +794,7 @@ export async function settleCorporationTurnPayouts({
         });
       }
     } catch (err) {
+      if (err instanceof CorporationTurnStepRefusedError) throw err;
       console.error("[corporationTurn] subsidiary cleanup failed:", err);
     }
 
@@ -725,10 +807,23 @@ export async function settleCorporationTurnPayouts({
     try {
       const { resolveDueMergerReviews, fineOverdueDivestitures } =
         await import("@/lib/corporations/mergerReview/lifecycle");
-      const { resolved } = await resolveDueMergerReviews(db, turn);
-      const { fined, totalAnchor } = await fineOverdueDivestitures(db, turn);
       const { processAntitrustCompliance } = await import("./antitrustCompliance");
-      const antitrust = await processAntitrustCompliance(db, lookups, turn);
+      const { resolved, fined, totalAnchor, antitrust } = await runJournaledStepWithOutput(
+        journal,
+        "mergerReview",
+        "refuse",
+        async () => {
+          const due = await resolveDueMergerReviews(db, turn);
+          const fines = await fineOverdueDivestitures(db, turn);
+          const compliance = await processAntitrustCompliance(db, lookups, turn);
+          return {
+            resolved: due.resolved,
+            fined: fines.fined,
+            totalAnchor: fines.totalAnchor,
+            antitrust: compliance,
+          };
+        }
+      );
       if (resolved > 0 || fined > 0) {
         console.log(
           `[corporationTurn] merger review: ${resolved} referral(s) resolved on deadline, ${fined} overdue divestiture(s) fined`
@@ -744,6 +839,7 @@ export async function settleCorporationTurnPayouts({
         });
       }
     } catch (err) {
+      if (err instanceof CorporationTurnStepRefusedError) throw err;
       console.error("[corporationTurn] merger review sweep failed:", err);
     }
 
@@ -756,13 +852,19 @@ export async function settleCorporationTurnPayouts({
     try {
       const { processNppInsolventCorpDissolution } =
         await import("@/lib/turn/corporation/nppInsolvencyDissolution");
-      const dissolveResult = await processNppInsolventCorpDissolution(db, turn);
+      const dissolveResult = await runJournaledStepWithOutput(
+        journal,
+        "nppInsolvencyDissolution",
+        "refuse",
+        () => processNppInsolventCorpDissolution(db, turn)
+      );
       if (dissolveResult.dissolved > 0) {
         console.log(
           `[corporationTurn] auto-dissolved ${dissolveResult.dissolved}/${dissolveResult.candidates} terminally-insolvent NPP corp(s)`
         );
       }
     } catch (err) {
+      if (err instanceof CorporationTurnStepRefusedError) throw err;
       logger.error("corporationTurn", "NPP insolvency dissolution failed", err);
     }
   }
