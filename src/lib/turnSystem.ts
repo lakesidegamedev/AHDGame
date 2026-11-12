@@ -55,6 +55,8 @@ import {
   totalRoundTrips,
   withPhaseProfiling,
 } from "@/lib/observability/mongoRoundTrips";
+import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
+import { TURN_HOLDER_ID, setTurnLockFence, turnLockFenceFilter } from "@/lib/turn/turnLockHolder";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
@@ -323,6 +325,7 @@ async function processTurnImpl(
   // do NOT re-run that turn: committed income phases would double-apply.
   // Captured from the pre-lock snapshot, acted on once we hold the lock.
   let preLockRecoveryTarget: number | null = null;
+  let resilienceStage = 0;
   /** Set when this turn is a resume; drives the phase skip set below. */
   let resumedFromCrash: CrashedTurnRecovery | null = null;
   const stopMemorySampler = startTurnMemorySampler(() => currentPhaseRef.current);
@@ -350,6 +353,11 @@ async function processTurnImpl(
         ? null
         : await gameConfigCollection(db).findOne({ _id: "default" });
       const simSandbox = localSingleplayer || turnConfig?.simSandbox === true;
+      resilienceStage = resolveTurnResilienceStage({
+        configStage: turnConfig?.turnResilienceStage,
+        simSandbox: turnConfig?.simSandbox === true,
+        envStage: process.env.AHD_TURN_RESILIENCE_STAGE,
+      });
       const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
       if (residueRefusal) {
         console.error(`[Turn System] Refused turn: ${residueRefusal}`);
@@ -485,7 +493,7 @@ async function processTurnImpl(
         // Lock fields only. The crash evidence (target, phase, statuses, results)
         // stays as the dead holder left it until the locked document validates the
         // resume, so a crash during takeover or setup cannot erase it.
-        $set: lockAcquisitionSet(lockAcquiredAt),
+        $set: lockAcquisitionSet(lockAcquiredAt, TURN_HOLDER_ID),
       },
       { returnDocument: "after" }
     );
@@ -502,6 +510,9 @@ async function processTurnImpl(
 
     // This process now owns the lock — allow graceful shutdown to release it.
     localTurnLockHeld = true;
+    // With the fast takeover on, a holder that lost its lock must not write over
+    // the new holder's state: every lock-owner write below is conditional on it.
+    setTurnLockFence(resilienceStage >= 1 ? TURN_HOLDER_ID : null);
 
     const gameState = lockResult;
     activeIteration = gameState.iteration ? { ...gameState.iteration } : undefined;
@@ -728,7 +739,7 @@ async function processTurnImpl(
     await (
       await getGameStateCollection(db)
     ).updateOne(
-      { _id: "current" },
+      { _id: "current", ...turnLockFenceFilter() },
       {
         $set: {
           currentTurn: context.newTurn,
@@ -970,7 +981,7 @@ async function processTurnImpl(
       await (
         await getGameStateCollection(db)
       ).updateOne(
-        { _id: "current" },
+        { _id: "current", ...turnLockFenceFilter() },
         {
           $set: holdForRepair
             ? {
@@ -1087,6 +1098,7 @@ async function processTurnImpl(
       health: lastHealth,
     };
   } finally {
+    setTurnLockFence(null);
     readMemoryPeak();
   }
 }

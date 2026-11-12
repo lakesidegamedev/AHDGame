@@ -41,6 +41,7 @@ import {
   type ResumeResultOutcome,
 } from "./turnPhaseResumeResults";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import { turnLockFenceFilter } from "@/lib/turn/turnLockHolder";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
@@ -279,7 +280,7 @@ export function createTurnPhaseRuntime(input: {
     }
 
     const persisted = await gameStateCollection(db).updateOne(
-      { _id: "current", isProcessing: true },
+      { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
       { $set: setFields }
     );
     if (status === "running" && persisted.matchedCount === 0) {
@@ -400,7 +401,10 @@ export function createTurnPhaseRuntime(input: {
         setFields[`processingPhaseStatuses.${name}.updatedAt`] = now;
       }
       void gameStateCollection(db)
-        .updateOne({ _id: "current", isProcessing: true }, { $set: setFields })
+        .updateOne(
+          { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
+          { $set: setFields }
+        )
         .catch((err) => {
           console.warn(`[Turn] Failed to refresh heartbeat for phase "${name}"`, err);
           Sentry.captureException(err, {
@@ -432,7 +436,10 @@ export function createTurnPhaseRuntime(input: {
           setFields[`processingPhaseStatuses.${name}.updatedAt`] = now;
         }
         void gameStateCollection(db)
-          .updateOne({ _id: "current", isProcessing: true }, { $set: setFields })
+          .updateOne(
+            { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
+            { $set: setFields }
+          )
           .catch((err) => {
             console.warn(`[Turn] Failed to refresh heartbeat for draining phase "${name}"`, err);
             Sentry.captureException(err, {

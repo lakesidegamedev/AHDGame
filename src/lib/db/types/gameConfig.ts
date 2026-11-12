@@ -942,6 +942,12 @@ export interface GameConfig {
    */
   simSandbox?: boolean;
   /**
+   * Turn resilience stage. 0 or absent: today's behaviour. 1: a stale turn lock
+   * is taken over after about 3 minutes by the worker watchdog, and a stopped
+   * turn is retried automatically from its failed step.
+   */
+  turnResilienceStage?: number;
+  /**
    * Launch-safety governor for the clearing/throughput revenue legs. `cap` is
    * the max fractional deviation (0–1) those legs may take from the ledger
    * baseline; `rampTurns` is the fade-in window from the flip. Tunable live so

@@ -11,6 +11,9 @@ import { backupTurnSchedule, resolveTurnCronMinute, turnCronSchedule } from "./c
 import { getProcessingLockState, TURN_LOCK_STALE_MS } from "./turn/processingLock";
 import { recordTurnHeapDelta } from "@/lib/observability/heapWatchdog";
 import { getDb } from "@/lib/mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
+import { tryFastStaleLockTakeover } from "@/lib/turn/turnLockHolder";
 import { deploymentServiceSlug } from "@/lib/deploymentIdentity";
 import { sweepPlayerRandomEventsRealtime } from "@/lib/events/pree/driver";
 import { persistApiAbuseScan } from "@/lib/api/abuseDetection";
@@ -59,7 +62,7 @@ const TURN_CRON_MONITOR_CONFIG = {
  * so trip events include the recent per-turn growth pattern.
  */
 async function runTurnWithHeapDiagnostics(
-  source: "primary" | "backup" | "stuckLockSweep"
+  source: "primary" | "backup" | "stuckLockSweep" | "staleLockWatchdog"
 ): Promise<ReturnType<typeof processTurn>> {
   const before = process.memoryUsage();
   const t0 = Date.now();
@@ -86,6 +89,8 @@ let stockExchangeRefreshCron: ReturnType<typeof cron.schedule> | null = null;
 let fogOfWarCron: ReturnType<typeof cron.schedule> | null = null;
 let backupCron: ReturnType<typeof cron.schedule> | null = null;
 let stuckLockRecoveryCron: ReturnType<typeof cron.schedule> | null = null;
+let staleLockWatchdogCron: ReturnType<typeof cron.schedule> | null = null;
+let staleLockWatchdogRunning = false;
 
 /**
  * Two full stale windows: twice what the :00/:30 turn crons require before the
@@ -169,6 +174,9 @@ export async function initializeCronJobs() {
   }
   if (stuckLockRecoveryCron) {
     stuckLockRecoveryCron.stop();
+  }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
   }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();
@@ -445,6 +453,50 @@ export async function initializeCronJobs() {
         Sentry.captureException(error, {
           tags: { component: "cron", job: "stuckLockSweep" },
         });
+      }
+    },
+    { timezone: "UTC" }
+  );
+
+  // Fast stale-lock watchdog (turnResilienceStage >= 1). Every minute it checks
+  // whether the turn lock's heartbeat is more than a few minutes old and, if so,
+  // takes the lock over by compare-and-set on the holder it read, then runs the
+  // normal turn, which resumes from the recorded step. At stage 0 it does nothing
+  // and the 20 minute rules above stay in force.
+  staleLockWatchdogCron = cron.schedule(
+    "* * * * *",
+    async () => {
+      if (staleLockWatchdogRunning) return;
+      staleLockWatchdogRunning = true;
+      try {
+        const db = await getDb();
+        const config = await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { turnResilienceStage: 1, simSandbox: 1 } }
+        );
+        const stage = resolveTurnResilienceStage({
+          configStage: config?.turnResilienceStage,
+          simSandbox: config?.simSandbox === true,
+          envStage: process.env.AHD_TURN_RESILIENCE_STAGE,
+        });
+        if (stage < 1) return;
+        if (!(await tryFastStaleLockTakeover(db, stage))) return;
+        console.warn("[Cron] Stale-lock watchdog took over a turn lock; resuming the turn.");
+        try {
+          Sentry.captureMessage("Stale turn lock taken over by watchdog", {
+            level: "warning",
+            fingerprint: ["stale-turn-lock-watchdog"],
+          });
+        } catch {
+          // Telemetry must not gate recovery.
+        }
+        const result = await runTurnWithHeapDiagnostics("staleLockWatchdog");
+        console.log("[Cron] Stale-lock watchdog result:", result);
+      } catch (error) {
+        console.error("[Cron] Error in stale-lock watchdog:", error);
+        Sentry.captureException(error, { tags: { component: "cron", job: "staleLockWatchdog" } });
+      } finally {
+        staleLockWatchdogRunning = false;
       }
     },
     { timezone: "UTC" }
@@ -773,6 +825,10 @@ export async function restartCronWithSchedule(): Promise<boolean> {
     stuckLockRecoveryCron.stop();
     stuckLockRecoveryCron = null;
   }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
+    staleLockWatchdogCron = null;
+  }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();
     playerEventsSweepCron = null;
@@ -834,6 +890,10 @@ export function stopCronJobs() {
   if (stuckLockRecoveryCron) {
     stuckLockRecoveryCron.stop();
     stuckLockRecoveryCron = null;
+  }
+  if (staleLockWatchdogCron) {
+    staleLockWatchdogCron.stop();
+    staleLockWatchdogCron = null;
   }
   if (playerEventsSweepCron) {
     playerEventsSweepCron.stop();
