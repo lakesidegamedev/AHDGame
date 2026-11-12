@@ -1,35 +1,15 @@
 /**
- * A7 (first half), listing standards.
+ * Listing standards: the qualification bar for index inclusion (free-float
+ * minimum, relative size minimum, solvency screen).
  *
- * Index eligibility is currently mechanical: be public, have a price, be in the
- * right country and sector. Nothing else. A shell corporation with two shares
- * outstanding and no business qualifies for the same index as a national
- * champion, and index funds will dutifully buy it.
+ * The size bar is relative to the candidate pool's MEDIAN cap on purpose: an
+ * absolute floor would be meaningless in a modern world and impossible in a
+ * 1953 one, while a median-relative bar means "not a rounding error next to
+ * your peers" in every era with no per-era constant.
  *
- * That matters more than it looks, because funds absorb public float. Inclusion
- * is a large, automatic, price-insensitive buyer, and today it is handed out on
- * no basis at all.
- *
- * Listing standards are the qualification bar: a free-float minimum, a size
- * minimum measured against the index's own median rather than an absolute
- * number, and a solvency screen. Clear them and the index buys you. Fall below
- * and it sells.
- *
- * ## The size bar is RELATIVE, deliberately
- *
- * An absolute ₳ floor would be wrong in two directions at once: meaningless in
- * a modern world, and impossible in a 1953 one where the whole economy is
- * smaller. Measuring against the median candidate makes the bar mean the same
- * thing, "not a rounding error next to your peers", in every era, with no
- * per-era constant to maintain.
- *
- * ## Exclusion is not instant
- *
- * A corporation that dips below the bar for one turn is not dumped. It must
- * fail for `GRACE_TURNS` consecutive observations. Without that, ordinary
- * price noise around the threshold would make funds churn the same position in
- * and out every turn, paying spread each way, the fund's holders would pay for
- * the volatility of the bar rather than of the business.
+ * Exclusion is not instant. A constituent must fail for `GRACE_TURNS`
+ * consecutive observations, otherwise price noise around the threshold would
+ * churn the position every turn and charge holders the spread each way.
  */
 
 /** Minimum share of a corporation's stock that must be in public hands. */

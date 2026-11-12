@@ -1,5 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, SoeMandate } from "@/lib/db/types";
+import type { CorporateSector, SoeMandate } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
  * State-official mandate setters for National Corporations (spec §11.4 / §24).
@@ -20,7 +22,7 @@ function activePosture(mandate: SoeMandate): SoeMandate | null {
 
 /** Set (or clear, when no posture) the corp-wide default mandate. */
 export async function setCorpMandate(db: Db, corpId: ObjectId, mandate: SoeMandate): Promise<void> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const now = new Date();
   const posture = activePosture(mandate);
   if (posture) {
@@ -40,7 +42,7 @@ export async function setSectorMandate(
   sectorId: ObjectId,
   mandate: SoeMandate
 ): Promise<void> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne({ _id: sectorId, corporationId: corpId });
   if (!sector) throw new Error("Sector not found for this National Corporation");
   await sectors.updateOne(
@@ -63,7 +65,7 @@ export async function clearSectorMandate(
   corpId: ObjectId,
   sectorId: ObjectId
 ): Promise<void> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const sector = await sectors.findOne({ _id: sectorId, corporationId: corpId });
   if (!sector) throw new Error("Sector not found for this National Corporation");
   await sectors.updateOne(

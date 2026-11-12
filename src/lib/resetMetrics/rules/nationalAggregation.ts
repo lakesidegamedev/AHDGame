@@ -155,11 +155,10 @@ function ownerRatio(
 /**
  * Build the national read model for region-owned primary metrics.
  *
- * This does not create a second owner or mutate a stored observation. It is a
- * portable rollup over the current regional owner readings. Where the game
- * does not persist the catalog's ideal national denominator, the result stays
- * explicitly provisional instead of presenting a weighted mean as sourced
- * national data.
+ * A portable rollup over current regional readings, not a second owner and not
+ * a mutation of stored observations. Where the ideal national denominator is
+ * not persisted, the result stays explicitly provisional rather than passing a
+ * weighted mean off as sourced national data.
  */
 export function aggregateNationalMetricObservations(
   regions: readonly NationalMetricRegionReading[]

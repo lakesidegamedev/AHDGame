@@ -10,6 +10,7 @@ import { notifyVoteEvent } from "@/lib/corporations/votes/voteNotifications";
 import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { totalVotingPower } from "@/lib/corporations/superShares";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string; voteId: string }>;
@@ -29,7 +30,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const vote = await db.collection<CorporationVote>("corporationVotes").findOne({
+    const vote = await corporationVotesCollection(db).findOne({
       _id: new ObjectId(voteId),
       corporationId: corporation._id,
     });
@@ -58,9 +59,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         await notifyVoteEvent({ db, vote, corpName: corporation.name, notificationType });
       }
       if (outcome !== "open") {
-        const updated = await db
-          .collection<CorporationVote>("corporationVotes")
-          .findOne({ _id: vote._id });
+        const updated = await corporationVotesCollection(db).findOne({ _id: vote._id });
         return NextResponse.json(updated);
       }
     }

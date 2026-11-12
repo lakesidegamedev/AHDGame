@@ -5,6 +5,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { createGitHubIssue, syncFeedbackToGitHub } from "@/lib/github";
 import type { Feedback, User } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
+import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { feedbackCollection } from "@/lib/db/repositories/feedback";
+import type { Document } from "mongodb";
 
 /**
  * POST /api/admin/feedback/backfill-github
@@ -23,8 +27,8 @@ export async function POST() {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    const token = process.env.GIT_TOKEN;
-    const repo = process.env.GITHUB_REPO;
+    const token = servicesConfig.gitToken();
+    const repo = servicesConfig.githubRepo();
     if (!token || !repo) {
       return errorResponse(
         400,
@@ -36,26 +40,22 @@ export async function POST() {
 
     // Step 1: Backfill githubIssueNumber for items that have githubIssueUrl
     // but are missing the number field (created before that field was introduced).
-    const missingNumber = (await db
-      .collection("feedback")
+    const missingNumber = (await feedbackCollection<Document>(db)
       .find({ githubIssueUrl: { $ne: null }, githubIssueNumber: null })
       .toArray()) as unknown as Feedback[];
 
     for (const f of missingNumber) {
       const match = f.githubIssueUrl!.match(/\/issues\/(\d+)/);
       if (match) {
-        await db
-          .collection("feedback")
-          .updateOne(
-            { _id: f._id },
-            { $set: { githubIssueNumber: parseInt(match[1], 10), updatedAt: new Date() } }
-          );
+        await feedbackCollection<Document>(db).updateOne(
+          { _id: f._id },
+          { $set: { githubIssueNumber: parseInt(match[1], 10), updatedAt: new Date() } }
+        );
       }
     }
 
     // Step 2: Create GitHub issues for feedback without any link.
-    const unlogged = (await db
-      .collection("feedback")
+    const unlogged = (await feedbackCollection<Document>(db)
       .find({ githubIssueUrl: null })
       .sort({ issueNumber: 1 })
       .toArray()) as unknown as Feedback[];
@@ -66,8 +66,7 @@ export async function POST() {
     ];
     const users =
       userIds.length > 0
-        ? await db
-            .collection<User>("users")
+        ? await usersCollection(db)
             .find({ _id: { $in: userIds } })
             .project({ _id: 1, username: 1 })
             .toArray()
@@ -98,7 +97,7 @@ export async function POST() {
       });
 
       if (gh) {
-        await db.collection("feedback").updateOne(
+        await feedbackCollection<Document>(db).updateOne(
           { _id: feedback._id },
           {
             $set: { githubIssueUrl: gh.url, githubIssueNumber: gh.number, updatedAt: new Date() },
@@ -112,8 +111,7 @@ export async function POST() {
 
     // Step 3: Sync current status (open/closed + labels) for ALL linked issues.
     // This closes resolved/wont_fix issues and updates labels without posting comments.
-    const allLinked = (await db
-      .collection("feedback")
+    const allLinked = (await feedbackCollection<Document>(db)
       .find({ githubIssueNumber: { $exists: true, $ne: null } })
       .toArray()) as unknown as Feedback[];
 

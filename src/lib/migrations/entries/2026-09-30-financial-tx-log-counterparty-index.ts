@@ -1,13 +1,14 @@
 import type { Migration, MigrationResult } from "../types";
 import { FINANCIAL_TX_LOG_COUNTERPARTY_INDEX } from "@/lib/admin/seed/indexes/financialTxLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
- * `financialTxLog` counterparty index on a live database (#2693).
+ * `financialTxLog` counterparty index on a live database.
  *
  * `stampEntityDeleted` marks every ledger row naming a deleted corporation or
- * character. The subject side has an index; the counterparty side did not, so
- * each deletion scanned the whole log. In an aged 1991 sandbox that was 4.2M
- * rows and about 9 s per deleted corporation, inside the corporation turn.
+ * character. The subject side had an index; the counterparty side did not, so
+ * each deletion scanned the whole log (millions of rows, seconds per deleted
+ * corporation, inside the corporation turn).
  *
  * Registry only, not the startup allowlist: building over millions of rows at
  * boot could delay a deployment. Create-only and idempotent.
@@ -21,7 +22,7 @@ export const migration: Migration = {
     const label = `financialTxLog.${options.name}`;
     if (ctx.dryRun)
       return { documentsScanned: 1, documentsUpdated: 0, notes: [`would create ${label}`] };
-    await db.collection("financialTxLog").createIndex({ ...keys }, { ...options });
+    await financialTxLogCollection(db).createIndex({ ...keys }, { ...options });
     return { documentsScanned: 1, documentsUpdated: 1, notes: [`created/verified ${label}`] };
   },
 };

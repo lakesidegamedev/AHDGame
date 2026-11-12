@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { CommodityPrice } from "@/lib/db/types";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const schema = z.object({ price: z.number().positive() });
 
@@ -23,15 +24,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ typ
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const result = await db
-      .collection<CommodityPrice>("commodityPrices")
-      .updateOne({ commodity: type } as Record<string, unknown>, {
+    const result = await commodityPricesCollection(db).updateOne(
+      { commodity: type } as Record<string, unknown>,
+      {
         $set: {
           hardPeg: parsed.data.price,
           globalPrice: parsed.data.price,
           updatedAt: new Date(),
         },
-      });
+      }
+    );
 
     if (result.matchedCount === 0) return errorResponse(404, "Commodity not found");
 
@@ -48,12 +50,13 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     const { type } = await params;
     const db = await getDb();
-    const result = await db
-      .collection<CommodityPrice>("commodityPrices")
-      .updateOne({ commodity: type } as Record<string, unknown>, {
+    const result = await commodityPricesCollection(db).updateOne(
+      { commodity: type } as Record<string, unknown>,
+      {
         $unset: { hardPeg: "" },
         $set: { updatedAt: new Date() },
-      });
+      }
+    );
 
     if (result.matchedCount === 0) return errorResponse(404, "Commodity not found");
 

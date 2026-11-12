@@ -2,8 +2,7 @@
  * Macro-growth v1 (design §4) — the convergence term (O2) and sector-signal
  * blend (O3) that fold corporate/tangible growth and historical catch-up into
  * potential growth. Pure functions + calibration constants; the phase wires the
- * inputs and gates the whole thing on `macroGrowthV1`. Flag-on only — off,
- * `phase.ts` never calls these.
+ * inputs.
  */
 
 /** Convergence slope: pp of catch-up per natural-log unit of relative-income gap. */
@@ -26,10 +25,9 @@ const GATE_W_FREEDOM = 0.2;
 const SOCI_MARKET = 20; // ≤ this ⇒ fully market (factor 1)
 const SOCI_COMMAND = 67; // ≥ this ⇒ maximally state-owned; STATE_CAPITALIST_OWNERSHIP_THRESHOLD (0.67) on the 0–100 scale
 /**
- * Floor on the state-system factor (user decision 2026-07-09): heavy state
- * ownership DAMPS convergence but never guts it — a state-capitalist but
- * trade-participating economy (e.g. in-game 76%-state-owned CN) still catches
- * up moderately rather than being pinned to near-zero convergence.
+ * Floor on the state-system factor: heavy state ownership DAMPS convergence but
+ * never guts it. A state-capitalist but trade-participating economy (e.g. 76%
+ * state-owned CN) still catches up moderately rather than pinning to near-zero.
  */
 const ECON_SYSTEM_FLOOR = 0.5;
 

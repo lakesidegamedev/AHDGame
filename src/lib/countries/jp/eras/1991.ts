@@ -1,27 +1,15 @@
 import type { CountryEraOverride } from "../../contract";
 
 /**
- * Japan, 1991. Phase D3.
+ * Japan, 1991. DIFFERENCES ONLY; everything not named here comes from the
+ * base modules.
  *
- * ⚠️ DIFFERENCES ONLY. Everything not named here comes from the base modules.
+ * getCountryConfig is a SHALLOW merge, so supplying `legislature` replaces
+ * the WHOLE object; a partial one silently drops chamber keys.
  *
- * Config override: election systems and legislature.
- *
- * ⚠️ getCountryConfig is a SHALLOW merge, so supplying `legislature` replaces the
- * WHOLE object. A partial one would silently drop chamber keys, names and
- * descriptions with nothing failing loudly.
- *
- * ⚠️ `usdExchangeRate` IS SET HERE BECAUSE NO 1991 ERA SET IT. The field is the
- * anchor value of ONE unit of this country's stored seed currency, and its base
- * value is 0.00943, which is 1/106 — the 2019 rate. `jpRegions1991` authors regional GDP in JPY millions,
- * so the anchor must be the reciprocal of `INITIAL_RATES_1991` (134.5 JPY/USD) — the
- * same table `seedExchangeRates` writes into the `exchangeRates` collection.
- * Left unset, Japan read as a $4.15T economy against a real ~$3.53T.
- *
- * The conversion follows the seed's stored GDP denomination. Native-currency
- * output uses the opening quote; output already in the shared unit stays at 1.
- * Soviet and Nigerian native-currency seeds now use that same rule after their
- * source denomination and national totals were reconciled.
+ * `usdExchangeRate` must be the reciprocal of INITIAL_RATES_1991 (134.5
+ * JPY/USD), matching the seed's stored JPY-denominated GDP. Left unset, JP
+ * reads as a $4.15T economy instead of ~$3.53T.
  */
 export const JP_1991: CountryEraOverride = {
   preset: "1991-default",

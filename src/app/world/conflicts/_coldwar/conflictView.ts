@@ -10,12 +10,8 @@ import { controlSplitDisplay } from "../controlDisplay";
 /**
  * A live conflict document as the Global Conflicts board renders it.
  *
- * The board predates dynamic conflicts and was written around a static Cold War
- * flashpoint set, so two of its fields are NULLABLE here: `lean` (a west↔east
- * position, meaningless for a war neither superpower backs) and `x`/`y` (a map
- * position, unavailable for a host with no anchor). Both degrade rather than guess.
- *
- * Spec: docs/superpowers/specs/2026-07-26-live-conflicts-hub-design.md
+ * `lean` and `x`/`y` are nullable: a war neither superpower backs has no
+ * west-east position, and a host with no anchor has no map position.
  */
 
 /**

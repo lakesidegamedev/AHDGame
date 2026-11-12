@@ -23,6 +23,7 @@ import {
   cabinetApprovalResponse,
   cabinetEffectsForRegion,
 } from "@/lib/resetCabinet/rules/gameplay";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 /** Approval needs current observations, never their notes or retained history. */
 export const RESET_APPROVAL_BOARD_PROJECTION = {
@@ -47,7 +48,7 @@ export const RESET_APPROVAL_BOARD_PROJECTION = {
 /**
  * A board one failed refresh behind is still the latest owned reading. Approval
  * reads it rather than failing every approval consumer (corporations, votes,
- * share prices) until the refresh catches up; on 2026-10-31 a strict match
+ * share prices) until the refresh catches up; a strict match
  * turned one failed refresh into a turn with no economy. Matches the health
  * input lag the demographic phase accepts. Future boards still fail closed.
  */
@@ -70,8 +71,7 @@ export async function loadResetApprovalModifiers(
   // Prefetched boards can span every reset country; lag is judged per country.
   const boards = (
     prefetchedBoards ??
-    (await db
-      .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+    (await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
       .find(
         { worldId: gameState!.resetWorldId, countryId },
         {
@@ -132,7 +132,7 @@ export async function loadResetApprovalModifiers(
   const context = {
     countryId,
     preset: gameState?.preset,
-    year: gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null,
+    year: gameState ? resolveGameYear(gameState) : null,
   };
   const modifiersByRegion = new Map<string, ActiveModifier[]>();
   const cabinetEffects =

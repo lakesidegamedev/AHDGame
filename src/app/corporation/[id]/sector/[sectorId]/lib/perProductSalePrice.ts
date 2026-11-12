@@ -1,18 +1,14 @@
 /**
- * Per-product sale price on a multi-output sector (ticket 1507).
+ * Per-product sale price on a multi-output sector.
  *
- * The money panel's "each unit sold for" figure is revenue / units sold across
- * every output. On a sector that makes two things priced far apart (ordnance
- * and industrial chemicals) that average sits below the dearer product's
- * market price and above the cheaper one's, and reads as though the dear
- * product sold far under market. The clearing pass records each output's
- * share of realized revenue; this splits the sector's revenue by that share
- * and divides by the units of that output that sold.
+ * The money panel's "each unit sold for" is revenue / units sold across every
+ * output. On a sector making two things priced far apart that average reads
+ * as though the dear product sold far under market. This splits the sector's
+ * revenue by each output's recorded revenue share and divides by that
+ * output's units sold.
  *
- * Units sold per output come from the panel's own rows (units made x share of
- * that output sold), rescaled so they add up to the sector's booked sold
- * units. That keeps the result on the same basis as the blended average, so a
- * one-output sector gets exactly the existing average back.
+ * Units sold per output are rescaled to add up to the sector's booked sold
+ * units, so a one-output sector gets exactly the existing average back.
  */
 export interface PerProductSaleInput {
   commodity: string;

@@ -1,12 +1,12 @@
 /**
- * The live funded producer turn (funded-market cutover, phase B slice S3).
+ * The live funded producer turn.
  *
  * Runs only when `resolveProducerPath` selects the funded path, before the
  * legacy per-sector pass. In order:
  * 1. build this turn's funded demand with the same builder the shadow uses;
- * 2. create any missing wallets, mint each public buyer's funding (the plant
- *    share of the outlay the treasury already spends) and, on the world's
- *    first funded turn only, the owner-approved household opening cash;
+ * 2. create missing wallets, mint each public buyer's funding (the plant share
+ *    of the outlay the treasury already spends), and on the first funded turn
+ *    only the owner-approved household opening cash;
  * 3. settle the market (cash, stock, payables and receipts, idempotent per turn);
  * 4. book the close: AI profit (60%) and operating income to households, state
  *    remittances to the treasury, unspent public funding burned.
@@ -19,7 +19,6 @@ import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   FISCAL_SCALE_STAGE,
   bookPrimarySpendingPerTurn,
@@ -29,7 +28,6 @@ import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
 import {
   applyMoneyMove,
   resumeMoneyMove,
-  MONEY_MOVE_COLLECTION,
   type MoneyMove,
   type MoneyMoveLeg,
 } from "@/lib/banking/moneyMove";
@@ -42,6 +40,8 @@ import {
   type ProfitOwnerKind,
 } from "@/lib/market/producerMarket/profitDistributionRules";
 import {
+  backgroundFundingMoves,
+  backgroundReturnMoves,
   householdOpeningMoves,
   householdTransferMoves,
   PRODUCER_ACCOUNTS,
@@ -73,10 +73,7 @@ import {
   idleRetireActive,
   idleRetireSectorShare,
 } from "@/lib/market/producerMarket/idleRetirementRules";
-import {
-  fundedLedgerRows,
-  PRODUCER_MARKET_OUTCOMES,
-} from "@/lib/market/producerMarket/fundedLedgerRules";
+import { fundedLedgerRows } from "@/lib/market/producerMarket/fundedLedgerRules";
 import type { ShadowCarryState } from "@/lib/market/producerMarket/shadowCarryRules";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
@@ -84,6 +81,15 @@ import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBoo
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
+import {
+  tariffCollectorScopes,
+  collectionsAtClose,
+  plantLevies,
+  recordLevyReceipts,
+  sweepBatches,
+  tariffSweepMoves,
+  type TariffClose,
+} from "./fundedTariffs";
 import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import {
@@ -109,11 +115,29 @@ import { PRODUCER_CATCH_UP_TURNS } from "@/lib/market/producerMarket/capacityRul
 import type { ProducerOpeningMarker } from "@/lib/market/producerMarket/liveMode";
 import { advanceStateRuns, returnStateRunAdvances } from "./stateRunAdvance";
 import {
+  backgroundFundingByAccount,
+  backgroundTradeOutcomes,
+} from "@/lib/market/producerMarket/backgroundTradeRules";
+import { producerFillSpend } from "@/lib/market/producerMarket/rules";
+import { loadBackgroundTraders, recordBackgroundTrade } from "./backgroundTraders";
+import {
   createProducerWallets,
   producerWalletId,
   runCorporationProducerMarket,
   type ProducerWalletScope,
 } from "./producerMarketPhase";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { producerEconomyTurnsCollection } from "@/lib/db/repositories/producerEconomyTurns";
+import { producerHouseholdSourceCollection } from "@/lib/db/repositories/producerHouseholdSource";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { producerPublicCarryCollection } from "@/lib/db/repositories/producerPublicCarry";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 
 /** Owner decision 2026-10-18: households open with about 3 turns of wages. */
 export const HOUSEHOLD_OPENING_APPROVAL = "owner 2026-10-18: household opening cash about 3 turns";
@@ -133,8 +157,6 @@ export interface FundedProducerTurnResult {
 }
 
 export { producerStageEnv } from "./producerStageEnv";
-
-const PUBLIC_CARRY = "producerPublicCarry";
 
 /** The funded receipt a sector's settlement publishes to its own accounts. */
 export function fundedReceiptOf(
@@ -180,8 +202,9 @@ export async function readProducerOpeningTurn(
   worldEpoch: string,
   turn: number
 ): Promise<number> {
-  const last = await db
-    .collection<{ _id: string; turn: number; status: string }>("producerEconomyTurns")
+  const last = await producerEconomyTurnsCollection<{ _id: string; turn: number; status: string }>(
+    db
+  )
     .find({ worldEpoch, turn: { $lt: turn } }, { projection: { turn: 1, status: 1 } })
     .sort({ turn: -1 })
     .limit(1)
@@ -204,9 +227,9 @@ export async function readProducerOpeningTurn(
  * funded records, the previous turn is only right when no opening exists.
  */
 async function readStoredOpeningTurn(db: Db, worldEpoch: string, turn: number): Promise<number> {
-  const state = await db
-    .collection<{ _id: string; producerOpening?: ProducerOpeningMarker }>("gameState")
-    .findOne({ _id: "current" }, { projection: { producerOpening: 1 } });
+  const state = await gameStateCollection<{ _id: string; producerOpening?: ProducerOpeningMarker }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { producerOpening: 1 } });
   const opening = state?.producerOpening;
   if (!opening || opening.worldEpoch !== worldEpoch) return turn - 1;
   if (turn - 1 - opening.turn > PRODUCER_CATCH_UP_TURNS)
@@ -229,13 +252,13 @@ async function readPublicCarryIn(
   walletOf: (countryId: string) => string,
   rateOfCountry: (countryId: string) => number
 ): Promise<Map<string, LineCarry>> {
-  const doc = await db
-    .collection<{ _id: string; byCountry?: Record<string, LineCarry> }>(PUBLIC_CARRY)
-    .findOne({ _id: `${worldEpoch}:${openingTurn}` });
+  const doc = await producerPublicCarryCollection<{
+    _id: string;
+    byCountry?: Record<string, LineCarry>;
+  }>(db).findOne({ _id: `${worldEpoch}:${openingTurn}` });
   const out = new Map<string, LineCarry>();
   if (!doc?.byCountry) return out;
-  const wallets = await db
-    .collection<{ _id: string; cash: number }>(PRODUCER_ACCOUNTS)
+  const wallets = await producerEconomyAccountsCollection<{ _id: string; cash: number }>(db)
     .find({ _id: { $in: countryIds.map(walletOf) } }, { projection: { cash: 1 } })
     .toArray();
   const cash = new Map(wallets.map((w) => [w._id, w.cash]));
@@ -277,9 +300,11 @@ export async function runFundedProducerTurn(
 
   // Public buyer wallet per country, in the country's budget currency.
   const countryCurrency = new Map<string, CurrencyCode>();
+  const budgetIdByCountry = new Map<string, string>();
   for (const b of lookups.federalBudgets) {
     const code = resolveCountryCurrencyCode(b);
     if (code) countryCurrency.set(String(b.countryId), code as CurrencyCode);
+    if (b.countryId) budgetIdByCountry.set(String(b.countryId), String(b._id));
   }
   const publicScope = (countryId: string): ProducerWalletScope => {
     const currency = countryCurrency.get(countryId);
@@ -294,6 +319,15 @@ export async function runFundedProducerTurn(
   });
   const investmentWallet = (countryId: string) =>
     producerWalletId(worldEpoch, investmentScope(countryId));
+
+  // Background countries trade their macro economy in this market (#5702).
+  // Empty, after one tier read, on every world without background countries.
+  const background = await loadBackgroundTraders(db, {
+    worldEpoch,
+    budgetCurrency: (countryId) => countryCurrency.get(countryId),
+    rates,
+  });
+  const traders = background.traders;
 
   const carryShare = input.env.publicCarryShare ?? 0;
   const spillShare = input.env.procurementSpillShare ?? 0;
@@ -314,11 +348,10 @@ export async function runFundedProducerTurn(
       ? new Map(
           Object.entries(
             (
-              await db
-                .collection<{ _id: string; shareByCountry?: Record<string, number> }>(
-                  "producerHouseholdSource"
-                )
-                .findOne({ _id: worldEpoch })
+              await producerHouseholdSourceCollection<{
+                _id: string;
+                shareByCountry?: Record<string, number>;
+              }>(db).findOne({ _id: worldEpoch })
             )?.shareByCountry ?? {}
           )
         )
@@ -328,17 +361,15 @@ export async function runFundedProducerTurn(
   // from one read.
   const clearingOn = (input.env.clearingReferenceStage ?? 0) >= 1;
   const shortageOn = (input.env.shortageGrowthStage ?? 0) >= 1;
-  const lastOutcome = await db
-    .collection<{
-      _id: string;
-      clearingPrices?: Record<string, number>;
-      laneClearingPrices?: Record<string, number>;
-      bookPressure?: Record<string, number>;
-    }>(PRODUCER_MARKET_OUTCOMES)
-    .findOne(
-      { _id: `${worldEpoch}:${openingTurn}` },
-      { projection: { clearingPrices: 1, laneClearingPrices: 1, bookPressure: 1 } }
-    );
+  const lastOutcome = await producerMarketOutcomesCollection<{
+    _id: string;
+    clearingPrices?: Record<string, number>;
+    laneClearingPrices?: Record<string, number>;
+    bookPressure?: Record<string, number>;
+  }>(db).findOne(
+    { _id: `${worldEpoch}:${openingTurn}` },
+    { projection: { clearingPrices: 1, laneClearingPrices: 1, bookPressure: 1 } }
+  );
   const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
   const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
   const demandEnv = {
@@ -361,13 +392,19 @@ export async function runFundedProducerTurn(
     carry: liveCarry(lookups, worldEpoch, openingTurn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
+    ...(traders.length > 0
+      ? {
+          backgroundEconomies: traders.map((t) => ({
+            countryId: t.countryId,
+            accountId: t.accountId,
+            byCommodity: t.byCommodity,
+          })),
+        }
+      : {}),
   });
-  // A live turn must settle every plant: a skipped one would run on legacy
-  // revenue beside the funded market. Fail the turn instead.
-  // A sector with no physical capacity yet (a new founding awaiting its first
-  // build) produces nothing: it settles as an explicit zero receipt below. Any
-  // other preparation failure would leave a plant on legacy revenue beside the
-  // funded market, so the turn fails instead.
+  // A sector with no physical capacity yet settles as an explicit zero receipt
+  // below. Any other preparation failure would leave a plant on legacy revenue
+  // beside the funded market, so the turn fails instead.
   const idleSectorIds = demand.skippedSectors
     .filter((s) => s.reason === NO_PHYSICAL_CAPACITY)
     .map((s) => s.sectorId);
@@ -378,7 +415,23 @@ export async function runFundedProducerTurn(
     );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
-  const walletScopes = [...demand.walletScopes, ...publicScopes, ...investmentScopes];
+  // One collection account per importing or levying country; none when both are off.
+  const levyByPlant = plantLevies(demand.planSector, lookups, turn);
+  const tariffScopes = tariffCollectorScopes(
+    demand.importTariffs,
+    (c) => countryCurrency.get(c) ?? traders.find((t) => t.countryId === c)?.currency,
+    levyByPlant
+  );
+  const tariffCollector = new Map(
+    tariffScopes.map((s) => [s.countryId, producerWalletId(worldEpoch, s)])
+  );
+  const walletScopes = [
+    ...demand.walletScopes,
+    ...publicScopes,
+    ...investmentScopes,
+    ...traders.map((t) => t.scope),
+    ...tariffScopes,
+  ];
   const scopeById = new Map(walletScopes.map((s) => [producerWalletId(worldEpoch, s), s]));
   await createProducerWallets(db, worldEpoch, walletScopes);
 
@@ -422,8 +475,7 @@ export async function runFundedProducerTurn(
         });
     }
     if (entries.length > 0)
-      await db
-        .collection<LedgerEntry>("ledgerEntries")
+      await ledgerEntriesCollection(db)
         .insertMany(entries, { ordered: false })
         .catch((error: unknown) => {
           // Duplicate ids are replays already witnessed; anything else is real.
@@ -495,6 +547,33 @@ export async function runFundedProducerTurn(
             currencyCode: currency,
             localPerAnchor: rate,
           };
+        })
+      )
+    )
+  );
+
+  // Each background country's import budget: its orders' spend limits.
+  const backgroundFunding = backgroundFundingByAccount(demand.backgroundOrders);
+  await apply(
+    batchProducerMoves(
+      worldEpoch,
+      turn,
+      backgroundFundingMoves(
+        worldEpoch,
+        turn,
+        traders.flatMap((t) => {
+          const anchor = backgroundFunding.get(t.accountId) ?? 0;
+          if (!(anchor > 0)) return [];
+          const rate = rateOf(t.currency);
+          return [
+            {
+              countryId: t.countryId,
+              walletId: t.accountId,
+              amountLocal: anchor * rate,
+              currencyCode: t.currency,
+              localPerAnchor: rate,
+            },
+          ];
         })
       )
     )
@@ -578,12 +657,19 @@ export async function runFundedProducerTurn(
   for (const corp of lookups.corporations)
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
       sectorOwner.set(sector._id.toHexString(), corp._id.toHexString());
-  // Closing transfers computed from the settled market and frozen with it: AI
-  // profit to households, operating income to households, and the transition
-  // floor from unspent public funding. One settlement write instead of
-  // thousands of money moves (each costs several prod round trips).
+  // Closing transfers computed from the settled market and frozen with it: AI profit
+  // and operating income to households, and the transition floor from unspent public
+  // funding. One settlement write instead of thousands of money moves.
   const closeAtSettlement = (market: EconomyResult): SettlementClose => {
     const closingCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
+    // Tariffs and levies come off the buyers' cash first (producerTariffStage).
+    const tariffs = collectionsAtClose({
+      market,
+      table: demand.importTariffs,
+      levyByPlant,
+      collectors: tariffCollector,
+      closingCash,
+    });
     const settledProfitByCorp = new Map<string, number>();
     const revenueBySector = new Map<string, number>();
     for (const r of market.producers) {
@@ -592,6 +678,10 @@ export async function runFundedProducerTurn(
       const sectorId = demand.planSector.get(r.id);
       if (sectorId) revenueBySector.set(sectorId, r.revenue);
     }
+    // A company's tariff on its imported inputs is a cost of the turn.
+    for (const [id, paid] of tariffs?.paidByAccount ?? [])
+      if (settledProfitByCorp.has(id))
+        settledProfitByCorp.set(id, settledProfitByCorp.get(id)! - paid);
     const transfers: SettlementClose["transfers"] = planFundedClose({
       settledProfitByCorp,
       closingCash,
@@ -606,6 +696,7 @@ export async function runFundedProducerTurn(
       toAccountId: t.to.id,
       amountAnchor: t.amountAnchor,
     }));
+    if (tariffs) transfers.unshift(...tariffs.transfers);
     // Public funding kept for next turn on lines that stayed short. Set aside
     // before transition support and grants so the pool they draw on excludes it.
     const carryTargetByCountry: Record<string, LineCarry> = {};
@@ -777,6 +868,14 @@ export async function runFundedProducerTurn(
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
         publicCarryTarget: carryTargetByCountry,
         ...(spillShare > 0 ? { procurementSpillByCountry: spillByCountry } : {}),
+        ...(tariffs
+          ? {
+              importTariffs: {
+                ...tariffs.meta,
+                paidByAccount: Object.fromEntries(tariffs.paidByAccount),
+              },
+            }
+          : {}),
       },
     };
   };
@@ -817,8 +916,14 @@ export async function runFundedProducerTurn(
       households: demand.households,
       // Marketing budgets keep their legacy settlement to media sellers this
       // turn; buying them here as well would spend each budget twice.
-      externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
+      externalOrders: [
+        ...demand.publicBuyerOrders,
+        ...demand.investmentBuyerOrders,
+        ...demand.backgroundOrders,
+      ],
+      ...(demand.backgroundOffers.length > 0 ? { externalOffers: demand.backgroundOffers } : {}),
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
+      ...(demand.importTariffs ? { importTariffs: demand.importTariffs } : {}),
       spilloverShare: input.env.spilloverShare,
       ownSitesFirst: input.env.ownSitesFirst,
       // An explicit "market first" supply priority is honoured (issue 5505): own
@@ -900,7 +1005,7 @@ export async function runFundedProducerTurn(
     (settled.result.close?.meta?.grantBySector as Record<string, number> | undefined) ?? {};
   const retiredIds = Object.keys(retiredBookBySector);
   if (retiredIds.length > 0)
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await corporateSectorsCollection(db).bulkWrite(
       retiredIds.map((id) => ({
         updateOne: {
           filter: { _id: new ObjectId(id) },
@@ -959,7 +1064,7 @@ export async function runFundedProducerTurn(
   // and the funded demand throttle (AI saturation reads it, and the legacy pass
   // would otherwise leave it stale), in one write per sector rather than a
   // second round trip.
-  const sectorDocs = db.collection<CorporateSector>("corporateSectors");
+  const sectorDocs = corporateSectorsCollection(db);
   const sectorUpdates: AnyBulkWriteOperation<CorporateSector>[] = [];
   for (const [id, receipt] of receiptsBySectorId) {
     const soldUnits = captiveOn
@@ -994,7 +1099,7 @@ export async function runFundedProducerTurn(
   // An idle sector settled this turn at zero: advance its generation with the
   // rest, or the next turn would reject it as unreconciled once it can produce.
   if (idleSectorIds.length > 0)
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await corporateSectorsCollection(db).bulkWrite(
       idleSectorIds.map((id) => ({
         updateOne: {
           filter: {
@@ -1028,25 +1133,40 @@ export async function runFundedProducerTurn(
   // Stage on: a stateless national wallet (public, military, investment)
   // counts in its country's national book, not the world total only.
   const nationalPublicDemandOn = (input.env.nationalPublicDemandStage ?? 0) >= 1;
+  // A background country has no state: its orders and offers count in its
+  // own national book whatever the stage.
+  const backgroundCountryOf = new Map(traders.map((t) => [t.accountId, t.countryId]));
   const rows = fundedLedgerRows({
     outcomes: settled.result.orderOutcomes,
-    products: settled.result.producers.flatMap((p) =>
-      p.products.map((x) => ({
-        producerId: p.id,
-        commodity: x.commodity,
-        book: x.book,
-        offeredUnits: x.offeredUnits,
-      }))
-    ),
+    products: [
+      ...settled.result.producers.flatMap((p) =>
+        p.products.map((x) => ({
+          producerId: p.id,
+          commodity: x.commodity,
+          book: x.book,
+          offeredUnits: x.offeredUnits,
+        }))
+      ),
+      ...demand.backgroundOffers.map((o) => ({
+        producerId: o.accountId,
+        commodity: o.commodity,
+        book: o.book,
+        offeredUnits: o.units,
+        ...(o.countryId ? { countryId: o.countryId } : {}),
+      })),
+    ],
     stateOfAccount: (id) => {
       const wallet = stateOfWallet(id);
       if (wallet) return wallet;
       const first = demand.firstWalletByCorp.get(id);
       return first ? stateOfWallet(first.wallet) : null;
     },
-    ...(nationalPublicDemandOn
+    ...(nationalPublicDemandOn || backgroundCountryOf.size > 0
       ? {
           countryOfAccount: (id: string) => {
+            const backgroundCountry = backgroundCountryOf.get(id);
+            if (backgroundCountry) return backgroundCountry;
+            if (!nationalPublicDemandOn) return null;
             const own = scopeById.get(id)?.countryId;
             if (own) return own;
             const first = demand.firstWalletByCorp.get(id);
@@ -1094,8 +1214,28 @@ export async function runFundedProducerTurn(
             : {}),
         }))
       : undefined;
+  const tariffMeta = settled.result.close?.meta?.importTariffs as
+    (TariffClose["meta"] & { paidByAccount: Record<string, number> }) | undefined;
+  const tariffPaidBy = tariffMeta?.paidByAccount ?? {};
+  // What each background country sold and bought, read back by its macro
+  // kernel so its capacity follows the trade it really did.
+  const backgroundTrade =
+    traders.length > 0
+      ? backgroundTradeOutcomes({
+          economies: traders,
+          offers: demand.backgroundOffers,
+          orders: demand.backgroundOrders,
+          openingCash: new Map(settled.openingAccounts.map((a) => [a.id, a.cash])),
+          // Tariff a background country paid on imports is not a smaller export.
+          closingCash: new Map(
+            settled.result.accounts.map((a) => [a.id, a.cash + (tariffPaidBy[a.id] ?? 0)])
+          ),
+          fills: producerFillSpend(settled.result.tradeReceipt),
+        })
+      : null;
+  if (backgroundTrade) await recordBackgroundTrade(db, turn, traders, backgroundTrade);
   if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)
-    await db.collection<{ _id: string }>("producerHouseholdSource").updateOne(
+    await producerHouseholdSourceCollection<{ _id: string }>(db).updateOne(
       { _id: worldEpoch },
       {
         $setOnInsert: {
@@ -1107,7 +1247,7 @@ export async function runFundedProducerTurn(
       } as never,
       { upsert: true }
     );
-  await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).replaceOne(
+  await producerMarketOutcomesCollection<{ _id: string }>(db).replaceOne(
     { _id: `${worldEpoch}:${turn}` },
     {
       _id: `${worldEpoch}:${turn}`,
@@ -1155,6 +1295,7 @@ export async function runFundedProducerTurn(
           }
         : {}),
       ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
+      ...(backgroundTrade ? { backgroundTrade: Object.fromEntries(backgroundTrade) } : {}),
       at: new Date(),
     } as never,
     { upsert: true }
@@ -1165,7 +1306,7 @@ export async function runFundedProducerTurn(
   const paidByCountry = new Map(
     Object.entries((close?.meta?.paidByCountry as Record<string, number> | undefined) ?? {})
   );
-  await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).updateOne(
+  await producerMarketOutcomesCollection<{ _id: string }>(db).updateOne(
     { _id: `${worldEpoch}:${turn}` },
     {
       $set: {
@@ -1174,6 +1315,15 @@ export async function runFundedProducerTurn(
           coverage: (close?.meta?.coverageByCountry as Record<string, number> | undefined) ?? {},
         },
         closeTransfers: close?.transfers.length ?? 0,
+        ...(tariffMeta
+          ? {
+              importTariffs: {
+                collectedByImporter: tariffMeta.collectedByImporter,
+                paid: tariffMeta.paid,
+                shortfall: tariffMeta.shortfall,
+              },
+            }
+          : {}),
         ...(settled.result.spillover ? { spillover: settled.result.spillover } : {}),
       },
     }
@@ -1191,9 +1341,19 @@ export async function runFundedProducerTurn(
   ];
   const heldLocal = new Map(
     (
-      await db
-        .collection<{ _id: string; cash: number }>(PRODUCER_ACCOUNTS)
-        .find({ _id: { $in: returnWallets.map((w) => w.id) } }, { projection: { cash: 1 } })
+      await producerEconomyAccountsCollection<{ _id: string; cash: number }>(db)
+        .find(
+          {
+            _id: {
+              $in: [
+                ...returnWallets.map((w) => w.id),
+                ...traders.map((t) => t.accountId),
+                ...tariffCollector.values(),
+              ],
+            },
+          },
+          { projection: { cash: 1 } }
+        )
         .toArray()
     ).map((w) => [w._id, w.cash])
   );
@@ -1217,7 +1377,7 @@ export async function runFundedProducerTurn(
     keptLocal.set(id, Math.min(held, keptTotal * rate));
   }
   if (carryShare > 0)
-    await db.collection<{ _id: string }>(PUBLIC_CARRY).replaceOne(
+    await producerPublicCarryCollection<{ _id: string }>(db).replaceOne(
       { _id: `${worldEpoch}:${turn}` },
       {
         _id: `${worldEpoch}:${turn}`,
@@ -1295,7 +1455,7 @@ export async function runFundedProducerTurn(
       now: new Date(),
     });
     if (ops.length > 0)
-      await db.collection("corporateSectors").bulkWrite(ops as never, { ordered: false });
+      await corporateSectorsCollection<Document>(db).bulkWrite(ops as never, { ordered: false });
   }
   await apply(
     batchProducerMoves(
@@ -1307,6 +1467,49 @@ export async function runFundedProducerTurn(
         demand.investmentFunding.flatMap((f) =>
           returnRow(f.countryId, investmentWallet(f.countryId))
         )
+      )
+    )
+  );
+
+  // Collected import tariffs go to each importer's Treasury cash.
+  const tariffSweep = tariffSweepMoves({
+    worldEpoch,
+    turn,
+    collectors: tariffScopes.map((s) => ({
+      countryId: s.countryId,
+      walletId: tariffCollector.get(s.countryId)!,
+      currency: s.currency,
+    })),
+    heldLocal,
+    budgetIdOf: (c) => budgetIdByCountry.get(c) ?? null,
+    rateOf,
+    levyAnchorByCountry: tariffMeta?.automationLevy?.collectedByCountry,
+  });
+  for (const batch of sweepBatches(worldEpoch, turn, tariffSweep)) await apply(batch);
+  await recordLevyReceipts(db, tariffSweep);
+
+  // A background wallet ends the turn empty: its unspent budget and its export
+  // receipts leave the world economy, as its budget came in.
+  await apply(
+    batchProducerMoves(
+      worldEpoch,
+      turn,
+      backgroundReturnMoves(
+        worldEpoch,
+        turn,
+        traders.flatMap((t) => {
+          const held = heldLocal.get(t.accountId) ?? 0;
+          if (!(Number.isFinite(held) && held > 0)) return [];
+          return [
+            {
+              countryId: t.countryId,
+              walletId: t.accountId,
+              amountLocal: held,
+              currencyCode: t.currency,
+              localPerAnchor: rateOf(t.currency),
+            },
+          ];
+        })
       )
     )
   );
@@ -1346,7 +1549,7 @@ export async function runFundedProducerTurn(
     settledProfitByCorp,
     headcountBySectorId,
     deferredDistributions,
-    turnWarnings: settled.result.turnWarnings ?? [],
+    turnWarnings: [...(settled.result.turnWarnings ?? []), ...background.warnings],
   };
 }
 
@@ -1482,12 +1685,9 @@ async function admitNewProducerEntrants(
       });
     }
   }
-  if (corpOps.length > 0)
-    await db.collection<Corporation>("corporations").bulkWrite(corpOps, { ordered: false });
+  if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps, { ordered: false });
   if (sectorOps.length > 0)
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .bulkWrite(sectorOps, { ordered: false });
+    await corporateSectorsCollection(db).bulkWrite(sectorOps, { ordered: false });
 }
 
 /** Treasury cash, book primary spending and fiscal scale per country, for stage 2 public funding. */
@@ -1496,8 +1696,7 @@ async function loadTreasuryFundingBudgets(
 ): Promise<
   Map<string, { budgetId: string; cashLocal: number; scale: number; bookPrimaryPerTurn: number }>
 > {
-  const rows = await db
-    .collection<FederalBudget>("federalBudget")
+  const rows = await federalBudgetCollection(db)
     .find(
       {},
       {
@@ -1546,13 +1745,13 @@ const walletKey = (leg: { collection?: string; filter?: Record<string, unknown>;
 export async function reconcileAppliedFunding(db: Db, move: MoneyMove): Promise<boolean> {
   if (move.turn === undefined || !move.legs.every((l) => l.kind === "mint" || l.kind === "credit"))
     return false;
-  const records = db.collection<{
+  const records = bankMoneyMovesCollection<{
     _id: string;
     kind: string;
     turn?: number;
     status: string;
     legs: RecordedLeg[];
-  }>(MONEY_MOVE_COLLECTION);
+  }>(db);
   const original = await records.findOne({ _id: move.key });
   if (
     !original ||

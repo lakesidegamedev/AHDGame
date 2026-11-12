@@ -1,46 +1,26 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * Ukraine (Ukrainian SSR) 1953 - Stalin's death year. Pop 41.0M; gdp in
- * millions of Soviet rubles, the same basis as src/lib/seeds/ru/ruRegions1953.ts
- * (the Western GNP-estimate rescale that makes the regional rollup agree with
- * the hand-authored FY-1953 budget seed). The national totals here are exactly
- * the values the union-level seed carries for its `UKR` region (41,000,000 /
- * 291,667), so promoting Ukraine to a playable country does not silently move
- * the USSR's economy.
+ * Ukraine (Ukrainian SSR) 1953. Pop 41.0M; gdp in millions of Soviet rubles, the
+ * same basis as src/lib/seeds/ru/ruRegions1953.ts, so the regional rollup agrees
+ * with the hand-authored FY-1953 budget seed. National totals match the union
+ * seed's `UKR` region exactly (41,000,000 / 291,667): promoting Ukraine to a
+ * playable country must not move the USSR's economy.
  *
- * SEED INDEPENDENCE - DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1953 directly; the six macro-regions match the shard at
- * public/ua-regions.json and are shared with the 1979 bundle (uaRegions.ts).
+ * SEED INDEPENDENCE: authored for ~1953 directly, not derived from another era.
  *
- * The 1953 republic, region by region:
- * - Reconstruction is the whole story. Ukraine lost something like a sixth of
- *   its people and most of its industrial plant between 1941 and 1944, and the
- *   1946-47 famine came on top of that. The Fourth and Fifth Five-Year Plans
- *   poured capital into rebuilding the pre-war industrial map rather than
- *   drawing a new one, so output is concentrated exactly where it was in 1940:
- *   Donbas coal, Dnieper metallurgy and hydroelectricity.
- * - Donbas and the Dnieper belt together carry just over half of republican
- *   output on about 39% of the population. That is the whole economic point of
- *   the Ukrainian SSR to Moscow.
- * - Western Ukraine (Galicia, Volhynia, Transcarpathia, Bukovina) was annexed
- *   in 1939-45 and is the poorest region by a wide margin: agrarian, Greek
- *   Catholic (the Uniate church was forcibly dissolved in 1946), and still
- *   being pacified. The UPA insurgency was fought down only in the early
- *   1950s, with mass deportations either side of it. It holds the second
- *   largest population and barely a ninth of the output.
- * - Podolia is the small agrarian centre: sugar beet, no heavy industry.
- * - The Black Sea coast is ports and shipbuilding (Odesa, Mykolaiv, Kherson)
- *   over a farming hinterland. NOTE: Crimea was still an RSFSR oblast in 1953
- *   and only transferred to the Ukrainian SSR in February 1954. The map shard's
- *   southern polygon includes the peninsula because the geometry is drawn on
- *   the post-1954 republic; the population and output authored here are sized
- *   for the coastal oblasts as they stood, so the region reads correctly for a
- *   game that starts in 1953 and runs forward past the transfer.
+ * - Donbas + Dnieper belt carry just over half of republican output on ~39% of
+ *   population; that concentration is the SSR's economic point to Moscow.
+ * - Western Ukraine (annexed 1939-45) is poorest by far: agrarian and still
+ *   being pacified, with the second-largest population and about a ninth of
+ *   output.
+ * - Crimea was an RSFSR oblast in 1953 and transferred in 1954. The map shard's
+ *   southern polygon includes it (post-1954 geometry), but population and output
+ *   here are sized for the coastal oblasts as they stood.
  *
  * houseDistricts = seats in the Supreme Soviet of the Ukrainian SSR (435),
  * apportioned by population with largest remainder. stateSenateSeats is 0:
- * a union republic has one chamber, not two.
+ * a union republic has one chamber.
  */
 export const uaRegions1953: State[] = [
   {

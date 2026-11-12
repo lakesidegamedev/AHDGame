@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * `auditLog` — master flag for the unified action-audit spine
@@ -37,9 +38,10 @@ export async function isAuditLogEnabled(
   let value = true;
   try {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { auditLog: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { auditLog: 1 } }
+    );
     value = config?.auditLog !== false;
   } catch {
     value = true;

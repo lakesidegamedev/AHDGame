@@ -11,6 +11,7 @@ import { inferGenderFromFirstName } from "@/lib/npp/nameGenerator";
 import { weightedRandomEthnicity, selectPoliticianImage } from "@/lib/npp/generator";
 import { getEraContext } from "@/lib/era/context";
 import type { CountryId } from "@/lib/constants/countries";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * GET /api/admin/heal/npp-portraits
@@ -23,22 +24,22 @@ export async function GET() {
 
     const db = await getDb();
 
-    const total = await db.collection<NPP>("npps").countDocuments({ retiredAt: null });
+    const total = await nppsCollection(db).countDocuments({ retiredAt: null });
 
-    const missingGender = await db.collection<NPP>("npps").countDocuments({
+    const missingGender = await nppsCollection(db).countDocuments({
       retiredAt: null,
       gender: { $exists: false },
     });
-    const missingEthnicity = await db.collection<NPP>("npps").countDocuments({
+    const missingEthnicity = await nppsCollection(db).countDocuments({
       retiredAt: null,
       ethnicity: { $exists: false },
     });
-    const missingAvatar = await db.collection<NPP>("npps").countDocuments({
+    const missingAvatar = await nppsCollection(db).countDocuments({
       retiredAt: null,
       avatarUrl: { $exists: false },
     });
 
-    const needsUpdate = await db.collection<NPP>("npps").countDocuments({
+    const needsUpdate = await nppsCollection(db).countDocuments({
       retiredAt: null,
       $or: [
         { gender: { $exists: false } },
@@ -79,8 +80,7 @@ export async function POST() {
     // Read once per heal run — the clock is per-world, the filter per-NPP.
     const eraYear = (await getEraContext(db)).year;
 
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({
         retiredAt: null,
         $or: [
@@ -127,7 +127,7 @@ export async function POST() {
 
       if (Object.keys(setOps).length > 0) {
         setOps.updatedAt = new Date();
-        await db.collection<NPP>("npps").updateOne({ _id: npp._id }, { $set: setOps });
+        await nppsCollection(db).updateOne({ _id: npp._id }, { $set: setOps });
         updated++;
       }
     }

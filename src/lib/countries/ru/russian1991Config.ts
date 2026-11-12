@@ -1,21 +1,15 @@
 import type { CountryEraOverride } from "../contract";
 
 /**
- * January 1991 RSFSR, before the presidency was created in April and first
- * elected in June and inaugurated in July. The 1990 Congress of People's Deputies had 1,068 directly
- * elected members and chose the 252-member Supreme Soviet from among them.
- * The Congress is the public electoral chamber in this one-chamber game model;
- * treating the inner Supreme Soviet as a separately elected upper chamber
- * would reproduce the USSR's institutions, not the RSFSR's.
+ * January 1991 RSFSR, before the presidency existed. The 1990 Congress of
+ * People's Deputies (1,068 directly elected) chose the 252-member Supreme Soviet
+ * from among them; the Congress is the public electoral chamber here. Treating
+ * the Supreme Soviet as a separate upper chamber would model the USSR, not the
+ * RSFSR.
  *
- * https://www.prlib.ru/news/2038679
- * https://www.prlib.ru/node/619190
- *
- * The Congress and its Supreme Soviet ceased under the 1993 constitutional
- * transition. That dated replacement and the June 1991 presidential election
- * need distinct runtime transitions; this start configuration is not a
- * permanent constitutional model for a 1991-to-2027 simulation.
- * https://www.constitution.ru/10003000/10003000-12.htm
+ * The Congress and Supreme Soviet ended in the 1993 constitutional transition,
+ * which needs its own runtime transition. This start config is not a permanent
+ * model for a 1991-to-2027 simulation.
  */
 export const RU_RUSSIAN_1991: CountryEraOverride = {
   preset: "1991-default",

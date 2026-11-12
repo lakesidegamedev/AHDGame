@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character, CharacterAchievement, User } from "@/lib/db/types";
+import type { CharacterAchievement, User } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 interface RouteParams {
   params: Promise<{ achievementId: string }>;
@@ -15,8 +18,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid achievement ID");
     }
     const db = await getDb();
-    const awards = await db
-      .collection<CharacterAchievement>("characterAchievements")
+    const awards = await characterAchievementsCollection(db)
       .find({ achievementId: new ObjectId(achievementId) })
       .sort({ earnedAt: -1 })
       .limit(5)
@@ -26,12 +28,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const userIds = awards.flatMap((award) => (award.userId ? [award.userId] : []));
     const characterIds = awards.flatMap((award) => (award.characterId ? [award.characterId] : []));
     const [users, characters] = await Promise.all([
-      db
-        .collection<User>("users")
+      usersCollection(db)
         .find({ _id: { $in: userIds } })
         .toArray(),
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ _id: { $in: characterIds } })
         .toArray(),
     ]);

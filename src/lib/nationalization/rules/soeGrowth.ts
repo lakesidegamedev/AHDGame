@@ -36,9 +36,8 @@ const SOE_GROWTH_SHARE_PER_SHORTAGE = 0.25;
 
 /**
  * Growth order share for a sector at this shortage: the minimum at the
- * threshold, rising linearly with how far above base its outputs are priced
- * (2x base is a 24% order, 3x and over the 50% cap). A sector 2x short and a
- * sector 1.3x short no longer get the same 5% a build cycle.
+ * threshold, rising linearly with how far above base its outputs are priced,
+ * capped at the max share.
  */
 export function soeGrowthOrderShare(shortage: number): number {
   if (!Number.isFinite(shortage)) return SOE_GROWTH_MIN_ORDER_SHARE;

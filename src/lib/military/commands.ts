@@ -30,23 +30,14 @@ export interface CommandDraft {
 export const LOGISTICS_PAIRING_ADVICE =
   "Logistics command recommended for multi-theatre overseas sustainment.";
 
-/**
+/*
  * Whether a command should be advised to pair with a Logistics command.
  *
- * Sustainment strain comes from the spread across macro theatres, not from the number of
- * regions. This condition used to be `regionIds.length >= REGION_CAP`, and REGION_CAP is a
- * hard cap the create dialog and the reducer both enforce, so it was satisfiable at
- * exactly the cap and nowhere else: every filled non-Logistics command drew the advice and
- * no partial one could. Ticket 1244 met that as South Asia + East Asia + Southeast Asia
- * drawing it while any two of the three drew nothing, though all three are one theatre.
- * Regions sharing a theatre share the tail that supplies them; two theatres are two tails.
- *
- * Takes the regions rather than a draft because a saved MilitaryCommand needs the same
- * answer as a CommandDraft, and the two shapes have nothing else in common. An id the map
- * does not know contributes no theatre rather than counting as one of its own, so a
- * command naming a retired region is not advised about a spread it does not have.
- *
- * A Logistics command IS the sustainment structure, so it is never told to go find one.
+ * Strain comes from the spread across macro theatres, not the number of regions:
+ * regions sharing a theatre share its supply tail. Takes regions rather than a
+ * draft so a saved MilitaryCommand and a CommandDraft share the answer. Unknown
+ * region ids contribute no theatre. A Logistics command IS the sustainment
+ * structure, so it is never advised to find one.
  */
 export function needsLogisticsPairing(type: CommandType, regionIds: string[]): boolean {
   if (type === "LOGISTICS") return false;
@@ -60,10 +51,7 @@ export function needsLogisticsPairing(type: CommandType, regionIds: string[]): b
 export function validateDraft(draft: CommandDraft, state: MilitaryState): string[] {
   const w: string[] = [];
   for (const rid of draft.regionIds) {
-    // Only a same-type owner is a role conflict — the line `overlappingRegions` has
-    // always drawn. Warning on every owner told players that pairing a Logistics
-    // command with the Regional command already holding a region was a mistake, when
-    // it is the recommended way to sustain a fight overseas.
+    // Only a same-type owner is a role conflict. A Logistics command paired with the Regional command already holding the region is recommended, not a mistake.
     const owners = commandsOfRegion(state, rid).filter((c) => c.type === draft.type);
     if (owners.length)
       w.push(

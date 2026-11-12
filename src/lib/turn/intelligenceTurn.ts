@@ -8,7 +8,6 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type { IntelligenceAgency, IntelligenceNetwork } from "@/lib/db/types/intelligence";
 import { OP_SLOTS_PER_TURN, TRADECRAFT_DEFAULT } from "@/lib/intelligence/config";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   applyIntelligenceSettlement,
   getIntelligenceAppropriation,
@@ -20,6 +19,7 @@ import {
 import { networkUpkeep } from "@/lib/intelligence/cost";
 import { deriveCounterIntel } from "@/lib/intelligence/counterIntel";
 import { stepNetwork } from "@/lib/intelligence/network";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 
 export interface IntelligenceTurnResult {
   networksStepped: number;
@@ -31,27 +31,20 @@ export interface IntelligenceTurnResult {
 }
 
 /**
- * Per-turn intelligence upkeep: settle the appropriation, then step the networks it paid
- * for, then refresh NPP counter-intelligence posture.
+ * Per-turn intelligence upkeep: settle appropriation, step funded networks,
+ * refresh NPP counter-intelligence posture.
  *
- * The money lives HERE rather than in a phase of its own because this pass already loads
- * every network and every agency, and because whether a network was funded is precisely
- * what decides whether it advances. A separate phase would need the same two reads and
- * would have to stay adjacent to this one to stay correct.
+ * Money lives here because this pass already loads every network and agency,
+ * and funding status decides whether a network advances. A separate phase
+ * would need the same reads and stay adjacent to this one.
  *
- * Deliberately NOT here:
+ * Deliberately NOT here: coverage decay (derived on read from
+ * `lastCollectedTurn`; writing every row each turn is wasteful) and player
+ * operations (resolve on request, not on the tick).
  *
- * - Coverage decay, which is derived on read from `lastCollectedTurn`. Writing
- *   every coverage row every turn would be roughly (countries x countries x
- *   domains) pointless writes for a value that is a pure function of a stored
- *   turn. Same lazy reasoning as `DiplomaticActionBudget`.
- * - Player operations, which resolve on request rather than on the tick.
- *
- * NPP posture is refreshed whether or not the NPP OPERATIONS switch is on: the
- * switch decides whether an NPP country ACTS, never whether it RESISTS. Without
- * this, most of the world would defend at a constant default forever, and the
- * only countries with a moving counter-intelligence posture would be the handful
- * with a player setting it by hand.
+ * NPP posture is refreshed regardless of the NPP OPERATIONS switch: the
+ * switch decides whether an NPP country ACTS, never whether it RESISTS.
+ * Otherwise most of the world would defend at a constant default forever.
  */
 export async function processIntelligenceTurn(
   db: Db,
@@ -77,8 +70,9 @@ export async function processIntelligenceTurn(
   // countries with a line either: a service whose line has since lapsed to zero still
   // owns networks, and their upkeep must still be charged against what it has left.
   const networkOwners = new Set(networks.map((n) => String(n.ownerCountryId)));
-  const budgetDocs = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgetDocs = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({
       $or: [
         { "spending.byCategory.intelligence": { $gt: 0 } },

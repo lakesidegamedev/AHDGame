@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SeededCorporationIdentity {
   _id: unknown;
@@ -14,13 +15,11 @@ export interface SequentialIdCollision {
 
 /**
  * Group seeded corporations by sequentialId and return every id claimed by
- * more than one corporation. Pure (no DB access), so tests can pin the exact
- * issue #2028 duplicate groups without a database.
+ * more than one. Pure (no DB), so tests can pin duplicate groups without a
+ * database.
  *
- * Corporations without a sequentialId are ignored: the
- * `corporations_sequentialId` index is sparse, so those never collide.
- * Output is sorted by sequentialId (then holder name) so the diagnostic is
- * deterministic across runs.
+ * Corporations without a sequentialId are ignored: the index is sparse, so
+ * those never collide. Output is sorted for deterministic diagnostics.
  */
 export function findDuplicateCorporationSequentialIds(
   corporations: SeededCorporationIdentity[]
@@ -66,8 +65,7 @@ export function formatSequentialIdCollisions(collisions: SequentialIdCollision[]
  * Throws on any duplicate. Resolves silently when the collection is clean.
  */
 export async function assertUniqueCorporationSequentialIds(db: Db): Promise<void> {
-  const corporations = (await db
-    .collection("corporations")
+  const corporations = (await corporationsCollection(db)
     .find({}, { projection: { sequentialId: 1, name: 1, countryId: 1 } })
     .toArray()) as SeededCorporationIdentity[];
   const collisions = findDuplicateCorporationSequentialIds(corporations);

@@ -7,6 +7,9 @@ import type {
 } from "@/lib/db/types";
 import type { NationalizationTrigger } from "./eligibility";
 import { matchActiveNationalizationBills } from "./corpNationalizationThreat";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 const CURABLE: ReadonlySet<NationalizationTrigger> = new Set(["strategic", "monopoly"]);
 
@@ -50,8 +53,7 @@ export async function buildCorpNationalizationStatus(
   corp: Corporation,
   currentTurn: number
 ): Promise<CorpNationalizationStatus> {
-  const sectorDocs = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectorDocs = await corporateSectorsCollection(db)
     .find({ corporationId: corp._id })
     .project<{ _id: ObjectId; sectorType: string }>({ _id: 1, sectorType: 1 })
     .toArray();
@@ -75,8 +77,7 @@ export async function buildCorpNationalizationStatus(
     sectorCount: b.sectorIds.length,
   }));
 
-  const pending = await db
-    .collection<PendingNationalization>("pendingNationalizations")
+  const pending = await pendingNationalizationsCollection(db)
     .find({
       status: "pending",
       $or: [
@@ -89,9 +90,10 @@ export async function buildCorpNationalizationStatus(
   pending.sort((a, b) => a.noticeDeadlineTurn - b.noticeDeadlineTurn);
   const p = pending[0] ?? null;
 
-  const auction = await db
-    .collection<NationalizationAuction>("nationalizationAuctions")
-    .findOne({ corporationId: corp._id, status: "open" });
+  const auction = await nationalizationAuctionsCollection(db).findOne({
+    corporationId: corp._id,
+    status: "open",
+  });
 
   const isSpunOut = corp.privatizedAtTurn != null;
   const goldenSharePercent = corp.goldenSharePercent ?? 0;

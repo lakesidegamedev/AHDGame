@@ -20,7 +20,7 @@ import {
 } from "@/lib/corporations/rules/stockTaxReceipt";
 import type { PendingStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
 import type { Db } from "mongodb";
-import type { Character, Corporation, IndexFund, ShareOrder } from "@/lib/db/types";
+import type { IndexFund } from "@/lib/db/types";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -45,7 +45,12 @@ import {
   type EquityPoolSellDemand,
 } from "@/lib/equities/equityPoolSellAllocation";
 import type { EquityMarketPool } from "@/lib/db/types";
-import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 /** Per-character delta for a corp, plus the fill price for new-entry cost basis. */
 interface ShareDelta {
@@ -91,17 +96,11 @@ export async function fillPendingShareOrders(
 ): Promise<void> {
   const holdingTaxActive = holdingTaxStartTurn !== undefined && turn >= holdingTaxStartTurn;
   let personalForexEnabled = false;
-  // Peer-fill orphan recovery (issue #1672) deliberately does NOT run here:
-  // the receipt scan is a query-per-row N+1 that does not belong on the turn
-  // path. Lonely receipts are re-driven by the periodic
-  // `runShareFillRecoveryPass` driver (cron sweep in multiplayer, post-turn
-  // pass on the singleplayer advance route), and the per-order stamp hook
-  // (`prepareShareFillClaim`) still covers any order that sees another fill.
+  // Peer-fill orphan recovery deliberately does NOT run here: the receipt scan is a query-per-row N+1 that does not belong on the turn path. Lonely receipts are re-driven by the periodic `runShareFillRecoveryPass` driver (cron sweep in multiplayer, post-turn pass on the singleplayer advance route), and `prepareShareFillClaim` still covers any order that sees another fill.
 
   // Fill decisions and their escrow/history writes only use these order
   // fields; the query filter still applies `status` server-side.
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find(
       { status: "open", activeShareFillKey: { $exists: false } },
       {
@@ -137,8 +136,7 @@ export async function fillPendingShareOrders(
   const corpIds = [...ordersByCorp.keys()].map((k) => new ObjectId(k));
   // Keep the full shareholder array for live holding caps. Other corporation
   // payload fields are not read by this matcher.
-  const corpDocs = await db
-    .collection<Corporation>("corporations")
+  const corpDocs = await corporationsCollection(db)
     .find(
       { _id: { $in: corpIds } },
       {
@@ -491,12 +489,10 @@ export async function fillPendingShareOrders(
         // the liquidity provider an exit and would bypass the guarded dual
         // debit of its cap-table and fund holdings ledgers.
         if (order.placerFundId) continue;
-        // Fill sell order at the executable bid (which is at least the seller's
-        // limit), add the shares to public float, and pay the seller.
         // Character sell orders are not debited at placement, so a reverse split
-        // (or any later sale) can leave sharesRemaining far above the live
-        // holding. Capping here stops the fill from driving the seller negative
-        // and dumping a pre-split share count into the float (ticket #1154).
+        // (or any later sale) can leave sharesRemaining above the live holding.
+        // Cap here so the fill cannot drive the seller negative or dump a
+        // pre-split share count into the float.
         let toFill = order.sharesRemaining;
         if (!order.placerCorporationId && charIdStr && order.sharesDebitedAtCreation !== true) {
           const held =
@@ -640,7 +636,7 @@ export async function fillPendingShareOrders(
     const purchasesIn = Math.round(flow.purchasesIn * 100) / 100;
     const salesOut = Math.round(flow.salesOut * 100) / 100;
     const net = Math.round((purchasesIn - salesOut) * 100) / 100;
-    const update = await db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).updateOne(
+    const update = await equityMarketPoolsCollection<EquityMarketPool>(db).updateOne(
       {
         _id: currency,
         ...(net < 0 ? { cashLocal: { $gte: -net } } : {}),
@@ -754,10 +750,10 @@ export async function fillPendingShareOrders(
   }
 
   if (orderFillOps.length > 0) {
-    await db.collection("shareOrders").bulkWrite(orderFillOps);
+    await shareOrdersCollection<Document>(db).bulkWrite(orderFillOps);
   }
   if (incOps.length > 0) {
-    await db.collection("corporations").bulkWrite(incOps);
+    await corporationsCollection(db).bulkWrite(incOps);
   }
   await recordPoolSellAbsorbed(db, poolSellAbsorbed, turn, (id) => new ObjectId(id));
   // Phase 2: $push for new shareholder entries that didn't exist at read time.
@@ -790,14 +786,13 @@ export async function fillPendingShareOrders(
       },
     }));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("corporations").bulkWrite(pushOps as any[]);
+    await corporationsCollection(db).bulkWrite(pushOps as any[]);
   }
   if (charCashAdjustments.size > 0) {
     const forexEnabled = await isForexEnabled();
     personalForexEnabled = forexEnabled;
     const adjCharIds = [...charCashAdjustments.keys()].map((id) => new ObjectId(id));
-    const adjChars = await db
-      .collection<Character>("characters")
+    const adjChars = await charactersCollection(db)
       .find({ _id: { $in: adjCharIds } })
       .project<{ _id: ObjectId; countryId: string }>({ _id: 1, countryId: 1 })
       .toArray();
@@ -870,7 +865,7 @@ export async function fillPendingShareOrders(
       };
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("characters").bulkWrite(charOps as any);
+    await charactersCollection(db).bulkWrite(charOps as any);
   }
 
   // Pay corporations that had sell orders filled (proceeds → liquidCapital).
@@ -894,7 +889,7 @@ export async function fillPendingShareOrders(
         },
       };
     });
-    await db.collection("corporations").bulkWrite(corpPayOps);
+    await corporationsCollection(db).bulkWrite(corpPayOps);
   }
 
   // Legacy fallback for worlds without a currency pool.
@@ -908,7 +903,7 @@ export async function fillPendingShareOrders(
         },
       }));
     if (treasuryOps.length > 0) {
-      await db.collection("corporations").bulkWrite(treasuryOps);
+      await corporationsCollection(db).bulkWrite(treasuryOps);
     }
   }
 
@@ -924,8 +919,7 @@ export async function fillPendingShareOrders(
         [...fundShareholderUpdates.values()].flatMap((fundDeltas) => [...fundDeltas.keys()])
       ),
     ];
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find({ _id: { $in: fundIds.map((id) => new ObjectId(id)) } })
       .project<Pick<IndexFund, "_id" | "holdings">>({ _id: 1, holdings: 1 })
       .toArray();
@@ -1024,10 +1018,10 @@ export async function fillPendingShareOrders(
       }
     }
     if (fundCapTableOps.length > 0) {
-      await db.collection("corporations").bulkWrite(fundCapTableOps);
+      await corporationsCollection(db).bulkWrite(fundCapTableOps);
     }
     if (fundHoldingOps.length > 0) {
-      await db.collection("indexFunds").bulkWrite(fundHoldingOps);
+      await indexFundsCollection<Document>(db).bulkWrite(fundHoldingOps);
     }
   }
 
@@ -1041,7 +1035,7 @@ export async function fillPendingShareOrders(
         },
       }));
     if (fundRefundOps.length > 0) {
-      await db.collection("indexFunds").bulkWrite(fundRefundOps);
+      await indexFundsCollection<Document>(db).bulkWrite(fundRefundOps);
     }
     // #992 tranche 4: one aggregate stock_order_refund row per fund for the
     // unused-escrow refunds just credited above (partial fills execute below
@@ -1054,8 +1048,7 @@ export async function fillPendingShareOrders(
       .filter(([, amount]) => amount > 0)
       .map(([fundIdStr]) => fundIdStr);
     if (refundedFundIds.length > 0) {
-      const refundedFunds = await db
-        .collection<IndexFund>("indexFunds")
+      const refundedFunds = await indexFundsCollection(db)
         .find({ _id: { $in: refundedFundIds.map((id) => new ObjectId(id)) } })
         .project<{ _id: ObjectId; name: string; anchorCurrencyCode: string }>({
           _id: 1,
@@ -1111,8 +1104,7 @@ export async function fillPendingShareOrders(
 
     const [nameChars, nameCorps] = await Promise.all([
       charIdSet.size > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: [...charIdSet].map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string; countryId?: string }>({
               _id: 1,
@@ -1122,8 +1114,7 @@ export async function fillPendingShareOrders(
             .toArray()
         : Promise.resolve([] as { _id: ObjectId; name: string }[]),
       corpIdSet.size > 0
-        ? db
-            .collection<Corporation>("corporations")
+        ? corporationsCollection(db)
             .find({ _id: { $in: [...corpIdSet].map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
             .toArray()

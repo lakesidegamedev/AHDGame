@@ -1,17 +1,16 @@
 /**
- * Deterministic simulation-only actor/controller seeding contract (issue #1993).
+ * Deterministic simulation-only actor/controller seeding contract.
  *
  * Pure rules module: no database, no wall clock, no randomness, no env, no
- * network. The deterministic plan built here is what the sim shell
- * materializes into sandbox `users`/`characters` docs (marked simulation-only
- * via `isSynthetic`/`syntheticRunId`); until that materialization step runs,
- * worlds contain zero synthetic characters and the coverage manifest honestly
- * reports actor-gated paths unreachable (see SYNTHETIC_UNSEEDED_REASON).
+ * network. The plan built here is materialized by the sim shell into sandbox
+ * `users`/`characters` docs (marked simulation-only via
+ * `isSynthetic`/`syntheticRunId`). Before that, worlds contain no synthetic
+ * characters and the coverage manifest reports actor-gated paths unreachable
+ * (see SYNTHETIC_UNSEEDED_REASON).
  *
  * Pure NPP autonomy remains the default: an omitted `--actors` flag parses to
- * `pure-npp`, which is byte-identical to every harness run before this mode
- * existed. This module never touches a live database — it only computes the
- * plan; insertion belongs to the sandbox-only shell in scripts/sim/runWorld.ts.
+ * `pure-npp`, byte-identical to runs before this mode existed. This module
+ * never touches a live database; insertion belongs to scripts/sim/runWorld.ts.
  */
 
 import {

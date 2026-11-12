@@ -1,0 +1,65 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "regionalBillAssentTitle": "Prefect",
+    "legislature": {
+      "name": "National Assembly",
+      "lowerChamber": {
+        "key": "qcAssembly",
+        "name": "National Assembly",
+        "shortName": "Assembly",
+        "seats": 125,
+        "description": "125 members elected across Quebec's regions, seats shared by each region's vote."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "Premier",
+        "labelPlural": "Premiers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "qcAssembly",
+        "label": "Member of the National Assembly",
+        "labelPlural": "Members of the National Assembly",
+        "chamberKey": "qcAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "governor",
+        "label": "Prefect",
+        "labelPlural": "Prefects",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "labelPlural": "Regional Councillors",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Canada",
+        "labelPlural": "Governors of the Bank of Canada",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": {
+      "snapElectionsAllowed": true
+    }
+  }
+}

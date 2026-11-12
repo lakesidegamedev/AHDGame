@@ -1,10 +1,14 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
-import type { Character, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import { createNPP } from "@/lib/npp/generator";
 import { getGameTime } from "@/lib/time/gameTime";
 import { DISCORD_COLORS, sendCountryGameEvent } from "@/lib/discordWebhooks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -14,7 +18,7 @@ export interface NominateJusticeParams {
   seatNumber: number;
   proposedByPresidentId: ObjectId;
   proposedByPresidentName: string;
-  /** Existing player character path (per #3598, no eligibility restriction). */
+  /** Existing player character path (no eligibility restriction). */
   nomineeCharacterId?: ObjectId;
   /**
    * Generated NPP "legal scholar" path (per #3598, no eligibility restriction).
@@ -40,15 +44,16 @@ export async function createJusticeNomination(
   db: Db,
   params: NominateJusticeParams
 ): Promise<NominateJusticeResult> {
-  const seat = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .findOne({ countryId: params.countryId, seatNumber: params.seatNumber });
+  const seat = await supremeCourtSeatsCollection(db).findOne({
+    countryId: params.countryId,
+    seatNumber: params.seatNumber,
+  });
   if (!seat) return { ok: false, error: "Unknown seat" };
   if (seat.justiceCharacterId || seat.justiceNppId || seat.justiceMode === "historical") {
     return { ok: false, error: "Seat is not vacant" };
   }
 
-  const existingActive = await db.collection<ScotusNomination>("scotusNominations").findOne({
+  const existingActive = await scotusNominationsCollection(db).findOne({
     countryId: params.countryId,
     seatNumber: params.seatNumber,
     status: "active",
@@ -66,9 +71,7 @@ export async function createJusticeNomination(
   let nomineeAvatarUrl: string | undefined;
 
   if (params.nomineeCharacterId) {
-    const nominee = await db
-      .collection<Character>("characters")
-      .findOne({ _id: params.nomineeCharacterId });
+    const nominee = await charactersCollection(db).findOne({ _id: params.nomineeCharacterId });
     if (!nominee) return { ok: false, error: "Nominee character not found" };
     if (nominee.countryId !== params.countryId) {
       return { ok: false, error: "Nominee must be a politician of this country" };
@@ -125,9 +128,10 @@ export async function createJusticeNomination(
     updatedAt: now,
   };
 
-  const result = await db
-    .collection<ScotusNomination>("scotusNominations")
-    .insertOne({ _id: new ObjectId(), ...nomination } as ScotusNomination);
+  const result = await scotusNominationsCollection(db).insertOne({
+    _id: new ObjectId(),
+    ...nomination,
+  } as ScotusNomination);
 
   sendCountryGameEvent("US", {
     title: "Supreme Court Nomination",
@@ -146,13 +150,13 @@ export async function loadNomineePersonalPositions(
   nomination: Pick<ScotusNomination, "nomineeMode" | "nomineeCharacterId" | "nomineeNppId">
 ): Promise<{ economic: number; social: number } | null> {
   if (nomination.nomineeMode === "character" && nomination.nomineeCharacterId) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: nomination.nomineeCharacterId });
+    const character = await charactersCollection(db).findOne({
+      _id: nomination.nomineeCharacterId,
+    });
     return character?.policies ?? null;
   }
   if (nomination.nomineeMode === "npp" && nomination.nomineeNppId) {
-    const npp = await db.collection<NPP>("npps").findOne({ _id: nomination.nomineeNppId });
+    const npp = await nppsCollection(db).findOne({ _id: nomination.nomineeNppId });
     return npp?.policies ?? null;
   }
   return null;

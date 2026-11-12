@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CollectiveAgreement } from "@/lib/db/types";
 import { clampWageLevel } from "@/lib/labour/laborCost";
 import { activeCollectiveAgreementFilter } from "./bargaining";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 export interface CollectiveAgreementEffects {
   wageFloorBySectorId: Map<string, number>;
@@ -16,8 +17,7 @@ export async function loadCollectiveAgreementEffects(
   db: Db,
   currentTurn: number
 ): Promise<CollectiveAgreementEffects> {
-  const agreements = await db
-    .collection<CollectiveAgreement>("collectiveAgreements")
+  const agreements = await collectiveAgreementsCollection(db)
     .find(
       {
         ...activeCollectiveAgreementFilter(currentTurn),

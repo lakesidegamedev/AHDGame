@@ -1,26 +1,18 @@
 import type { Db } from "mongodb";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { getRuRegionOrg, getRuPartyTreasury } from "@/lib/seeds/ru/ruStatePartyOrgCalculations";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
- * Soviet Union state party organization seeder (spec §5.1).
- *
- * The USSR is a single-party state — the Communist Party of the Soviet Union
- * (CPSU, sequentialId "1", seeded first) is the only party with regional
- * organization; there are no advisory minor parties (unlike CN's CPPCC
- * framework).
- *
- * `registration` mirrors `organization` per row — the swing-flow engine's
- * `regByParty` map is what gates §7.3.2 defense. Without seeded registration,
- * the CPSU would be 20%-peelable (newcomer baseline) under
- * `transferableShare` / `persuasionResistance`. The shared
- * `seedRegistrationLanes` pipeline only covers US / UK / JP / DE, so RU sets
- * `registration` inline here (the CN precedent).
- *
- * Era-specific org tables live in ruStatePartyOrgCalculations.ts — near-total
- * penetration in the RSFSR core, visibly weaker in the recently-annexed
- * western republics early on.
+ * USSR is single-party: CPSU (sequentialId "1") is the only party with
+ * regional organization. `registration` mirrors `organization` per row so the
+ * swing-flow engine's `regByParty` gates §7.3.2 defense; otherwise CPSU would be
+ * 20%-peelable. The shared `seedRegistrationLanes` pipeline only covers US / UK /
+ * JP / DE, so RU sets `registration` inline here (CN precedent).
+ * Era-specific org tables live in ruStatePartyOrgCalculations.ts.
  */
 
 const RU_REGION_IDS = [
@@ -49,13 +41,13 @@ export async function seedRuStatePartyOrg(
   log: (msg: string) => void,
   preset?: string
 ): Promise<void> {
-  const activePreset = preset ?? (await getGameStatePreset(db)) ?? "1953-default";
+  const activePreset = preset ?? (await getGameStatePreset(db));
+  if (activePreset == null) throw missingPresetEntry("(none)", "ru-state-party-org");
 
-  // The CPSU + USSR only exist in the Cold-War (1953/1979) eras — RU regions are
-  // era-gated the same way in bootstrapGameWorld, and the successor Russian
-  // Federation owns this landmass in 1991/2019. Without this guard the CPSU's
-  // regional org would seed for Soviet-era region ids that no longer exist,
-  // leaving orphaned communist rosters in a post-Soviet world (refs #3269).
+  // CPSU + USSR exist only in Cold-War (1953/1979) eras; RU regions are
+  // era-gated the same way in bootstrapGameWorld. Without this guard, the
+  // CPSU's regional org would seed for Soviet-era region ids that no longer
+  // exist, leaving orphaned communist rosters in a post-Soviet world.
   const { isEasternBlocEra } = await import("@/lib/seeds/presetSelector");
   if (!isEasternBlocEra(activePreset)) {
     log(
@@ -65,7 +57,7 @@ export async function seedRuStatePartyOrg(
   }
 
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "RU" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "RU" });
   }
 
   const regionOrg = getRuRegionOrg(activePreset);
@@ -100,13 +92,11 @@ export async function seedRuStatePartyOrg(
   let upserted = 0;
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    const result = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne(
-        { _id },
-        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    const result = await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
     if (result.upsertedCount > 0) upserted++;
   }
 

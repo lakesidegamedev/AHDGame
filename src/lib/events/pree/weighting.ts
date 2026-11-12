@@ -13,7 +13,8 @@ export function filterEligibleTemplates(
   characterCtx: CharacterEventContext,
   ledger: { perKindCooldowns: Record<string, number> } | null,
   currentTurn: number,
-  currentYear?: number
+  currentYear?: number,
+  options: { ignoreKindCooldown?: boolean; unboundedOnly?: boolean } = {}
 ): WeightedEventTemplate[] {
   const eligible: WeightedEventTemplate[] = [];
 
@@ -39,6 +40,9 @@ export function filterEligibleTemplates(
     if (!isWithinYearWindow(definition, currentYear)) {
       continue;
     }
+    if (options.unboundedOnly && (definition.minYear != null || definition.maxYear != null)) {
+      continue;
+    }
     if (!matchesEligibility(characterCtx, definition.eligibility)) {
       continue;
     }
@@ -51,7 +55,10 @@ export function filterEligibleTemplates(
     ) {
       continue;
     }
-    if (!isPerKindCooldownSatisfied(ledger, definition.kind, currentTurn)) {
+    if (
+      !options.ignoreKindCooldown &&
+      !isPerKindCooldownSatisfied(ledger, definition.kind, currentTurn)
+    ) {
       continue;
     }
     eligible.push({ definition, weight: definition.baseWeight });

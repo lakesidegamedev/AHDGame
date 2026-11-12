@@ -5,6 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   userId: z.string().min(1),
@@ -24,9 +25,9 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const character = await db
-      .collection("characters")
-      .findOne({ userId: new ObjectId(parsed.data.userId) });
+    const character = await charactersCollection(db).findOne({
+      userId: new ObjectId(parsed.data.userId),
+    });
 
     if (!character) {
       return errorResponse(404, "No character found for this user");
@@ -35,12 +36,10 @@ export async function POST(request: Request) {
     // Clear BOTH the legacy Date and the turn-first field; the relocation
     // cooldown check is turn-first, so leaving lastRelocatedTurn would keep the
     // cooldown active even after a "reset".
-    const result = await db
-      .collection("characters")
-      .updateOne(
-        { _id: character._id },
-        { $unset: { lastRelocatedAt: "", lastRelocatedTurn: "" } }
-      );
+    const result = await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $unset: { lastRelocatedAt: "", lastRelocatedTurn: "" } }
+    );
 
     if (result.modifiedCount === 0) {
       return NextResponse.json({ message: "No movement cooldown was active" });

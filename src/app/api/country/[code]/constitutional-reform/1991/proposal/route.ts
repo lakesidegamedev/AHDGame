@@ -20,6 +20,9 @@ import {
   loadBg1991AssemblyDissolutionDecision,
   openBg1991AssemblyDissolution,
 } from "@/lib/countries/bg/assemblyDissolution1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 const bodySchema = z
   .object({
@@ -38,7 +41,7 @@ type Context = { params: Promise<{ code: string }> };
 
 export async function GET(_request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "BG")
+    if (!countryHasFeature("bgApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Bulgarian constitutional decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -63,7 +66,7 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function POST(request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "BG")
+    if (!countryHasFeature("bgApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Bulgarian constitutional decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -77,7 +80,7 @@ export async function POST(request: Request, { params }: Context) {
       return errorResponse(409, "No electoral decision in this era");
     const character = await getCharacterByUserId(db, auth.user.userId);
     const official = character
-      ? await db.collection("electedOfficials").findOne(
+      ? await electedOfficialsCollection<Document>(db).findOne(
           {
             characterId: character._id,
             countryId: "BG",

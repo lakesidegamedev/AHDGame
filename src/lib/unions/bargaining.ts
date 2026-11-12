@@ -520,11 +520,8 @@ export interface BargainingMediationOptions {
    *
    * The delay exists so a party cannot table an offer and instantly demand a
    * mediator; it is not a statement that a dispute is unmediatable while young.
-   * A government intervening in a nationwide strike is exactly the case the
-   * delay was not written for, and applying it there made the crisis's
-   * mediation option inert (#127). Every other gate still applies: the dispute
-   * must be real, unmediated, legally permitted, and carry an offer from both
-   * sides.
+   * Every other gate still applies: the dispute must be real, unmediated,
+   * legally permitted, and carry an offer from both sides.
    */
   governmentIntervention?: boolean;
 }
@@ -781,19 +778,12 @@ export function disputeLapseTurn(
 }
 
 /**
- * The one definition of "this agreement is in force right now", in the two
- * shapes callers need: a predicate for rows already in memory, and a Mongo
- * filter for the ones that have to select in the database.
+ * Single definition of "agreement is in force right now", for both the
+ * in-memory predicate and the Mongo filter. Consolidates six prior copies so
+ * wage floors and no-strike terms cannot diverge across sites.
  *
- * There were six copies of this rule before, five of them written out inline.
- * They all AGREED, so this is not a bug fix; it is removing the opportunity for
- * the seventh one to disagree. A wage floor or a no-strike term applied on a
- * turn boundary one site reads differently from another is the kind of defect
- * that shows up as an employer being fined for a strike the agreement permitted.
- *
- * Note the asymmetry, which is deliberate and easy to get wrong when copying:
- * the start is INCLUSIVE and the expiry is EXCLUSIVE, so an agreement running
- * to turn 100 is not in force on turn 100.
+ * Note: start is INCLUSIVE, expiry is EXCLUSIVE, so an agreement running to
+ * turn 100 is not in force on turn 100.
  */
 export function activeCollectiveAgreementFilter(currentTurn: number): {
   status: "active";

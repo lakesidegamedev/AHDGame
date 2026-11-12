@@ -15,6 +15,11 @@ import {
 import { getExecutiveSurface } from "@/lib/constants/executiveSurface";
 import type { Bill, GovernorExecutiveOrder } from "@/lib/db/types";
 import type { CabinetMember, CabinetNomination } from "@/lib/db/types/cabinet";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import type { Document } from "mongodb";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 const LEDGER_BILL_STATUSES = [
   "signed",
@@ -38,10 +43,7 @@ function humanizePositionId(positionId: string): string {
 async function loadExecutiveActInputs(db: Db, countryId: CountryId): Promise<ExecutiveActInputs> {
   const nationalStateId = NATIONAL_POLICY_STATE_IDS[countryId];
   const [bills, orders, nominations, cabinetMembers, types] = await Promise.all([
-    db
-      // Untyped: the country-scope filter is a dynamic query shape (same
-      // pattern as overview-counts); row typing comes from .project<> below.
-      .collection("bills")
+    billsCollection<Document>(db)
       .find({
         ...buildNationalBillCountryScopeFilter(countryId),
         status: { $in: LEDGER_BILL_STATUSES },
@@ -70,20 +72,13 @@ async function loadExecutiveActInputs(db: Db, countryId: CountryId): Promise<Exe
       .sort({ proposedAt: -1 })
       .limit(40)
       .toArray(),
-    db
-      .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+    governorExecutiveOrdersCollection(db)
       .find({ countryId, stateId: nationalStateId })
       .sort({ createdAt: -1 })
       .limit(14)
       .toArray(),
-    db
-      .collection<CabinetNomination>("cabinetNominations")
-      .find({ countryId })
-      .sort({ _id: -1 })
-      .limit(14)
-      .toArray(),
-    db
-      .collection<CabinetMember>("cabinetMembers")
+    cabinetNominationsCollection(db).find({ countryId }).sort({ _id: -1 }).limit(14).toArray(),
+    cabinetMembersCollection(db)
       .find({ countryId })
       // By _id rather than confirmedAt: acting holders have no confirmedAt, and
       // a descending sort on a missing field would push every acting
@@ -158,7 +153,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         ? inputs.bills.filter(
             (bill) => bill.status === "enrolled" || bill.status === "cabinet_review"
           ).length
-        : await db.collection("governorExecutiveOrders").countDocuments({
+        : await governorExecutiveOrdersCollection<Document>(db).countDocuments({
             countryId,
             stateId: NATIONAL_POLICY_STATE_IDS[countryId],
             status: "active",

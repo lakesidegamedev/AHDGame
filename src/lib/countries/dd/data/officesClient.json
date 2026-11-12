@@ -1,0 +1,79 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Volkskammer",
+      "lowerChamber": {
+        "key": "volkskammer",
+        "name": "People's Chamber",
+        "shortName": "Volkskammer",
+        "seats": 500,
+        "description": "500 deputies of the Volkskammer elected on the single National Front list, led by the ruling SED."
+      },
+      "upperChamber": {
+        "key": "staatsrat",
+        "name": "Council of State",
+        "shortName": "Staatsrat",
+        "seats": 25,
+        "description": "The Staatsrat - a collective head of state exercising standing authority between Volkskammer sessions.",
+        "elected": false
+      }
+    },
+    "subNationalChamber": {
+      "key": "landAssembly",
+      "name": "Landtag",
+      "shortName": "Landtag",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "labelPlural": "General Secretaries",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "chairmanOfStateCouncil",
+        "label": "Chairman of the Council of State",
+        "labelPlural": "Chairmen of the Council of State",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "volkskammerDeputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "volkskammer",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "landAssembly",
+        "label": "Landtag Deputy",
+        "labelPlural": "Landtag Deputies",
+        "chamberKey": "landAssembly",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "governor",
+        "label": "Land First Secretary",
+        "labelPlural": "Land First Secretaries",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "President of the Staatsbank",
+        "labelPlural": "Presidents of the Staatsbank",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "regionalAssentOfficeKey": "governor"
+}

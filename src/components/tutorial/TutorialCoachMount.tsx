@@ -25,18 +25,13 @@ const TutorialWelcome = dynamic(
 );
 
 /**
- * Mounts the tutorial surfaces for the signed-in character.
- *
- * Two things live here because they share one fetch and one piece of state:
- *  - the welcome flow, shown to a freshly created character who has not chosen
- *    a plan yet (or to anyone who asks for it from /tutorial), and
- *  - the spotlight coach, which runs the plan.
- *
- * Renders nothing for logged-out users and accounts without a character. The
- * coach auto-starts only for a character created inside the fresh window, so
- * existing players are never surprised by the tour; they can replay it from the
- * tutorial page. The coach's own localStorage done key still guarantees it
- * shows once.
+ * Mounts the tutorial surfaces for the signed-in character: the welcome flow
+ * (fresh character without a plan, or requested from /tutorial) and the
+ * spotlight coach that runs the plan. Both share one fetch and one state.
+ * Renders nothing for logged-out users or accounts without a character. The
+ * coach auto-starts only for a character created inside the fresh window so
+ * existing players are not surprised; the localStorage done key still
+ * guarantees it shows once.
  */
 
 const FRESH_WINDOW_MS = 24 * 60 * 60 * 1000;

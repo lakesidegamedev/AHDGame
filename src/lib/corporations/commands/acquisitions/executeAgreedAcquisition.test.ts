@@ -255,6 +255,22 @@ describe("executeAgreedAcquisition", () => {
     ).toBe(0);
   });
 
+  it("hands the target's live extraction contracts to the acquirer", async () => {
+    const w = buildAcquisitionWorld({ extractionContracts: true });
+    const r = await executeAgreedAcquisition({
+      db: w.db,
+      offer: w.offer as never,
+      currentTurn: 200,
+    });
+    expect(r.ok).toBe(true);
+    const contracts = w.memory.collection("extractionContracts");
+    expect(await contracts.countDocuments({ corporationId: w.acq })).toBe(1);
+    expect(await contracts.countDocuments({ corporationId: w.tgt })).toBe(1);
+    expect(
+      await contracts.countDocuments({ corporationId: w.tgt, revokedTurn: { $exists: true } })
+    ).toBe(1);
+  });
+
   it("blocks acquiring a banked target when the acquirer already operates a bank", async () => {
     const w = buildAcquisitionWorld({ charter: true, acquirerCharter: true });
     const r = await executeAgreedAcquisition({

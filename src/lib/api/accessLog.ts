@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { clientIpFromRequest } from "@/lib/utils/network";
+import { apiAccessLogCollection } from "@/lib/db/repositories/apiAccessLog";
 
 /**
  * One row in the `apiAccessLog` collection. This is Phase-1 instrumentation:
@@ -65,7 +66,7 @@ export function logApiAccess(
   void (async () => {
     try {
       const db = await getDb();
-      await db.collection<ApiAccessLogEntry>("apiAccessLog").insertOne(entry);
+      await apiAccessLogCollection<ApiAccessLogEntry>(db).insertOne(entry);
     } catch {
       // Intentionally swallow: instrumentation must never break a request.
     }

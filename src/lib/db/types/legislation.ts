@@ -70,22 +70,6 @@ export type BillStatus =
  */
 export type BillChamber = "house" | "senate" | "joint" | (string & {});
 
-export interface BillVoteTally {
-  votesFor: number;
-  votesAgainst: number;
-  votesAbstain: number;
-  votes: Record<string, "for" | "against" | "abstain">;
-  votingStartedAt?: Date;
-  votingEndsAt?: Date;
-  /**
-   * Game-clock turn on which voting closes. Server-side resolution checks
-   * `currentTurn >= votingEndsOnTurn` rather than comparing dates, so the
-   * deadline doesn't drift with real-clock vs game-clock divergence.
-   * Optional during the transition; new bills set both.
-   */
-  votingEndsOnTurn?: number;
-}
-
 export interface PolicyProvision {
   type?: "policy"; // optional for backwards compat with existing docs
   legislationTypeId: string;
@@ -304,7 +288,7 @@ export interface UnionLawProvision {
   /** -50 (strong right-to-work) .. +50 (strong collective-bargaining protection). */
   bias: number;
   /**
-   * Union ban (player suggestion #93). When present, this provision is a BAN
+   * Union ban. When present, this provision is a BAN
    * action rather than a bias law: `"ban"` outlaws unions nationally
    * (`FederalBudget.unionsBanned = true`, player unions suspended, NPC
    * unionization decays to 0), `"repeal_ban"` lifts it. A ban provision
@@ -518,7 +502,7 @@ export interface Bill {
   /** Optional pseudo-state for country-scoped national bills (e.g. "uk_national"). */
   stateId?: string;
   /**
-   * Set on the UK annual Budget's vote-vehicle bill (epic #856): links this bill
+   * Set on the UK annual Budget's vote-vehicle bill: links this bill
    * to the UKBudget for that fiscal year. When such a bill resolves, the UK
    * notifier applies the outcome to the budget (defeat → budgetDefeat confidence
    * hit). The budget's tax/spend content lives in the UKBudget doc, not here.
@@ -581,12 +565,12 @@ export interface Bill {
   overrideVotingEndsOnTurn?: number;
   overrideEnactedAt?: Date;
   overrideFailedAt?: Date;
-  /** Frozen origin-chamber result, set when the bill leaves `active` (#0982). */
+  /** Frozen origin-chamber result, set when the bill leaves `active`. */
   voteSnapshot?: BillVoteSnapshot;
-  /** Frozen second-chamber result, set when the bill leaves `active_other` (#0982). */
+  /** Frozen second-chamber result, set when the bill leaves `active_other`. */
   otherChamberVoteSnapshot?: BillVoteSnapshot;
   /**
-   * Frozen per-chamber veto-override display, set when the override resolves (#0982).
+   * Frozen per-chamber veto-override display, set when the override resolves.
    * Structurally an `OverrideChamberDisplay` (inlined to avoid a db/types ↔ congress
    * import cycle).
    */
@@ -667,12 +651,22 @@ export interface Bill {
    *  crisis-aid bills (category "foreign policy", no provisions) for the
    *  per-turn resolution sweep. */
   crisisAidId?: ObjectId;
+  /** Set on fast-track bills a legislature lever raises against a Crisis v2
+   *  crisis. The per-turn sweep records the lever use or the inaction once the
+   *  bill resolves. */
+  crisisEmergency?: {
+    crisisId: ObjectId;
+    leverId: string;
+    holderId: ObjectId;
+    /** Turn the sweep recorded the outcome; absent while unrecorded. */
+    recordedTurn?: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
 
 /** Tariff targeting scope — only applicable to tariff legislation */
-export interface TariffScope {
+interface TariffScope {
   type: "universal" | "per_country" | "per_category";
   /** Target country code when type is "per_country" */
   targetCountry?: string;
@@ -680,9 +674,9 @@ export interface TariffScope {
   targetCategory?: string;
 }
 
-export type EffectScope = "national" | "state";
+type EffectScope = "national" | "state";
 
-export interface LegislationEffectTarget {
+interface LegislationEffectTarget {
   metricCategoryId: MetricCategoryId;
   metricId: string;
   scope: EffectScope;
@@ -734,6 +728,9 @@ export interface LegislationTypePosition {
     | "congresoDiputados"
     | "senado" // ES Cortes chambers (added with 1979 Spain)
     | "riksdag" // SE Riksdag (unicameral; added with 1979 Sweden)
+    | "caCommons" // CA House of Commons
+    | "caSenate" // CA Senate (appointed)
+    | "qcAssembly" // QC National Assembly (successor country)
     | "milletMeclisi"
     | "senato" // TR parliament chambers (added with 1979 Turkey)
     | "volkskammer" // DD Volkskammer (one-party; added with 1979 GDR)
@@ -848,15 +845,12 @@ export interface LegislationPolicyOption {
   economic: number;
   social: number;
   rate?: number; // Tax rate percentage for tax legislation
-  /** @deprecated Use archetypeApprovals instead */
-  groupApprovals?: Record<string, number>; // Old demographic groups (college, urban, etc.)
   /**
-   * Per-group approval impacts (-100 to +100), keyed on Layer-1 census BUCKETS
-   * (`"education:no_college"`). Applied when voting on bills with this policy.
-   * Legacy voter-archetype keys still resolve — see
-   * `Character.archetypeApprovals` for why and for how long.
+   * Per-bucket approval impacts (-100 to +100), keyed "dim:bucket" in the
+   * Layer-1 census vocabulary (`"education:no_college"`). Applied when voting
+   * on bills with this policy.
    */
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   /** Direct per-turn metric effects when this option is the active policy */
   metricEffects?: PolicyOptionMetricEffect[];
   /** Department delivery metadata. Absent options remain on the legacy effect path. */
@@ -911,8 +905,6 @@ export interface EffectTargetWeighted {
  * - "population": group population share (legacy channel, always active).
  * - "economicLean" / "socialLean": group lean on the shared −5..+5 axis.
  * - "turnout": group turnout percentage (0-100).
- * Lean/turnout targets only apply when the `legislationDemographicEffectsV2Enabled`
- * game-state flag is on (fail-closed: absent flag = population channel only).
  */
 export type DemographicEffectTarget = "population" | "economicLean" | "socialLean" | "turnout";
 
@@ -962,44 +954,29 @@ export interface DemographicEffect {
   magnitude?: number;
   /**
    * Designer marker for a LANDMARK effect: while `true` (for
-   * `target: "economicLean" | "socialLean" | "turnout"` — still ignored for
-   * `"population"`, the always-on legacy channel that has no durable/temporary
-   * distinction to make), this entry's per-turn shift durably relocates the
-   * group's base value via the shared durable-relocation mechanism
-   * (`src/lib/demographics/durableRealignment.ts` — the SAME one era
-   * checkpoints and the SCOTUS demographic-signal consumer use): it is not
-   * capped by `LEAN_MAX_DEVIATION_FROM_BASELINE` / `TURNOUT_MAX_DEVIATION_FROM_BASELINE`,
-   * it does NOT decay back toward baseline once the law lapses or is repealed,
-   * and it is visible to the granular vote path — via
-   * `demographicDefaults.layer1PositionOverrides` for the lean axes, or
-   * `demographicDefaults.layer1TurnoutOverrides` for turnout (see that type's
-   * doc comment in `src/lib/db/types/demographics.ts` for why turnout needed
-   * its OWN overlay rather than reusing the lean one: it is a single bounded
-   * 0-100 percentage, not a signed two-axis lean, and the legacy engine
-   * ignores `groups[id].turnout` drift for any state with a Layer-1 census,
-   * so the archetype-level write alone would have been invisible again — not
-   * just the legacy one).
+   * `target: "economicLean" | "socialLean" | "turnout"`; still ignored for
+   * `"population"`), the per-turn shift durably relocates the group's base
+   * value via the shared durable-relocation mechanism
+   * (`src/lib/demographics/durableRealignment.ts`, the same one era checkpoints
+   * and the SCOTUS demographic-signal consumer use): it is not capped by
+   * `LEAN_MAX_DEVIATION_FROM_BASELINE` / `TURNOUT_MAX_DEVIATION_FROM_BASELINE`,
+   * it does not decay back toward baseline once the law lapses or is repealed,
+   * and it is visible to the granular vote path via
+   * `demographicDefaults.layer1PositionOverrides` (lean axes) or
+   * `layer1TurnoutOverrides` (turnout). Turnout has its own overlay because it
+   * is a bounded single 0-100 percentage, not a signed two-axis lean, and the
+   * legacy engine ignores `groups[id].turnout` drift for any state with a
+   * Layer-1 census.
    *
-   * Absent/false (the default — leave this unset for ordinary bills) keeps
-   * the existing TEMPORARY behavior: a capped, decaying overlay on top of the
-   * seeded baseline (`applyBandedShift` / `applyBaselineDecay` in
-   * `demographicEffects.ts`) — correct for a tax tweak or a routine
-   * regulation, which should NOT permanently redefine an electorate.
+   * Absent/false (the default) keeps the existing TEMPORARY behavior: a capped,
+   * decaying overlay on top of the seeded baseline (`applyBandedShift` /
+   * `applyBaselineDecay` in `demographicEffects.ts`) for ordinary bills.
    *
    * Reserve `permanent: true` for legislation whose real-world consequence
-   * was to durably change who the electorate IS — landmark, rarely-repealed
-   * civil-rights/enfranchisement-scale acts (the Civil Rights Act's lean
-   * consolidation; the Voting Rights Act's `target: "turnout"` enfranchisement
-   * effect — voters who could not previously cast a ballot at all, not voters
-   * who changed their politics — is the project's worked example for the
-   * turnout channel specifically) — the same bar the era checkpoint's
-   * `SOUTHERN_REALIGNMENT_CHECKPOINT` targets. It is still "gravity, not
-   * rails": an opposing durable or temporary effect targeting the same
-   * group+axis nets against it every turn it is active (the existing
-   * per-target sum in `calculateDemographicShiftsByTarget`), so a durable
-   * shift — including a turnout enfranchisement effect against a sustained
-   * voter-suppression counter-effort — remains beatable by sustained
-   * counter-legislation.
+   * durably changed who the electorate IS (civil-rights/enfranchisement-scale
+   * acts). It is still "gravity, not rails": opposing durable or temporary
+   * effects on the same group+axis net against it every active turn, so a
+   * durable shift remains beatable by sustained counter-legislation.
    */
   permanent?: boolean;
 }
@@ -1113,7 +1090,9 @@ export interface LegislationType {
     | "fi"
     | "dd"
     | "sco"
-    | "wls";
+    | "wls"
+    | "ca"
+    | "qc";
 
   /**
    * Political-legislation v2 (spec §6): the typed law's metric targets,

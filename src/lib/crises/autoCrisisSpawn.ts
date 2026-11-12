@@ -13,11 +13,7 @@ import {
   setArmed,
   stampCooldown,
 } from "./autoCrisisCooldown";
-import {
-  DEFAULT_DISASTER_COOLDOWN_TURNS,
-  MAX_AUTO_CRISES_PER_TURN,
-  deterministicRoll,
-} from "./autoCrisisConstants";
+import { DEFAULT_DISASTER_COOLDOWN_TURNS, deterministicRoll } from "./autoCrisisConstants";
 import {
   loadNationalSnapshot,
   evaluateCondition,
@@ -32,6 +28,11 @@ import { refreshVietnamEscalationLevel } from "./vietnamEscalationInterface";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./marketAdjustment/template";
 import { marketAdjustmentEnabled, recordLossShares } from "./marketAdjustment/signals";
 import { syncWorldHeadline } from "./marketAdjustment/worldHeadline";
+import { createSpawnDirector, directorScopeFor } from "./spawnDirector";
+import { legacyDefinitionId } from "./v2/legacyConvert";
+import { SPAWN_PRIORITY } from "./v2/spawnBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /** Serializable description of an auto-spawnable template, for the admin tab. */
 export interface AutoCrisisCatalogEntry {
@@ -100,7 +101,7 @@ export function getAutoCrisisCatalog(): AutoCrisisCatalogEntry[] {
 }
 
 /** Country gating from a template's geo (allow-list minus deny-list). */
-function countryAllowed(template: CrisisTemplate, countryId: CountryId): boolean {
+export function countryAllowed(template: CrisisTemplate, countryId: CountryId): boolean {
   const geo = template.geo;
   if (!geo) return true;
   if (geo.countries && !geo.countries.includes(countryId)) return false;
@@ -127,7 +128,7 @@ export async function processAutoCrisisSpawn(
   );
   if (autoTemplates.length === 0) return { spawned: 0 };
 
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   // The era gate resolves against the LIVE year, not the seed preset — a
   // preset never changes, so a preset-keyed gate is permanent.
   const currentYear = gs?.currentYear;
@@ -143,6 +144,24 @@ export async function processAutoCrisisSpawn(
   // simulating, including countries deliberately closed to players.
   const countryIds = await getSimulatedCountryIds(db);
   const cooldowns = await loadCooldownMap(db);
+  // The director budgets concurrent load by scope and country, counting
+  // active crises and living conflicts together. Opportunities carry no load.
+  const director = await createSpawnDirector(db, currentTurn, new Set<string>(countryIds));
+  const admitted = (
+    key: string,
+    template: CrisisTemplate,
+    scope: CrisisTemplate["scope"],
+    countryIdsFor: string[],
+    tier: keyof typeof SPAWN_PRIORITY
+  ) =>
+    template.opportunity === true ||
+    director.allow({
+      key: `${key}:${countryIdsFor.join(",") || GLOBAL_SCOPE_KEY}`,
+      definitionId: legacyDefinitionId(key),
+      scope: directorScopeFor(scope),
+      countryIds: countryIdsFor,
+      priority: SPAWN_PRIORITY[tier],
+    });
   // Market Adjustment is dark until its stage is set: no signal is recorded and
   // the template is skipped below.
   const marketAdjustmentOn = await marketAdjustmentEnabled(db);
@@ -165,13 +184,11 @@ export async function processAutoCrisisSpawn(
   // Condition (national) tier first — metric-driven crises take priority over
   // the random tier when the per-turn cap is tight.
   for (const [key, template] of autoTemplates) {
-    if (spawned >= MAX_AUTO_CRISES_PER_TURN) break;
     const trig = template.autoTrigger!;
     if (trig.kind !== "condition") continue;
     if (key === MARKET_ADJUSTMENT_TEMPLATE_KEY && !marketAdjustmentOn) continue;
     if (!isTemplateAllowedInYear(template, currentYear)) continue;
     for (const countryId of countryIds) {
-      if (spawned >= MAX_AUTO_CRISES_PER_TURN) break;
       if (!countryAllowed(template, countryId)) continue;
       const s = await snap(countryId);
       // Hysteresis latch. A condition crisis disarms itself on spawn and only
@@ -189,8 +206,12 @@ export async function processAutoCrisisSpawn(
       }
       if (isOnCooldown(cooldowns, key, countryId, currentTurn, trig.cooldownTurns)) continue;
       if (!evaluateCondition(trig.condition, s)) continue;
+      // Refused, not dropped: the template stays armed and off cooldown, so it
+      // fires on the first turn the condition still holds and the budget fits.
+      if (!admitted(key, template, "country", [countryId], "condition")) continue;
       await createCrisisFromTemplate(db, {
         template,
+        templateKey: key,
         scope: "country",
         countryIds: [countryId],
         regionIds: [],
@@ -204,7 +225,6 @@ export async function processAutoCrisisSpawn(
 
   // Random tier (national + global).
   for (const [key, template] of autoTemplates) {
-    if (spawned >= MAX_AUTO_CRISES_PER_TURN) break;
     const trig = template.autoTrigger!;
     if (trig.kind !== "random") continue;
     if (!isTemplateAllowedInYear(template, currentYear)) continue;
@@ -213,8 +233,10 @@ export async function processAutoCrisisSpawn(
       if (isOnCooldown(cooldowns, key, GLOBAL_SCOPE_KEY, currentTurn, trig.cooldownTurns)) continue;
       if (deterministicRoll(currentTurn, key, GLOBAL_SCOPE_KEY) >= trig.spawnChance * crisisMult)
         continue;
+      if (!admitted(key, template, "global", [], "random")) continue;
       await createCrisisFromTemplate(db, {
         template,
+        templateKey: key,
         scope: "global",
         countryIds: [],
         regionIds: [],
@@ -227,12 +249,13 @@ export async function processAutoCrisisSpawn(
     }
 
     for (const countryId of countryIds) {
-      if (spawned >= MAX_AUTO_CRISES_PER_TURN) break;
       if (!countryAllowed(template, countryId)) continue;
       if (isOnCooldown(cooldowns, key, countryId, currentTurn, trig.cooldownTurns)) continue;
       if (deterministicRoll(currentTurn, key, countryId) >= trig.spawnChance * crisisMult) continue;
+      if (!admitted(key, template, "country", [countryId], "random")) continue;
       await createCrisisFromTemplate(db, {
         template,
+        templateKey: key,
         scope: "country",
         countryIds: [countryId],
         regionIds: [],
@@ -270,8 +293,7 @@ export async function forceSpawnCrisis(
   // Regional disaster.
   if (template.naturalDisaster) {
     if (!countryId) return { ok: false, error: "countryId required for a regional disaster" };
-    const regions = await db
-      .collection<State>("states")
+    const regions = await statesCollection(db)
       .find({ countryId, regionType: { $nin: [null, "nation", "constituency"] } } as never)
       .toArray();
     if (regions.length === 0) return { ok: false, error: "No regions for country" };
@@ -280,6 +302,7 @@ export async function forceSpawnCrisis(
     const region = (valid.length > 0 ? valid : regions)[0];
     const crisisId = await createCrisisFromTemplate(db, {
       template,
+      templateKey,
       scope: "region",
       countryIds: [countryId],
       regionIds: [region._id],
@@ -298,6 +321,7 @@ export async function forceSpawnCrisis(
   if (isGlobal) {
     const crisisId = await createCrisisFromTemplate(db, {
       template,
+      templateKey,
       scope: "global",
       countryIds: [],
       regionIds: [],
@@ -311,6 +335,7 @@ export async function forceSpawnCrisis(
   if (!countryId) return { ok: false, error: "countryId required for a national crisis" };
   const crisisId = await createCrisisFromTemplate(db, {
     template,
+    templateKey,
     scope: "country",
     countryIds: [countryId],
     regionIds: [],

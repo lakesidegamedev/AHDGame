@@ -1,35 +1,36 @@
 /**
- * SCOTUS Tenure Turn (#3598).
+ * SCOTUS Tenure Turn.
  *
  * Two independent clocks, one per seat state:
  *
  *  - Original Roster seats (`isDivergent === false`): the justice seated at
- *    the preset's start leaves on their authored historical date. That opens
- *    a real vacancy for the in-game President and Senate. Later historical
+ *    the preset's start leaves on their authored historical date, opening a
+ *    real vacancy for the in-game President and Senate. Later historical
  *    occupants are reference data only; the game must never appoint them
- *    automatically over the players' constitutional choice (ticket #1289).
+ *    automatically over the players' constitutional choice.
  *
  *  - Divergent seats (`isDivergent === true`): flat per-turn hazard clock
  *    (`rollDivergentDeparture`), age-agnostic, uncapped on the high end.
  *    Applies to player-held seats as well as generated NPPs; otherwise a
- *    confirmed player stays on the Court forever (ticket #1135). The
- *    occupant and president are notified when the seat opens, and the UI
- *    shows the death chance while they sit.
+ *    confirmed player stays on the Court forever. The occupant and president
+ *    are notified when the seat opens, and the UI shows the death chance.
  */
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { yearToTurn } from "@/lib/scotus/turnConversion";
-import { calendarTurn } from "@/lib/utils/gameDate";
-import { rollDivergentDeparture } from "@/lib/scotus/tenure";
+import { calendarTurn, yearOfTurn } from "@/lib/utils/gameDate";
+import { rollDivergentDeparture, rollOpenEndedHistoricalDeparture } from "@/lib/scotus/tenure";
 import { generateScotusVacancyNews } from "@/lib/scotus/scotusNews";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { awardAchievement } from "@/lib/achievements";
 import { SCOTUS_DIED_IN_OFFICE_SLUG } from "@/lib/scotus/achievementDefinitions";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 export interface ScotusTenureTurnResult {
   seatsAdvanced: number;
@@ -73,12 +74,10 @@ async function vacateSeatIfStillOccupied(
   seat: SupremeCourtSeat,
   now: Date
 ): Promise<boolean> {
-  const result = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .updateOne(
-      { _id: seat._id, justiceMode: seat.justiceMode },
-      { $set: vacatedOccupantFields(now) }
-    );
+  const result = await supremeCourtSeatsCollection(db).updateOne(
+    { _id: seat._id, justiceMode: seat.justiceMode },
+    { $set: vacatedOccupantFields(now) }
+  );
   return (result?.modifiedCount ?? 0) > 0;
 }
 
@@ -93,9 +92,9 @@ async function notifySeatVacated(
     const justiceLabel = seat.justiceName?.trim() || "A justice";
 
     if (seat.justiceCharacterId) {
-      const occupant = await db
-        .collection<Character>("characters")
-        .findOne({ _id: seat.justiceCharacterId }, { projection: { userId: 1 } });
+      const occupant = await (
+        await getCharactersCollection(db)
+      ).findOne({ _id: seat.justiceCharacterId }, { projection: { userId: 1 } });
       if (occupant?.userId) {
         if (cause === "death") {
           await awardAchievement(
@@ -122,15 +121,17 @@ async function notifySeatVacated(
       }
     }
 
-    const presidentOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const presidentOfficial = await (
+      await getElectedOfficialsCollection(db)
+    ).findOne({
       countryId: seat.countryId,
       officeType: "president",
       characterId: { $ne: null },
     });
     if (presidentOfficial?.characterId) {
-      const presidentChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: presidentOfficial.characterId }, { projection: { userId: 1 } });
+      const presidentChar = await (
+        await getCharactersCollection(db)
+      ).findOne({ _id: presidentOfficial.characterId }, { projection: { userId: 1 } });
       if (presidentChar?.userId && !notifiedUserIds.has(presidentChar.userId.toString())) {
         const left =
           cause === "death"
@@ -170,19 +171,16 @@ export async function processScotusTenureTurn(
   const gameState = await getGameState();
   const startingYear =
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
-  // Scripted departures are CALENDAR dates, so they resolve against the calendar
-  // turn — a founding phase shifts the raw turn a full game year ahead of the
-  // year the player sees (#1208). The divergent-seat hazard below stays on the
-  // raw turn: it measures turns SERVED, a duration, not a date.
+  // Scripted departures are CALENDAR dates, so they resolve against the
+  // calendar turn: a founding phase shifts raw turns ahead of the year the
+  // player sees. The divergent-seat hazard below stays on the raw turn,
+  // since it measures turns SERVED, not a date.
   const calTurn = calendarTurn(currentTurn, {
     preIterationActive: gameState?.preIteration?.active,
     preIterationTurns: gameState?.preIterationTurns,
   });
 
-  const seats = await database
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
-    .find({ countryId: "US" })
-    .toArray();
+  const seats = await supremeCourtSeatsCollection(database).find({ countryId: "US" }).toArray();
 
   const seatsAdvanced = 0;
   let seatsVacatedByHistory = 0;
@@ -212,7 +210,23 @@ export async function processScotusTenureTurn(
       if (seat.justiceMode !== "historical") continue;
 
       const occupant = seat.historicalOccupants[seat.historicalOccupantIndex];
-      if (!occupant || occupant.departureYear == null) continue; // still serving to "present"
+      if (!occupant) continue;
+      if (occupant.departureYear == null) {
+        // Open-ended seeded justice: serves until the authored record ends,
+        // then leaves on the same hazard as a Divergent Justice.
+        const calendarYear = yearOfTurn(currentTurn, startingYear, {
+          preIterationActive: gameState?.preIteration?.active,
+          preIterationTurns: gameState?.preIterationTurns,
+        });
+        if (
+          rollOpenEndedHistoricalDeparture(calendarYear, Math.random()) &&
+          (await vacateSeatIfStillOccupied(database, seat, now))
+        ) {
+          seatsVacatedByHazard++;
+          await notifySeatVacated(database, seat, notifications, "death");
+        }
+        continue;
+      }
 
       const departureTurn = yearToTurn(occupant.departureYear, startingYear);
       if (calTurn < departureTurn) continue;

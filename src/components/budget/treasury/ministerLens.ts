@@ -117,9 +117,7 @@ export const MINISTER_SPENDING_DRIFT_PP = 1.4;
 
 /**
  * One-line statement of the assumptions behind the next-FY projection, so the
- * card answers "why" instead of just "what" (ticket #1272: a minister running
- * a small surplus could not tell why the card showed a 1B deficit and a 21pp
- * debt-ratio jump during a 9% GDP contraction).
+ * card answers "why" instead of just "what".
  */
 export function describeProjectionAssumptions(i: {
   gdpGrowth: number;

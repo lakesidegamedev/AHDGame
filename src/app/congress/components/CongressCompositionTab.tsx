@@ -8,13 +8,6 @@ import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { LEADER_BADGE_SHORT, getSenateClassLabel } from "./CongressConstants";
 import type { ChamberTab, SenateClassFilter, LeaderStrip } from "./CongressConstants";
 
-export type LeaderForBadge = {
-  role: string;
-  label: string;
-  chamber: "house" | "senate";
-  characterId: string | null;
-};
-
 function mapToCompositionData(
   data: CongressMembersResponse | null,
   countryId: CountryId

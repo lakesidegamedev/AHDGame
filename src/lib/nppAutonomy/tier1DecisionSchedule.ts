@@ -1,15 +1,14 @@
 /**
- * Tier-1 NPP strategic decision schedule (#3724).
+ * Tier-1 NPP strategic decision schedule.
  *
- * Economic accounting (sectors, budgets, contracts, markets) continues every
- * normal turn and is intentionally outside this module. Strategic decisions —
- * policy, appointment, sector-order, diplomacy, and sphere — share one
- * deterministic six-hour (= six-turn) bucket cadence so autonomous countries do
- * not all decide on the same turn.
+ * Economic accounting (sectors, budgets, contracts, markets) runs every normal
+ * turn and is outside this module. Strategic decisions (policy, appointment,
+ * sector-order, diplomacy, sphere) share one deterministic six-turn bucket
+ * cadence so autonomous countries do not all decide on the same turn.
  *
- * Scheduling uses only stable country identity and turn/cycle math — never
+ * Scheduling uses only stable country identity and turn/cycle math, never
  * wall-clock randomness. Callers persist `lastCompletedCycle` and claim the
- * slot before acting so a missed/restarted worker recovers without double-firing.
+ * slot before acting so a restarted worker recovers without double-firing.
  */
 
 /** One turn = one real hour; six buckets ⇒ six-hour decision cadence. */
@@ -30,8 +29,6 @@ export const TIER1_STRATEGIC_DECISION_KINDS = [
   "diplomacy",
   "sphere",
 ] as const;
-
-export type Tier1StrategicDecisionKind = (typeof TIER1_STRATEGIC_DECISION_KINDS)[number];
 
 export type Tier1DecisionSkipReason = "not-due" | "already-completed" | "player-controlled";
 

@@ -1,5 +1,8 @@
 import crypto from "crypto";
 import { getDb } from "@/lib/mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
 
 /** Scopes for user-facing API keys (distinct from bot keys). */
 export type UserApiScope = "public" | "private";
@@ -66,7 +69,7 @@ export async function requireUserApiKey(
   }
 
   const db = await getDb();
-  const keyDoc = await db.collection("userApiKeys").findOne({
+  const keyDoc = await userApiKeysCollection<Document>(db).findOne({
     tokenHash: hashToken(token),
     revokedAt: null,
     // Honor a rotation grace window: a key whose `revokeAt` is in the past is
@@ -90,9 +93,10 @@ export async function requireUserApiKey(
   // banned users on every request; without this check a banned player's key
   // kept working on the private-scope endpoints (transfers, forex) forever,
   // since banning never touched this collection.
-  const owner = await db
-    .collection("users")
-    .findOne({ _id: keyDoc.userId }, { projection: { isBanned: 1 } });
+  const owner = await usersCollection<Document>(db).findOne(
+    { _id: keyDoc.userId },
+    { projection: { isBanned: 1 } }
+  );
   if (!owner || owner.isBanned === true) {
     return { ok: false as const, reason: "revoked" };
   }
@@ -100,8 +104,7 @@ export async function requireUserApiKey(
   // Update usage stats (background, don't await). The rejection is swallowed
   // like logApiAccess does: an instrumentation write must never become an
   // unhandledRejection, which the crash handler escalates to a process exit.
-  void db
-    .collection("userApiKeys")
+  void userApiKeysCollection<Document>(db)
     .updateOne(
       { _id: keyDoc._id },
       {
@@ -139,7 +142,7 @@ export async function validateUserApiKey(
   }
 
   const db = await getDb();
-  const keyDoc = await db.collection("userApiKeys").findOne({
+  const keyDoc = await userApiKeysCollection<Document>(db).findOne({
     tokenHash: hashToken(token),
     revokedAt: null,
     // Honor a rotation grace window: a key whose `revokeAt` is in the past is
@@ -149,16 +152,16 @@ export async function validateUserApiKey(
 
   if (!keyDoc || keyDoc.scope !== inferredScope) return { valid: false };
 
-  const owner = await db
-    .collection("users")
-    .findOne({ _id: keyDoc.userId }, { projection: { isBanned: 1 } });
+  const owner = await usersCollection<Document>(db).findOne(
+    { _id: keyDoc.userId },
+    { projection: { isBanned: 1 } }
+  );
   if (!owner || owner.isBanned === true) return { valid: false };
 
   // Update usage stats (background, don't await). The rejection is swallowed
   // like logApiAccess does: an instrumentation write must never become an
   // unhandledRejection, which the crash handler escalates to a process exit.
-  void db
-    .collection("userApiKeys")
+  void userApiKeysCollection<Document>(db)
     .updateOne(
       { _id: keyDoc._id },
       {

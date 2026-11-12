@@ -12,6 +12,7 @@ interface UseStatePartyDataReturn {
   stateParty: StatePartyData | null;
   currentTurn: number;
   loading: boolean;
+  loadError: boolean;
   // Controlled treasury state (sync'd from stateParty on fetch)
   taxRate: number;
   setTaxRate: (v: number) => void;
@@ -70,6 +71,8 @@ export function useStatePartyData(
   const [treasuryPreset, setTreasuryPreset] = useState<TreasuryPresetId>("custom");
   const [psInvestmentBudget, setPsInvestmentBudget] = useState("0");
 
+  const [loadError, setLoadError] = useState(false);
+
   const fetchUser = useCallback(async () => {
     try {
       const r = await fetch("/api/auth/me");
@@ -77,7 +80,9 @@ export function useStatePartyData(
         const d = await r.json();
         setUser(d.user);
       }
-    } catch {}
+    } catch {
+      setLoadError(true);
+    }
   }, []);
 
   const fetchStateParty = useCallback(async () => {
@@ -114,7 +119,9 @@ export function useStatePartyData(
           formatTreasuryReserveInputValue(d.stateParty.psInvestmentBudget ?? 0)
         );
       }
+      setLoadError(false);
     } catch {
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -137,6 +144,7 @@ export function useStatePartyData(
     stateParty,
     currentTurn,
     loading,
+    loadError,
     fetchUser,
     taxRate,
     setTaxRate,

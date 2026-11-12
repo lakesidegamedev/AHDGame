@@ -25,12 +25,9 @@ export function PrimaryShellClient({
   countryId,
   winnerColorByState,
   /**
-   * partyId used to build per-state detail links on the CarveUpPanel and
-   * to construct outgoing tier-navigation URLs. When set, the carve-up
-   * panel shows a "View state details →" link to
-   * `/president/primary/{partyId}/state/{stateId}`. Functions can't be
-   * passed server→client, so we accept the partyId and build hrefs
-   * client-side.
+   * Used to build per-state detail links on the CarveUpPanel and outgoing
+   * tier-navigation URLs. Functions cannot be passed server to client, so the
+   * partyId is accepted here and hrefs are built client-side.
    */
   partyIdForDetailLinks,
   /**

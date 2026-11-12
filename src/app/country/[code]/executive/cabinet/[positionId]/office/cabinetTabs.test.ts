@@ -20,13 +20,12 @@ describe("isDefenseMinister — RU/DD recognition", () => {
   });
 });
 
-describe("resolveCabinetTabs — RU defense seat gains Commands + Doctrine when conflicts enabled", () => {
+describe("resolveCabinetTabs — RU defense seat gains Commands + Doctrine", () => {
   it("exposes Military + Commands + Doctrine for RU minister_of_defence", () => {
     const tabs = resolveCabinetTabs({
       countryId: "RU",
       positionId: "minister_of_defence",
       mechanics: { ...base, positionId: "minister_of_defence" },
-      conflictsEnabled: true,
     });
     const ids = tabs.map((t) => t.id);
     expect(ids).toContain("flagship"); // labelled "Military" for a defense seat
@@ -53,7 +52,6 @@ describe("resolveCabinetTabs", () => {
       mechanics: base,
       cabinetVersion: "v2",
       flagshipAvailable: true,
-      conflictsEnabled: true,
     });
     expect(tabs.map((tab) => tab.id)).toEqual([
       "overview",
@@ -136,34 +134,21 @@ describe("resolveCabinetTabs", () => {
     expect(tabs.find((t) => t.id === "flagship")?.label).toBe("Programs");
   });
 
-  it("adds Commands + Doctrine tabs for a defense seat when Conflicts is enabled", () => {
+  it("adds Commands + Doctrine tabs for a defense seat", () => {
     const tabs = resolveCabinetTabs({
       countryId: "US",
       positionId: "secretary_of_defense",
       mechanics: { ...base, positionId: "secretary_of_defense" },
-      conflictsEnabled: true,
     });
     expect(tabs.some((t) => t.id === "commands")).toBe(true);
     expect(tabs.some((t) => t.id === "doctrine")).toBe(true);
   });
 
-  it("keeps Commands but omits Doctrine for a defense seat when Conflicts is disabled", () => {
-    const tabs = resolveCabinetTabs({
-      countryId: "US",
-      positionId: "secretary_of_defense",
-      mechanics: { ...base, positionId: "secretary_of_defense" },
-      conflictsEnabled: false,
-    });
-    expect(tabs.some((t) => t.id === "commands")).toBe(true);
-    expect(tabs.some((t) => t.id === "doctrine")).toBe(false);
-  });
-
-  it("does not add Commands/Doctrine tabs to a non-defense seat even when Conflicts is enabled", () => {
+  it("does not add Commands/Doctrine tabs to a non-defense seat", () => {
     const tabs = resolveCabinetTabs({
       countryId: "US",
       positionId: "secretary_of_education",
       mechanics: base,
-      conflictsEnabled: true,
     });
     expect(tabs.some((t) => t.id === "commands")).toBe(false);
     expect(tabs.some((t) => t.id === "doctrine")).toBe(false);
@@ -208,25 +193,13 @@ describe("the intelligence seat's console tab", () => {
     expect(isIntelligenceMinister("secretary_of_defense")).toBe(false);
   });
 
-  it("gives the seat an Intelligence tab when Conflicts is enabled", () => {
+  it("gives the seat an Intelligence tab", () => {
     const tabs = resolveCabinetTabs({
       countryId: "US",
       positionId: "director_of_intelligence",
       mechanics: intel,
-      conflictsEnabled: true,
     });
     expect(tabs.some((t) => t.id === "intelligence")).toBe(true);
-  });
-
-  it("withholds it while the Conflicts subsystem is off", () => {
-    // Same reasoning as Commands and Doctrine: this is Cold War machinery.
-    const tabs = resolveCabinetTabs({
-      countryId: "US",
-      positionId: "director_of_intelligence",
-      mechanics: intel,
-      conflictsEnabled: false,
-    });
-    expect(tabs.some((t) => t.id === "intelligence")).toBe(false);
   });
 
   it("never gives the tab to another seat", () => {
@@ -234,7 +207,6 @@ describe("the intelligence seat's console tab", () => {
       countryId: "US",
       positionId: "secretary_of_defense",
       mechanics: { ...base, positionId: "secretary_of_defense" },
-      conflictsEnabled: true,
     });
     expect(tabs.some((t) => t.id === "intelligence")).toBe(false);
   });

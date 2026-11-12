@@ -11,10 +11,11 @@ import { loadVentureContext, newVentureId } from "@/lib/products/venture/access"
 import { newVenture, clampFundingPerTurn } from "@/lib/products/venture/engine";
 import { availableVentureLines, liftedSectorIds } from "@/lib/products/venture/lines";
 import { buildStudioView } from "@/lib/products/venture/studio";
-import { PRODUCT_VENTURES, ventureDocument } from "@/lib/products/venture/store";
+import { ventureDocument } from "@/lib/products/venture/store";
 import { sectorTurnRevenueAnchor } from "@/lib/products/venture/revenue";
 import { ventureSector } from "@/lib/products/venture/turn";
 import type { ProductVenture } from "@/lib/products/venture/types";
+import { productVenturesCollection } from "@/lib/db/repositories/productVentures";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -119,7 +120,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       parsed.data.fundingPerTurnAnchor ?? venture.fundingPerTurnAnchor
     );
     try {
-      await db.collection<ProductVenture>(PRODUCT_VENTURES).insertOne({
+      await productVenturesCollection<ProductVenture>(db).insertOne({
         _id: venture._id,
         ...ventureDocument({ ...venture, fundingPerTurnAnchor: funding }),
       });

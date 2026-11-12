@@ -3,6 +3,7 @@ import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import type { RegistryNode } from "@/lib/metricEngine/types";
 import type { ApplicableTemporaryTargetEffect, TemporaryTargetEffect } from "./actions";
 import { mergeApplicableActionEffects } from "./actions";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface CabinetDiscipline {
   countryId: string;
@@ -64,8 +65,8 @@ function cabinetActionScopeApplies(scope: string, regionId?: string): boolean {
   if (scope === "Vet") return regionId !== undefined;
   return (
     (scope === "NI" && regionId === "NIR") ||
-    (scope === "SCT" && regionId === "SCO") ||
-    (scope === "WAL" && regionId === "WAL")
+    (scope === "SCT" && countryHasFeature("scoSeeds", regionId)) ||
+    (countryHasFeature("walSeeds", scope) && countryHasFeature("walSeeds", regionId))
   );
 }
 

@@ -14,6 +14,7 @@ import { normalizeNationalMetricBoard, type ResetMetricSnapshot } from "./rules/
 import { appendMetricHistory, metricHistoryDue, RESET_METRIC_HISTORY_LIMIT } from "./rules/history";
 import type { HousingState } from "./rules/housing";
 import type { HouseholdProductionStatus } from "./rules/householdSources";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 export interface MetricOwnerTurnReadings {
   updates: Readonly<Record<string, OpeningMetricObservation>>;
@@ -58,7 +59,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
     throw new Error("Reset metric turn lacks its verified opening turn");
   }
   const recordHistory = metricHistoryDue(sourceTurn!, turn);
-  const collection = db.collection<ResetMetricSnapshot>("resetMetricSnapshots");
+  const collection = resetMetricSnapshotsCollection<ResetMetricSnapshot>(db);
   const stored = await collection
     .find(
       { countryId: { $in: [...activeCountries] }, worldId: gameState.resetWorldId },

@@ -1,4 +1,6 @@
 import type { Db } from "mongodb";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import type { Document } from "mongodb";
 
 /**
  * Clear world-scoped political offsets embedded in the retained reference board.
@@ -8,7 +10,7 @@ import type { Db } from "mongodb";
  * never from a targeted seed or maintenance re-seed.
  */
 export async function resetPoliticalMetricsRuntimeState(db: Db): Promise<number> {
-  const result = await db.collection("politicalMetrics").updateMany(
+  const result = await politicalMetricsCollection<Document>(db).updateMany(
     {},
     {
       $unset: {

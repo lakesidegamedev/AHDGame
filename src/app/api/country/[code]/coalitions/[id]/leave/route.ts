@@ -5,10 +5,12 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { canActAsChair } from "@/lib/parties/actingChair";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 // POST /api/coalitions/[id]/leave?country= — Leave a coalition
 export async function POST(
@@ -36,9 +38,10 @@ export async function POST(
     const db = await getDb();
 
     // Find the user's party
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(character.party), countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(character.party),
+      countryId,
+    });
     if (!party) {
       throw notFound("Your party was not found.");
     }
@@ -51,9 +54,10 @@ export async function POST(
     }
 
     // Find coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -72,7 +76,7 @@ export async function POST(
 
     if (remainingMembers.length === 0) {
       // Last member — delete the coalition entirely
-      await db.collection<Coalition>("coalitions").deleteOne({ _id: coalition._id });
+      await coalitionsCollection(db).deleteOne({ _id: coalition._id });
     } else if (isChairParty) {
       // Chair leaves with others remaining — promote next most senior member
       const sorted = [...remainingMembers].sort(
@@ -81,13 +85,13 @@ export async function POST(
       const nextMember = sorted[0]!;
 
       // Look up new chair party to get their national chair character
-      const newChairParty = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: nextMember.partyId });
+      const newChairParty = await politicalPartiesCollection(db).findOne({
+        _id: nextMember.partyId,
+      });
 
       const newChairCharacterId = newChairParty?.chairId ?? null;
 
-      await db.collection<Coalition>("coalitions").updateOne(
+      await coalitionsCollection(db).updateOne(
         { _id: coalition._id },
         {
           $pull: { members: { partyId: party._id } },
@@ -101,9 +105,10 @@ export async function POST(
 
       // Notify new chair
       if (newChairCharacterId) {
-        const newChairChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: newChairCharacterId }, { projection: { userId: 1 } });
+        const newChairChar = await charactersCollection(db).findOne(
+          { _id: newChairCharacterId },
+          { projection: { userId: 1 } }
+        );
         if (newChairChar) {
           await createNotification({
             userId: newChairChar.userId,
@@ -121,7 +126,7 @@ export async function POST(
       }
     } else {
       // Non-chair leaves — just remove from members
-      await db.collection<Coalition>("coalitions").updateOne(
+      await coalitionsCollection(db).updateOne(
         { _id: coalition._id },
         {
           $pull: { members: { partyId: party._id } },
@@ -134,9 +139,10 @@ export async function POST(
     // If coalitionId points elsewhere (data corruption — see invite/accept + join/accept gaps
     // pre-fix), clearing it would orphan the party from the coalition it really belongs to.
     if (party.coalitionId && party.coalitionId.equals(coalition._id)) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { coalitionId: null } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { coalitionId: null } }
+      );
     }
 
     return NextResponse.json({ success: true, message: `Left ${coalition.name}` });

@@ -5,18 +5,13 @@ import { COUNTRY_BUCKET_LABELS } from "./bucketLabelsByCountry";
 /**
  * Player-facing names for the Layer-1 electorate buckets.
  *
- * The granular cell model is the vote engine, but its bucket keys are internal
- * (`no_college`, `mid`, `other`). Archetype labels — "Retirees", "Soccer Moms" —
- * are being removed from the interface entirely, so every surface that used to
- * name a voter archetype needs a name for a bucket instead.
+ * Bucket keys are internal (`no_college`, `mid`, `other`), so every surface
+ * that names a voter group needs a player-readable name here.
  *
- * Naming rules, because these are read by players and not by us:
- *  - Describe the PEOPLE, not the data field. "Graduates", not "Education:
- *    graduate".
- *  - No jargon from the model. A player should not have to learn the word
- *    "bucket" or "Layer-1" to target a group.
- *  - Neutral. These are demographic facts, not judgements, and they appear next
- *    to political actions aimed at them.
+ * Naming rules, because players read these:
+ *  - Describe the PEOPLE, not the data field.
+ *  - No model jargon: no "bucket" or "Layer-1".
+ *  - Neutral: demographic facts, not judgements.
  */
 export const BUCKET_LABELS: Record<GranularDim, Record<string, string>> = {
   race: {

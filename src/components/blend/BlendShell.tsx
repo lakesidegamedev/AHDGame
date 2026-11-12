@@ -26,17 +26,14 @@ export interface BlendShellProps {
 /**
  * The Blend three-column frame.
  *
- * Desktop is `206px | minmax(0,1fr) | 296-300px` over a 900px minimum (none when
- * full bleed). Below `lg` the rails drop out and the centre column runs full width, which is what
- * the design's mobile artboards show; the screens supply their own sticky
- * mobile header and fold the rails' content into the stacked body.
+ * Desktop is `206px | minmax(0,1fr) | 296-300px` over a 900px minimum (none
+ * when full bleed). Below `lg` the rails drop out and the centre column runs
+ * full width; screens supply their own sticky mobile header and fold the
+ * rails' content into the stacked body.
  *
- * The frame sits in the app's standard page container (`BLEND_CONTAINER`)
- * rather than running edge to edge. The Claude Design artboards are full-bleed
- * because an artboard has no browser chrome around it; on a real 1920px screen
- * that left the rails pinned to the viewport edges while every other page in
- * the app is a centred `max-w-7xl` column. The dark ground still bleeds to the
- * edges, so the treatment reads the same.
+ * The frame uses the app's standard page container (`BLEND_CONTAINER`) rather
+ * than running edge to edge, so it aligns with the centred `max-w-7xl` column
+ * every other page uses. The dark ground still bleeds to the edges.
  */
 export function BlendShell({
   left,

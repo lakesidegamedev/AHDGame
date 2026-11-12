@@ -10,6 +10,7 @@ import {
   creditSharesToImperial,
   creditSharesToCorp,
   creditSharesToFund,
+  creditSharesToNpp,
 } from "@/lib/corporations/shareholderOps";
 import { upsertFundHoldingShares } from "@/lib/indexFunds/fundQueries";
 import {
@@ -17,18 +18,18 @@ import {
   loadFxRatesByCurrency,
   shareTradeAnchorValue,
 } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Distribute a dissolving corp's holdings in OTHER corps IN-KIND, pro-rata to
- * the dissolving corp's own cap table — instead of cashing them out at market
- * price (the money-mint both dissolution paths used to do: they credited
- * `shares × issuer.sharePrice` into liquidCapital with no counterparty debit,
- * letting a ring pump prices and extract the difference). No cash is created
- * and every issuer's `totalShares` stays invariant: the dissolving corp's stake
- * simply moves to its shareholders (and its public-float fraction to the
- * issuer's public float). A corp may never hold its own shares, so any
- * allocation back to the issuer itself (cross-holding rings hit this) is routed
- * to the issuer's public float instead.
+ * its own cap table, rather than cashing them out at market price. Cashing out
+ * would mint money (crediting shares × issuer.sharePrice with no counterparty
+ * debit), letting a ring pump prices and extract the difference. No cash is
+ * created and every issuer's `totalShares` stays invariant: the stake moves to
+ * the shareholders (and the public-float fraction to the issuer's public
+ * float). A corp may never hold its own shares, so allocations back to the
+ * issuer (cross-holding rings) go to its public float instead.
  *
  * Shared by the quick-dissolve route and the bond-default dissolution.
  */
@@ -40,9 +41,10 @@ export async function distributeCrossEquityInKind(
 ): Promise<void> {
   const [fxByCurrency, activation] = await Promise.all([
     loadFxRatesByCurrency(db),
-    db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } }),
+    gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { stockHoldingTaxStartTurn: 1 } }
+    ),
   ]);
   const trackingEnabled =
     activation?.stockHoldingTaxStartTurn !== undefined &&
@@ -56,14 +58,14 @@ export async function distributeCrossEquityInKind(
       if (s.corporationId)
         return { id: s.corporationId.toString(), kind: "corporation", shares: s.shares };
       if (s.fundId) return { id: s.fundId.toString(), kind: "fund", shares: s.shares };
+      if (s.nppId) return { id: s.nppId.toString(), kind: "npp", shares: s.shares };
       return null;
     })
     .filter((x): x is InKindShareholder => x !== null && x.shares > 0);
   const totalShares = dissolvingCorp.totalShares ?? 0;
   const publicFloatShares = dissolvingCorp.publicFloat ?? 0;
 
-  const heldEquityCorps = await db
-    .collection<Corporation>("corporations")
+  const heldEquityCorps = await corporationsCollection(db)
     .find(
       { "shareholders.corporationId": dissolvingCorp._id },
       {
@@ -94,7 +96,7 @@ export async function distributeCrossEquityInKind(
       return true;
     });
 
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: issuer._id, "shareholders.corporationId": dissolvingCorp._id },
       {
         $pull: { shareholders: { corporationId: dissolvingCorp._id } },
@@ -138,6 +140,10 @@ export async function distributeCrossEquityInKind(
         // (anchor currency) so NAV reflects the windfall; non-constituent
         // positions are liquidated by the next rebalance sweep.
         await upsertFundHoldingShares(db, recipientId, issuer._id, alloc.shares, basisAnchor);
+      } else if (alloc.kind === "npp") {
+        await creditSharesToNpp(db, issuer._id, recipientId, alloc.shares, basis, {
+          $set: { updatedAt: now },
+        });
       } else {
         await creditSharesToCorp(db, issuer._id, recipientId, alloc.shares, basis, {
           $set: { updatedAt: now },

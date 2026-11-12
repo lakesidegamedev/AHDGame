@@ -60,4 +60,17 @@ export async function seedIntelligenceIndexes(db: Db, log: (msg: string) => void
     { name: "intelligenceOpLog_owner_turn", background: true },
     log
   );
+
+  // One cyber launch per country pair and turn; only launch rows carry the key.
+  await ensureIndex(
+    db,
+    INTELLIGENCE_OP_LOG,
+    { launchKey: 1 },
+    {
+      name: "intelligenceOpLog_launch_key",
+      unique: true,
+      partialFilterExpression: { launchKey: { $type: "string" } },
+    },
+    log
+  );
 }

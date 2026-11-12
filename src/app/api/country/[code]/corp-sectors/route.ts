@@ -6,8 +6,10 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -24,14 +26,11 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (!ObjectId.isValid(corpIdParam)) return NextResponse.json({ sectors: [] });
 
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(corpIdParam) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(corpIdParam) });
     if (!corp || corp.countryId !== countryId || isStateOwned(corp)) {
       return NextResponse.json({ sectors: [] });
     }
-    const sectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const sectors = await corporateSectorsCollection(db)
       .find({ corporationId: corp._id, countryId })
       .toArray();
     return NextResponse.json({

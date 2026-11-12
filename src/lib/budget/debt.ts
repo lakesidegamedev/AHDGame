@@ -27,11 +27,11 @@ import {
   sovereignStockAnnualService,
   type SovereignCouponBook,
 } from "@/lib/budget/rules/sovereignDebtService";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
- * Debt/GDP ratio at which a sovereign leaves the B band and degrades to CCC
- * (refs #3236). 250% is far above any healthy world — live prod countries sit
- * well under it — so this only bites in runaway autonomous-world scenarios.
+ * Debt/GDP ratio at which a sovereign degrades from the B band to CCC.
+ * 250% is far above any healthy world so this only bites in runaway scenarios.
  */
 export const EXTREME_DISTRESS_DEBT_TO_GDP = 2.5;
 
@@ -78,11 +78,9 @@ export const DEBT_THRESHOLDS = [
     gdpPenalty: 0.5,
     trustPenalty: 10,
   },
-  // Extreme-distress band (refs #3236): sustained debt/GDP beyond 250% drops the
-  // sovereign to CCC — the floor the rating type supports (a post-default
-  // repudiation also stamps CCC; see sovereignDefault/resolution/repudiate.ts).
-  // Deliberately conservative: no live-world country is anywhere near this
-  // ratio, so behavior below 250% is byte-identical to the previous ladder.
+  // Extreme-distress band: sustained debt/GDP beyond 250% drops the sovereign
+  // to CCC, the floor the rating type supports (post-default repudiation also
+  // stamps CCC). Well above any live-world ratio, so behavior below is unchanged.
   {
     maxRatio: Infinity,
     rating: "CCC" as CreditRating,
@@ -125,14 +123,14 @@ export function calculateCreditRating(
 /**
  * Interest rate for a given debt/GDP ratio, capped at the concessional IMF
  * sovereign-facility rate whenever an IMF bailout program is active on the
- * country (refs #3813).
+ * country.
  *
  * The top tier's flat 14% has no ceiling on ratio — by design, since it's
  * meant to price genuine market distress, not to be a stable steady state.
  * The design's escape valve was always the sovereign-default resolution
  * paths, but a bailout only ever bolted on a small IMF facility alongside
  * the untouched legacy debt, which kept accruing at the punitive tier rate
- * forever (the actual #3813 spiral). A real IMF program's whole point is
+ * forever (the actual spiral). A real IMF program's whole point is
  * cheaper financing than the market will offer — the tier rate should never
  * outrank the program rate while one is in force.
  */
@@ -169,8 +167,8 @@ export async function processAnnualDebt(
   nationalGDP: number,
   /**
    * The country's outstanding sovereign coupon book. When supplied, interest is
-   * the coupons the stock actually carries plus the marginal rate on any stock
-   * not yet represented by bonds (#2089). Omitted: legacy whole-stock pricing.
+   * the coupons the stock carries plus the marginal rate on unrepresented stock.
+   * Omitted: legacy whole-stock pricing.
    */
   couponBook?: SovereignCouponBook | null
 ): Promise<{
@@ -182,10 +180,8 @@ export async function processAnnualDebt(
   ceilingExceeded: boolean;
 }> {
   // The bond ledger owns the debt stock (see bonds/sovereignPrincipal.ts):
-  // issuance, maturity, and default/resolution mutations maintain
-  // `debt.principal` incrementally, and the annual rollover must not re-derive
-  // it from the treasury balance (that clobber overwrote same-turn bond state
-  // every fiscal boundary, refs #1975). Treasury cash is a separate field.
+  // issuance, maturity, and default mutations maintain `debt.principal`
+  // incrementally. Do not re-derive it from the treasury balance.
   const newPrincipal = Math.max(0, federalBudget.debt?.principal ?? 0);
   const marginalRate = federalBudget.debt?.interestRate ?? 0;
   const interestPayment =
@@ -226,7 +222,7 @@ export async function processAnnualDebt(
 }
 
 export async function triggerDebtCeilingCrisis(db: Db, fiscalYear: number): Promise<void> {
-  await db.collection<DebtCeilingCrisis>("gameState").updateOne(
+  await gameStateCollection<DebtCeilingCrisis>(db).updateOne(
     { _id: "debt_ceiling_crisis" },
     {
       $set: {
@@ -242,7 +238,7 @@ export async function triggerDebtCeilingCrisis(db: Db, fiscalYear: number): Prom
 }
 
 export async function resolveDebtCeilingCrisis(db: Db): Promise<void> {
-  await db.collection<DebtCeilingCrisis>("gameState").updateOne(
+  await gameStateCollection<DebtCeilingCrisis>(db).updateOne(
     { _id: "debt_ceiling_crisis" },
     {
       $set: {
@@ -255,18 +251,17 @@ export async function resolveDebtCeilingCrisis(db: Db): Promise<void> {
 }
 
 export async function checkDebtCeilingCrisis(db: Db): Promise<DebtCeilingCrisis | null> {
-  return db
-    .collection<DebtCeilingCrisis>("gameState")
-    .findOne({ _id: "debt_ceiling_crisis", active: true });
+  return gameStateCollection<DebtCeilingCrisis>(db).findOne({
+    _id: "debt_ceiling_crisis",
+    active: true,
+  });
 }
 
 export async function incrementCrisisTurns(db: Db): Promise<number> {
-  const result = await db
-    .collection<DebtCeilingCrisis>("gameState")
-    .findOneAndUpdate(
-      { _id: "debt_ceiling_crisis", active: true },
-      { $inc: { turnsElapsed: 1 } },
-      { returnDocument: "after" }
-    );
+  const result = await gameStateCollection<DebtCeilingCrisis>(db).findOneAndUpdate(
+    { _id: "debt_ceiling_crisis", active: true },
+    { $inc: { turnsElapsed: 1 } },
+    { returnDocument: "after" }
+  );
   return result?.turnsElapsed || 0;
 }

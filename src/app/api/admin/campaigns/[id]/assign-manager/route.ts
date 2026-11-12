@@ -6,7 +6,9 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { schemas } from "@/lib/api/validate";
-import type { Campaign, Character } from "@/lib/db/types";
+import type { Campaign } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 const assignManagerSchema = z.object({
   characterId: schemas.objectId,
@@ -38,14 +40,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     const characterOid = new ObjectId(characterId);
 
     // Verify campaign exists
-    const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignOid });
+    const campaign = await campaignsCollection(db).findOne({ _id: campaignOid });
 
     if (!campaign) {
       return errorResponse(404, "Campaign not found");
     }
 
     // Verify character exists
-    const character = await db.collection<Character>("characters").findOne({ _id: characterOid });
+    const character = await charactersCollection(db).findOne({ _id: characterOid });
 
     if (!character) {
       return errorResponse(404, "Character not found");
@@ -56,7 +58,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // partially-overridden list would be more confusing than a clean reset.
     // Legacy pair stays mirrored to managers[0] (see campaigns/access.ts).
     const now = new Date();
-    await db.collection<Campaign>("campaigns").updateOne(
+    await campaignsCollection(db).updateOne(
       { _id: campaignOid },
       {
         $set: {
@@ -96,7 +98,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const campaignOid = new ObjectId(campaignId);
 
-    await db.collection<Campaign>("campaigns").updateOne(
+    await campaignsCollection(db).updateOne(
       { _id: campaignOid },
       {
         $set: {

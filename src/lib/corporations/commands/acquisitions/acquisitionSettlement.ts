@@ -5,29 +5,27 @@ import {
   netStockProceeds,
 } from "@/lib/budget/stockSaleWithholding";
 /**
- * Durable, crash-aware execution of an agreed-acquisition payout (shell: loads
- * documents, calls the pinned plan in `rules/acquisitionPayoutPlan.ts`, writes
- * results).
+ * Durable, crash-aware execution of an agreed-acquisition payout (shell:
+ * loads documents, calls the pinned plan in `rules/acquisitionPayoutPlan.ts`,
+ * writes results).
  *
- * Why this exists: the legacy flow debited the acquirer, then credited holders
- * across several unrecorded writes, then refunded the FULL debit when anything
- * later threw. Paid holders kept their money and the offer reset to `pending`,
- * so a retry double-debited and double-pays. This module replaces that with
- * three properties borrowed from the banking money-move primitive (which is
- * the established answer on a database with no multi-document transactions):
+ * Naive debiting before crediting across multiple writes refunded the full
+ * debit on any throw, so paid holders kept money while the offer reset to
+ * `pending`, double-paying on retry. This module borrows three properties
+ * from the banking money-move primitive (the established answer on a
+ * database with no multi-document transactions):
  *
  * 1. The plan is claimed BEFORE any money moves: one settlement document per
- *    offer (`_id` = offer id, so the claim is an `insertOne` and a retry loses
- *    it with E11000 and resumes from the record instead of recomputing).
+ *    offer (`_id` = offer id), so the claim is an `insertOne` and a retry
+ *    loses it with E11000 and resumes from the record instead of recomputing.
  * 2. Every leg applies as one atomic document write (credit plus idempotency
- *    stamp, guarded on `settledKeys $ne stamp`, the same shape as `applyLeg`).
- *    A replay of a landed leg matches nothing and is read back as applied from
- *    the stamp on the document itself, which closes the crash window between
- *    the money write and the record update.
- * 3. Terminal failure compensates instead of pretending: the refund is exactly
- *    `price - delivered`, stamped like any other leg, with a refund ledger leg
- *    so the log nets truthfully. Paid holder legs are never clawed back (they
- *    cannot be) and the offer goes to `failed`, never back to `pending`.
+ *    stamp, guarded on `settledKeys $ne stamp`, same shape as `applyLeg`).
+ *    A replay of a landed leg matches nothing and reads back as applied from
+ *    the stamp, closing the crash window between write and record update.
+ * 3. Terminal failure compensates: the refund is exactly `price - delivered`,
+ *    stamped like any other leg, with a refund ledger leg so the log nets
+ *    truthfully. Paid holder legs are never clawed back and the offer goes
+ *    to `failed`, never back to `pending`.
  */
 
 import { ObjectId, type Db, type Document, type Filter, type UpdateFilter } from "mongodb";
@@ -41,19 +39,10 @@ import type {
 } from "@/lib/db/types/acquisitionSettlement";
 import type { AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";
 import type { PlannedLeg, PayoutPlan } from "./rules/acquisitionPayoutPlan";
-
-export const ACQUISITION_SETTLEMENTS = "acquisitionSettlements";
-
-/** Another live settlement already owns this target. Retry-safe abort. */
-export class AcquisitionTargetBusyError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AcquisitionTargetBusyError";
-  }
-}
+import { acquisitionSettlementsCollection } from "@/lib/db/repositories/acquisitionSettlements";
 
 /** A retry recomputed a plan that disagrees with the claimed one. Never retry blind. */
-export class AcquisitionSettlementConflictError extends Error {
+class AcquisitionSettlementConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AcquisitionSettlementConflictError";
@@ -61,7 +50,7 @@ export class AcquisitionSettlementConflictError extends Error {
 }
 
 function settlements(db: Db) {
-  return db.collection<AcquisitionSettlement>(ACQUISITION_SETTLEMENTS);
+  return acquisitionSettlementsCollection<AcquisitionSettlement>(db);
 }
 
 export async function loadAcquisitionSettlement(
@@ -363,7 +352,7 @@ export async function emitAcquisitionLegLedger(
  * acquirer (see below), never by shrinking the price refund. Counting it here
  * too would charge the acquirer twice for the same cash.
  */
-export function deliveredCostInAcquirerCapital(settlement: AcquisitionSettlement): number {
+function deliveredCostInAcquirerCapital(settlement: AcquisitionSettlement): number {
   return settlement.legs
     .filter((leg) => leg.applied && leg.kind === "holder_credit")
     .reduce((sum, leg) => sum + leg.costInAcquirerCapital, 0);
@@ -399,7 +388,7 @@ function debitLegApplied(settlement: AcquisitionSettlement): boolean {
 }
 
 /** Net refund owed on terminal compensation: price minus delivered minus already refunded. */
-export function compensationRefundOwed(settlement: AcquisitionSettlement): number {
+function compensationRefundOwed(settlement: AcquisitionSettlement): number {
   if (!debitLegApplied(settlement)) return 0;
   return Math.max(
     0,

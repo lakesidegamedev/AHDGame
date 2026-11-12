@@ -3,6 +3,8 @@ import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { ObjectId, type Db } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export interface CrisisListResult {
   crises: Crisis[];
@@ -10,8 +12,7 @@ export interface CrisisListResult {
   startingYear: number;
   /**
    * `GameState.preIterationTurns` (0 on normal worlds). Crisis turns are stored
-   * RAW, so a display needs this to date them on the world's calendar instead of
-   * a game year ahead of it (#1208).
+   * RAW, so a display needs this to date them on the world's calendar.
    */
   preIterationTurns: number;
   /** `GameState.preIteration.active` — calendar pinned to the era start while true. */
@@ -39,7 +40,7 @@ export async function listCrises(
   }
 
   const [crises, gameState] = await Promise.all([
-    db.collection<Crisis>("crises").find(filter).sort({ startTurn: -1 }).toArray(),
+    crisesCollection(db).find(filter).sort({ startTurn: -1 }).toArray(),
     getGameState(db),
   ]);
 
@@ -48,8 +49,7 @@ export async function listCrises(
   const regionIds = [...new Set(crises.flatMap((c) => c.regionIds ?? []))];
   const regionNames: Record<string, string> = {};
   if (regionIds.length > 0) {
-    const states = await db
-      .collection<StateNameRow>("states")
+    const states = await statesCollection<StateNameRow>(db)
       .find({ _id: { $in: regionIds } }, { projection: { name: 1 } })
       .toArray();
     for (const s of states) {
@@ -72,7 +72,7 @@ export async function getCrisisDetail(db: Db, crisisId: string): Promise<Crisis>
     throw notFound("Crisis not found");
   }
 
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: new ObjectId(crisisId) });
+  const crisis = await crisesCollection(db).findOne({ _id: new ObjectId(crisisId) });
   if (!crisis) {
     throw notFound("Crisis not found");
   }

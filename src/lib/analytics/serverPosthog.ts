@@ -4,6 +4,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { Db } from "mongodb";
 import type { GameIteration } from "@/lib/db/types/gameState";
 import { gameEventEnvelope } from "./gameEventEnvelope";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { analyticsRecordsCollection } from "@/lib/db/repositories/analyticsRecords";
 
 let client: PostHog | null = null;
 
@@ -70,8 +72,11 @@ async function getIterationForTurn(db: Db, turn: number): Promise<GameIteration 
   if (cached && cached.turn === turn && cached.expiresAt > Date.now()) {
     return (await cached.value).iteration;
   }
-  const value = db
-    .collection<{ _id: string; currentTurn?: number; iteration?: GameIteration }>("gameState")
+  const value = gameStateCollection<{
+    _id: string;
+    currentTurn?: number;
+    iteration?: GameIteration;
+  }>(db)
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
     .then((gameState) => ({ iteration: gameState?.iteration }));
   envelopeCache.set(db, { turn, expiresAt: Date.now() + 5000, value });
@@ -150,18 +155,18 @@ export async function flushServerPosthog(): Promise<void> {
     for (const [db, group] of claimGroups) {
       const events = [...group.values()];
       try {
-        const result = await db
-          .collection<{ _id: string; value: number }>("analyticsRecords")
-          .bulkWrite(
-            events.map((event) => ({
-              updateOne: {
-                filter: { _id: event.markerId! },
-                update: { $setOnInsert: { value: event.turn } },
-                upsert: true,
-              },
-            })),
-            { ordered: false }
-          );
+        const result = await analyticsRecordsCollection<{ _id: string; value: number }>(
+          db
+        ).bulkWrite(
+          events.map((event) => ({
+            updateOne: {
+              filter: { _id: event.markerId! },
+              update: { $setOnInsert: { value: event.turn } },
+              upsert: true,
+            },
+          })),
+          { ordered: false }
+        );
         for (const index of Object.keys(result.upsertedIds)) {
           const event = events[Number(index)];
           if (event) claimedEvents.add(event);

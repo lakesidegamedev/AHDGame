@@ -4,7 +4,7 @@
  * live regional electorates and other elections keep their existing inputs.
  */
 import type { Election } from "@/lib/db/types";
-import type { AccumulateVoteTurnPreload } from "@/lib/electionEngine/types";
+import type { AccumulateVoteTurnPreload } from "@/lib/elections/engine/types";
 export function bindRussianPresidentialElectorate(
   election: Election,
   preload: AccumulateVoteTurnPreload

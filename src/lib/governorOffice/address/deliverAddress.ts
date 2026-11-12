@@ -1,11 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
-import type {
-  GovernorAddress,
-  Character,
-  GovernorOfficeState,
-  PartyGroupFavorability,
-} from "@/lib/db/types";
+import type { GovernorAddress, GovernorOfficeState, PartyGroupFavorability } from "@/lib/db/types";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -31,6 +26,12 @@ import { getNationalAddressName, getRegionalAddressName } from "@/lib/constants/
 import { generateAddressNews } from "@/lib/news";
 import { sendCountryGameEvent } from "@/lib/discordWebhooks";
 import { buildNationalAddressEmbed } from "@/lib/governorOffice/address/addressWebhook";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { partyGroupFavorabilityCollection } from "@/lib/db/repositories/partyGroupFavorability";
 
 export interface DeliverAddressInput {
   countryId: CountryId;
@@ -112,8 +113,7 @@ export async function deliverAddress(
   // Cooldown attaches to the office. Admin override bypasses cooldown to
   // allow correcting state.
   if (!adminOverride) {
-    const recent = await db
-      .collection<GovernorAddress>("governorAddresses")
+    const recent = await governorAddressesCollection(db)
       .find({ countryId, stateId })
       .sort({ deliveredAtTurn: -1 })
       .limit(1)
@@ -132,7 +132,7 @@ export async function deliverAddress(
     // Two writes so we can target separate documents — if the NPI debit fails
     // after the office spend succeeds, refund the office AP so the office state
     // stays consistent.
-    const officeSpend = await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+    const officeSpend = await governorOfficeStateCollection(db).updateOne(
       {
         countryId,
         stateId,
@@ -146,7 +146,7 @@ export async function deliverAddress(
     if (officeSpend.modifiedCount === 0) {
       return { status: 400, body: { error: "Insufficient office action points." } };
     }
-    const npiSpend = await db.collection<Character>("characters").updateOne(
+    const npiSpend = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         nationalInfluence: { $gte: ADDRESS_NPI_COST },
@@ -158,7 +158,7 @@ export async function deliverAddress(
     );
     if (npiSpend.modifiedCount === 0) {
       // Refund office AP so the office stays consistent.
-      await db.collection<GovernorOfficeState>("governorOfficeState").updateOne(
+      await governorOfficeStateCollection(db).updateOne(
         { countryId, stateId },
         {
           $inc: { gubernatorialActions: ADDRESS_ACTION_COST },
@@ -183,13 +183,11 @@ export async function deliverAddress(
   if (targetDemographicGroupId) {
     const isNational = stateId === getNationalStateId(countryId);
     if (isNational) {
-      const states = await db
-        .collection<{ _id: string; countryId: CountryId }>("states")
+      const states = await statesCollection<{ _id: string; countryId: CountryId }>(db)
         .find({ countryId })
         .toArray();
       const stateIds = states.map((s) => s._id);
-      const turnoutDocs = await db
-        .collection<StateDemographicTurnout>("stateDemographicTurnout")
+      const turnoutDocs = await stateDemographicTurnoutCollection(db)
         .find({ _id: { $in: stateIds } })
         .toArray();
       const currentByState = new Map(
@@ -226,21 +224,19 @@ export async function deliverAddress(
         }
       }
       if (ops.length > 0) {
-        await db.collection<StateDemographicTurnout>("stateDemographicTurnout").bulkWrite(ops);
+        await stateDemographicTurnoutCollection(db).bulkWrite(ops);
       }
       turnoutDeltasByState = deltas;
       // Scalar reflects the sum so UIs reading the legacy field show a
       // representative value; precise expiry uses the per-state map.
       appliedTurnoutDelta = Object.values(deltas).reduce((s, v) => s + v, 0);
     } else {
-      const turnoutDoc = await db
-        .collection<StateDemographicTurnout>("stateDemographicTurnout")
-        .findOne({ _id: stateId });
+      const turnoutDoc = await stateDemographicTurnoutCollection(db).findOne({ _id: stateId });
       const currentModifier = readTurnoutModifier(turnoutDoc?.modifiers, targetDemographicGroupId);
       const headroom = 20 - currentModifier;
       appliedTurnoutDelta = Math.max(0, Math.min(ADDRESS_DEMOGRAPHIC_DELTA, headroom));
       if (appliedTurnoutDelta > 0) {
-        await db.collection<StateDemographicTurnout>("stateDemographicTurnout").updateOne(
+        await stateDemographicTurnoutCollection(db).updateOne(
           { _id: stateId },
           {
             $inc: { [turnoutModifierPath(targetDemographicGroupId)]: appliedTurnoutDelta },
@@ -281,7 +277,7 @@ export async function deliverAddress(
     ...(adminOverride ? { adminProposed: true } : {}),
     createdAt: now,
   };
-  await db.collection<GovernorAddress>("governorAddresses").insertOne(addr);
+  await governorAddressesCollection(db).insertOne(addr);
 
   // Per-party demographic favorability — when the address targets a voter
   // group AND the leader belongs to a party, that party gets a per-group
@@ -305,7 +301,7 @@ export async function deliverAddress(
         expiresAtTurn: currentTurn + ADDRESS_DEMOGRAPHIC_DURATION_TURNS,
         createdAt: now,
       };
-      await db.collection<PartyGroupFavorability>("partyGroupFavorability").insertOne(pgf);
+      await partyGroupFavorabilityCollection(db).insertOne(pgf);
     } catch {
       // Non-critical: the address is still delivered; vote distribution
       // simply won't get the per-group bonus this cycle.

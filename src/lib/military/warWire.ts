@@ -1,31 +1,20 @@
 /**
  * A settled war's dispatch to World News.
  *
- * WHAT IS AND IS NOT NEWS. Offers, withdrawals and rejections are private business
- * between two governments and stay off the wire entirely: a channel carrying every
- * probe would bury the one post that matters. What gets a post is the ENDING, and
- * the term that was taken with it. A white peace posts too, because a war ending
- * with nobody paying anything is news about the world as much as a reparation is.
+ * WHAT IS NEWS. Offers, withdrawals and rejections stay off the wire; only
+ * the ending and its term post, plus a white peace (a war ending with nobody
+ * paying is still world news). The other post is a country entering a war
+ * under a mutual-defence pact (buildTreatyEntryDispatch): nobody there voted
+ * for it, so the wire is the only notice.
  *
- * The one other post is a country entering a war under a mutual-defence pact
- * (`buildTreatyEntryDispatch`). Nobody in that country voted for the war, so the
- * world hears it from the wire or not at all.
+ * PURE BUILDERS. Each function takes a document and returns copy. DB writes
+ * and stamping live in `emitWarWire`, keeping copy testable without a DB and
+ * stamping testable without asserting on prose.
  *
- * PURE BUILDERS. Every function here takes a document and returns copy. The database
- * writes and the stamping live in `emitWarWire`, which keeps the copy testable
- * without a database and the stamping testable without asserting on prose. Same
- * split the settlement crisis uses, for the same reason.
- *
- * HOUSE STYLE, inherited from the Bonn Desk dispatches: a short narrative title that
- * says what happened rather than naming the feature, two sentences of prose carrying
- * no digits, then terse labelled fields for the figures, under a named desk in the
- * footer rather than the product name.
- *
- * Copy rules this file follows, all project-wide: no em or en dashes; no calendar
- * years and no "current rate" phrasing, because the same text has to read correctly
- * in every era; and no anchor units, because those are not a player-facing currency.
- * An indemnity's figure is printed beside the country that paid it, in that
- * country's own money.
+ * COPY RULES (project-wide): no em or en dashes; no calendar years or
+ * "current rate" phrasing, since text must read correctly in every era; no
+ * anchor units, which are not player-facing. An indemnity figure prints
+ * beside the country that paid it, in that country's money.
  */
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import { governmentSystemLabel, type PeaceTerm } from "@/lib/military/peaceTerm";

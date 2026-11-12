@@ -12,6 +12,8 @@ import { withNoStore } from "@/lib/api/withNoStore";
 import { createAdminLog } from "@/lib/adminLog";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminResetPasswordSchema } from "@/lib/api/schemas/admin";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/admin/users/reset-password — Reset a user's password to a new value.
 // Auth: requireAdmin
@@ -30,10 +32,10 @@ export const POST = withNoStore(async (request: Request) => {
     const objectId = new ObjectId(userId);
 
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
+    const usersCollectionHandle = usersCollection(db);
 
     // Check if user exists
-    const user = await usersCollection.findOne({ _id: objectId });
+    const user = await usersCollectionHandle.findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -57,7 +59,7 @@ export const POST = withNoStore(async (request: Request) => {
     // write never alters it.
     let updated;
     try {
-      updated = await usersCollection.updateOne(
+      updated = await usersCollectionHandle.updateOne(
         {
           _id: objectId,
           password: user.password ?? null,
@@ -96,7 +98,7 @@ export const POST = withNoStore(async (request: Request) => {
     // Never log the secret.
     let characterName: string | undefined;
     try {
-      const character = await db.collection("characters").findOne({ userId: objectId });
+      const character = await charactersCollection(db).findOne({ userId: objectId });
       characterName = character?.name;
     } catch {
       characterName = undefined;

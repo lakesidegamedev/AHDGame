@@ -1,21 +1,11 @@
 /**
- * CPU profile of the two corporation-turn substeps goal 16 targets.
+ * CPU profile of the corporation-turn market-context and lookup substeps.
  *
  *   npx tsx src/lib/turn/corporation/__perf__/marketContextCpu.ts [corps] [sectorsPerCorp]
  *
- * The production turn spends its market-context substep inside
- * `runClearingPrePass` and its lookup substep inside `buildCorporationLookups`,
- * both of them CPU rather than round-trip bound. Point `AHD_PERF_MONGO_URI` at
- * a local COPY of a world and the script profiles both over that world's real
- * documents: the lookup build, the freight-billing apportionment the
- * market-context substep runs before the pre-pass, and the pre-pass itself,
- * with the market context built from the same gameConfig the turn reads.
+ * With AHD_PERF_MONGO_URI set to a local COPY of a world, profiles runClearingPrePass, buildCorporationLookups, and freight-billing apportionment over that world's real documents, using the same gameConfig the turn reads. Without it, falls back to the seeded production-shape fixture and profiles only the two DB-free workloads.
  *
- * Without a URI it falls back to the seeded production-shape fixture, which has
- * no database, and profiles the two DB-free workloads only.
- *
- * Each workload is profiled on its own so the GC figure belongs to one pass
- * rather than to the whole script. Never point it at production.
+ * Each workload is profiled separately so the GC figure belongs to one pass. Never point it at production.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { Session } from "node:inspector/promises";
@@ -35,6 +25,11 @@ import {
   buildProductionTurnWorld,
   type ProductionTurnWorld,
 } from "../__fixtures__/productionTurnWorld";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface ProfileNode {
   id: number;
@@ -222,9 +217,9 @@ async function databaseWorld(
   lookups: CorporationLookups,
   config: GameConfig | null
 ): Promise<PrePassWorld> {
-  const gameState = (await db
-    .collection<{ _id: string }>("gameState")
-    .findOne({ _id: "current" })) as {
+  const gameState = (await gameStateCollection<{ _id: string }>(db).findOne({
+    _id: "current",
+  })) as {
     currentTurn?: number;
     currentYear?: number;
   } | null;
@@ -296,12 +291,12 @@ async function main() {
     await client.connect();
     db = client.db(process.env.MONGODB_DB ?? "a-house-divided");
     console.log(
-      `lookup database: ${await db.collection("corporations").countDocuments({})} corporations, ` +
-        `${await db.collection("corporateSectors").countDocuments({})} sectors`
+      `lookup database: ${await corporationsCollection(db).countDocuments({})} corporations, ` +
+        `${await corporateSectorsCollection<Document>(db).countDocuments({})} sectors`
     );
-    const config = (await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" })) as GameConfig | null;
+    const config = (await gameConfigCollection(db).findOne({
+      _id: "default",
+    })) as GameConfig | null;
     const lookups = await buildCorporationLookups(db, {
       ...lookupOptions,
       productionTurn: Number(process.argv[4] ?? 0) || undefined,

@@ -25,6 +25,10 @@ import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
 import type { GameConfig } from "@/lib/db/types";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 
 export async function computeSectorExtractionCapacityContext(
   db: Db,
@@ -39,9 +43,10 @@ export async function computeSectorExtractionCapacityContext(
   // rations the same sector 70-174x harder on era worlds.
   const [eraUnitScale, gameConfigDoc] = await Promise.all([
     loadWorldEraUnitScale(db),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { extractionOutputScaleEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { extractionOutputScaleEnabled: 1 } }
+    ),
   ]);
   const extractionOutputScaleEnabled = await getExtractionOutputScaleEnabled(gameConfigDoc);
   let stateResources: Partial<Record<ExtractableResource, number>> | null | undefined = undefined;
@@ -59,9 +64,10 @@ export async function computeSectorExtractionCapacityContext(
   const extractionDesiredByResource: Partial<Record<ExtractableResource, number>> = {};
 
   if (sectorType === "extraction") {
-    const capDoc = await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .findOne({ stateId: sector.stateId }, { projection: { stateId: 1, resources: 1 } });
+    const capDoc = await stateResourceCapacityCollection(db).findOne(
+      { stateId: sector.stateId },
+      { projection: { stateId: 1, resources: 1 } }
+    );
 
     // undefined = no cap doc at all (uncapped); null = cap doc exists but has no
     // resources field; Partial<Record> = cap doc with resource data.
@@ -69,22 +75,18 @@ export async function computeSectorExtractionCapacityContext(
 
     if (capDoc) {
       const [extractionContracts, allStateSectors] = await Promise.all([
-        db
-          .collection<ExtractionContract>("extractionContracts")
+        extractionContractsCollection(db)
           .find({ stateId: sector.stateId, ...activeExtractionContractFilter() })
           .toArray(),
-        db
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(db)
           .find({ stateId: sector.stateId, sectorType: "extraction" })
           .project({ _id: 1, corporationId: 1, stateId: 1, revenue: 1, strategyId: 1 })
           .toArray(),
       ]);
 
-      // Every sector here operates in `sector.stateId`, so they share the host
-      // state's currency. Sector revenue is stored in that currency; normalize it
-      // to ₳ — the unit COMMODITY_BASE_PRICES and the capacity allocator use — at
-      // the host rate before the per-resource output math. (Fixes both the
-      // host-vs-owner denomination and the prior local-as-₳ approximation.)
+      // Sectors share the host state's currency; revenue is stored in that
+      // currency. Normalize to the anchor unit (used by COMMODITY_BASE_PRICES
+      // and the capacity allocator) at the host rate before per-resource output math.
       const hostCode = resolveSectorHostCurrencyCode(sector, null);
       const hostRate = await getSectorHostFxRate(db, sector, null);
       const revenueAnchorOf = (rev: number): number =>

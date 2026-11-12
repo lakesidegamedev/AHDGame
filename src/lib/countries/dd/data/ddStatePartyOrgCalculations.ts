@@ -1,18 +1,9 @@
-/**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era's DD party-org table is authored self-contained. East Germany is a
- * one-party state behind a National Front facade, so org is an authored
- * SED-dominant distribution per era with real (but captive) bloc-party
- * presence, not a vote-share × formula. Changing one era's table must not
- * affect another. (Mirrors ruStatePartyOrgCalculations.ts /
- * cnStatePartyOrgCalculations.ts.)
- *
- * Historical texture: the SED strongest in Berlin and industrial Saxony;
- * the DBD (farmers' party) strongest in the agrarian north; the LDPD
- * (liberal middle-class remnant) in the Saxon/Thuringian workshop towns; the
- * CDU (Ost) in church country — Thüringen and the Mecklenburg villages. The
- * remainder to 100 is the unaffiliated pool. By the late era the SED has
- * consolidated a few points everywhere.
+/*
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
+ * Each era's DD party-org table is authored self-contained; this is an
+ * authored SED-dominant distribution behind a National Front facade, not
+ * a vote-share formula. Changing one era must not affect another.
+ * Remainder to 100 is the unaffiliated pool.
  */
 type DdRegionOrg = { sed: number; cdu: number; ldpd: number; ndpd: number; dbd: number };
 

@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { UK_REGIONS } from "@/lib/constants/uk";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface MapPartyOrgState {
   leadingParty: string;
@@ -34,10 +36,7 @@ export async function computePartyOrgMap(
   countryId: CountryId
 ): Promise<Record<string, MapPartyOrgState>> {
   // Fetch all parties for this country
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
 
   // Build lookup maps using ONLY sequentialId (the current party identifier)
   // Old slug-based partyIds are stale data and should be filtered out
@@ -56,10 +55,7 @@ export async function computePartyOrgMap(
 
   // Fetch statePartyOrg records for this country
   // Filter by countryId to ensure we only get orgs for the correct country
-  const allPartyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .find({ countryId })
-    .toArray();
+  const allPartyOrgs = await statePartyOrgCollection(db).find({ countryId }).toArray();
 
   // Filter out any orgs whose partyId is not a valid sequentialId for this country
   // This removes stale records with old slug-based partyIds

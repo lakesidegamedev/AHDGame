@@ -5,6 +5,7 @@ import { loadCabinetGameplayEffects } from "./loadGameplayEffects";
 import { cabinetEffectsForRegion, cabinetWhipBonus } from "./rules/gameplay";
 
 import type { CabinetDiscipline } from "./rules/gameplay";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 export { cabinetDisciplineForParty, type CabinetDiscipline } from "./rules/gameplay";
 
 /** Only the formed government's supporting parties benefit; opposition whips do not. */
@@ -22,8 +23,7 @@ export async function loadCabinetDiscipline(
     ),
   ];
   if (!countries.length) return [];
-  const formations = await db
-    .collection<GovernmentFormation>("governmentFormations")
+  const formations = await governmentFormationsCollection(db)
     .find(
       { _id: { $in: countries }, status: "formed" },
       { projection: { _id: 1, status: 1, governingPartyId: 1, coalitionPartyIds: 1 } }

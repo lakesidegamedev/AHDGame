@@ -8,13 +8,15 @@ import type { Corporation } from "@/lib/db/types";
 import { tickManufacturingProject } from "./rules/manufacturingRules";
 import {
   MANUFACTURING_PRODUCT_ACTIVE_INDEX_V2,
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
   type ManufacturingProductProject,
   type ManufacturingDevelopmentCashReceiptV2,
 } from "./manufacturingProject";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
+import type { Document } from "mongodb";
 
 export async function ensureManufacturingProductProjectIndexesV2(db: Db): Promise<string> {
-  await db.collection(MANUFACTURING_PRODUCT_PROJECTS_V2).createIndex(
+  await manufacturingProductProjectsV2Collection<Document>(db).createIndex(
     { activeCorporationId: 1 },
     {
       name: MANUFACTURING_PRODUCT_ACTIVE_INDEX_V2,
@@ -137,14 +139,15 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
   }
 
   if (projectOps.length > 0) {
-    const result = await input.db
-      .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-      .bulkWrite(projectOps, { ordered: false });
+    const result = await manufacturingProductProjectsV2Collection<ManufacturingProductProject>(
+      input.db
+    ).bulkWrite(projectOps, { ordered: false });
     if (result.matchedCount !== projectOps.length) {
       // A concurrent retirement or clock writer can win. Only the stored
       // acknowledgment allows its matching paid cash receipt to be cleared.
-      const current = await input.db
-        .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
+      const current = await manufacturingProductProjectsV2Collection<ManufacturingProductProject>(
+        input.db
+      )
         .find({ _id: { $in: [...nextByCorporationId.values()].map((project) => project._id) } })
         .project<ManufacturingProductProject>(activeManufacturingProductProjectProjection())
         .toArray();
@@ -185,7 +188,7 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
     return orphan || acknowledged || outsideWindow ? [{ corporation, receipt }] : [];
   });
   if (advertisingToClear.length > 0) {
-    const cleared = await input.db.collection<Corporation>("corporations").bulkWrite(
+    const cleared = await corporationsCollection(input.db).bulkWrite(
       advertisingToClear.map(({ corporation, receipt }) => ({
         updateOne: {
           filter: {
@@ -203,8 +206,7 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
       advertisingToClear.map(({ corporation }) => corporation._id.toString())
     );
     if (cleared.matchedCount !== advertisingToClear.length) {
-      const current = await input.db
-        .collection<Corporation>("corporations")
+      const current = await corporationsCollection(input.db)
         .find(
           { _id: { $in: advertisingToClear.map(({ corporation }) => corporation._id) } },
           { projection: { _id: 1, manufacturingProductAdvertisingReceiptV2: 1 } }
@@ -235,13 +237,10 @@ export async function consumeManufacturingDevelopmentReceiptsV2(input: {
       },
     })
   );
-  const cleared = await input.db
-    .collection<Corporation>("corporations")
-    .bulkWrite(receiptOps, { ordered: false });
+  const cleared = await corporationsCollection(input.db).bulkWrite(receiptOps, { ordered: false });
   let clearedIds = new Set(receiptsToClear.keys());
   if (cleared.matchedCount !== receiptOps.length) {
-    const current = await input.db
-      .collection<Corporation>("corporations")
+    const current = await corporationsCollection(input.db)
       .find(
         { _id: { $in: [...receiptsToClear.values()].map(({ corporation }) => corporation._id) } },
         { projection: { _id: 1, manufacturingProductDevelopmentReceiptV2: 1 } }

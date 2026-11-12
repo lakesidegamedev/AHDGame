@@ -12,10 +12,6 @@ import type {
  *  - scaleCounts      — clone per sub-region, splitting each `countVectorFields`
  *                       count vector by population weight (conserving). Delete aggregate.
  *  - copyDoc          — clone verbatim per sub-region (rate/profile docs). Delete aggregate.
- *  - apportionShares  — clone per sub-region, replacing the voter-archetype
- *                       `groups` split with a per-region tilt off the live
- *                       aggregate (preset pattern; preserves the aggregate).
- *                       Delete aggregate.
  *  - scaleNumeric     — clone per sub-region, scaling every numeric field by GDP
  *                       weight (budgets). Delete aggregate.
  *  - partitionGdp     — distribute the many docs across sub-regions by GDP weight
@@ -29,7 +25,6 @@ export type FanoutPolicy =
   | "cloneIdentical"
   | "scaleCounts"
   | "copyDoc"
-  | "apportionShares"
   | "scaleNumeric"
   | "partitionGdp"
   | "rekeyCopyShares"
@@ -97,9 +92,8 @@ export const SECEDE_FANOUT: FanoutScope[] = [
     countVectorFields: ["ages.male", "ages.female"],
   },
   { collection: "stateDemographicTurnout", key: "idIsState", policy: "copyDoc" },
-  // Differentiate each sub-region's archetype split off the live aggregate
-  // (per-region preset pattern); see apportionDemographicShares.
-  { collection: "stateDemographics", key: "idIsState", policy: "apportionShares" },
+  // Regional differentiation lives in each sub-region's own census bundle, not here.
+  { collection: "stateDemographics", key: "idIsState", policy: "copyDoc" },
   { collection: "demographicDefaults", key: "idIsState", policy: "copyDoc" },
   {
     collection: "regionalBudgets",

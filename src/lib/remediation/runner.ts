@@ -32,14 +32,15 @@ import type {
   HealRun,
   VerifyResult,
 } from "./types";
+import { healRunsCollection } from "@/lib/db/repositories/healRuns";
 
 export const HEAL_RUNS_COLLECTION = "healRuns";
 
 export async function ensureRemediationIndexes(db: Db): Promise<void> {
   await ensureTokenIndexes(db);
   await ensureBackupIndexes(db);
-  await db.collection<HealRun>(HEAL_RUNS_COLLECTION).createIndex({ defectId: 1, startedAt: -1 });
-  await db.collection<HealRun>(HEAL_RUNS_COLLECTION).createIndex({ env: 1, startedAt: -1 });
+  await healRunsCollection<HealRun>(db).createIndex({ defectId: 1, startedAt: -1 });
+  await healRunsCollection<HealRun>(db).createIndex({ env: 1, startedAt: -1 });
 }
 
 function assertEnvAllowed(defect: Defect, env: HealEnv): void {
@@ -242,7 +243,7 @@ export async function runApply(
     codeGate: args.codeGate,
     backupCount: 0,
   };
-  await db.collection<HealRun>(HEAL_RUNS_COLLECTION).insertOne(run);
+  await healRunsCollection<HealRun>(db).insertOne(run);
 
   try {
     await ensureBackupIndexes(db);
@@ -258,9 +259,10 @@ export async function runApply(
       );
     }
     run.backupCount = snap.backupCount;
-    await db
-      .collection<HealRun>(HEAL_RUNS_COLLECTION)
-      .updateOne({ _id: runId }, { $set: { backupCount: snap.backupCount } });
+    await healRunsCollection<HealRun>(db).updateOne(
+      { _id: runId },
+      { $set: { backupCount: snap.backupCount } }
+    );
 
     const result = await defect.apply(db, freshPlan, { ...ctx, runId });
     const verify = await defect.verify(db, { ...ctx, runId });
@@ -276,9 +278,7 @@ export async function runApply(
             error: `verify failed: ${verify.remaining} still affected — ${verify.notes.join("; ")}`,
           }),
     };
-    await db
-      .collection<HealRun>(HEAL_RUNS_COLLECTION)
-      .updateOne({ _id: runId }, { $set: finished });
+    await healRunsCollection<HealRun>(db).updateOne({ _id: runId }, { $set: finished });
 
     return {
       ok: verify.ok,
@@ -288,12 +288,10 @@ export async function runApply(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await db
-      .collection<HealRun>(HEAL_RUNS_COLLECTION)
-      .updateOne(
-        { _id: runId },
-        { $set: { status: "failed", finishedAt: new Date(), error: message } }
-      );
+    await healRunsCollection<HealRun>(db).updateOne(
+      { _id: runId },
+      { $set: { status: "failed", finishedAt: new Date(), error: message } }
+    );
     return { ok: false, runId, refusal: message };
   }
 }
@@ -311,7 +309,7 @@ export async function runRollback(
   db: Db,
   runId: string
 ): Promise<{ ok: boolean; detail: string; restored: number; deleted: number; notes: string[] }> {
-  const run = await db.collection<HealRun>(HEAL_RUNS_COLLECTION).findOne({ _id: runId });
+  const run = await healRunsCollection<HealRun>(db).findOne({ _id: runId });
   if (!run)
     return { ok: false, detail: `unknown run ${runId}`, restored: 0, deleted: 0, notes: [] };
   if (run.status === "rolled-back") {
@@ -325,9 +323,10 @@ export async function runRollback(
   }
 
   const summary = await rollbackSnapshot(db, { runId, result: run.result });
-  await db
-    .collection<HealRun>(HEAL_RUNS_COLLECTION)
-    .updateOne({ _id: runId }, { $set: { status: "rolled-back", finishedAt: new Date() } });
+  await healRunsCollection<HealRun>(db).updateOne(
+    { _id: runId },
+    { $set: { status: "rolled-back", finishedAt: new Date() } }
+  );
 
   return {
     ok: true,
@@ -345,8 +344,7 @@ export async function listHistory(
   const filter: Record<string, unknown> = {};
   if (args.defectId) filter.defectId = args.defectId;
   if (args.env) filter.env = args.env;
-  return db
-    .collection<HealRun>(HEAL_RUNS_COLLECTION)
+  return healRunsCollection<HealRun>(db)
     .find(filter)
     .sort({ startedAt: -1 })
     .limit(Math.min(args.limit ?? 25, 200))

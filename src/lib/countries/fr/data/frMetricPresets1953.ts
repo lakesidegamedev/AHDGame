@@ -1,37 +1,16 @@
-/**
- * France 1953 metric overlays — Fourth Republic / Monnet Plan reconstruction.
- *
- * Base `frStateMetrics` is authored on ~1979 (Giscard) values. Without this
- * overlay a 1953-default world keeps 1979 life expectancy (~73.5), literacy 99,
- * and urbanization (~73) — anachronistic for a country still ~half rural
- * (INSEE 1954 census) with life expectancy ~66 (INED / UN Demographic Yearbook
- * 1950-55). Region ids match `frRegionCensusData1953`.
+/*
+ * France 1953 metric overlays. Base `frStateMetrics` is 1979
+ * (Giscard-era) values, so without this a 1953 world keeps 1979 life
+ * expectancy, literacy and urbanisation.
  *
  * `medianIncome` is annual household income in ANCIENS FRANCS (AF), the unit
- * the 1953 GDP seed is denominated in (budgets.ts FR FY1953: FFr 16,450B old
- * francs). This is NOT the same unit as the ~1979 `frStateMetrics` baseline,
- * which is in NOUVEAUX FRANCS — the 1960 redenomination cut two zeros (1 NF =
- * 100 AF, ordonnance 58-1341 of 27 Dec 1958, effective 1 Jan 1960).
+ * the 1953 GDP seed uses. The ~1979 baseline is in NOUVEAUX FRANCS (1 NF =
+ * 100 AF). Do not mix them.
  *
- * The original authoring took `1979 nominal NF × 0.42` (the Maddison Project
- * REAL GDP/cap ratio 1953≈5,000 vs 1979≈12,000 1990 Int$) and left the result
- * in NF. That is wrong twice over: it applies a real-volume ratio to a nominal
- * value and skips the redenomination entirely. The nominal chain is
+ * Nominal chain used: AF_1953 = NF_1979 x 100 / ~5 (1953-1979 CPI rise)
+ * x 0.42 (real income ratio), i.e. NF_1979 x 8.4.
  *
- *   AF_1953 = NF_1979 × 100 (AF per NF) ÷ ~5 (INSEE consumer price level
- *             1953→1979) × 0.42 (real income ratio)  ≈  NF_1979 × 8.4
- *
- * and since the old values already carried the ×0.42, the correction is a flat
- * ×(8.4 / 0.42) = ×20 on every figure below. Cross-check against
- * the seed's own national accounts: GDP/capita = 16,450B AF / 42.8M = 384,000
- * AF, so a 420,000 AF median household (3.2 persons) is ~1.1× GDP/capita —
- * the same income-to-GDP/capita relationship the FR 1979 seed carries
- * (50,000 NF against 2,500B NF / 53.5M = 46,700 NF, ratio 1.07).
- *
- * Sanity check against wage records: INSEE puts the 1953 average net annual
- * salary near 380,000 AF and the SMIG at 78.65 AF/hour; a household with ~1.4
- * earners plus non-wage income lands in the 340,000-600,000 AF range seeded
- * here. Broadband/internet did not exist.
+ * Broadband/internet did not exist.
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 
@@ -61,11 +40,9 @@ const NATIONAL_1953: Record<string, number> = {
   "population.medianAge": 33, // WWII losses + early baby boom; older than Turkey, younger than SE
   // 0-100 fertility INDEX (population.birthRate; metricDefinitions
   // `unit: "index"`), NOT a crude per-1000 rate. Real France 1953 TFR ≈2.7
-  // (INED, the "baby boom" that ran ahead of the rest of Western Europe) —
-  // birthRateIndexToTFR(76, 2.06) = 2.06*(0.4+0.76*1.2) = 2.74. This field
-  // was previously ABSENT, so FR fell through seedCohortVectors'
-  // DEFAULT_BIRTH_RATE = 50 (TFR 2.06) — understating the postwar French
-  // baby boom, one of Western Europe's strongest.
+  // (INED, the "baby boom" ahead of the rest of Western Europe) ,
+  // birthRateIndexToTFR(76, 2.06) = 2.06*(0.4+0.76*1.2) = 2.74.
+
   "population.birthRate": 76,
   "population.populationGrowth": 0.8, // baby boom underway
   "infrastructure.broadbandAccess": 0, // internet did not exist

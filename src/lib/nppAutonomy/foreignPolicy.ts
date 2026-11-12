@@ -3,36 +3,20 @@ import { ALIGNMENT_POLES, type AlignmentPoleId } from "@/lib/constants/alignment
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { type OrganizationCategory } from "@/lib/constants/orgCategory";
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
-import type { Bill, BillStatus, NPP, NppForeignPolicyStage } from "@/lib/db/types";
-import type { CountryAlignment } from "@/lib/db/types/countryAlignment";
-import type { ConflictDoc } from "@/lib/db/types/conflict";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
-import type { BattleDeclarationDoc } from "@/lib/db/types/battleDeclaration";
-import type {
-  OrganizationLeadershipElection,
-  OrganizationLegislation,
-  OrganizationMembership,
-  OrganizationMembershipProposal,
-} from "@/lib/db/types/internationalOrganization";
-import type { Tariff } from "@/lib/db/types/tariff";
-import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
-import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
+import type { BillStatus, NppForeignPolicyStage } from "@/lib/db/types";
 import { loadOrganizationDefWithPowers } from "@/lib/internationalOrganizations/service";
 import { buildActiveNationalBillFilter } from "@/lib/legislature/nationalBillScope";
-import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import type { PeaceOfferDoc } from "@/lib/db/types/peaceOffer";
 import type { PersistedSphereMembership } from "@/lib/world/spheres/membershipStore";
 import { isNppAutonomyActive } from "./featureFlag";
 import { executeForeignPolicyChoice } from "./foreignPolicyActions";
+import { processAutonomousCyber } from "./autonomousCyber";
 import {
   foreignPolicyActionAllowed,
+  foreignPolicyCyberAllowed,
   foreignPolicyModeFrom,
   foreignPolicyStageFrom,
 } from "./foreignPolicyRollout";
-import { nppOffensiveFlagFrom } from "./offensiveFlags";
 import {
-  DECISION_COLLECTION,
   MINIMUM_ACTION_SCORE,
   MAX_ALTERNATIVES,
   STANDARD_COOLDOWN_TURNS,
@@ -62,6 +46,26 @@ export type {
   ForeignPolicyResult,
 } from "./foreignPolicyShared";
 import { voteCandidates, bilateralCandidates, warCandidates } from "./foreignPolicyCandidates";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { countryAlignmentsCollection } from "@/lib/db/repositories/countryAlignments";
+import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
+import { battleDeclarationsCollection } from "@/lib/db/repositories/battleDeclarations";
+import { sphereMembershipsCollection } from "@/lib/db/repositories/sphereMemberships";
+import { organizationMembershipProposalsCollection } from "@/lib/db/repositories/organizationMembershipProposals";
+import { organizationLeadershipElectionsCollection } from "@/lib/db/repositories/organizationLeadershipElections";
+import { peaceOffersCollection } from "@/lib/db/repositories/peaceOffers";
+import { nppForeignPolicyDecisionsCollection } from "@/lib/db/repositories/nppForeignPolicyDecisions";
 function buildOpinion(context: ForeignPolicyContext, targetCountryId: CountryId): CountryOpinion {
   const factors: OpinionFactor[] = [];
   const sourceAlignment = context.alignments.find(
@@ -293,13 +297,11 @@ async function loadContext(
   countryId: CountryId,
   currentTurn: number
 ): Promise<ForeignPolicyContext | null> {
-  const government = await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .findOne({ _id: countryId });
+  const government = await governmentFormationsCollection(db).findOne({ _id: countryId });
   if (!government || government.status !== "formed") return null;
   const headNppId = government.presidentNppId ?? government.pmNppId ?? null;
   if (!headNppId) return null;
-  const head = await db.collection<NPP>("npps").findOne(
+  const head = await nppsCollection(db).findOne(
     { _id: headNppId },
     {
       projection: {
@@ -334,53 +336,35 @@ async function loadContext(
     pendingBattleDeclarations,
     pendingPeaceOffers,
   ] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        nppForeignPolicyMode?: ForeignPolicyMode;
-        nppForeignPolicyStage?: NppForeignPolicyStage;
-        nppOffensiveInitiationEnabled?: boolean;
-      }>("gameState")
-      .findOne({ _id: "current" }),
-    db.collection<CountryAlignment>("countryAlignments").find({}).toArray(),
-    db.collection<PersistedSphereMembership>("sphereMemberships").find({}).toArray(),
-    db.collection<OrganizationMembership>("organizationMemberships").find({}).toArray(),
-    db
-      .collection<ConflictDoc>("conflicts")
+    gameStateCollection<{
+      _id: string;
+      nppForeignPolicyMode?: ForeignPolicyMode;
+      nppForeignPolicyStage?: NppForeignPolicyStage;
+    }>(db).findOne({ _id: "current" }),
+    countryAlignmentsCollection(db).find({}).toArray(),
+    sphereMembershipsCollection<PersistedSphereMembership>(db).find({}).toArray(),
+    organizationMembershipsCollection(db).find({}).toArray(),
+    conflictsCollection(db)
       .find({ status: { $in: ["active", "escalating", "winding_down"] } })
       .toArray(),
-    db.collection<TradeEmbargo>("tradeEmbargoes").find({}).toArray(),
-    db.collection<Tariff>("tariffs").find({}).toArray(),
-    db
-      .collection<Bill>("bills")
+    tradeEmbargoesCollection(db).find({}).toArray(),
+    tariffsCollection(db).find({}).toArray(),
+    billsCollection(db)
       .find({
         ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]),
         "provisions.type": "tariff",
         "provisions.scopeType": "origin_country",
       })
       .toArray(),
-    db
-      .collection<OrganizationLegislation>("organizationLegislation")
-      .find({ status: "active" })
-      .toArray(),
-    db
-      .collection<OrganizationMembershipProposal>("organizationMembershipProposals")
-      .find({ status: "pending" })
-      .toArray(),
-    db
-      .collection<OrganizationLegislation>("organizationLegislation")
-      .find({ status: "pending" })
-      .toArray(),
-    db
-      .collection<OrganizationLeadershipElection>("organizationLeadershipElections")
-      .find({ status: "pending" })
-      .toArray(),
-    db.collection<TradeFlowSnapshot>("tradeFlowSnapshots").findOne({}, { sort: { turn: -1 } }),
-    db
-      .collection<{ countryId: CountryId; debtToGdpRatio?: number }>("federalBudget")
-      .findOne({ countryId }),
-    db
-      .collection<PersistedForeignPolicyDecision>(DECISION_COLLECTION)
+    organizationLegislationCollection(db).find({ status: "active" }).toArray(),
+    organizationMembershipProposalsCollection(db).find({ status: "pending" }).toArray(),
+    organizationLegislationCollection(db).find({ status: "pending" }).toArray(),
+    organizationLeadershipElectionsCollection(db).find({ status: "pending" }).toArray(),
+    tradeFlowSnapshotsCollection(db).findOne({}, { sort: { turn: -1 } }),
+    federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
+      countryId,
+    }),
+    nppForeignPolicyDecisionsCollection<PersistedForeignPolicyDecision>(db)
       .find({
         countryId,
         turn: { $gte: Math.max(0, currentTurn - TRADE_ESCALATION_COOLDOWN_TURNS) },
@@ -388,14 +372,12 @@ async function loadContext(
       .sort({ turn: -1 })
       .limit(20)
       .toArray(),
-    db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray(),
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
-    db
-      .collection<BattleDeclarationDoc>("battleDeclarations")
+    militaryUnitsCollection(db).find({ countryId }).toArray(),
+    governmentApprovalsCollection(db).findOne({ _id: countryId }),
+    battleDeclarationsCollection(db)
       .find({ declarerCountry: countryId, status: "pending" })
       .toArray(),
-    db
-      .collection<PeaceOfferDoc>("peaceOffers")
+    peaceOffersCollection(db)
       .find({ fromCountry: countryId, status: "pending", expiresTurn: { $gt: currentTurn } })
       .toArray(),
   ]);
@@ -472,7 +454,6 @@ async function loadContext(
     militaryUnits,
     pendingBattleDeclarations,
     pendingPeaceOffers,
-    offensiveInitiationEnabled: nppOffensiveFlagFrom(gameState?.nppOffensiveInitiationEnabled),
   };
 }
 
@@ -527,21 +508,11 @@ export async function processAutonomousForeignPolicy(
     };
   }
 
-  // BALLOTS ARE NOT THE COUNTRY'S ONE ACTION, and separating them here is the
-  // whole of ticket #1257.
-  //
-  // A country plans once every six turns and executes a single top-ranked
-  // choice. Casting a ballot used to compete for that slot against embargoes,
-  // tariffs and war conduct, so a 24-turn ballot gave each member four contested
-  // chances to vote and it lost most of them — the more so after #1233 raised
-  // war conduct above the routine band precisely to stop votes crowding IT out.
-  // Under unanimity one member losing all four is a permanent veto, which is how
-  // China closed 5-of-7 and North Korea 2-of-7 in the Warsaw Pact with not one
-  // "no" cast against either.
-  //
-  // A foreign ministry can vote in its bloc AND raise a tariff in the same week;
-  // the two were never really rivals. So every eligible ballot is cast, and the
-  // ranked action is chosen from what is left.
+  // Ballots are separate from the country's one strategic action. A country
+  // plans once every six turns and executes a single top-ranked choice; letting
+  // ballots compete for that slot means each member loses votes under pressure,
+  // and under unanimity a member losing every vote is a permanent veto. So every
+  // eligible ballot is cast, and the ranked action is chosen from the rest.
   const ranked = rankChoices(context);
   const isBallot = (c: ForeignPolicyChoice) =>
     c.type === "vote_org_yes" || c.type === "vote_org_no";
@@ -565,7 +536,7 @@ export async function processAutonomousForeignPolicy(
     acted: false,
     executionStatus: context.mode === "shadow" ? "planned" : choice ? "claimed" : "no_action",
     // The audit row is the only account of why a country did what it did, and a
-    // flat "no action" on a turn that cast four ballots is how #1257 stayed
+    // flat "no action" on a turn that cast four ballots is how stayed
     // invisible for as long as it did. Say which of the two happened.
     executionNote:
       context.mode === "shadow"
@@ -577,7 +548,7 @@ export async function processAutonomousForeignPolicy(
             : "No permitted choice cleared the action threshold.",
     createdAt: now,
   };
-  const decisions = db.collection<PersistedForeignPolicyDecision>(DECISION_COLLECTION);
+  const decisions = nppForeignPolicyDecisionsCollection<PersistedForeignPolicyDecision>(db);
   const write = await decisions.updateOne(
     { countryId, turn: currentTurn },
     { $setOnInsert: decision },
@@ -623,6 +594,10 @@ export async function processAutonomousForeignPolicy(
         },
       }
     );
+  }
+  // Cyber operations ride the same once-per-plan claim, so a replayed turn cannot repeat them.
+  if (context.mode === "active" && decisionRecorded && foreignPolicyCyberAllowed(context.stage)) {
+    await processAutonomousCyber(db, countryId, context.head, currentTurn);
   }
   if (ballotsCast > 0) {
     await decisions.updateOne(

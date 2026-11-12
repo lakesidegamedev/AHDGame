@@ -6,6 +6,8 @@ import type { Filter } from "mongodb";
 import type { PoliticalParty, ElectedOfficial } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface PartyData {
   id: string;
@@ -27,7 +29,7 @@ export interface PartyData {
 
 export async function getAllPartySlugs(): Promise<{ id: string; countryId: CountryId }[]> {
   const db = await getDb();
-  const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+  const parties = await politicalPartiesCollection(db).find({}).toArray();
   // Include countryId to disambiguate parties with same sequential ID across countries
   return parties.map((p) => ({ id: String(p.sequentialId), countryId: p.countryId ?? "US" }));
 }
@@ -47,13 +49,13 @@ export async function getPartyData(
       : { countryId };
 
   // Filter by both sequentialId and countryId to avoid cross-country collisions.
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ sequentialId: Number(id), ...partyCountryQuery });
+  const party = await politicalPartiesCollection(db).findOne({
+    sequentialId: Number(id),
+    ...partyCountryQuery,
+  });
   if (!party) return null;
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ party: id, ...officialCountryQuery })
     .toArray();
 

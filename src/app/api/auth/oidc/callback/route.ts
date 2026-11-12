@@ -4,10 +4,14 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { ObjectId } from "mongodb";
 import { issueUnifiedGameSession } from "@/lib/auth/unifiedGameSession";
 import { getDb } from "@/lib/mongodb";
+import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { unifiedOidcFlowsCollection } from "@/lib/db/repositories/unifiedOidcFlows";
 
 function cohortSourceForSubject(subject: string): string | null {
   try {
-    const values = Object.entries(JSON.parse(process.env.AHD_UNIFIED_COHORT_TARGETS ?? "{}")) as [
+    const values = Object.entries(JSON.parse(authConfig.unifiedCohortTargets() ?? "{}")) as [
       string,
       { userId?: string },
     ][];
@@ -18,17 +22,11 @@ function cohortSourceForSubject(subject: string): string | null {
 }
 
 export async function GET(request: Request) {
-  const issuer = process.env.UNIFIED_OIDC_ISSUER;
-  const clientId = process.env.UNIFIED_OIDC_CLIENT_ID;
-  const clientSecret = process.env.UNIFIED_OIDC_CLIENT_SECRET;
-  const redirectUri = process.env.UNIFIED_OIDC_REDIRECT_URI;
-  if (
-    process.env.UNIFIED_OIDC_ENABLED !== "true" ||
-    !issuer ||
-    !clientId ||
-    !clientSecret ||
-    !redirectUri
-  ) {
+  const issuer = authConfig.unifiedOidcIssuer();
+  const clientId = authConfig.unifiedOidcClientId();
+  const clientSecret = authConfig.unifiedOidcClientSecret();
+  const redirectUri = authConfig.unifiedOidcRedirectUri();
+  if (!authConfig.unifiedOidcEnabled() || !issuer || !clientId || !clientSecret || !redirectUri) {
     return NextResponse.redirect(new URL("/login?error=unified_unavailable", request.url));
   }
   const appOrigin = new URL(redirectUri).origin;
@@ -39,15 +37,13 @@ export async function GET(request: Request) {
   if (!code || !state)
     return NextResponse.redirect(new URL("/login?error=unified_state", appOrigin));
   const db = await getDb();
-  const flow = await db
-    .collection<{
-      _id: string;
-      state: string;
-      nonce: string;
-      verifier: string;
-      expiresAt: Date;
-    }>("unifiedOidcFlows")
-    .findOneAndDelete({ state, expiresAt: { $gt: new Date() } });
+  const flow = await unifiedOidcFlowsCollection<{
+    _id: string;
+    state: string;
+    nonce: string;
+    verifier: string;
+    expiresAt: Date;
+  }>(db).findOneAndDelete({ state, expiresAt: { $gt: new Date() } });
   if (!flow) return NextResponse.redirect(new URL("/login?error=unified_state", appOrigin));
   const tokenResponse = await fetch(`${issuer}/protocol/openid-connect/token`, {
     method: "POST",
@@ -78,7 +74,7 @@ export async function GET(request: Request) {
   const sourceId = cohortSourceForSubject(payload.sub);
   if (!sourceId || !ObjectId.isValid(sourceId))
     return NextResponse.redirect(new URL("/login?error=unified_cohort", appOrigin));
-  const user = await db.collection("users").findOne({
+  const user = await usersCollection<Document>(db).findOne({
     _id: new ObjectId(sourceId),
     "authMigrationFence.canonicalAccountId": { $exists: true },
     isBanned: { $ne: true },

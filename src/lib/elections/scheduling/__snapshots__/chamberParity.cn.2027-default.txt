@@ -1,0 +1,180 @@
+## fresh-t1 cn.npcDelegate
+CN/npcDelegate/DB c1 y2028 active seats=238 turns=1/72/96 dur=48/24 seat=CN-npcDelegate-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/npcDelegate/HB c1 y2028 active seats=323 turns=1/72/96 dur=48/24 seat=CN-npcDelegate-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/npcDelegate/HD c1 y2028 active seats=922 turns=1/72/96 dur=48/24 seat=CN-npcDelegate-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/npcDelegate/HN c1 y2028 active seats=316 turns=1/72/96 dur=48/24 seat=CN-npcDelegate-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/npcDelegate/HZ c1 y2028 active seats=395 turns=1/72/96 dur=48/24 seat=CN-npcDelegate-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/npcDelegate/XB c1 y2028 active seats=320 turns=1/72/96 dur=48/24 seat=CN-npcDelegate-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/npcDelegate/XN c1 y2028 active seats=466 turns=1/72/96 dur=48/24 seat=CN-npcDelegate-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+## fresh-t1 cn.peoplesCongress
+CN/peoplesCongress/DB c1 y2028 active seats=321 turns=1/72/96 dur=48/24 seat=CN-peoplesCongress-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/peoplesCongress/HB c1 y2028 active seats=433 turns=1/72/96 dur=48/24 seat=CN-peoplesCongress-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/peoplesCongress/HD c1 y2028 active seats=1240 turns=1/72/96 dur=48/24 seat=CN-peoplesCongress-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/peoplesCongress/HN c1 y2028 active seats=425 turns=1/72/96 dur=48/24 seat=CN-peoplesCongress-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/peoplesCongress/HZ c1 y2028 active seats=533 turns=1/72/96 dur=48/24 seat=CN-peoplesCongress-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/peoplesCongress/XB c1 y2028 active seats=423 turns=1/72/96 dur=48/24 seat=CN-peoplesCongress-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+CN/peoplesCongress/XN c1 y2028 active seats=625 turns=1/72/96 dur=48/24 seat=CN-peoplesCongress-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+## fresh-t1 cn.governor
+CN/governor/DB c1 y2030 active seats=1 turns=1/168/192 dur=192/168 seat=CN-governor-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+CN/governor/HB c1 y2030 active seats=1 turns=1/168/192 dur=192/168 seat=CN-governor-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+CN/governor/HD c1 y2030 active seats=1 turns=1/168/192 dur=192/168 seat=CN-governor-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+CN/governor/HN c1 y2030 active seats=1 turns=1/168/192 dur=192/168 seat=CN-governor-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+CN/governor/HZ c1 y2030 active seats=1 turns=1/168/192 dur=192/168 seat=CN-governor-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+CN/governor/XB c1 y2030 active seats=1 turns=1/168/192 dur=192/168 seat=CN-governor-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+CN/governor/XN c1 y2030 active seats=1 turns=1/168/192 dur=192/168 seat=CN-governor-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+## fresh-t300 cn.npcDelegate
+CN/npcDelegate/DB c3 y2038 active seats=238 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HB c3 y2038 active seats=323 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HD c3 y2038 active seats=922 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HN c3 y2038 active seats=316 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HZ c3 y2038 active seats=395 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/XB c3 y2038 active seats=320 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/XN c3 y2038 active seats=466 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+## fresh-t300 cn.peoplesCongress
+CN/peoplesCongress/DB c3 y2038 active seats=321 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HB c3 y2038 active seats=433 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HD c3 y2038 active seats=1240 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HN c3 y2038 active seats=425 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HZ c3 y2038 active seats=533 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/XB c3 y2038 active seats=423 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/XN c3 y2038 active seats=625 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+## fresh-t300 cn.governor
+CN/governor/DB c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HB c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HD c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HN c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HZ c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/XB c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/XN c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## after-cycle1-t120 cn.npcDelegate
+CN/npcDelegate/DB c2 y2033 active seats=238 turns=120/312/336 dur=48/24 seat=CN-npcDelegate-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/npcDelegate/HB c2 y2033 active seats=323 turns=120/312/336 dur=48/24 seat=CN-npcDelegate-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/npcDelegate/HD c2 y2033 active seats=922 turns=120/312/336 dur=48/24 seat=CN-npcDelegate-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/npcDelegate/HN c2 y2033 active seats=316 turns=120/312/336 dur=48/24 seat=CN-npcDelegate-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/npcDelegate/HZ c2 y2033 active seats=395 turns=120/312/336 dur=48/24 seat=CN-npcDelegate-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/npcDelegate/XB c2 y2033 active seats=320 turns=120/312/336 dur=48/24 seat=CN-npcDelegate-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/npcDelegate/XN c2 y2033 active seats=466 turns=120/312/336 dur=48/24 seat=CN-npcDelegate-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+## after-cycle1-t120 cn.peoplesCongress
+CN/peoplesCongress/DB c2 y2033 active seats=321 turns=120/312/336 dur=48/24 seat=CN-peoplesCongress-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/peoplesCongress/HB c2 y2033 active seats=433 turns=120/312/336 dur=48/24 seat=CN-peoplesCongress-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/peoplesCongress/HD c2 y2033 active seats=1240 turns=120/312/336 dur=48/24 seat=CN-peoplesCongress-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/peoplesCongress/HN c2 y2033 active seats=425 turns=120/312/336 dur=48/24 seat=CN-peoplesCongress-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/peoplesCongress/HZ c2 y2033 active seats=533 turns=120/312/336 dur=48/24 seat=CN-peoplesCongress-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/peoplesCongress/XB c2 y2033 active seats=423 turns=120/312/336 dur=48/24 seat=CN-peoplesCongress-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+CN/peoplesCongress/XN c2 y2033 active seats=625 turns=120/312/336 dur=48/24 seat=CN-peoplesCongress-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T12:00:00.000Z|2026-11-17T12:00:00.000Z
+## after-cycle1-t120 cn.governor
+CN/governor/DB c2 y2034 active seats=1 turns=120/360/384 dur=192/168 seat=CN-governor-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+CN/governor/HB c2 y2034 active seats=1 turns=120/360/384 dur=192/168 seat=CN-governor-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+CN/governor/HD c2 y2034 active seats=1 turns=120/360/384 dur=192/168 seat=CN-governor-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+CN/governor/HN c2 y2034 active seats=1 turns=120/360/384 dur=192/168 seat=CN-governor-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+CN/governor/HZ c2 y2034 active seats=1 turns=120/360/384 dur=192/168 seat=CN-governor-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+CN/governor/XB c2 y2034 active seats=1 turns=120/360/384 dur=192/168 seat=CN-governor-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+CN/governor/XN c2 y2034 active seats=1 turns=120/360/384 dur=192/168 seat=CN-governor-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+## after-cycle1-t700 cn.npcDelegate
+CN/npcDelegate/DB c4 y2043 active seats=238 turns=700/792/816 dur=48/24 seat=CN-npcDelegate-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/npcDelegate/HB c4 y2043 active seats=323 turns=700/792/816 dur=48/24 seat=CN-npcDelegate-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/npcDelegate/HD c4 y2043 active seats=922 turns=700/792/816 dur=48/24 seat=CN-npcDelegate-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/npcDelegate/HN c4 y2043 active seats=316 turns=700/792/816 dur=48/24 seat=CN-npcDelegate-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/npcDelegate/HZ c4 y2043 active seats=395 turns=700/792/816 dur=48/24 seat=CN-npcDelegate-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/npcDelegate/XB c4 y2043 active seats=320 turns=700/792/816 dur=48/24 seat=CN-npcDelegate-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/npcDelegate/XN c4 y2043 active seats=466 turns=700/792/816 dur=48/24 seat=CN-npcDelegate-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## after-cycle1-t700 cn.peoplesCongress
+CN/peoplesCongress/DB c4 y2043 active seats=321 turns=700/792/816 dur=48/24 seat=CN-peoplesCongress-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/peoplesCongress/HB c4 y2043 active seats=433 turns=700/792/816 dur=48/24 seat=CN-peoplesCongress-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/peoplesCongress/HD c4 y2043 active seats=1240 turns=700/792/816 dur=48/24 seat=CN-peoplesCongress-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/peoplesCongress/HN c4 y2043 active seats=425 turns=700/792/816 dur=48/24 seat=CN-peoplesCongress-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/peoplesCongress/HZ c4 y2043 active seats=533 turns=700/792/816 dur=48/24 seat=CN-peoplesCongress-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/peoplesCongress/XB c4 y2043 active seats=423 turns=700/792/816 dur=48/24 seat=CN-peoplesCongress-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+CN/peoplesCongress/XN c4 y2043 active seats=625 turns=700/792/816 dur=48/24 seat=CN-peoplesCongress-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## after-cycle1-t700 cn.governor
+CN/governor/DB c4 y2042 active seats=1 turns=700/744/768 dur=192/168 seat=CN-governor-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+CN/governor/HB c4 y2042 active seats=1 turns=700/744/768 dur=192/168 seat=CN-governor-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+CN/governor/HD c4 y2042 active seats=1 turns=700/744/768 dur=192/168 seat=CN-governor-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+CN/governor/HN c4 y2042 active seats=1 turns=700/744/768 dur=192/168 seat=CN-governor-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+CN/governor/HZ c4 y2042 active seats=1 turns=700/744/768 dur=192/168 seat=CN-governor-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+CN/governor/XB c4 y2042 active seats=1 turns=700/744/768 dur=192/168 seat=CN-governor-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+CN/governor/XN c4 y2042 active seats=1 turns=700/744/768 dur=192/168 seat=CN-governor-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T08:00:00.000Z|2026-11-11T08:00:00.000Z
+## all-live cn.npcDelegate
+heal seats=238
+heal seats=316
+heal seats=320
+heal seats=323
+heal seats=395
+heal seats=466
+heal seats=922
+## all-live cn.peoplesCongress
+heal seats=1240
+heal seats=321
+heal seats=423
+heal seats=425
+heal seats=433
+heal seats=533
+heal seats=625
+## all-live cn.governor
+(none)
+## late-joiner cn.npcDelegate
+CN/npcDelegate/XB c3 y2038 active seats=320 turns=450/552/576 dur=48/24 seat=CN-npcDelegate-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=238
+heal seats=316
+heal seats=323
+heal seats=395
+heal seats=466
+heal seats=922
+## late-joiner cn.peoplesCongress
+CN/peoplesCongress/XB c3 y2038 active seats=423 turns=450/552/576 dur=48/24 seat=CN-peoplesCongress-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=1240
+heal seats=321
+heal seats=425
+heal seats=433
+heal seats=533
+heal seats=625
+## late-joiner cn.governor
+CN/governor/XB c2 yundefined active seats=1 turns=400/430/460 dur=60/30 seat=CN-governor-XB shift=- t=2026-10-01T00:00:00.000Z|2026-12-01T00:00:00.000Z|2027-01-01T00:00:00.000Z
+## late-joiner-with-history cn.npcDelegate
+CN/npcDelegate/XB c3 y2038 active seats=320 turns=450/552/576 dur=48/24 seat=CN-npcDelegate-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=238
+heal seats=316
+heal seats=323
+heal seats=395
+heal seats=466
+heal seats=922
+## late-joiner-with-history cn.peoplesCongress
+CN/peoplesCongress/XB c3 y2038 active seats=423 turns=450/552/576 dur=48/24 seat=CN-peoplesCongress-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+heal seats=1240
+heal seats=321
+heal seats=425
+heal seats=433
+heal seats=533
+heal seats=625
+## late-joiner-with-history cn.governor
+CN/governor/XB c3 y2038 active seats=1 turns=450/552/576 dur=192/168 seat=CN-governor-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T18:00:00.000Z|2026-11-13T18:00:00.000Z
+## resolved-this-turn cn.npcDelegate
+(none)
+## resolved-this-turn cn.peoplesCongress
+(none)
+## resolved-this-turn cn.governor
+(none)
+## gate-closed cn.npcDelegate
+CN/npcDelegate/DB c3 y2038 active seats=238 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HB c3 y2038 active seats=323 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HD c3 y2038 active seats=922 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HN c3 y2038 active seats=316 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/HZ c3 y2038 active seats=395 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/XB c3 y2038 active seats=320 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/npcDelegate/XN c3 y2038 active seats=466 turns=300/552/576 dur=48/24 seat=CN-npcDelegate-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+## gate-closed cn.peoplesCongress
+CN/peoplesCongress/DB c3 y2038 active seats=321 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HB c3 y2038 active seats=433 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HD c3 y2038 active seats=1240 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HN c3 y2038 active seats=425 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/HZ c3 y2038 active seats=533 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/XB c3 y2038 active seats=423 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+CN/peoplesCongress/XN c3 y2038 active seats=625 turns=300/552/576 dur=48/24 seat=CN-peoplesCongress-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T00:00:00.000Z|2026-11-20T00:00:00.000Z
+## gate-closed cn.governor
+CN/governor/DB c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-DB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HB c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HD c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HD shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HN c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/HZ c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-HZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/XB c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-XB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+CN/governor/XN c2 y2034 active seats=1 turns=300/360/384 dur=192/168 seat=CN-governor-XN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z

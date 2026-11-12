@@ -21,6 +21,11 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { scheduleGroupReceiving, effectiveGroupReceiving } from "./rules/participation";
 import type { GroupManagementCommand } from "./managementSchema";
 import type { GroupManagement } from "./managementTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 export const defaultGroupManagement = (root: Corporation): GroupManagement => ({
   name: root.name,
@@ -37,8 +42,7 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
   const ids = rootId ? membership.membersByRootId.get(rootId) : undefined;
   if (!rootId || !ids) return null;
   const [corps, world, config, regions] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: ids.map((id) => new ObjectId(id)) } },
         {
@@ -67,13 +71,8 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
         }
       )
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, subsidiaryCorporationsEnabled: 1 } }
-      ),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -83,15 +82,13 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { name: 1, countryId: 1 } })
       .toArray(),
   ]);
   const root = corps.find((c) => c._id.toString() === rootId);
   if (!root) return null;
   const parent =
-    world?.subsidiaryCorporationsEnabled === true &&
     !requireCeo(root, userId) &&
     root.ceoType !== "npp" &&
     !root.suspended &&
@@ -107,12 +104,10 @@ export async function loadGroupManagement(db: Db, corporation: Corporation, user
     parent,
     regions,
     ...groupCapabilities({
-      subsidiariesEnabled: world?.subsidiaryCorporationsEnabled,
       marketSystemMode: config?.marketSystemMode,
       groupSupplyCoordinationEnabled: config?.groupSupplyCoordinationEnabled,
     }),
     supplyAgreementsEnabled: config?.supplyAgreementsEnabled === true,
-    enabled: world?.subsidiaryCorporationsEnabled === true,
   };
 }
 export async function groupManagementView(db: Db, corporation: Corporation, userId: string) {
@@ -126,8 +121,7 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
     .map((c) => c._id);
   const [history, debtByCorp] = await Promise.all([
     privateIds.length
-      ? db
-          .collection<CorporationHistory>("corporationHistory")
+      ? corporationHistoryCollection(db)
           .find(
             {
               corporationId: { $in: privateIds },
@@ -199,7 +193,6 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
     settings: defaultGroupManagement(ctx.root),
     currentTurn: ctx.turn,
     canManage: ctx.parent,
-    managementEnabled: ctx.enabled,
     /** No economic activation is implied by saving a direction or participation preference. */
     supplyEngineEnabled: ctx.supplyEngineEnabled,
     directionsEnabled: ctx.directionsEnabled,
@@ -233,7 +226,7 @@ export async function groupManagementView(db: Db, corporation: Corporation, user
         history: privateAccess ? (historyByCorp.get(c._id.toString()) ?? []) : null,
         operator: operator.operator,
         isRoot: c._id.equals(ctx.root._id),
-        canEdit: own && ctx.enabled && !operator.vacant,
+        canEdit: own && !operator.vacant,
         receiving: privateAccess ? effectiveGroupReceiving(operator, preference, ctx.turn) : null,
         requested:
           privateAccess && validPreference ? preference.enabled : privateAccess ? false : null,
@@ -253,7 +246,7 @@ export async function updateGroupManagement(
   const paused = await requireCorporationActionsEnabled(db);
   if (paused) return deny("Corporation actions are paused.", 409);
   const ctx = await loadGroupManagement(db, corporation, userId);
-  if (!ctx || !ctx.enabled) return deny("Subsidiary group management is unavailable.", 409);
+  if (!ctx) return deny("Subsidiary group management is unavailable.", 409);
   const rootId = ctx.root._id.toString(),
     now = new Date();
   const own =
@@ -272,7 +265,7 @@ export async function updateGroupManagement(
       command.enabled,
       ctx.turn
     );
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         userId: new ObjectId(userId),
@@ -297,7 +290,7 @@ export async function updateGroupManagement(
       direction.ceoTenureKey !== groupOperator(corporation, rootId).ceoTenureKey
     )
       return deny("This suggestion is no longer current.", 409);
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         userId: new ObjectId(userId),
@@ -322,7 +315,7 @@ export async function updateGroupManagement(
       return deny("Choose a current subsidiary.", 400);
     if (!(await canActOnCorporationAsParent(db, new ObjectId(userId), target)))
       return deny("You no longer control this subsidiary.");
-    const result = await db.collection<Corporation>("corporations").updateOne(
+    const result = await corporationsCollection(db).updateOne(
       {
         _id: target._id,
         ceoId: target.ceoId,
@@ -363,7 +356,7 @@ export async function updateGroupManagement(
       : command.action === "discount"
         ? { "groupManagement.supplyDiscount": command.discount }
         : { "groupManagement.supplyPolicy": command.policy };
-  const result = await db.collection<Corporation>("corporations").updateOne(
+  const result = await corporationsCollection(db).updateOne(
     {
       _id: ctx.root._id,
       userId: new ObjectId(userId),

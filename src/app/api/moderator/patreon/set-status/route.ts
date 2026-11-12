@@ -8,6 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import type { PatreonTier, User } from "@/lib/db/types";
 import { applyPatreonStatus } from "@/lib/patreon/service";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const bodySchema = z.object({
   userId: z.string().refine((value) => ObjectId.isValid(value), "Invalid user ID"),
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     const db = await getDb();
     const objectId = new ObjectId(userId);
 
-    const user = await db.collection<User>("users").findOne({ _id: objectId });
+    const user = await usersCollection(db).findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }

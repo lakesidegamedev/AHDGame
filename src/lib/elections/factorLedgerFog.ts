@@ -13,7 +13,7 @@
  * stay hidden while the shared, already-public national picture is kept.
  */
 
-import type { FactorLedgerSnapshot } from "@/lib/electionEngine/factorLedger";
+import type { FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
 
 export function applyFactorLedgerFogOfWar(
   snapshot: FactorLedgerSnapshot,

@@ -4,7 +4,7 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS } from "@/lib/constants/sectorStrategies";
 
-/** A controlling parent's CEO retools an AI-run subsidiary's sector (S#410). */
+/** A controlling parent's CEO retools an AI-run subsidiary's sector. */
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));

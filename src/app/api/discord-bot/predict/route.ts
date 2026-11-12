@@ -19,6 +19,11 @@ import type {
   ElectionVoteTally,
   PoliticalParty,
 } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface PredictPartySeats {
   party: string;
@@ -81,20 +86,17 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const [officials, parties, activeElections] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           officeType,
           // { countryId: null } matches both missing field and explicit null — catches all untagged officials
           $or: [{ countryId: country as CountryId }, { countryId: null as unknown as CountryId }],
         })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId: country as CountryId })
         .toArray(),
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .find({
           countryId: country as CountryId,
           electionType: electionTypes.length === 1 ? electionTypes[0] : { $in: electionTypes },
@@ -150,12 +152,10 @@ export async function GET(request: Request) {
       const electionIds = generalElections.map((e: Election) => e._id);
 
       const [tallies, candidates] = await Promise.all([
-        db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+        electionVoteTalliesCollection(db)
           .find({ electionId: { $in: electionIds } })
           .toArray(),
-        db
-          .collection<ElectionCandidate>("electionCandidates")
+        electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds }, status: "active" })
           .toArray(),
       ]);

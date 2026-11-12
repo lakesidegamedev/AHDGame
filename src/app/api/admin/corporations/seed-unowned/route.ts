@@ -36,6 +36,9 @@ import type { SeedPreviewRow, SeedPreviewResponse } from "@/lib/api/types/sector
 import { unownedPoolBoostSet } from "@/lib/market/unownedHeadroom";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 const LEGACY_BOOST_MULTIPLIER = 1.2;
 const MAX_BOOST_CAP = 3.0;
@@ -54,9 +57,9 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     const [gameState, ranking, rateDocs] = await Promise.all([
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       computeSectorDistressRanking(db),
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+      exchangeRatesCollection(db).find({}).toArray(),
     ]);
     const boostMap = distressRankingToBoostMap(ranking, maxBoost);
 
@@ -69,8 +72,7 @@ export async function GET(request: Request) {
 
     // Aggregate current revenue per (sectorType, countryId) so we can convert
     // each country's local-currency total to ₳ at its own FX rate.
-    const agg = await db
-      .collection<UnownedSector>("unownedSectors")
+    const agg = await unownedSectorsCollection(db)
       .aggregate<{
         _id: { sectorType: string; countryId: CountryId };
         totalRevenue: number;
@@ -119,7 +121,6 @@ export async function GET(request: Request) {
       totalCurrentRevenue,
       totalProjectedDelta,
       totalDocs,
-      autoSectorSeedEnabled: gameState?.autoSectorSeedEnabled === true,
     });
   } catch (error) {
     return handleRouteError(error);
@@ -142,15 +143,13 @@ export async function POST(request: Request) {
     const log: string[] = [];
     const redirectBuckets = await loadSeedProtectedBucketKeys(db);
     // PLANTS: `headroomUnits`, not `revenue`, is the pool players draw from.
-    // Both boost paths below scale the two legs in lockstep via the SAME shared
-    // pipeline the per-turn auto-seeder uses. This route used to scale revenue
-    // alone, so under plants an admin stimulus moved a number nothing reads and
-    // left the unit view stale.
+    // Both boost paths scale the two legs in lockstep via the same shared
+    // pipeline the per-turn auto-seeder uses.
     const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
     const eraUnitScale = await loadWorldEraUnitScale(db);
 
     if (body.maxBoost == null) {
-      const allUnowned = await db.collection<UnownedSector>("unownedSectors").find({}).toArray();
+      const allUnowned = await unownedSectorsCollection(db).find({}).toArray();
       const open = allUnowned.filter(
         (u) =>
           !redirectBuckets.has(
@@ -170,21 +169,19 @@ export async function POST(request: Request) {
       for (const [lane, ids] of idsByType) {
         if (ids.length === 0) continue;
         const identity = operatingSectorIdentity(lane);
-        const res = await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateMany({ _id: { $in: ids } }, [
-            {
-              $set: unownedPoolBoostSet(
-                identity.sectorType,
-                LEGACY_BOOST_MULTIPLIER,
-                now,
-                plantsEnabled,
-                eraUnitScale,
-                identity.industryModel,
-                identity.mediaDiscriminator
-              ),
-            },
-          ]);
+        const res = await unownedSectorsCollection(db).updateMany({ _id: { $in: ids } }, [
+          {
+            $set: unownedPoolBoostSet(
+              identity.sectorType,
+              LEGACY_BOOST_MULTIPLIER,
+              now,
+              plantsEnabled,
+              eraUnitScale,
+              identity.industryModel,
+              identity.mediaDiscriminator
+            ),
+          },
+        ]);
         modifiedCount += res.modifiedCount;
       }
       const redirectedCount = await boostProtectedUnownedToNatCorp(
@@ -221,10 +218,7 @@ export async function POST(request: Request) {
       if (boost <= 0) continue;
       const multiplier = 1 + boost;
       const identity = operatingSectorIdentity(lane);
-      const sectorDocs = await db
-        .collection<UnownedSector>("unownedSectors")
-        .find(identity)
-        .toArray();
+      const sectorDocs = await unownedSectorsCollection(db).find(identity).toArray();
       const openIds = sectorDocs
         .filter(
           (u) =>
@@ -234,9 +228,9 @@ export async function POST(request: Request) {
         )
         .map((u) => u._id);
       if (openIds.length > 0) {
-        const { modifiedCount } = await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateMany({ _id: { $in: openIds } }, [
+        const { modifiedCount } = await unownedSectorsCollection(db).updateMany(
+          { _id: { $in: openIds } },
+          [
             {
               $set: unownedPoolBoostSet(
                 identity.sectorType,
@@ -248,7 +242,8 @@ export async function POST(request: Request) {
                 identity.mediaDiscriminator
               ),
             },
-          ]);
+          ]
+        );
         totalModified += modifiedCount;
       }
       totalRedirected += await boostProtectedUnownedToNatCorp(

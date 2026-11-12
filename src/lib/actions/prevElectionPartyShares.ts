@@ -1,5 +1,8 @@
 import type { Db } from "mongodb";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export interface LastElectionPartySummary {
   cycle: number;
@@ -25,20 +28,17 @@ export async function getLastElectionPartyShares(
     query.senateClass = currentElection.senateClass;
   }
 
-  const prev = await db.collection<Election>("elections").findOne({
+  const prev = await electionsCollection(db).findOne({
     ...query,
     cycle: currentElection.cycle - 1,
     status: { $in: ["completed", "resolved"] },
   });
   if (!prev) return null;
 
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
-    .findOne({ electionId: prev._id });
+  const tally = await electionVoteTalliesCollection(db).findOne({ electionId: prev._id });
   if (!tally?.totalVotes || Object.keys(tally.totalVotes).length === 0) return null;
 
-  const prevCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const prevCandidates = await electionCandidatesCollection(db)
     .find({ electionId: prev._id })
     .toArray();
   const idToParty = new Map(prevCandidates.map((c) => [c._id.toString(), c.party]));

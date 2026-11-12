@@ -1,19 +1,8 @@
-/**
- * NPP CEO careers and pay demands: the turn shell around
- * `corporations/rules/nppCeoCareer`.
- *
- * Every corporation run by an NPP CEO (NPP companies, subsidiaries with an NPP
- * CEO, caretakers) gets a pay review every 24 turns. The CEO asks for a salary
- * sized to its level and the company's trailing profit; the owner accepts,
- * counters or replaces the CEO. When nobody answers within the window, the
- * corporation's operator policy decides. Salary already flows to the NPP's own
- * funds through the corporation turn, so this pass only sets `ceoSalary`.
- *
- * Runs once per turn before the sector calculations, so a salary set here is
- * paid this turn. Reads: one `npps` $in, one `corporationHistory` aggregate,
- * and the free-NPP pool once per country that needs a replacement. Writes:
- * one corporations bulkWrite.
- */
+// Every NPP-run corporation gets a pay review every 24 turns: the CEO
+// demands a salary sized to level and trailing profit; owner accepts,
+// counters, or replaces. Unanswered windows fall to the operator policy.
+// Salary flows via the corporation turn; this pass only sets ceoSalary.
+// Runs before sector calcs so today's salary pays this turn.
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporationCeoPay } from "@/lib/db/types/corporation";
@@ -38,6 +27,10 @@ import {
 } from "@/lib/corporations/caretakerCeo";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 type NppCareer = Pick<NPP, "_id" | "ceoTrackRecord" | "personality">;
 
@@ -118,8 +111,7 @@ export async function processNppCeoPay(
     const nppIds = [...new Set([...involved, ...newlySeen].map((c) => c.ceoId!.toString()))]
       .filter((id) => ObjectId.isValid(id))
       .map((id) => new ObjectId(id));
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ _id: { $in: nppIds } })
       .project<NppCareer>({ ceoTrackRecord: 1, personality: 1 })
       .toArray();
@@ -211,7 +203,7 @@ export async function processNppCeoPay(
   }
 
   if (ops.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(ops, { ordered: true });
+    await corporationsCollection(db).bulkWrite(ops, { ordered: true });
   }
   return result;
 }
@@ -315,8 +307,7 @@ export async function trailingDailyResults(
   const out = new Map<string, { revenue: number; profit: number; priorProfit: number }>();
   if (corpIds.length === 0) return out;
   const window = CEO_PAY_REVIEW_TURNS;
-  const rows = await db
-    .collection("corporationHistory")
+  const rows = await corporationHistoryCollection<Document>(db)
     .aggregate<{ _id: ObjectId; revenue: number; profit: number; priorProfit: number }>([
       {
         $match: {

@@ -1,15 +1,12 @@
 /**
- * Canonical freight billing v1 (issue #897): the corporation-turn glue between
- * last turn's state-scoped shipping money (lookups, from the sourcing pass via
- * sourcingNetworkLoad) and the per-sector apportionment in
- * `@/lib/logistics/freightBilling`.
+ * Corporation-turn glue between last turn's state-scoped shipping money
+ * (from the sourcing pass via sourcingNetworkLoad) and the per-sector
+ * apportionment in `@/lib/logistics/freightBilling`.
  *
- * This file owns exactly one job: derive each sector's billing-relevant
- * physical units the same way every other corp surface does
- * (`computeSectorCommodityUnits`, the ledger's per-sector twin) and hand the
- * pure apportionment its inputs. Only called while
- * `gameConfig.canonicalFreightBillingEnabled` is on; a world with the flag off
- * never reaches this code.
+ * This file derives each sector's billing-relevant physical units via
+ * `computeSectorCommodityUnits` (the ledger's per-sector twin) and hands the
+ * pure apportionment its inputs. Only reached when
+ * `gameConfig.canonicalFreightBillingEnabled` is on.
  */
 
 import type { Corporation, CorporateSector } from "@/lib/db/types";

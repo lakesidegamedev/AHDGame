@@ -1,11 +1,11 @@
 /**
- * UK dual-ministry rules (portable core for issue #2049).
+ * UK dual-ministry rules.
  *
  * A UK player may hold exactly one departmental portfolio plus exactly one
  * central title (Deputy Prime Minister or First Secretary of State). Two
  * departments, both central titles, and any second seat outside the UK are
- * rejected. One cabinet row per position is preserved; the shell enforces
- * this with a unique (countryId, characterId, roleSlot) index.
+ * rejected. The shell enforces one cabinet row per position with a unique
+ * (countryId, characterId, roleSlot) index.
  *
  * Portable zone: plain data in, plain data out. No database, clock,
  * randomness, environment, network, or app imports. Time arrives as

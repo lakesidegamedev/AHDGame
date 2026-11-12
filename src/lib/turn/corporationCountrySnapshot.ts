@@ -1,11 +1,13 @@
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import {
   fxRateForCorpFromMap,
   loadValuationFxRates,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationCountryHistoryCollection } from "@/lib/db/repositories/corporationCountryHistory";
+import type { Document } from "mongodb";
 
 const HISTORY_CAP = 96;
 
@@ -33,8 +35,7 @@ interface CorporationCountrySnapshot {
  * fixed once for NPP wealth (src/lib/sim/metrics.ts).
  */
 export async function snapshotCorporationsByCountry(db: Db, turn: number): Promise<number> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       {},
       {
@@ -98,12 +99,12 @@ export async function snapshotCorporationsByCountry(db: Db, turn: number): Promi
     };
   });
 
-  await db
-    .collection<CorporationCountrySnapshot>("corporationCountryHistory")
-    .bulkWrite(ops, { ordered: false });
+  await corporationCountryHistoryCollection<CorporationCountrySnapshot>(db).bulkWrite(ops, {
+    ordered: false,
+  });
 
   const minTurn = Math.max(1, turn - HISTORY_CAP + 1);
-  await db.collection("corporationCountryHistory").deleteMany({ turn: { $lt: minTurn } });
+  await corporationCountryHistoryCollection<Document>(db).deleteMany({ turn: { $lt: minTurn } });
 
   return ops.length;
 }

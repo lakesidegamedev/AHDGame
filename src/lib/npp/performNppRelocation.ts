@@ -7,10 +7,16 @@ import type {
   State,
   StatePartyOrg,
 } from "@/lib/db/types";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
 import { updatePartyPresence } from "@/lib/turn/partyOrg/presence";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface NppRelocationOutcome {
   /** Office label the NPP was vacated from, or null if they held none. */
@@ -37,7 +43,7 @@ async function vacateNppOffice(
   if (!currentOffice) return { resignedFromOffice: null };
 
   const blocRowIds = await heldBlocRowIds(db, { nppId: npp._id });
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     { nppId: npp._id },
     {
       $set: { isNPP: false, updatedAt: now },
@@ -70,16 +76,14 @@ async function withdrawNppActiveCandidacies(
   nppId: ObjectId,
   now: Date
 ): Promise<{ withdrawnGeneralElections: number }> {
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({ nppId, isNPP: true, status: "active" })
     .toArray();
 
   if (candidacies.length === 0) return { withdrawnGeneralElections: 0 };
 
   const electionIds = [...new Set(candidacies.map((candidate) => candidate.electionId))];
-  const openElections = await db
-    .collection<Election>("elections")
+  const openElections = await electionsCollection(db)
     .find({ _id: { $in: electionIds }, status: { $in: ["upcoming", "active", "completed"] } })
     .project({ _id: 1 })
     .toArray();
@@ -90,12 +94,10 @@ async function withdrawNppActiveCandidacies(
 
   if (toWithdraw.length === 0) return { withdrawnGeneralElections: 0 };
 
-  await db
-    .collection("electionCandidates")
-    .updateMany(
-      { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { _id: { $in: toWithdraw.map((candidate) => candidate._id) } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   for (const candidate of toWithdraw) {
     await removeWithdrawnCandidateFromTally(db, candidate.electionId, candidate._id.toString());
@@ -117,7 +119,7 @@ async function clearOldRegionStateLeadership(
 ): Promise<string[]> {
   if (!npp.party || npp.party === "independent") return [];
 
-  const oldStateOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+  const oldStateOrg = await statePartyOrgCollection(db).findOne({
     partyId: npp.party,
     stateId: oldStateId,
     $or: [{ chairId: npp._id }, { viceChairId: npp._id }, { treasurerId: npp._id }],
@@ -141,26 +143,22 @@ async function clearOldRegionStateLeadership(
   }
   if (positions.length === 0) return [];
 
-  await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .updateOne({ _id: oldStateOrg._id }, { $set: updates });
+  await statePartyOrgCollection(db).updateOne({ _id: oldStateOrg._id }, { $set: updates });
   return positions;
 }
 
 /**
- * Apply the full relocation pipeline to an NPP — the `npps`-collection sibling of
+ * Apply the full relocation pipeline to an NPP: the `npps`-collection sibling of
  * `performRelocation` for player characters.
  *
- * Before this existed, the only NPP move path (`relocate_state` party influence)
- * wrote `homeState` and vacated the office inline, and left every other
- * region-derived fact behind: the old and new regions' `statePartyOrg` presence
- * flags were never recomputed, so moving a party's last NPP out of a region left
- * that region flagged as "party present" (and a region gaining its first NPP
- * stayed flagged empty, blocking Build Org there). State-party leadership in the
- * abandoned region was also retained.
+ * Recomputes region-derived facts the inline `relocate_state` path left stale:
+ * `statePartyOrg` presence flags on both old and new regions, and state-party
+ * leadership in the abandoned region. Otherwise a region losing its last NPP
+ * stays flagged "party present", and a region gaining its first stays flagged
+ * empty (blocking Build Org there).
  *
- * Assumes the caller has already validated the target region exists, belongs to
- * the NPP's country, differs from the current region, and has capacity.
+ * Assumes the caller has validated the target region exists, belongs to the
+ * NPP's country, differs from the current region, and has capacity.
  */
 export async function performNppRelocation(
   db: Db,
@@ -178,12 +176,10 @@ export async function performNppRelocation(
 
   const clearedStateLeadership = await clearOldRegionStateLeadership(db, npp, oldStateId, now);
 
-  await db
-    .collection<NPP>("npps")
-    .updateOne(
-      { _id: npp._id },
-      { $set: { homeState: newStateId, currentOffice: null, updatedAt: now } }
-    );
+  await nppsCollection(db).updateOne(
+    { _id: npp._id },
+    { $set: { homeState: newStateId, currentOffice: null, updatedAt: now } }
+  );
 
   // Presence is derived from where a party's NPPs live, so it must be recomputed
   // for BOTH regions, and only after the `homeState` write above lands.

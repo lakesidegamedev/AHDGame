@@ -375,10 +375,8 @@ export function stateFigure(s: Pick<PresMapState, "ev" | "evLabel">): string | n
 }
 
 /**
- * A map model from flat state tiles (the results board's): fill, ink, caption
- * and electoral votes per state, with no per-ticket shares or trend. Used where
- * the election payload carries no per-state tally to build a full model from,
- * such as a race with a single ticket.
+ * A map model from flat state tiles, with no per-ticket shares or trend.
+ * Used when the payload carries no per-state tally, e.g. a single-ticket race.
  */
 export function presMapModelFromTiles(
   tiles: { stateId: string; ev: number; background: string; ink: string; title: string }[]

@@ -6,7 +6,9 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const positionValue = z.number().int().min(-5).max(5);
 
@@ -34,16 +36,14 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
 
   const db = await getDb();
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterId) });
+  const character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
   if (!character) {
     return errorResponse(404, "Character not found");
   }
 
   // Resolve the linked account for audit-log attribution (NPCs may have none).
   const user = character.userId
-    ? await db.collection("users").findOne({ _id: character.userId })
+    ? await usersCollection<Document>(db).findOne({ _id: character.userId })
     : null;
 
   const oldEconomic = character.policies.economic;
@@ -63,7 +63,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   if (economic !== undefined) $set["policies.economic"] = economic;
   if (social !== undefined) $set["policies.social"] = social;
 
-  await db.collection<Character>("characters").updateOne({ _id: character._id }, { $set });
+  await charactersCollection(db).updateOne({ _id: character._id }, { $set });
 
   const detailsParts: string[] = [];
   if (economic !== undefined) detailsParts.push(`economic ${oldEconomic} → ${economic}`);

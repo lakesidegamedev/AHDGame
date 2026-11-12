@@ -19,6 +19,10 @@ import {
   getPartyTenure,
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -53,7 +57,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -74,7 +78,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Get or create state party org record
     const statePartyOrgId = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
       _id: statePartyOrgId,
     });
 
@@ -102,9 +106,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       // to a deleted/banned/party-left character does not block appointment.
       let chairPositionIsVacant = true;
       if (statePartyOrg?.chairId) {
-        const existingChair = await db
-          .collection<Character>("characters")
-          .findOne({ _id: statePartyOrg.chairId });
+        const existingChair = await charactersCollection(db).findOne({
+          _id: statePartyOrg.chairId,
+        });
         if (existingChair && existingChair.party === partyKey) {
           chairPositionIsVacant = false;
         }
@@ -131,7 +135,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       // Find the character
-      appointedCharacter = await db.collection<Character>("characters").findOne({
+      appointedCharacter = await charactersCollection(db).findOne({
         _id: characterObjectId,
       });
 
@@ -150,7 +154,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       // Check if character is banned
-      const user = await db.collection<User>("users").findOne({ _id: appointedCharacter.userId });
+      const user = await usersCollection(db).findOne({ _id: appointedCharacter.userId });
       if (user?.isBanned) {
         return errorResponse(400, "Cannot appoint a banned user");
       }
@@ -220,7 +224,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (position !== "treasurer" && !("treasurerId" in leadershipReset))
       setOnInsertFields.treasurerId = null;
 
-    await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    await statePartyOrgCollection(db).updateOne(
       { _id: statePartyOrgId },
       {
         $set: {
@@ -238,9 +242,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       position === "chair" ? "Chair" : position === "viceChair" ? "Vice Chair" : "Treasurer";
 
     if (appointedCharacter) {
-      const appointedUser = await db
-        .collection<User>("users")
-        .findOne({ _id: appointedCharacter.userId });
+      const appointedUser = await usersCollection(db).findOne({ _id: appointedCharacter.userId });
       await createAdminLog({
         category: "election",
         action: "official_appointed",

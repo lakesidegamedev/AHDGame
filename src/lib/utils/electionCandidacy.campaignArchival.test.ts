@@ -3,7 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/electionEngine/tallyCleaner", () => ({
+vi.mock("@/lib/elections/engine/tallyCleaner", () => ({
   removeWithdrawnCandidateFromTally: vi.fn().mockResolvedValue(undefined),
 }));
 

@@ -163,6 +163,26 @@ describe("roster-driven enablement", () => {
     });
   });
 
+  it("flags 2027 background countries and clears the flag in other presets (#5702)", async () => {
+    const a = collectWrites();
+    await seedCountryGameStates(a.db as unknown as Db, "2027-default", 2027);
+    expect(a.writes().find((w) => w.id === "FR")!.set).toMatchObject({
+      backgroundCountry: true,
+      absentInEra: false,
+      enabledForPlayers: false,
+      status: "beta",
+    });
+    expect(a.writes().find((w) => w.id === "UK")!.set).toMatchObject({
+      backgroundCountry: false,
+      enabledForPlayers: false,
+      status: "beta",
+    });
+
+    const b = collectWrites();
+    await seedCountryGameStates(b.db as unknown as Db, "2019-default", 2019);
+    for (const w of b.writes()) expect(w.set, w.id).toMatchObject({ backgroundCountry: false });
+  });
+
   it("opens JP to players in 1991 and 2019", async () => {
     for (const preset of ["1991-default", "2019-default"] as const) {
       const { db, writes } = collectWrites();

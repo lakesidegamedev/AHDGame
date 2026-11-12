@@ -1,8 +1,11 @@
 import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
-import type { Character, ElectedOfficial, User } from "@/lib/db/types";
+import type { ElectedOfficial, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Returns characterIds of seated, non-NPP, non-banned party members eligible
@@ -22,8 +25,7 @@ export async function getEligibleCharactersForWhip(
   // "npc" vs office type "npcDelegate"), so querying by the raw key would match
   // zero delegates and silently whip nobody.
   const officeType = getOfficeTypeForChamber(countryId, chamber);
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       isNPP: false,
       party: partyId,
@@ -41,8 +43,7 @@ export async function getEligibleCharactersForWhip(
   if (characterIds.length === 0) return [];
 
   // Resolve characters → users so we can filter out banned users.
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: characterIds } })
     .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
     .toArray();
@@ -52,8 +53,7 @@ export async function getEligibleCharactersForWhip(
     (s) => characters.find((c) => c.userId.toString() === s)!.userId
   );
 
-  const bannedUsers = await db
-    .collection<User>("users")
+  const bannedUsers = await usersCollection(db)
     .find({ _id: { $in: userIds }, isBanned: true })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();

@@ -41,16 +41,20 @@ export interface RefugeeAdmissionAuthorization {
   displacementActive?: boolean;
 }
 
-/** Seven-option asylum and border catalogs run from open to restrictive. */
-export const REFUGEE_ADMISSION_LAW_IDS = [
-  "us_border_security_enforcement",
-  "uk_immigration_asylum",
-  "de_asylum_policy",
-  "de_immigration_policy",
-  "ie_immigration_asylum",
-] as const;
+/** Admission share by enacted option index (7 options run from open to restrictive). */
+const OPEN_TO_RESTRICTIVE_ADMISSION = [1, 1, 0.75, 0.5, 0.25, 0.1, 0] as const;
+/** Admission share by enacted level (5 levels run from closed to open). */
+const CLOSED_TO_OPEN_ADMISSION = [0, 0.25, 0.5, 0.75, 1] as const;
 
-const ADMISSION_BY_OPTION = [1, 1, 0.75, 0.5, 0.25, 0.1, 0] as const;
+const ADMISSION_TABLES: Readonly<Record<string, readonly number[]>> = {
+  "us.sec.immigrationNationality": CLOSED_TO_OPEN_ADMISSION,
+  "uk.sec.nationalityMigration": CLOSED_TO_OPEN_ADMISSION,
+  de_asylum_policy: OPEN_TO_RESTRICTIVE_ADMISSION,
+  de_immigration_policy: OPEN_TO_RESTRICTIVE_ADMISSION,
+  ie_immigration_asylum: OPEN_TO_RESTRICTIVE_ADMISSION,
+};
+
+export const REFUGEE_ADMISSION_LAW_IDS = Object.keys(ADMISSION_TABLES);
 
 /** Reserve the modeled conscript stock in its eligible age band, without removing residents. */
 export function servingCohortsForReception(
@@ -97,7 +101,8 @@ export function refugeeAdmissionAuthorization(
     .sort((a, b) => a.legislationTypeId.localeCompare(b.legislationTypeId))
     .map((law) => {
       const index = law.policyOptionIndex;
-      if (!Number.isInteger(index) || index === undefined || index < 0 || index > 6)
+      const table = ADMISSION_TABLES[law.legislationTypeId];
+      if (!Number.isInteger(index) || index === undefined || index < 0 || index >= table.length)
         throw new Error("Asylum law needs a valid enacted option");
       return { legislationTypeId: law.legislationTypeId, policyOptionIndex: index };
     });
@@ -105,7 +110,7 @@ export function refugeeAdmissionAuthorization(
     basis: "humanitarian-response",
     admissionMultiplier: Math.min(
       1,
-      ...snapshot.map((law) => ADMISSION_BY_OPTION[law.policyOptionIndex])
+      ...snapshot.map((law) => ADMISSION_TABLES[law.legislationTypeId][law.policyOptionIndex])
     ),
     laws: snapshot,
   };
@@ -114,6 +119,8 @@ export function refugeeAdmissionAuthorization(
 export interface RefugeeReceptionOrder {
   _id: string;
   worldEpochId: string;
+  /** Set when a Crisis v2 effect raised this, so completion is recorded on the crisis instead of an interaction. */
+  origin?: "crisis";
   interactionId: string;
   crisisId: string;
   nodeId: string;
@@ -140,6 +147,8 @@ export interface RefugeeReceptionRoute {
 export interface RefugeeReceptionResult {
   _id: string;
   worldEpochId: string;
+  /** Set when a Crisis v2 effect raised this, so completion is recorded on the crisis instead of an interaction. */
+  origin?: "crisis";
   interactionId: string;
   crisisId: string;
   originCountryId: string;
@@ -305,6 +314,7 @@ export function planRefugeeReceptions(
     results.push({
       _id: order._id,
       worldEpochId,
+      ...(order.origin ? { origin: order.origin } : {}),
       interactionId: order.interactionId,
       crisisId: order.crisisId,
       originCountryId: order.originCountryId,

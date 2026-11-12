@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import type { Character, ElectedOfficial } from "@/lib/db/types";
 import type { OfficeType } from "@/lib/db/types/character";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Cabinet `currentOffice.type` values that carry a `positionId`. */
 const CABINET_OFFICE_TYPES = new Set([
@@ -70,8 +72,7 @@ export async function getExecutiveCharacterIds(
   // Query-side mirror of isExecutiveOffice so the scan touches executives
   // only, not every player in the member countries. The in-memory check below
   // stays as the source of truth.
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({
       countryId: { $in: memberCountries },
       userId: { $exists: true },
@@ -89,8 +90,7 @@ export async function getExecutiveCharacterIds(
     if (isExecutiveOffice(c.currentOffice)) ids.add(c._id.toString());
   }
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       countryId: { $in: memberCountries },
       officeType: { $in: [...EXECUTIVE_OFFICE_KEYS] },

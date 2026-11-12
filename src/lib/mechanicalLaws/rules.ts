@@ -23,6 +23,22 @@ export function clampMechanicalLevel(value: unknown): MechanicalLawLevel {
   return Math.max(0, Math.min(4, n)) as MechanicalLawLevel;
 }
 
+/**
+ * Level of a law that replaced an older act. A world seeded with the newer law
+ * holds a record for it, so a record decides. Without one the world predates
+ * the newer law and keeps running the older act: its record, else its
+ * starting level.
+ */
+export function resolveSupersededLevel(input: {
+  current: number | undefined;
+  superseded: number | undefined;
+  supersededBaseline: MechanicalLawLevel;
+}): MechanicalLawLevel {
+  if (input.current != null) return clampMechanicalLevel(input.current);
+  if (input.superseded != null) return clampMechanicalLevel(input.superseded);
+  return input.supersededBaseline;
+}
+
 /** Most subsidiaries one group may run in the country; null means no cap. */
 export const SUBSIDIARY_CAP_BY_LEVEL: readonly (number | null)[] = [null, 12, 8, 5, 3];
 

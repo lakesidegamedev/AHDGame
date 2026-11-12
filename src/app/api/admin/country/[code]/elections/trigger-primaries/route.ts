@@ -16,8 +16,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { recordPrimarySnapshots } from "@/lib/turnSystem";
-import { initElectionVoteTally, fetchEnrichedCandidates } from "@/lib/electionEngine";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initElectionVoteTally, fetchEnrichedCandidates } from "@/lib/elections/engine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   calcPrimaryScore,
   calcPresidentPrimaryScore,
@@ -43,6 +43,14 @@ import { parseSeatId } from "@/lib/seats/seatId";
 import { getGameTime } from "@/lib/time/gameTime";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -72,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     };
     if (state) query.state = state;
 
-    const inPrimary = await db.collection<Election>("elections").find(query).toArray();
+    const inPrimary = await electionsCollection(db).find(query).toArray();
 
     if (inPrimary.length === 0) {
       return NextResponse.json({
@@ -90,8 +98,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     for (const election of inPrimary) {
       // Fetch all active candidates for this election
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
@@ -118,12 +125,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
 
       if (duplicateIds.length > 0) {
-        await db
-          .collection("electionCandidates")
-          .updateMany(
-            { _id: { $in: duplicateIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: duplicateIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         totalEliminated += duplicateIds.length;
         // Withdrawn candidates' campaigns must leave active surfaces (ticket #1313).
         await archiveCampaignsForCandidates({
@@ -142,8 +147,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
 
       // Re-fetch active candidates after dedup
-      const activeCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const activeCandidates = await electionCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
@@ -151,8 +155,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       const enriched = await fetchEnrichedCandidates(activeCandidates);
       // Filter parties by election's countryId to avoid cross-country collisions
       const electionCountryId = election.countryId ?? "US";
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ countryId: electionCountryId })
         .toArray();
       const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
@@ -165,9 +168,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       if (!isPresident && election.seatId) {
         const localRegionId = parseSeatId(election.seatId).localRegionId;
         if (localRegionId) {
-          const stateDoc = await db
-            .collection<State>("states")
-            .findOne({ _id: localRegionId, countryId: electionCountryId });
+          const stateDoc = await statesCollection(db).findOne({
+            _id: localRegionId,
+            countryId: electionCountryId,
+          });
           if (
             stateDoc &&
             typeof stateDoc.cachedEconomicLean === "number" &&
@@ -188,18 +192,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         const nppIds = activeCandidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
         const [chars, npps, statePartyOrgs] = await Promise.all([
           characterIds.length > 0
-            ? db
-                .collection<Character>("characters")
+            ? charactersCollection(db)
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : [],
           nppIds.length > 0
-            ? db
-                .collection<NPP>("npps")
+            ? nppsCollection(db)
                 .find({ _id: { $in: nppIds } })
                 .toArray()
             : [],
-          db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+          statePartyOrgCollection(db).find({}).toArray(),
         ]);
         charMap = new Map(chars.map((c) => [c._id.toString(), c]));
         _nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
@@ -213,10 +215,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       for (const c of activeCandidates)
         partyCounts.set(c.party, (partyCounts.get(c.party) ?? 0) + 1);
 
-      // How many advance per party. This route used to hardcode 1, which
-      // withdrew candidates the turn resolver would have advanced: 3 for
-      // UK/JP/DE legislatures, 7 for one-party states. Mirror
-      // `resolvePrimariesIfNeeded` exactly.
+      // Must match resolvePrimariesIfNeeded: 1 would wrongly withdraw candidates
+      // the resolver advances (3 for UK/JP/DE, 7 for one-party states).
       const maxAdvancing = getPrimaryWinnersForElection(
         electionCountryId as CountryId,
         election.electionType
@@ -236,9 +236,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             const ec = enriched.find((e) => e.candidateId === c._id.toString())!;
             let score: number;
             if (isPresident) {
-              // Party influence (candidate's own party clout), NPPs have none. See #934.
-              // National chairs get +25% on the value used for primary calcs.
-              // State chairs get no boost on the national snapshot (geographic only).
+              // Party influence is the candidate's own party clout; NPPs have none. National chairs get +25% for primary calcs; state chairs get no national-snapshot boost (geographic only).
               const rawPartyInfluence = c.isNPP
                 ? 0
                 : (charMap.get(c.characterId.toString())?.partyInfluence ?? 0);
@@ -285,12 +283,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
       if (loserIds.length > 0) {
         const { ObjectId } = await import("mongodb");
-        await db
-          .collection("electionCandidates")
-          .updateMany(
-            { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         totalEliminated += loserIds.length;
         // Primary-cut losers leave the race: their campaigns must leave active
         // surfaces too (ticket #1313). Re-entry reactivates the campaign.
@@ -310,8 +306,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
 
       // ── 3c. Initialize vote tally for the general election ────────────────
-      const generalCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const generalCandidates = await electionCandidatesCollection(db)
         .find({ electionId: election._id, status: "active" })
         .toArray();
 
@@ -325,7 +320,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // ── 4. Advance primaries ─────────────────────────────────────────────────
     // Set primaryEndTurn = currentTurn so the turn-first resolver treats the
     // primary as closed this turn (primaryEndTime kept for display/fallback).
-    await db.collection("elections").updateMany(
+    await electionsCollection<Document>(db).updateMany(
       { _id: { $in: electionIds } },
       {
         $set: {

@@ -1,11 +1,12 @@
 import type { Db } from "mongodb";
-import type { Character, PolicyShiftLedgerEntry } from "@/lib/db/types";
+import type { PolicyShiftLedgerEntry } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import {
   applyBillVotePolicyShift,
   type ApplyBillVotePolicyShiftInput,
   type BillVote,
 } from "@/lib/policyShift";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** The character movement and bill ledger commit together, using fresh positions. */
 export async function applyV2BillVotePolicyShift(
@@ -34,9 +35,10 @@ export async function applyV2BillVotePolicyShift(
       );
     // A later click may have superseded this request while it waited for Mongo.
     if (bill?.[voteField]?.[key] !== input.vote) return;
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: input.characterId }, { projection: { policies: 1 }, session });
+    const character = await charactersCollection(db).findOne(
+      { _id: input.characterId },
+      { projection: { policies: 1 }, session }
+    );
     if (!character) return;
     await applyBillVotePolicyShift(db, {
       ...input,

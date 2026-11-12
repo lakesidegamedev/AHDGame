@@ -10,7 +10,7 @@
 
 import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import type { Db, ObjectId } from "mongodb";
-import type { Bond, Corporation, ElectionCandidate, GameState } from "@/lib/db/types";
+import type { ElectionCandidate, GameState } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   cleanupShareMarketActivityForCharacters,
@@ -21,6 +21,12 @@ import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseH
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import type { Document } from "mongodb";
 
 export interface CascadeResult {
   sharesReleased: number;
@@ -42,7 +48,7 @@ export async function cascadeCharacterDeletion(
   characterId: ObjectId
 ): Promise<CascadeResult> {
   await closeCharacterSavings(db, characterId);
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   const now = new Date();
   const forexEnabled = await isForexEnabled();
 
@@ -50,8 +56,7 @@ export async function cascadeCharacterDeletion(
   // bound to this character and transition affected charters to
   // founder-replacement so surviving founders can nominate a replacement.
   const activeCharterStatuses = ["draft", "pending-signatures", "founder-replacement"];
-  const affectedCharters = await db
-    .collection("partyCharters")
+  const affectedCharters = await partyChartersCollection<Document>(db)
     .find({
       foundersCharacterIds: characterId,
       status: { $in: activeCharterStatuses },
@@ -66,7 +71,7 @@ export async function cascadeCharacterDeletion(
     const charterTurn = await getCurrentTurn(db);
     const replacementDeadlineTurn = computeCharterDeadlineTurn(charterTurn);
     for (const charter of affectedCharters) {
-      await db.collection("partyCharters").updateOne(
+      await partyChartersCollection<Document>(db).updateOne(
         {
           _id: charter._id,
           "signatures.characterId": characterId,
@@ -100,7 +105,7 @@ export async function cascadeCharacterDeletion(
   // vacate-and-release path below. National / IMF corps are never auto-dissolved.
   const bondedCorpIds =
     ceoCorpIds.length > 0
-      ? await db.collection<Bond>("bonds").distinct("corporationId", {
+      ? await bondsCollection(db).distinct("corporationId", {
           corporationId: { $in: ceoCorpIds },
           matured: false,
         })
@@ -132,9 +137,10 @@ export async function cascadeCharacterDeletion(
 
   const releasedCharacterShares = await releaseCharacterHeldSharesToFloat(db, [characterId], now);
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const currentTurn = gameState?.currentTurn ?? 0;
 
   // Force-dissolve abandoned corps that still owe bondholders. Each runs under
@@ -214,21 +220,18 @@ export async function cascadeCharacterDeletion(
   // hard-delete flows (self-delete / admin force-delete) route through here.
   // Read the rows first: archiving their campaigns needs each row's electionId,
   // and after the update they are no longer `status: "active"`.
-  const activeCandidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeCandidacies = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .project<{ _id: ObjectId; electionId: ObjectId }>({ _id: 1, electionId: 1 })
     .toArray();
 
-  const candidacyRes = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { characterId, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  const candidacyRes = await electionCandidatesCollection(db).updateMany(
+    { characterId, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Archive the deleted character's campaigns so they stop appearing on
-  // Campaign Operations alongside candidates still in the race (#1313).
+  // Campaign Operations alongside candidates still in the race.
   await archiveCampaignsForCandidates({
     db,
     candidates: activeCandidacies

@@ -1,15 +1,17 @@
 import type { Db } from "mongodb";
-import type { CentralBank, TurnSnapshot } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { GameState } from "@/lib/db/types/gameState";
+import type { TurnSnapshot } from "@/lib/db/types";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { State } from "@/lib/db/types/state";
 import { gdpWeightedGrowth } from "@/lib/country/nationalGdpGrowth";
 import { FOREX_AND_MACRO_CHART_HISTORY_TURNS } from "@/lib/constants/turnTime";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const HISTORY_CAP = FOREX_AND_MACRO_CHART_HISTORY_TURNS;
 
@@ -19,7 +21,7 @@ const HISTORY_CAP = FOREX_AND_MACRO_CHART_HISTORY_TURNS;
  * All three histories are capped at HISTORY_CAP entries (5 in-game years).
  */
 export async function snapshotInterestRateHistory(db: Db, turn: number): Promise<void> {
-  const banks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const banks = await centralBanksCollection(db).find({}).toArray();
   if (banks.length === 0) return;
 
   // World era: countries without a national metrics doc (layer-1) snapshot the
@@ -27,9 +29,9 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
   // min=max=2.5 forever for RU/FR/IT/ES/SE/TR in historical worlds). Keyed on
   // the CURRENT in-game year so the trend graduates as the world advances;
   // absent → modern fallback (fail-safe).
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" }, { projection: { currentYear: 1 } });
   const currentYear = gameState?.currentYear;
 
   // Pre-collect budget IDs and national doc IDs for batching
@@ -49,8 +51,9 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
   // Batch-fetch budgets and metrics
   const budgets =
     budgetIdSet.size > 0
-      ? await db
-          .collection<FederalBudget>("federalBudget")
+      ? await (
+          await getFederalBudgetCollection(db)
+        )
           .find(
             { _id: { $in: Array.from(budgetIdSet) } },
             { projection: { "economicFactors.inflationRate": 1 } }
@@ -61,8 +64,7 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
 
   const nationalMetricsDocs =
     nationalDocIdSet.size > 0
-      ? await db
-          .collection<StateMetrics>("macroMetrics")
+      ? await macroMetricsCollection(db)
           .find(
             { _id: { $in: Array.from(nationalDocIdSet) } },
             { projection: { "economic.gdpGrowth.value": 1 } }
@@ -79,12 +81,10 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
   // same quantity the national doc caches for the ten that have it.
   const bankCountryIds = banks.map((b) => b.countryId as CountryId);
   const [regionStates, regionMetrics] = await Promise.all([
-    db
-      .collection<State>("states")
+    (await getStatesCollection(db))
       .find({ countryId: { $in: bankCountryIds } }, { projection: { countryId: 1, gdp: 1 } })
       .toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
+    macroMetricsCollection(db)
       .find(
         { countryId: { $in: bankCountryIds } },
         { projection: { countryId: 1, "economic.gdpGrowth.value": 1 } }
@@ -143,5 +143,5 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
     };
   });
 
-  await db.collection<CentralBank>("centralBanks").bulkWrite(ops);
+  await centralBanksCollection(db).bulkWrite(ops);
 }

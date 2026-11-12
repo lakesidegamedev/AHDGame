@@ -40,7 +40,6 @@ beforeEach(() => {
   db.collection("nationalDoctrine");
   db.collection("electedOfficials");
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    coldWarEnabled: true,
     currentYear: 1955,
     currentTurn: 42,
     startingYear: 1953,

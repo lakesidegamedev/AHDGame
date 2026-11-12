@@ -88,6 +88,17 @@ describe(defect.id, () => {
     expect(plan.touched[0]!.ids).toHaveLength(5);
   });
 
+  it("does not flag a shared rollover bond paired with a scheduled issue", async () => {
+    const memory = createInMemoryDb();
+    memory.seed("gameState", [{ _id: "current", currentTurn: 680 }]);
+    memory.seed("bonds", [
+      bond(1),
+      bond(2, { sovereignRolloverConsolidated: true }),
+    ] as unknown as Record<string, unknown>[]);
+    const detected = await defect.detect(memory as unknown as Db, { ...ctx, dryRun: true });
+    expect(detected.affected).toBe(0);
+  });
+
   it("folds each series into its oldest bond with face, float and positions conserved", async () => {
     const memory = world();
     const db = memory as unknown as Db;

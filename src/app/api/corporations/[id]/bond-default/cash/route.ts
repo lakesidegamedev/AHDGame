@@ -6,7 +6,7 @@ import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction"
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { handleRouteError, badRequest, internalError, errorResponse } from "@/lib/api/errors";
-import type { Bond, Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
@@ -31,6 +31,10 @@ import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 type TxLogInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 import { getGameState } from "@/lib/gameState";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -87,8 +91,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       "bondSettlementInProgressAt",
       now,
       async () => {
-        const defaultedBonds = await db
-          .collection<Bond>("bonds")
+        const defaultedBonds = await bondsCollection(db)
           .find({ corporationId: corporation._id, matured: false, defaulted: true })
           .toArray();
 
@@ -104,9 +107,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
         const fxByCurrency = await loadFxRatesByCurrency(db);
         const cost = sumDefaultedBondPrincipal(defaultedBonds, fxByCurrency);
 
-        const refreshedCorporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corporation._id });
+        const refreshedCorporation = await corporationsCollection(db).findOne({
+          _id: corporation._id,
+        });
         if (!refreshedCorporation) {
           return errorResponse(404, "Corporation not found");
         }
@@ -138,9 +141,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
         const imperialIncs = new Map<string, number>();
         const corpIncs = new Map<string, number>();
         // Index funds and autonomous NPPs hold bond units too (BondHolder.fundId
-        // / .nppId). They were silently dropped by the holder chain below while
-        // the bond was still marked cured, so their principal simply vanished
-        // (#809). Both hold in ₳, matching the bondTurn coupon/maturity legs.
+        // / .nppId). They must be included by the holder chain below, or their
+        // principal vanishes while the bond is still marked cured.
+        // Both hold in ₳, matching the bondTurn coupon/maturity legs.
         const fundIncsAnchor = new Map<string, number>();
         const nppIncsAnchor = new Map<string, number>();
         // Per-(holder, bond) snapshot so each holder gets a `bond_maturity` row at
@@ -276,8 +279,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           if (charIncs.size > 0) {
             const charIds = [...charIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const charDocs = await db
-              .collection<Character>("characters")
+            const charDocs = await charactersCollection(db)
               .find({ _id: { $in: charIds } }, so)
               .project<Pick<Character, "_id" | "countryId" | "name">>({
                 _id: 1,
@@ -305,8 +307,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           if (imperialIncs.size > 0) {
             const ids = [...imperialIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const docs = await db
-              .collection<ImperialCharacter>("imperialCharacters")
+            const docs = await imperialCharactersCollection(db)
               .find({ _id: { $in: ids } }, so)
               .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
                 _id: 1,
@@ -334,8 +335,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           if (corpIncs.size > 0) {
             const ids = [...corpIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const docs = await db
-              .collection<Corporation>("corporations")
+            const docs = await corporationsCollection(db)
               .find({ _id: { $in: ids } }, so)
               .toArray();
             if (docs.length !== corpIncs.size) {
@@ -408,7 +408,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
           // Atomic, race-safe debit. Each leg is guarded only when it's actually
           // drawn (a $gte:0 guard on an untouched negative escrow would wrongly block).
-          const debitResult = await db.collection<Corporation>("corporations").updateOne(
+          const debitResult = await corporationsCollection(db).updateOne(
             {
               _id: refreshedCorporation._id,
               ...(paymentSplit.fromLiquid > 0
@@ -435,7 +435,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
             );
           }
           undo.push(async () => {
-            const result = await db.collection<Corporation>("corporations").updateOne(
+            const result = await corporationsCollection(db).updateOne(
               { _id: refreshedCorporation._id },
               {
                 $inc: {
@@ -506,13 +506,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
           };
 
           if (!compensate) {
-            const claimedBonds = await db
-              .collection<Bond>("bonds")
-              .updateMany(
-                { ...maturityFilter(bondIds[0]!), _id: { $in: bondIds } },
-                maturityUpdate,
-                so
-              );
+            const claimedBonds = await bondsCollection(db).updateMany(
+              { ...maturityFilter(bondIds[0]!), _id: { $in: bondIds } },
+              maturityUpdate,
+              so
+            );
             if (claimedBonds.modifiedCount !== bondIds.length) {
               throw badRequest("Bond state changed during payoff. Refresh and try again.");
             }
@@ -520,9 +518,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
             for (const bond of defaultedBonds) {
               let result: { modifiedCount: number };
               try {
-                result = await db
-                  .collection<Bond>("bonds")
-                  .updateOne(maturityFilter(bond._id), maturityUpdate, so);
+                result = await bondsCollection(db).updateOne(
+                  maturityFilter(bond._id),
+                  maturityUpdate,
+                  so
+                );
               } catch (err) {
                 return compensateAndThrow(err);
               }
@@ -542,7 +542,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
                   if (bond[field] === undefined) priorUnset[field] = "";
                   else priorSet[field] = bond[field];
                 }
-                const result = await db.collection<Bond>("bonds").updateOne(
+                const result = await bondsCollection(db).updateOne(
                   {
                     _id: bond._id,
                     matured: true,

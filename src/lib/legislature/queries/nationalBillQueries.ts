@@ -79,6 +79,15 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { mayRuleByDecree } from "@/lib/singleplayerHeadOfState";
 import { loadBillLegislationTypes } from "@/lib/legislature/queries/loadBillLegislationTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 const BILL_PAGE_LIMIT = 50;
 
@@ -122,7 +131,7 @@ function resolveVoteOfficeType(
 /**
  * Live-scoped origin/other tallies for a national bill-list card. Shared by the
  * US Congress list and every country legislature list so The Count cannot
- * exceed the current chamber after a seat transfer (ticket #1075).
+ * exceed the current chamber after a seat transfer.
  */
 export function nationalBillListTallies(
   bill: Bill,
@@ -247,26 +256,24 @@ export async function listNationalLegislatureBills(
     ],
   };
 
-  // The bill list is already scoped to this country by
-  // buildNationalBillCountryScopeFilter above. If the viewed country is not
-  // enabled for this (non-admin) viewer, show nothing — but do NOT replace the
-  // scope with `{ $in: enabledCountries }`, which pulled every enabled country's
-  // bills (incl. the US) into e.g. Nigeria's House/Senate tabs (#912).
+  // The bill list is already scoped to this country. If the viewed country
+  // is not enabled for this non-admin viewer, show nothing, but do NOT
+  // replace the scope with `{ $in: enabledCountries }`, which would pull in
+  // every enabled country's bills.
   if (enabledCountries && !enabledCountries.includes(countryId)) {
     billFilter.countryId = "__disabled__";
   }
 
   const [bills, total, parties] = await Promise.all([
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(billFilter)
       .project<Bill>({ fullText: 0 })
       .sort({ proposedAt: -1 })
       .skip(skip)
       .limit(BILL_PAGE_LIMIT)
       .toArray(),
-    db.collection<Bill>("bills").countDocuments(billFilter),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    billsCollection(db).countDocuments(billFilter),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
   const lowerKey = config.legislature.lowerChamber.key;
   const upperKeyForGet = config.legislature.upperChamber?.key;
@@ -277,14 +284,13 @@ export async function listNationalLegislatureBills(
   // Load both chambers' CURRENT seat holders once so every card can live-scope
   // its tally. The stored votesFor/votesAgainst counters keep de-seated NPP
   // votes after a House repair or election, so The Count can exceed the
-  // chamber (ticket #1075: 250-215 on a 435-seat House). Detail/resolution
-  // already scope; only the list card did not. Mirrors the state-list #973 fix.
+  // chamber (: 250-215 on a 435-seat House). Detail/resolution
+  // already scope; only the list card did not. Mirrors the state-list fix.
   const chamberOfficeTypes = [
     getOfficeTypeForChamber(countryId, lowerKey, preset, config),
     ...(upperKeyForGet ? [getOfficeTypeForChamber(countryId, upperKeyForGet, preset, config)] : []),
   ];
-  const chamberOfficials: ScopedVoteOfficial[] = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const chamberOfficials: ScopedVoteOfficial[] = await electedOfficialsCollection(db)
     .find(
       {
         countryId,
@@ -315,11 +321,9 @@ export async function listNationalLegislatureBills(
     myCharacterId = char?._id?.toString() ?? null;
     myPolicies = char?.policies;
     if (myCharacterId) {
-      // In a bill-active bicameral legislature (US/JP/NG) the upper chamber can
-      // also originate bills, so its members count as proposers. UK Lords / DE
-      // Bundesrat are `bicameral: false` and correctly excluded (#912 — NG
-      // senators were treated as non-members and could not propose).
-      // Era-aware: TR 1953 is unicameral (no Senato).
+      // In a bill-active bicameral legislature the upper chamber can also
+      // originate bills, so its members count as proposers. `bicameral: false`
+      // chambers are excluded. Era-aware: unicameral eras have no upper chamber.
       const memberOfficeTypes =
         config.legislature.bicameral && upperKeyForGet
           ? [lowerKey, upperKeyForGet].map((k) =>
@@ -328,15 +332,14 @@ export async function listNationalLegislatureBills(
           : [getOfficeTypeForChamber(countryId, lowerKey, preset, config)];
 
       const [officials, activeBill] = await Promise.all([
-        db
-          .collection<ElectedOfficial>("electedOfficials")
+        electedOfficialsCollection(db)
           .find({
             characterId: new ObjectId(myCharacterId),
             officeType: { $in: memberOfficeTypes },
             countryId,
           })
           .toArray(),
-        db.collection<Bill>("bills").findOne({
+        billsCollection(db).findOne({
           sponsorId: new ObjectId(myCharacterId),
           ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]),
         }),
@@ -385,8 +388,7 @@ export async function listNationalLegislatureBills(
     BillProposalAutoFailWarning | null
   >;
 
-  const activeBillsForProvisions = await db
-    .collection<Bill>("bills")
+  const activeBillsForProvisions = await billsCollection(db)
     .find(buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES as BillStatus[]), {
       projection: { provisions: 1 },
     })
@@ -435,8 +437,7 @@ export async function listNationalLegislatureBills(
   ];
   const sponsorChars =
     sponsorIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             { _id: { $in: sponsorIds.map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, sequentialId: 1, avatarUrl: 1 } }
@@ -715,7 +716,7 @@ export async function getNationalBillDetail(
   billId: string,
   authUser: AuthUser | null
 ): Promise<BillDetail | null> {
-  const bill = await db.collection<Bill>("bills").findOne({ _id: new ObjectId(billId) });
+  const bill = await billsCollection(db).findOne({ _id: new ObjectId(billId) });
   if (!bill) return null;
 
   const { provisionsResolved, legislationTypeName, legacyDirectionLabel, legacyEffectTargetLabel } =
@@ -737,14 +738,12 @@ export async function getNationalBillDetail(
   let viewerCountryId: CountryId | null = null;
   let viewerPolicies: AxisPositions | undefined;
 
-  if (country === "US") {
+  if (countryHasFeature("usLib", country)) {
     if (authUser) {
-      const viewerCharacter = await db
-        .collection<Character>("characters")
-        .findOne(
-          { userId: new ObjectId(authUser.userId) },
-          { projection: { _id: 1, party: 1, countryId: 1, policies: 1 } }
-        );
+      const viewerCharacter = await charactersCollection(db).findOne(
+        { userId: new ObjectId(authUser.userId) },
+        { projection: { _id: 1, party: 1, countryId: 1, policies: 1 } }
+      );
       if (viewerCharacter) {
         myCharacterId = viewerCharacter._id.toString();
         viewerCharacterObjectId = viewerCharacter._id;
@@ -752,8 +751,7 @@ export async function getNationalBillDetail(
         viewerCountryId = viewerCharacter.countryId ?? null;
         viewerPolicies = viewerCharacter.policies;
         const [officials, presidentOfficial] = await Promise.all([
-          db
-            .collection<ElectedOfficial>("electedOfficials")
+          electedOfficialsCollection(db)
             .find({
               characterId: viewerCharacter._id,
               officeType: {
@@ -765,7 +763,7 @@ export async function getNationalBillDetail(
               countryId: country,
             })
             .toArray(),
-          db.collection<ElectedOfficial>("electedOfficials").findOne({
+          electedOfficialsCollection(db).findOne({
             characterId: viewerCharacter._id,
             officeType: "president",
             countryId: country,
@@ -785,17 +783,16 @@ export async function getNationalBillDetail(
       }
     }
   } else if (authUser) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(authUser.userId) });
+    const character = await charactersCollection(db).findOne({
+      userId: new ObjectId(authUser.userId),
+    });
     if (character) {
       myCharacterId = character._id.toString();
       viewerCharacterObjectId = character._id;
       viewerPartyId = character.party ?? null;
       viewerCountryId = character.countryId ?? null;
       viewerPolicies = character.policies;
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find({
           characterId: character._id,
           officeType: {
@@ -823,16 +820,17 @@ export async function getNationalBillDetail(
           )
         : false;
       isPresident = officials.some((official) => official.officeType === "president");
-      if (country === "JP" && bill.status === "cabinet_review") {
+      if (countryHasFeature("jpLib", country) && bill.status === "cabinet_review") {
         const governmentFormation = await getGovernmentFormationsCollection(db).findOne({
           _id: country,
         });
         const isPrimeMinister = governmentFormation?.pmCharacterId?.equals(character._id) ?? false;
         const cabinetMember = isPrimeMinister
           ? null
-          : await db
-              .collection("cabinetMembers")
-              .findOne({ characterId: character._id, countryId: country });
+          : await cabinetMembersCollection<Document>(db).findOne({
+              characterId: character._id,
+              countryId: country,
+            });
         canCabinetVote = isPrimeMinister || Boolean(cabinetMember);
       }
     }
@@ -868,8 +866,7 @@ export async function getNationalBillDetail(
   const uniqueCharacterIds = [...new Set(characterVoteIds)];
   const uniqueNppIds = [...new Set(nppIds)];
 
-  const allParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const allParties = await politicalPartiesCollection(db)
     .find({ countryId: country })
     .project({ sequentialId: 1, slug: 1 })
     .toArray();
@@ -881,15 +878,13 @@ export async function getNationalBillDetail(
   const voterPartyMap = new Map<string, string>();
   const [characters, npps] = await Promise.all([
     uniqueCharacterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: uniqueCharacterIds.map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1 })
           .toArray()
       : Promise.resolve([]),
     uniqueNppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: uniqueNppIds.map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1 })
           .toArray()
@@ -932,8 +927,7 @@ export async function getNationalBillDetail(
   }
   const officials =
     orClauses.length > 0
-      ? await db
-          .collection<ElectedOfficial>("electedOfficials")
+      ? await electedOfficialsCollection(db)
           .find({
             $or: orClauses,
             // Filter to the bill's own country to prevent cross-country
@@ -979,10 +973,9 @@ export async function getNationalBillDetail(
     otherVoteOfficeType ? { countryId: country, officeType: otherVoteOfficeType } : null
   );
 
-  // A concluded voting phase has a frozen snapshot — derive its per-party
-  // breakdown (and, via billEnrichment's sumVoteByParty, the headline) from the
-  // snapshot so a later general election cannot recompute (and collapse) the
-  // historical tally (#0982). Only an in-progress phase (no snapshot) live-scopes.
+  // A concluded voting phase has a frozen snapshot: derive per-party breakdown
+  // (and headline) from it so a later election cannot recompute the tally.
+  // Only an in-progress phase (no snapshot) live-scopes.
   const voteByPartyOrigin = bill.voteSnapshot
     ? buildVotesByParty(
         bill.voteSnapshot.votes,
@@ -1014,8 +1007,7 @@ export async function getNationalBillDetail(
     bill.status === "active_both" || bill.status === "veto_override"
       ? bill.originChamber
       : (bill.currentChamber ?? bill.originChamber);
-  const originWhips = await db
-    .collection<BillWhip>("billWhips")
+  const originWhips = await billWhipsCollection(db)
     .find({
       targetType: "bill",
       targetId: bill._id,
@@ -1055,8 +1047,7 @@ export async function getNationalBillDetail(
   );
   const sequentialIdMap = new Map<string, number>();
   if (uniqueLookupIds.length > 0) {
-    const characterDocs = await db
-      .collection<Character>("characters")
+    const characterDocs = await charactersCollection(db)
       .find(
         { _id: { $in: uniqueLookupIds.map((id) => new ObjectId(id)) } },
         { projection: { _id: 1, sequentialId: 1 } }
@@ -1081,11 +1072,10 @@ export async function getNationalBillDetail(
     bill.overrideFailedAt != null;
   if (bill.overrideDisplaySnapshot) {
     // A resolved override has a frozen per-chamber display — use it so a later
-    // election cannot recompute (and collapse) the historical override (#0982).
+    // election cannot recompute (and collapse) the historical override.
     overrideDisplay = bill.overrideDisplaySnapshot;
   } else if (hasOverrideActivity && upperKey != null) {
-    const overrideOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const overrideOfficials = await electedOfficialsCollection(db)
       .find({ officeType: { $in: ["house", "senate"] }, countryId: country })
       .project<ScopedVoteOfficial>({
         characterId: 1,

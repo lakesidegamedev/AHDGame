@@ -17,9 +17,13 @@ import { resolveCrisisLocationName, interpolateLocation } from "@/lib/crises/cri
 import { CRISIS_TOOLTIPS, tooltipForEffect } from "@/lib/crises/tooltipCopy";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { getSiteUrl } from "@/lib/siteMetadata";
-import { getAuthAdmin } from "@/lib/auth";
+import { getAuthAdmin, getAuthUserWithCharacter } from "@/lib/auth";
 import CrisisInteractionPanel from "./CrisisInteractionPanel";
 import CrisisAdminActions from "./CrisisAdminActions";
+import CrisisV2Detail from "./CrisisV2Detail";
+import { loadCrisisV2Detail } from "@/lib/crises/queries/crisisV2View";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 // UN General Assembly — shared with the crises list hero so the two surfaces
 // read as one section. https://unsplash.com/photos/41Wj4KxB7BA
@@ -158,12 +162,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const crisis = await db
-    .collection<Crisis>("crises")
-    .findOne(
-      { _id: new ObjectId(id) },
-      { projection: { name: 1, description: 1, scope: 1, countryIds: 1 } }
-    );
+  const crisis = await crisesCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { name: 1, description: 1, scope: 1, countryIds: 1 } }
+  );
   if (!crisis) return {};
 
   const scopeLabel =
@@ -204,13 +206,19 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   if (!ObjectId.isValid(id)) notFound();
 
   const db = await getDb();
-  const [crisis, gameState, admin] = await Promise.all([
-    db.collection<Crisis>("crises").findOne({ _id: new ObjectId(id) }),
+  const [crisis, gameState, admin, viewer] = await Promise.all([
+    crisesCollection(db).findOne({ _id: new ObjectId(id) }),
     getGameState(db),
     getAuthAdmin(),
+    getAuthUserWithCharacter(),
   ]);
 
   if (!crisis) notFound();
+  const v2Detail = await loadCrisisV2Detail(
+    db,
+    crisis,
+    viewer?.hasCharacter && viewer.character ? viewer.character._id : null
+  );
 
   // Affected regions — used for the dollar value of a one-time GDP loss and to
   // resolve real place names for the `{location}` flavor substitution.
@@ -223,8 +231,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   const affectedStates =
     crisis.scope === "global"
       ? []
-      : await db
-          .collection<State>("states")
+      : await statesCollection(db)
           .find(stateFilter as never)
           .project({ name: 1, gdp: 1 })
           .toArray();
@@ -393,6 +400,8 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                 </p>
               </div>
             )}
+
+            {v2Detail && <CrisisV2Detail crisisId={id} detail={v2Detail} />}
 
             {/* Interactive decision panel (interactive crises only) */}
             {crisis.interactionDefinition && <CrisisInteractionPanel crisisId={id} />}

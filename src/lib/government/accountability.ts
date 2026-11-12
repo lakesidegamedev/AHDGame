@@ -17,6 +17,17 @@ import {
   accountabilityDrain,
   continuingPartySinceTurn,
 } from "./rules/accountability";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { governmentAccountabilityCollection } from "@/lib/db/repositories/governmentAccountability";
 
 /** The party holding a country's national executive, with that government's approval. */
 export interface NationalExecutiveParty {
@@ -36,11 +47,11 @@ export async function observeGovernmentAccountability(
 ): Promise<Map<string, number>> {
   const [game, officials, formations, approvals, regionalApprovals, previous, states, runtimes] =
     await Promise.all([
-      db
-        .collection<{ _id: string; currentTurn?: number; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, preset: 1 } }),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      gameStateCollection<{ _id: string; currentTurn?: number; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, preset: 1 } }
+      ),
+      electedOfficialsCollection(db)
         .find(
           {},
           {
@@ -56,8 +67,7 @@ export async function observeGovernmentAccountability(
           }
         )
         .toArray(),
-      db
-        .collection<GovernmentFormation>("governmentFormations")
+      governmentFormationsCollection(db)
         .find(
           { status: "formed" },
           {
@@ -73,21 +83,17 @@ export async function observeGovernmentAccountability(
           }
         )
         .toArray(),
-      db
-        .collection<{ _id: CountryId; approvalRating: number }>("governmentApprovals")
+      governmentApprovalsCollection<{ _id: CountryId; approvalRating: number }>(db)
         .find({}, { projection: { approvalRating: 1 } })
         .toArray(),
-      db
-        .collection<StateApprovalHistory>("stateApprovalHistory")
+      stateApprovalHistoryCollection(db)
         .find({}, { projection: { countryId: 1, stateId: 1, approvalRating: 1 } })
         .toArray(),
-      db.collection<GovernmentAccountability>("governmentAccountability").find({}).toArray(),
-      db
-        .collection<State>("states")
+      governmentAccountabilityCollection(db).find({}).toArray(),
+      statesCollection(db)
         .find({}, { projection: { countryId: 1, stateSenateSeats: 1 } })
         .toArray(),
-      db
-        .collection<{ _id: CountryId; governmentType: string }>("countryState")
+      countryStateCollection<{ _id: CountryId; governmentType: string }>(db)
         .find({}, { projection: { governmentType: 1 } })
         .toArray(),
     ]);
@@ -104,20 +110,17 @@ export async function observeGovernmentAccountability(
   ];
   type Actor = { _id: ObjectId; party?: string };
   const [characters, npps, coalitions] = await Promise.all([
-    db
-      .collection<Actor>("characters")
+    charactersCollection<Actor>(db)
       .find({ _id: { $in: charIds } }, { projection: { party: 1 } })
       .toArray(),
-    db
-      .collection<Actor>("npps")
+    nppsCollection<Actor>(db)
       .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
       .toArray(),
-    db
-      .collection<{
-        sequentialId: number;
-        countryId: CountryId;
-        members: { partySequentialId: number }[];
-      }>("coalitions")
+    coalitionsCollection<{
+      sequentialId: number;
+      countryId: CountryId;
+      members: { partySequentialId: number }[];
+    }>(db)
       .find(
         {
           sequentialId: {
@@ -297,13 +300,13 @@ export async function observeGovernmentAccountability(
     );
   }
   if (observations.length)
-    await db.collection<GovernmentAccountability>("governmentAccountability").bulkWrite(
+    await governmentAccountabilityCollection(db).bulkWrite(
       observations.map((doc) => ({
         updateOne: { filter: { _id: doc._id }, update: { $set: doc }, upsert: true },
       }))
     );
   if (attributionRepairs.length)
-    await db.collection<GovernmentFormation>("governmentFormations").bulkWrite(
+    await governmentFormationsCollection(db).bulkWrite(
       attributionRepairs.map(({ countryId, fields }) => ({
         updateOne: {
           filter: { _id: countryId, status: "formed" },

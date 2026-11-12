@@ -18,7 +18,12 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 export interface VacateResult {
   characterIds: string[];
@@ -36,8 +41,7 @@ export async function vacatePartyLeadershipForBannedUser(
   db: Db,
   userId: ObjectId
 ): Promise<VacateResult> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();
@@ -61,8 +65,7 @@ export async function vacatePartyLeadershipForBannedUser(
 
   // Find every party doc that seats one of these characters anywhere, so we
   // can record per-position counts and cascade chair changes to coalitions.
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find({
       $or: [
         { chairId: { $in: characterIds } },
@@ -112,16 +115,13 @@ export async function vacatePartyLeadershipForBannedUser(
     }
 
     if (Object.keys(updateOp).length > 0) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, updateOp);
+      await politicalPartiesCollection(db).updateOne({ _id: party._id }, updateOp);
     }
   }
 
   // State party leadership — every statePartyOrg doc that seats one of the
   // banned characters in any of the three positions.
-  const stateOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const stateOrgs = await statePartyOrgCollection(db)
     .find({
       $or: [
         { chairId: { $in: characterIds } },
@@ -152,31 +152,25 @@ export async function vacatePartyLeadershipForBannedUser(
     }
 
     if (touched) {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne({ _id: org._id }, { $set: setOps });
+      await statePartyOrgCollection(db).updateOne({ _id: org._id }, { $set: setOps });
     }
   }
 
   // Coalitions where the banned character is the named chair.
-  const coalitionDirect = await db
-    .collection("coalitions")
-    .updateMany(
-      { chairCharacterId: { $in: characterIds } },
-      { $set: { chairCharacterId: null, updatedAt: now } }
-    );
+  const coalitionDirect = await coalitionsCollection<Document>(db).updateMany(
+    { chairCharacterId: { $in: characterIds } },
+    { $set: { chairCharacterId: null, updatedAt: now } }
+  );
   result.coalitionChairsCleared += coalitionDirect.modifiedCount;
 
   // Coalitions led by a party whose chair we just cleared — null the cached
   // chairCharacterId so the coalition doesn't keep pointing at a banned
   // account through the chairPartyId chain.
   if (partiesLosingChair.length > 0) {
-    const coalitionCascade = await db
-      .collection("coalitions")
-      .updateMany(
-        { chairPartyId: { $in: partiesLosingChair } },
-        { $set: { chairCharacterId: null, updatedAt: now } }
-      );
+    const coalitionCascade = await coalitionsCollection<Document>(db).updateMany(
+      { chairPartyId: { $in: partiesLosingChair } },
+      { $set: { chairCharacterId: null, updatedAt: now } }
+    );
     result.coalitionChairsCleared += coalitionCascade.modifiedCount;
   }
 

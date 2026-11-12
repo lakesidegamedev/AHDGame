@@ -1,20 +1,10 @@
 /**
  * The United States cabinet.
  *
- * ⚠️ IT WAS `constants/cabinet.ts`, NAMED AS IF IT WERE EVERY COUNTRY'S. Each
- * other country has an explicit roster -- `UK_CABINET_POSITIONS`,
- * `JP_CABINET_POSITIONS`, `IE_`, `DE_`, `CN_`, `NG_`, `RU_` -- and the US alone
- * had the bare name, because it is the default country. The positions inside
- * were never ambiguous: Secretary of State, Secretary of the Treasury, Attorney
- * General.
- *
- * Consumers had already renamed it for themselves, which is the tell:
- * `cabinet-nominations/route.ts` writes
- * `const US_POSITION_IDS = CABINET_POSITIONS.map(...)`, and both
- * `cabinetTransition.ts` and `cabinetMechanics.ts` file it under a `US:` key.
- *
- * The export keeps its old name so the `@/lib/constants` barrel and every
- * consumer are untouched; `constants/cabinet.ts` forwards here.
+ * Bare `CABINET_POSITIONS` is the US roster; every other country uses an
+ * explicit prefixed name (`UK_CABINET_POSITIONS`, `JP_CABINET_POSITIONS`, …).
+ * The export keeps its old name so the barrel and consumers are untouched;
+ * `constants/cabinet.ts` forwards here.
  */
 /**
  * Cabinet positions: the principal officers, in presidential line of
@@ -90,10 +80,9 @@ export const CABINET_POSITIONS = [
     name: "Secretary of Health and Human Services",
     order: 9,
     yearEnabled: 1953,
-    // Stays "Health, Education, and Welfare" (carrying education + welfare levers)
-    // until the Department of Education Act splits Education off — then it is
-    // styled HHS via renameOnDepartmentSplit. The old year-1980 auto-flip is gone
-    // (operator decision 2026-08-13: the split is legislation-gated, not automatic).
+    // Stays "Health, Education, and Welfare" (carrying education + welfare
+    // levers) until the Department of Education Act splits Education off, then
+    // renamed to HHS via renameOnDepartmentSplit. The split is legislation-gated.
     namesByYear: [{ from: 1953, name: "Secretary of Health, Education, and Welfare" }],
     renameOnDepartmentSplit: {
       whenSeatEnabled: "secretary_of_education",

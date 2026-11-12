@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -7,16 +6,21 @@ import { accountId } from "@/lib/ledger/accounts";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { splitProducerWallets, remapProducerPayables } from "./rules/producerWallets";
+import { secessionSource, type SecedingCountryId } from "./subRegions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 
 /** Called inside the enclosing independence transaction, before the old region is removed. */
 export async function migrateProducerWallets(
   db: Db,
-  countryId: string,
+  countryId: SecedingCountryId,
   regions: readonly { _id: string; population: number }[],
   turn: number
 ): Promise<void> {
-  const accounts = db.collection<ProducerEconomyAccount>("producerEconomyAccounts");
-  const source = await accounts.find({ countryId: "UK", stateId: countryId }).toArray();
+  const { fromCountryId, regionId } = secessionSource(countryId);
+  const accounts = producerEconomyAccountsCollection(db);
+  const source = await accounts.find({ countryId: fromCountryId, stateId: regionId }).toArray();
   if (!source.length) return;
   const { map, wallets } = splitProducerWallets(source, countryId, regions);
   const oldIds = source.map((row) => row._id);
@@ -35,7 +39,7 @@ export async function migrateProducerWallets(
     pendingSettlementProjection: 1,
   };
   const [corporations, otherWallets] = await Promise.all([
-    db.collection<Corporation>("corporations").find(affected, { projection }).toArray(),
+    corporationsCollection(db).find(affected, { projection }).toArray(),
     accounts.find(affected).toArray(),
   ]);
   const originals = new Map([...source, ...otherWallets].map((row) => [row._id, row]));
@@ -44,8 +48,7 @@ export async function migrateProducerWallets(
     if (pending.pendingMoneyMoveReceipt || pending.pendingSettlementProjection)
       throw new Error("A producer wallet payment must settle before independence");
   }
-  const rates = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rates = await exchangeRatesCollection(db)
     .find(
       { currencyCode: { $in: [...new Set(source.map((row) => row.currency as CurrencyCode))] } },
       { projection: { currencyCode: 1, rate: 1 } }
@@ -122,7 +125,7 @@ export async function migrateProducerWallets(
     }))
   );
   if (corporations.length)
-    await db.collection<Corporation>("corporations").bulkWrite(
+    await corporationsCollection(db).bulkWrite(
       corporations.map((row) => ({
         updateOne: {
           filter: { _id: row._id },

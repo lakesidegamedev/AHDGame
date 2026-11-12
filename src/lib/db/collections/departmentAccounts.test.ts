@@ -2,17 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { FederalBudget } from "@/lib/db/types/budget";
-import {
-  createEmptyDepartmentAccount,
-  createEmptyUsHealthDepartmentAccount,
-} from "@/lib/governmentFinance/departments";
+import { createEmptyDepartmentAccount } from "@/lib/governmentFinance/departments";
 import { DEPARTMENT_DEFINITIONS } from "@/lib/governmentFinance/departmentCatalog";
-import { settleProgramAccount } from "@/lib/governmentFinance/rules/implementation";
 import { settleDepartmentAccount } from "@/lib/governmentFinance/rules/departmentSettlement";
 import {
   applyDepartmentAccountSettlement,
   applyCountryDepartmentSettlements,
-  applyDepartmentProgramSettlement,
   ensureDepartmentAccount,
 } from "./departmentAccounts";
 
@@ -57,70 +52,6 @@ describe("department account persistence", () => {
       .collection<FederalBudget>("federalBudget")
       .findOne({ countryId: "UK" });
     expect(budget?.treasuryBalance).toBe(456);
-  });
-
-  it("commits a turn once under balance and turn guards", async () => {
-    const memory = createInMemoryDb();
-    const opening = createEmptyUsHealthDepartmentAccount();
-    memory.seed("federalBudget", [
-      {
-        _id: "federal",
-        countryId: "US",
-        treasuryBalance: 123,
-        departmentAccounts: { us_health_department: opening },
-      },
-    ]);
-    const settlement = settleProgramAccount({
-      programId: "us_public_health_workforce",
-      legislationTypeId: "us_public_health",
-      policyOptionId: "public_health_opt_1",
-      status: "authorized",
-      priority: 6,
-      openingBalance: 0,
-      openingEncumbered: 0,
-      accruedThroughTurn: 0,
-      turn: 1,
-      authority: 100,
-      programDemand: 100,
-      requestedOutlay: 60,
-      requestedEncumbrance: 20,
-      capacity: {
-        capacityType: "public_health_operations",
-        maintenanceDemand: 0,
-        programDemand: 100,
-        sourceBreakdown: { workforce: 40, facilities: 20, systems: 20, efficiency: 20 },
-      },
-      coverageRatio: 1,
-      rampFactor: 1,
-    });
-    expect(
-      await applyDepartmentProgramSettlement(
-        memory as unknown as Db,
-        "US",
-        "us_health_department",
-        opening,
-        settlement
-      )
-    ).toBe(true);
-    expect(
-      await applyDepartmentProgramSettlement(
-        memory as unknown as Db,
-        "US",
-        "us_health_department",
-        opening,
-        settlement
-      )
-    ).toBe(false);
-
-    const after = await (memory as unknown as Db)
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: "US" });
-    expect(after?.treasuryBalance).toBe(123);
-    expect(after?.departmentAccounts?.us_health_department).toMatchObject({
-      balance: 40,
-      encumbered: 20,
-      accruedThroughTurn: 1,
-    });
   });
 
   it("atomically commits a generalized multi-program settlement without touching treasury", async () => {

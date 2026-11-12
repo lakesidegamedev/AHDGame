@@ -3,20 +3,12 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 /**
  * Baltic ruling party (Cold-War presets), gated to 1953/1979.
  *
- * One party, as with PL/BG/CS. The three republican parties (the Estonian,
- * Latvian and Lithuanian Communist Parties) were not separate organisations in
- * any meaningful sense: they were republican branches of the CPSU, bound by
- * democratic centralism and staffed at the top by cadres sent from Moscow or
- * by returning Russian-speaking "Yestonians" and "Latovichi". Seeding three
- * parties would imply a federal party system that did not exist, so the seed
- * carries the single branch organisation and lets the republican split live in
- * the regions and the census instead.
- *
- * Positions relative to the satellite parties: this is not a satellite state
- * with its own foreign ministry but a set of union republics inside the USSR.
- * The treasury is the smallest of
- * the bloc set for the same reason — a republican party organisation had a much
- * thinner independent purse than the PZPR or the BKP.
+ * One party. The Estonian, Latvian and Lithuanian Communist Parties were
+ * republican branches of the CPSU under democratic centralism, not separate
+ * organisations; seeding three would imply a federal party system that did not
+ * exist. The republican split lives in regions and census instead. This is
+ * union republics inside the USSR, not a satellite state, so the treasury is
+ * the smallest of the bloc set.
  */
 export const balParties: PartySeed[] = [
   {

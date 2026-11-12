@@ -4,15 +4,15 @@ import { processUkLeadershipChallengeTurn } from "./ukLeadershipChallengeTurn";
 import {
   castLeadershipBallotVote,
   initiateLeadershipChallenge,
-} from "@/lib/uk/leadership/leadershipCommands";
-import { createFakeLeadershipDb } from "@/lib/uk/leadership/leadershipTestDb";
+} from "@/lib/countries/uk/leadership/leadershipCommands";
+import { createFakeLeadershipDb } from "@/lib/countries/uk/leadership/leadershipTestDb";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import {
   LEADERSHIP_BALLOT_DURATION_TURNS,
   LEADERSHIP_GATHERING_WINDOW_TURNS,
-} from "@/lib/uk/leadership/rules";
+} from "@/lib/countries/uk/leadership/rules";
 import type { PoliticalParty } from "@/lib/db/types";
-import type { UKPartyLeadership } from "@/lib/uk/leadership/leadershipTypes";
+import type { UKPartyLeadership } from "@/lib/countries/uk/leadership/leadershipTypes";
 
 vi.mock("@/lib/notifications", () => ({ createNotification: async () => undefined }));
 vi.mock("@/lib/country/registeredCountries", () => ({ getRegisteredCountryIds: vi.fn() }));

@@ -1,11 +1,7 @@
 /**
  * Union membership, dues and approval.
  *
- * Replaces `membershipPressure`, the 0-100 organizing score that used to stand
- * in for all three. That number was doing too many jobs: it was the dues base,
- * the unionization drift bias, the strike-capacity gate and the leadership
- * threshold, and players read it as a headcount and saw "Membership 17.0" as a
- * broken stat. It is now three separate things that each mean what they say.
+ * Three separate quantities, each meaning what it says:
  *
  *   MEMBERS   a real headcount, summed from the workers in the sectors this
  *             union actually represents, weighted by each sector's unionization.
@@ -171,7 +167,7 @@ export interface ApprovalTargetBreakdown {
 /**
  * Every term in the approval target, exposed from the same authority the turn engine uses.
  * Keeping this arithmetic here lets the UI explain a flat target without reimplementing the
- * balance rule and drifting away from actual turn processing (ticket #1168).
+ * balance rule and drifting away from actual turn processing.
  */
 export function approvalTargetBreakdown(inputs: ApprovalInputs): ApprovalTargetBreakdown {
   const burden = duesBurdenRatio(inputs.duesPerWorkerAnnual, inputs.annualWage);

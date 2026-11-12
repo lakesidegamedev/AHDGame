@@ -10,6 +10,9 @@ import { CAMPAIGN_CATEGORIES } from "@/lib/campaigns/dto/campaignView";
 import type { UpgradeCategory } from "@/lib/campaigns/upgradeCosts";
 import type { Election, PrimaryStateActionKind } from "@/lib/db/types";
 import { campaignPageHref } from "@/lib/campaignManager/links";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Emitters for the per-race wire.
@@ -60,22 +63,25 @@ function leverLabel(category: UpgradeCategory): string {
  * and non-player politicians, so both collections are tried.
  */
 async function candidateName(db: Db, candidateId: ObjectId): Promise<string | null> {
-  const character = await db
-    .collection<{ name?: string }>("characters")
-    .findOne({ _id: candidateId }, { projection: { name: 1 } });
+  const character = await charactersCollection<{ name?: string }>(db).findOne(
+    { _id: candidateId },
+    { projection: { name: 1 } }
+  );
   if (character?.name) return character.name;
 
-  const npp = await db
-    .collection<{ name?: string }>("npps")
-    .findOne({ _id: candidateId }, { projection: { name: 1 } });
+  const npp = await nppsCollection<{ name?: string }>(db).findOne(
+    { _id: candidateId },
+    { projection: { name: 1 } }
+  );
   return npp?.name ?? null;
 }
 
 /** Where a wire item sends a reader: the campaign on its race page (Russia keeps its own). */
 async function campaignWireHref(db: Db, campaign: CampaignLike): Promise<string> {
-  const race = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+  const race = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1 } }
+  );
   return campaignPageHref({
     campaignId: campaign._id.toString(),
     electionId: campaign.electionId.toString(),

@@ -21,6 +21,8 @@ import {
   isDissolutionTriggered,
   type ConfidenceEvent,
 } from "@/lib/countries/uk/confidence/confidenceGauge";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 const MAX_CONFIDENCE_HISTORY_POINTS = 500;
 
@@ -35,7 +37,7 @@ const MAX_CONFIDENCE_HISTORY_POINTS = 500;
  */
 
 export function isConfidenceDissolutionEnabled(): boolean {
-  return process.env.UK_CONFIDENCE_GAUGE_DISSOLUTION === "1";
+  return runtimeConfig.ukConfidenceGaugeDissolution();
 }
 
 /** Current gauge value (defaults to full when unset). */
@@ -235,8 +237,7 @@ export async function tickParliamentaryGovernmentConfidence(
         }
       )
       .toArray(),
-    db
-      .collection<GovernmentApproval>("governmentApprovals")
+    governmentApprovalsCollection(db)
       .find({ _id: { $in: opts.countryIds } }, { projection: { _id: 1, approvalRating: 1 } })
       .toArray(),
   ]);

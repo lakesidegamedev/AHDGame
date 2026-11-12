@@ -1,13 +1,20 @@
 import { ObjectId, type Db } from "mongodb";
 import { loadTxThresholds, emitTxBulk } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
-import type { Bond, Corporation, Character } from "@/lib/db/types";
+import type { Bond, Character } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { resolveBondCurrency } from "./bondTurnHelpers";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
 
 // Tx log entry accumulators (resolved to names + emitted after all phases).
 // `charId` carries the holder id in string form for batched name lookup;
@@ -22,26 +29,21 @@ export type PartialTxEntry = Omit<
 export const BOND_HISTORY_INTEREST_INDEX_KEY = { bondId: 1, totalInterestPaid: -1 } as const;
 
 /**
- * Largest `totalInterestPaid` recorded for each bond, the base each new
- * history row accumulates onto.
+ * Largest `totalInterestPaid` recorded for each bond, the base each new history
+ * row accumulates onto.
  *
- * bondHistory gains a row per live bond per turn, so a `$group`/`$max` over it
- * fetches every row the game has ever written for those bonds (about a million
- * documents by the time a world is a few hundred turns old). Sorting on
- * `{ bondId, totalInterestPaid: -1 }` and taking `$first` asks the same
- * question, and with that index Mongo answers it with a DISTINCT_SCAN that
- * reads one key per bond. `$sort` descending orders values the way `$max`
- * compares them (null and missing last), so the two return the same number.
- *
- * The index is hinted so the fast plan is never a planner guess. A world that
- * has not installed it yet rejects the hint with BadValue; that falls back to
- * the original `$max` pipeline, so the answer never depends on the index.
+ * A `$group`/`$max` over bondHistory scans every row ever written. Sorting on
+ * `{ bondId, totalInterestPaid: -1 }` and taking `$first` lets the hinted index
+ * answer with a DISTINCT_SCAN reading one key per bond; `$sort` descending
+ * treats null/missing the same as `$max` does. A world without the index rejects
+ * the hint with BadValue, falling back to the `$max` pipeline, so the answer is
+ * index-independent.
  */
 export async function loadPriorBondInterest(
   db: Db,
   bondIds: ObjectId[]
 ): Promise<Array<{ _id: ObjectId; maxInterest: number }>> {
-  const collection = db.collection("bondHistory");
+  const collection = bondHistoryCollection<Document>(db);
   const match = { $match: { bondId: { $in: bondIds } } };
   try {
     return await collection
@@ -78,8 +80,7 @@ export async function snapshotBondHistory(args: {
 }): Promise<number> {
   const { db, activeBonds, fxByCurrency, turn, now } = args;
   // Get updated bonds after all price changes
-  const updatedBonds = await db
-    .collection<Bond>("bonds")
+  const updatedBonds = await bondsCollection(db)
     .find({ matured: false })
     .project({ _id: 1, marketPrice: 1 })
     .toArray();
@@ -121,7 +122,7 @@ export async function snapshotBondHistory(args: {
     });
     // Unordered: a duplicate on a retried turn must not stop the other live
     // bond snapshots from landing.
-    await db.collection("bondHistory").insertMany(historyDocs, { ordered: false });
+    await bondHistoryCollection<Document>(db).insertMany(historyDocs, { ordered: false });
   }
 
   return updatedBonds.length;
@@ -162,15 +163,13 @@ export async function emitBondTurnLedger(args: {
     ];
     const [regularNameDocs, imperialNameDocs] = await Promise.all([
       regularCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: regularCharIds.map((id) => new ObjectId(id!)) } })
             .project({ _id: 1, name: 1 })
             .toArray()
         : Promise.resolve([] as Pick<Character, "_id" | "name">[]),
       imperialCharIds.length > 0
-        ? db
-            .collection<ImperialCharacter>("imperialCharacters")
+        ? imperialCharactersCollection(db)
             .find({ _id: { $in: imperialCharIds.map((id) => new ObjectId(id!)) } })
             .project({ _id: 1, name: 1 })
             .toArray()
@@ -193,8 +192,7 @@ export async function emitBondTurnLedger(args: {
     ];
     const corpNameDocs =
       corpSubjectIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: corpSubjectIds.map((id) => new ObjectId(id)) } })
             .project({ _id: 1, name: 1 })
             .toArray()
@@ -211,8 +209,7 @@ export async function emitBondTurnLedger(args: {
     ];
     const fundNameDocs =
       fundSubjectIds.length > 0
-        ? await db
-            .collection("indexFunds")
+        ? await indexFundsCollection<Document>(db)
             .find({ _id: { $in: fundSubjectIds.map((id) => new ObjectId(id)) } })
             .project({ _id: 1, name: 1 })
             .toArray()

@@ -187,7 +187,7 @@ describe("resolveProvisionFiscal — scope selection", () => {
     const { resolveProvisionFiscal } = await import("./fiscal");
     const out = await resolveProvisionFiscal(
       db as unknown as Db,
-      { scope: "region", countryId: "CN", regionId: "XB" },
+      { scope: "region", countryId: "FR", regionId: "FR_IDF" },
       PROGRAM_LT as never,
       {},
       1,

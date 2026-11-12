@@ -4,20 +4,19 @@
  * replay keeps the original count and cannot change player or financial identity.
  */
 import { type ClientSession, type Db } from "mongodb";
-import type {
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  CountryGameState,
-  State,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { buildHuMixedPlan } from "./rules/mixedElectionPlan";
 import { coalesceHuModernCampaignActors } from "./rules/campaignActors2011";
 import { buildHuModernAssembly } from "./rules/modernAssembly2011";
 import type { Hu1991AssemblyRecord } from "./assemblyCount1991";
 import type { Hu1991InstalledMandates } from "./rules/mandates1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
 export const HU_2011_COUNTS_COLLECTION = "hu2011AssemblyCounts";
 export interface Hu2011AssemblyRecord {
   _id: string;
@@ -55,22 +54,20 @@ async function materializeHu2011Count(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Modern Hungarian count needs a transaction, cycle, turn and time");
-  const journal = db.collection<Hu2011AssemblyRecord>(HU_2011_COUNTS_COLLECTION);
+  const journal = hu2011AssemblyCountsCollection<Hu2011AssemblyRecord>(db);
   const id = `HU:mixed2011:${cycle}`;
   const existing = await journal.findOne({ _id: id }, { session });
   if (existing) return existing;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "HU" }, { session, projection: { huElectoralSystem2011SinceTurn: 1 } });
-  const polls = await db
-    .collection<Election>("elections")
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { huElectoralSystem2011SinceTurn: 1 } }
+  );
+  const polls = await electionsCollection(db)
     .find(
       { countryId: "HU", electionType: "nationalAssembly", cycle },
       { session, projection: { state: 1, status: 1, hungarianModernAssembly: 1 } }
@@ -90,12 +87,10 @@ async function materializeHu2011Count(input: {
     )
   )
     return null;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: "HU" }, { session, projection: { _id: 1, population: 1 } })
     .toArray();
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: polls.map((row) => row._id) } },
       {
@@ -114,8 +109,7 @@ async function materializeHu2011Count(input: {
       }
     )
     .toArray();
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: polls.map((row) => row._id) } },
       {
@@ -257,13 +251,11 @@ async function materializeHu2011Count(input: {
     installed: assembly.installed,
     createdAt: now,
   };
-  await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
-    .updateMany(
-      { electionId: { $in: polls.map((row) => row._id) }, finalized: false },
-      { $set: { updatedAt: now } },
-      { session }
-    );
+  await electionVoteTalliesCollection(db).updateMany(
+    { electionId: { $in: polls.map((row) => row._id) }, finalized: false },
+    { $set: { updatedAt: now } },
+    { session }
+  );
   await journal.insertOne(receipt, { session });
   return receipt;
 }

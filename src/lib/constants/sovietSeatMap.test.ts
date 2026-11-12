@@ -171,9 +171,11 @@ describe.each([
     const orphans = getPresetSeats(preset)
       .map((s) => s.state)
       .filter((state) => {
+        // A seeded region wins: US "CA" is California, not the country code.
+        if (seeded.has(state)) return false;
         // National offices (president/PM) pass the bare country code as `state`.
         if (state in COUNTRY_CONFIGS) return !live.has(state);
-        return !seeded.has(state);
+        return true;
       });
     expect([...new Set(orphans)]).toEqual([]);
   });

@@ -9,6 +9,11 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { frozenPoolCashPerFace } from "@/lib/budget/rules/fiscalScale";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export interface SovereignMaturityCashLeg {
   collection: string;
@@ -164,11 +169,11 @@ export async function resolveSovereignMaturityPayoutLegs(
   const live = new Set<string>(preloaded?.live ?? []);
   for (const id of (
     await Promise.all([
-      liveIds("characters", db.collection<{ _id: unknown }>("characters")),
-      liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
-      liveIds("corporations", db.collection<{ _id: unknown }>("corporations")),
-      liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
-      liveIds("npps", db.collection<{ _id: unknown }>("npps")),
+      liveIds("characters", charactersCollection<{ _id: unknown }>(db)),
+      liveIds("imperialCharacters", imperialCharactersCollection<{ _id: unknown }>(db)),
+      liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
+      liveIds("indexFunds", indexFundsCollection<{ _id: unknown }>(db)),
+      liveIds("npps", nppsCollection<{ _id: unknown }>(db)),
     ])
   ).flat())
     live.add(id);

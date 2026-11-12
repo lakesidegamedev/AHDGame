@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import type { Campaign, CampaignFogOfWar } from "@/lib/db/types";
 import { getMaxLevel } from "./upgradeCosts";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Applies ± variance jitter, then clamps to [0, max].
@@ -20,8 +21,7 @@ export async function updateCampaignFogOfWar(): Promise<void> {
     // Only the four level fields are read below. activityHistory is never
     // touched here, and a campaign now keeps 200 entries rather than 10, so
     // pulling it would make this sweep twenty times heavier for nothing.
-    const campaigns = await db
-      .collection<Campaign>("campaigns")
+    const campaigns = await campaignsCollection(db)
       .find({}, { projection: { activityHistory: 0 } })
       .toArray();
 
@@ -75,7 +75,7 @@ export async function updateCampaignFogOfWar(): Promise<void> {
 
     // Bulk write all updates at once
     if (updates.length > 0) {
-      await db.collection<Campaign>("campaigns").bulkWrite(updates);
+      await campaignsCollection(db).bulkWrite(updates);
       console.log(`[Fog Update] Updated fog of war for ${updates.length} campaign(s)`);
     }
   } catch (error) {

@@ -1,7 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { UnownedSector } from "@/lib/db/types";
-import type { State } from "@/lib/db/types/state";
 import { OPERATING_SECTOR_TYPES, operatingSectorIdentity } from "@/lib/constants/corporations";
 import { computeUnownedSeedRevenue } from "@/lib/admin/seed/seedUnownedSectors";
 import type { CountryId } from "@/lib/constants/countries";
@@ -20,6 +19,11 @@ import { computeUnownedHeadroomUnits, unownedPoolBoostSet } from "@/lib/market/u
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { plantSizeMongoExpr } from "@/lib/constants/facilityQuantum";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 // Max per-year revenue boost applied to the most distressed sector type (linearly
 // scaled down the distress ranking). Raised 0.02 → 0.06 (audit t786): at 0.02 the
@@ -40,8 +44,7 @@ const AUTO_SEED_MAX_BOOST = 0.06;
  * claimable than anyone has actually built".
  */
 async function loadOwnedCapacityByBucket(db: Db): Promise<Map<string, number>> {
-  const rows = await db
-    .collection("corporateSectors")
+  const rows = await corporateSectorsCollection<Document>(db)
     .aggregate<{
       _id: {
         stateId: string;
@@ -84,11 +87,8 @@ async function loadOwnedCapacityByBucket(db: Db): Promise<Map<string, number>> {
 export async function processAutoSectorSeed(
   db: Db,
   currentTurn: number,
-  preloadedGameState?: { autoSectorSeedEnabled?: boolean; lastAutoSeedTurn?: number }
+  preloadedGameState?: { lastAutoSeedTurn?: number }
 ): Promise<{ seeded: boolean; sectorsUpdated: number }> {
-  if (!preloadedGameState?.autoSectorSeedEnabled) {
-    return { seeded: false, sectorsUpdated: 0 };
-  }
   const lastSeedTurn = preloadedGameState?.lastAutoSeedTurn ?? 0;
   if (currentTurn - lastSeedTurn < TURNS_PER_YEAR) {
     return { seeded: false, sectorsUpdated: 0 };
@@ -107,13 +107,13 @@ export async function processAutoSectorSeed(
   ]);
   const natCorpObjectIds = [...nationalCorpIds].map((id) => new ObjectId(id));
 
-  const states = await db
-    .collection<State>("states")
+  const states = await (
+    await getStatesCollection(db)
+  )
     .find({ _id: { $not: /^NATIONAL_/ } })
     .toArray();
 
-  const existingDocs = await db
-    .collection<UnownedSector>("unownedSectors")
+  const existingDocs = await unownedSectorsCollection(db)
     .find({})
     .project({ stateId: 1, sectorType: 1, industryModel: 1, mediaDiscriminator: 1 })
     .toArray();
@@ -130,9 +130,8 @@ export async function processAutoSectorSeed(
 
   const now = new Date();
   let sectorsUpdated = 0;
-  // Seed at the WORLD's era. This used to ride the seed helper's
-  // "2019-default" parameter default, so a 1953 world grew modern sector
-  // revenue mid-turn.
+  // Seed at the WORLD's era, not the seed helper's 2019 default, so older
+  // worlds don't grow modern sector revenue mid-turn.
   const preset = await getGameStatePresetOrDefault(db);
 
   const profiles = OPERATING_SECTOR_TYPES.map((operatingType) => ({
@@ -146,8 +145,7 @@ export async function processAutoSectorSeed(
 
     const multiplier = 1 + boost;
 
-    const sectorDocs = await db
-      .collection<UnownedSector>("unownedSectors")
+    const sectorDocs = await unownedSectorsCollection(db)
       .find({ sectorType, industryModel, mediaDiscriminator })
       .toArray();
     const openIds = sectorDocs
@@ -157,20 +155,18 @@ export async function processAutoSectorSeed(
             bucketKey(u.stateId, u.sectorType, u.industryModel, u.mediaDiscriminator)
           )
       )
-      // ─── Cap the boost against actually-built capacity (#1145) ────────────
+      // ─── Cap the boost against actually-built capacity ────────────────────
       //
       // The boost is a $multiply, so it compounds every year a commodity stays
       // distressed. Nothing else grows the pool and only founding/building draw
-      // it down, so a market nobody is building into inflated indefinitely —
-      // and "Unowned 60.6%" on a market that is fully built out is precisely
-      // what players hit when the expand gate (a real demand gap) then refuses
-      // the build.
+      // it down, so a market nobody is building into inflates indefinitely, // and a fully-built-out market then shows inflated unowned share while
+      // the expand gate (a real demand gap) refuses the build.
       //
-      // Distress relief is meant to open room in markets that are genuinely
-      // thin. A bucket already holding more claimable headroom than the world
-      // has built plant is not thin, so it is skipped. Plants-gated: below
-      // plants the pool leads in ₳ and there is no comparable unit figure, so
-      // that path is byte-identical to before.
+      // Distress relief is meant to open room in genuinely thin markets. A
+      // bucket already holding more claimable headroom than the world has built
+      // plant is not thin, so it is skipped. Plants-gated: below plants the pool
+      // leads in ₳ and has no comparable unit figure, so that path is unchanged.
+      // ─────────────────────────────────────────────────────────────────────
       .filter((u) => {
         if (!plantsEnabled) return true;
         const owned =
@@ -206,9 +202,10 @@ export async function processAutoSectorSeed(
           mediaDiscriminator
         ),
       };
-      const { modifiedCount } = await db
-        .collection<UnownedSector>("unownedSectors")
-        .updateMany({ _id: { $in: openIds } }, [boostPipeline]);
+      const { modifiedCount } = await unownedSectorsCollection(db).updateMany(
+        { _id: { $in: openIds } },
+        [boostPipeline]
+      );
       sectorsUpdated += modifiedCount;
     }
     // Natcorp corporate sectors get the same $multiply boost as open unowned markets.
@@ -218,7 +215,9 @@ export async function processAutoSectorSeed(
       // Per document: natcorps of one lane can run recipes of different plant sizes.
       const quantum = plantSizeMongoExpr({ sectorType, industryModel, mediaDiscriminator });
       const boostedStock = { $multiply: [{ $ifNull: ["$capitalStock", 0] }, multiplier] };
-      const { modifiedCount: natModified } = await db.collection("corporateSectors").updateMany(
+      const { modifiedCount: natModified } = await corporateSectorsCollection<Document>(
+        db
+      ).updateMany(
         {
           sectorType,
           industryModel,
@@ -290,7 +289,7 @@ export async function processAutoSectorSeed(
         boostMultiplier: multiplier,
       });
 
-      await db.collection<UnownedSector>("unownedSectors").insertOne({
+      await unownedSectorsCollection(db).insertOne({
         _id: new ObjectId(),
         stateId: state._id as string,
         countryId: state.countryId as CountryId,
@@ -315,9 +314,10 @@ export async function processAutoSectorSeed(
     }
   }
 
-  await db
-    .collection("gameState")
-    .updateOne({}, { $set: { lastAutoSeedTurn: currentTurn, updatedAt: now } });
+  await gameStateCollection<Document>(db).updateOne(
+    {},
+    { $set: { lastAutoSeedTurn: currentTurn, updatedAt: now } }
+  );
 
   return { seeded: true, sectorsUpdated };
 }

@@ -4,6 +4,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { NPP } from "@/lib/db/types";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/settings/supporter-requests/npp-search?q= — search active NPPs by
 // name substring for the Supporter++ rename form.
@@ -20,8 +21,7 @@ export async function GET(request: Request) {
     }
 
     const db = await getDb();
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({
         name: { $regex: escapeRegex(q), $options: "i" },
         retiredAt: null,

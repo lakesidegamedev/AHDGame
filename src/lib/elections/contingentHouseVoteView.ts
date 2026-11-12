@@ -19,7 +19,11 @@ import { coalitionWhipKey, partyWhipKey } from "@/lib/elections/contingentHouseS
 import {
   loadHouseVoteStandings,
   loadPartyCoalitions,
-} from "@/lib/turn/election/contingentHouseVoteStandings";
+} from "@/lib/elections/resolution/contingentHouseVoteStandings";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export interface ContingentHouseVoteViewCandidate {
   id: string;
@@ -119,20 +123,15 @@ export async function buildContingentHouseVoteView(
   const [standings, seat, viewer, parties, coalitions, partyCoalition] = await Promise.all([
     vote.status === "open" ? loadHouseVoteStandings(db, election, tally, vote) : null,
     viewerCharacterId
-      ? db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne(
-            { countryId, officeType: "house", characterId: viewerCharacterId },
-            { projection: { state: 1 } }
-          )
+      ? electedOfficialsCollection(db).findOne(
+          { countryId, officeType: "house", characterId: viewerCharacterId },
+          { projection: { state: 1 } }
+        )
       : Promise.resolve(null),
     viewerCharacterId
-      ? db
-          .collection<Character>("characters")
-          .findOne({ _id: viewerCharacterId }, { projection: { party: 1 } })
+      ? charactersCollection(db).findOne({ _id: viewerCharacterId }, { projection: { party: 1 } })
       : Promise.resolve(null),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId })
       .project<Pick<PoliticalParty, "sequentialId" | "name" | "chairId">>({
         sequentialId: 1,
@@ -140,8 +139,7 @@ export async function buildContingentHouseVoteView(
         chairId: 1,
       })
       .toArray(),
-    db
-      .collection<Coalition>("coalitions")
+    coalitionsCollection(db)
       .find({ countryId })
       .project<Pick<Coalition, "sequentialId" | "name" | "chairCharacterId">>({
         sequentialId: 1,
@@ -175,8 +173,7 @@ export async function buildContingentHouseVoteView(
     .sort((a, b) => a.scope.localeCompare(b.scope) || a.name.localeCompare(b.name));
 
   const defianceChars = standings?.defiances.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: standings.defiances.map((d) => new ObjectId(d.voterId)) } })
         .project<Pick<Character, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray()

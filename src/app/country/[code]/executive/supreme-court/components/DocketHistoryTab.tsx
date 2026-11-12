@@ -15,11 +15,10 @@ interface DocketCaseRow {
 }
 
 /**
- * Docket history (#3581 stories 14/17/19/30) — past cases and how the sitting
- * Court ruled, most recent first (server already sorts by `decidedAtTurn`
- * descending; see `getScotusCaseHistory`). Lazy-loaded: only fetched once the
- * "Docket History" tab is actually opened, matching the Admin-tab lazy-fetch
- * convention on the cabinet page.
+ * Docket history: past cases and how the sitting Court ruled, most recent first
+ * (server already sorts by `decidedAtTurn` descending; see `getScotusCaseHistory`).
+ * Lazy-loaded: only fetched once the Docket History tab is opened, matching the
+ * Admin-tab lazy-fetch convention on the cabinet page.
  */
 /**
  * What the outcome badges mean and how cases reach the Court. Shown with the

@@ -2,6 +2,9 @@ import type { Db, ObjectId } from "mongodb";
 import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 export interface ReservedCorporatePosition {
   corporationId: ObjectId;
@@ -75,8 +78,7 @@ export async function loadReservedCorporatePositions(
   targetCorpId: ObjectId
 ): Promise<ReservedCorporatePosition[]> {
   const [orders, listings] = await Promise.all([
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find({
         corporationId: targetCorpId,
         type: "sell",
@@ -84,8 +86,7 @@ export async function loadReservedCorporatePositions(
         placerCorporationId: { $exists: true },
       })
       .toArray(),
-    db
-      .collection<ShareListing>("shareListings")
+    shareListingsCollection(db)
       .find({
         corporationId: targetCorpId,
         status: "open",
@@ -104,8 +105,7 @@ export async function loadReservedCorporatePositionsByTarget(
   if (targetCorpIds?.length === 0) return new Map();
   const targetFilter = targetCorpIds ? { corporationId: { $in: [...targetCorpIds] } } : {};
   const [orders, listings] = await Promise.all([
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find({
         ...targetFilter,
         type: "sell",
@@ -120,8 +120,7 @@ export async function loadReservedCorporatePositionsByTarget(
         sharesRemaining: 1,
       })
       .toArray(),
-    db
-      .collection<ShareListing>("shareListings")
+    shareListingsCollection(db)
       .find({
         ...targetFilter,
         status: "open",
@@ -168,16 +167,14 @@ export async function loadReservedPositionsPlacedBy(
   placerCorpId: ObjectId
 ): Promise<Array<{ targetCorpId: ObjectId; shares: number }>> {
   const [orders, listings] = await Promise.all([
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find({
         placerCorporationId: placerCorpId,
         type: "sell",
         status: "open",
       })
       .toArray(),
-    db
-      .collection<ShareListing>("shareListings")
+    shareListingsCollection(db)
       .find({
         sellerCorporationId: placerCorpId,
         status: "open",
@@ -224,9 +221,10 @@ export async function isSittingCeoOfControllingParent(
   if (!viewerUserId) return false;
   const controllingParent = await resolveControllingCorporateParent(db, corporation);
   if (!controllingParent) return false;
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId }, { projection: { userId: 1, ceoVacant: 1 } });
+  const parent = await corporationsCollection(db).findOne(
+    { _id: controllingParent.corporationId },
+    { projection: { userId: 1, ceoVacant: 1 } }
+  );
   return parent != null && parent.ceoVacant !== true && parent.userId?.toString() === viewerUserId;
 }
 

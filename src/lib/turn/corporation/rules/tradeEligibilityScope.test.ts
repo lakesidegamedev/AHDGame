@@ -30,6 +30,15 @@ describe("tradeEligibilityScope", () => {
     });
   });
 
+  it("builds route eligibility but no country books on a modern world with funded tariffs", () => {
+    expect(
+      tradeEligibilityScope({ eraUnitScale: 1, activeBlockEmbargoCount: 0, fundedTariffs: true })
+    ).toEqual({ routes: true, countryBooks: false });
+    expect(
+      tradeEligibilityScope({ eraUnitScale: 1, activeBlockEmbargoCount: 0, fundedTariffs: false })
+    ).toEqual({ routes: false, countryBooks: false });
+  });
+
   it("treats a non-finite embargo count as no embargo", () => {
     expect(tradeEligibilityScope({ eraUnitScale: 1, activeBlockEmbargoCount: Number.NaN })).toEqual(
       {

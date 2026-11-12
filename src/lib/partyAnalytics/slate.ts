@@ -4,53 +4,18 @@ import type { Election, SlateCandidate } from "@/lib/db/types";
 import { listPartySlates, listSlateCandidatesByIds } from "@/lib/db/recruitmentSlateLookup";
 import { partyUrl } from "@/lib/urls";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
+import { getSlateElectionSortWeight } from "@/lib/parties/slateElectionSortWeight";
 import type {
   PartyAnalyticsSlateCoverageItem,
   PartyAnalyticsSlateItem,
   PartyAnalyticsSlateSection,
 } from "./types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface ElectionSummary {
   electionId: string;
   state: string;
   electionLabel: string;
-}
-
-function getSlateElectionSortWeight(electionType: string): number {
-  switch (electionType) {
-    case "senate":
-    case "sangiin":
-    case "lords":
-    case "seanad":
-    case "bundesrat":
-      return 10;
-    case "house":
-    case "commons":
-    case "bundestag":
-    case "shugiin":
-    case "dail":
-    case "chamber":
-    case "npc":
-    case "npcDelegate":
-    case "supremeSovietDeputy":
-    case "nationalitiesDeputy":
-      return 20;
-    case "governor":
-    case "ministerPresident":
-    case "premier":
-      return 30;
-    case "stateSenate":
-    case "regionalCouncil":
-    case "holyrood":
-    case "senedd":
-    case "landtag":
-    case "peoplesCongress":
-    case "republicSupremeSoviet":
-    case "localCouncil":
-      return 40;
-    default:
-      return 50;
-  }
 }
 
 function formatElectionLabel(
@@ -101,8 +66,7 @@ export async function buildPartySlateAnalytics(
   partyId: string,
   stateId?: string
 ): Promise<PartyAnalyticsSlateSection> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       countryId,
       status: { $in: ["upcoming", "active"] },

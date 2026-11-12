@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 healthcare spending sweep guard (P2b). These healthcare outcomes are
@@ -35,9 +32,7 @@ const REGULATORY_MECHANISM_KEEP_LIST = new Set<string>([
   // care within the budget. These laws' direct effects model that allocation
   // choice, which the channel cannot.
   "uk_mental_health",
-  "de_mental_health",
   "jp_mental_health",
-  "de_elder_care",
   "jp_elder_care",
   "uk_social_care",
   // PRICE mechanism: drug-price regulation moves affordability/outcomes through
@@ -69,13 +64,7 @@ function readoutHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 healthcare spending sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...deLegislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no healthcare-FUNDING law targets a spend-driven healthcare readout", () => {
     const offenders: string[] = [];

@@ -17,8 +17,7 @@ import { getAlignmentCrisesCollection, getCountryAlignmentsCollection } from "@/
 import type { GameState } from "@/lib/db/types";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { resolveGameYear } from "@/lib/era/era";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
-import { isIntOrgAlignmentEnabled } from "../featureFlag";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import type { AlignmentStatus } from "../project";
 import {
   eraPoleVocabulary,
@@ -27,6 +26,8 @@ import {
   type NationStanding,
 } from "./nationStanding";
 import { loadAlignmentTopology } from "../topology";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export type { LedgerPole };
 
@@ -48,7 +49,6 @@ export interface LedgerCrisis {
 }
 
 export interface WorldAlignmentView {
-  enabled: boolean;
   year: number;
   eraKey: string;
   joinGate: number;
@@ -72,14 +72,13 @@ const STATUS_ORDER: Record<AlignmentStatus, number> = {
 };
 
 export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        intOrgAlignmentEnabled: 1,
         // Era-aware display names read this; omitting it silently falls back
         // to the modern preset and the Cold War reads "Germany" / "Russia".
         preset: 1,
@@ -106,17 +105,10 @@ export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
     remainderLabel,
   };
 
-  // Gate off: report the shape so the page can render a disabled state, but
-  // never read the collection.
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) {
-    return { ...base, enabled: false, rows: [], crises: [] };
-  }
-
   const col = await getCountryAlignmentsCollection(db);
   const [docs, memberships] = await Promise.all([
     col.find({}).toArray(),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({})
       .project<{ organizationId: string; countryId: CountryId }>({
         organizationId: 1,
@@ -179,5 +171,5 @@ export async function loadWorldAlignment(db: Db): Promise<WorldAlignmentView> {
     movementCap: CRISIS_TURN_CAP,
   }));
 
-  return { ...base, enabled: true, rows, crises };
+  return { ...base, rows, crises };
 }

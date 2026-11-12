@@ -1,9 +1,9 @@
 import type { Db } from "mongodb";
 import type { EventInstance, OutcomeTier } from "@/lib/db/types/events";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import { createSystemNewsPost } from "@/lib/news";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 function interpolate(
   text: string,
@@ -37,9 +37,10 @@ export async function emitOutcomeNewsWire(
   let country = "";
   let leader = "the government";
   if (instance.scope === "character") {
-    const char = await db
-      .collection<Character>("characters")
-      .findOne({ _id: instance.scopeId }, { projection: { name: 1, countryId: 1 } });
+    const char = await charactersCollection(db).findOne(
+      { _id: instance.scopeId },
+      { projection: { name: 1, countryId: 1 } }
+    );
     if (char) {
       name = char.name;
       const cfg = char.countryId ? COUNTRY_CONFIGS[char.countryId as CountryId] : undefined;
@@ -52,9 +53,10 @@ export async function emitOutcomeNewsWire(
       country = cfg?.name ?? countryId;
       const leaderCharId = await getHeadOfGovernmentCharacterId(db, countryId);
       if (leaderCharId) {
-        const leaderChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: leaderCharId }, { projection: { name: 1 } });
+        const leaderChar = await charactersCollection(db).findOne(
+          { _id: leaderCharId },
+          { projection: { name: 1 } }
+        );
         if (leaderChar) leader = leaderChar.name;
       }
     }

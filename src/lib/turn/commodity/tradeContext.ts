@@ -17,10 +17,10 @@ export function buildBlocsByCountry(
 
 /**
  * Iron curtain: planned economies trade only among themselves until real
- * east-west trade mechanics exist (owner decision 2026-08-16). Membership is
- * the engine's own MARKETIZATION_SCHEDULE via isCurtained, so the curtain
- * lifts country-by-country on the historical marketization dates and the
- * Tito-split exemption keeps Yugoslavia trading with the open world.
+ * east-west trade mechanics exist. Membership derives from
+ * MARKETIZATION_SCHEDULE via isCurtained, so the curtain lifts
+ * country-by-country on historical dates, with the Tito-split exemption
+ * keeping Yugoslavia in the open world.
  */
 export function buildCurtainedCountries(
   ledgerCurrentYear: number | null,

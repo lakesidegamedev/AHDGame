@@ -16,12 +16,16 @@ import {
   baselineFor,
 } from "@/lib/politicalMetrics/seeds/baselineAnchors";
 import { REGIONAL_MODIFIERS_1953 } from "@/lib/politicalMetrics/seeds/regionalModifiers1953";
-import { REGIONAL_TEXTURE_1991 } from "@/lib/politicalMetrics/seeds/regionalTexture1991";
-import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
-import { NON_PLAYABLE_BOARDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { getRegionalTexture1991 } from "@/lib/politicalMetrics/seeds/regionalTexture1991";
+import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import type { Document } from "mongodb";
 
 /**
- * The 1953 preset carrying both authored modifiers and generated texture (issue #704).
+ * The 1953 preset carrying both authored modifiers and generated texture.
  * Applying either 1953 regional input to another era's baselines would dress
  * it in the wrong year's regional character.
  */
@@ -34,9 +38,7 @@ const PLAYABLE = new Set<string>(POLITICAL_METRIC_COUNTRY_IDS);
  * given a neutral board; a 63-family doc of 50s would look authored while
  * meaning nothing, which is the failure mode this whole project exists to end.
  */
-const BOARD_COUNTRIES = new Set<string>(
-  Object.values(NON_PLAYABLE_BOARDS).flatMap((byCountry) => Object.keys(byCountry))
-);
+const BOARD_COUNTRIES = new Set<string>(NON_PLAYABLE_BOARD_COUNTRY_IDS);
 // PoliticalMetricsCountryId is a subset of CountryId, so the Mongo filter needs
 // the wider element type to satisfy the State schema.
 const SEEDED_FILTER: State["countryId"][] = [
@@ -48,14 +50,13 @@ const clampScore = (v: number) => Math.max(0, Math.min(100, v));
 /**
  * Seeds one politicalMetrics doc per US/UK/RU/DD region present in `states`:
  * value = clamp(baseline at `year` + regional character, 0, 100), where the
- * character is the sparse hand-authored modifier where one exists and the
- * generated texture deviation otherwise (issues #704 and #3266).
+ * character is the sparse hand-authored modifier where one exists, else the
+ * generated texture deviation.
  *
  * Baselines resolve by in-game YEAR through the anchor table, never by seed
- * preset. Authored era anchors give later presets their own national values.
- *
- * Texture resolves by seed PRESET, never by year. The 1953 preset prefers
- * explicit modifiers; the 1991 preset uses its population-centered texture.
+ * preset, so authored era anchors give later presets their own national
+ * values. Texture resolves by seed PRESET, never by year: 1953 prefers
+ * explicit modifiers, 1991 uses its population-centered texture.
  */
 export async function seedPoliticalMetrics(
   db: Db,
@@ -69,13 +70,12 @@ export async function seedPoliticalMetrics(
   // has no emitted board seeds NO non-playable boards rather than falling back
   // to another era's; a 2019 world wearing 1953 numbers is exactly the silent
   // wrongness this project exists to end.
-  const boardsForPreset = NON_PLAYABLE_BOARDS[preset];
+  const boardsForPreset = getNonPlayableBoards()[preset];
   if (!boardsForPreset) {
     log(`No non-playable political boards emitted for preset ${preset}; playables only`);
   }
   if (reset) {
-    await db
-      .collection("politicalMetrics")
+    await politicalMetricsCollection<Document>(db)
       .drop()
       .catch((error) => {
         logWarning("Collection drop failed (may not exist)", {
@@ -86,8 +86,7 @@ export async function seedPoliticalMetrics(
       });
   }
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: { $in: SEEDED_FILTER } })
     .toArray();
 
@@ -109,9 +108,9 @@ export async function seedPoliticalMetrics(
         preset === TEXTURE_PRESET ? (REGIONAL_MODIFIERS_1953[countryId][state._id] ?? {}) : {};
       const texture =
         preset === "1991-default"
-          ? (REGIONAL_TEXTURE_1991[countryId]?.[state._id] ?? {})
+          ? (getRegionalTexture1991()[countryId]?.[state._id] ?? {})
           : preset === TEXTURE_PRESET
-            ? (REGIONAL_TEXTURE_1953[countryId]?.[state._id] ?? {})
+            ? (getRegionalTexture1953()[countryId]?.[state._id] ?? {})
             : {};
       for (const metricId of Object.keys(
         POLITICAL_BASELINE_ANCHORS[countryId]
@@ -163,7 +162,7 @@ export async function seedPoliticalMetrics(
   }
 
   if (ops.length > 0) {
-    await db.collection<PoliticalMetricsDoc>("politicalMetrics").bulkWrite(ops, { ordered: true });
+    await politicalMetricsCollection(db).bulkWrite(ops, { ordered: true });
   }
   log(`Seeded political metrics for ${regionsSeeded} regions (playables + board countries)`);
   return { regionsSeeded };

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { formatFundsCompact } from "@/lib/utils/formattersCore";
+import { YAxisGrid } from "./YAxisGrid";
 
 interface HistoryPoint {
   turn: number;
@@ -148,33 +149,13 @@ export function PortfolioChart({ history, view = "total" }: Props) {
         onMouseLeave={() => setHovered(null)}
       >
         {/* Y-axis grid + labels */}
-        {yLabels.map((v, i) => {
-          const y = toY(v);
-          return (
-            <g key={i}>
-              <line
-                x1={PAD_LEFT}
-                y1={y}
-                x2={WIDTH - PAD_RIGHT}
-                y2={y}
-                stroke="currentColor"
-                strokeWidth={1}
-                strokeDasharray={i === 0 || i === 4 ? undefined : "4 3"}
-                className="text-card-border/60"
-                opacity={0.4}
-              />
-              <text
-                x={PAD_LEFT - 4}
-                y={y + 4}
-                textAnchor="end"
-                fontSize={9}
-                className="fill-muted/70"
-              >
-                {fmt(v)}
-              </text>
-            </g>
-          );
-        })}
+        <YAxisGrid
+          values={yLabels}
+          toY={toY}
+          left={PAD_LEFT}
+          right={WIDTH - PAD_RIGHT}
+          format={fmt}
+        />
 
         {/* Area fill */}
         <defs>

@@ -1,21 +1,15 @@
 /**
- * United Kingdom Region Census Profiles — 1979 era.
+ * United Kingdom Region Census Profiles , 1979 era.
  *
- * 1979-default companion to {@link ukRegionCensusData} (the 2019 profiles).
- * Anchored to the UK Census 1981 (the 1991 census was the first with an
- * ethnic-group question, so 1981-era ethnicity is estimated from country-of-
- * birth tables and Labour Force Survey work).
+ * Anchored to the UK Census 1981; 1981-era ethnicity is estimated from
+ * country-of-birth tables and Labour Force Survey work (the 1991 census was the
+ * first with an ethnic-group question). Industrial regions near manufacturing
+ * peak, council-housing tenure at its historic high, degree attainment under
+ * ~10% everywhere, ethnic minorities concentrated in London and the West
+ * Midlands, Northern Ireland mid-Troubles.
  *
- * Era anchors (Winter of Discontent / Thatcher's first win): industrial
- * North, Midlands, Scotland and Wales at or near their manufacturing peak;
- * council-housing tenure at its historic high; higher-education attainment
- * very low (degree-level under ~10% everywhere); ethnic-minority population
- * concentrated almost entirely in London and the West Midlands; Northern
- * Ireland mid-Troubles with a notably young population.
- *
- * All values independently authored from historical knowledge of each region
- * in 1979 — NOT scaled or derived from any other era's data. Income uses
- * era-neutral relative tiers (no £ thresholds).
+ * All values independently authored for 1979, NOT scaled from another era.
+ * Income uses era-neutral relative tiers (no £ thresholds).
  */
 
 import type { UKRegionLayer1 } from "@/lib/countries/uk/data/ukRegionCensusData";

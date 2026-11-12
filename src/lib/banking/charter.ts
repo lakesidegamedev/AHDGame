@@ -7,7 +7,6 @@ import { bankMayManageFunds } from "@/lib/indexFunds/sponsorship/rules/eligibili
 import { ObjectId, type Db } from "mongodb";
 import type { BankCharter, BankCharterType, BankLoan } from "@/lib/db/types/bank";
 import type { Corporation, CorporateSector, GameConfig } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -29,20 +28,22 @@ import { getCurrentTurn } from "@/lib/currentTurn";
 import { charterTypeMay } from "@/lib/banking/rules/capabilities";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { depositBookReturnKey } from "@/lib/banking/depositBookReturn";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Charter capital as a multiple of the corporation founding cost.
  *
- * Was 10x. Cut to 5x once the deposit fix landed, because the old number was
- * doing two jobs and failing both. It was set high to keep a bank solvent, but
- * solvency was never a capital problem: deposits arrived without their cash, so
- * no amount of posted capital saved a bank and a simulated charter died on turn
- * 8 at 1x and turn 47 at 5x. With deposits carrying their cash, the same
- * simulation survives 60 turns at 1x, so capital no longer has to buy survival.
- *
- * What it should price is commitment, and 5x the cost of creating the
- * corporation is a real commitment without being a wall. At 1953 US scale that
- * is ~71,700 from the corporate treasury against a ~14,300 founding cost.
+ * This prices commitment, not solvency: with deposits carrying their cash,
+ * capital no longer has to buy survival. 5x the cost of creating the
+ * corporation is a real commitment without being a wall. At 1953 US scale
+ * that is ~71,700 from the corporate treasury against a ~14,300 founding
+ * cost.
  */
 export const CHARTER_CAPITAL_FOUNDING_MULTIPLE = 5;
 
@@ -136,9 +137,10 @@ export async function getCharterCapitalRequirement(
 }
 
 async function corpOwnsFinancialSector(db: Db, corporationId: ObjectId): Promise<boolean> {
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ corporationId, sectorType: "financial" }, { projection: { _id: 1 } });
+  const sector = await corporateSectorsCollection(db).findOne(
+    { corporationId, sectorType: "financial" },
+    { projection: { _id: 1 } }
+  );
   return sector != null;
 }
 
@@ -156,7 +158,7 @@ export async function checkCharterEligibility(
   const reasons: string[] = [];
 
   if (!options?.skipFlagCheck) {
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -193,7 +195,7 @@ export async function checkCharterEligibility(
     reasons.push("Resolve the failed bank estate before rechartering");
   }
 
-  const sponsoredFundCount = await db.collection("indexFunds").countDocuments({
+  const sponsoredFundCount = await indexFundsCollection<Document>(db).countDocuments({
     sponsorCorporationId: corporation._id,
     status: { $ne: "delisted" },
   });
@@ -283,11 +285,11 @@ async function issueCharterInner(
   currency: CurrencyCode,
   options?: { skipFlagCheck?: boolean }
 ): Promise<IssueCharterResult & { settlementId?: string }> {
-  const corporation = await db
-    .collection<Corporation & { settledKeys?: string[] }>("corporations")
-    .findOne({
-      _id: corporationId,
-    });
+  const corporation = await corporationsCollection<Corporation & { settledKeys?: string[] }>(
+    db
+  ).findOne({
+    _id: corporationId,
+  });
   if (!corporation) {
     return { ok: false, reasons: ["Corporation not found"] };
   }
@@ -324,8 +326,7 @@ async function issueCharterInner(
   }
   // Seed the counter from only this charter's current/arrears epoch, not a
   // stale charter counter. Pending requests and terminal loans are not exposure.
-  const survivingLoans = await db
-    .collection<BankLoan>("bankLoans")
+  const survivingLoans = await bankLoansCollection(db)
     .find(
       {
         bankCorporationId: corporationId,
@@ -427,17 +428,12 @@ async function issueCharterInner(
 /**
  * Revoke a charter, returning the deposit book on the way out.
  *
- * This used to set `status: "revoked"` and stop. Depositors stayed pointed at a
- * dead bank, `npcDeposits` stayed on its books with the matching cash beside
- * it, and the owner got nothing back because the refund was gated on the
- * deposit book being empty, which nobody could make it be. That is ticket
- * 1093: a revoke that erased the balance sheet and stranded everything on it.
- *
- * Revocation now runs the same {@link returnDepositBook} waterfall as failure,
- * admin unwind and a charter switch: household deposits go back to the money
- * supply out of the bank's cash (insurance covers any shortfall), player
- * pointers flip to the central bank, and only what is genuinely left over,
- * capped at book equity, reaches the shareholder.
+ * Revocation must run the {@link returnDepositBook} waterfall, as failure, admin
+ * unwind, and charter switch do: household deposits return to the money supply
+ * out of the bank's cash (insurance covers any shortfall), player pointers flip
+ * to the central bank, and only the genuine leftover, capped at book equity,
+ * reaches the shareholder. Skipping this strands depositors on a dead bank and
+ * erases the balance sheet.
  */
 export async function revokeCharter(
   db: Db,
@@ -490,7 +486,7 @@ async function revokeCharterInner(
   corporationId: ObjectId,
   reason: string
 ): Promise<RevokeCharterResult> {
-  const corporation = await db.collection<Corporation>("corporations").findOne({
+  const corporation = await corporationsCollection(db).findOne({
     _id: corporationId,
   });
   if (!corporation) {
@@ -516,7 +512,7 @@ async function revokeCharterInner(
   // revocation that crashed after claiming is finished here as well, under
   // the turn it was claimed on, so the waterfall's idempotency key is the
   // same and the money moves once.
-  const claim = await db.collection<Corporation>("corporations").updateOne(
+  const claim = await corporationsCollection(db).updateOne(
     {
       _id: corporationId,
       bankUnderwritingFunding: { $exists: false },
@@ -580,12 +576,13 @@ async function revokeCharterInner(
     $unset: { "bankCharter.pendingRevocationReason": "" },
   };
   // No cash leg here: `returnDepositBook` already moved every currency unit it
-  // was going to move, with a netting check on the legs. Writing a second
-  // refund here is how the unwind path used to pay the shareholder twice.
+  // was going to move, with a netting check on the legs. A second refund here
+  // would pay the shareholder twice.
 
-  const result = await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: corporationId, "bankCharter.status": "active" }, update);
+  const result = await corporationsCollection(db).updateOne(
+    { _id: corporationId, "bankCharter.status": "active" },
+    update
+  );
 
   if (result.modifiedCount !== 1) {
     return { ok: false, error: "Failed to revoke charter (no longer active)" };
@@ -688,9 +685,10 @@ export async function previewCharterSwitch(
   if (corporation.bankUnderwritingFunding) blockers.push("underwriting_settlement");
   if (
     !bankMayManageFunds({ status: "active", type: targetType }) &&
-    (await db
-      .collection("indexFunds")
-      .countDocuments({ sponsorCorporationId: corporation._id, status: { $ne: "delisted" } })) > 0
+    (await indexFundsCollection<Document>(db).countDocuments({
+      sponsorCorporationId: corporation._id,
+      status: { $ne: "delisted" },
+    })) > 0
   )
     blockers.push("sponsored_funds");
 
@@ -736,28 +734,15 @@ export async function previewCharterSwitch(
 /**
  * Change a bank's charter type in place.
  *
- * Before this existed the only route from retail to investment was to persuade
- * the central-bank chair to revoke your charter and then charter again from
- * scratch, posting capital twice - which is to say there was no route, and a
- * player who picked the wrong type at founding was stuck with it. That is the
- * complaint this fixes.
+ * Moving to an investment charter returns the whole deposit book, since an
+ * investment bank cannot hold deposits: player savings pointers flip back to
+ * the central bank (balances untouched) and NPC household deposits return to
+ * `externalBroadMoney` with conservation. Refusing the switch instead would
+ * leave the CEO with no way to shed deposits, and returning the book is the
+ * honest price: the bank gives up the funding base it built.
  *
- * ## Deposits do not survive a move to an investment charter
- *
- * An investment bank cannot hold deposits, so switching to one returns the
- * whole book: player savings pointers flip back to the central bank (balances
- * untouched - it is a pointer, exactly as `moveCharacterSavings` treats it) and
- * NPC household deposits go back to `externalBroadMoney` with conservation.
- *
- * The alternative was to refuse the switch until the CEO had shed deposits by
- * hand, and there is no mechanism for them to do that - they cannot evict
- * depositors. Refusing would have reproduced the original complaint with extra
- * steps. Returning the book is also the honest price: the bank gives up the
- * funding base it spent turns building, which is a real cost that the cooldown
- * on its own would not impose.
- *
- * Loans are LEFT IN PLACE and keep amortizing, the same rule `unwindBank` uses.
- * They are assets the bank owns; a charter change is not a jubilee.
+ * Loans are left in place and keep amortizing, the same rule `unwindBank`
+ * uses. A charter change is not a jubilee.
  */
 export async function switchCharterType(
   db: Db,
@@ -804,7 +789,7 @@ async function switchCharterTypeInner(
   corporationId: ObjectId,
   targetType: BankCharterType
 ): Promise<SwitchCharterResult> {
-  const corporation = await db.collection<Corporation>("corporations").findOne({
+  const corporation = await corporationsCollection(db).findOne({
     _id: corporationId,
   });
   if (!corporation) {
@@ -860,7 +845,7 @@ async function switchCharterTypeInner(
   // land. Clearing them here as well would be harmless today and wrong the day
   // the waterfall stops half way, because it would hide the hole.
 
-  const updated = await db.collection<Corporation>("corporations").findOneAndUpdate(
+  const updated = await corporationsCollection(db).findOneAndUpdate(
     {
       _id: corporationId,
       "bankCharter.status": "active",
@@ -912,8 +897,9 @@ export async function isChairOfCurrencyBank(
 ): Promise<boolean> {
   const countryId = getCountryIdForCurrency(currency);
   const bankId = getBankId(countryId);
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: bankId }, { projection: { chairCharacterId: 1 } });
+  const bank = await centralBanksCollection(db).findOne(
+    { _id: bankId },
+    { projection: { chairCharacterId: 1 } }
+  );
   return !!bank?.chairCharacterId && bank.chairCharacterId.equals(characterId);
 }

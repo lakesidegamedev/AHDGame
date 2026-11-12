@@ -2,7 +2,7 @@
 // A Commanding General posts the generals of their own Command to Conflicts and
 // designates one Theater Commander per Conflict. Auth: the CG of a Command in this
 // country (authority comes from being commandingGeneralId, not from a cabinet seat).
-// Gated by conflictsEnabled. Errors: 400, 401, 403, 404.
+// Errors: 400, 401, 403, 404.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -11,7 +11,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireCommandingGeneral } from "@/lib/api/requireCommandingGeneral";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import {
   getMilitaryFormations,
   getMilitaryFormationsCollection,
@@ -43,12 +42,6 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const gs = await (
-      await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
 
     const characterId = auth.user.character?._id?.toString() ?? null;
     const cg = await requireCommandingGeneral(db, countryId, characterId);

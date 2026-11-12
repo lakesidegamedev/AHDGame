@@ -4,6 +4,7 @@ import { DEMOGRAPHIC_TURNOUT_RATES } from "@/lib/seeds/demographicCategories";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCountryLayer1Model } from "@/lib/seeds/international";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Per-group turnout cell: national baseline, applied modifier, and their sum. */
 export interface RegionTurnoutCell {
@@ -77,7 +78,7 @@ export async function buildRegionTurnoutResponse(
   // Same gate as `getTurnoutTargetsForCountry`: the US census model is the one
   // that lives in `DEMOGRAPHIC_TURNOUT_RATES`; every other country's lives on
   // its own Layer-1 model.
-  if (countryId.toUpperCase() === "US") {
+  if (countryHasFeature("usLib", countryId.toUpperCase())) {
     for (const dim of US_CATEGORIES) {
       addBuckets(dim, DEMOGRAPHIC_TURNOUT_RATES[dim] as Record<string, number>);
     }

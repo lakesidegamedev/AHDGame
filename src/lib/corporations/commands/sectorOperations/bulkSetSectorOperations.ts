@@ -14,7 +14,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { bulkSectorOperationsSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
@@ -26,11 +26,12 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { growthCostFor, resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -119,7 +120,7 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
     const filter: Record<string, unknown> = { corporationId: corporation._id, countryId };
     if (sectorType) filter.sectorType = sectorType;
 
-    const sectors = await db.collection<CorporateSector>("corporateSectors").find(filter).toArray();
+    const sectors = await corporateSectorsCollection(db).find(filter).toArray();
 
     if (sectors.length === 0) {
       return NextResponse.json({ success: true, preview, matchedCount: 0, stateIds: [] });
@@ -150,14 +151,13 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
       // CEO Business Acumen lowers growth cost — read once so persisted/projected
       // costs match what the turn engine charges.
       const ceoChar = corporation.ceoId
-        ? await db
-            .collection<Character>("characters")
-            .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+        ? await charactersCollection(db).findOne(
+            { _id: corporation.ceoId },
+            { projection: { "stats.businessAcumen": 1 } }
+          )
         : null;
       const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
-      // Sector tech-tree growth-cost discount — scoped per sector type. Read the
-      // gate once; compute the multiplier per sector synchronously.
-      const techEnabled = await isSectorTechTreesEnabled();
+      // Sector tech-tree growth-cost discount, scoped per sector type.
       const techCorpView = {
         type: corporation.type,
         industryModel: corporation.industryModel,
@@ -166,10 +166,8 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
         techDecadeLane: corporation.techDecadeLane,
       };
       const techMultFor = (s: CorporateSector) =>
-        techEnabled
-          ? getSectorTechEffects(techCorpView, s.sectorType, s.industryModel, s.mediaDiscriminator)
-              .growthCostMultiplier
-          : 1;
+        getSectorTechEffects(techCorpView, s.sectorType, s.industryModel, s.mediaDiscriminator)
+          .growthCostMultiplier;
       let projectedTotal = 0;
       let currentTotal = 0;
       for (const s of sectors) {
@@ -272,7 +270,7 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
       if (clampedPosture !== undefined) set.pricingPosture = clampedPosture;
       return { updateOne: { filter: { _id: s._id }, update: { $set: set } } };
     });
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+    await corporateSectorsCollection(db).bulkWrite(ops);
 
     const typeLabel = sectorType ? OPERATING_SECTOR_TYPE_LABELS[sectorType] : "all sectors";
     const parts: string[] = [];
@@ -347,7 +345,7 @@ async function bulkSetCapacity(
     countryId: scope.countryId,
   };
   if (scope.sectorType) filter.sectorType = scope.sectorType;
-  const sectors = await db.collection<CorporateSector>("corporateSectors").find(filter).toArray();
+  const sectors = await corporateSectorsCollection(db).find(filter).toArray();
   const needsChange = sectors.filter(
     (s) => (s.mothballed === true) !== mothballed || (s.activeCapacityPercent ?? 100) !== 100
   );
@@ -365,7 +363,7 @@ async function bulkSetCapacity(
 
   const now = new Date();
   const currentTurn = await getCurrentTurn(db).catch(() => 0);
-  const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+  const result = await corporateSectorsCollection(db).bulkWrite(
     eligible.map((s) => ({
       updateOne: {
         filter: {

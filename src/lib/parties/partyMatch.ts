@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Strip a country prefix from legacy slug-style party ids (`cn_ccp` → `ccp`). */
 export function stripCountryPartyPrefix(partyRef: string): string {
@@ -29,8 +30,7 @@ export type PartyIdResolver = (partyRef: string | null | undefined) => string | 
  * resolve through the country's party registry.
  */
 export async function buildPartyIdResolver(db: Db, countryId: CountryId): Promise<PartyIdResolver> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId })
     .project<{ sequentialId: number; abbreviation?: string }>({
       sequentialId: 1,

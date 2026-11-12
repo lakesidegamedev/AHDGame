@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getRegionCensusData, type ArchetypeRegionCensus } from "./regionCensusData";
+import { getRegionCensusData, type IntlRegionCensus } from "./regionCensusData";
 import { REGION_CENSUS_LABELS } from "@/lib/constants/regionCensusLabels";
 import type { CountryId } from "@/lib/constants/countries";
 
@@ -33,7 +33,7 @@ describe("region census cross-preset parity", () => {
           cc as CountryId,
           SAMPLES[cc],
           preset
-        ) as ArchetypeRegionCensus;
+        ) as IntlRegionCensus;
         for (const dim of ["ethnicity", "age", "education", "income", "urbanization"] as const) {
           for (const key of Object.keys(census[dim])) {
             expect(labels[dim][key], `${cc} ${preset} ${dim} label for "${key}"`).toBeTruthy();

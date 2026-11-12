@@ -16,6 +16,9 @@ import {
   loadNationalPolicyRecords,
   buildSubsidyResponse,
 } from "@/lib/policy/nationalPolicyRecordsList";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/policy/types".
@@ -41,17 +44,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     if (scope === "state" && stateId) {
       const { legislationTypeMap } = await loadCountryLegislationTypes(db, countryId);
-      const policies = await db
-        .collection<StatePolicyRecord>("statePolicies")
+      const policies = await statePoliciesCollection<StatePolicyRecord>(db)
         .find({ scope: "state", stateId })
         .toArray();
-      const subsidies = await db
-        .collection<Subsidy>("subsidies")
+      const subsidies = await subsidiesCollection(db)
         .find({ countryId, active: true, scope: "state", stateId })
         .sort({ scopeType: 1, targetSectorType: 1, targetStrategyId: 1, createdAt: 1 })
         .toArray();
-      const activeOrders = await db
-        .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+      const activeOrders = await governorExecutiveOrdersCollection(db)
         .find({ countryId, stateId, status: "active" })
         .toArray();
       const activeOrderById = new Map(activeOrders.map((o) => [o._id!.toString(), o]));

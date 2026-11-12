@@ -13,6 +13,9 @@ import {
 import { getOfficeHolderRow } from "@/lib/governorOffice/queries";
 import { createEndorsement } from "@/lib/governorOffice/endorsements/createEndorsement";
 import type { GovernorEndorsement, Election, ElectionCandidate } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 // POST /api/country/[code]/region/[id]/office/endorsements — Endorse a candidate.
 // Auth: requireHumanSessionWithCharacter; must be the office-holder.
@@ -83,14 +86,15 @@ export async function GET(
     // governor's state, so fetch them separately and merge — matches the SSR
     // path in office/page.tsx.
     const [scopedElections, presidentialElection] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .find({ state: stateId, countryId, status: "active", electionType: { $in: allowedTypes } })
         .toArray(),
       allowedTypes.includes("president")
-        ? db
-            .collection<Election>("elections")
-            .findOne({ electionType: "president", countryId, status: "active" })
+        ? electionsCollection(db).findOne({
+            electionType: "president",
+            countryId,
+            status: "active",
+          })
         : Promise.resolve(null),
     ]);
     const elections: Election[] = presidentialElection
@@ -98,8 +102,7 @@ export async function GET(
       : scopedElections;
 
     const active = characterId
-      ? await db
-          .collection<GovernorEndorsement>("governorEndorsements")
+      ? await governorEndorsementsCollection(db)
           .find({
             countryId,
             stateId,
@@ -112,8 +115,7 @@ export async function GET(
     const candidatesByElection: Record<string, ElectionCandidate[]> = {};
     for (const e of elections) candidatesByElection[e._id.toString()] = [];
     if (elections.length > 0) {
-      const allCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const allCandidates = await electionCandidatesCollection(db)
         .find({ electionId: { $in: elections.map((e) => e._id) }, status: "active" })
         .toArray();
       for (const c of allCandidates) {

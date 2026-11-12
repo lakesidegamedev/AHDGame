@@ -6,10 +6,12 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { executeActionSchema } from "@/lib/api/schemas/actions";
 import { ACTIONS, BATCHABLE_ACTION_TYPES } from "@/lib/actions";
 import { executeCharacterAction } from "@/lib/actions/commands/executeAction";
-import type { ActionType, Character, User } from "@/lib/db/types";
+import type { ActionType, User } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { recordApiRequestTimingSafely } from "@/lib/observability/requestTimings";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/actions/execute — Executes a political action (optionally in batch) and applies its effects to the character
 // Auth: requireHumanSession (bot tokens rejected)
@@ -99,11 +101,11 @@ export async function POST(request: Request) {
 
     // Resolve active character (admin accounts may have multiple characters)
     stageStartedAt = Date.now();
-    const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
       : { userId: new ObjectId(user.userId) };
-    const character = await db.collection<Character>("characters").findOne(characterQuery);
+    const character = await charactersCollection(db).findOne(characterQuery);
     timings.characterReadMs += Date.now() - stageStartedAt;
 
     if (!character) {

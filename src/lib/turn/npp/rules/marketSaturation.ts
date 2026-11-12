@@ -4,16 +4,11 @@
  *
  * Plain data in, plain data out: no clock, rng or ambient state.
  *
- * Why not price or fill. The NPP entry and growth gates scored markets on the
- * commodity price ratio and on each plant's `soldFraction`. Neither sees a glut
- * once the throttle has done its job: the throttle cuts a plant's run to what
- * buyers take, so the plant sells most of what it makes (fill 0.6-0.9) while
- * running at a tenth of its capacity, and a world-wide price ratio of 2-3x base
- * read as shortage everywhere. On live turn 250, 399 producing sectors sat
- * below -100% margin, 292 of their 316 corps NPP-run, most founded in the
- * previous three days into cells whose existing plants were held at the 0.1
- * throttle floor. The throttle itself is the direct measure of unmet demand, so
- * placement reads it.
+ * Why not price or fill. Price ratio and `soldFraction` miss a glut once the
+ * throttle has done its job: a throttled plant sells most of what it makes
+ * (fill 0.6-0.9) while running at a tenth of capacity, and a price ratio of
+ * 2-3x base reads as shortage everywhere. The throttle is the direct measure of
+ * unmet demand, so placement reads it.
  *
  * Saturation of a cell is the capacity-weighted demand throttle of its plants.
  * Mothballed capacity counts at 0: it is capacity the market already refused.

@@ -9,12 +9,12 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import {
   authorizeRussianCouncilFormation,
-  RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION,
   type RussianCouncilFormationProposal,
 } from "./councilFormationProposals";
 import { materializeRussianRegionalAuthorities } from "./regionalCouncilAuthorities";
 import { materializeRussianCouncilCompositionSeating } from "./councilCompositionSeating";
-import type { CountryGameState } from "@/lib/db/types";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilFormationProposalsCollection } from "@/lib/db/repositories/russianCouncilFormationProposals";
 
 export async function processRussianCouncilComposition(input: {
   db: Db;
@@ -32,11 +32,11 @@ export async function processRussianCouncilComposition(input: {
     }) < 237
   )
     return result;
-  const proposals = await db
-    .collection<RussianCouncilFormationProposal>(RUSSIAN_COUNCIL_FORMATION_PROPOSALS_COLLECTION)
-    .find({ countryId: "RU", preset: "1991-default", status: "open" }, { projection: { _id: 1 } })
-    .limit(2)
-    .toArray();
+  const proposals =
+    await russianCouncilFormationProposalsCollection<RussianCouncilFormationProposal>(db)
+      .find({ countryId: "RU", preset: "1991-default", status: "open" }, { projection: { _id: 1 } })
+      .limit(2)
+      .toArray();
   for (const proposal of proposals)
     if (
       await runRequiredTransaction(
@@ -46,9 +46,10 @@ export async function processRussianCouncilComposition(input: {
       )
     )
       result.authorized++;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "RU" }, { projection: { ruCouncilFormationMandate: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { projection: { ruCouncilFormationMandate: 1 } }
+  );
   if (!country?.ruCouncilFormationMandate) return result;
   const settlement = await runRequiredTransaction(
     async (session) => {

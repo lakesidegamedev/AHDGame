@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
-import type { User } from "@/lib/db/types";
 import { getDb } from "@/lib/mongodb";
-import { IDENTITY_OBSERVATIONS_COLLECTION } from "@/lib/db/types/identityObservation";
 import { clearAuthCookie, verifyAuth } from "@/lib/auth";
 import { credentialSessionIsCurrent } from "@/lib/auth/credentialSession";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -21,6 +19,14 @@ import {
   revokeAppleRefreshToken,
 } from "@/lib/auth/apple";
 import { heldBlocRowIds, releaseVacatedBlocSeats } from "@/lib/elections/vacatedBlocSeats";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 
 // DELETE /api/auth/delete-account — Permanently deletes the authenticated user's account, character, and clears offices held.
 // Auth: requireBasicAuth
@@ -36,13 +42,13 @@ export const DELETE = withNoStore(async () => {
 
     const objectId = new ObjectId(userId);
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
-    const charactersCollection = db.collection("characters");
-    const actionLogsCollection = db.collection("actionLogs");
-    const officialsCollection = db.collection("electedOfficials");
+    const usersCollectionHandle = usersCollection(db);
+    const charactersHandle = charactersCollection(db);
+    const actionLogsHandle = actionLogsCollection<Document>(db);
+    const officialsCollection = electedOfficialsCollection<Document>(db);
 
     // Verify user exists
-    const user = await usersCollection.findOne({ _id: objectId });
+    const user = await usersCollectionHandle.findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -67,7 +73,7 @@ export const DELETE = withNoStore(async () => {
     }
 
     // Find the user's character
-    const character = await charactersCollection.findOne({ userId: objectId });
+    const character = await charactersHandle.findOne({ userId: objectId });
 
     // Log account self-deletion with tracking data (before actually deleting)
     // WHY: Self-deleted alt accounts lose all IP/fingerprint data — this preserves an audit trail for fraud investigation
@@ -118,7 +124,7 @@ export const DELETE = withNoStore(async () => {
 
       // Retain action logs for forensics: stamp them deleted + denormalize
       // identity from the still-present docs so they stay readable afterward.
-      await actionLogsCollection.updateMany(
+      await actionLogsHandle.updateMany(
         { characterId: character._id },
         {
           $set: {
@@ -159,7 +165,7 @@ export const DELETE = withNoStore(async () => {
       });
 
       // Delete the character
-      await charactersCollection.deleteOne({ _id: character._id });
+      await charactersHandle.deleteOne({ _id: character._id });
     }
 
     if (!character) {
@@ -178,14 +184,14 @@ export const DELETE = withNoStore(async () => {
     }
 
     // Delete retired characters and achievements for this user
-    await db.collection("retiredCharacters").deleteMany({ userId: objectId });
-    await db.collection("characterAchievements").deleteMany({ userId: objectId });
+    await retiredCharactersCollection<Document>(db).deleteMany({ userId: objectId });
+    await characterAchievementsCollection<Document>(db).deleteMany({ userId: objectId });
 
     // Identity history lives in its own collection, so deleting the user row
     // does NOT take it with it. Purged here so account deletion actually
     // removes the account's IP and fingerprint evidence rather than orphaning
     // 90 days of it.
-    await db.collection(IDENTITY_OBSERVATIONS_COLLECTION).deleteMany({ userId: objectId });
+    await identityObservationsCollection<Document>(db).deleteMany({ userId: objectId });
 
     // App Store rule 5.1.1(v): deleting an account created or linked with
     // Sign in with Apple must revoke the Apple grant. Best effort, so an
@@ -193,7 +199,7 @@ export const DELETE = withNoStore(async () => {
     await revokeAppleGrantForDeletion(user.appleRefreshToken);
 
     // Delete the user
-    await usersCollection.deleteOne({ _id: objectId });
+    await usersCollectionHandle.deleteOne({ _id: objectId });
 
     await clearAuthCookie("user_delete_account");
 

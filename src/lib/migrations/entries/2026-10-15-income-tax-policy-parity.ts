@@ -1,5 +1,5 @@
 import type { AnyBulkWriteOperation } from "mongodb";
-import type { FederalBudget, LegislationType, StatePolicy } from "@/lib/db/types";
+import type { LegislationType, StatePolicy } from "@/lib/db/types";
 import {
   INCOME_TAX_POLICY_JURISDICTIONS,
   incomeTaxPolicyOptionId,
@@ -7,6 +7,9 @@ import {
   readTaxPolicyRate,
 } from "@/lib/budget/rules/incomeTaxPolicy";
 import type { Migration } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /** Align original seed policies with existing receipts, without changing rates or enacted laws. */
 export const migration: Migration = {
@@ -24,16 +27,14 @@ export const migration: Migration = {
       enactedTurn: { $exists: false },
     };
     const [policies, budgets, types] = await Promise.all([
-      db.collection<StatePolicy>("statePolicies").find(seedOnly).toArray(),
-      db
-        .collection<FederalBudget>("federalBudget")
+      statePoliciesCollection(db).find(seedOnly).toArray(),
+      federalBudgetCollection(db)
         .find(
           { countryId: { $in: ["BR", "NG"] } },
           { projection: { countryId: 1, "taxRates.incomeTax": 1, "taxRatePhaseIn.incomeTax": 1 } }
         )
         .toArray(),
-      db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesCollection(db)
         .find(
           { _id: { $in: ids } },
           { projection: { "policyOptions.id": 1, "policyOptions.rate": 1 } }
@@ -94,9 +95,7 @@ export const migration: Migration = {
           `Would align ${ops.length} seed policies; budget rates and ideological effects are preserved.`,
         ],
       };
-    const result = ops.length
-      ? await db.collection<StatePolicy>("statePolicies").bulkWrite(ops)
-      : undefined;
+    const result = ops.length ? await statePoliciesCollection(db).bulkWrite(ops) : undefined;
     return { documentsScanned: policies.length, documentsUpdated: result?.modifiedCount ?? 0 };
   },
 };

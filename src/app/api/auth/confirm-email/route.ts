@@ -13,6 +13,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumeEmailChange } from "@/lib/emailChange";
 import { sendEmail } from "@/lib/email";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const NO_STORE = { headers: { "Cache-Control": "private, no-store" } };
 const INVALID_LINK =
@@ -50,13 +51,13 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
+    const usersCollectionHandle = usersCollection(db);
 
     let matched: number;
     try {
       // CAS on the address the request was made from: a second change that
       // landed in between wins, and this stale link does nothing.
-      const updated = await usersCollection.updateOne(
+      const updated = await usersCollectionHandle.updateOne(
         {
           _id: change.userId,
           email: change.previousEmail,

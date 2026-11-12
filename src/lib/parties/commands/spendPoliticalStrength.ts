@@ -13,6 +13,10 @@ import {
   PRESSURE_LADDER_MAX_VALUE,
   effectivePsCost,
 } from "@/lib/turn/politicalStrength/strengthConstants";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyStrengthPressureCollection } from "@/lib/db/repositories/partyStrengthPressure";
+import { partyPoliticalStrengthLedgerCollection } from "@/lib/db/repositories/partyPoliticalStrengthLedger";
 
 /**
  * Shared command that debits Political Strength for a party action and
@@ -104,7 +108,7 @@ export async function spendPoliticalStrength(
   const pressureRowId = `${input.countryId}_${input.partyId}_${pressureStateId}`;
 
   // Read current pressure (one extra read; tolerable for action paths).
-  const pressureCol = db.collection<PartyStrengthPressure>("partyStrengthPressure");
+  const pressureCol = partyStrengthPressureCollection(db);
   const existingPressure = await pressureCol.findOne({ _id: pressureRowId });
   const currentPressure = existingPressure?.value ?? 0;
   const cost = effectivePsCost(input.baseCost, currentPressure);
@@ -114,7 +118,7 @@ export async function spendPoliticalStrength(
   let updatedPS: number | null = null;
   let currentPS = 0;
   if (input.scope === "state") {
-    const spoCol = db.collection<StatePartyOrg>("statePartyOrg");
+    const spoCol = statePartyOrgCollection(db);
     const spoFilter = {
       countryId: input.countryId,
       partyId: input.partyId,
@@ -150,7 +154,7 @@ export async function spendPoliticalStrength(
     updatedPS = updated.politicalStrength;
     currentPS = updatedPS;
   } else {
-    const partyCol = db.collection<PoliticalParty>("politicalParties");
+    const partyCol = politicalPartiesCollection(db);
     const partyFilter = {
       countryId: input.countryId,
       sequentialId: Number(input.partyId),
@@ -185,15 +189,11 @@ export async function spendPoliticalStrength(
     currentPS = updatedPS;
   }
 
-  // Increment pressure (upsert — first spend in this geography creates the row),
-  // clamped to `PRESSURE_LADDER_MAX_VALUE`. Pressure beyond that ceiling has no
-  // effect on cost (which already saturates at `PRESSURE_LADDER_MAX_COST`) but,
-  // if allowed to accumulate unbounded via a raw `$inc`, keeps the cost pinned
-  // at max for dozens of turns after the party stops spending, since decay is
-  // only a few PS/turn — the runaway behind ticket #945. We compute the clamped
-  // value and `$set` it; the tiny concurrency window (two simultaneous spends
-  // each reading the same `currentPressure`) can at worst under-count by one
-  // increment, which is harmless given the value is capped anyway.
+  // Increment pressure (upsert: first spend here creates the row), clamped to
+  // `PRESSURE_LADDER_MAX_VALUE`. Unclamped accumulation keeps cost pinned at
+  // max for dozens of turns after spending stops, since decay is only a few
+  // PS/turn. The tiny concurrency window can at worst under-count by one
+  // increment, harmless given the value is capped.
   const newPressureValue = Math.min(
     currentPressure + PRESSURE_LADDER_INCREMENT,
     PRESSURE_LADDER_MAX_VALUE
@@ -212,7 +212,7 @@ export async function spendPoliticalStrength(
   );
 
   // Audit ledger row. Geography is the (potentially sentinel) state.
-  await db.collection<PartyPoliticalStrengthLedgerRow>("partyPoliticalStrengthLedger").insertOne({
+  await partyPoliticalStrengthLedgerCollection(db).insertOne({
     _id: new ObjectId(),
     countryId: input.countryId,
     partyId: input.partyId,

@@ -1,13 +1,9 @@
 /**
  * `decide`: the one function behind every bank command.
  *
- * Each branch below reads the snapshot, applies the capability table and the
+ * Each branch reads the snapshot, applies the capability table and the
  * balance-sheet rules, and either refuses with a reason or returns exactly
- * one balanced transition. The transitions reproduce what the hand-written
- * command modules used to write, leg for leg, so adopting the boundary is a
- * move rather than a retune. Where a hand-written path was known to be
- * wrong (an unfunded loan disbursement, a refund paid twice) the correct
- * shape is here and the commit that switches the shell over says so.
+ * one balanced transition.
  */
 
 import type { BankCharterType } from "@/lib/db/types/bank";

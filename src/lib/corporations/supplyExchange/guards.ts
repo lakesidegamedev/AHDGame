@@ -20,6 +20,10 @@ import {
   supplyAgreementReachProblem,
   supplyReachMessage,
 } from "./rules/deliveryReach";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 /**
  * Gates shared by every way a supply contract can be opened or changed:
@@ -31,9 +35,10 @@ export async function requireSupplyExchangeAccess(
   db: Db,
   userId: string
 ): Promise<NextResponse | null> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { supplyAgreementsEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { supplyAgreementsEnabled: 1 } }
+  );
   if (!config?.supplyAgreementsEnabled) {
     return errorResponse(403, "Supply agreements are not enabled.");
   }
@@ -61,18 +66,19 @@ export async function isSupplyLaneClosed(
   const { supplierCountry, buyerCountry, commodity } = args;
   if (!supplierCountry || !buyerCountry || supplierCountry === buyerCountry) return false;
   const [world, config] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1, currentYear: 1 } }),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, currentYear: 1 } }
+    ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
   ]);
   const turn = world?.currentTurn ?? 0;
   const supplier = supplierCountry as CountryId;
   const buyer = buyerCountry as CountryId;
-  const embargoes = await db
-    .collection<TradeEmbargo>("tradeEmbargoes")
+  const embargoes = await tradeEmbargoesCollection(db)
     .find({
       $and: [
         { $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: turn } }] },
@@ -121,13 +127,8 @@ export async function checkSupplyContractParties(
   args: { supplier: GuardedCorp; buyer: GuardedCorp; commodity: CommodityType }
 ): Promise<string | null> {
   const { supplier, buyer, commodity } = args;
-  if (resolveRelatedParty(supplier, buyer)) {
-    const world = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-    if (world?.subsidiaryCorporationsEnabled !== true || !shareFormalizedGroup(supplier, buyer)) {
-      return RELATED_PARTY_MESSAGE;
-    }
+  if (resolveRelatedParty(supplier, buyer) && !shareFormalizedGroup(supplier, buyer)) {
+    return RELATED_PARTY_MESSAGE;
   }
   if (
     await isSupplyLaneClosed(db, {
@@ -168,13 +169,10 @@ export async function checkSupplyAgreementReach(
   }
 ): Promise<string | null> {
   const [sectors, world] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: args.buyer._id }, { projection: REACH_SECTOR_PROJECTION })
       .toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
   ]);
   const problem = supplyAgreementReachProblem({
     commodity: args.commodity,

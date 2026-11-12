@@ -375,6 +375,12 @@ export const RUNTIME: CollectionEntry[] = [
       "World-local government state, confidence history and confidenceSnapStartTurn replay guard. Cleared on world reset so a new world's snap elections start without an old reset marker.",
   },
   { name: "governmentAccountability", category: "runtime" },
+  {
+    name: "partyRenewalStates",
+    category: "runtime",
+    notes:
+      "Per-country party renewal history: the last two national election snapshots, recently held regions and renewal events. Cycle-indexed, so it resets with the world.",
+  },
   { name: "parliamentaryGovernments", category: "runtime" },
   { name: "ukCabinetCooldowns", category: "runtime" },
   { name: "ukGovernment", category: "runtime" },
@@ -804,7 +810,7 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "energyPlants", category: "runtime" },
   { name: "infraProjects", category: "runtime" },
 
-  // ── Conflicts subsystem (WIRE W1–W6; gated behind conflictsEnabled) ─────────
+  // ── Conflicts subsystem (WIRE W1–W6) ─────────────────────────────────────────
   // All per-world military state, siblings of militaryUnits (already runtime
   // above). Every one is built by gameplay in a specific world and must not
   // outlive it — a command roster or half-fought battle carried into a fresh
@@ -918,6 +924,12 @@ export const RUNTIME: CollectionEntry[] = [
       "Player order receipts and audit outboxes belong to the same world as fund cash, positions and transactions. Never expire within an active world.",
   },
   {
+    name: "frontierRaces",
+    category: "runtime",
+    notes:
+      "Per-world frontier programme race funding, winners and licences. Rebuilt through gameplay and must not survive a world reset.",
+  },
+  {
     name: "pensionSchemes",
     category: "runtime",
     notes:
@@ -972,6 +984,13 @@ export const RUNTIME: CollectionEntry[] = [
   // Crises / referendums / debates / discussions.
   { name: "crisisAidCommitments", category: "runtime" },
   { name: "crisisInteractions", category: "runtime" },
+  { name: "crisisLeverUses", category: "runtime" },
+  {
+    name: "crisisDetectorStreaks",
+    category: "runtime",
+    notes:
+      "Consecutive turns each Crisis v2 detector condition has held. Turn-based, so it resets with the world.",
+  },
   { name: "refugeeReceptionHistory", category: "runtime" },
   { name: "conflictCivilianLossHistory", category: "runtime" },
   { name: "conflictCapacityObligations", category: "runtime" },
@@ -987,6 +1006,12 @@ export const RUNTIME: CollectionEntry[] = [
     notes:
       "Auto-crisis spawn cooldown (turn-based lastSpawnTurn). Previously survived resets, suppressing crisis spawns in the new world.",
   },
+  {
+    name: "crisisAlertState",
+    category: "runtime",
+    notes:
+      "Last alerted decision-tree position per crisis, keyed by crisis id. Crisis ids are per world, so it resets with them.",
+  },
   { name: "referendums", category: "runtime" },
   { name: "referendumWire", category: "runtime" },
   { name: "debateSessions", category: "runtime" },
@@ -995,6 +1020,18 @@ export const RUNTIME: CollectionEntry[] = [
 
   // Per-country / per-state runtime + histories.
   { name: "countryLeaderStates", category: "runtime" },
+  {
+    name: "leaderLegacies",
+    category: "runtime",
+    notes:
+      "One row per departed head of government: legacy score, its inputs and the decaying party shifts it gives. Turn-indexed, so it resets with the world.",
+  },
+  {
+    name: "countryBriefs",
+    category: "runtime",
+    notes:
+      "Background country briefs posted to the wire and the country page. Turn-indexed, so it resets with the world.",
+  },
   { name: "characterStateOrg", category: "runtime" },
   {
     name: "primaryStateActions",

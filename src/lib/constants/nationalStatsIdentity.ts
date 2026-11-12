@@ -18,6 +18,7 @@ import { UK_IDENTITY } from "@/lib/countries/uk/identity";
 import { DE_IDENTITY } from "@/lib/countries/de/identity";
 import { CN_IDENTITY } from "@/lib/countries/cn/identity";
 import { IE_IDENTITY } from "@/lib/countries/ie/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 export interface StatsAccent {
   /** Accent gold/brass. */
@@ -60,6 +61,7 @@ export const NATIONAL_STATS_IDENTITY: Partial<Record<CountryId, StatsIdentity>> 
   DE: DE_IDENTITY.stats,
   JP: JP_IDENTITY.stats,
   IE: IE_IDENTITY.stats,
+  CA: CA_IDENTITY.stats,
 };
 
 /** Neutral fallback for countries without a bespoke identity (e.g. BR, NG). */

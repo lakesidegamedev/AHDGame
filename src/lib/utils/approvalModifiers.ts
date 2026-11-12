@@ -26,10 +26,11 @@ import { resolveModifierDef } from "@/lib/states/conditions/resolveModifierDef";
 import {
   netModifierEffect,
   POSITIVE_MODIFIER_NET_CAP,
+  prioritizeModifiers,
   type ActiveModifier,
 } from "@/lib/approval/activeModifier";
 
-export { netModifierEffect, POSITIVE_MODIFIER_NET_CAP };
+export { netModifierEffect, POSITIVE_MODIFIER_NET_CAP, prioritizeModifiers };
 export type { ActiveModifier };
 
 export interface Condition {
@@ -63,7 +64,6 @@ export interface EvaluateModifiersOptions {
   year?: number | null;
 }
 
-const HEADLINE_MODIFIER_CAP = 8;
 /**
  * Net-positive approval from named modifiers is capped so seed-day badge stacks
  * (right-lane freefires + cheap-housing + low-crime clusters) cannot push every
@@ -321,40 +321,23 @@ const MODIFIER_DEFS: ModifierDef[] = [
     conditions: [{ category: "economic", metric: "rdIntensity", op: ">=", value: 3.2 }],
   },
 
-  // ── Right-coded positive badges (Phase B: bias symmetry) ────────────────────
+  // ── Right-coded positive badges (bias symmetry) ──────────────────────────
   //
-  // Badge symmetry requirement: every left-coded positive badge must have either
-  // a right-coded mirror or a documented exemption. This block redresses the
-  // historical asymmetry where left-coded concepts (universal healthcare, safety
-  // net, green transition, civic participation, social cohesion) had dedicated
-  // badges while right-coded concepts (economic freedom, defense, national
-  // confidence, fiscal discipline) did not.
+  // Badge symmetry: every left-coded positive badge needs a right-coded mirror
+  // or a documented exemption.
   //
-  // Left-coded positive badge      → Right-coded mirror / exemption
-  // ──────────────────────────────── ───────────────────────────────────────
-  // universal_healthcare           → EXEMPTION: healthcare access is universally
-  //                                   valued across the political spectrum; the
-  //                                   right-coded counter (market-based choice)
-  //                                   is not modelled as a distinct badge.
-  // strong_safety_net             → EXEMPTION: food security / low homelessness
-  //                                   are baseline welfare, not ideologically
-  //                                   exclusive to the left.
-  // green_transition / clean_env  → EXEMPTION: environmental quality is a
-  //                                   cross-spectrum good; right-coded
-  //                                   deregulatory stance is captured indirectly
-  //                                   via economic_freedom (low regulatoryBurden).
-  // social_cohesion                → national_confidence (national pride mirror)
-  // civic_flourishing              → EXEMPTION: civic participation overlaps
-  //                                   with voter-turnout and high_public_trust;
-  //                                   no right-coded counter beyond governance
-  //                                   transparency badges.
-  // balanced_budget               → fiscal_discipline (tighter fiscal threshold)
+  // Exempted (not ideologically exclusive):
+  //   universal_healthcare, strong_safety_net, green_transition/clean_env,
+  //   civic_flourishing.
+  // Mirrored:
+  //   social_cohesion     → national_confidence
+  //   balanced_budget     → fiscal_discipline
   //
   // Right-coded badges added below:
-  //   economic_freedom     ← mirror of strong_growth / innovation_economy cluster
-  //   strong_defense       ← mirror of safe_streets (internal ↔ external security)
-  //   national_confidence  ← mirror of social_cohesion
-  //   fiscal_discipline    ← mirror of balanced_budget (stricter conditions)
+  //   economic_freedom    ← strong_growth / innovation_economy cluster
+  //   strong_defense      ← safe_streets (internal ↔ external security)
+  //   national_confidence ← social_cohesion
+  //   fiscal_discipline   ← balanced_budget (stricter conditions)
   {
     id: "economic_freedom",
     label: "Economic Freedom",
@@ -393,9 +376,7 @@ const MODIFIER_DEFS: ModifierDef[] = [
     ],
   },
   // Right-lane axis-metric badges. Thresholds sit above untouched 2019 national
-  // averages but within one full-strength law swing of high-seed regions
-  // (#2898): borderSecurity SOUTH ~58 + enforcement ~+5 ⇒ 63; firearmRights
-  // SOUTH ~82 + state gun law ~+12 ⇒ ~94 (threshold 88).
+  // averages but within one full-strength law swing of high-seed regions.
   {
     id: "secure_border",
     label: "Secure Border",
@@ -811,41 +792,6 @@ export function evaluateModifiers(
     }
   }
   return active;
-}
-
-/**
- * Split active modifiers into headline (highest-impact) and remainder lists for
- * compact UIs such as the state overview conditions card.
- */
-export function prioritizeModifiers(
-  modifiers: ActiveModifier[],
-  opts?: { max?: number }
-): { headline: ActiveModifier[]; remainder: ActiveModifier[] } {
-  const max = opts?.max ?? HEADLINE_MODIFIER_CAP;
-  if (modifiers.length <= max) {
-    return { headline: modifiers, remainder: [] };
-  }
-  // Sort by absolute margin effect first (most impactful on profit margins),
-  // then by absolute approval effect as tie-breaker.
-  //
-  // The war block is exempt from the margin pass. It declares `marginEffect: 0`
-  // deliberately — it is purely political and must not reach profit margins —
-  // which under a margin-first sort would rank it below every economic
-  // condition and drop the largest approval swing in the game into the hidden
-  // remainder. It is ranked on approval magnitude instead.
-  const isPolitical = (m: ActiveModifier) => m.source === "war";
-  const sorted = [...modifiers].sort((a, b) => {
-    const marginA = isPolitical(a) ? Math.abs(a.effect) : Math.abs(a.marginEffect ?? 0);
-    const marginB = isPolitical(b) ? Math.abs(b.effect) : Math.abs(b.marginEffect ?? 0);
-    if (marginB !== marginA) return marginB - marginA;
-    const impact = Math.abs(b.effect) - Math.abs(a.effect);
-    if (impact !== 0) return impact;
-    return a.label.localeCompare(b.label);
-  });
-  return {
-    headline: sorted.slice(0, max),
-    remainder: sorted.slice(max),
-  };
 }
 
 /**

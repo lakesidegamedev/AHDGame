@@ -16,7 +16,7 @@
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, State } from "@/lib/db/types";
+import type { ElectedOfficial, State } from "@/lib/db/types";
 import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
 import {
   canonicalizeLegislationTypeId,
@@ -29,6 +29,11 @@ import { loadCountryLegislationTypes } from "@/lib/policy/nationalPolicyRecords"
 import { resolveExecutiveOffice } from "@/lib/states/regionalExecutive";
 import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import type { PolicyProvenance } from "@/lib/policy/policyRecordPayload";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * "<Surname> administration", from whichever office actually governs this
@@ -42,16 +47,15 @@ async function resolveRegionalEra(
 ): Promise<{ label: string; sinceDate: string | null; sinceTurn: number | null } | null> {
   const config = resolveExecutiveOffice(countryId, regionId);
   if (!config) return null;
-  const official = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(
-      { countryId, state: regionId.toUpperCase(), officeType: config.officeType },
-      { sort: { electedAt: -1 } }
-    );
+  const official = await electedOfficialsCollection(db).findOne(
+    { countryId, state: regionId.toUpperCase(), officeType: config.officeType },
+    { sort: { electedAt: -1 } }
+  );
   if (!official?.characterId) return null;
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: official.characterId }, { projection: { name: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: official.characterId },
+    { projection: { name: 1 } }
+  );
   if (!character) return null;
   const lastName = character.name.split(" ").slice(-1)[0];
   return {
@@ -70,15 +74,12 @@ export async function loadRegionPolicyRecordPayload(
 
   const [types, laws, state, budget, era] = await Promise.all([
     loadCountryLegislationTypes(db, countryId),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find({ scope: "state", stateId: regionId, repealedAt: { $exists: false } })
       .sort({ enactedAt: 1 })
       .toArray(),
-    db
-      .collection<State>("states")
-      .findOne({ _id: regionId }, { projection: { population: 1, gdp: 1 } }),
-    db.collection<StateBudget>("stateBudgets").findOne({ _id: regionId }),
+    statesCollection(db).findOne({ _id: regionId }, { projection: { population: 1, gdp: 1 } }),
+    stateBudgetsCollection(db).findOne({ _id: regionId }),
     resolveRegionalEra(db, countryId, regionId),
   ]);
 

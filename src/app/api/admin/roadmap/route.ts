@@ -4,6 +4,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
+import { roadmapItemsCollection } from "@/lib/db/repositories/roadmapItems";
+import type { Document } from "mongodb";
 
 const createRoadmapItemSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -22,8 +24,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const items = await db
-      .collection("roadmapItems")
+    const items = await roadmapItemsCollection<Document>(db)
       .find({})
       .sort({ phase: 1, sortOrder: 1 })
       .toArray();
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     const { title, description, phase, category, subcategory } = parsed.data;
 
     const db = await getDb();
-    const col = db.collection("roadmapItems");
+    const col = roadmapItemsCollection<Document>(db);
 
     // Get max sortOrder for this phase
     const last = await col.findOne({ phase }, { sort: { sortOrder: -1 } });

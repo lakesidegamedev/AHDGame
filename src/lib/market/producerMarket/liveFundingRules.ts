@@ -1,18 +1,13 @@
 /**
- * Live money flows around a funded producer turn (funded-market cutover,
- * phase B slice S3b). Each flow is one idempotent money move with a stable key
- * per world, turn and party, so a retried turn never pays twice.
+ * Live money flows around a funded producer turn. Each flow is one idempotent
+ * money move with a stable key per world, turn and party, so a retried turn
+ * never pays twice.
  *
- * - Public funding: the commodity outlay the treasury already spends each
- *   turn (each budget line times its commodity demand rate). That outlay is deducted from the
- *   treasury today and goes nowhere; here the same amount is minted into the
- *   country's public-buyer wallet as its destination. Unspent funding is
- *   burned at close, so public buyers never accumulate cash.
- * - Construction funding: this turn's work on outstanding build orders, whose
- *   cost was paid into a sink when each order was placed. Minted into the
+ * - Public funding: the treasury's commodity outlay is minted into the
+ *   country's public-buyer wallet. Unspent funding is burned at close.
+ * - Construction funding: this turn's work on build orders is minted into the
  *   country's construction-buyer wallet and burned at close if unspent.
- * - Household opening: the one-time owner-approved seed (about 3 turns of
- *   wages), minted once per world.
+ * - Household opening: the one-time seed, minted once per world.
  * - Close: AI profit distribution and operating-payee income move to
  *   households; state-company remittances move to their treasury.
  *
@@ -321,6 +316,172 @@ export function investmentReturnMoves(
         },
       ],
     }));
+}
+
+/**
+ * Mints each background country's trading budget for this turn: what its macro
+ * demand would spend at reference prices. Its money is not modelled in the
+ * world economy, so the budget comes from outside, like a public buyer's, and
+ * whatever remains in the wallet at close goes back there.
+ */
+export function backgroundFundingMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-background-funding:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_background_funding",
+      turn,
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "background economy import budget",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "background economy trading wallet",
+        },
+      ],
+    }));
+}
+
+/**
+ * Burns a background country's closing cash: its unspent budget plus what its
+ * exports earned. The wallet ends every turn empty, so money in (budget and
+ * export receipts) equals money out (imports and this return).
+ */
+export function backgroundReturnMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-background-return:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_background_return",
+      turn,
+      legs: [
+        {
+          kind: "debit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "background economy closing cash",
+        },
+        {
+          kind: "burn",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "background economy trade settles outside the world economy",
+        },
+      ],
+    }));
+}
+
+interface RevenueFlow {
+  /** Move key and ledger kind stem, e.g. "tariff" gives producer-tariff-treasury. */
+  stem: string;
+  collected: string;
+  intoTreasury: string;
+  noBudget: string;
+}
+
+const TARIFF_FLOW: RevenueFlow = {
+  stem: "tariff",
+  collected: "import tariffs collected this turn",
+  intoTreasury: "import tariffs into Treasury cash",
+  noBudget: "import tariffs of a country without a budget",
+};
+
+const AUTOMATION_LEVY_FLOW: RevenueFlow = {
+  stem: "automation_levy",
+  collected: "automation levies collected this turn",
+  intoTreasury: "automation levies into Treasury cash",
+  noBudget: "automation levies of a country without a budget",
+};
+
+export type RevenueRow = WalletAmount & { countryId: string; budgetId: string | null };
+
+function collectedRevenueMoves(
+  flow: RevenueFlow,
+  worldEpoch: string,
+  turn: number,
+  rows: readonly RevenueRow[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-${flow.stem.replaceAll("_", "-")}-${r.budgetId ? "treasury" : "return"}:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: `producer_${flow.stem}_${r.budgetId ? "treasury" : "return"}`,
+      turn,
+      legs: [
+        {
+          kind: "debit" as const,
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId, cash: { $gte: r.amountLocal } },
+          path: "cash",
+          note: flow.collected,
+        },
+        r.budgetId
+          ? {
+              kind: "credit" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              collection: "federalBudget",
+              filter: { _id: r.budgetId },
+              path: "treasuryCashLocal",
+              note: flow.intoTreasury,
+            }
+          : {
+              kind: "burn" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              note: flow.noBudget,
+            },
+      ],
+    }));
+}
+
+/**
+ * Moves each country's collected import tariffs (producerTariffStage) out of
+ * its tariff account. A country with a budget receives them as Treasury cash;
+ * one without (a background country with no budget) has them leave the world
+ * economy, as its trading budget does. Two kinds, so each batches on its own.
+ */
+export function tariffRevenueMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly RevenueRow[]
+): MoneyMove[] {
+  return collectedRevenueMoves(TARIFF_FLOW, worldEpoch, turn, rows);
+}
+
+/**
+ * The same sweep for automation levies, under their own ledger kinds
+ * (producer_automation_levy_treasury and producer_automation_levy_return) so
+ * levy revenue is told apart from tariff revenue.
+ */
+export function automationLevyRevenueMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly RevenueRow[]
+): MoneyMove[] {
+  return collectedRevenueMoves(AUTOMATION_LEVY_FLOW, worldEpoch, turn, rows);
 }
 
 /**

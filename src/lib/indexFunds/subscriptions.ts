@@ -15,6 +15,9 @@ import { refundCharacterCash, refundCorpLiquidCapital } from "@/lib/financialTxL
 import { creditFundPosition, insertFundTransaction } from "./fundQueries";
 import { getQueuedRedemptionUnits } from "./fundValuation";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 
 export interface BankSubscription {
   _id: string;
@@ -113,7 +116,7 @@ export async function witnessSubscription(
 
 async function refundSubscription(tx: Db, fund: IndexFund, order: BankSubscription, turn: number) {
   const s = order.subscription;
-  const claimed = await tx.collection<BankSubscription>("indexFundCommands").updateOne(
+  const claimed = await indexFundCommandsCollection<BankSubscription>(tx).updateOne(
     { _id: order._id, "subscription.status": "queued" },
     {
       $set: {
@@ -136,17 +139,18 @@ export async function cancelBankFundSubscription(
   operationId: string
 ): Promise<Response> {
   return withSessionDb(db, async (tx) => {
-    const order = await tx
-      .collection<BankSubscription>("indexFundCommands")
-      .findOne({ _id: `fund:${characterId}:${operationId}` });
+    const order = await indexFundCommandsCollection<BankSubscription>(tx).findOne({
+      _id: `fund:${characterId}:${operationId}`,
+    });
     if (!order?.subscription) return errorResponse(404, "Investment order not found.");
     if (order.subscription.status === "settled")
       return errorResponse(409, "Your investment has settled. You can withdraw on the fund page.");
     if (order.subscription.status === "refunded")
       return statusResponse(200, { success: true, refunded: true });
-    const fund = await tx
-      .collection<IndexFund>("indexFunds")
-      .findOne({ _id: order.subscription.fundId }, { projection: { floatSettlementPlan: 0 } });
+    const fund = await indexFundsCollection(tx).findOne(
+      { _id: order.subscription.fundId },
+      { projection: { floatSettlementPlan: 0 } }
+    );
     if (!fund) throw new Error("Subscription fund is unavailable");
     await refundSubscription(tx, fund, order, await getCurrentTurn(tx));
     return statusResponse(200, { success: true, refunded: true });
@@ -154,12 +158,12 @@ export async function cancelBankFundSubscription(
 }
 
 /**
- * Refund every queued subscription for a fund that is winding down (#4219).
+ * Refund every queued subscription for a winding-down fund.
  *
  * The regular subscription pass never runs for a winding-down fund, so a queued
  * command would hold `completeWindUp` forever and repeat its warning every
- * turn. Refund in one transaction, using the same refund path as a player
- * cancel so the ledger rows and the command receipt agree.
+ * turn. Use the same refund path as a player cancel so ledger rows and the
+ * command receipt agree.
  */
 export async function refundQueuedSubscriptionsForFund(
   db: Db,
@@ -167,12 +171,12 @@ export async function refundQueuedSubscriptionsForFund(
   turn: number
 ): Promise<number> {
   return withSessionDb(db, async (tx) => {
-    const fund = await tx
-      .collection<IndexFund>("indexFunds")
-      .findOne({ _id: fundId }, { projection: { floatSettlementPlan: 0 } });
+    const fund = await indexFundsCollection(tx).findOne(
+      { _id: fundId },
+      { projection: { floatSettlementPlan: 0 } }
+    );
     if (!fund) return 0;
-    const orders = await tx
-      .collection<BankSubscription>("indexFundCommands")
+    const orders = await indexFundCommandsCollection<BankSubscription>(tx)
       .find({ "subscription.fundId": fundId, "subscription.status": "queued" })
       .toArray();
     for (const order of orders) await refundSubscription(tx, fund, order, turn);
@@ -186,8 +190,7 @@ export async function settleBankFundSubscriptions(
   turn: number,
   markedFundIds: ObjectId[]
 ): Promise<void> {
-  const pending = await db
-    .collection<BankSubscription>("indexFundCommands")
+  const pending = await indexFundCommandsCollection<BankSubscription>(db)
     .find(
       {
         "subscription.status": "queued",
@@ -201,14 +204,14 @@ export async function settleBankFundSubscriptions(
     let moreDue = true;
     while (moreDue) {
       moreDue = await withSessionDb(db, async (tx) => {
-        const fund = await tx
-          .collection<IndexFund>("indexFunds")
-          .findOne({ _id: new ObjectId(id) }, { projection: { floatSettlementPlan: 0 } });
+        const fund = await indexFundsCollection(tx).findOne(
+          { _id: new ObjectId(id) },
+          { projection: { floatSettlementPlan: 0 } }
+        );
         if (!fund) throw new Error("Subscription fund is unavailable");
         const accepting = await bankFundAcceptsSubscriptions(tx, fund);
         if (accepting && !markedFundIds.some((f) => String(f) === id)) return false;
-        const orders = await tx
-          .collection<BankSubscription>("indexFundCommands")
+        const orders = await indexFundCommandsCollection<BankSubscription>(tx)
           .find({
             "subscription.fundId": fund._id,
             "subscription.status": "queued",
@@ -263,7 +266,7 @@ export async function settleBankFundSubscriptions(
           cash += s.amountAnchor;
           units += issued;
         }
-        const receipts = await tx.collection<BankSubscription>("indexFundCommands").bulkWrite(
+        const receipts = await indexFundCommandsCollection<BankSubscription>(tx).bulkWrite(
           orders.map((order) => ({
             updateOne: {
               filter: { _id: order._id, "subscription.status": "queued" },
@@ -288,7 +291,7 @@ export async function settleBankFundSubscriptions(
         );
         if (receipts.matchedCount !== orders.length)
           throw new Error("Subscription receipts changed");
-        const credited = await tx.collection("indexFunds").updateOne(
+        const credited = await indexFundsCollection<Document>(tx).updateOne(
           {
             _id: fund._id,
             status: "active",

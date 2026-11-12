@@ -1,0 +1,94 @@
+{
+  "config": {
+    "governmentType": "presidential",
+    "regionLabel": "State",
+    "legislature": {
+      "name": "National Congress",
+      "lowerChamber": {
+        "key": "chamber",
+        "name": "Chamber of Deputies",
+        "shortName": "Chamber",
+        "seats": 513,
+        "description": "513 deputies elected by open-list proportional representation from 27 multi-member constituencies. Four-year terms."
+      },
+      "upperChamber": {
+        "key": "senate",
+        "name": "Federal Senate",
+        "shortName": "Senate",
+        "seats": 81,
+        "description": "81 senators - three per state - serving eight-year staggered terms. Reviews legislation from the Chamber.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "vicePresident",
+        "label": "Vice President",
+        "labelPlural": "Vice Presidents",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "senate",
+        "label": "Senator",
+        "labelPlural": "Senators",
+        "chamberKey": "senate",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "chamber",
+        "label": "Federal Deputy",
+        "labelPlural": "Federal Deputies",
+        "chamberKey": "chamber",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "labelPlural": "Governors",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the BCB",
+        "labelPlural": "Governors of the BCB",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "upperElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "National Congress",
+        "lowerChamber": {
+          "key": "chamber",
+          "name": "Chamber of Deputies",
+          "shortName": "Chamber",
+          "seats": 304,
+          "description": "304 deputies of the 1950 legislature elected by open-list proportional representation."
+        },
+        "upperChamber": {
+          "key": "senate",
+          "name": "Federal Senate",
+          "shortName": "Senate",
+          "seats": 81,
+          "description": "81 senators - three per state - serving eight-year staggered terms. Reviews legislation from the Chamber.",
+          "elected": true
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ import {
   resolveBankingPolicy,
   type BankingPolicyConfig,
 } from "@/lib/banking/rules/policy";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 type BankingFlags = Pick<
   GameConfig,
@@ -51,7 +52,8 @@ async function loadFlags(
     return preloadedConfig;
   }
   const db = await getDb();
-  return db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { ...BANKING_POLICY_PROJECTION } });
+  return gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { ...BANKING_POLICY_PROJECTION } }
+  );
 }

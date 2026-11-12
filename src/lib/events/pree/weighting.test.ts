@@ -60,3 +60,26 @@ describe("filterEligibleTemplates era gating", () => {
     expect(filterEligibleTemplates(defs, ctx(), null, 100)).toHaveLength(1);
   });
 });
+
+describe("filterEligibleTemplates generic fallback", () => {
+  const ledger = { perKindCooldowns: { "pree.timeless": 500 } };
+
+  it("skips a kind on cooldown unless the cooldown is ignored", () => {
+    const defs = [def({ kind: "pree.timeless" })];
+    expect(filterEligibleTemplates(defs, ctx(), ledger, 100, 2060)).toHaveLength(0);
+    expect(
+      filterEligibleTemplates(defs, ctx(), ledger, 100, 2060, { ignoreKindCooldown: true })
+    ).toHaveLength(1);
+  });
+
+  it("limits the fallback pool to definitions with no year window", () => {
+    const defs = [
+      def({ kind: "pree.timeless" }),
+      def({ kind: "pree.decade", minYear: 2050, maxYear: 2070 }),
+    ];
+    const kinds = filterEligibleTemplates(defs, ctx(), null, 100, 2060, {
+      unboundedOnly: true,
+    }).map((e) => e.definition.kind);
+    expect(kinds).toEqual(["pree.timeless"]);
+  });
+});

@@ -28,7 +28,6 @@ import type {
   Bill,
   BillChamber,
   BillStatus,
-  Character,
   ElectedOfficial,
   PoliticalParty,
 } from "@/lib/db/types";
@@ -54,6 +53,12 @@ import { mayRuleByDecree } from "@/lib/singleplayerHeadOfState";
 import { enactSingleplayerDecree } from "./enactSingleplayerDecree";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { caretakerBlocksBill, CARETAKER_BILL_MESSAGE } from "@/lib/elections/rules/caretaker";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -75,10 +80,8 @@ export async function proposeNationalBill(
   authUser: AuthUser,
   input: ProposeNationalBillInput
 ): Promise<LegislatureCommandResult> {
-  // A bill minted for a country no turn phase walks never advances, enacts,
-  // vetoes or fails — it just sits on the floor forever with nothing to close
-  // it and nothing that reports it (#806). Refuse it up front rather than
-  // creating the zombie. The same helper already gates auto-spawned bills.
+  // A country with no bill lifecycle never advances, enacts, or closes
+  // a bill, so refuse it up front to avoid a zombie bill.
   if (!hasBillLifecycle(countryId)) {
     return {
       status: 400,
@@ -103,12 +106,17 @@ export async function proposeNationalBill(
       body: { error: "This legislature is dissolved and cannot receive bills." },
     };
   }
+  const caretakerGov = await getGovernmentFormationsCollection(db).findOne(
+    { _id: countryId },
+    { projection: { status: 1, caretaker: 1 } }
+  );
+  if (caretakerBlocksBill(caretakerGov, input.category)) {
+    return { status: 409, body: { error: CARETAKER_BILL_MESSAGE } };
+  }
   const lowerKey = config.legislature.lowerChamber.key;
   const upperKey = config.legislature.upperChamber?.key;
-  // Bill-active bicameral legislatures (JP/NG) let the upper chamber originate
-  // bills; UK Lords / DE Bundesrat are `bicameral: false` and stay lower-only
-  // (#912 — NG senators got a 403 "must be a seated member of the House").
-  // Era-aware: TR 1953 is unicameral (no Senato).
+  // Bicameral bill-active legislatures (JP/NG) allow upper-chamber origin;
+  // UK/DE are bicameral: false and stay lower-only. Era-aware: TR 1953 is unicameral.
   const memberOriginKeys: string[] =
     config.legislature.bicameral && upperKey ? [lowerKey, upperKey] : [lowerKey];
   const allowedOriginKeys = isUsCongress ? [...memberOriginKeys, "joint"] : memberOriginKeys;
@@ -201,16 +209,14 @@ export async function proposeNationalBill(
   };
   const official = partySponsor
     ? null
-    : await db.collection<ElectedOfficial>("electedOfficials").findOne(officialFilter);
+    : await electedOfficialsCollection(db).findOne(officialFilter);
   const usingAdminOverride = isAdmin && !official;
   const usingSovereignOverride = !input.proposeViaPartyNpp && mayRuleByDecree(character, countryId);
 
-  // Origin/current chamber is stored as the *chamber key* (e.g. "npc"), which is
-  // what every read path — bills list, active-bill guard, turn lifecycle — filters
-  // on. A seated official's `officeType` is NOT always the chamber key (CN's
-  // "npcDelegate" maps to chamber "npc"), so it must be round-tripped through
-  // getChamberKeyForOfficeType. Storing the raw officeType hid CN bills from the
-  // NPC page and wedged sponsors (Bug #0734).
+  // Chamber is stored as the *chamber key* (e.g. "npc"), which every read
+  // path filters on. A seated official's `officeType` is not always the chamber
+  // key (e.g. "npcDelegate" maps to "npc"), so round-trip it through
+  // getChamberKeyForOfficeType.
   let sponsorChamberKey: string = lowerKey;
   if (usingAdminOverride || usingSovereignOverride) sponsorChamberKey = chamber;
   if (partySponsor) sponsorChamberKey = partySponsor.chamber;
@@ -252,9 +258,10 @@ export async function proposeNationalBill(
   // lifts the banned-party restriction.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const sponsorParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const sponsorParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `config` — see the note in `nationalBillActions`: the
     // static config never learns about a conversion, so it would silently
     // disable this guard for a runtime-converted one-party state.
@@ -275,7 +282,7 @@ export async function proposeNationalBill(
     const proposalBlockingStatuses = config.legislature.bicameral
       ? ([...NATIONAL_TERMINAL_STATUSES, "passed_origin", "active_other"] as BillStatus[])
       : (NATIONAL_TERMINAL_STATUSES as BillStatus[]);
-    const existingActiveBill = await db.collection<Bill>("bills").findOne({
+    const existingActiveBill = await billsCollection(db).findOne({
       sponsorId: character._id,
       ...buildActiveNationalBillFilter(countryId, proposalBlockingStatuses),
     });
@@ -342,7 +349,7 @@ export async function proposeNationalBill(
           },
         };
       }
-      const spendResult = await db.collection<Character>("characters").updateOne(
+      const spendResult = await charactersCollection(db).updateOne(
         {
           _id: character._id,
           actions: { $gte: actionCost },
@@ -402,7 +409,7 @@ export async function proposeNationalBill(
       updatedAt: now,
     };
     try {
-      const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(natBill);
+      const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(natBill);
       if (!partySponsor && !usingAdminOverride)
         await awardBillSponsored(authUser.userId, character._id);
       if (usingSovereignOverride) {
@@ -420,7 +427,7 @@ export async function proposeNationalBill(
       };
     } catch (error) {
       if (!isAdmin) {
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: character._id },
           {
             $inc: {
@@ -441,8 +448,7 @@ export async function proposeNationalBill(
   }
 
   const enabledCountryIds = new Set(await getEnabledCountryIds());
-  const administrationEnabled =
-    gameState?.lawAdministrationEnabled === true && isResetV2Country(countryId);
+  const administrationEnabled = isResetV2Country(countryId);
   const validation = await validateBillProvisions(db, rawProvisions, category, countryId, {
     enabled: administrationEnabled,
   });
@@ -649,7 +655,7 @@ export async function proposeNationalBill(
         },
       };
     }
-    const spendResult = await db.collection<Character>("characters").updateOne(
+    const spendResult = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: actionCost },
@@ -729,7 +735,7 @@ export async function proposeNationalBill(
   };
 
   try {
-    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     if (!partySponsor && !usingAdminOverride)
       await awardBillSponsored(authUser.userId, character._id);
     if (usingSovereignOverride) {
@@ -747,7 +753,7 @@ export async function proposeNationalBill(
     };
   } catch (error) {
     if (!isAdmin) {
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: character._id },
         {
           $inc: {

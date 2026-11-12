@@ -6,10 +6,13 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type { Election, ElectionCandidate, NPP, PoliticalParty } from "@/lib/db/types";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import { loadPendingRussianCouncilOwners } from "./pendingCouncilMandates";
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { planRussianDumaNpcSlates } from "./rules/assemblyNpcSlates";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function registerRussianDumaNpcSlates(input: {
   db: Db;
@@ -24,8 +27,7 @@ export async function registerRussianDumaNpcSlates(input: {
   const { db, session, cohortId, elections, now } = input;
   if (!session.inTransaction() || !Number.isSafeInteger(now.getTime()) || now.getTime() < 0)
     throw new Error("Duma slate registration needs an active transaction and time");
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "RU", regimeStatus: { $ne: "banned" } },
       { session, projection: { sequentialId: 1 } }
@@ -34,8 +36,7 @@ export async function registerRussianDumaNpcSlates(input: {
   const partyIds = parties.map((party) => String(party.sequentialId));
   if (parties.some((party) => !Number.isSafeInteger(party.sequentialId) || party.sequentialId < 1))
     throw new Error("Duma NPC admission needs registered party identities");
-  const profiles = await db
-    .collection<NPP>("npps")
+  const profiles = await nppsCollection(db)
     .find(
       {
         countryId: "RU",
@@ -50,8 +51,7 @@ export async function registerRussianDumaNpcSlates(input: {
       }
     )
     .toArray();
-  const active = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const active = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: elections.map((row) => row._id) }, status: "active" },
       {
@@ -125,8 +125,6 @@ export async function registerRussianDumaNpcSlates(input: {
     };
   });
   if (documents.length)
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .insertMany(documents, { session, ordered: true });
+    await electionCandidatesCollection(db).insertMany(documents, { session, ordered: true });
   return { created: documents.length, unrepresentedParties: plan.unrepresentedParties };
 }

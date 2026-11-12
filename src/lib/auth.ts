@@ -1,4 +1,5 @@
 import { isTokenRevokedByCutoff } from "@/lib/auth/revocationCutoff";
+import type { StaffRole } from "@/lib/staff/rules";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { jwtVerify, SignJWT, errors as joseErrors } from "jose";
@@ -10,10 +11,12 @@ import { getCharactersCollection, getUsersCollection } from "@/lib/db/collection
 import { getCachedUser, invalidateCachedUser, setCachedUser } from "@/lib/auth/userDocCache";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import type { Character, User } from "@/lib/db/types";
-import { getValidatedEnv } from "@/lib/env";
+import { getValidatedEnv } from "@/lib/config/validatedEnv";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { CHARACTER_GATE_COOKIE } from "@/lib/auth/characterGate";
 import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
+import { authConfig } from "@/lib/config/auth";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 const CANONICAL_COOKIE_DOMAIN = ".ahousedividedgame.com";
 
@@ -72,7 +75,7 @@ async function getCookieDomain(): Promise<string | undefined> {
 
   return (
     resolveCookieDomainFromBaseUrl(process.env.NEXT_PUBLIC_BASE_URL?.trim()) ??
-    (process.env.RAILWAY_ENVIRONMENT_NAME || process.env.VERCEL_ENV === "production"
+    (runtimeConfig.railwayEnvironmentName() || runtimeConfig.vercelEnv() === "production"
       ? CANONICAL_COOKIE_DOMAIN
       : undefined)
   );
@@ -81,7 +84,7 @@ async function getCookieDomain(): Promise<string | undefined> {
 export function getJwtSecret(): Uint8Array {
   const secret =
     process.env.NODE_ENV === "test"
-      ? (process.env.AUTH_SECRET ?? "test-secret-placeholder")
+      ? (authConfig.authSecret() ?? "test-secret-placeholder")
       : getValidatedEnv().AUTH_SECRET;
 
   return new TextEncoder().encode(secret);
@@ -190,6 +193,9 @@ function mapUserToAuthUser(user: User, payload: UserPayload): AuthUser {
   // signed but stale token minted before a demotion must never re-grant
   // staff access, and a stale player-claim token must never mask a promotion.
   const isAdmin = user.isAdmin === true || user.role === "admin";
+  // junior_dev is read-only staff. It is deliberately NOT isModerator: every
+  // gameplay bypass keyed on isModerator stays closed to it.
+  const isJuniorDev = !isAdmin && user.role === "junior_dev";
   return {
     userId: payload.userId,
     username: payload.username,
@@ -197,6 +203,7 @@ function mapUserToAuthUser(user: User, payload: UserPayload): AuthUser {
     role: user.role,
     isAdmin,
     isModerator: isAdmin || user.role === "moderator",
+    ...(isJuniorDev ? { isJuniorDev: true } : {}),
     isBanned: user.isBanned === true,
     activeCharacterId: user.activeCharacterId ? user.activeCharacterId.toString() : null,
     // Only present when opted in, so the rest of the auth shape is unchanged.
@@ -211,6 +218,8 @@ export interface AuthUser {
   role: string;
   isAdmin?: boolean;
   isModerator?: boolean;
+  /** Read-only staff. Never implies isAdmin or isModerator. */
+  isJuniorDev?: boolean;
   /** True when the underlying user has been banned. Read directly from the DB
    * record on every auth resolution so banned accounts with stale JWTs are
    * caught immediately without waiting for cookie expiry. */
@@ -338,9 +347,11 @@ function isStaffCandidate(payload: UserPayload, cached: User | undefined): boole
     payload.isAdmin === true ||
     payload.role === "admin" ||
     payload.role === "moderator" ||
+    payload.role === "junior_dev" ||
     cached?.isAdmin === true ||
     cached?.role === "admin" ||
-    cached?.role === "moderator"
+    cached?.role === "moderator" ||
+    cached?.role === "junior_dev"
   );
 }
 
@@ -348,21 +359,21 @@ function isStaffCandidate(payload: UserPayload, cached: User | undefined): boole
  * Resolve the user document for an authenticated session.
  *
  * Reads through the short-TTL process cache (`userDocCache`) so the many
- * parallel `/api/*` requests a single page fires don't each re-hit the DB just
- * to enforce ban / token-revocation. Ban + revoke paths invalidate the cache,
+ * parallel `/api/*` requests a page fires don't each re-hit the DB just to
+ * enforce ban / token-revocation. Ban and revoke paths invalidate the cache,
  * so enforcement stays effectively immediate; the TTL is the upper bound for
- * anything we don't explicitly invalidate.
+ * anything not explicitly invalidated.
  *
  * Staff candidates bypass the cache (see `isStaffCandidate`): ordinary-player
  * cache hits keep the fast path, but no staff grant ever comes from a cached
  * record. Only a validated fresh record is cached; a null read (deleted
- * account) drops any stale entry without caching anything. DB failures
- * propagate so the caller fails closed without clearing the session cookie.
+ * account) drops any stale entry without caching. DB failures propagate so the
+ * caller fails closed without clearing the session cookie.
  *
- * The full account read includes `authMigrationFence` so fenced accounts deny
- * even with an otherwise valid signed token. Fence denial is bounded by the
- * 10s cache TTL for sessions cached before fencing; the future fence writer
- * must stamp `authRevokedAt` and evict the cache entry to revoke live sessions.
+ * The full read includes `authMigrationFence` so fenced accounts deny even
+ * with an otherwise valid signed token. Fence denial is bounded by the 10s
+ * cache TTL for sessions cached before fencing; the future fence writer must
+ * stamp `authRevokedAt` and evict the cache entry to revoke live sessions.
  */
 async function resolveUserDoc(db: Db, userId: string, payload: UserPayload): Promise<User | null> {
   const cached = getCachedUser(userId);
@@ -471,6 +482,38 @@ export async function getAuthModerator(): Promise<AuthUserWithCharacter | null> 
   if (!user || !user.isModerator) return null;
 
   return user;
+}
+
+/**
+ * Get an authenticated junior dev (read-only staff). Returns null for anyone
+ * else, admins included: callers use this only as the read-only fallback after
+ * the admin or moderator check has already failed.
+ */
+export async function getAuthJuniorDev(): Promise<AuthUserWithCharacter | null> {
+  const user = await getAuthUserWithCharacter();
+  if (!user || !user.isJuniorDev) return null;
+
+  return user;
+}
+
+/**
+ * Get an authenticated staff member of any role (admin, moderator, junior
+ * dev) with the role resolved. Returns null for everyone else. Page loaders
+ * use this; API routes use requireAdmin / requireModerator.
+ */
+export async function getAuthStaff(): Promise<
+  (AuthUserWithCharacter & { staffRole: StaffRole }) | null
+> {
+  const user = await getAuthUserWithCharacter();
+  if (!user) return null;
+  const staffRole: StaffRole | null = user.isAdmin
+    ? "admin"
+    : user.isModerator
+      ? "moderator"
+      : user.isJuniorDev
+        ? "junior_dev"
+        : null;
+  return staffRole ? { ...user, staffRole } : null;
 }
 
 /**

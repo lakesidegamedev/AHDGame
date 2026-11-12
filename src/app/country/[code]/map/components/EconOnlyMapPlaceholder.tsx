@@ -54,6 +54,7 @@ import { useRegionGeometry } from "@/lib/maps/useRegionGeometry";
 import { DEVOLVED_REGION_CONTAINS } from "@/lib/maps/devolvedRegionContains";
 import { useEnabledCountries } from "@/contexts/RegisteredCountriesContext";
 import { CDN_GEO } from "@/lib/images/cdnUrls";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const RegionalGeoMap = dynamic(
   () => import("@/components/maps/RegionalGeoMap").then((m) => ({ default: m.RegionalGeoMap })),
@@ -315,7 +316,7 @@ export function EconOnlyMapPlaceholder({
   const ownedCodes = useMemo(() => displayRegions.map((r) => r._id), [displayRegions]);
   const geoUrl = isBritishIsles
     ? BRITISH_ISLES_GEO_URL
-    : countryId === "BG"
+    : countryHasFeature("bgUi", countryId)
       ? bgGeoUrlForRegions(ownedCodes)
       : devolvedGeoUrl;
   const { features: multiAreaFeatures } = useRegionGeometry(geoUrl ? [] : ownedCodes);

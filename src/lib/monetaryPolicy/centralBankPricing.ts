@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Shared pricing adjustment for central-bank LOCs and central-bank-held
@@ -93,12 +95,11 @@ async function notifyExposedPlayers(
   adjustment: CentralBankPricingAdjustment,
   startedTurn: number
 ): Promise<void> {
-  const characters = await db
-    .collection<
-      Pick<Character, "_id" | "userId" | "lineOfCredit" | "currencyBalances"> & {
-        savingsOnHand?: number;
-      }
-    >("characters")
+  const characters = await charactersCollection<
+    Pick<Character, "_id" | "userId" | "lineOfCredit" | "currencyBalances"> & {
+      savingsOnHand?: number;
+    }
+  >(db)
     .find({})
     .project({ _id: 1, userId: 1, lineOfCredit: 1, currencyBalances: 1, savingsOnHand: 1 })
     .toArray();
@@ -133,9 +134,10 @@ export async function loadCentralBankPricingAdjustment(
   db: Db,
   currentTurn: number
 ): Promise<CentralBankPricingAdjustment> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { "centralBankPricingPhaseIn.startedTurn": 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { "centralBankPricingPhaseIn.startedTurn": 1 } }
+  );
   const phase = config?.centralBankPricingPhaseIn;
   if (!phase || !hasFiniteTurn(phase.startedTurn)) return inactiveAdjustment();
   return resolveCentralBankPricingAdjustment(currentTurn, phase.startedTurn);
@@ -145,27 +147,27 @@ export async function ensureCentralBankPricingPhaseIn(
   db: Db,
   currentTurn: number
 ): Promise<CentralBankPricingAdjustment> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { centralBankPricingPhaseIn: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { centralBankPricingPhaseIn: 1 } }
+  );
   const phase = config?.centralBankPricingPhaseIn as CentralBankPricingPhase | undefined;
   if (!phase) return inactiveAdjustment();
 
   let startedTurn = hasFiniteTurn(phase.startedTurn) ? phase.startedTurn : undefined;
   if (startedTurn === undefined) {
     const normalizedTurn = Number.isFinite(currentTurn) ? currentTurn : 0;
-    const initialized = await db
-      .collection<GameConfig>("gameConfig")
-      .updateOne(
-        { _id: "default", "centralBankPricingPhaseIn.startedTurn": { $exists: false } },
-        { $set: { "centralBankPricingPhaseIn.startedTurn": normalizedTurn } }
-      );
+    const initialized = await gameConfigCollection(db).updateOne(
+      { _id: "default", "centralBankPricingPhaseIn.startedTurn": { $exists: false } },
+      { $set: { "centralBankPricingPhaseIn.startedTurn": normalizedTurn } }
+    );
     if (initialized.matchedCount > 0) {
       startedTurn = normalizedTurn;
     } else {
-      const refreshed = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { centralBankPricingPhaseIn: 1 } });
+      const refreshed = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { centralBankPricingPhaseIn: 1 } }
+      );
       const refreshedPhase = refreshed?.centralBankPricingPhaseIn;
       if (!refreshedPhase || !hasFiniteTurn(refreshedPhase.startedTurn)) {
         return inactiveAdjustment();
@@ -175,7 +177,7 @@ export async function ensureCentralBankPricingPhaseIn(
   }
 
   const adjustment = resolveCentralBankPricingAdjustment(currentTurn, startedTurn);
-  const notificationClaim = await db.collection<GameConfig>("gameConfig").updateOne(
+  const notificationClaim = await gameConfigCollection(db).updateOne(
     {
       _id: "default",
       "centralBankPricingPhaseIn.startedTurn": startedTurn,

@@ -21,25 +21,17 @@ export function accrualPerTurn(defenseLine: number): number {
 /**
  * What the standing force costs this turn, in absolute local currency.
  *
- * Denominated against the APPROPRIATION, not against GDP. Two reasons, both learned the
- * hard way:
+ * `upkeepBase` is an abstract unit, not money, so measure against the
+ * appropriation envelope, not GDP: defence-line-to-GDP ratios swing hugely
+ * across eras, so a GDP-keyed divisor works in one era and not the next.
  *
- *  1. `upkeepBase` is an abstract unit shared by every country — a British and an American
- *     division both cost 70 — so it cannot be compared to money directly. The existing
- *     defence envelope only works because its baseline floor dwarfs every small country's
- *     real slice; it is a synthetic allowance, not currency.
- *  2. A GDP-keyed divisor fails one era later. The defence-line-to-GDP ratio swings hugely
- *     (US 13.6% in 1953, ~3.4% in 2019), so a divisor calibrated in one era puts the same
- *     country deep in arrears in another while looking correct where it was measured.
+ * `totalUpkeep` and `seedRosterUpkeep` are both `aggregateForce().totalUpkeep`,
+ * so MILITARY_COUNTRY_SCALE and posture/tier multipliers cancel. Never
+ * re-apply the country scale here; that double-scales RU by 2.4x.
  *
- * `totalUpkeep` and `seedRosterUpkeep` are BOTH `aggregateForce().totalUpkeep` values, so
- * MILITARY_COUNTRY_SCALE, posture and force-tier multipliers appear on both sides and
- * cancel. Never re-apply the country scale here — doing so double-scales RU by 2.4x.
- *
- * Returns 0 on any unusable input rather than throwing or guessing: this runs as a per-turn
- * sweep over every country, so a data gap must not take down the turn loop, and an invented
- * charge would put a whole nation into arrears over a missing table entry. The coverage
- * test in `seedRosterUpkeep.test.ts` is what stops that path being reached in practice.
+ * Returns 0 on unusable input rather than throwing: this is a per-turn sweep
+ * over every country, so a data gap must not take down the turn loop, and an
+ * invented charge would put a nation into arrears over a missing table entry.
  */
 export function upkeepPerTurn(
   totalUpkeep: number,
@@ -112,30 +104,19 @@ export function settleAppropriation(
 }
 
 /**
- * Share of a turn's defence income the standing force consumes — the affordability signal
- * the Defense metrics read.
+ * Share of a turn's defence income the standing force consumes. Reduces to
+ * SEED_UPKEEP_TARGET_SHARE × (liveRoster / seedRoster).
  *
- * Reduces to `SEED_UPKEEP_TARGET_SHARE × (liveRoster / seedRoster)`. A country at its
- * historical starting force reads 0.55 whatever its currency or decade, and diverges only as
- * a player grows the force past the size that country was seeded at.
+ * The defence line CANCELS: upkeep is itself accrual × 0.55 × (live/seed), so
+ * dividing by accrual leaves 0.55 × (live/seed) whatever the accrual magnitude.
+ * This measures the force against its own seeded order of battle, not the
+ * budget: growing or gutting the defence line does not move this, only a
+ * zero line does (a cliff to null). Because upkeep is defined against your own
+ * accrual, zeroing the line zeroes upkeep and never produces arrears.
  *
- * ⚠️ The defence LINE CANCELS. `upkeepPerTurn` is itself `accrual × 0.55 × (live/seed)`, so
- * dividing by accrual leaves `0.55 × (live/seed)` — measured at every line from 1e12 down to
- * 1e-6, the burden is 0.5500 throughout. This measures the force against the country's OWN
- * SEEDED order of battle, not against its budget: a minister who triples or guts the defence
- * line moves this by nothing, and only hits a cliff to null at exactly zero.
- *
- * That is a real improvement over the envelope it replaced — that denominator was a
- * country-independent constant, so 26 of 27 nations divided by the same number — but it is
- * NOT budget sensitivity, and it inherits one hole from the appropriation model: because
- * upkeep is defined as a share of your own accrual, zeroing the defence line zeroes upkeep
- * too, so it never produces arrears and never suppresses readiness. Making this respond to
- * budget choices means pinning the seed calibration to a fixed currency amount instead of to
- * the live accrual — a separate design decision, not a rename.
- *
- * Returns null — not 0 — when there is no usable defence line. 0 would read as "this force
- * is free", which is the most positive signal there is; absent means the metric has nothing
- * to say and must contribute nothing.
+ * Returns null (not 0) when there is no usable defence line: 0 would read as
+ * "this force is free," the most positive signal. Absent means the metric
+ * contributes nothing.
  */
 export function upkeepBurden(upkeep: number, accrual: number): number | null {
   if (!(accrual > 0)) return null;

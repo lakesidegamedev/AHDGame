@@ -71,7 +71,7 @@ export function TasksWidget() {
   const [showForm, setShowForm] = useState(false);
 
   const loadSummary = useCallback(() => {
-    fetch("/api/admin/tasks/summary")
+    fetch("/api/control/overview/tasks/summary")
       .then((r) => (r.ok ? r.json() : Promise.reject("Failed to load")))
       .then((json: SummaryData) => setData(json))
       .catch(() => setData(null))
@@ -142,7 +142,7 @@ export function TasksWidget() {
               data.topPriority.map((task) => (
                 <Link
                   key={task._id.toString()}
-                  href={`/admin/tasks?task=${task._id}`}
+                  href={`/control/overview/tasks?task=${task._id}`}
                   className="group flex items-center gap-3 text-sm border border-card-border bg-card-elevated/50 rounded-lg p-2.5 hover:bg-card-elevated hover:border-primary/20 transition-all shadow-sm"
                 >
                   <div className="shrink-0 w-8 flex justify-center text-lg" title={task.type}>
@@ -181,7 +181,7 @@ export function TasksWidget() {
               Recently completed
             </h3>
             <Link
-              href="/admin/tasks?status=completed"
+              href="/control/overview/tasks?status=completed"
               className="text-xs text-muted hover:text-foreground transition-colors"
             >
               View all
@@ -192,7 +192,7 @@ export function TasksWidget() {
             {data.completedTasks.map((task) => (
               <Link
                 key={task._id.toString()}
-                href={`/admin/tasks?task=${task._id}`}
+                href={`/control/overview/tasks?task=${task._id}`}
                 className="flex items-center gap-3 text-sm p-2 rounded hover:bg-card-muted/50 transition-colors"
               >
                 <div className="shrink-0 text-green-500">✓</div>
@@ -210,7 +210,7 @@ export function TasksWidget() {
 
       <div className="text-center">
         <Link
-          href="/admin/tasks"
+          href="/control/overview/tasks"
           className="text-xs font-medium text-muted hover:text-foreground transition-colors border-b border-transparent hover:border-muted inline-block pb-0.5"
         >
           Open task board →

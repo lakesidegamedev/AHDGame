@@ -29,9 +29,16 @@ import { isShippingPreset, tierFor } from "@/lib/world/eraRoster";
 import {
   countryBackgroundModeForEraTier,
   countryRequirementLevelForEraTier,
+  type CountryBackgroundMode,
   type CountryRequirementLevel,
 } from "@/lib/world/countryRequirementLevel";
 import { enterCountryForPlayers, exitCountryForPlayers } from "@/lib/world/playerHandoff";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -85,7 +92,7 @@ function buildReadinessProfiles(input: {
   source: "reset-preset";
   activeLevel: CountryRequirementLevel;
   presetLevel: CountryRequirementLevel;
-  backgroundMode: "npp" | "latent" | "absent" | null;
+  backgroundMode: CountryBackgroundMode | null;
   contentStatus: "complete" | "gaps" | "not-assessed";
   contentGaps: FailedCapability[];
   profiles: ReadinessProfileRow[];
@@ -142,10 +149,10 @@ export const GET = withAdminRoute(async (_auth, request: Request, { params }: Ro
 
   const [access, gameState, activePlayers, activeNpps, politicalParties] = await Promise.all([
     getCountryAccess(countryId),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
-    db.collection("characters").countDocuments({ countryId }),
-    db.collection("npps").countDocuments({ countryId }),
-    db.collection("politicalParties").countDocuments({ countryId }),
+    gameStateCollection(db).findOne({ _id: "current" }),
+    charactersCollection(db).countDocuments({ countryId }),
+    nppsCollection<Document>(db).countDocuments({ countryId }),
+    politicalPartiesCollection<Document>(db).countDocuments({ countryId }),
   ]);
 
   const presetId = resolvePresetIdFromGameState(gameState);
@@ -238,7 +245,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
         `Cannot enable economy preview for ${countryId} while it is enabled for players. Disable player access in the same request first.`
       );
     }
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const presetId = resolvePresetIdFromGameState(gameState);
     if (isShippingPreset(presetId) && tierFor(presetId, countryId) === "absent") {
       return errorResponse(
@@ -266,9 +273,7 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
     }
   }
 
-  // Mid-world player handoff (#3725): open/close go through the handoff
-  // module so readiness is gated, live state is preserved, and exit vacates
-  // claimable player offices without an instant NPP replacement.
+  // Handoff module gates readiness, preserves live state, and vacates claimable player offices without instant NPP replacement.
   if (enabledForPlayers === true) {
     try {
       await enterCountryForPlayers(db, countryId, {
@@ -303,9 +308,11 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
     if (status !== undefined) extra.status = status;
     if (economyPreview !== undefined) extra.economyPreview = economyPreview;
     if (status !== undefined || economyPreview !== undefined) {
-      await db
-        .collection<CountryGameState>("countryGameStates")
-        .updateOne({ _id: countryId }, { $set: extra }, { upsert: true });
+      await countryGameStatesCollection(db).updateOne(
+        { _id: countryId },
+        { $set: extra },
+        { upsert: true }
+      );
     }
     return NextResponse.json({ success: true });
   }
@@ -320,9 +327,11 @@ export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: 
   }
   if (economyPreview !== undefined) updateFields.economyPreview = economyPreview;
 
-  await db
-    .collection<CountryGameState>("countryGameStates")
-    .updateOne({ _id: countryId }, { $set: updateFields }, { upsert: true });
+  await countryGameStatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: updateFields },
+    { upsert: true }
+  );
 
   return NextResponse.json({ success: true });
 });

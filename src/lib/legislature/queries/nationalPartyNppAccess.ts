@@ -11,6 +11,10 @@ import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { buildActiveNationalBillFilter } from "../nationalBillScope";
 import { hasPartyNppSeats } from "../rules/partyNppProposal";
 import { canDirectNationalPartyNpp, pickNationalPartySponsor } from "../rules/nationalPartyNpp";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export async function resolveNationalPartyNppAccess(
   db: Db,
@@ -23,12 +27,10 @@ export async function resolveNationalPartyNppAccess(
   if (!character?.party || !isSameCountry(character, { countryId })) return denied;
   const partyNumber = Number(character.party);
   if (!Number.isSafeInteger(partyNumber) || partyNumber <= 0) return denied;
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { countryId, sequentialId: partyNumber },
-      { projection: { chairId: 1, sequentialId: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { countryId, sequentialId: partyNumber },
+    { projection: { chairId: 1, sequentialId: 1 } }
+  );
   if (
     !party ||
     !canDirectNationalPartyNpp({
@@ -40,7 +42,7 @@ export async function resolveNationalPartyNppAccess(
     })
   )
     return denied;
-  const active = await db.collection<Bill>("bills").findOne(
+  const active = await billsCollection(db).findOne(
     {
       ...buildActiveNationalBillFilter(countryId, NATIONAL_TERMINAL_STATUSES),
       nppSponsored: true,
@@ -49,8 +51,7 @@ export async function resolveNationalPartyNppAccess(
     { projection: { _id: 1 } }
   );
   if (active) return { authorized: true, blocked: true, sponsor: null };
-  const seats = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const seats = await electedOfficialsCollection(db)
     .find(
       {
         ...officialsCountryScope(countryId),
@@ -63,8 +64,7 @@ export async function resolveNationalPartyNppAccess(
   const seated = seats.filter((s) => s.nppId && hasPartyNppSeats(s.seatsHeld));
   const ids = seated.flatMap((s) => (s.nppId ? [s.nppId] : []));
   if (!ids.length) return { authorized: true, blocked: false, sponsor: null };
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(
       { _id: { $in: ids }, party: character.party, retiredAt: null },
       { projection: { name: 1, party: 1, countryId: 1 } }

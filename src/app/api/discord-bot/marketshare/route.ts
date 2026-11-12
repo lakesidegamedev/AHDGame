@@ -4,7 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { Corporation, CorporateSector, State, User } from "@/lib/db/types";
+import type { CorporateSector, State, User } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   isOperatingSectorType,
@@ -23,6 +23,10 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const PAGE_SIZE = 15;
 
@@ -74,16 +78,16 @@ export async function GET(request: Request) {
     // Look up the Discord user's home country currency for default display in the bot.
     let suggestedCurrencyCode: string | null = null;
     if (discordIdParam) {
-      const linkedUser = await db
-        .collection<User>("users")
-        .findOne({ discordId: discordIdParam }, { projection: { accountCountryId: 1 } });
+      const linkedUser = await usersCollection(db).findOne(
+        { discordId: discordIdParam },
+        { projection: { accountCountryId: 1 } }
+      );
       if (linkedUser?.accountCountryId) {
         suggestedCurrencyCode = COUNTRY_CURRENCY_MAP[linkedUser.accountCountryId] ?? null;
       }
     }
 
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; name: string; gdp: number; countryId: CountryId }>({
         _id: 1,
@@ -120,8 +124,7 @@ export async function GET(request: Request) {
     const scopedStateIds = new Set(scopedStates.map((s) => s._id));
 
     const [sectorsInScope, fxByCurrency] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({
           ...laneFilter,
           stateId: { $in: [...scopedStateIds] },
@@ -136,8 +139,7 @@ export async function GET(request: Request) {
 
     const corporations =
       corpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: corpIds } })
             .project<
               {
@@ -168,16 +170,9 @@ export async function GET(request: Request) {
       });
     }
 
-    // ─── Convert each sector at its OWN host rate (#1161) ───────────────────
-    //
-    // `corporateSectors.revenue` is stored in the SECTOR's host currency, not
-    // the corp's (see the docblock on `corpDailyGrossRevenueLocal`, ticket
-    // #1118). Converting it at the corp's rate reads a foreign sector's local
-    // figure as if it were already in the corp's money, so one sector in a
-    // weak-currency country inflated a corp's revenue by whatever the two
-    // currencies differ by — and the ranking is built on that number. Reported
-    // as "people with one foreign sector in like bulgaria talking about how
-    // they have the biggest corp".
+    // Convert each sector at its OWN host rate. `corporateSectors.revenue` is
+    // stored in the SECTOR's host currency, not the corp's, so converting at the
+    // corp's rate inflates revenue by the FX gap and corrupts the ranking.
     const revenueAnchorByCorp = new Map<string, number>();
     const ownedRevenueAnchorByState = new Map<string, number>();
     for (const sec of sectorsInScope) {
@@ -214,9 +209,7 @@ export async function GET(request: Request) {
     for (const [corpId, revenueAnchor] of revenueAnchorByCorp) {
       const corp = corpMap.get(corpId);
       totalOwnedRevenue += revenueAnchor;
-      // The displayed figure is the anchor restated in the corp's OWN currency.
-      // It used to be a bare sum of per-sector amounts in whatever currency
-      // each sector happened to be stored in, which is not a quantity.
+      // The displayed figure is the anchor restated in the corp's own currency.
       const corpFx = fxByCorpId.get(corpId);
       companies.push({
         corporationId: corpId,
@@ -233,9 +226,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // Ticket #1145: market share = a corp's revenue over the TOTAL real revenue
-    // in scope. No unowned pool in the denominator, so shares sum to 100% and
-    // there is no "unowned" slice.
+    // Market share is revenue over total owned revenue, so shares sum to 100% with no unowned pool.
     const effectiveMarket = totalOwnedRevenue;
     for (const company of companies) {
       company.marketSharePercent = roundMarketSharePercent(company.revenueAnchor, effectiveMarket);

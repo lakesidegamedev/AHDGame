@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { CampaignFieldOffice } from "@/lib/db/types";
-import { FIELD_OFFICES_COLLECTION } from "./commands";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 const FIELD_OFFICE_UNIQUE_SUBDIVISION_INDEX = "campaignFieldOffices_campaign_subdivision";
 
@@ -10,7 +10,7 @@ const FIELD_OFFICE_UNIQUE_SUBDIVISION_INDEX = "campaignFieldOffices_campaign_sub
  * subdivision and stack, so the uniqueness is partial on string ids only.
  */
 export async function ensureFieldOfficeIndexes(db: Db): Promise<void> {
-  const col = db.collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION);
+  const col = campaignFieldOfficesCollection<CampaignFieldOffice>(db);
   await col.createIndex({ electionId: 1 }, { name: "campaignFieldOffices_electionId" });
   await col.createIndex(
     { campaignId: 1, regionId: 1 },

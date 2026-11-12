@@ -3,6 +3,8 @@ import type { User } from "@/lib/db/types/user";
 import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getGameStateCore, type GameStateCore } from "@/lib/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** The few character fields the role widgets read. */
 export type ViewerCharacter = Pick<
@@ -35,7 +37,7 @@ function memo(viewer: object): Memo {
 
 export function loadViewerUser(db: Db, viewer: { userId: string }): Promise<ViewerUser | null> {
   const entry = memo(viewer);
-  entry.user ??= db.collection<User>("users").findOne(
+  entry.user ??= usersCollection(db).findOne(
     { _id: new ObjectId(viewer.userId) },
     {
       projection: {
@@ -60,12 +62,10 @@ export function loadViewerCharacter(
   entry.character ??= (async () => {
     const user = await loadViewerUser(db, viewer);
     if (!user?.activeCharacterId || user.activeCharacterType === "imperial") return null;
-    const character = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: user.activeCharacterId },
-        { projection: { countryId: 1, homeState: 1, currentOffice: 1, party: 1 } }
-      );
+    const character = await charactersCollection(db).findOne(
+      { _id: user.activeCharacterId },
+      { projection: { countryId: 1, homeState: 1, currentOffice: 1, party: 1 } }
+    );
     return character?.countryId ? (character as ViewerCharacter) : null;
   })();
   return entry.character;

@@ -20,28 +20,13 @@ export interface HistoricalPriorityCountry {
   regionalLevels?: Record<string, Partial<Record<PriorityTopic, PriorityReference>>>;
 }
 
-function economic(
+/** A request into the one law book: explicit left, centre and right option ids. */
+function book(
   lawTypeId: string,
-  prefix: string,
-  left = 1,
-  centre = 2,
-  right = 3
+  axis: HistoricalPriorityTopic["axis"],
+  levels: [string, string, string]
 ): HistoricalPriorityTopic {
-  return {
-    lawTypeId,
-    levels: [left, centre, right].map((n) => `${prefix}_opt_${n}`) as [string, string, string],
-    axis: "economicLean",
-  };
-}
-
-function social(
-  lawTypeId: string,
-  prefix: string,
-  left = 2,
-  centre = 3,
-  right = 4
-): HistoricalPriorityTopic {
-  return { ...economic(lawTypeId, prefix, left, centre, right), axis: "socialLean" };
+  return { lawTypeId, levels, axis };
 }
 
 const noIncomeTax = Object.fromEntries(
@@ -50,7 +35,7 @@ const noIncomeTax = Object.fromEntries(
   ["AK", "FL", "NH", "NV", "SD", "TN", "TX", "WA", "WY"].map((region) => [
     region,
     {
-      tax: { lawTypeId: "us_state_income_tax_rate", policyOptionId: "state_income_tax_rate_opt_0" },
+      tax: { lawTypeId: "us.tax.stateIncomeTax", policyOptionId: "rate_0" },
     },
   ])
 );
@@ -59,28 +44,28 @@ const noIncomeTax = Object.fromEntries(
 export const YEAR_2000_PRIORITIES: Record<string, HistoricalPriorityCountry> = {
   US: {
     topics: {
-      schools: economic("us_state_education_funding", "state_education_funding"),
-      health: economic("us_state_healthcare", "state_healthcare"),
-      pensions: economic("us_social_security", "social_security", 2, 2, 3),
-      care: economic("us_medicaid", "medicaid", 1, 2, 3),
-      prescriptions: economic("us_drug_pricing_medicare", "drug_pricing_medicare", 1, 1, 4),
-      skills: economic("us_state_workforce_development", "state_workforce_development"),
-      labor: economic("us_state_labor", "state_labor", 2, 3, 4),
-      family: economic("us_paid_family_leave", "paid_family_leave", 2, 3, 4),
-      transport: economic("us_state_transportation", "state_transportation"),
-      housing: economic("us_state_housing", "state_housing", 2, 3, 4),
-      tuition: economic("us_state_higher_education", "state_higher_education", 2, 3, 4),
-      research: economic("us_federal_science_funding", "federal_science_funding"),
-      business: economic("us_state_business_regulation", "state_business_regulation", 2, 3, 4),
-      tax: economic("us_state_income_tax_rate", "state_income_tax_rate", 4, 3, 2),
+      schools: book("us.education.universalSchooling.primary", "economicLean", ["l4", "l3", "l2"]),
+      health: book("us.health.outcomes.primary", "economicLean", ["l4", "l3", "l2"]),
+      pensions: book("us.health.socialInsurance.primary", "economicLean", ["l3", "l3", "l2"]),
+      care: book("us.health.universalCare.primary", "economicLean", ["l4", "l3", "l2"]),
+      prescriptions: book("us.health.providerChoice.primary", "economicLean", ["l0", "l0", "l3"]),
+      skills: book("us.education.adultSkills.primary", "economicLean", ["l4", "l3", "l2"]),
+      labor: book("us.sec.laborManagementRelations", "economicLean", ["l3", "l2", "l1"]),
+      family: book("us.society.womensOpportunity.primary", "economicLean", ["l3", "l2", "l1"]),
+      transport: book("us.infrastructure.transit.primary", "economicLean", ["l4", "l3", "l2"]),
+      housing: book("us.infrastructure.publicHousing.primary", "economicLean", ["l3", "l2", "l1"]),
+      tuition: book("us.education.attainment.primary", "economicLean", ["l3", "l2", "l1"]),
+      research: book("us.education.research.primary", "economicLean", ["l4", "l3", "l2"]),
+      business: book("us.infrastructure.development.primary", "economicLean", ["l1", "l2", "l3"]),
+      tax: book("us.tax.stateIncomeTax", "economicLean", ["rate_9", "rate_5", "rate_5"]),
       // Rural water/grid services, not food stamps as a proxy for farm policy.
-      rural: economic("us_state_utilities", "state_utilities", 2, 3, 3),
-      environment: economic("us_state_environment", "state_environment", 2, 3, 4),
-      rights: social("us_civics_voting_rights", "civics_voting_rights", 1, 2, 3),
-      crime: social("us_state_policing", "state_policing"),
-      reproductive: social("us_reproductive_rights", "reproductive_rights"),
-      firearms: social("us_gun_control", "gun_control"),
-      immigration: social("us_legal_immigration_visas", "legal_immigration_visas"),
+      rural: book("us.infrastructure.utilities.primary", "economicLean", ["l3", "l2", "l2"]),
+      environment: book("us.environment.conservation.primary", "economicLean", ["l3", "l2", "l1"]),
+      rights: book("us.governance.participation.primary", "socialLean", ["l4", "l3", "l2"]),
+      crime: book("us.order.communityTrust.primary", "socialLean", ["l3", "l2", "l1"]),
+      reproductive: book("us.society.demography.primary", "socialLean", ["l1", "l2", "l3"]),
+      firearms: book("us.order.safety.primary", "socialLean", ["l3", "l2", "l1"]),
+      immigration: book("us.sec.immigrationNationality", "socialLean", ["l3", "l2", "l1"]),
     },
     groups: {
       "race:white": [
@@ -208,32 +193,30 @@ export const YEAR_2000_PRIORITIES: Record<string, HistoricalPriorityCountry> = {
   },
   UK: {
     topics: {
-      health: economic("uk_nhs_funding", "uk_nhs_funding", 1, 2, 2),
-      schools: economic("uk_regional_education", "uk_regional_education"),
-      pensions: economic("uk_state_pensions", "uk_state_pensions", 1, 2, 3),
-      care: economic("uk_social_care", "uk_social_care"),
-      skills: economic("uk_regional_skills", "uk_regional_skills"),
-      jobs: economic("uk_regional_economic_development", "uk_regional_economic_development"),
-      labor: economic("uk_regional_labour", "uk_regional_labour", 2, 3, 4),
-      family: economic("uk_childcare", "uk_childcare", 2, 3, 4),
-      tuition: economic("uk_tuition_fees", "uk_tuition_fees", 2, 2, 3),
-      housing: economic(
-        "uk_regional_housing_development",
-        "uk_regional_housing_development",
-        2,
-        3,
-        4
-      ),
-      transport: economic("uk_regional_transport", "uk_regional_transport"),
-      research: economic("uk_research_science", "uk_research_science"),
-      business: economic("uk_business_rates", "uk_business_rates", 3, 2, 1),
-      tax: economic("uk_council_tax", "uk_council_tax", 3, 2, 1),
-      rural: economic("uk_agriculture_policy", "uk_agriculture_policy"),
-      environment: economic("uk_regional_environment", "uk_regional_environment", 2, 3, 4),
-      crime: social("uk_regional_policing", "uk_regional_policing"),
+      health: book("uk.health.universalCare.primary", "economicLean", ["l4", "l3", "l3"]),
+      schools: book("uk.education.universalSchooling.primary", "economicLean", ["l4", "l3", "l2"]),
+      pensions: book("uk.health.socialInsurance.primary", "economicLean", ["l4", "l3", "l2"]),
+      care: book("uk.sec.nationalAssistanceReform", "economicLean", ["l4", "l3", "l2"]),
+      skills: book("uk.education.adultSkills.primary", "economicLean", ["l4", "l3", "l2"]),
+      jobs: book("uk.economy.mobility.primary", "economicLean", ["l4", "l3", "l2"]),
+      labor: book("uk.sec.industrialRelations", "economicLean", ["l3", "l2", "l1"]),
+      family: book("uk.society.womensOpportunity.primary", "economicLean", ["l3", "l2", "l1"]),
+      tuition: book("uk.sec.universityGrants", "economicLean", ["l3", "l3", "l2"]),
+      housing: book("uk.infrastructure.publicHousing.primary", "economicLean", ["l3", "l2", "l1"]),
+      transport: book("uk.infrastructure.transit.primary", "economicLean", ["l4", "l3", "l2"]),
+      research: book("uk.education.research.primary", "economicLean", ["l4", "l3", "l2"]),
+      business: book("uk.tax.domesticCorporateTax", "economicLean", [
+        "rate_48",
+        "rate_35",
+        "rate_24",
+      ]),
+      tax: book("uk.tax.incomeTax", "economicLean", ["rate_36", "rate_24", "rate_24"]),
+      rural: book("uk.sec.agricultureDeficiency", "economicLean", ["l4", "l3", "l2"]),
+      environment: book("uk.environment.conservation.primary", "economicLean", ["l3", "l2", "l1"]),
+      crime: book("uk.order.communityTrust.primary", "socialLean", ["l3", "l2", "l1"]),
       // Community justice/victim support, not online voting as a civil-rights proxy.
-      rights: economic("uk_regional_justice", "uk_regional_justice"),
-      devolution: social("uk_devolution_local_powers", "uk_devolution_local_powers", 2, 3, 3),
+      rights: book("uk.order.courts.primary", "economicLean", ["l4", "l3", "l2"]),
+      devolution: book("uk.governance.localAutonomy.primary", "socialLean", ["l3", "l2", "l2"]),
     },
     groups: {
       "ethnicity:white_british": [
@@ -309,29 +292,29 @@ export const YEAR_2000_PRIORITIES: Record<string, HistoricalPriorityCountry> = {
     // An aspiration to retain fee abolition and oppose the graduate endowment,
     // not a claim that universal maintenance grants were enacted in Scotland.
     regionalLevels: {
-      SCO: { tuition: { lawTypeId: "uk_tuition_fees", policyOptionId: "uk_tuition_fees_opt_0" } },
+      SCO: { tuition: { lawTypeId: "uk.sec.universityGrants", policyOptionId: "l4" } },
     },
   },
   JP: {
     topics: {
-      jobs: economic("jp_regional_economic_development", "jp_regional_economic_development"),
-      business: economic("jp_sme_support", "jp_sme_support", 1, 2, 3),
-      skills: economic("jp_regional_skills", "jp_regional_skills"),
-      labor: economic("jp_labor_reform", "jp_labor_reform", 2, 3, 4),
-      health: economic("jp_national_health_insurance", "jp_national_health_insurance"),
-      pensions: economic("jp_pension", "jp_pension", 2, 2, 3),
-      care: economic("jp_elder_care", "jp_elder_care", 1, 2, 2),
-      schools: economic("jp_regional_education", "jp_regional_education"),
-      tuition: economic("jp_university_tuition", "jp_university_tuition", 2, 3, 3),
-      research: economic("jp_research_science", "jp_research_science"),
-      family: economic("jp_family_policy", "jp_family_policy", 2, 3, 3),
-      tax: economic("jp_resident_tax", "jp_resident_tax", 2, 3, 4),
-      rural: economic("jp_regional_agriculture", "jp_regional_agriculture", 1, 2, 2),
-      transport: economic("jp_regional_transport", "jp_regional_transport"),
-      disaster: economic("jp_disaster_preparedness", "jp_disaster_preparedness", 1, 2, 2),
-      environment: economic("jp_regional_environment", "jp_regional_environment", 2, 3, 4),
-      rights: social("jp_gender_equality", "jp_gender_equality", 2, 3, 3),
-      immigration: social("jp_visa_residency", "jp_visa_residency", 2, 3, 4),
+      jobs: book("jp.economy.mobility.primary", "economicLean", ["l4", "l3", "l2"]),
+      business: book("jp.sec.exportCreditsAndSmallFirms", "economicLean", ["l4", "l3", "l2"]),
+      skills: book("jp.education.adultSkills.primary", "economicLean", ["l4", "l3", "l2"]),
+      labor: book("jp.sec.enterpriseUnionBargaining", "economicLean", ["l3", "l2", "l1"]),
+      health: book("jp.health.universalCare.primary", "economicLean", ["l4", "l3", "l2"]),
+      pensions: book("jp.health.socialInsurance.primary", "economicLean", ["l4", "l3", "l2"]),
+      care: book("jp.sec.pensionCoverageExtension", "economicLean", ["l4", "l3", "l2"]),
+      schools: book("jp.education.universalSchooling.primary", "economicLean", ["l4", "l3", "l2"]),
+      tuition: book("jp.sec.universityFunding", "economicLean", ["l3", "l3", "l2"]),
+      research: book("jp.education.research.primary", "economicLean", ["l4", "l3", "l2"]),
+      family: book("jp.sec.parentalLeaveAndChildcare", "economicLean", ["l3", "l2", "l1"]),
+      tax: book("jp.tax.incomeTax", "economicLean", ["rate_45", "rate_33", "rate_22"]),
+      rural: book("jp.sec.agriculturalSupport", "economicLean", ["l4", "l3", "l2"]),
+      transport: book("jp.infrastructure.transit.primary", "economicLean", ["l4", "l3", "l2"]),
+      disaster: book("jp.sec.disasterPreparedness", "economicLean", ["l4", "l3", "l2"]),
+      environment: book("jp.environment.conservation.primary", "economicLean", ["l3", "l2", "l1"]),
+      rights: book("jp.society.womensOpportunity.primary", "socialLean", ["l4", "l3", "l2"]),
+      immigration: book("jp.sec.migrationAndResidence", "socialLean", ["l4", "l3", "l2"]),
     },
     groups: {
       "ethnicity:japanese": [

@@ -50,7 +50,7 @@ import {
 } from "@/lib/labour/unionLaws";
 import { getEraContext } from "@/lib/era/context";
 import { resolveTaxSliderProvisionFields } from "@/lib/politicalLegislation/taxSlider";
-import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable } from "@/lib/era/legislationCatalog";
 import { validateBillAdministration } from "@/lib/legislature/jurisdiction";
 import { findAdministrationConflict } from "@/lib/legislature/administrationConflictCheck";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -58,11 +58,14 @@ import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVers
 import { loadReviewedLawCatalog } from "@/lib/resetLegislation/loadReviewedCatalog";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import type { LawChoice } from "@/lib/resetLegislation/rules/eligibility";
-import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
+import { resetTaxForLegislationType, resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import { resolveResetTaxProvisionFields } from "@/lib/resetLegislation/resolveTaxProvision";
 import { marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // snapshotBillPolicyProvisions now lives in the shared provision-enrichment core
 // so the regional bill paths can call it too. Re-exported for existing importers.
@@ -80,7 +83,7 @@ export interface ValidatedPolicyProvision {
   /** Omitted when the provision does not take a stance on this axis (0 is not centre). */
   economic?: number;
   social?: number;
-  /** Tax-slider laws (ruling #16): the validated slider-chosen rate. */
+  /** Tax-slider laws: the validated slider-chosen rate. */
   proposedRate?: number;
 }
 
@@ -126,7 +129,7 @@ export async function validateBillProvisions(
   const { year: eraYear, currentTurn, mediaRegulation } = await getEraContext(db);
   const resetState =
     sourceCountry && isResetV2Country(sourceCountry)
-      ? await db.collection<GameState>("gameState").findOne(
+      ? await gameStateCollection(db).findOne(
           { _id: "current" },
           {
             projection: {
@@ -162,7 +165,7 @@ export async function validateBillProvisions(
   const validatedEuropeanTreatyProvisions: EuropeanTreatyProvision[] = [];
   const validatedResetLawProvisions: ResetLawProvision[] = [];
   const resetFamilyIds = new Set<string>();
-  const resetTaxTypeIds = new Set<string>();
+  const resetTaxInstrumentIds = new Set<string>();
   let reviewedNationalCatalog: Awaited<ReturnType<typeof loadReviewedLawCatalog>> | null = null;
   const isTradeCategory = TARIFF_BILL_CATEGORIES.has(category as BillCategory);
   const requestedLegislationTypeIds = Array.from(
@@ -175,8 +178,7 @@ export async function validateBillProvisions(
     )
   );
   const legislationTypes = requestedLegislationTypeIds.length
-    ? await db
-        .collection<LegislationType>("legislationTypes")
+    ? await legislationTypesCollection(db)
         .find({ _id: { $in: requestedLegislationTypeIds } })
         .toArray()
     : [];
@@ -449,9 +451,10 @@ export async function validateBillProvisions(
       const rawElectoralLaw = rawP as { japanShugiinReform?: unknown };
       const reformContext =
         rawElectoralLaw.japanShugiinReform === true
-          ? await db
-              .collection<GameState>("gameState")
-              .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } })
+          ? await gameStateCollection(db).findOne(
+              { _id: "current" },
+              { projection: { preset: 1, currentYear: 1 } }
+            )
           : null;
       const res = validateElectoralLawProvision(rawP, category, {
         countryId: sourceCountry,
@@ -583,7 +586,7 @@ export async function validateBillProvisions(
         };
       }
       const p = rawP as { type: "union_law"; bias: number; banAction?: unknown };
-      // Union ban (player suggestion #93): a banAction provision carries no
+      // Union ban: a banAction provision carries no
       // meaningful bias (it deliberately leaves unionLawBias untouched at
       // enactment), so it's validated as its own arm.
       if (p.banAction !== undefined) {
@@ -693,7 +696,7 @@ export async function validateBillProvisions(
     if (!lt) {
       return { ok: false, status: 400, error: `Invalid legislation type: ${ltId}.` };
     }
-    if (!isLegislationTypeActive(lt._id, eraYear)) {
+    if (!isLegislationTypeFileable(lt._id, eraYear)) {
       return {
         ok: false,
         status: 400,
@@ -701,8 +704,9 @@ export async function validateBillProvisions(
       };
     }
     if (resetLegislationV2) {
-      const resetTax = resetTaxesFor(sourceCountry as ResetCountry, "national").find(
-        (candidate) => candidate.existingLegislationTypeId === lt._id
+      const resetTax = resetTaxForLegislationType(
+        resetTaxesFor(sourceCountry as ResetCountry, "national"),
+        lt._id
       );
       if (!resetTax) {
         return {
@@ -711,7 +715,7 @@ export async function validateBillProvisions(
           error: "This world accepts only reviewed legislation v2 provisions.",
         };
       }
-      if (resetTaxTypeIds.has(lt._id)) {
+      if (resetTaxInstrumentIds.has(resetTax.id)) {
         return { ok: false, status: 400, error: "A v2 bill cannot repeat a tax instrument." };
       }
       if (category !== "tax" && category !== "custom") {
@@ -732,14 +736,14 @@ export async function validateBillProvisions(
       if (!resolved.ok) {
         return { ok: false, status: 400, error: resolved.error };
       }
-      resetTaxTypeIds.add(lt._id);
+      resetTaxInstrumentIds.add(resetTax.id);
       validatedPolicyProvisions.push({
         legislationTypeId: lt._id,
         ...resolved.fields,
       });
       continue;
     }
-    if (sourceCountry === "US" && lt._id === "us_media_communications") {
+    if (countryHasFeature("usLib", sourceCountry) && lt._id === "us_media_communications") {
       const mediaRegulationEnabled =
         mediaRegulation.enabled && marketAtLeast(mediaRegulation.marketSystemMode, "clearing");
       if (
@@ -776,7 +780,7 @@ export async function validateBillProvisions(
       };
     validatedLegislationTypes.push(lt);
 
-    // Tax-slider laws (ruling #16): server-side bounds/grid/min-step
+    // Tax-slider laws: server-side bounds/grid/min-step
     // validation against the CURRENT rate, with stamped delta-derived fields.
     if (lt.taxSlider) {
       const resolved = await resolveTaxSliderProvisionFields(
@@ -799,9 +803,9 @@ export async function validateBillProvisions(
       p?.effectDirection != null && typeof p.effectDirection === "number"
         ? Math.max(-1, Math.min(1, Math.round(p.effectDirection)))
         : 0;
-    // 0 means "no stance on this axis", not a centre target. Omitting the
-    // field stops vote-time policy shift from recentring the legislator
-    // (ticket #1116). Explicit non-zero values still stamp.
+    // 0 means no stance on this axis, not a centre target. Omitting the field
+    // stops vote-time policy shift from recentring the legislator. Non-zero
+    // values still stamp.
     const economic =
       p?.economic != null && typeof p.economic === "number"
         ? Math.max(-3, Math.min(3, Math.round(p.economic)))

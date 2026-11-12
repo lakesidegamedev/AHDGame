@@ -10,11 +10,15 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { Corporation, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { NppCeoTrackRecord } from "@/lib/db/types/npp";
 import { buildCeoAffiliations, type NppCorpCeoAffiliation } from "@/lib/admin/nppCorpCeoSelection";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
 import { NPP_ENGINE_LEVEL } from "@/lib/nppAutonomy/engineVersion";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface GatherNppCeoAffiliationsOptions {
   /** Load each free NPP's CEO track record (v6 selection only). */
@@ -36,30 +40,26 @@ export async function gatherNppCeoAffiliations(
   countryId: CountryId,
   options: GatherNppCeoAffiliationsOptions = {}
 ): Promise<NppCorpCeoAffiliation[]> {
-  const partyDocs = await db
-    .collection("politicalParties")
+  const partyDocs = await politicalPartiesCollection<Document>(db)
     .find({ countryId, isDefunct: { $ne: true } })
     .project<{ sequentialId: number }>({ sequentialId: 1 })
     .toArray();
   const nonDefunctPartyIds = partyDocs.map((p) => String(p.sequentialId));
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ ceoType: "npp", countryId })
     .project<{ ceoId: ObjectId }>({ ceoId: 1 })
     .toArray();
   const ceoIds = corps.map((c) => c.ceoId).filter(Boolean);
   const ceoNppDocs = ceoIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find({ _id: { $in: ceoIds } })
         .project<{ _id: ObjectId; party: string }>({ _id: 1, party: 1 })
         .toArray()
     : [];
   const existingCorpCeos = ceoNppDocs.map((n) => ({ nppId: n._id.toString(), party: n.party }));
 
-  const activeNppDocs = await db
-    .collection<NPP>("npps")
+  const activeNppDocs = await nppsCollection(db)
     .find({ countryId, retiredAt: null })
     .project<{
       _id: ObjectId;

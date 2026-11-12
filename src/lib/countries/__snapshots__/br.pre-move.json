@@ -1604,7 +1604,6 @@
         "lockHomeState": true,
         "nppsPerState": 2
       },
-      "demographicProfileId": "br_archetypes",
       "executiveTermLimit": {
         "officeKey": "president",
         "maxTermsPerCharacter": 2,

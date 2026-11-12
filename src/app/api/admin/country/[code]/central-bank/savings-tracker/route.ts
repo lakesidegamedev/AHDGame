@@ -16,6 +16,7 @@ import {
   getPersonalBalance,
   getSavingsBalance,
 } from "@/lib/currency/characterFunds";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -43,8 +44,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const db = await getDb();
     const nationalCurrency = COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode;
 
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({
         userId: { $exists: true },
         [`savingsAccountsOpened.${nationalCurrency}`]: true,

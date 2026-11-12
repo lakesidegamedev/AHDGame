@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { CentralBank, Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -13,6 +13,8 @@ import {
   holdsPlayerSavings,
   privateHolderSavingsApyPercent,
 } from "@/lib/banking/rules/rates";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -26,8 +28,7 @@ async function loadCentralBankSavingsInputs(
   const bankIds = [
     ...new Set(FOREX_ACTIVE_CURRENCIES.map((c) => getBankId(getCountryIdForCurrency(c)))),
   ];
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({ _id: { $in: bankIds } })
     .project({ _id: 1, primeRate: 1, inflationHistory: 1 })
     .toArray();
@@ -89,8 +90,7 @@ export async function loadSavingsApyForCharacter(
 
   const [policy, holderBanks] = await Promise.all([
     loadBankingPolicy(db),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({
         _id: { $in: [...new Set(bankHeld.map(([, id]) => id))].map((id) => new ObjectId(id)) },
       })

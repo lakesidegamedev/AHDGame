@@ -47,7 +47,7 @@ export interface ShareholderInfo {
  * Corp-wide physical rollup (plants tier). Null outside plants.
  * Units are output units on the DAILY clock, matching every per-sector figure.
  */
-export interface CorporationPhysicalRollup {
+interface CorporationPhysicalRollup {
   capacityUnits: number;
   producedUnits: number;
   soldUnits: number;
@@ -146,9 +146,9 @@ export interface CorporationDetail {
   sequentialId?: number;
   name: string;
   /**
-   * True when a published, non-private `corp-<sequentialId>` wiki page exists.
-   * The hero only links to Wiki when this is true: an unpublished slug renders
-   * the wiki Not Found page (#2347). Absent on stale payloads; treat as unknown.
+   * True when a published, non-private wiki page exists. The hero only links
+   * to Wiki when this is true, since an unpublished slug renders Not Found.
+   * Absent on stale payloads; treat as unknown.
    */
   wikiPagePublished?: boolean;
   /**
@@ -409,10 +409,10 @@ export interface CorporationDetail {
   /** Viewer is CEO of this (parent-eligible) corp and may spin off a sector into a new subsidiary. */
   canSpinOff?: boolean;
   /**
-   * Group strength transfer (#1669). Present only for the CEO of a group
-   * leader while the world runs strength upkeep with the group paid by the
-   * leader: each turn this corporation hands its formalized subsidiaries part
-   * of the strength it gains. The budget projections leave that payment out.
+   * Group strength transfer: present only for the CEO of a group leader
+   * when strength upkeep is group-paid by the leader. Each turn this corp
+   * hands formalized subsidiaries part of its gained strength.
+   * Not included in budget projections.
    */
   groupStrengthTransfer?: { subsidiaryCount: number } | null;
   /** Turns left before this corporation may spin off again; 0 when ready. */
@@ -434,7 +434,7 @@ export interface MyShareOrder {
   createdAt: string;
 }
 
-export interface OrderbookLevel {
+interface OrderbookLevel {
   price: number;
   shares: number;
   orderCount: number;
@@ -521,10 +521,9 @@ export interface CorpHistoryPoint {
   currencyCode?: string;
   /**
    * The `currencyCode` FX rate (local per 1 ₳) in effect at write time. Charts
-   * MUST use this — not the live/current rate — to convert this row's money
-   * fields back to ₳, or every historical point drifts by however much FX has
-   * moved since that turn (#2958). Missing = legacy row written before this
-   * field existed; readers fall back to the live rate for those.
+   * MUST use this, not the live rate, to convert this row's money fields back to
+   * ₳, or every historical point drifts by however much FX has moved since that
+   * turn. Missing = legacy row; readers fall back to the live rate.
    */
   fxRateAtWrite?: number;
 }
@@ -585,10 +584,9 @@ export interface Financials {
   bondInterestCost: number;
   bondCouponIncome: number;
   /**
-   * Dividend income (daily display units, local ccy) this corp received from
-   * holding other corps' shares last turn, net of FX spread + the 50%
-   * dividend-received-deduction tax. Already included in `income`. 0 when the
-   * corp holds no dividend-paying corp shares (#3109).
+   * Dividend income (daily display units, local ccy) received last turn
+   * from holding other corps' shares, net of FX spread and the 50%
+   * dividend-received-deduction tax. Already included in `income`.
    */
   dividendIncomeReceived: number;
   /** Government contribution that offsets bond interest for natcorps (state-owned corps) */
@@ -599,8 +597,8 @@ export interface Financials {
   imfFacilityReceiptsDaily: number;
   /**
    * Last-turn supply-agreement CFD net cash, in daily display units (local).
-   * Not inside `income` / `realizedIncome` — those are P&L. This is the cash
-   * bridge a CEO needs when income is green and liquid capital is flat (#2019).
+   * Not inside `income` / `realizedIncome` (those are P&L): this is the cash
+   * bridge when income is green and liquid capital is flat.
    */
   supplyAgreementSettlementDaily?: number;
   /** Last-turn unpaid solvency remainder on those contracts, in anchor. */
@@ -622,9 +620,8 @@ export interface Financials {
   /**
    * REALIZED per-turn net income the turn engine actually booked last turn
    * (daily display units, local currency = corporationHistory.income × turns/day).
-   * Absent for brand-new corps with no history. This is the ground-truth figure
-   * — a corp draining cash shows negative here even if `income` looks positive
-   * (ticket #935).
+   * Absent for brand-new corps with no history. Ground truth: a corp draining
+   * cash shows negative here even if `income` looks positive.
    */
   realizedIncome?: number;
   /** Turn the realized figure was booked on (for the "actual, last turn" chip). */
@@ -645,10 +642,10 @@ export interface Financials {
   /** Daily dominance regulatory burden in local currency. Already included in operatingCosts. */
   regulatoryBurden: number;
   /**
-   * Annualized growth. Under plants this is MEASURED realized revenue growth
-   * over a trailing window; below plants (or with too little history) it is the
-   * legacy average of the sectors' `currentGrowthRate` field. See
-   * `growthRateIsRealized` before labelling it (#922).
+   * Annualized growth. Under plants this is MEASURED realized revenue
+   * growth over a trailing window; below plants or with too little
+   * history it is the legacy average of sectors' `currentGrowthRate`.
+   * Check `growthRateIsRealized` before labelling it.
    */
   currentGrowthRate: number;
   /** True when `currentGrowthRate` is measured realized revenue, not the legacy field. */
@@ -689,10 +686,7 @@ export interface SectorDetail {
   currentGrowthRate: number;
   currentGrowthCost: number;
   revenue: number;
-  /** Realized revenue preferring the exact persisted figure, falling back to a
-   *  blended-ratio estimate pre-reprocessing (#3001/#3002). Prefer this over
-   *  `revenue` (nameplate) for anything presented to the player as "how much
-   *  this sector makes" — matches the corp-level total's basis. */
+  /** Realized revenue: exact persisted figure when available, otherwise a blended-ratio estimate. Use this, not `revenue` (nameplate), for any player-facing "how much this sector makes" figure so it matches the corp-level total's basis. */
   financialRevenue: number;
   /** Exact realized revenue when persisted; null pre-reprocessing. */
   realizedRevenue: number | null;
@@ -715,10 +709,10 @@ export interface SectorDetail {
     otherPp: number;
     /**
      * The policy/tech modifier stack as percentage points of realized revenue,
-     * SIGNED (positive = credit). Its own line rather than part of `otherPp`,
-     * so this drilldown names the same stack the sector page's money chain
-     * names (ticket 1122). 0 or absent on the fallback path, where the credit
-     * cannot be separated from the residual.
+     * SIGNED (positive = credit). Its own line rather than part of `otherPp`
+     * so this drilldown names the same stack the sector money chain does.
+     * 0 or absent on the fallback path, where the credit cannot be separated
+     * from the residual.
      */
     policyPp?: number;
   } | null;
@@ -984,7 +978,7 @@ export interface BondData {
 }
 
 /** Inputs surfaced for the credit rating tab (same math as server-side score). */
-export interface CreditDiagnostics {
+interface CreditDiagnostics {
   totalEquity: number;
   annualIncome: number;
   annualCouponObligations: number;
@@ -993,7 +987,7 @@ export interface CreditDiagnostics {
 }
 
 /** Active IMF restructuring — tradable bonds are removed; debt lives in the facility. */
-export interface ImfFacilitySummary {
+interface ImfFacilitySummary {
   principalOutstanding: number;
   annualRatePercent: number;
   amortizationTurnsRemaining: number;
@@ -1010,10 +1004,10 @@ export interface BondInfo {
   /** Per-issuance cap in ₳: 25% of annual revenue, floored at $100M */
   maxPerIssuance?: number;
   /**
-   * Effective issuance ceiling in ₳: the smallest of the per-issuance cap, the
-   * 2x going-concern equity headroom, and the 1x exit-equity headroom (#1198).
-   * Authoritative — the POST enforces exactly this, so render it rather than
-   * re-deriving any one of the three rules here.
+   * Effective issuance ceiling in ₳: the smallest of the per-issuance cap,
+   * the 2x going-concern equity headroom, and the 1x exit-equity headroom.
+   * Authoritative, the POST enforces exactly this; render it rather than
+   * re-deriving the rules here.
    */
   maxAllowedIssuance?: number;
   /** Effective minimum issuance in ₳: the flat minimum clamped to the corp's ceiling. */
@@ -1028,8 +1022,6 @@ export interface BondInfo {
   issuanceLimitedBy?: "perIssuance" | "leverage" | "exitEquity";
   isCeo: boolean;
   cooldownTurnsRemaining: number;
-  /** ISO instant until which issuance is frozen for the launch window, else null. */
-  issuanceFrozenUntil?: string | null;
   currentTurn: number;
   creditDiagnostics?: CreditDiagnostics;
   bondDefaultCreditPenalty?: {
@@ -1088,22 +1080,6 @@ export interface PortfolioBondHolding {
   currencyCode?: CurrencyCode;
   /** Synthetic row for IMF bailout loan receivable (not a tradable bond). */
   imfFacilityLoan?: boolean;
-}
-
-export interface PortfolioData {
-  stockHoldings: PortfolioStockHolding[];
-  bondHoldings: PortfolioBondHolding[];
-  totalStockValue: number;
-  totalBondValue: number;
-  totalPortfolioValue: number;
-  totalUnrealizedPnl: number;
-  totalCouponIncomePerTurn: number;
-  history: Array<{
-    turn: number;
-    totalValue: number;
-    stockValue?: number;
-    bondValue?: number;
-  }>;
 }
 
 export interface VoteTally {

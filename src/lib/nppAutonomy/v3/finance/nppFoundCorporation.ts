@@ -33,12 +33,14 @@
 
 import { operatingSectorIdentity, type OperatingSectorType } from "@/lib/constants/corporations";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { generateNppCorpName, spawnNppCorporation } from "@/lib/admin/spawnNppCorporation";
 import { nppHomeFxRate, localToAnchor } from "./nppEconomicAccount";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type NppFoundCorporationResult =
   | {
@@ -89,9 +91,10 @@ export async function nppFoundCorporation(
     };
   }
 
-  const alreadyCeo = await db
-    .collection<Corporation>("corporations")
-    .findOne({ ceoId: npp._id, ceoVacant: { $ne: true } }, { projection: { _id: 1 } });
+  const alreadyCeo = await corporationsCollection(db).findOne(
+    { ceoId: npp._id, ceoVacant: { $ne: true } },
+    { projection: { _id: 1 } }
+  );
   if (alreadyCeo) {
     return { ok: false, reason: "NPP already runs a corporation." };
   }
@@ -101,7 +104,7 @@ export async function nppFoundCorporation(
   const rate = homeRate ?? (await nppHomeFxRate(db, npp.countryId, undefined, preset));
   const foundingFeeAnchor = localToAnchor(foundingFeeLocal, rate);
   const now = new Date();
-  const deducted = await db.collection<NPP>("npps").findOneAndUpdate(
+  const deducted = await nppsCollection(db).findOneAndUpdate(
     { _id: npp._id, nppInvestmentCashAnchor: { $gte: foundingFeeAnchor } },
     { $inc: { nppInvestmentCashAnchor: -foundingFeeAnchor }, $set: { updatedAt: now } },
     // Only the balance is read back; an NPP document is ~28 KB.
@@ -128,12 +131,10 @@ export async function nppFoundCorporation(
     });
   } catch (error) {
     // Refund the founding fee — no corp was created, no partial state.
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: npp._id },
-        { $inc: { nppInvestmentCashAnchor: foundingFeeAnchor }, $set: { updatedAt: new Date() } }
-      );
+    await nppsCollection(db).updateOne(
+      { _id: npp._id },
+      { $inc: { nppInvestmentCashAnchor: foundingFeeAnchor }, $set: { updatedAt: new Date() } }
+    );
     return {
       ok: false,
       reason: `Corporation founding failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -151,7 +152,7 @@ export async function nppFoundCorporation(
   // preserves that instead of forcing a price through the trade-basis math
   // creditSharesToNpp/debitSharesFromNpp are built for.
   if (!autoCeoId.equals(npp._id)) {
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporationId, "shareholders.nppId": autoCeoId },
       {
         $set: {

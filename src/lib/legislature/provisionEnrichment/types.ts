@@ -70,9 +70,7 @@ export interface ProvisionDisplay {
   effectTargetsWeighted?: { metricCategoryId: string; metricId: string; weight: number }[];
   effects?: ProvisionEffectChip[];
 
-  archetypeApprovals?: Record<string, number>;
-  /** @deprecated Superseded by archetypeApprovals; retained for existing state consumers. */
-  groupApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   policyDomain?: string;
   policyOptionScores?: number[];
   economic?: number;

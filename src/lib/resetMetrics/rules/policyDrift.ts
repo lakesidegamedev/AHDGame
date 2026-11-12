@@ -1,15 +1,13 @@
 /**
- * Policy drift for v2 metrics that have no physical live ledger yet.
+ * Policy drift for v2 metrics that have no live ledger yet.
  *
  * Until an owner system measures a metric, its observation is a carry-forward
- * of the opening value. That left enacted laws and Cabinet initiatives as a
- * display-only "pressure" line: the board showed the push, the number never
- * moved (ticket 1539). This rule gives that pressure a settlement: the
- * condition score the metric drifts toward is the opening score plus the
- * combined normalized pressure scaled to condition points, and each refresh
- * closes a cadence-sized share of the remaining gap. When the pressure goes
- * away (a program defunded, a temporary action expired) the value drifts back
- * toward its opening, so nothing becomes a permanent bonus.
+ * of the opening value, leaving enacted laws and Cabinet initiatives as
+ * display-only pressure. This rule settles that pressure: the metric drifts
+ * toward the opening score plus the combined normalized pressure scaled to
+ * condition points, closing a cadence-sized share of the gap each refresh.
+ * When pressure goes away, the value drifts back toward its opening, so
+ * nothing becomes a permanent bonus.
  *
  * Derived and fail-closed owners never pass through here; the live ledger
  * stays authoritative for them.

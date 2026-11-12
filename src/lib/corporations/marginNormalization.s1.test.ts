@@ -3,7 +3,7 @@ import type { StateMetrics } from "@/lib/db/types";
 import { computeStateMetricMarginModifier } from "./sectorMetricMarginProfiles";
 
 /**
- * S1 follow-up: the margin system normalizes a metric's value over a realistic
+ * The margin system normalizes a metric's value over a realistic
  * range. After S1 widened `educationSpending`'s safety bounds to [0, 10_000_000]
  * (multi-currency clamp), reusing those bounds as the normalization range pinned
  * every realistic spend to ~−1. The fix normalizes over the metric's THRESHOLDS

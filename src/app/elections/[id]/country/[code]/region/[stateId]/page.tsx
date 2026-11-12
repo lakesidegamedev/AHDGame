@@ -13,6 +13,8 @@ import { useGameEvents, useGameTurnStatus } from "@/hooks/useGameEvents";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
 import { UK_REGION_NAMES, RU_REGION_NAMES } from "@/lib/constants/states";
+import { US_STATE_AND_DC_NAMES } from "@/lib/constants/usStateNames";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface Election {
   _id: string;
@@ -87,59 +89,7 @@ interface SubdivisionResultsData {
   seatsByCandidate?: Record<string, number>;
 }
 
-const STATE_NAMES: Record<string, string> = {
-  AL: "Alabama",
-  AK: "Alaska",
-  AZ: "Arizona",
-  AR: "Arkansas",
-  CA: "California",
-  CO: "Colorado",
-  CT: "Connecticut",
-  DE: "Delaware",
-  FL: "Florida",
-  GA: "Georgia",
-  HI: "Hawaii",
-  ID: "Idaho",
-  IL: "Illinois",
-  IN: "Indiana",
-  IA: "Iowa",
-  KS: "Kansas",
-  KY: "Kentucky",
-  LA: "Louisiana",
-  ME: "Maine",
-  MD: "Maryland",
-  MA: "Massachusetts",
-  MI: "Michigan",
-  MN: "Minnesota",
-  MS: "Mississippi",
-  MO: "Missouri",
-  MT: "Montana",
-  NE: "Nebraska",
-  NV: "Nevada",
-  NH: "New Hampshire",
-  NJ: "New Jersey",
-  NM: "New Mexico",
-  NY: "New York",
-  NC: "North Carolina",
-  ND: "North Dakota",
-  OH: "Ohio",
-  OK: "Oklahoma",
-  OR: "Oregon",
-  PA: "Pennsylvania",
-  RI: "Rhode Island",
-  SC: "South Carolina",
-  SD: "South Dakota",
-  TN: "Tennessee",
-  TX: "Texas",
-  UT: "Utah",
-  VT: "Vermont",
-  VA: "Virginia",
-  WA: "Washington",
-  WV: "West Virginia",
-  WI: "Wisconsin",
-  WY: "Wyoming",
-  DC: "District of Columbia",
-};
+const STATE_NAMES = US_STATE_AND_DC_NAMES;
 
 const DEFAULT_PARTY_COLORS: Record<string, string> = {
   democrat: "#3B82F6",
@@ -302,13 +252,16 @@ export default function StateElectionResultsPage({
         const electionData: Election = wrapper.election;
         // A US presidential state lives inside the race's own page now: the
         // stage opens the state, zoomed, with its counties beside the map.
-        if (electionData.electionType === "president" && code.toUpperCase() === "US") {
+        if (
+          electionData.electionType === "president" &&
+          countryHasFeature("usUi", code.toUpperCase())
+        ) {
           router.replace(`/elections/${encodeURIComponent(id)}?state=${stateUpper}`);
           return;
         }
         setElection(electionData);
 
-        const isUS = code.toUpperCase() === "US";
+        const isUS = countryHasFeature("usUi", code.toUpperCase());
         if (!isUS) {
           // Non-US: the subdivision registry decides which election types are
           // supported — an unsupported type just 404s into the error state.
@@ -377,8 +330,8 @@ export default function StateElectionResultsPage({
           } else {
             setError("Congressional district data not available");
           }
-          // Live square overlay (present only when redistrictingEnabled). Failure
-          // is non-fatal — the page falls back to the legacy district map.
+          // Live square overlay. Failure is non-fatal: the page falls back to the
+          // legacy district map.
           try {
             const sqRes = await fetch(`/api/congressional-districts/${stateUpper}`);
             if (sqRes.ok) {

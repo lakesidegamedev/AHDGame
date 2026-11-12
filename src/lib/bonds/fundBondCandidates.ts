@@ -1,18 +1,10 @@
 /**
- * One bond read for a whole reserve-deployment pass.
- *
- * `deployBondReserveFromCash` is called once per fund, and each call used to
- * read the issues it can buy, the sovereign rating table and the exchange-rate
- * gate for itself. On a world with dozens of funds that is dozens of scans of
- * the same collection in one turn. This module loads the union of every fund's
- * candidate query once and answers each fund from memory, applying the filters,
- * ranking and sort the per-fund query applied.
- *
- * Funds compete for the same public float, and that ordering is part of the
- * economic result, so the in-memory view has to follow each settled purchase:
- * `applyPurchase` moves the units out of `publicFloat` and into the fund's
- * holder row, exactly as the settlement write did. A later fund therefore sees
- * the same issue list a fresh read would have returned.
+ * One bond read shared across a reserve-deployment pass. Loads the union of
+ * every fund's candidate query once, then applies the same filters, ranking
+ * and sort per fund from memory. Funds compete for the same public float, so
+ * `applyPurchase` must move units from `publicFloat` into the fund's holder
+ * row exactly as the settlement write does, so later funds see the same issue
+ * list a fresh read would return.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Bond, IndexFund } from "@/lib/db/types";
@@ -21,6 +13,10 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { CREDIT_RATINGS, type CreditRating } from "@/lib/db/types/centralBank";
 import type { BondFundUniverse } from "@/lib/indexFunds/fundDefinitions";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS = 48;
 
@@ -130,8 +126,7 @@ export interface FundBondCandidateSource {
 }
 
 export async function loadFundBondCandidateCache(db: Db): Promise<FundBondCandidateCache> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ matured: false, defaulted: { $ne: true }, publicFloat: { $gt: 0 } })
     .toArray();
 
@@ -143,8 +138,7 @@ export async function loadFundBondCandidateCache(db: Db): Promise<FundBondCandid
   ];
   const [budgets, corporations, currencyRows] = await Promise.all([
     sovereignCountryIds.length > 0
-      ? db
-          .collection<{ _id: string; creditRating?: string }>("federalBudget")
+      ? federalBudgetCollection<{ _id: string; creditRating?: string }>(db)
           .find(
             { _id: { $in: sovereignCountryIds.map((id) => getNationalBudgetId(id)) } },
             { projection: { creditRating: 1 } }
@@ -152,15 +146,11 @@ export async function loadFundBondCandidateCache(db: Db): Promise<FundBondCandid
           .toArray()
       : Promise.resolve([] as Array<{ _id: string; creditRating?: string }>),
     corporationIds.length > 0
-      ? db
-          .collection<{ _id: ObjectId; creditRatingSnapshot?: string }>("corporations")
+      ? corporationsCollection<{ _id: ObjectId; creditRatingSnapshot?: string }>(db)
           .find({ _id: { $in: corporationIds } }, { projection: { creditRatingSnapshot: 1 } })
           .toArray()
       : Promise.resolve([] as Array<{ _id: ObjectId; creditRatingSnapshot?: string }>),
-    db
-      .collection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(
-        "exchangeRates"
-      )
+    exchangeRatesCollection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(db)
       .find({})
       .project({ currencyCode: 1, rate: 1, capitalControls: 1 })
       .toArray(),

@@ -22,7 +22,10 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { FomcNomination } from "@/lib/db/types/centralBank";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 const voteSchema = z.object({
   vote: z.enum(["for", "against", "abstain"]),
@@ -65,7 +68,7 @@ export async function POST(
     // Game-clock deadline so a drifted real clock can't open/close early.
     const gameTime = await getGameTime();
 
-    const nomination = await db.collection<FomcNomination>("fomcNominations").findOne({
+    const nomination = await fomcNominationsCollection(db).findOne({
       _id: nominationOid,
       countryId,
       status: "active",
@@ -84,7 +87,7 @@ export async function POST(
       return errorResponse(409, "Voting has ended");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter) {
@@ -93,7 +96,7 @@ export async function POST(
 
     // Senate only. The senator must sit in the nomination's own country — a
     // foreign legislator cannot confirm another nation's central bank.
-    const senator = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const senator = await electedOfficialsCollection(db).findOne({
       characterId: myCharacter._id,
       officeType: "senate",
       countryId,
@@ -102,7 +105,7 @@ export async function POST(
       return errorResponse(403, "Only Senators of this country can vote on Fed nominations");
     }
 
-    const updateResult = await db.collection<FomcNomination>("fomcNominations").updateOne(
+    const updateResult = await fomcNominationsCollection(db).updateOne(
       { _id: nominationOid, status: "active" },
       buildEmbeddedVoteTallyUpdate({
         voteField: "votes",

@@ -33,6 +33,7 @@ import { BR_IDENTITY } from "@/lib/countries/br/identity";
 // ISO-numeric ⇄ CountryId now live in the neutral countryIso module so non-commodity
 // surfaces (e.g. the IntOrg world map) can reuse them without depending on this file.
 export { ISO_NUMERIC_TO_COUNTRY, COUNTRY_TO_ISO_NUMERIC } from "@/lib/constants/countryIso";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 /**
  * Display names for state/region IDs, scoped by country.
@@ -46,6 +47,7 @@ export const STATE_DISPLAY_NAMES: Partial<Record<CountryId, Record<string, strin
   JP: JP_IDENTITY.stateDisplayNames,
   DE: DE_IDENTITY.stateDisplayNames,
   IE: IE_IDENTITY.stateDisplayNames,
+  CA: CA_IDENTITY.stateDisplayNames,
   BR: BR_IDENTITY.stateDisplayNames,
   CN: CN_IDENTITY.stateDisplayNames,
   // The prefixed-region countries derive their tables from the seed rosters

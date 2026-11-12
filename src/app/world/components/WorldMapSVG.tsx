@@ -240,11 +240,10 @@ export default function WorldMapSVG({
   /**
    * The `d` string most recently WRITTEN to each path by the imperative loop.
    *
-   * React state (`paths`) goes stale the moment the globe rotates, because
-   * rotation updates the DOM directly and deliberately skips React. Without
-   * this, any re-render — a hover, a tooltip — would repaint every country from
-   * the stale state and snap the globe back to where it was at the last sync,
-   * which is why hover used to force a full `syncPathsState()` reprojection.
+   * Rotation updates the DOM directly and deliberately skips React, so the
+   * `paths` state is stale. Without this ref, a re-render from a hover or
+   * tooltip would repaint every country from stale state and snap the globe
+   * back.
    */
   const livePathsRef = useRef<Map<string, string | null>>(new Map());
   const sphereRef = useRef<SVGCircleElement>(null);
@@ -258,10 +257,7 @@ export default function WorldMapSVG({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const featuresRef = useRef<any[]>([]);
   const centroidsRef = useRef<Map<string, [number, number]>>(new Map());
-  // Countries whose landmass is fully drawn by a region-overlay `bi:` blob — their
-  // base countries-110m feature is hidden so its internal borders (e.g. the
-  // UK↔Republic line across Ireland) don't bleed through the overlay. (The `bi:`
-  // id prefix is historical — originally British Isles, now any manifest shard.)
+  // Countries fully drawn by a region-overlay `bi:` blob: their base countries-110m feature is hidden so its internal borders don't bleed through the overlay. `bi:` is now any manifest shard, not just British Isles.
   const biCoveredRef = useRef<Set<string>>(new Set());
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const graticuleDataRef = useRef<any>(null);
@@ -371,12 +367,10 @@ export default function WorldMapSVG({
 
   /**
    * Publish the geometry the imperative loop already drew into React state,
-   * WITHOUT reprojecting anything.
+   * without reprojecting anything.
    *
-   * This is what hover and drag-release use. Both used to call
-   * `syncPathsState()`, which re-ran `d3.geoPath` over every feature — a full
-   * world reprojection per mouse-enter, on top of the re-render — even though
-   * neither changes the projection at all. Hover only changes a stroke.
+   * Hover and drag-release use this. Reprojecting the whole world on every
+   * mouse-enter is wasted work, since neither changes the projection.
    */
   const commitLivePaths = useCallback(() => {
     if (!livePathsRef.current.size) return;
@@ -491,25 +485,21 @@ export default function WorldMapSVG({
       }
 
       // Region overlay: geometrically UNION each owning country's regions into one
-      // blob so it reads as a single nation — one national outline, no internal
-      // region lines — and a region that changes country (NI reunifying; the
-      // eastern Länder under DD in 1979) moves between blobs, the internal border
-      // vanishing as they fuse. A true union (not an arc merge) is required because
-      // some source regions come from independently-digitized datasets whose shared
-      // borders don't share vertices; an arc merge leaves those as coincident lines.
+      // blob so it reads as a single nation: one national outline, no internal region
+      // lines, and a region that changes country moves between blobs, the internal
+      // border vanishing as they fuse. A true union (not an arc merge) is required
+      // because some source regions come from independently digitized datasets whose
+      // shared borders don't share vertices; an arc merge leaves coincident lines.
       // Structural shards feed this loop (splits + multi-base silhouettes). Pure
       // homeland-detail shards keep their countries-110m base. Region codes are
-      // globally disjoint, so each owner's blob falls out (UK/IE, DE/DD, USSR, …).
-      // Appended AFTER the country features so they draw on top.
+      // globally disjoint, so each owner's blob falls out. Appended AFTER country
+      // features so they draw on top.
       //
       // A source is only overlaid when EVERY one of its regions is owned. Hiding a
-      // base country polygon (biCovered) but leaving part of it un-blobbed would
-      // show the hidden background through the gap — e.g. mid-reset, before East
-      // Germany's Länder seed, the west is DE-owned but the east is ownerless, which
-      // would render East Germany as ocean. A partially-owned source is skipped so
-      // its base polygon (e.g. unified Germany) draws normally until seeding
-      // completes. The British Isles is always fully seeded; Germany can be
-      // transiently partial mid-reset (same for any future split shard).
+      // base polygon (biCovered) but leaving part un-blobbed shows the hidden
+      // background through the gap (e.g. mid-reset, before East Germany's Länder
+      // seed, would render East Germany as ocean). A partially-owned source is
+      // skipped so its base polygon draws normally until seeding completes.
       try {
         // Only overlay shards flagged mergeable — a shard whose regions don't union
         // cleanly (Brazil) keeps its clean base polygon (manifest worldOverlay:false).
@@ -602,27 +592,18 @@ export default function WorldMapSVG({
         // overlay is best-effort — the base country map still renders without it
       }
 
-      // The historical territories — protectorates, trust territories and
-      // international zones that sit INSIDE a modern country and so have no ISO
-      // numeric of their own. Unlike Vietnam these do NOT replace a base feature:
-      // the Saar is drawn on top of Germany and Zanzibar on top of Tanzania, and
-      // dropping the host would erase a country that very much exists in 1953.
+      // Historical territories (protectorates, trust territories, international
+      // zones) that sit inside a modern country and have no ISO numeric.
+      // They do NOT replace a base feature: the Saar draws on top of Germany,
+      // Zanzibar on top of Tanzania.
       //
-      // ⚠️ Appended LAST — after the region-overlay blobs, not merely after the base
-      // countries. d3 draws in array order, so appending earlier buried the two whose
-      // host HAS a region shard (the Saar is one of Germany's Länder; Trieste sits
-      // inside Italy's macro-regions) under their host's blob, and they disappeared.
-      // Every step above this point only appends to `geojson.features` or replaces it
-      // wholesale, so this is the one position nothing later can cover or filter out.
+      // ⚠️ Appended LAST, after the region-overlay blobs. d3 draws in array
+      // order, and appending earlier buried territories whose host has a region
+      // shard under the host's blob. Placed after the overlay's try/catch so a
+      // failed overlay does not also drop these.
       //
-      // Placed AFTER the overlay's try/catch rather than inside it: that block
-      // swallows its own failures, so control reaches here whether or not the
-      // overlay rendered, and a failed overlay must not also cost us these.
-      //
-      // This ordering bites in the HEATMAP modes. In the structural modes these are
-      // background-tier and merged into one silhouette drawn before every individual
-      // path, so they are not separately visible there at any position — see the
-      // tier note in historicalGeometry.
+      // Only visible in HEATMAP modes; in structural modes they are
+      // background-tier and merged into a silhouette.
       try {
         const histResp = await fetch(HISTORICAL_GEO_URL, { cache: "no-store" });
         if (histResp.ok) {
@@ -679,9 +660,8 @@ export default function WorldMapSVG({
     if (!isLoaded) return;
     const card = cardRef.current;
 
-    // The loop reprojects the world every frame, so it must not run for a globe
-    // nobody is looking at. Scrolling the map out of view or backgrounding the
-    // tab previously kept a full-rate d3 reprojection running forever.
+    // The loop reprojects every frame, so skip it when the globe is off
+    // screen or the tab is backgrounded.
     let onScreen = true;
     const observer =
       card && typeof IntersectionObserver !== "undefined"
@@ -1100,9 +1080,8 @@ export default function WorldMapSVG({
     }
   }, [isFullscreen, isLoaded, syncPathsState]);
 
-  // A region-overlay blob is `bi:<ownerCountryId>` — resolve it to the owner's base
-  // ISO so the tooltip shows the OWNING country (hovering the USSR's acquired
-  // Länder reads "Soviet Union", not nothing).
+  // A region-overlay blob is `bi:<ownerCountryId>`; resolve it to the owner's
+  // base ISO so the tooltip shows the owning country.
   const hoveredIso = hovered
     ? hovered.startsWith("bi:")
       ? countryIdToIso(hovered.slice(3).split(":")[0] as CountryId)

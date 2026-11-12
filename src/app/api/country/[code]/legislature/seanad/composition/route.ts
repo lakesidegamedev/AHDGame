@@ -8,11 +8,12 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { deriveSeanadComposition } from "@/lib/ireland/seanadComposition";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
-    if (code.toUpperCase() !== "IE") {
+    if (!countryHasFeature("ieApi", code.toUpperCase())) {
       return errorResponse(404, "Seanad composition is only available for Ireland");
     }
     const db = await getDb();

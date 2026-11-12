@@ -71,18 +71,18 @@ interface WarContext {
 async function buildWarContext(db: Db): Promise<WarContext> {
   // Projection passed as a find option rather than via the cursor's .project(), which is
   // this codebase's house style and does not require a cursor implementation of it.
-  const conflicts = (await getConflictsCollection(db)
-    .find(
+  const conflicts = await getConflictsCollection(db)
+    .find<{
+      _id?: unknown;
+      sideA?: { countries?: string[] };
+      sideB?: { countries?: string[] };
+      region?: RegionCode;
+      extendedRegions?: RegionCode[];
+    }>(
       { status: { $in: [...FIGHTING_CONFLICT_STATUSES] } },
       { projection: { "sideA.countries": 1, "sideB.countries": 1, region: 1, extendedRegions: 1 } }
     )
-    .toArray()) as unknown as Array<{
-    _id?: unknown;
-    sideA?: { countries?: string[] };
-    sideB?: { countries?: string[] };
-    region?: RegionCode;
-    extendedRegions?: RegionCode[];
-  }>;
+    .toArray();
 
   const hostility = new Map<string, Set<string>>();
   const link = (a: string, b: string) => {
@@ -175,9 +175,9 @@ export function stationOf(
  * contest last turn's positions.
  */
 export async function processNavairTurn(db: Db, turn: number): Promise<NavairTurnResult> {
-  const units = (await getMilitaryUnitsCollection(db)
-    .find({ domain: { $in: ["naval", "air"] } })
-    .toArray()) as unknown as NavairUnit[];
+  const units = await getMilitaryUnitsCollection(db)
+    .find<NavairUnit>({ domain: { $in: ["naval", "air"] } })
+    .toArray();
 
   if (!units.length) {
     return {
@@ -231,11 +231,9 @@ export async function processNavairTurn(db: Db, turn: number): Promise<NavairTur
   }
 
   // ── standing missions for formations nobody commands ────────────────────────
-  // Most of the world is run by nobody: NPC countries, players who have not opened the
-  // war room, and every formation that existed before this subsystem did. Without this,
-  // every navy in the game carries a null mission, no blockade or engagement ever fires,
-  // and naval combat value falls through to the flying-weights fallback. A stored mission
-  // is never overwritten: this fills a blank, it does not overrule a commander.
+  // Without a mission, no blockade or engagement fires and naval combat value
+  // falls back to flying weights. A stored mission is never overwritten: this
+  // fills a blank, it does not overrule a commander.
   let missionsAssigned = 0;
   for (const [region, here] of byRegion) {
     const hostileNavalHere = new Set(

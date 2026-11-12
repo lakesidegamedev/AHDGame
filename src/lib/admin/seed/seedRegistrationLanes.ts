@@ -1,21 +1,11 @@
 /**
- * Bootstrap-time Reg/Org seeding from curated lane templates.
+ * Seeding Reg/Org from curated lane templates. Runs after statePartyOrg seeding.
+ * For each StateRegistrationSeed: maps party abbr to politicalParties.sequentialId,
+ * updates statePartyOrg with organization and registration, upserts
+ * stateRegistrationPool with independent and unregistered.
  *
- * Runs after every country's `statePartyOrg` rows have been seeded
- * (`runSeed` + country-specific `seed*StatePartyOrg`). For each
- * `StateRegistrationSeed` row:
- *   - Maps the seed's party `abbr` to that country's `politicalParties`
- *     `sequentialId`.
- *   - Updates the matching `statePartyOrg` row with `.organization` and
- *     `.registration` values from the seed.
- *   - Upserts a `stateRegistrationPool` row holding `.independent` and
- *     `.unregistered`.
- *
- * Preset-aware: `2019-default` (and any 2019-* variants) use the curated
- * 2019-era data in `registrationLanes.ts`; `1991-default` uses the
- * 1991-era curation in `registrationLanes1991.ts`. Unknown presets skip
- * Reg seeding entirely (`statePartyOrg.registration` stays undefined,
- * the politics turn phase is a no-op for those states until data lands).
+ * Preset-aware: each preset maps to its own curated registrationLanes file.
+ * Unknown presets skip Reg seeding entirely.
  */
 
 import type { Db } from "mongodb";
@@ -34,6 +24,10 @@ import { build2027RegistrationSeeds } from "@/lib/seeds/registration/registratio
 import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib/db/types";
 import { NUMERIC_BSON_TYPE } from "@/lib/db/queryHelpers";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 interface SeedResult {
   presetUsed: string;
@@ -102,7 +96,7 @@ export async function seedRegistrationLanes(
 
   // Build a per-country `abbr → sequentialId` lookup once. Parties seeded
   // via `runSeed` / country seeders have a stable `abbreviation` field.
-  const allParties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+  const allParties = await politicalPartiesCollection(db).find({}).toArray();
   const abbrLookup: Record<CountryId, Map<string, string>> = {
     US: new Map(),
     UK: new Map(),
@@ -133,6 +127,8 @@ export async function seedRegistrationLanes(
     DD: new Map(),
     SCO: new Map(),
     WAL: new Map(),
+    CA: new Map(),
+    QC: new Map(),
   };
   for (const p of allParties) {
     const map = abbrLookup[p.countryId];
@@ -169,7 +165,7 @@ export async function seedRegistrationLanes(
         continue;
       }
       const docId = `${row.stateId}_${sequentialId}`;
-      const writeResult = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+      const writeResult = await statePartyOrgCollection(db).updateOne(
         { _id: docId },
         {
           $set: {
@@ -191,7 +187,7 @@ export async function seedRegistrationLanes(
     // Upsert the non-party pool row for this state. The composite `_id`
     // matches the design's documented pattern (`${countryId}_${stateId}`).
     const poolId = `${row.countryId}_${row.stateId}`;
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").updateOne(
+    await stateRegistrationPoolCollection(db).updateOne(
       { _id: poolId },
       {
         $set: {
@@ -214,8 +210,11 @@ export async function seedRegistrationLanes(
   // stale rows from an earlier bundle cannot survive (notably DC and the
   // pre-statehood AK/HI territories in a 1953 world).
   const coveredCountries = [...new Set(bundle.map((row) => row.countryId))];
-  const admittedUSStates = await db
-    .collection<{ _id: string; countryId?: string; admittedYear?: number }>("states")
+  const admittedUSStates = await statesCollection<{
+    _id: string;
+    countryId?: string;
+    admittedYear?: number;
+  }>(db)
     .find(
       { countryId: "US", admittedYear: { $type: NUMERIC_BSON_TYPE } },
       { projection: { _id: 1 } }
@@ -225,7 +224,7 @@ export async function seedRegistrationLanes(
     ...bundle.map((row) => `${row.countryId}_${row.stateId}`),
     ...admittedUSStates.map((state) => `US_${state._id}`),
   ];
-  const cleanup = await db.collection<StateRegistrationPool>("stateRegistrationPool").deleteMany({
+  const cleanup = await stateRegistrationPoolCollection(db).deleteMany({
     countryId: { $in: coveredCountries },
     _id: { $nin: validPoolIds },
   });

@@ -10,6 +10,7 @@ import type { ProvisionalPriceProfile } from "./provisionalPricing";
 import { provisionalPriceVector } from "./provisionalPricing";
 import type { LawChoice, LawScope } from "./eligibility";
 import type { ReviewedLawOption } from "./reviewedOption";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const POSITIONS: readonly LegislativePosition[] = [
   "far_left",
@@ -189,7 +190,7 @@ export function buildReviewedOptionCatalog(input: {
       balanceBasis: "game-calibrated-provisional",
     };
   });
-  if (country === "US" && scope === "national" && family.leaveToStates) {
+  if (countryHasFeature("usSeeds", country) && scope === "national" && family.leaveToStates) {
     entries.push({
       option: {
         familyId: family.id,

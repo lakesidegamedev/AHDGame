@@ -12,18 +12,8 @@ import type { TreasuryIdentity } from "@/lib/constants/treasuryIdentity";
 import type { CountryIdentity } from "../contract";
 
 /**
- * Ireland's names, labels and surface text.
- *
- * ⚠ GENERATED FROM THE PRE-MOVE SNAPSHOT, NOT TRANSCRIBED. Every value below was
- * read out of `__snapshots__/ie.pre-move.json`, emitted from the live
- * registries before anything moved. Regenerate with:
- *
- *     npx tsx scripts/countries/gen-country-identity.ts IE "Ireland" --force
- *
- * ⚠ TREASURY_IDENTITY IS NOT HERE, DELIBERATELY. It is computed from
- * TREASURY_TEXT plus the national palette (`treasuryIdentity.ts`), so it
- * recomposes itself once the text moves. Forwarding the derived one would create
- * a second source of the same values.
+ * Generated from the pre-move snapshot via gen-country-identity.ts; do not hand-edit.
+ * TREASURY_IDENTITY is derived from TREASURY_TEXT plus the palette, so it lives in treasuryIdentity.ts.
  */
 
 const cabinet: CabinetIdentity = {

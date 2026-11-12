@@ -45,9 +45,7 @@ export function FundHoldingsPanel({
 }) {
   const { formatAmount, forexEnabled, forexRates } = useCurrency();
 
-  // #857 grandfather: legacy units redeem rate-free, so the display layer's
-  // × rate step over-states their value ~100×. Discount the ₳ figures by the
-  // legacy fraction so Value / P&L / Avg NAV match what the holder can redeem.
+  // Legacy units redeem rate-free, so the display layer's x rate step overstates their value ~100x. Discount by the legacy fraction to match redeemable value.
   const legacyAdjFactor = useCallback(
     (pos: FundPosition): number => {
       if (pos.units <= 0) return 1;

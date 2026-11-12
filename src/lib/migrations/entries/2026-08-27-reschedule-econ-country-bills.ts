@@ -1,5 +1,7 @@
 import type { Db, Document, Filter } from "mongodb";
 import type { Migration, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const COUNTRY_IDS = ["FR", "IT", "ES", "SE", "TR", "AT", "FI", "GR", "BR", "NG"];
 const VOTE_TURNS = 24;
@@ -105,9 +107,10 @@ function expiredFilter(stage: RepairStage, currentTurn: number, now: Date): Filt
 }
 
 async function rescheduleStrandedBills(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const gameState = await db
-    .collection<{ _id: string; currentTurn: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const currentTurn = gameState?.currentTurn ?? 1;
   const now = new Date();
   let scanned = 0;
@@ -116,12 +119,12 @@ async function rescheduleStrandedBills(db: Db, dryRun: boolean): Promise<Migrati
 
   for (const stage of REPAIR_STAGES) {
     const filter = expiredFilter(stage, currentTurn, now);
-    const matches = await db.collection<Document>("bills").countDocuments(filter);
+    const matches = await billsCollection<Document>(db).countDocuments(filter);
     scanned += matches;
     if (matches === 0) continue;
     notes.push(`${stage.status}: ${matches} bill(s) ${dryRun ? "would be" : "were"} rescheduled`);
     if (dryRun) continue;
-    const result = await db.collection<Document>("bills").updateMany(filter, {
+    const result = await billsCollection<Document>(db).updateMany(filter, {
       $set: {
         ...stage.set(now, currentTurn),
         lifecycleRepairIssue: REPAIR_MARKER,

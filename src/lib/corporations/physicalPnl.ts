@@ -86,16 +86,15 @@ export interface InputsCostResult {
  * Merge a country's reachable price ratio onto the world ratio for the
  * plant input bill.
  *
- * Reachable books in partitioned markets can print far above the world
- * (live US iron ~3.27 vs world ~0.77). The input bill now prices through the
- * same realization damping revenue does (`ratio^0.5`, max 2x, see
- * `computeInputsCost`), so capping the ratio here still matters: it lowers the
- * value fed into that factor rather than a raw linear price. Taking the cheaper
- * of the two keeps cheap-local discounts (the original overlay) without
- * charging buyers a cost no seller-side leg can recover.
+ * Reachable books in partitioned markets can print far above the world, but
+ * the input bill prices through the same realization damping revenue does
+ * (`ratio^0.5`, max 2x, see `computeInputsCost`), so capping the ratio here
+ * lowers the value fed into that factor rather than a raw linear price.
+ * Taking the cheaper of the two keeps cheap-local discounts without charging
+ * buyers a cost no seller-side leg can recover.
  *
- * Ticket #1120 (Dangote / manufacturing) is the same t175 cliff as the
- * worldwide margin collapse: uncapped reachable input prices.
+ * Uncapped reachable input prices are the same cliff as the worldwide margin
+ * collapse.
  */
 export function capInputPriceRatioAtWorld(
   worldRatio: number | undefined,
@@ -110,67 +109,20 @@ export function capInputPriceRatioAtWorld(
 /**
  * Physical input bill for one sector-turn.
  *
- * Units consumed are the SAME quantity the world commodity ledger books as this
- * sector's demand (`computeRawSupplyDemand`, plants branch):
+ * Units match what the world commodity ledger books as this sector's
+ * demand: recipe rate × base price, scaled by utilization and the
+ * production-policy input multiplier. The firm must be billed for the same
+ * units the world is told it took.
  *
- *     units_c = (nominalDailyRevenue × rate_c / basePrice_c)
- *               × utilization × inputMultiplier ÷ turnsPerDay
+ * Known level divergences from the ledger (absorbed by the calibration
+ * solve; they only bite when the factor moves): demandMultiplier and
+ * natcorpScale are not carried here, tech input effects are; and the
+ * revenue basis lags one turn while capacity is building.
  *
- * — i.e. the recipe rate converted to units at the commodity's BASE price, then
- * scaled by how hard the plant actually ran (P3b's utilization scaling: a plant
- * at 60% buys ~60% of its inputs) and by the production-policy input multiplier.
- * Keeping this close to the ledger matters: the firm should be billed for the
- * same units the world is told it took, or money and goods stop describing the
- * same event.
- *
- * FOUR KNOWN DIVERGENCES from the ledger's demand branch, audited and kept
- * (each is a pre-existing shape of the ledger, not something this file
- * introduced). All four are LEVEL differences, so the calibration solve absorbs
- * them whole on the sector's first producing turn — they only bite to the
- * extent the factor MOVES afterwards:
- *
- *  1. `demandMultiplier` — the ledger scales retail input demand by the
- *     retail/GDP multiplier (bounded [0.5, 2.0]) and by world-event sector
- *     demand modifiers. Neither is reachable from the sector turn, so the bill
- *     does not carry them. A retail sector in a booming state can therefore be
- *     billed for up to half the units the ledger books it taking. Plumbing the
- *     multiplier through `CorporationLookups` is the fix; it is a lookups
- *     change, not a formula change.
- *  2. `natcorpScale` — the ledger books a natcorp at 0.25% of its flows (a
- *     world-flow dampener, not a claim the plant buys less). Applying it here
- *     would hand natcorps a 400x input discount, so the bill is deliberately
- *     full-rate.
- *  3. Tech input effects — `rates` here are tech-scaled (`effectiveDemand`);
- *     the ledger recomputes raw strategy rates and has never carried tech. The
- *     bill is the more correct of the two.
- *  4. One-turn lag — the ledger reads the PERSISTED `sector.revenue` (last
- *     turn's restated nameplate); this reads the current turn's
- *     `plantsNameplateRevenue`. Identical for a sector whose capacity did not
- *     move, one turn stale while it is building.
- *
- * The PRICE is the lagged market price passed through the SAME realization
- * function the revenue side uses: `basePrice × priceRealizationFactor(ratio)`,
- * i.e. clamp(ratio^0.5, 0.7, 1.5). The ratio comes from the prior turn's
- * commodity-price pass — the same one-turn lag that breaks the
- * price→revenue→supply→price loop. Absent ratio ⇒ factor 1 ⇒ base price.
- * Buy-sell symmetry is the invariant: a corp sells into a damped, clamped
- * market and buys from the same one, so world inflation squeezes margins
- * proportionally instead of unboundedly on the cost side only.
- *
- * Note the ratio is what makes the bill move: units cancel the base price, so
- * `cost_c = revenueBasis × rate_c × priceRealizationFactor(priceRatio_c)`. At
- * ratio 1 across the board the bill is exactly the recipe's nominal input
- * share of revenue.
- *
- * `rates` should already carry tech `inputCost` effects (they are input-rate
- * multipliers — see the tech disposition table in `sectorTurn`), so an
- * efficiency tech shows up as fewer units bought, not as a margin bonus.
- *
- * `statePremiums` (money wiring step 5, config-gated) adds the sector's home
- * state's landed-price surcharge for out-of-state sourcing on top of the
- * global ratio: unitPrice = basePrice × ratio + premium. Same one-turn lag as
- * the price ratios (the premium comes from last turn's sourcing pass).
- * Omitted or empty ⇒ output is byte-identical to the pre-money-wiring formula.
+ * Price uses the same realization as the revenue side:
+ * basePrice × clamp(ratio^0.5, 0.7, 1.5), so buy-sell symmetry holds and
+ * world inflation squeezes margins proportionally. statePremiums adds the
+ * home state's landed-price surcharge; empty means byte-identical output.
  */
 export function computeInputsCost(args: {
   /**
@@ -288,26 +240,12 @@ export function computeFinancialLegs(args: {
   return hourlyRevenue * (-marginPenaltyPp / 100);
 }
 
-/**
- * Solve the calibration residual.
- *
- * `marginFormulaCost` is what the OLD formula would have charged for
- * maintenance (labor included) at this turn's state. Everything the physical
- * model can name is subtracted; whatever is left is the sector's other
- * operating cost, expressed PER OUTPUT UNIT so it scales with production
- * instead of with revenue (a plant running at half throughput has roughly half
- * the other opex; under the margin formula it had exactly half, by
- * construction, which is the one thing the formula got right).
- *
- * Returns null when there is no production to divide by — the caller then
- * defers calibration to a later turn and charges the residual directly, which
- * is exact either way.
- *
- * The residual CAN be negative (a sector whose named physical costs already
- * exceed the margin formula's total). That is kept, not clamped: clamping would
- * break the identity, which is the entire point of this function. It shows up
- * as a sector whose physical costs are ahead of its calibrated total, and the
- * right response is to fix the input rates, not to hide it.
+/*
+ * Solve the calibration residual: whatever the physical model cannot name
+ * is the sector's other operating cost, expressed per output unit so it
+ * scales with production, not revenue.
+ * Returns null when there is no production to divide by; caller defers.
+ * The residual may be negative; not clamped, so the identity holds.
  */
 export function solveOtherOpexPerUnit(args: {
   marginFormulaCost: number;
@@ -328,30 +266,21 @@ export function solveOtherOpexPerUnit(args: {
  * `otherOpexPerUnitAnchor`, as ₳ this turn.
  *
  * Anchors stamped before the policy stack moved to `policyCredit` were solved
- * against a margin cost that already contained the stack (their stored basis
- * is `1 − (base + stack)/100`), and `policyCredit` now credits the live stack
- * on top. The residual is whatever cost is left after the named bills, so the
- * stack sits in it as an AMOUNT, revenue × stack/100, not as a proportion of
- * it:
+ * against a margin cost that already contained the stack (basis
+ * `1 − (base + stack)/100`), while `policyCredit` now credits the live stack
+ * on top. The stack sits inside the residual as an AMOUNT, revenue ×
+ * stack/100, not a proportion:
  *
  *     anchor_neutral × units = anchor_legacy × units
  *                              + revenue × (basis_neutral − basis_at_calibration)
  *
  * Charging that amount back makes the stack count once. Revenue is this
- * turn's, the base `policyCredit` uses, so on the calibration state the two
- * lines cancel and the flip identity holds; afterwards only the CHANGE in the
- * stack since calibration moves profit. Anchors stamped at the neutral basis
- * return 0. A negative result (a stack of penalties at calibration) is a
- * credit: those sectors were paying the penalty twice.
- *
- * HISTORY: the rebase used to MULTIPLY the anchor by `basis_neutral ÷
- * basis_at_calibration`. That equals the amount above only for a sector with
- * no inputs and no labour; every real sector was under-charged by
- * stack × (inputs + labour) ÷ basis_at_calibration, and on a negative anchor
- * the factor grew the credit. Measured live at prod turn 1310: 2,059 legacy
- * sectors mis-costed, 15 of them booking profit equal to revenue (a technology
- * plant whose 44.1M of inputs and 17.1M of labour a day netted to zero cost),
- * while bloc sectors calibrated under penalties paid them twice.
+ * turn's, so on the calibration state the two lines cancel; afterwards only
+ * the CHANGE since calibration moves profit. Anchors stamped at the neutral
+ * basis return 0. A negative result is a credit (those sectors were paying
+ * the penalty twice). Scaling the anchor by a basis ratio is wrong: it is
+ * only correct with no inputs and no labour, under-charges every real
+ * sector, and grows the credit on a negative anchor.
  */
 export function legacyAnchorPolicyCharge(args: {
   hourlyRevenue: number;
@@ -369,26 +298,19 @@ export function legacyAnchorPolicyCharge(args: {
 /**
  * Re-base a held `otherOpexPerUnitAnchor` across a strategy retool.
  *
- * The anchor is ₳ PER OUTPUT UNIT, and that is what makes it survive capacity
- * growth, mothballing, throttling and sector merges untouched: double the
- * plant, double the units, double the bill, same rate. A RETOOL is the one
- * event that breaks the assumption, because it does not change how many units
- * there are — it changes what a unit IS. `setSectorStrategy` rescales
- * `capitalStock` by `capacityRescaleRatio` precisely so that the nameplate
- * (capacity × mixPrice) is invariant while the unit count moves by the RPU
- * ratio, which reaches 327x for a coal ↔ rare-earth pair. An anchor left alone
- * across that would be multiplied by the same 327x the unit count moved,
- * turning the residual operating cost into a plant-killing (or free) line for
- * no reason a player could name.
+ * The anchor is ₳ PER OUTPUT UNIT, so it survives capacity growth,
+ * mothballing, throttling and merges untouched. A RETOOL changes what a unit
+ * IS: `setSectorStrategy` rescales `capitalStock` by `capacityRescaleRatio`
+ * to keep nameplate (capacity × mixPrice) invariant while unit count moves
+ * by the RPU ratio (up to ~327x for coal ↔ rare-earth). An anchor left alone
+ * would be multiplied by that same ratio.
  *
- * So the anchor moves by the INVERSE: `anchor / ratio`, which holds
- * `anchor × units` — the actual ₳ charged — exactly fixed across the retool.
- * Composing a retool with its cancellation restores the original anchor, the
- * same invertibility `capitalStock` and the build queue already guarantee.
+ * The anchor moves by the INVERSE: `anchor / ratio`, holding `anchor × units`
+ * (the actual ₳ charged) fixed across the retool. Composing a retool with its
+ * cancellation restores the original anchor.
  *
- * Returns null when there is no anchor to move (a sector that has not been
- * calibrated yet) or the ratio is degenerate — the caller then writes nothing
- * and the sector calibrates fresh on its next producing turn, which is exact.
+ * Returns null when there is no anchor or the ratio is degenerate; the caller
+ * writes nothing and the sector calibrates fresh next producing turn.
  */
 export function rescaleOtherOpexAnchorForRetool(
   anchor: number | null | undefined,
@@ -403,49 +325,19 @@ export function rescaleOtherOpexAnchorForRetool(
 /**
  * The units of capacity an idle-upkeep charge may honestly be levied on.
  *
- * ─── The defect this fixes ───────────────────────────────────────────────────
+ * `IDLE_UPKEEP_FRACTION` should price OVER-BUILDING, an owner's decision. Charging
+ * it against `capacity - producedUnits` also bills involuntary throttles (input
+ * starvation, disasters, strikes), and `throughputFactor` already prices those on
+ * the revenue side, so one constraint gets billed twice. Dividing the involuntary
+ * throttle back out leaves the capacity that would still stand idle absent it:
  *
- * `IDLE_UPKEEP_FRACTION` exists to make OVER-BUILDING cost something: capacity
- * you bought and do not use is not free to hold. That is a statement about an
- * OWNER'S DECISION. The charge was implemented against `capacity −
- * producedUnits`, which is not that number — it is every reason the plant ran
- * short, including the ones the owner did not pick.
- *
- * Measured on the live 12-player sandbox at turn 293 (675 sectors, `plants` on
- * since turn 240): `throughputFactor` was **exactly 0.85 for all 675 sectors**
- * — i.e. every plant in the world was pinned at the launch-safety governor's
- * floor (`1 − MARKET_REALIZATION_DEVIATION_CAP`), input-starved, with raw
- * throughput below the floor. Not one sector's idleness was an overbuild. The
- * charge was therefore billing a world-wide input shortage as if 675 owners had
- * each independently chosen to build 15% too much plant.
- *
- * It is also a DOUBLE charge. `throughputFactor` is already a term in
- * `baselineHourlyRevenue`: an input-starved plant loses that 15% off its top
- * line first, and was then billed upkeep on the same 15% of units. One
- * constraint, priced twice, in opposite directions.
- *
- * ─── What is charged instead ────────────────────────────────────────────────
- *
- * The involuntary throttles are divided back out, leaving the capacity that
- * would STILL have stood idle in a world that was not throttling the sector:
- *
- *     ownerIdleUnits = max(0, capacity − producedUnits ÷ involuntaryThrottle)
+ *     ownerIdleUnits = max(0, capacity - producedUnits / involuntaryThrottle)
  *
  * `involuntaryThrottle` is the product of the production legs the owner cannot
- * choose — input throughput, the physical leg of an active disaster, a strike,
- * the extraction hard-minimum, a nationalisation transition. The legs the owner
- * DOES choose stay in: throttling the production policy slider to 60% still
- * idles 40% of the plant and is still billed for it, which is the case the
- * constant was written for.
- *
- * A throttle of 0 (a totally halted plant — full embargo, total disaster stop)
- * returns 0 idle units rather than dividing by zero: a plant the world has
- * switched off is not an overbuild either, and MOTHBALL_UPKEEP_FRACTION is the
- * deliberate, player-chosen path that does carry a charge.
- *
- * Genuine overbuild under plants shows up on the SALES side (`soldFraction`,
- * clearing) rather than as idle units, so this narrowing does not leave the
- * over-builder untouched — it stops the mechanic from punishing the wrong firm.
+ * choose. The policy slider stays in, so a slider cut to 60% still idles and is
+ * still billed. A throttle of 0 (fully halted plant) returns 0 idle units rather
+ * than dividing by zero; MOTHBALL_UPKEEP_FRACTION is the player-chosen path that
+ * does carry a charge.
  */
 export function ownerIdleUnits(args: {
   capacity: number;
@@ -469,38 +361,20 @@ export function ownerIdleUnits(args: {
 /**
  * The per-unit price of idle upkeep, ₳ per output unit per turn.
  *
- * ─── Why this is no longer `(1 − margin_now)` ───────────────────────────────
+ * The basis is ANCHORED, like `otherOpexPerUnitAnchor`: stamped once from the
+ * live margin on the sector's first plants turn, then HELD. Absent an anchor
+ * (a legacy row, a sector that has not run a plants turn), it falls back to
+ * the live basis.
  *
- * Idle upkeep was priced at `mixPrice × (1 − effectiveMargin/100)`, i.e. the
- * live cost ratio. That makes the charge GROW as the margin falls — a sector
- * whose margin drops from 45 to 12 sees its idle bill per unit rise by 1.6x at
- * the exact moment it can least carry it, and a sector at a negative derived
- * margin sees it rise without bound. On the live sandbox the deepest
- * loss-makers (the Eastern-bloc extraction and agriculture SOEs, seeded at
- * `profitMargin` 12) were paying the HIGHEST unit price in the world for the
- * privilege of being input-starved. That is a positive feedback loop pointed at
- * insolvency, and nothing in the design asked for it.
- *
- * It is also wrong on its own terms. The docblock on `IDLE_UPKEEP_FRACTION`
- * describes the charge as "fixed site/maintenance/skeleton crew" — a FIXED
- * cost. A fixed cost does not float with this quarter's margin.
- *
- * So the basis is ANCHORED, in exactly the discipline `otherOpexPerUnitAnchor`
- * already uses: stamped once from the live margin on the sector's first plants
- * turn (so the stamping turn is unchanged, byte for byte, including for a
- * mothballed sector where no ramp hides the difference), then HELD. Absent an
- * anchor — a legacy row, a sector that has not run a plants turn — it falls
- * back to the live basis, which is the pre-change behaviour.
+ * The basis must not track the live margin: `(1 - margin_now)` makes the
+ * charge GROW as the margin falls, and a sector at a negative derived margin
+ * sees it rise without bound, a positive feedback loop pointed at insolvency.
+ * Idle upkeep is described as fixed site/maintenance/skeleton crew, and a
+ * fixed cost does not float with this quarter's margin.
  *
  * Clamped to [0, IDLE_UPKEEP_BASIS_MAX]. A negative basis would pay the owner
- * to hold idle plant. The upper bound used to be 1, which let a sector whose
- * FIRST plants turn was input-starved (margin at or below zero) stamp a basis
- * of 1 and hold it forever: every idle unit billed at the full running-unit
- * cost, for the life of the sector, because of the turn it happened to be born
- * on. 937 of 5,733 live sectors carried a held basis at or above 0.9. A fixed
- * site cost is not the whole unit cost; the default sector margin gives the
- * ceiling, so no sector's idle unit can be priced above a healthy sector's
- * cost share.
+ * to hold idle plant. The ceiling is a healthy sector's cost share, so no
+ * sector's idle unit is priced above a healthy sector's running-unit cost.
  */
 export const IDLE_UPKEEP_BASIS_MAX = 1 - DEFAULT_SECTOR_PROFIT_MARGIN_PCT / 100;
 
@@ -576,32 +450,14 @@ export interface PhysicalPnl {
 /**
  * Bound the calibration residual when it is a CREDIT.
  *
- * `solveOtherOpexPerUnit` keeps a negative residual on purpose: on the
- * calibration turn the named physical bills already exceed the margin
- * formula's total, and the negative residual is what makes the flip identity
- * hold. That residual is then stored PER UNIT and re-multiplied by
- * `producedUnits` every turn after. Nothing tied it to the bills it was solved
- * against, so once the unit count or the unit economics moved (a capacity
- * build, an auto-retool rebase, a nameplate restatement) the credit kept
- * scaling on its own and the sector booked profit far above its revenue.
- *
- * Measured live (2026-09-02, prod turn 571): one NPC rare-earth sector with
- * anchor -1201 anchor/unit and 161K units/turn carried an otherOpex line of
- * -1.74T JPY/day against 287M JPY/day of revenue. The corp booked income 500x
- * revenue, priced at 14x the next-largest corporation on the exchange, and the
- * Global Top 50 index fund bought 57% of its NAV into it.
- *
- * The invariant this enforces: a plant can never be paid to run. The residual
- * credit may cancel the inputs, labour, upkeep, compliance, financial and
- * growth bills it was calibrated against, net of whatever the policy stack
- * already credits, and not one anchor more. Total cost is therefore never
- * negative and profit is bounded by revenue for every sector, by
- * construction, whatever the stored anchor says. A positive residual (a
- * charge) is never touched, and a credit that leaves total cost at or above
- * zero is never touched either, so the calibration identity still holds on
- * every sector where it held honestly. Measured live before this: 91 sectors
- * booked profit above revenue, 80 of them by the policy credit stacking on a
- * residual credit that had already cancelled most of the bills.
+ * `solveOtherOpexPerUnit` stores a negative residual PER UNIT and re-multiplies
+ * it by `producedUnits` every turn. That credit scales on its own whenever the
+ * unit count or unit economics move, so a sector can book profit far above
+ * revenue. Invariant enforced here: a plant can never be paid to run. The
+ * credit may cancel the bills it was calibrated against (net of policy credit)
+ * and not one anchor more, so total cost is never negative. A positive
+ * residual, or a credit that leaves total cost at or above zero, is untouched,
+ * so the calibration identity still holds wherever it held honestly.
  */
 export function clampOtherOpexCredit(args: {
   otherOpex: number;

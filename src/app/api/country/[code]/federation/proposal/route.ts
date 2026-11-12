@@ -22,6 +22,12 @@ import {
   type FederationPoliticalProposalRecord,
 } from "@/lib/world/succession/politicalProposal";
 import type { Bill } from "@/lib/db/types/legislation";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { federationRatificationsCollection } from "@/lib/db/repositories/federationRatifications";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
 
 const bodySchema = z.object({
   negotiatedCustodians: z.record(z.string(), z.string()).default({}),
@@ -32,7 +38,11 @@ const bodySchema = z.object({
 
 function sourceForCode(code: string): DefaultFederationSource | null {
   const upper = code.toUpperCase();
-  return upper === "CS" || upper === "YU" || upper === "RU" ? upper : null;
+  return countryHasFeature("csApi", upper) ||
+    countryHasFeature("yuApi", upper) ||
+    countryHasFeature("ruApi", upper)
+    ? upper
+    : null;
 }
 
 // GET shows the dated choice, existing bill and assets requiring negotiation.
@@ -49,19 +59,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         reason: "This world has no federation decision.",
       });
     const proposal = (
-      await db
-        .collection<FederationPoliticalProposalRecord>("federationPoliticalProposals")
+      await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(db)
         .find({ presetId: "1991-default", sourceEntityId: sourceCountryId })
         .sort({ revision: -1 })
         .limit(1)
         .toArray()
     )[0];
-    const bill = proposal
-      ? await db.collection<Bill>("bills").findOne({ _id: proposal.billId })
-      : null;
+    const bill = proposal ? await billsCollection(db).findOne({ _id: proposal.billId }) : null;
     const consents = proposal
-      ? await db
-          .collection("federationRatifications")
+      ? await federationRatificationsCollection<Document>(db)
           .find(
             {
               presetId: "1991-default",
@@ -136,7 +142,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       getOfficeTypeForChamber(sourceCountryId, chamber, "1991-default")
     );
     const official = character
-      ? await db.collection("electedOfficials").findOne({
+      ? await electedOfficialsCollection<Document>(db).findOne({
           characterId: character._id,
           countryId: sourceCountryId,
           officeType: { $in: officeTypes },

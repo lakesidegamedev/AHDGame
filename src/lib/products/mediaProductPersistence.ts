@@ -8,13 +8,15 @@ import { TECH_TREE } from "@/lib/constants/techTree/nodes";
 import { sectorCapacityBookAnchor } from "@/lib/corporations/sectorProfitBasis";
 import { efficacyAdjustedAdvertising } from "@/lib/advertising/rules/coverage";
 import { getMediaProductKind } from "./mediaProductCatalog";
-import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "./mediaProduct";
+import { type MediaProductProject } from "./mediaProduct";
 import {
   advanceMediaProduct,
   chooseNppMediaProduct,
   mediaDevelopmentThresholdAnchor,
   shouldRetireChronicMediaDevelopment,
 } from "./rules/mediaProductRules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { mediaProductProjectsV1Collection } from "@/lib/db/repositories/mediaProductProjectsV1";
 
 interface MediaProductReceiptCorp extends Pick<Corporation, "_id"> {
   mediaProductDevelopmentReceiptV1?: {
@@ -204,9 +206,10 @@ export async function processMediaProductProjectsV1(input: {
 
   const projectResult =
     projectOps.length > 0
-      ? await input.db
-          .collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS)
-          .bulkWrite(projectOps, { ordered: false })
+      ? await mediaProductProjectsV1Collection<MediaProductProject>(input.db).bulkWrite(
+          projectOps,
+          { ordered: false }
+        )
       : null;
   if (!projectResult || projectResult.matchedCount === projectOps.length) {
     for (const [corporationId, projects] of progressedByCorp) {
@@ -219,8 +222,7 @@ export async function processMediaProductProjectsV1(input: {
       }
       return [];
     });
-    const currentProjects = await input.db
-      .collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS)
+    const currentProjects = await mediaProductProjectsV1Collection<MediaProductProject>(input.db)
       .find({ _id: { $in: projectIds } })
       .project<MediaProductProject>({
         _id: 1,
@@ -335,7 +337,7 @@ export async function processMediaProductProjectsV1(input: {
     delete corporation.mediaProductAdvertisingReceiptV1;
   }
   if (receiptClearOps.length > 0) {
-    await input.db.collection<Corporation>("corporations").bulkWrite(receiptClearOps, {
+    await corporationsCollection(input.db).bulkWrite(receiptClearOps, {
       ordered: false,
     });
   }
@@ -403,7 +405,7 @@ export async function startNppMediaProductsV1(input: {
     newProjects.push(project);
   }
   if (newProjects.length === 0) return newProjects;
-  await input.db.collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS).insertMany(newProjects, {
+  await mediaProductProjectsV1Collection<MediaProductProject>(input.db).insertMany(newProjects, {
     ordered: false,
   });
   for (const project of newProjects) {

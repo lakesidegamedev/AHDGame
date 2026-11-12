@@ -4,92 +4,50 @@ import type { GameState } from "@/lib/db/types/gameState";
 /**
  * Fresh-world feature flag policy.
  *
- * Standing rule: every fresh world (first bootstrap or a reset) starts with
- * EVERY gameplay feature flag ON, at the top of every rollout ladder, with one
- * exclusion: NPP autonomy stays at v4 rather than v5 (see
- * FRESH_WORLD_FLAG_EXCLUSIONS). The two presets below are that policy, one per
- * document the flags live on.
+ * Every fresh world (bootstrap or reset) starts with every gameplay flag ON at
+ * the top of its rollout ladder, except entries in FRESH_WORLD_FLAG_EXCLUSIONS
+ * (NPP autonomy starts at v6, the live world's level). FeatureFlagDefaults.test.ts reads GameState and
+ * GameConfig and fails when a flag is in neither preset nor the non-gameplay
+ * lists, so new flags cannot ship silently.
  *
- * Fields that look like flags but are not gameplay features (ops kill switches,
- * maintenance and access gates, security tooling, sim-only harness switches,
- * runtime state, era-derived values, deprecated aliases, superseded
- * alternatives) are listed in NON_GAMEPLAY_GAME_STATE_FIELDS and
- * NON_GAMEPLAY_GAME_CONFIG_FIELDS with the reason each keeps its own default.
- * featureFlagDefaults.test.ts reads the GameState and GameConfig types and fails
- * when a flag field is in none of these lists, so a new flag cannot ship
- * without either being on for fresh worlds or carrying a recorded exclusion.
- *
- * Applied by:
- *   - `initializeGameState` (first gameState doc) and `resetGameWorld` (every
- *     reset) for the gameState preset;
- *   - the reference gameConfig (`seeds/reference/gameConfig.ts`), written by
- *     the core seed, plus `resetGameWorld` for the gameConfig preset.
- *
- * Existing running worlds are never flipped by this policy. Non-reset seed
- * top-ups write these keys with `$setOnInsert` only, and the startup
- * migration that adopts reference gates leaves them alone past a world's first
- * game day.
+ * Applied by initializeGameState, resetGameWorld, and the reference gameConfig
+ * seed. Running worlds are never flipped: seed top-ups use $setOnInsert only and
+ * the reference-gate startup migration leaves post-first-day worlds alone.
  */
 
 /** Gameplay flags held below their maximum on fresh worlds, and why. */
 export const FRESH_WORLD_FLAG_EXCLUSIONS = {
   nppAutonomyLevel: {
-    value: "v4",
+    value: "v6",
     reason:
-      "NPP v5 (persistent governing goals) is the one owner-excluded flag. Fresh worlds seed v4, the top of the ladder below v5.",
+      "Fresh worlds seed NPP engine 6 (v6), the same level the live world runs. It is held as a named policy because it is a level, not an on/off flag.",
   },
 } as const;
 
 export const DEFAULT_GAME_STATE_FLAGS = {
   forexEnabled: true,
   playerRandomEventsEnabled: true,
-  crisisInteractionEnabled: true,
   autoDisastersEnabled: true,
-  crisisAidBillsEnabled: true,
-  rpgStatsEnabled: true,
-  autoSectorSeedEnabled: true,
   sectorTechTreesEnabled: true,
-  onboardingChecklistEnabled: true,
   nppAutonomyLevel: FRESH_WORLD_FLAG_EXCLUSIONS.nppAutonomyLevel.value,
   // Kept in sync with nppAutonomyLevel for legacy readers.
   nppAutonomyEnabled: true,
+  // NPP death and retirement, independent of the autonomy level.
+  nppTurnoverEnabled: true,
+  // NPP parties splinter, found and fold; bounds the seat-share ratchet.
+  nppPartyRenewalEnabled: true,
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
-  nppOffensiveInitiationEnabled: true,
-  nppOffensiveJoinEnabled: true,
-  intelligenceMilitarySabotageEnabled: true,
-  nppIntelligenceOperationsEnabled: true,
-  worldEventsEnabled: true,
-  legislationDemographicEffectsV2Enabled: true,
   // The reset-era systems are staged independently. These are version
-  // selectors, not the older legislation-demographics subfeature above.
+  // selectors.
   metricsSystemVersion: "v1",
   legislationSystemVersion: "v1",
   cabinetSystemVersion: "v1",
-  departmentProgramSliceEnabled: true,
-  departmentFinanceEnabled: true,
-  lawAdministrationEnabled: true,
-  regionalLegislationFinanceEnabled: true,
-  canonicalPoliticalMetricsEnabled: true,
-  granularPollEnabled: true,
-  granularElectorateEnabled: true,
-  demographicsLayer1PositionsEnabled: true,
   eraSystemEnabled: true,
-  macroGrowthV1: true,
-  conflictsEnabled: true,
   livingConflictsEnabled: true,
   coldWarEnabled: true,
-  settlementCrisisEnabled: true,
-  redistrictingEnabled: true,
-  subsidiaryCorporationsEnabled: true,
-  embargoTradeExposureEnabled: true,
-  liveElectionResultsEnabled: true,
-  extractionAutoStrategyEnabled: true,
   nppEntryViabilityMode: "enforce",
   frontierEntryExperimentEnabled: true,
-  seasonRecapEnabled: true,
-  corpDealsEnabled: true,
-  intOrgAlignmentEnabled: true,
   nppCorpStrategyEnabled: true,
   // Macro demand reads state GDP in anchor terms. Fresh worlds only: existing
   // worlds lack the field and keep the raw stored reading.
@@ -147,6 +105,26 @@ export const FRESH_WORLD_GAME_CONFIG_FLAGS = {
   campaignEraPriceLevelEnabled: true,
   regionalConditionsOverviewEnabled: true,
   firstJoinerBecomesPartyChair: true,
+  // Import tariffs in the funded producer market. Fresh worlds only: a running
+  // world switches it on as a deliberate staged change.
+  producerTariffStage: 1,
+  // Growth signal measured as value added. A running world keeps gross output
+  // so a basis switch cannot show up as a recession.
+  outputBasis: "value_added",
+  // Operational switches for systems that change a running world. A running
+  // world has them absent (off) until an operator turns them on.
+  priceLevelEnabled: true,
+  fiscalStabilizerEnabled: true,
+  crisisV2EmergentEnabled: true,
+  crisisV2StagesEnabled: true,
+  executiveSuccessionEnabled: true,
+  leaderLegacyEnabled: true,
+  campaignLiveGdpBasisEnabled: true,
+  byElectionFillEnabled: true,
+  scotusNppNominationsEnabled: true,
+  scotusPendingDocketEnabled: true,
+  preeGenericFallbackEnabled: true,
+  cyberOperationsEnabled: true,
 } as const satisfies Partial<GameConfig>;
 
 export type FreshWorldGameConfigFlagKey = keyof typeof FRESH_WORLD_GAME_CONFIG_FLAGS;

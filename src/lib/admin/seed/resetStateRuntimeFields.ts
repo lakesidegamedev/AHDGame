@@ -1,4 +1,6 @@
 import type { Db } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Fields that hold engine, campaign, cache, or legacy state rather than the region baseline. */
 export const STATE_RUNTIME_UNSET_FIELDS = [
@@ -54,11 +56,9 @@ export const STATE_PRESERVED_FIELD_REASONS: Readonly<Record<string, string>> = {
 
 /** Clear world-specific state before reference region rows are upserted. */
 export async function resetStateRuntimeFields(db: Db): Promise<number> {
-  const result = await db
-    .collection("states")
-    .updateMany(
-      {},
-      { $unset: Object.fromEntries(STATE_RUNTIME_UNSET_FIELDS.map((field) => [field, ""])) }
-    );
+  const result = await statesCollection<Document>(db).updateMany(
+    {},
+    { $unset: Object.fromEntries(STATE_RUNTIME_UNSET_FIELDS.map((field) => [field, ""])) }
+  );
   return result.modifiedCount ?? 0;
 }

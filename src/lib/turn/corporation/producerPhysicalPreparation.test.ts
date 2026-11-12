@@ -124,6 +124,22 @@ describe("physical producer preparation", () => {
       }).prepared.plan.internalTransferPricing
     ).toBeUndefined();
   });
+  it("opts every non-Free plan in to own-site market-value booking", () => {
+    const { input } = fixture();
+    expect(prepareProducerPhysicalSector(input).prepared.plan.ownSiteMarketValue).toBe(true);
+    input.corporation.internalSupplyPolicy = {
+      priority: "own",
+      discount: 0,
+      transferPricing: "market",
+    };
+    expect(prepareProducerPhysicalSector(input).prepared.plan.ownSiteMarketValue).toBe(true);
+    input.corporation.internalSupplyPolicy = {
+      priority: "own",
+      discount: 0,
+      transferPricing: "free",
+    };
+    expect(prepareProducerPhysicalSector(input).prepared.plan.ownSiteMarketValue).toBeUndefined();
+  });
   it("carries the sell-outside-first flag into the plan only when the sector sets it", () => {
     const { input, sector } = fixture();
     expect(prepareProducerPhysicalSector(input).prepared.plan.sellOutsideFirst).toBeUndefined();

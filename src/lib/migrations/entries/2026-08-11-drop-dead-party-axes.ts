@@ -1,31 +1,23 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
- * Drop the retired `foreignPolicy` / `culture` party axes (ticket #1032).
+ * Drop the retired `foreignPolicy` / `culture` party axes. Both were written
+ * by party seeds, charter ratification, and the position-shift proposal, but
+ * read by nothing, so the shift proposal could burn a committee vote and a
+ * 336-turn cooldown on a number that affected nothing.
  *
- * Both axes were written by every party seed, by charter ratification and by
- * the position-shift proposal, and read by nothing. No engine, no driver, no
- * appeal calculation ever consumed either value — the party type's own doc
- * comment admitted as much ("scaffolding only — no engine reads this yet").
- * The cost was not merely dead storage: the shift proposal offered all four
- * axes as identical choices, so a party could spend a committee vote and a
- * 336-turn cooldown moving a number that could not affect anything. UK Labour
- * did exactly that twice in one evening.
+ * Unsets the fields from `politicalParties`, its
+ * `positionShiftCooldowns`, and `partyCharters.platform`.
  *
- * Unsets the fields from the three places they were persisted:
- *   - `politicalParties.foreignPolicy` / `.culture`
- *   - `politicalParties.positionShiftCooldowns.foreignPolicy` / `.culture`
- *   - `partyCharters.platform.foreignPolicy` / `.platform.culture`
+ * Deliberately does NOT touch `committeeProposals`: historical proposals on a
+ * retired axis are a true record, they still render as "(retired)", and
+ * `applyPositionShiftEffect` no-ops on them.
  *
- * Deliberately does NOT touch `committeeProposals`. Historical proposals on a
- * retired axis are a true record of something that happened, they still render
- * (the card keeps a "(retired)" label for them), and `applyPositionShiftEffect`
- * now no-ops on them rather than throwing. Rewriting history to make the schema
- * tidy would be the wrong trade.
- *
- * Idempotent: `$unset` on an absent field is a no-op, and the filters only
- * match documents that still carry one of the fields.
+ * Idempotent: `$unset` on an absent field is a no-op.
  */
 async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   const notes: string[] = [];
@@ -45,8 +37,8 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
     ],
   };
 
-  const partiesToClean = await db.collection("politicalParties").countDocuments(partyFilter);
-  const chartersToClean = await db.collection("partyCharters").countDocuments(charterFilter);
+  const partiesToClean = await politicalPartiesCollection<Document>(db).countDocuments(partyFilter);
+  const chartersToClean = await partyChartersCollection<Document>(db).countDocuments(charterFilter);
   const scanned = partiesToClean + chartersToClean;
 
   if (ctx.dryRun) {
@@ -56,7 +48,7 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
     return { documentsScanned: scanned, documentsUpdated: 0, notes };
   }
 
-  const parties = await db.collection("politicalParties").updateMany(partyFilter, {
+  const parties = await politicalPartiesCollection<Document>(db).updateMany(partyFilter, {
     $unset: {
       foreignPolicy: "",
       culture: "",
@@ -64,7 +56,7 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
       "positionShiftCooldowns.culture": "",
     },
   });
-  const charters = await db.collection("partyCharters").updateMany(charterFilter, {
+  const charters = await partyChartersCollection<Document>(db).updateMany(charterFilter, {
     $unset: { "platform.foreignPolicy": "", "platform.culture": "" },
   });
 

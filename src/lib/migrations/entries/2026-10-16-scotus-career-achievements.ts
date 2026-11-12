@@ -7,6 +7,11 @@ import {
   hasScotusConfirmationEvent,
 } from "@/lib/scotus/careerEvents";
 import type { Character } from "@/lib/db/types/character";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import type { Document } from "mongodb";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 /**
  * Adds the Supreme Court achievement definitions and backfills what past
@@ -19,8 +24,7 @@ export const migration: Migration = {
   description: "Seed Supreme Court achievements and backfill confirmed justices' career history.",
   idempotent: true,
   async execute(db, ctx) {
-    const confirmed = await db
-      .collection("scotusNominations")
+    const confirmed = await scotusNominationsCollection<Document>(db)
       .find(
         { status: "confirmed", nomineeMode: "character", nomineeCharacterId: { $ne: null } },
         {
@@ -36,8 +40,7 @@ export const migration: Migration = {
       )
       .toArray();
     const characters = confirmed.length
-      ? await db
-          .collection("characters")
+      ? await charactersCollection(db)
           .find(
             { _id: { $in: confirmed.map((n) => n.nomineeCharacterId as ObjectId) } },
             { projection: { userId: 1, careerHistory: 1 } }
@@ -78,7 +81,7 @@ export const migration: Migration = {
 
     if (!ctx.dryRun) {
       const now = new Date();
-      await db.collection("achievements").bulkWrite(
+      await achievementsCollection<Document>(db).bulkWrite(
         SCOTUS_ACHIEVEMENTS.map((definition) => ({
           updateOne: {
             filter: { slug: definition.slug },
@@ -87,13 +90,13 @@ export const migration: Migration = {
           },
         }))
       );
-      if (historyWrites.length)
-        await db.collection<Character>("characters").bulkWrite(historyWrites);
-      const definition = await db
-        .collection("achievements")
-        .findOne({ slug: SCOTUS_CONFIRMED_SLUG }, { projection: { _id: 1 } });
+      if (historyWrites.length) await charactersCollection(db).bulkWrite(historyWrites);
+      const definition = await achievementsCollection<Document>(db).findOne(
+        { slug: SCOTUS_CONFIRMED_SLUG },
+        { projection: { _id: 1 } }
+      );
       if (definition && awardUserIds.size) {
-        await db.collection("characterAchievements").bulkWrite(
+        await characterAchievementsCollection<Document>(db).bulkWrite(
           [...awardUserIds.values()].map(({ userId, characterId }) => ({
             updateOne: {
               filter: { userId, achievementId: definition._id },

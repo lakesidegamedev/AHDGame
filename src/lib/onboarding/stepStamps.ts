@@ -10,6 +10,8 @@ import {
   type OnboardingSignals,
   type OnboardingStepId,
 } from "./checklist";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 
 /**
  * Persist when each onboarding step was first completed.
@@ -61,8 +63,7 @@ export function newlyCompletedSteps(
 }
 
 async function firstCampaignAt(db: Db, character: StampableCharacter): Promise<Date | null> {
-  const first = await db
-    .collection<{ createdAt?: Date }>("actionLogs")
+  const first = await actionLogsCollection<{ createdAt?: Date }>(db)
     .find({ characterId: character._id, actionType: "campaign" }, { projection: { createdAt: 1 } })
     .sort({ createdAt: 1 })
     .limit(1)
@@ -89,9 +90,10 @@ export async function recordOnboardingProgress(
     for (const step of pending) {
       const at = step === "campaign-action" ? ((await firstCampaignAt(db, character)) ?? now) : now;
       const field = `onboarding.steps.${step}`;
-      const result = await db
-        .collection<Character>("characters")
-        .updateOne({ _id: character._id, [field]: { $exists: false } }, { $set: { [field]: at } });
+      const result = await charactersCollection(db).updateOne(
+        { _id: character._id, [field]: { $exists: false } },
+        { $set: { [field]: at } }
+      );
       if (result.modifiedCount !== 1) continue;
       stamped.push(step);
       await captureIntakeEvent("onboarding_step_done", {

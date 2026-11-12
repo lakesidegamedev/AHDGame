@@ -268,7 +268,26 @@ export interface PresidentialHealthReliefModifier {
   createdAt: Date;
 }
 
+/**
+ * Vote-share shift for one party, earned by how its office holders handled a
+ * crisis. Positive is credit. `regionIds` empty means the whole country.
+ */
+export interface CrisisBlameCountryModifier {
+  _id: ObjectId;
+  countryId: string;
+  kind: "crisisBlame";
+  partyId: string;
+  regionIds: string[];
+  /** Nominal vote-share change in percent, already bounded. */
+  pct: number;
+  appliedAtTurn: number;
+  expiresAtTurn: number;
+  sourceInstanceId?: ObjectId;
+  createdAt: Date;
+}
+
 export type CountryModifier =
+  | CrisisBlameCountryModifier
   | SectorDemandCountryModifier
   | SectorOutputDemandCountryModifier
   | WarEmergencyMitigationModifier

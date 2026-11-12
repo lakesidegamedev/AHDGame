@@ -48,6 +48,7 @@ export interface WorldOpts {
   acquirerCash?: number;
   /** Active bank charter on the target plus one satellite row per re-key set. */
   charter?: boolean;
+  extractionContracts?: boolean;
   /** Acquirer starts with its own active charter (conflict path). */
   acquirerCharter?: boolean;
   sectorCount?: number;
@@ -147,6 +148,21 @@ export function buildAcquisitionWorld(opts: WorldOpts = {}): AcquisitionWorld {
     ]);
   }
 
+  if (opts.extractionContracts) {
+    memory.seed("extractionContracts", [
+      { _id: new ObjectId(), corporationId: tgt, stateId: "ST0", resource: "oil", share: 0.3 },
+      {
+        _id: new ObjectId(),
+        corporationId: tgt,
+        stateId: "ST0",
+        resource: "oil",
+        share: 0.1,
+        status: "expired",
+        revokedTurn: 90,
+      },
+    ]);
+  }
+
   if (opts.charter) {
     memory.seed("bankLoans", [{ _id: new ObjectId(), bankCorporationId: tgt }]);
     memory.seed("interbankLoans", [
@@ -223,18 +239,25 @@ export interface WorldBalances {
   acquirerSectors: number;
 }
 
+/** The in-memory world is not a driver Db, so it is opened by name here rather than through the typed repositories. */
+function memoryCollection(w: AcquisitionWorld, name: string) {
+  const existing = w.memory.collections.get(name);
+  if (!existing) throw new Error(`In-memory collection ${name} was never seeded`);
+  return existing;
+}
+
 export async function readBalances(w: AcquisitionWorld): Promise<WorldBalances> {
   const acquirer = await w.memory.collection("corporations").findOne({ _id: w.acq });
-  const charA = await w.memory.collection("characters").findOne({ _id: w.charA });
-  const charB = await w.memory.collection("characters").findOne({ _id: w.charB });
-  const imperial = await w.memory.collection("imperialCharacters").findOne({ _id: w.imperial });
+  const charA = await memoryCollection(w, "characters").findOne({ _id: w.charA });
+  const charB = await memoryCollection(w, "characters").findOne({ _id: w.charB });
+  const imperial = await memoryCollection(w, "imperialCharacters").findOne({ _id: w.imperial });
   const corpHolder = await w.memory.collection("corporations").findOne({ _id: w.corpHolder });
-  const fund = await w.memory.collection("indexFunds").findOne({ _id: w.fund });
+  const fund = await memoryCollection(w, "indexFunds").findOne({ _id: w.fund });
   const treasury = await w.memory.collection("federalBudget").findOne({ countryId: "US" });
   const target = await w.memory.collection("corporations").findOne({ _id: w.tgt });
-  const acquirerSectors = await w.memory
-    .collection("corporateSectors")
-    .countDocuments({ corporationId: w.acq });
+  const acquirerSectors = await memoryCollection(w, "corporateSectors").countDocuments({
+    corporationId: w.acq,
+  });
   return {
     acquirer: (acquirer?.liquidCapital as number) ?? NaN,
     charA: (charA?.cashOnHand as number) ?? NaN,

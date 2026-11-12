@@ -1,5 +1,13 @@
 import { migration as financialTxLogTurnOrderIndex } from "./entries/2026-11-10-financial-tx-log-turn-order-index";
+import { migration as bucketApprovalsRename } from "./entries/2026-11-11-bucket-approvals-rename";
+import { migration as regionGroupDriftToBuckets } from "./entries/2026-11-11-region-group-drift-to-buckets";
+import { migration as electoratePriorityLawBook } from "./entries/2026-11-11-electorate-priority-law-book";
+import { migration as deLawBookBackfill } from "./entries/2026-11-12-de-law-book-backfill";
+import { migration as cyberLaunchKeyIndex } from "./entries/2026-11-12-cyber-launch-key-index";
+import { migration as jpLawBookBackfill } from "./entries/2026-11-12-jp-law-book-backfill";
 import { migration as successorTaxTypes } from "./entries/2026-11-09-successor-tax-types";
+import { migration as cnLawBookBackfill } from "./entries/2026-11-12-cn-law-book-backfill";
+import { migration as modernEraBookBackfill } from "./entries/2026-11-13-modern-era-book-backfill";
 import { migration as jpLawLeanEffects } from "./entries/2026-11-09-jp-law-lean-effects";
 import { migration as ukJpSubdivisionPopulations } from "./entries/2026-11-01-uk-jp-subdivision-populations";
 import { migration as archiveNonPresidentialCampaigns } from "./entries/2026-11-01-archive-non-presidential-campaigns";
@@ -19,19 +27,10 @@ import { migration as fundMandates } from "./entries/2026-10-12-fund-mandates";
 import { migration as corporateFundPositions } from "./entries/2026-10-09-corporate-fund-positions";
 import { migration as governmentAccountability } from "./entries/2026-10-04-government-accountability";
 import { migration as bankFailurePoliticsIndex } from "./entries/2026-10-04-bank-failure-politics-index";
-// Central registry of deployable migrations, in chronological order. Each
-// entry's id is stable forever (used as the _id of the migrationsRun marker)
-// and `idempotent` must reflect actual runtime safety.
-//
-// Adding a migration:
-//   1. Create src/lib/migrations/entries/<id>.ts that exports `migration: Migration`.
-//   2. Import and append to MIGRATIONS below.
-//   3. If wrapping an existing scripts/migrations/<name>.ts, the entry's
-//      execute() should call into the script's main() while honoring the
-//      ctx.dryRun flag.
-//
-// Incident response scripts (heal-*, inspect-*, audit-*, fix-*) live in
-// scripts/migrations/incidents/ and DO NOT belong in this registry.
+// Central registry of deployable migrations, chronological. Ids are stable forever
+// (used as migrationsRun _id); `idempotent` must reflect actual runtime safety.
+// To add: create entries/<id>.ts, import, append. Incident scripts live in
+// scripts/migrations/incidents/ and do not belong here.
 
 import { migration as locRecoveryOwnerIndex } from "./entries/2026-09-30-loc-recovery-owner-index";
 import { migration as politicalMediaOrderIndexes } from "./entries/2026-10-04-political-media-order-indexes";
@@ -87,6 +86,10 @@ import { migration as ukRegionalPartyOrgBackfill } from "./entries/2026-08-26-uk
 import { migration as easternDepositsCnSoeIron } from "./entries/2026-08-25-eastern-deposits-cn-soe-iron";
 import { migration as backfillRedistrictingAuthorityTypes } from "./entries/2026-08-26-backfill-redistricting-authority-types";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
+import { migration as crisisV2Indexes } from "./entries/2026-11-08-crisis-v2-indexes";
+import { migration as crisisV2LeverIndexes } from "./entries/2026-11-09-crisis-v2-lever-indexes";
+import { migration as crisisV2ConsequenceIndexes } from "./entries/2026-11-10-crisis-v2-consequence-indexes";
+import { migration as crisisV2PopulationOrderIndexes } from "./entries/2026-11-11-crisis-v2-population-order-indexes";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
 import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
 import { migration as playerReadIndexes } from "./entries/2026-10-27-player-read-indexes";
@@ -163,7 +166,7 @@ export const MIGRATIONS: Migration[] = [
   unionLeadershipIndexes,
   // NGX (Nigeria) exchange enablement - re-upsert fund definitions for the two new NGX broad funds
   ngxIndexFundSeed,
-  // bonds (corporationId, matured, defaulted) - nationalization eligibility + bond payoff paths (#2817)
+  // bonds (corporationId, matured, defaulted) - nationalization eligibility + bond payoff paths
   perfN1Indexes,
   // orgRegLedger (countryId, stateId, partyId, metric, turn desc) - region-page
   // registration sparkline was a 1M-doc collscan (only the _id index existed)
@@ -194,7 +197,7 @@ export const MIGRATIONS: Migration[] = [
   // Repairs the active 1953 world as well as future resets: four-country
   // registration pools plus era-relative sovereign debt pricing.
   heal1953SeedBalance,
-  // Ticket #1014 - command-economy unowned double-seed (~50% SOE ownership +
+  // Command-economy unowned double-seed (~50% SOE ownership +
   // unreachable 0% remainder sectors). Also runs at end of seedUnownedSectors.
   reconcileCommandEconomyUnowned,
   // The USSR came up on iteration 4 with no SOEs at all and every producing
@@ -208,7 +211,7 @@ export const MIGRATIONS: Migration[] = [
   smoothLegacyBuildOrders,
   pensionSchemeFundPositions,
   ratificationBallotIndexes,
-  // Ticket #1032 - drop the foreignPolicy / culture party axes. Written by
+  // Drop the foreignPolicy / culture party axes. Written by
   // every seed and the shift UI, read by nothing.
   dropDeadPartyAxes,
   // Indexes for the banking money-movement claim records. The seed module
@@ -217,35 +220,32 @@ export const MIGRATIONS: Migration[] = [
   // Strategic Operations v2 - migrate campaign investment levers from linear
   // levels to the starter + three-branch tree model. Player-friendly, idempotent.
   campaignOpsTrees,
-  // Ticket #1106: live worlds never received legislation types added to the
-  // typed catalog after they were seeded (US state tax sliders). Insert-missing
-  // only, so admin law-type edits are preserved.
+  // Insert-missing legislation types added to the catalog after seeding
+  // (US state tax sliders), preserving admin law-type edits.
   backfillPoliticalLegislationTypes,
   seedGlobalResponseFoundations,
-  // Ticket #1174: reconcile KAZ laws from their durable enacted-law and
+  // Reconcile KAZ laws from their durable enacted-law and
   // pre-executive-order records after legacy order expiry left mismatched rows.
   repairKazakhLawLevels,
   // Per-turn E11000 on crises_living_event: unset null keys, rebuild the
-  // sparse unique index as partial-on-string (GlitchTip AHD-1JV).
+  // sparse unique index as partial-on-string.
   crisesLivingEventPartialIndex,
   // The UK regional-party contest gate is gone (SNP/Plaid/DUP/SF/UUP now stand
   // UK-wide); give them the statePartyOrg rows they were never seeded outside
   // their home nation, or the presence gate keeps them off the ballot anyway.
   ukRegionalPartyOrgBackfill,
-  // Ticket #1189: the three state redistricting laws stopped seeding when the
-  // old US catalog was superseded, leaving every state pinned to the default
-  // commission with no bill able to change it. Insert-missing only.
+  // Redistricting laws stopped seeding when the US catalog was superseded,
+  // pinning states to the default commission. Insert-missing only.
   backfillRedistrictingAuthorityTypes,
-  // Ticket #1189: the executive-order ladder assumed a seven-option (0-6)
-  // policy list, so orders on the five-level new-generation laws wrote levels
-  // past the end. Clamp those rows down to the ladder top the game already
-  // coerces them to.
+  // The executive-order ladder assumed a seven-option (0-6) policy list; orders
+  // on five-level new-generation laws wrote levels past the end. Clamp those
+  // rows down to the ladder top the game already coerces them to.
   repairOutOfRangePolicyLevels,
   // Markets repair P2a: eastern deposits were never authored for the playable
   // bloc countries (every state resources:{}), and the CN extraction SOE was
   // coal-locked in its four iron-rich states.
   easternDepositsCnSoeIron,
-  // Ticket 1200: a commander who emigrated or was dismissed stayed in the saved
+  //: a commander who emigrated or was dismissed stayed in the saved
   // command, and the commands PUT then refused every edit in that country.
   dropOffRosterCommandCommanders,
   // The other half of the same gap: the rosters above are cleared, but the units
@@ -253,7 +253,7 @@ export const MIGRATIONS: Migration[] = [
   // can never be sent to a front. Runs AFTER the roster clear, on purpose - that
   // one shrinks the set of holders this has to sever.
   severEmigratedGenerals,
-  // Issue #996: the new lifecycle registrations make these bills resolvable;
+  // The new lifecycle registrations make these bills resolvable;
   // reopen their expired vote windows instead of replaying stale tallies.
   rescheduleEconCountryBills,
   equityLiquidityIndexes,
@@ -288,10 +288,10 @@ export const MIGRATIONS: Migration[] = [
   // indexFunds survived resets while corporations and fund positions were
   // wiped. Remove those old-world references and reconcile live claims.
   repairOrphanIndexFundState,
-  // Ticket #1256: a party renumber / region fuse leaves statePartyOrg rows
-  // whose compound _id names a different party or region than their fields;
-  // field-triple readers and _id readers then disagree about who owns the org.
-  // Re-derive _id from the authoritative fields and index the triple unique.
+  // A party renumber / region fuse leaves statePartyOrg rows whose compound _id
+  // names a different party or region than their fields, so field-triple and
+  // _id readers disagree about ownership. Re-derive _id from the authoritative
+  // fields and index the triple unique.
   statePartyOrgRekey,
   // Intelligence spine: three UNIQUE guards the agency/network/coverage read
   // paths assume rather than re-check, plus the operation-log lookups. A live
@@ -302,14 +302,14 @@ export const MIGRATIONS: Migration[] = [
   // `manifestos` had only its _id index, so the elections page's per-race
   // manifesto reads were collection scans.
   manifestosIndex,
-  // Ticket #1295: one voting leadership/committee race per seat. Seed indexes
+  // One voting leadership/committee race per seat. Seed indexes
   // cover a fresh bootstrap; this reaches worlds that are already running.
   uniqueVotingPartyElections,
   providerIdentityIndexes,
   // Anchor the player-facing central-bank pricing phase-in on the live turn.
   centralBankPricingPhaseIn,
   sourceFenceIndexes,
-  // Ticket #1269: persisted sovereign fields must follow the current debt/GDP
+  // Persisted sovereign fields must follow the current debt/GDP
   // ladder after historical seed anchors stop rescaling live risk.
   repriceCurrentSovereignRisk,
   // Seed identityObservations from the scalar identity fields and
@@ -317,19 +317,19 @@ export const MIGRATIONS: Migration[] = [
   // to the admin panel and keep grouping accounts.
   identityObservationsBackfill,
   supplyListingIndexes,
-  // Issue #2028: worlds seeded while the FR/IT/ES/SE/TR/GR/AT/FI sovereign
+  // Worlds seeded while the FR/IT/ES/SE/TR/GR/AT/FI sovereign
   // issuers reused 900_009-900_016 keep ambiguous corporation URLs and an
   // unprotected collection until something renumbers them in place. Seed +
   // bootstrap cover fresh/reset worlds; this reaches ones already running.
   repairDuplicateCorporationSequentialIds,
-  // Issue #2049: UK dual ministry. Classify rows into role slots, init shared
+  // UK dual ministry. Classify rows into role slots, init shared
   // holder pools from current balances, and swap the one-seat index for the
   // role-slot index. Idempotent, dry-run safe, deletes nothing.
   ukDualMinistryRoleSlot,
   // Corporate actions remain available for cost-basis replay, but contribute
   // no executable volume or notional to share-market aggregates.
   normalizeShareCorporateActions,
-  // Issue #704: live 1953 worlds seeded flat playable boards (baseline +
+  // Live 1953 worlds seeded flat playable boards (baseline +
   // sparse modifiers). Fold the generated regional texture into residuals so
   // regions glide to their textured equilibrium instead of lurching.
   playableRegionTextureResiduals,
@@ -355,14 +355,14 @@ export const MIGRATIONS: Migration[] = [
   backfillNppTechBaselines,
   locRecoveryOwnerIndex,
   bankPropForexFeeIndex,
-  // #2688: also in the startup allowlist; listed here so `npm run migrate`
+  // Also in the startup allowlist; listed here so `npm run migrate`
   // reports it and `--only ... --force` can rerun it.
   longHorizonTelemetryIndexes,
-  // #2693: deletion stamping scanned the whole ledger on the counterparty side.
+  // Deletion stamping scanned the whole ledger on the counterparty side.
   financialTxLogCounterpartyIndex,
   // Also in the startup allowlist, like longHorizonTelemetryIndexes.
   appleProviderIdentityIndex,
-  // #2699: seed indexes a running world never received; skips text/TTL/duplicate-blocked.
+  // Seed indexes a running world never received; skips text/TTL/duplicate-blocked.
   reconcileSeedIndexes,
   // Metadata only. Deploy this backfill before relying on charter epoch reads;
   // the runtime also dual-reads untagged legacy rows during rollout.
@@ -388,7 +388,7 @@ export const MIGRATIONS: Migration[] = [
   navairBasingIndex,
   corporateFundPositions,
   subhourWikiCadence,
-  // Suggestion #363: spin-offs were created with no tech. Additive heal.
+  //: spin-offs were created with no tech. Additive heal.
   backfillSpinOffTechBaselines,
   completeCabinetV2Accounts,
   fundMandates,
@@ -408,7 +408,15 @@ export const MIGRATIONS: Migration[] = [
   partyNppRegionalBills,
   nationalPartyNppBills,
   archiveNonPresidentialCampaigns,
+  crisisV2Indexes,
+  crisisV2LeverIndexes,
+  crisisV2ConsequenceIndexes,
+  crisisV2PopulationOrderIndexes,
   financialTxLogTurnOrderIndex,
+  // Also in the startup allowlist: approvals must move before the first 1.20 turn.
+  bucketApprovalsRename,
+  // Also in the startup allowlist: regional drift must move before the first 1.20 turn.
+  regionGroupDriftToBuckets,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.
@@ -439,25 +447,28 @@ export const ROLLBACK_MIGRATIONS: Migration[] = [restoreCapitalModeFromShadow];
 //     the per-turn conservation warning is INERT until this is run. Run it as
 //     soon as the write is approved, or the monitoring half of the fix is dead.
 export const HELD_MIGRATIONS: Migration[] = [
-  // #4293: paused-world stock-tax rollout requires an explicit --only selection.
+  // Paused-world stock-tax rollout requires an explicit --only selection.
   stockHoldingTaxTiers,
   equityPoolSeedBackfill,
-  // #2159: explicit live-world promotion. The dedicated script targets
+  // Explicit live-world promotion. The dedicated script targets
   // MONGODB_URI_LIVE, defaults to dry-run, and requires the current world id.
   activateLiveDemographicsV2,
   // County stock initialization requires paused population writers and an explicit --only.
   countyPopulations,
   ukJpSubdivisionPopulations,
   jpLawLeanEffects,
+  electoratePriorityLawBook,
+  deLawBookBackfill,
+  jpLawBookBackfill,
+  cnLawBookBackfill,
+  modernEraBookBackfill,
+  cyberLaunchKeyIndex,
 ];
 
-// Deferred to follow-up (need bootstrap-marker pass on production first):
-//   - 2026-04-22-reverse-split-victim-reparations  (no marker writer in script)
-//   - 2026-05-05-cleanup-duplicate-tariff-pulses   (no marker writer)
-//   - 2026-05-07-backfill-corporation-isprivate    (no marker writer)
-//   - 2026-05-07-set-legal-structure-defaults      (no marker writer)
-//   - 2026-05-05-phase-11-live-bootstrap           (uses MONGODB_URI_LIVE; sub-section markers)
+// Deferred (need bootstrap-marker pass on production first):
+//   - reverse-split-victim-reparations     (no marker writer)
+//   - cleanup-duplicate-tariff-pulses      (no marker writer)
+//   - backfill-corporation-isprivate       (no marker writer)
+//   - set-legal-structure-defaults         (no marker writer)
+//   - phase-11-live-bootstrap              (uses MONGODB_URI_LIVE; sub-section markers)
 //
-// Other schema-add and backfill scripts under scripts/migrations/ that already
-// follow the run<Name>(db, opts) shape can be wrapped incrementally - see
-// scripts/migrations/README.md for the pattern.

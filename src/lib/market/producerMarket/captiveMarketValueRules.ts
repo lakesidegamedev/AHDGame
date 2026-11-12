@@ -1,16 +1,14 @@
 /**
  * Own-site deliveries at market value (producerCaptiveDeliveryStage >= 3). A
- * plant that hands its output to its own company's other sites moves no cash
- * and books no sale, so its site accounts show the cost of making the good and
- * none of its worth: a mine feeding its own steel plant reads as a loss while
- * the company would otherwise buy the same ore on the market.
+ * plant that hands output to its own company's other sites moves no cash and
+ * books no sale, so its accounts show the cost of making the good and none of
+ * its worth: a mine feeding its own steel plant reads as a loss.
  *
- * Here each unit moved between own sites is valued at this turn's clearing
- * price for its lane, or the selling site's ask when the lane did not trade.
- * The seller books that as internal supply income and the receiving site books
- * the same amount as an internal supply charge, so the company's totals are
- * unchanged. Only accounts that opt in are valued: a company on Free transfer
- * pricing books nothing between its own sites, and one with an explicit
+ * Each unit moved between own sites is valued at this turn's clearing price
+ * for its lane, or the selling site's ask when the lane did not trade. The
+ * seller books internal supply income and the receiver books the same amount
+ * as an internal supply charge, so company totals are unchanged. Only opt-in
+ * accounts are valued: Free transfer pricing books nothing, and an explicit
  * internal transfer price already books its own entries.
  *
  * Pure: settled internal deliveries, offers and lane prices in, matching

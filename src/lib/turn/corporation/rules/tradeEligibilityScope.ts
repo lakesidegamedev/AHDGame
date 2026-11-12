@@ -28,6 +28,10 @@
  * block embargo builds exactly what it built before, so there is no new work
  * and no change in behavior. A world that passed one gets the rule it voted for.
  *
+ * Funded tariffs (gameConfig.producerTariffStage) need the graph as well: it
+ * carries each route's tariff and the blockade closure. With the stage on the
+ * graph is built on every world; the country books still follow the era.
+ *
  * Pure: plain numbers and a count in, booleans out.
  */
 
@@ -36,6 +40,8 @@ export interface TradeEligibilityScopeInput {
   eraUnitScale: number;
   /** Active (non-expired) block-mode trade embargoes for this turn. */
   activeBlockEmbargoCount: number;
+  /** gameConfig.producerTariffStage >= 1: the funded market charges import tariffs. */
+  fundedTariffs?: boolean;
 }
 
 export interface TradeEligibilityScope {
@@ -50,7 +56,7 @@ export function tradeEligibilityScope(input: TradeEligibilityScopeInput): TradeE
   const hasBlock =
     Number.isFinite(input.activeBlockEmbargoCount) && input.activeBlockEmbargoCount > 0;
   return {
-    routes: eraWorld || hasBlock,
+    routes: eraWorld || hasBlock || input.fundedTariffs === true,
     countryBooks: eraWorld,
   };
 }

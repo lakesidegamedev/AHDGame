@@ -8,7 +8,7 @@ export const PARTY_LEADERSHIP_TENURE_TURNS = 24;
 
 // Residency required after relocating before a character may stand in — or be
 // appointed into — STATE party leadership. Stops relocation-hopping into fresh
-// state parties (ticket #949). Intentionally decoupled from the (longer)
+// state parties. Intentionally decoupled from the (longer)
 // relocation cooldown RELOCATION_COOLDOWN_TURNS: local-leadership residency
 // stays at 24 turns even as the movement cooldown is longer. A missing
 // lastRelocatedTurn is grandfathered eligible.

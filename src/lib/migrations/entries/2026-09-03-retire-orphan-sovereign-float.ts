@@ -1,9 +1,12 @@
 import type { Db } from "mongodb";
-import type { Bond, FederalBudget } from "@/lib/db/types";
+import type { Bond } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Retire sovereign paper that no debt stands behind.
@@ -20,13 +23,13 @@ import type { Migration, MigrationContext, MigrationResult } from "../types";
  * Idempotent: a second run finds no excess and does nothing.
  */
 async function retireOrphanSovereignFloat(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const turnDoc = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   const turn = turnDoc?.currentTurn ?? 0;
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ issuerType: "sovereign", matured: false, defaulted: false })
     .toArray();
   const byCountry = new Map<CountryId, Bond[]>();
@@ -46,9 +49,10 @@ async function retireOrphanSovereignFloat(db: Db, ctx: MigrationContext): Promis
 
   for (const [countryId, series] of byCountry) {
     scanned += series.length;
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) }, { projection: { debt: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) },
+      { projection: { debt: 1 } }
+    );
     if (!budget) continue;
     const principal = Math.max(0, budget.debt?.principal ?? 0);
     const face = series.reduce((sum, bond) => sum + (bond.totalIssued ?? 0), 0);
@@ -104,7 +108,7 @@ async function retireOrphanSovereignFloat(db: Db, ctx: MigrationContext): Promis
   }
   let updated = 0;
   if (ops.length > 0) {
-    const result = await db.collection<Bond>("bonds").bulkWrite(ops);
+    const result = await bondsCollection(db).bulkWrite(ops);
     updated = result.modifiedCount;
   }
   return {

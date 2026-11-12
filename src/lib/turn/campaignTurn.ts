@@ -5,7 +5,7 @@ import {
 import * as Sentry from "@sentry/nextjs";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import type { UpdateFilter } from "mongodb";
+import type { Document, UpdateFilter } from "mongodb";
 import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { calculateCampaignIncome } from "@/lib/campaigns/income";
 import { campaignActionsPerTurn, cappedCampaignActionGrant } from "@/lib/campaigns/actions";
@@ -19,8 +19,8 @@ import { getMediaFavPerTurn, getOppoDrainPerTurn } from "@/lib/campaigns/opsEffe
 import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_TOUR_TICK_ACTION_COST,
-} from "@/lib/electionEngine/electionFormulaFactors";
-import { buildRallyAccrualEntry } from "@/lib/turn/elections/supportAccrual";
+} from "@/lib/elections/engine/electionFormulaFactors";
+import { buildRallyAccrualEntry } from "@/lib/elections/campaigns/supportAccrual";
 import { computeAutoDowngrade } from "@/lib/campaigns/autoDowngrade";
 import { calculateCampaignStrengthLeaderPullbacks } from "@/lib/campaigns/campaignStrength";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
@@ -34,7 +34,7 @@ import {
 import {
   PRIMARY_CAMPAIGN_TICK_CAP,
   PRIMARY_CAMPAIGN_NATIONAL_FAV_BONUS,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { loadTxThresholds, emitTxBulk } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
@@ -42,6 +42,16 @@ import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activit
 import { logger } from "../observability/logger";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import type { PoliticalMediaPayer } from "@/lib/politicalMedia/journal";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 export interface CampaignTurnResults {
   campaignsProcessed: number;
@@ -91,13 +101,11 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // generation so an active player rolls a correspondingly more active campaign.
         // Campaign pool is separate from the player's own action pool; endorsements
         // only boost this campaign pool, never the player's.
-        const gameConfig = await db
-          .collection<{
-            _id: string;
-            baseActionsPerTurn?: number;
-            politicalMediaMarketEnabled?: boolean;
-          }>("gameConfig")
-          .findOne({ _id: "default" });
+        const gameConfig = await gameConfigCollection<{
+          _id: string;
+          baseActionsPerTurn?: number;
+          politicalMediaMarketEnabled?: boolean;
+        }>(db).findOne({ _id: "default" });
         const politicalMediaMarketEnabled = gameConfig?.politicalMediaMarketEnabled === true;
         // Passed through raw. `campaignActionsPerTurn` owns the floor and the
         // halving for NPP-run campaigns, so the desk applies the same ones.
@@ -109,8 +117,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // no upkeep and gets no actions; completed elections should have had their
         // campaigns archived at resolution, and this also guards stragglers.
         const activeElections = (
-          await db
-            .collection("elections")
+          await electionsCollection<Document>(db)
             .find(
               { status: "active" },
               {
@@ -145,8 +152,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
           ])
         );
 
-        const campaigns = await db
-          .collection<Campaign>("campaigns")
+        const campaigns = await campaignsCollection(db)
           // activityHistory is write-only for the turn engine: it pushes
           // insolvency downgrades and never reads the array back. Excluding it
           // keeps the hourly read flat as the history deepens, rather than
@@ -200,8 +206,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             .map((c) => ({ electionId: c.electionId, characterId: c.candidateId }));
 
           if (candidatePairs.length > 0) {
-            const electionCandidateDocs = await db
-              .collection<ElectionCandidate>("electionCandidates")
+            const electionCandidateDocs = await electionCandidatesCollection(db)
               .find({
                 $or: candidatePairs.map((p) => ({
                   electionId: p.electionId,
@@ -297,14 +302,12 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         const nppIds = campaigns.filter((c) => c.candidateIsNPP).map((c) => c.candidateId);
         const [characterDocs, nppDocs] = await Promise.all([
           characterIds.length > 0
-            ? db
-                .collection("characters")
+            ? charactersCollection<Document>(db)
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : Promise.resolve([]),
           nppIds.length > 0
-            ? db
-                .collection("npps")
+            ? nppsCollection<Document>(db)
                 // `policies` is ~94% of an NPP document and is not read here.
                 .find({ _id: { $in: nppIds } }, { projection: { policies: 0 } })
                 .toArray()
@@ -323,8 +326,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // each campaign's candidate row once so the aggregate below can join
         // correctly, then translate results back to the identity-id eKey space
         // shared with the NPP/governor/executive endorsement maps.
-        const candidateRows = await db
-          .collection<ElectionCandidate>("electionCandidates")
+        const candidateRows = await electionCandidatesCollection(db)
           .find({
             electionId: { $in: campaignElectionIds },
             characterId: { $in: campaignCandidateIds },
@@ -350,8 +352,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
           governorEndorsementCounts,
           executiveEndorsementCounts,
         ] = await Promise.all([
-          db
-            .collection("nppEndorsements")
+          nppEndorsementsCollection<Document>(db)
             .aggregate<{ _id: { electionId: ObjectId; candidateId: ObjectId }; count: number }>([
               {
                 // Active AND visible: the shared filter hides legacy
@@ -373,8 +374,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
             ])
             .toArray(),
           candidateRowIds.length > 0
-            ? db
-                .collection("playerEndorsements")
+            ? playerEndorsementsCollection<Document>(db)
                 .aggregate<{
                   _id: { electionId: ObjectId; candidateId: ObjectId };
                   count: number;
@@ -395,8 +395,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
                 ])
                 .toArray()
             : Promise.resolve([]),
-          db
-            .collection("governorEndorsements")
+          governorEndorsementsCollection<Document>(db)
             .aggregate<{ _id: { electionId: ObjectId; candidateId: ObjectId }; count: number }>([
               {
                 $match: {
@@ -413,8 +412,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
               },
             ])
             .toArray(),
-          db
-            .collection("executiveEndorsements")
+          executiveEndorsementsCollection<Document>(db)
             .aggregate<{ _id: { electionId: ObjectId; candidateId: ObjectId }; count: number }>([
               {
                 $match: {
@@ -473,11 +471,10 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
               continue;
             }
 
-            // An archived campaign belongs to a candidate who is out of the
-            // race (withdrew, lost a primary, was removed). It is retained for
-            // history and for reactivation on re-entry, but it must not keep
-            // drawing income, actions or maintenance — nor keep refreshing its
-            // fog-of-war — while its candidate is no longer running.
+            // An archived campaign belongs to a candidate out of the race (withdrew,
+            // lost a primary, was removed). It is retained for history and
+            // reactivation, but must not keep drawing income, actions,
+            // maintenance, or refreshing its fog-of-war while not running.
             if (campaign.status === "archived") {
               continue;
             }
@@ -880,7 +877,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
 
         // Execute bulkWrite for campaigns
         if (campaignOps.length > 0) {
-          await db.collection<Campaign>("campaigns").bulkWrite(campaignOps);
+          await campaignsCollection(db).bulkWrite(campaignOps);
         }
 
         for (const intent of politicalMediaOrders) {
@@ -913,7 +910,7 @@ export async function processCampaignTurn(turnNumber: number): Promise<CampaignT
         // enforced at schedule-time above (only queue an op if current < cap),
         // so the stored value cannot exceed PRIMARY_CAMPAIGN_TICK_CAP.
         if (candidateOps.length > 0) {
-          await db.collection<ElectionCandidate>("electionCandidates").bulkWrite(candidateOps);
+          await electionCandidatesCollection(db).bulkWrite(candidateOps);
         }
 
         // Apply passive effects using bulkWrite
@@ -979,8 +976,7 @@ async function applyPassiveEffectsBulk(
   // Resolve unknown targets (opposition research targets) — bulk lookup
   if (unknownTargets.size > 0) {
     const unknownIds = [...unknownTargets.keys()].map((id) => new ObjectId(id));
-    const foundChars = await db
-      .collection("characters")
+    const foundChars = await charactersCollection(db)
       .find({ _id: { $in: unknownIds } }, { projection: { _id: 1 } })
       .toArray();
     const charIdSet = new Set(foundChars.map((c) => c._id.toString()));
@@ -1031,7 +1027,7 @@ async function applyPassiveEffectsBulk(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("characters").bulkWrite(charOps);
+    await charactersCollection(db).bulkWrite(charOps);
   }
 
   if (nppUpdatesFinal.size > 0) {
@@ -1041,6 +1037,6 @@ async function applyPassiveEffectsBulk(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("npps").bulkWrite(nppOps);
+    await nppsCollection<Document>(db).bulkWrite(nppOps);
   }
 }

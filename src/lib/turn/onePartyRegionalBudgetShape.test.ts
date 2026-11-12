@@ -56,6 +56,7 @@ describe("one-party regional budget writes exactly one shape", () => {
     setup("legislationTypes", []);
     setup("regionalBudgets", [{ _id: "NE", countryId: "CN", ...STALE_DE_FIELDS }]);
     setup("cabinetSettings", []);
+    setup("federalBudget", []);
     db.collection.mockImplementation((name: string) => db.collectionMocks[name]);
   }
 
@@ -101,6 +102,25 @@ describe("one-party regional budget writes exactly one shape", () => {
     // not the frozen equalization figure.
     expect(shape.grantAmount).toBe(update.$set.centralTransferGrant);
     expect(shape.revenue).not.toHaveProperty("incomeTaxShare");
+  });
+
+  it("taxes provincial profits at the corporate rate the national budget sets", async () => {
+    const eitShareAt = async (domesticCorporateTax: number | null) => {
+      wire();
+      db.collectionMocks.federalBudget!.findOne = vi
+        .fn()
+        .mockResolvedValue(
+          domesticCorporateTax == null ? null : { taxRates: { domesticCorporateTax } }
+        );
+      const { processOnePartyRegionalBudgets } = await import("./cnRegionalBudget");
+      await processOnePartyRegionalBudgets(db as unknown as Db, "CN", 600, "1953-default");
+      return db.collectionMocks.regionalBudgets!.bulkWrite.mock.calls[0]?.[0][0].updateOne.update
+        .$set.eitShare as number;
+    };
+    const atDefault = await eitShareAt(null);
+    const atTen = await eitShareAt(10);
+    expect(atDefault).toBeGreaterThan(0);
+    expect(atTen).toBeCloseTo((atDefault * 10) / 25, 6);
   });
 
   it("is a no-op for a country with no onePartyRegionalBudget config", async () => {

@@ -132,6 +132,49 @@ describe("persisted operating model strategy reads", () => {
   });
 });
 
+describe("strategy section retool cost", () => {
+  const energySection = (currentYear: number, techTreesEnabled = true) =>
+    buildSectorStrategySection({
+      sector: makeSector({ sectorType: "energy", strategyId: "standard", revenue: 1000 }),
+      sectorType: "energy",
+      effectiveRates: { isTransitioning: false },
+      transitionProgress: 0,
+      strategyTransitionMod: 0,
+      currentTurn: 100,
+      sectorHostLiquidCode: "USD",
+      sectorHostFxRate: 1,
+      commodityPrices: [],
+      techCorpView: { type: "energy", unlockedTechNodeIds: [] },
+      techCurrentYear: currentYear,
+      techTreesEnabled,
+      shouldRedact: false,
+      stateResources: undefined,
+      strategyCapacityMultipliers: null,
+      marginProjection: null,
+    });
+  const row = (section: ReturnType<typeof energySection>, id: string) =>
+    section.availableStrategies.find((strategy) => strategy.id === id);
+
+  it("discounts a successor of a retired method", () => {
+    const section = energySection(2040);
+    const full = section.retoolCost;
+    expect(full).toBeGreaterThan(0);
+    expect(row(section, "renewables")).toMatchObject({
+      retoolCostMultiplier: 0.4,
+      retoolCost: Math.round(full * 0.4),
+    });
+  });
+
+  it("charges the full fee before the sunset and with tech trees off", () => {
+    for (const section of [energySection(2038), energySection(2040, false)]) {
+      expect(row(section, "renewables")).toMatchObject({
+        retoolCostMultiplier: 1,
+        retoolCost: section.retoolCost,
+      });
+    }
+  });
+});
+
 describe("pledged property sale affordability", () => {
   it("includes actual native FX fees in the buyer quote and allows a same-market merge", async () => {
     const memory = createInMemoryDb();

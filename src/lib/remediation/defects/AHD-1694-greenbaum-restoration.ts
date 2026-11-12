@@ -13,27 +13,28 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
 
 /**
- * Support incident #1694, Greenbaum Group (sequential 493).
+ * Remediation for the Greenbaum Group incident (sequential 493).
  *
- * Greenbaum's retail bank failed at turn 438 holding 15.8B of marked
- * sovereign treasuries and a 0.90 capital ratio. The confidence score and the
- * red-band run test read only vault cash, while the treasury auto-sweep had
- * moved spare cash into bills. Contagion from the injection failures pushed it
- * red, flight emptied the 1.32B vault and the run test closed a solvent bank.
- * The code half is PR #5062 (treasuries count as liquid cover).
+ * Greenbaum's retail bank failed holding marked sovereign treasuries while
+ * the confidence score and red-band run test read only vault cash, so the
+ * auto-sweep had moved spare cash to bills and the run test closed a solvent
+ * bank. Treasuries count as liquid cover now (the code-side half).
  *
- * Resolution paid the 16.26B household deposit book from the vault (3.84B),
- * the USD deposit insurance fund (6.54B) and the treasury backstop (5.88B).
- * The bank's own 14.0B bond then matured into the insurance fund at turn 467,
- * and its loan book recoveries keep flowing there. The owner received nothing.
+ * The 16.26B household deposit book was paid from the vault, the USD deposit
+ * insurance fund, and the treasury backstop; the bank's own 14.0B bond matured
+ * into the fund and loan recoveries keep flowing there. The owner received
+ * nothing.
  *
- * Owner decision 2026-10-27: return the 3.005B of capital the owner posted,
- * MOVED from the USD insurance fund (which collected more from Greenbaum's
- * estate than it paid out), so no money is created, and reopen the retail
- * bank with fresh books through `issueCharter`, which posts the required
- * capital out of the corporation's cash like any player charter.
+ * The owner's 3.005B posted capital is refunded from the USD insurance fund
+ * (which collected more from the estate than it paid out), so no money is
+ * created. The retail bank is then reopened with fresh books through
+ * `issueCharter`, which posts required capital from the corporation's cash
+ * like any player charter.
  */
 
 export const DEFECT_ID = "AHD-1694-greenbaum-restoration";
@@ -61,12 +62,10 @@ type CorpDoc = Pick<Corporation, "_id" | "name" | "bankCharter" | "liquidCapital
 };
 
 async function load(db: Db): Promise<CorpDoc | null> {
-  return db
-    .collection<CorpDoc>("corporations")
-    .findOne(
-      { _id: new ObjectId(CORPORATION_ID) },
-      { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
-    );
+  return corporationsCollection<CorpDoc>(db).findOne(
+    { _id: new ObjectId(CORPORATION_ID) },
+    { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
+  );
 }
 
 const markerOf = (doc: CorpDoc | null) => doc?.remediation?.[DEFECT_ID];
@@ -74,9 +73,10 @@ const markerOf = (doc: CorpDoc | null) => doc?.remediation?.[DEFECT_ID];
 async function currentTurn(db: Db): Promise<number> {
   return (
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0
   );
 }
@@ -110,9 +110,7 @@ async function plan(db: Db): Promise<HealPlan> {
   const o = outstanding(doc);
   const notes: string[] = [];
   if (doc && o.reopen) {
-    const corp = (await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: doc._id })) as Corporation;
+    const corp = (await corporationsCollection(db).findOne({ _id: doc._id })) as Corporation;
     const eligibility = await checkCharterEligibility(
       db,
       { ...corp, liquidCapital: (corp.liquidCapital ?? 0) + (o.refund ? REFUND : 0) },
@@ -125,9 +123,10 @@ async function plan(db: Db): Promise<HealPlan> {
         : `${NAME}: reopen as retail would be refused: ${eligibility.reasons.join("; ")}`
     );
   }
-  const fund = await db
-    .collection<{ _id: string; balance?: number }>("depositInsuranceFunds")
-    .findOne({ _id: FUND_ID }, { projection: { balance: 1 } });
+  const fund = await depositInsuranceFundsCollection<{ _id: string; balance?: number }>(db).findOne(
+    { _id: FUND_ID },
+    { projection: { balance: 1 } }
+  );
   return {
     affected: (o.refund ? 1 : 0) + (o.reopen ? 1 : 0),
     touched: [
@@ -152,7 +151,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   if (payload?.refund) {
     // Claim the marker first so a retry can never pay twice; the journal key
     // makes the transfer itself idempotent as well.
-    const claimed = await db.collection<CorpDoc>("corporations").updateOne(
+    const claimed = await corporationsCollection<CorpDoc>(db).updateOne(
       { _id: id, [MARKER_PATH]: { $exists: false } },
       {
         $set: {
@@ -195,9 +194,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         event: { kind: "bank.resolved", command: "remediation.greenbaum", amount: REFUND },
       });
       if (move.status !== "applied" || move.error) {
-        await db
-          .collection<CorpDoc>("corporations")
-          .updateOne({ _id: id }, { $unset: { [MARKER_PATH]: "" } });
+        await corporationsCollection<CorpDoc>(db).updateOne(
+          { _id: id },
+          { $unset: { [MARKER_PATH]: "" } }
+        );
         return {
           documentsScanned: 1,
           documentsUpdated: 0,
@@ -236,9 +236,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       const outcome: Marker["reopen"] = result.ok
         ? "done"
         : `refused: ${(result.reasons[0] ?? "ineligible").slice(0, 120)}`;
-      await db
-        .collection<CorpDoc>("corporations")
-        .updateOne({ _id: id }, { $set: { [`${MARKER_PATH}.reopen`]: outcome } });
+      await corporationsCollection<CorpDoc>(db).updateOne(
+        { _id: id },
+        { $set: { [`${MARKER_PATH}.reopen`]: outcome } }
+      );
       reopened = result.ok;
       notes.push(`reopen as retail ${outcome}`);
     }

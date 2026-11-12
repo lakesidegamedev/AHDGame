@@ -44,6 +44,11 @@ import {
 } from "@/lib/constants/sectorStrategies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { withFundedNationalBalances } from "@/lib/market/producerMarket/loadFundedCountryBooks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export interface CountrySectorMixEntry {
   type: OperatingSectorType;
@@ -459,19 +464,19 @@ export async function aggregateCountrySectorMix(
 ): Promise<CountrySectorMixEntry[]> {
   const [states, sectors, fxByCurrency, preset, marketMode, worldState, storedPrices] =
     await Promise.all([
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ countryId })
         .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
         .toArray(),
-      db.collection<CorporateSector>("corporateSectors").find({ countryId }).toArray(),
+      corporateSectorsCollection(db).find({ countryId }).toArray(),
       loadFxRatesByCurrency(db),
       loadWorldPreset(db),
       getMarketSystemModeForDb(db),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1, worldEpochId: 1 } }),
-      db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
+      gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, worldEpochId: 1 } }
+      ),
+      commodityPricesCollection(db).find({}).toArray(),
     ]);
   // The national gap reads the funded country book of the prices' turn when
   // there is one: stored nationalDemand misses buyers with no state.
@@ -479,7 +484,7 @@ export async function aggregateCountrySectorMix(
   const plantsMode = marketAtLeast(marketMode, "plants");
   const unownedDocs = plantsMode
     ? []
-    : await db.collection<UnownedSector>("unownedSectors").find({ countryId }).toArray();
+    : await unownedSectorsCollection(db).find({ countryId }).toArray();
   const eraUnitScale = getEraUnitScale(preset);
   const currentTurn =
     typeof worldState?.currentTurn === "number" && Number.isFinite(worldState.currentTurn)

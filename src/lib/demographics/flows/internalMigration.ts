@@ -51,11 +51,9 @@ export function regionAttractiveness(m: RegionPullMetrics, countryAvgMedianIncom
 }
 
 // Per-turn share of country population that reallocates per unit of attractiveness
-// deviation. Because the net target scales with COUNTRY population (not the
-// receiving region's), a small attractive state used to balloon — a 1-point
-// attractiveness edge could add several %/yr, flipping House seats after a single
-// game-year instead of over a realistic decade. Lowered so cross-state divergence
-// stays ~1%/yr and decennial reapportionment moves a realistic handful of seats.
+// deviation. The net target scales with COUNTRY population, not the receiving
+// region's, so keep this low: cross-state divergence should stay ~1%/yr so
+// decennial reapportionment moves only a realistic handful of seats.
 const INTERNAL_MIGRATION_SENSITIVITY = 0.00004;
 
 /**

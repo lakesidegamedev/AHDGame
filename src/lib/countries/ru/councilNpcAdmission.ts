@@ -5,25 +5,25 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  GameState,
-  NPP,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { ensureBoundedNpcCandidateGuards } from "@/lib/admin/seed/indexes/boundedNpcCandidates";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
 import {
   materializeRussianCouncilElectionOpening,
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
   type RussianCouncilOpeningRecord,
 } from "./councilElectionOpening";
 import { loadRussianCouncilOpeningBinding } from "./councilOpeningBinding";
 import { materializeRussianCouncilRepeatOpening } from "./councilRepeatOpening";
 import { planRussianCouncilNpcSlates } from "./rules/councilNpcSlates";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export async function materializeRussianCouncilNpcAdmission(input: {
   db: Db;
@@ -41,14 +41,12 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     now.getTime() < 0
   )
     throw new Error("Council admission needs an active transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (game?.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -70,7 +68,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     !country.ruDumaNpcAdmissionCohortId?.equals(country.ruFirstDumaElectionCohortId)
   )
     return null;
-  const openings = db.collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION);
+  const openings = russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(db);
   const binding = await loadRussianCouncilOpeningBinding({ db, session, country, cohortId, turn });
   if (!binding) throw new Error("Council admission lost its opening receipt");
   const { opening: receipt, rootCohortId } = binding;
@@ -100,8 +98,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     });
     if (!boundOpening?.cohortId.equals(cohortId)) return null;
   }
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "RU", "russianCouncilRound.cohortId": cohortId },
       {
@@ -155,8 +152,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
     )
   )
     return null;
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "RU", regimeStatus: { $ne: "banned" } },
       { session, projection: { sequentialId: 1 } }
@@ -165,8 +161,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
   if (parties.some((row) => !Number.isSafeInteger(row.sequentialId) || row.sequentialId < 1))
     throw new Error("Council admission needs registered associations");
   const partyIds = parties.map((row) => String(row.sequentialId));
-  const profiles = await db
-    .collection<NPP>("npps")
+  const profiles = await nppsCollection(db)
     .find(
       {
         countryId: "RU",
@@ -181,7 +176,7 @@ export async function materializeRussianCouncilNpcAdmission(input: {
       }
     )
     .toArray();
-  const candidates = db.collection<ElectionCandidate>("electionCandidates");
+  const candidates = electionCandidatesCollection(db);
   const active = await candidates
     .find(
       { electionId: { $in: elections.map((row) => row._id) }, status: "active" },
@@ -285,11 +280,12 @@ export async function admitRussianCouncilNpcNominees(
     input.now.getTime() < 0
   )
     throw new Error("Council admission needs a safe turn and time");
-  const game = await input.db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(input.db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
-  const country = await input.db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(input.db).findOne(
     { _id: "RU" },
     {
       projection: {

@@ -18,22 +18,21 @@ import {
   mergeSurvivorConstructionFilter,
   type ConstructionBorrowerTransferPlan,
 } from "@/lib/banking/constructionBorrowerTransfer";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /**
- * Move one operating sector to `destCorpId`, re-denominating its revenue + growth
- * cost from the source corp's home currency to the destination's (sector economic
- * fields are stored in the owner's currency post-v0.2.6).
+ * Move one operating sector to `destCorpId`, re-denominating its revenue and
+ * growth cost from the source corp's home currency to the destination's
+ * (sector economic fields are stored in the owner's currency).
  *
  * Respects the unique (corporationId, stateId, sectorType) index: if the
- * destination already operates that (state, type), the donor is MERGED in (its
- * capacity folded, donor row dropped); otherwise it is re-parented. Haircut-free
- * — unlike nationalization's absorbSectorIntoNatCorp, this is a consensual
- * transfer, not a taking, so no productivity shock is applied.
+ * destination already operates that (state, type), the donor is merged in
+ * (capacity folded, donor row dropped); otherwise it is re-parented. No
+ * haircut, since this is a consensual transfer, not a taking.
  *
- * A financed site moves only under `constructionTransfers`, which has already
- * locked its loan: the title write names the new borrower in the same update.
- * The caller settles the plan afterwards. A financed site never merges into
- * another row; a financed survivor keeps its own claim while a donor folds in.
+ * A financed site moves only under `constructionTransfers`: the title write
+ * names the new borrower in the same update; caller settles the plan after.
+ * A financed site never merges into another row.
  */
 export async function moveSectorToCorp(
   db: Db,
@@ -50,7 +49,7 @@ export async function moveSectorToCorp(
   if (hasProtectedConstructionProperty(sector) && !financedMove) {
     throw new Error("A sector with secured construction cannot change ownership yet");
   }
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const revenueAnchor = readCorpEconomicAnchor(sector.revenue ?? 0, srcCurrency, srcFxRate);
   const growthCostAnchor = readCorpEconomicAnchor(
     sector.currentGrowthCost ?? 0,
@@ -105,20 +104,13 @@ export async function moveSectorToCorp(
       const donorQueue: SectorBuildOrder[] = Array.isArray(sector.buildQueue)
         ? rescaleBuildQueueForStrategyChange(sector.buildQueue, ratio)
         : [];
-      // The strategy-ratio rescale is the only thing special about THIS merge
-      // path; everything after it is the shared fold. Pre-fix this file
-      // hand-rolled the fold and diverged from `mergeSectorPlantFields` on
-      // three points, all of them silent: the merged queue was not re-sorted by
-      // `onlineTurn` (the turn processor's "land everything due" scan depends
-      // on that ordering), `plantsStartTurn` was dropped instead of taking the
-      // earlier of the two (restarting the survivor's governor ramp), and
-      // `mothballed` was not merged at all (a move into a mothballed survivor
-      // left it idle while holding the donor's capacity).
-      //
-      // `costPaidAnchor` is ₳-anchored cash ALREADY SPENT and is deliberately
-      // not rescaled by the strategy ratio (same rule as the retool path) — CIP
-      // and the cancellation refund must keep reporting what was actually paid,
-      // which is why the rescale above touches units only.
+      // The strategy-ratio rescale is the only thing special about this merge path;
+      // everything after is the shared fold. Do not hand-roll the fold: the shared
+      // fold re-sorts the merged queue by `onlineTurn` (the turn processor's due scan
+      // depends on it), takes the earlier `plantsStartTurn`, and merges `mothballed`.
+      // `costPaidAnchor` is cash ALREADY SPENT and is deliberately not rescaled by the
+      // strategy ratio (same rule as the retool path); CIP and cancellation refund
+      // must report what was actually paid.
       const merged = mergeSectorPlantFields(
         {
           sectorType: existing.sectorType,

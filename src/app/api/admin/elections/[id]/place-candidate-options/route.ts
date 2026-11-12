@@ -7,7 +7,13 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Election, Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { Election, NPP, PoliticalParty } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -30,7 +36,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 
@@ -38,8 +44,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Not a presidential election");
     }
 
-    const existingCandidateIds = await db
-      .collection("electionCandidates")
+    const existingCandidateIds = await electionCandidatesCollection<Document>(db)
       .find({ electionId: electionObjectId, status: "active" })
       .project({ characterId: 1, nppId: 1, isNPP: 1 })
       .toArray();
@@ -54,23 +59,17 @@ export async function GET(request: Request, { params }: RouteParams) {
     );
 
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({})
         .project({ _id: 1, name: 1, party: 1, homeState: 1 })
         .sort({ name: 1 })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({})
         .project({ _id: 1, name: 1, party: 1 })
         .sort({ name: 1 })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .find({})
-        .project({ _id: 1, name: 1 })
-        .toArray(),
+      politicalPartiesCollection(db).find({}).project({ _id: 1, name: 1 }).toArray(),
     ]);
 
     const characterOptions = characters.map((c) => ({

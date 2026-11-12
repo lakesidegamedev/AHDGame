@@ -172,6 +172,24 @@ describe("resolveSectorLabourEconomics", () => {
     }
   });
 
+  it("cheapens payroll under the hiring subsidy and leaves the automation index alone", () => {
+    const plain = economicsInput();
+    const subsidised = economicsInput();
+    const base = resolveSectorLabourEconomics(plain);
+    const cheaper = resolveSectorLabourEconomics({
+      ...subsidised,
+      employerWageCostMultiplier: 0.95,
+    });
+    // The subsidy cuts the employer's bill, not the worker's pay.
+    expect(cheaper.wagePerWorker).toBeCloseTo(base.wagePerWorker!, 10);
+    expect(cheaper.sectorLaborCost).toBeLessThan(base.sectorLaborCost);
+    expect(subsidised.automationIndexByState).toEqual(plain.automationIndexByState);
+    expect(
+      resolveSectorLabourEconomics({ ...economicsInput(), employerWageCostMultiplier: 1 })
+        .sectorLaborCost
+    ).toBe(base.sectorLaborCost);
+  });
+
   it("prices an agreement wage floor above the employer's own wage level", () => {
     const unfloored = resolveSectorLabourEconomics(economicsInput());
     const floored = resolveSectorLabourEconomics(economicsInput(1.3));
@@ -258,6 +276,65 @@ describe("resolveSectorHeadcount on a funded turn", () => {
     });
     expect(out).toMatchObject({ desiredWorkers: 0, workers: 0 });
     expect(demand.get("s1") ?? 0).toBe(0);
+  });
+});
+
+describe("resolveSectorHeadcount with an automation crew factor", () => {
+  const base = {
+    revenue: 1_000_000,
+    stateId: "s1",
+    rawWorkforceSkillByState: new Map<string, number>(),
+    politicalBoard: undefined,
+    staffingFactor: 1,
+  };
+
+  it("wants fewer workers and records the ones it shed", () => {
+    const conventional = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+    });
+    const demand = makeLabourDemandByState();
+    const displaced = makeLabourDemandByState();
+    const automated = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: demand,
+      labourPerUnitFactor: 0.5,
+      automationDisplacedByState: displaced,
+    });
+    expect(automated.desiredWorkers).toBe(Math.round(conventional.desiredWorkers * 0.5));
+    expect(demand.get("s1")).toBe(automated.desiredWorkers);
+    expect(displaced.get("s1")).toBeCloseTo(automated.desiredWorkers, 6);
+  });
+
+  it("leaves a conventional plant unchanged and sheds no one", () => {
+    const displaced = makeLabourDemandByState();
+    const plain = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+    });
+    const out = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+      labourPerUnitFactor: 1,
+      automationDisplacedByState: displaced,
+    });
+    expect(out.desiredWorkers).toBe(plain.desiredWorkers);
+    expect(displaced.get("s1") ?? 0).toBe(0);
+  });
+
+  it("compares a funded automated plant against its own method-adjusted crew", () => {
+    const out = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+      labourPerUnitFactor: 0.5,
+      fundedHeadcount: { desiredWorkers: 7, workers: 7 },
+    });
+    const automated = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: makeLabourDemandByState(),
+      labourPerUnitFactor: 0.5,
+    });
+    expect(out.referenceDesiredWorkers).toBe(automated.desiredWorkers);
   });
 });
 

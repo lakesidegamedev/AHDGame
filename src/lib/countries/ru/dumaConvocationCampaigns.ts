@@ -4,7 +4,6 @@
  * and opens only failed-ballot repeats within that convocation's original term.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { CountryGameState } from "@/lib/db/types";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { openRussianDumaConvocation } from "./dumaConvocationOpening";
 import {
@@ -13,16 +12,12 @@ import {
 } from "./dumaConvocationAuthority";
 import { admitRussianDumaNpcNominees } from "./dumaNpcAdmission";
 import { admitRussianDumaRepeatNpcNominees } from "./dumaRepeatNpcAdmission";
-import {
-  openRussianDumaRepeat,
-  RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION,
-  type RussianDumaRepeatOpeningRecord,
-} from "./dumaRepeatOpening";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import { openRussianDumaRepeat, type RussianDumaRepeatOpeningRecord } from "./dumaRepeatOpening";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import { planRussianAssemblyCampaign } from "./rules/assemblyCampaign";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaRepeatOpeningsCollection } from "@/lib/db/repositories/russianDumaRepeatOpenings";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 export async function processRussianDumaConvocationCampaigns(input: {
   db: Db;
   game: RussianConstitutionalCalendar;
@@ -34,37 +29,33 @@ export async function processRussianDumaConvocationCampaigns(input: {
   if (input.game.preset !== "1991-default") return result;
   const opened = await openRussianDumaConvocation(input);
   if (opened?.created) result.opened++;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne(
-      { _id: "RU" },
-      { projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruDumaNpcAdmissionCohortId: 1 } }
-    );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruDumaNpcAdmissionCohortId: 1 } }
+  );
   const root = country?.ruDumaConvocationCohortId;
   if (!country || !root) return result;
   result.active = true;
   const authority = await loadRussianDumaAuthority({ db, country, root, turn });
   if (!authority?.record) throw new Error("Duma campaign lacks its current convocation authority");
-  const latest = await db
-    .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-    .findOne(
-      {
-        countryId: "RU",
-        preset: "1991-default",
-        mandateSinceTurn: country.ruFederalAssemblyMandateSinceTurn,
-        $or: [{ cohortId: root }, { rootCohortId: root }],
+  const latest = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db).findOne(
+    {
+      countryId: "RU",
+      preset: "1991-default",
+      mandateSinceTurn: country.ruFederalAssemblyMandateSinceTurn,
+      $or: [{ cohortId: root }, { rootCohortId: root }],
+    },
+    {
+      sort: { generation: -1 },
+      projection: {
+        cohortId: 1,
+        generation: 1,
+        resolvedOnTurn: 1,
+        "result.constituencyResults.decision.outcome": 1,
+        "result.listDecision.outcome": 1,
       },
-      {
-        sort: { generation: -1 },
-        projection: {
-          cohortId: 1,
-          generation: 1,
-          resolvedOnTurn: 1,
-          "result.constituencyResults.decision.outcome": 1,
-          "result.listDecision.outcome": 1,
-        },
-      }
-    );
+    }
+  );
   const failedPolls = latest
     ? latest.result.constituencyResults.filter((row) => row.decision.outcome === "repeat").length +
       (latest.result.listDecision.outcome === "repeat" ? 1 : 0)
@@ -72,14 +63,12 @@ export async function processRussianDumaConvocationCampaigns(input: {
   const generation = latest ? (latest.generation ?? 0) + 1 : 0;
   const opening =
     latest && failedPolls
-      ? await db
-          .collection<RussianDumaRepeatOpeningRecord>(RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION)
-          .findOne(
-            {
-              _id: `${root.toHexString()}:repeat:${generation}`,
-            },
-            { projection: { cohortId: 1, generation: 1, openedOnTurn: 1, npcAdmission: 1 } }
-          )
+      ? await russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(db).findOne(
+          {
+            _id: `${root.toHexString()}:repeat:${generation}`,
+          },
+          { projection: { cohortId: 1, generation: 1, openedOnTurn: 1, npcAdmission: 1 } }
+        )
       : null;
   const plan = planRussianAssemblyCampaign({
     turn,

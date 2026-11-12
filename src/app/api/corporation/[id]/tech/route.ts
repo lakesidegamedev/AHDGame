@@ -21,7 +21,6 @@ import {
 import type { Corporation } from "@/lib/db/types";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   RD_INNOVATION_INTERVAL,
@@ -64,9 +63,15 @@ import {
   TECH_NODE_CASH_REVENUE_FRACTION,
   type TechCorpView,
   type TechLane,
+  isFrontierOpen,
+  frontierProgrammeCost,
+  frontierPurchaseCount,
+  FRONTIER_OUTPUT_PCT,
+  FRONTIER_INPUT_PCT,
 } from "@/lib/constants/techTree";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { corpDailyGrossRevenuePricingLocal } from "@/lib/corporations/dailyGrossRevenue";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -78,9 +83,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     const gameState = await getGameState();
-    if (!(await isSectorTechTreesEnabled(gameState ?? undefined))) {
-      return NextResponse.json({ enabled: false });
-    }
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
@@ -99,12 +101,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const controllingParent =
       authUser?.userId && !isCeo ? getControllingCorporateParent(corporation) : null;
     if (authUser?.userId && controllingParent) {
-      const parentCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: controllingParent.corporationId },
-          { projection: { userId: 1, ceoVacant: 1 } }
-        );
+      const parentCorp = await corporationsCollection(db).findOne(
+        { _id: controllingParent.corporationId },
+        { projection: { userId: 1, ceoVacant: 1 } }
+      );
       viewerIsControllingParentCeo =
         !!parentCorp &&
         parentCorp.ceoVacant !== true &&
@@ -132,6 +132,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       industryModel: corporation.industryModel,
       unlockedTechNodeIds: corporation.unlockedTechNodeIds,
       techDecadeLane: corporation.techDecadeLane,
+      frontierProgrammes: corporation.frontierProgrammes,
+      frontierMethods: corporation.frontierMethods,
     };
     const unlocked = new Set(corporation.unlockedTechNodeIds ?? []);
     const passedDecades = new Set(getPassedDecadeIds(currentYear));
@@ -178,11 +180,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
           techCashFloorLocal,
           techPlantBasis
         );
-        // What the node is worth per turn to this corp, and how long its cash
-        // price takes to earn back. Null when redacted or when the node has no
-        // running plant value.
-        // Owned techs from before the previous decade no longer apply their
-        // running plant effects in the turn, so they are worth nothing now.
+        // Per-turn value of this node to the corp, and turns of cash cost
+        // to earn it back. Null when redacted, or when an owned node's
+        // running plant effects have expired (past decades no longer apply).
         const effectExpired =
           owned && isTechNodeEffectExpired(node, activeDecadeIds, { shieldExpires });
         const valuePerTurn =
@@ -329,14 +329,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
       redacted: redact,
       rdScore,
       rdBudget: redact ? null : Math.round(corporation.rdBudget ?? 0),
-      // Mirror the turn engine / Budget / Operations formula exactly: FX-anchor
-      // the R&D budget and subtract decay (calculateCorpStrengthProjection).
-      // Previously fed the RAW local-currency rdBudget straight into calcRdGrowth
-      // with no anchor and no decay, which inflated the figure ~2.7× for non-USD
-      // corps (e.g. JPY ~130× budget through the log curve) and disagreed with
-      // every other tab (#903).
+      // Must match the turn engine / Budget / Operations formula: FX-anchor the
+      // R&D budget and subtract decay (calculateCorpStrengthProjection).
       // While an active product is in development it takes a bounded share of
-      // the R&D budget, so only the rest earns points (#1724).
+      // the R&D budget, so only the remainder earns points.
+
       rdGainPerTurn: rdProjection ? Math.round(rdProjection.rdScoreNetChange * 10) / 10 : null,
       rdDecayPerTurn: rdProjection ? Math.round(rdProjection.rdScoreDecay * 10) / 10 : null,
       rdFundedProduct:
@@ -366,6 +363,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // Active plant-wide tech effects against their caps.
       plantOutputPct: agg ? Math.round(agg.plantOutputBonus * 1000) / 10 : null,
       plantOutputCapPct: Math.round(TECH_PLANT_OUTPUT_CAP * 100),
+      // Frontier race methods sit on top of the node cap as their own term.
+      methodOutputPct: agg ? Math.round(agg.methodOutputBonus * 1000) / 10 : null,
       inputEfficiencyPct: agg ? Math.round(agg.inputEfficiencyBonus * 1000) / 10 : null,
       inputEfficiencyCapPct: Math.round(TECH_INPUT_EFFICIENCY_CAP * 100),
       // Overview metrics.
@@ -375,6 +374,23 @@ export async function GET(_request: Request, { params }: RouteParams) {
       breakthroughChance,
       breakthroughInterval: RD_INNOVATION_INTERVAL,
       decades,
+      // Repeatable frontier programmes after the last tier. Null when redacted.
+      frontier: redact
+        ? null
+        : (() => {
+            const purchases = frontierPurchaseCount(corporation.frontierProgrammes);
+            const open = isFrontierOpen(corpView, operatingSectorType, currentYear);
+            const nextCost = frontierProgrammeCost(purchases);
+            return {
+              open,
+              outputCount: corporation.frontierProgrammes?.output ?? 0,
+              inputCount: corporation.frontierProgrammes?.input ?? 0,
+              nextCost,
+              outputPctPerProgramme: FRONTIER_OUTPUT_PCT * 100,
+              inputPctPerProgramme: FRONTIER_INPUT_PCT * 100,
+              affordable: open && isCeo && (rdScore ?? 0) >= nextCost,
+            };
+          })(),
     });
   } catch (error) {
     return handleRouteError(error);

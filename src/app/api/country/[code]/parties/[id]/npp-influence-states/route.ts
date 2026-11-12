@@ -3,8 +3,10 @@ import { handleRouteError, forbidden, notFound, errorResponse } from "@/lib/api/
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -52,8 +54,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Get all player characters in this party (non-NPP)
     // Filter by countryId to prevent cross-country sequentialId collisions
     const partyCountry = party.countryId ?? "US";
-    const playerCharacters = await db
-      .collection<Character>("characters")
+    const playerCharacters = await charactersCollection(db)
       .find({ party: partyIdStr, isNPP: { $ne: true }, countryId: partyCountry })
       .project({ homeState: 1 })
       .toArray();
@@ -63,8 +64,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Pull regions for this party's country directly from the states collection —
     // works uniformly for every country (US states, UK regions, JP prefectures,
     // DE Länder, …) without hardcoded per-country tables.
-    const regionDocs = await db
-      .collection<State>("states")
+    const regionDocs = await statesCollection(db)
       .find({ countryId: partyCountry })
       .project<{ _id: string; name?: string }>({ _id: 1, name: 1 })
       .toArray();

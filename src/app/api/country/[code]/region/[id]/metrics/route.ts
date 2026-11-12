@@ -4,7 +4,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { State, StateApprovalHistory, GameState } from "@/lib/db/types";
-import type { StateDemographics } from "@/lib/db/types/demographics";
 import { resolveGameYear } from "@/lib/era/era";
 import { getActiveAddressApprovalModifiers } from "@/lib/governorOffice/address/activeAddressModifiers";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
@@ -14,6 +13,8 @@ import {
   computeStateApprovalBase,
   computeNationalAveragesFromMetrics,
   buildFlatMetrics,
+  loadElectorateGroups,
+  weightingFor,
 } from "@/lib/utils/governmentApproval";
 import {
   isPoliticalApprovalCountry,
@@ -27,6 +28,10 @@ import {
   NATIONAL_SCOPE_IDS,
   getNationalDocId,
 } from "@/lib/constants/nationalScope";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
 
 // GET /api/country/[code]/region/[id]/metrics — Return all state metrics including government approval and tick rates
 // Auth: public
@@ -55,13 +60,13 @@ export async function GET(
     const [state, metrics, budgetDoc] = await Promise.all([
       isNational
         ? Promise.resolve(null)
-        : db.collection<State>("states").findOne({ _id: stateId, countryId }),
+        : statesCollection(db).findOne({ _id: stateId, countryId }),
       // SP5: merged two-store view.
       isNational
         ? findMergedRegionMetrics(db, { _id: stateId })
         : findMergedRegionMetrics(db, { _id: stateId, countryId }),
       hasSubNationalChamber
-        ? db.collection<RegionalBudget>("regionalBudgets").findOne({ _id: stateId, countryId })
+        ? regionalBudgetsCollection(db).findOne({ _id: stateId, countryId })
         : Promise.resolve(null),
     ]);
 
@@ -81,8 +86,8 @@ export async function GET(
       await Promise.all([
         nationalDocId ? findMergedRegionMetrics(db, { _id: nationalDocId }) : Promise.resolve(null),
         isNational ? Promise.resolve({}) : computeStateTickRates(db, stateId, resolvedCountryId),
-        db.collection<StateApprovalHistory>("stateApprovalHistory").findOne({ _id: stateId }),
-        db.collection<GameState>("gameState").findOne({ _id: "current" }),
+        stateApprovalHistoryCollection(db).findOne({ _id: stateId }),
+        gameStateCollection(db).findOne({ _id: "current" }),
         findMergedRegionMetricsMany(db, { countryId: resolvedCountryId }),
       ]);
 
@@ -108,7 +113,7 @@ export async function GET(
     const currentTurn = gameStateDoc?.currentTurn ?? 0;
     const preset = gameStateDoc?.preset ?? null;
     // Live year for era-aware scoring; null while the flag is off (legacy path).
-    const year = gameStateDoc?.eraSystemEnabled ? resolveGameYear(gameStateDoc) : null;
+    const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
     const addressModifiers = await getActiveAddressApprovalModifiers(
       db,
       resolvedCountryId,
@@ -117,11 +122,11 @@ export async function GET(
     );
     // P6d: this region's demographic groups, so the displayed approval matches
     // the electorate-weighted value the per-turn snapshot stores.
-    const demographicsDoc = await db
-      .collection<StateDemographics>("stateDemographics")
-      .findOne({ _id: stateId, countryId: resolvedCountryId }, { projection: { groups: 1 } });
-    const regionGroups = Object.values(demographicsDoc?.groups ?? {});
-    const weighting = regionGroups.length > 0 ? { groups: regionGroups } : undefined;
+    const groupsByState = await loadElectorateGroups(db, {
+      _id: stateId,
+      countryId: resolvedCountryId,
+    });
+    const weighting = weightingFor(groupsByState, resolvedCountryId, stateId);
     // SP4: playable countries score from the hybrid political base.
     let metricModifiers;
     let baseOverride: number | undefined;

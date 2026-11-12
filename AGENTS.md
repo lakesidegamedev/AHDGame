@@ -46,6 +46,15 @@ line that has to be rewritten wherever the system runs next.
 Existing systems are not being retrofitted in bulk. The rule bites on what you
 touch: if your change adds or reworks a formula, that formula lands in `rules/`.
 
+## Comments
+
+Explain why, not history. No dates, issue or ticket numbers, or change narration
+("previously", "used to", "the owner decided") in code comments: that belongs in
+commits, PRs and changelogs. Keep comments short and prefer a clear name. The
+comment ratchet in `npm run architecture:contracts` fails a file that gains
+overlong blocks or narrative lines; after cleanups run
+`npm run comment:ratchet:lower`. See [CONTRIBUTING.md](./CONTRIBUTING.md#code-comments).
+
 ## Commands
 
 ```bash

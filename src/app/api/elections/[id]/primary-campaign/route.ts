@@ -19,10 +19,13 @@ import {
   type MoneyFlowLegOutcome,
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
-import type { ElectionCandidate, Character, GameState } from "@/lib/db/types";
+import type { ElectionCandidate, GameState } from "@/lib/db/types";
 import { z } from "zod";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded } from "@/lib/elections/phases";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -54,9 +57,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { id: electionId } = await params;
 
     const db = await getDb();
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     const validStates = new Set(getElectoralVoteUnits(gameState?.preset).map((u) => u.stateId));
     if (!validStates.has(stateId)) {
       return errorResponse(400, "Invalid US state code");
@@ -89,7 +93,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const character = auth.user.character;
 
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -124,8 +128,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${character._id.toHexString()}:${candidate._id.toHexString()}:primary:${stateId}:${actionCost}`;
-    const characters = db.collection<Character>("characters");
-    const candidates = db.collection<ElectionCandidate>("electionCandidates");
+    const characters = charactersCollection(db);
+    const candidates = electionCandidatesCollection(db);
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
     if (previousReceipt && previousReceipt.fingerprint !== fingerprint) {
@@ -145,9 +149,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "You are already campaigning in this state");
     }
     if (!recovering) {
-      const freshChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: character._id }, { projection: { actions: 1 } });
+      const freshChar = await charactersCollection(db).findOne(
+        { _id: character._id },
+        { projection: { actions: 1 } }
+      );
       if (!freshChar || freshChar.actions < actionCost) {
         return errorResponse(
           400,

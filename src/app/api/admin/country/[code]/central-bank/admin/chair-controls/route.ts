@@ -9,13 +9,13 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types";
 import { createAdminLog } from "@/lib/adminLog";
 import {
   notifyImfMonetarySupervisionDiscord,
   notifyImfMonetarySupervisionLiftedDiscord,
 } from "@/lib/centralBankChairEvents";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 const schema = z.object({
   locked: z.boolean(),
@@ -40,7 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const db = await getDb();
     const bankId = getBankId(countryId);
-    const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+    const bank = await centralBanksCollection(db).findOne({ _id: bankId });
     if (!bank)
       return NextResponse.json(notFound("Central bank not found").toJson(), { status: 404 });
 
@@ -54,7 +54,7 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    await db.collection<CentralBank>("centralBanks").updateOne(
+    await centralBanksCollection(db).updateOne(
       { _id: bankId },
       {
         $set: {

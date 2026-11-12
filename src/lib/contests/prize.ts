@@ -13,6 +13,8 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { onboardingRewardLocalAmount } from "@/lib/onboarding/rules";
 import { createNotification } from "@/lib/notifications";
 import { placePrizeAnchor } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export const CONTEST_KIND_TITLES: Record<ContestKind, string> = {
   corp_growth_small: "Small Business Growth",
@@ -60,9 +62,7 @@ export async function payContestPrize(
   const anchorAmount = placePrizeAnchor(round.kind, input.place, preset);
   const currencyCode = getHomeCurrency(character, preset);
   const rateDoc = forexEnabled
-    ? await db
-        .collection<ExchangeRate>("exchangeRates")
-        .findOne({ _id: getCountryIdForCurrency(currencyCode) })
+    ? await exchangeRatesCollection(db).findOne({ _id: getCountryIdForCurrency(currencyCode) })
     : null;
   const localAmount = onboardingRewardLocalAmount(
     anchorAmount,
@@ -72,7 +72,7 @@ export async function payContestPrize(
     preset
   );
 
-  const credit = await db.collection<Character>("characters").updateOne(
+  const credit = await charactersCollection(db).updateOne(
     { _id: character._id },
     {
       $inc: buildPersonalBalanceInc(localAmount, currencyCode, forexEnabled),

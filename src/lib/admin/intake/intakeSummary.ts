@@ -1,4 +1,5 @@
 import type { Db, Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * First-party intake funnel, computed from the game database.
@@ -97,14 +98,13 @@ export async function computeIntakeSummary(
     },
   });
 
-  const rows = (await db
-    .collection("users")
+  const rows = (await usersCollection<Document>(db)
     .aggregate([
       {
         $match: {
           createdAt: { $gte: since },
           isAdmin: { $ne: true },
-          role: { $nin: ["admin", "moderator"] },
+          role: { $nin: ["admin", "moderator", "junior_dev"] },
         },
       },
       firstCharacter("characters"),

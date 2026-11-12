@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 /** Expire before normal treasury accrual, including between fiscal boundaries. */
 export async function expireFinancialCrisisAusterity(
@@ -10,7 +11,7 @@ export async function expireFinancialCrisisAusterity(
   const expires = budget.financialCrisisAusterityUntilTurn;
   const spending = budget.financialCrisisAusterityBaseSpending;
   if (expires === undefined || turn < expires || !spending) return;
-  const result = await db.collection<FederalBudget>("federalBudget").updateOne(
+  const result = await federalBudgetCollection(db).updateOne(
     {
       _id: budget._id,
       financialCrisisAusterityUntilTurn: expires,

@@ -17,6 +17,11 @@ import {
   foreignPolicyModeFrom,
   foreignPolicyStageFrom,
 } from "./foreignPolicyRollout";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { battleDeclarationsCollection } from "@/lib/db/repositories/battleDeclarations";
 
 export interface AutonomousWarCommandResult {
   acted: boolean;
@@ -91,14 +96,14 @@ async function deployReserveCommitment(
   commitmentShare = DEFAULT_WAR_COMMITMENT_SHARE,
   priority: WarCommitmentPriority = "lowest"
 ): Promise<number> {
-  const units = await db.collection<MilitaryUnit>("militaryUnits").find({ countryId }).toArray();
+  const units = await militaryUnitsCollection(db).find({ countryId }).toArray();
   const selected = planAutonomousDeployment(
     readyReserveUnits(units, currentTurn),
     commitmentShare,
     priority
   );
   if (selected.length === 0) return 0;
-  const result = await db.collection<MilitaryUnit>("militaryUnits").updateMany(
+  const result = await militaryUnitsCollection(db).updateMany(
     {
       _id: { $in: selected.map((unit) => unit._id) },
       countryId,
@@ -135,16 +140,14 @@ export async function mobilizeImmediateWarEntry(
 }
 
 async function activeForAutonomousWar(db: Db, countryId: CountryId): Promise<boolean> {
-  const rollout = await db
-    .collection<{
-      _id: string;
-      nppForeignPolicyMode?: "off" | "shadow" | "active";
-      nppForeignPolicyStage?: "votes" | "proposals" | "trade" | "support" | "war";
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { nppForeignPolicyMode: 1, nppForeignPolicyStage: 1 } }
-    );
+  const rollout = await gameStateCollection<{
+    _id: string;
+    nppForeignPolicyMode?: "off" | "shadow" | "active";
+    nppForeignPolicyStage?: "votes" | "proposals" | "trade" | "support" | "war";
+  }>(db).findOne(
+    { _id: "current" },
+    { projection: { nppForeignPolicyMode: 1, nppForeignPolicyStage: 1 } }
+  );
   return (
     foreignPolicyModeFrom(rollout?.nppForeignPolicyMode) === "active" &&
     foreignPolicyActionAllowed(
@@ -166,10 +169,10 @@ export async function prepareAutonomousWarEntry(
     return { ready: false, deployedUnits: 0, reason: "Autonomous war entry is not active." };
   }
   const [approval, budget] = await Promise.all([
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
-    db
-      .collection<{ countryId: CountryId; debtToGdpRatio?: number }>("federalBudget")
-      .findOne({ countryId }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId }),
+    federalBudgetCollection<{ countryId: CountryId; debtToGdpRatio?: number }>(db).findOne({
+      countryId,
+    }),
   ]);
   // A missing document means "not measured yet", NOT "nobody approves". Only
   // `active` countries and current belligerents are snapshotted into
@@ -247,14 +250,14 @@ async function conductWar(
   const target = enemySide.factionEntity ?? enemySide.countries[0];
   if (!target) return { acted: false, note: "The opposing side has no targetable belligerent." };
 
-  const pending = await db.collection<BattleDeclarationDoc>("battleDeclarations").findOne({
+  const pending = await battleDeclarationsCollection(db).findOne({
     declarerCountry: countryId,
     theaterId: conflict._id,
     status: "pending",
   });
   if (pending) return { acted: false, note: "An offensive is already pending in this war." };
 
-  let deployed = await db.collection<MilitaryUnit>("militaryUnits").countDocuments({
+  let deployed = await militaryUnitsCollection(db).countDocuments({
     countryId,
     theaterId: conflict._id,
     personnel: { $gt: 0 },
@@ -272,9 +275,10 @@ async function conductWar(
     declaredTurn: currentTurn,
     status: "pending",
   };
-  const result = await db
-    .collection<Omit<BattleDeclarationDoc, "_id">>("battleDeclarations")
-    .insertOne(declaration);
+  const result =
+    await battleDeclarationsCollection<Omit<BattleDeclarationDoc, "_id">>(db).insertOne(
+      declaration
+    );
   return { acted: true, note: `Queued offensive ${result.insertedId.toString()}.` };
 }
 

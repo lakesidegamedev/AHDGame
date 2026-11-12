@@ -27,7 +27,16 @@ export interface SeedSynthesisInput {
   /** 0-100 index; sets the plausibility envelope the median-age solve is clamped into. */
   birthRate: number;
   population: number;
+  /**
+   * Thin the 65+ band by a mortality-shaped decay instead of the generic
+   * pyramid curve, which leaves millions of people past 90. Era seeds that
+   * predate the 2027 world keep the generic curve.
+   */
+  survivalSeniorTail?: boolean;
 }
+
+/** Per-year decay of the 65+ band under `survivalSeniorTail`; close to the adult mortality slope. */
+const SENIOR_TAIL_DECAY = 0.11;
 
 /**
  * 0-17 share of the total population implied by the birth-rate index alone.
@@ -83,6 +92,12 @@ function zeroVector(): AgeSexVector {
  */
 export type PyramidDirection = "fromOldest" | "fromYoungest";
 
+function survivalWeights(span: number): number[] {
+  const raw = Array.from({ length: span + 1 }, (_, i) => Math.exp(-SENIOR_TAIL_DECAY * i));
+  const sum = raw.reduce((a, b) => a + b, 0);
+  return raw.map((w) => w / sum);
+}
+
 /** Distribute `bandPeople` across inclusive ages [lo,hi], splitting each year by sex. */
 function fillBand(
   v: AgeSexVector,
@@ -90,10 +105,13 @@ function fillBand(
   hi: number,
   bandPeople: number,
   medianAge: number,
-  direction: PyramidDirection = "fromYoungest"
+  direction: PyramidDirection = "fromYoungest",
+  survivalTail = false
 ) {
   if (bandPeople <= 0) return;
-  const weights = agePyramidWeights(lo, hi, medianAge, direction);
+  const weights = survivalTail
+    ? survivalWeights(hi - lo)
+    : agePyramidWeights(lo, hi, medianAge, direction);
   for (let i = 0; i < weights.length; i++) {
     const age = lo + i;
     const yearTotal = bandPeople * weights[i];
@@ -110,10 +128,13 @@ function addBand(
   hi: number,
   mass: number,
   medianAge: number,
-  direction: PyramidDirection
+  direction: PyramidDirection,
+  survivalTail = false
 ) {
   if (mass <= 0) return;
-  const weights = agePyramidWeights(lo, hi, medianAge, direction);
+  const weights = survivalTail
+    ? survivalWeights(hi - lo)
+    : agePyramidWeights(lo, hi, medianAge, direction);
   for (let i = 0; i < weights.length; i++) density[lo + i] += mass * weights[i];
 }
 
@@ -173,6 +194,7 @@ function solveYouthFraction(
 
 export function synthesizeAgeSexVector(input: SeedSynthesisInput): AgeSexVector {
   const { adultShares, medianAge, birthRate, population } = input;
+  const tail = input.survivalSeniorTail === true;
   const v = zeroVector();
   if (!(population > 0)) return v;
 
@@ -221,7 +243,15 @@ export function synthesizeAgeSexVector(input: SeedSynthesisInput): AgeSexVector 
     medianAge,
     "fromOldest"
   );
-  addBand(adultShape, AGE_BANDS.seniorMin, LAST_INDEX, norm.senior, medianAge, "fromYoungest");
+  addBand(
+    adultShape,
+    AGE_BANDS.seniorMin,
+    LAST_INDEX,
+    norm.senior,
+    medianAge,
+    "fromYoungest",
+    tail
+  );
 
   const youthFraction =
     Number.isFinite(medianAge) && medianAge > 0
@@ -269,7 +299,8 @@ export function synthesizeAgeSexVector(input: SeedSynthesisInput): AgeSexVector 
     VECTOR_LENGTH - 1,
     adultPeople * norm.senior,
     medianAge,
-    "fromYoungest"
+    "fromYoungest",
+    tail
   );
 
   return v;

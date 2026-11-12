@@ -6,23 +6,19 @@ import type { LegalStructureId } from "@/lib/constants/legalStructures";
 /**
  * YU's money.
  *
- * ⚠ GENERATED FROM `__snapshots__/yu.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * GENERATED FROM `__snapshots__/yu.pre-move.json`. Regenerate with:
  *
  *     npx tsx scripts/countries/gen-country-economy.ts YU --force
  *
- * ⚠ THE EXCHANGE RATE IS NOT HERE, DELIBERATELY. Currency IDENTITY is this
- * country's fact and moved; a rate is a fact about a PAIR of countries in a
- * YEAR, and belongs beside the rates it must stay consistent with. Moving one
- * into a country folder would give it a value whose meaning only exists relative
- * to the table it left.
+ * The exchange rate is deliberately NOT here: a rate is a fact about a pair
+ * of countries in a year, not a country fact.
  *
- * ⚠ EVERY FIGURE BELOW IS IN LOCAL CURRENCY and is not comparable to another
- * country's. Do not reconcile one toward its neighbours.
+ * EVERY FIGURE BELOW IS IN LOCAL CURRENCY; do not reconcile toward
+ * neighbours.
  *
- * ⚠ NO MONETARY BASELINE FOR 1971, 1979, 1991: YU has no entry in
- * those era tables and takes the base baseline. The key is ABSENT rather than
- * defaulted, because inventing one would turn a fallback into an authored value.
+ * NO MONETARY BASELINE FOR 1971, 1979, 1991: the key is ABSENT rather than
+ * defaulted, because inventing one would turn a fallback into an authored
+ * value.
  */
 
 const currencyCode = "YUD" as CurrencyCode;

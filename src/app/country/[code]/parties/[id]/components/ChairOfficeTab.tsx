@@ -17,6 +17,7 @@ import { BulkStateOrgControl } from "./BulkStateOrgControl";
 import { HuListVacanciesCard } from "./HuListVacanciesCard";
 import { PartyLeadershipTitlesControl } from "./PartyLeadershipTitlesControl";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface ChairOfficeTabProps {
   party: PartyData;
@@ -228,7 +229,7 @@ export function ChairOfficeTab({ party, countryId, characterId, onUpdate }: Chai
   return (
     <>
       <div className="space-y-6">
-        {countryId.toUpperCase() === "HU" && (
+        {countryHasFeature("huUi", countryId.toUpperCase()) && (
           <HuListVacanciesCard partyId={party.id} onUpdate={onUpdate} />
         )}
         <div className="rounded-xl border border-card-border bg-card p-6">

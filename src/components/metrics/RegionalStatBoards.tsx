@@ -61,16 +61,10 @@ function StatRow({
   countryId: string;
   stateId: string;
 }) {
-  const {
-    preset,
-    eraSystemEnabled,
-    currentYear,
-    startingYear,
-    incomeBandIndexByCountry,
-    incomeStartVintages,
-  } = useWorldFlags();
+  const { preset, currentYear, startingYear, incomeBandIndexByCountry, incomeStartVintages } =
+    useWorldFlags();
   // Live year for era-aware score bands; null while the flag is off (legacy path).
-  const eraYear = eraSystemEnabled ? currentYear : null;
+  const eraYear = currentYear;
   const incomeIndex = eraYear != null ? (incomeBandIndexByCountry?.[countryId] ?? null) : null;
   const def = getMetricDefinition(category, metricId);
   // Era existence gate: inactive metrics render nothing (self-hiding row).

@@ -4,7 +4,7 @@
  * members and their mirrors atomically, finishing with a bound composition receipt.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Character, CountryGameState, ElectedOfficial, GameState, NPP } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { loadEnactedRussianCouncilFormation } from "./councilFormationProposals";
@@ -16,7 +16,6 @@ import {
   loadRussianRegionalNpcProfiles,
   type RussianRegionalAuthorityRecord,
   type RussianRegionalCouncilSeatingInputs,
-  RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION,
 } from "./regionalCouncilAuthorities";
 import {
   planRussianCouncilComposition,
@@ -29,8 +28,18 @@ import {
 } from "./rules/councilCompositionDelta";
 import { russianAssemblyOfficialId } from "./assemblyOfficialIdentity";
 import type { RussianAssemblySeatingRecord, RussianAssemblyOfficeArchive } from "./assemblySeating";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
+import { russianAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/russianAssemblyOfficeArchives";
+import { russianRegionalAuthoritiesCollection } from "@/lib/db/repositories/russianRegionalAuthorities";
+import { russianCouncilCompositionSeatingsCollection } from "@/lib/db/repositories/russianCouncilCompositionSeatings";
 
-const RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION = "russianCouncilCompositionSeatings";
 export interface RussianCouncilCompositionSeating {
   _id: string;
   countryId: "RU";
@@ -64,14 +73,12 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Council composition seating needs a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
   if (game?.preset !== "1991-default") return false;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -87,9 +94,8 @@ export async function materializeRussianCouncilCompositionSeating(input: {
   const mandate = await loadEnactedRussianCouncilFormation({ db, session, country, game, turn });
   if (!mandate) return false;
   if (!(await loadCurrentRussianDumaClock({ db, session, country, turn }))) return false;
-  const journals = db.collection<RussianCouncilCompositionSeating>(
-    RUSSIAN_COUNCIL_COMPOSITION_SEATINGS_COLLECTION
-  );
+  const journals =
+    russianCouncilCompositionSeatingsCollection<RussianCouncilCompositionSeating>(db);
   const prior = country.ruCouncilComposition
     ? await journals.findOne({ _id: country.ruCouncilComposition.receiptId }, { session })
     : null;
@@ -112,8 +118,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     prior.formationRevision !== mandate.revision;
   const authorities =
     input.seatingInputs?.authorities ??
-    (await db
-      .collection<RussianRegionalAuthorityRecord>(RUSSIAN_REGIONAL_AUTHORITIES_COLLECTION)
+    (await russianRegionalAuthoritiesCollection<RussianRegionalAuthorityRecord>(db)
       .find({ countryId: "RU", preset: "1991-default" }, { session, batchSize: 1000 })
       .toArray());
   if (!authorities.length) return false;
@@ -129,8 +134,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     ),
   ].map((id) => new ObjectId(id));
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: playerIds } },
           {
@@ -142,8 +146,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         .toArray()
     : [];
   const playerById = new Map(players.map((row) => [row._id.toHexString(), row]));
-  const physical = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const physical = await electedOfficialsCollection(db)
     .find(
       {
         $or: [
@@ -155,8 +158,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     )
     .toArray();
   const cabinet = playerIds.length
-    ? await db
-        .collection<UnifiedCabinetMember>("cabinetMembers")
+    ? await cabinetMembersCollection<UnifiedCabinetMember>(db)
         .find(
           { characterId: { $in: playerIds } },
           { session, projection: { characterId: 1 }, batchSize: 1000 }
@@ -227,8 +229,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
     }
   else {
     const first = (
-      await db
-        .collection<RussianAssemblySeatingRecord>("russianAssemblySeatings")
+      await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db)
         .find(
           {
             countryId: "RU",
@@ -275,7 +276,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         )
       );
   if (retiring.length) {
-    await db.collection<RussianAssemblyOfficeArchive>("russianAssemblyOfficeArchives").insertMany(
+    await russianAssemblyOfficeArchivesCollection<RussianAssemblyOfficeArchive>(db).insertMany(
       retiring.map((official) => ({
         _id: `${receiptId}:${official._id.toHexString()}`,
         preset: "1991-default",
@@ -285,7 +286,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
       })),
       { session }
     );
-    const deleted = await db.collection<ElectedOfficial>("electedOfficials").deleteMany(
+    const deleted = await electedOfficialsCollection(db).deleteMany(
       {
         _id: { $in: retiring.map((row) => row._id) },
         countryId: "RU",
@@ -316,8 +317,7 @@ export async function materializeRussianCouncilCompositionSeating(input: {
       ? { termEnds: new Date(now.getTime() + (row.termEndTurn - turn) * MS_PER_TURN) }
       : {}),
   }));
-  if (added.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(added, { session });
+  if (added.length) await electedOfficialsCollection(db).insertMany(added, { session });
   const affected = new Set(
     [...retiring, ...added].map(
       (row) => `${row.isNPP ? "npc" : "player"}:${row.isNPP ? row.nppId : row.characterId}`
@@ -349,8 +349,8 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         $set: { currentOffice: null, updatedAt: now },
         ...(isNpc ? { $unset: { seatsHeld: "" as const } } : {}),
       };
-      if (isNpc) await db.collection<NPP>("npps").updateMany(filter, update, { session });
-      else await db.collection<Character>("characters").updateMany(filter, update, { session });
+      if (isNpc) await nppsCollection(db).updateMany(filter, update, { session });
+      else await charactersCollection(db).updateMany(filter, update, { session });
     }
     if (owners.size) {
       const operations = [...owners].map(([ownerId, row]) => ({
@@ -391,8 +391,8 @@ export async function materializeRussianCouncilCompositionSeating(input: {
         },
       }));
       const updated = isNpc
-        ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
-        : await db.collection<Character>("characters").bulkWrite(operations, { session });
+        ? await nppsCollection(db).bulkWrite(operations, { session })
+        : await charactersCollection(db).bulkWrite(operations, { session });
       if (updated.matchedCount !== owners.size)
         throw new Error("Regional Council owner changed during handover");
     }

@@ -51,16 +51,13 @@ export interface RecruitmentSlate {
 /**
  * Why a slate row never made it onto the ballot. Two sources write it:
  *
- * - `decideNPPSlateResponse`, when the NPP itself declines the invitation
- *   (the first seven values).
+ * - `decideNPPSlateResponse`, when the NPP itself declines the invitation.
  * - the turn's `fileAcceptedSlateRows` pass, when an accepted row cannot be
- *   converted into an `ElectionCandidate` (the `*_` filing values below).
+ *   converted into an `ElectionCandidate`.
  *
  * Stored on `SlateCandidate.refusalReason` so the chair can see why the
- * recruit fell through. Before ticket #1181 the filing pass tombstoned failed
- * rows as `withdrawn` with no reason, and the slate view hides reasonless
- * tombstones — so a chair-assigned NPP simply vanished from the Slate tab.
- * Kept as a small enum (not free text) so the UI can render localized labels.
+ * recruit fell through. Kept as a small enum (not free text) so the UI can
+ * render localized labels.
  */
 export type SlateRefusalReason =
   | "low_relationship"

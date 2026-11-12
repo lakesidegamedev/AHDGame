@@ -4,6 +4,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { PartyHistorySnapshot } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
 
 // Per-turn party-history snapshots are immutable once written during turn
 // processing, so the result for a given (country, currentTurn, lookback) window
@@ -18,8 +20,7 @@ async function fetchPartyHistory(
 ): Promise<PartyHistorySnapshot[]> {
   const db = await getDb();
   const minTurn = Math.max(1, currentTurn - lookbackTurns + 1);
-  return db
-    .collection<PartyHistorySnapshot>("partyHistory")
+  return partyHistoryCollection(db)
     .find({ countryId, turn: { $gte: minTurn, $lte: currentTurn } })
     .sort({ partyId: 1, turn: 1 })
     .toArray();
@@ -51,9 +52,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // currentTurn is read uncached (getGameState is intentionally uncached for
     // immediate visibility) so we always select the correct per-turn cache key.
-    const gameState = await db
-      .collection<{ _id: "current"; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection<{ _id: "current"; currentTurn: number }>(
+      db
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
     const currentTurn = Math.max(1, gameState?.currentTurn ?? 1);
     const lookbackTurnsParam = new URL(request.url).searchParams.get("turns");
     const requestedTurns = Number.parseInt(lookbackTurnsParam ?? "48", 10);

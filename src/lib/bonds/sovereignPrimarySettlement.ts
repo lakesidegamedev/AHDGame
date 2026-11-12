@@ -16,7 +16,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
 import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { sovereignPrimaryTransition, type SovereignPrimaryFunding } from "./rules/sovereignPrimary";
 import {
@@ -24,6 +23,11 @@ import {
   fiscalScalePoolCashPerFace,
   fiscalScaleStageActive,
 } from "@/lib/budget/rules/fiscalScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface PrimaryAccountingContext {
   ledgerShadow: boolean;
@@ -60,10 +64,11 @@ export async function loadPoolCashPerFaceByCountry(
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (!fiscalScaleStageActive(stage, FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT)) return out;
-  const budgets = await db
-    .collection<{ _id: string; countryId?: string; fiscalScale?: { scale?: number } }>(
-      "federalBudget"
-    )
+  const budgets = await federalBudgetCollection<{
+    _id: string;
+    countryId?: string;
+    fiscalScale?: { scale?: number };
+  }>(db)
     .find({ "fiscalScale.scale": { $gt: 0 } }, { projection: { countryId: 1, fiscalScale: 1 } })
     .toArray();
   for (const budget of budgets) {
@@ -97,32 +102,30 @@ export function primaryFinancingRate(
 
 export async function loadPrimaryAccounting(db: Db): Promise<PrimaryAccountingContext> {
   const [config, rates, gameState, ledgerTurn] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        ledgerShadow?: boolean;
-        turnLengthMinutes?: number;
-        treasuryCashLedgerEnabled?: boolean;
-        fiscalScaleStage?: number;
-      }>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        {
-          projection: {
-            ledgerShadow: 1,
-            turnLengthMinutes: 1,
-            treasuryCashLedgerEnabled: 1,
-            fiscalScaleStage: 1,
-          },
-        }
-      ),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    gameConfigCollection<{
+      _id: string;
+      ledgerShadow?: boolean;
+      turnLengthMinutes?: number;
+      treasuryCashLedgerEnabled?: boolean;
+      fiscalScaleStage?: number;
+    }>(db).findOne(
+      { _id: "default" },
+      {
+        projection: {
+          ledgerShadow: 1,
+          turnLengthMinutes: 1,
+          treasuryCashLedgerEnabled: 1,
+          fiscalScaleStage: 1,
+        },
+      }
+    ),
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    ),
     resolveLedgerTurn(db),
   ]);
   const poolScale = await loadPoolCashPerFaceByCountry(db, config?.fiscalScaleStage);
@@ -143,11 +146,11 @@ export function primaryDocumentId(key: string): ObjectId {
 
 /** A recorded intent wins over any freshly recomputed quote. */
 export async function primarySettlementExists(db: Db, key: string): Promise<boolean> {
-  const record = await db
-    .collection<{ _id: string; status: string; projectionsCompletedAt?: Date }>(
-      MONEY_MOVE_COLLECTION
-    )
-    .findOne({ _id: key }, { projection: { status: 1, projectionsCompletedAt: 1 } });
+  const record = await bankMoneyMovesCollection<{
+    _id: string;
+    status: string;
+    projectionsCompletedAt?: Date;
+  }>(db).findOne({ _id: key }, { projection: { status: 1, projectionsCompletedAt: 1 } });
   if (!record) return false;
   if (record.status !== "applied" || !record.projectionsCompletedAt) {
     throw new Error(`Sovereign placement ${key} awaits settlement recovery`);
@@ -165,8 +168,7 @@ export async function existingPrimarySettlementKeys(
   keys: readonly string[]
 ): Promise<Set<string>> {
   if (keys.length === 0) return new Set();
-  const rows = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<{ _id: string }>(db)
     .find({ _id: { $in: [...keys] } }, { projection: { _id: 1 } })
     .toArray();
   return new Set(rows.map((row) => String(row._id)));

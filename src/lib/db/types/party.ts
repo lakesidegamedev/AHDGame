@@ -5,7 +5,7 @@ export type PartyLeadershipTitleKey = "chair" | "viceChair" | "treasurer";
 export type PartyLeadershipTitles = Partial<Record<PartyLeadershipTitleKey, string | null>>;
 
 /**
- * A single Shadow Cabinet appointment (player suggestion #52) — the character
+ * A single Shadow Cabinet appointment — the character
  * the Leader of the Opposition has named to shadow one cabinet post. A member
  * of the sitting Opposition Leader's shadow cabinet earns +1 action per turn
  * (see `SHADOW_CABINET_ACTION_BONUS`); no other mechanical effect. Stored in
@@ -55,16 +55,7 @@ export interface PoliticalParty {
   treasury: number;
   nationalTaxRate: number;
   /**
-   * Political Strength reserve — the renamed-from-`actionPool` PS pool.
-   *
-   * Phase 3 model: PS is a stored reserve that grows from a flat passive
-   * per-turn gain plus a treasury-driven country-normalized spend stream, both
-   * limited solely by the hard `politicalStrengthCap` (soft-cap slowdown bands
-   * removed 2026-06-28). PS is spent on party actions (Org Building, Influence,
-   * GOTV, Suppression, Contest, etc.) via the shared `spendPoliticalStrength`
-   * command, which also tracks per-geography pressure escalation.
-   *
-   * See plan §"Phase 3 — Political Strength Migration" and Phase 0.5 §8.
+   * Political Strength reserve: grows from flat passive gain plus treasury-driven spend; capped solely by `politicalStrengthCap`. Spent on party actions via `spendPoliticalStrength`, which also tracks per-geography pressure escalation.
    */
   politicalStrength: number;
   /**
@@ -77,14 +68,10 @@ export interface PoliticalParty {
   /**
    * Chair-set per-turn budget for explicit PS investment, on top of the flat
    * passive (national 20 / state 5). Each turn, `min(budget, treasury)` is
-   * debited and converted to PS at the country-scoped rate
-   * (`psInvestmentRate(countryId, scope)`), capped at `+PS_INVESTMENT_MAX_TIERS`
-   * PS/turn.
-   *
-   * Spend converts at the full rate up to the hard cap (soft-cap bands removed
-   * 2026-06-28); near the cap only the PS that fits below it is bought and
-   * charged. Treasury at `0` only zeroes the spend stream — the flat passive is
-   * still paid.
+   * debited and converted to PS at `psInvestmentRate(countryId, scope)`, capped
+   * at `+PS_INVESTMENT_MAX_TIERS` PS/turn. Near the cap only the PS that fits is
+   * bought and charged. Treasury at `0` only zeroes the spend stream; the flat
+   * passive is still paid.
    *
    * Defaults to `0` (off). See `partyActionGeneration` for the math.
    */
@@ -92,10 +79,9 @@ export interface PoliticalParty {
   /**
    * Dedicated NPP Action Points pool (national scope). Banked, regenerates a
    * flat passive per turn (tier-scaled) up to `nppActionPointCap("national",
-   * tier)`. Sole currency for NPP Recruitment (5 AP) and NPP Management (1 AP);
-   * PS/treasury are no longer charged for NPP work. `undefined` on legacy rows
-   * is treated as a full pool until the next regen heals it. See
-   * `src/lib/npp/actionPoints.ts`.
+   * tier)`. Sole currency for NPP Recruitment (5 AP) and NPP Management (1 AP).
+   * `undefined` on legacy rows is treated as a full pool until the next regen
+   * heals it. See `src/lib/npp/actionPoints.ts`.
    */
   nppActionPoints?: number;
   /**
@@ -118,11 +104,9 @@ export interface PoliticalParty {
   /** NPP recruitment cooldown end turn (currentTurn + 24). Turn-first source. */
   nppRecruitmentCooldownUntilTurn?: number;
   /**
-   * Receipt for the UK party-conference cohesion payoff (ticket #862): the
    * `ukPartyConferences._id` whose payoff credited this party's PS reserve.
-   * The credit write sets this atomically with the `$inc`, so replays and
-   * concurrent callers match zero documents and cannot double-credit.
-   * Absent = never credited (covers every legacy row, no migration).
+   * Set atomically with the `$inc` so replays and concurrent callers cannot
+   * double-credit. Absent = never credited (covers all legacy rows).
    */
   lastConferencePayoffId?: string | null;
   /** Turn on which the last member purge was executed. Used to enforce the cooldown. */
@@ -144,6 +128,13 @@ export interface PoliticalParty {
   isDefunct?: boolean;
   defunctAtTurn?: number;
   mergedIntoPartyId?: ObjectId;
+  /** Set on a party created by NPP party renewal: how and when it formed. */
+  renewalOrigin?: {
+    kind: "splinter" | "founding";
+    cycle: number;
+    /** Splinter parent's sequential id. */
+    parentPartyId?: string;
+  };
   /**
    * Presidential primary calendar family. Determines wave schedule + delegate table.
    * Built-in parties (democrat/green/progressive/dem-socialist → "dem",
@@ -203,23 +194,14 @@ export interface PoliticalParty {
    */
   transactionApprovalMode?: "single" | "double";
   /**
-   * Regime status in countries whose `governmentType` is `"onePartyState"`.
-   *
-   * - `"ruling"`: the single party allowed to form government, field
-   *   executive candidates, trigger VONC, or invite coalitions. Invariant:
-   *   at most one party per country has this status.
-   * - `"approved"`: minor party tolerated by the regime. Full legislative
-   *   participation (hold seats, run candidates for non-executive offices,
-   *   propose bills, vote, accept donations, cabinet) but blocked from
-   *   forming government.
-   * - `"banned"`: inert. Cannot field candidates, propose bills, vote,
-   *   receive donations, or be appointed to cabinet. Existing seats are
-   *   vacated when status flips to banned mid-game.
-   * - `null`: not applicable. Always `null` when the country's
-   *   `governmentType !== "onePartyState"`.
-   *
-   * Authoritative at runtime. `CountryConfig.rulingPartyId` is a seed-time
-   * pointer only.
+   * Regime status when the country's governmentType is "onePartyState".
+   * - "ruling": the single party allowed to form government, field executive
+   *   candidates, trigger VONC, invite coalitions. At most one per country.
+   * - "approved": tolerated minor party; full legislative participation but
+   *   blocked from forming government.
+   * - "banned": inert; seats vacated when flipped mid-game.
+   * - null: always null when governmentType !== "onePartyState".
+   * Authoritative at runtime; CountryConfig.rulingPartyId is seed-time only.
    */
   regimeStatus?: "ruling" | "approved" | "banned" | null;
 
@@ -251,7 +233,7 @@ export interface PoliticalParty {
   majorDemotionWarning?: { startedTurn: number };
 
   /**
-   * Membership gate (player suggestion #72). "open" or absent — a join takes
+   * Membership gate. "open" or absent — a join takes
    * effect immediately. "approval" — a join instead files a pending request in
    * `pendingJoinRequests` for a party leader (chair, or acting vice-chair when
    * the chair seat is vacant) to accept or decline. Mirrors the coalition
@@ -265,7 +247,7 @@ export interface PoliticalParty {
    */
   pendingJoinRequests?: PartyJoinRequest[];
   /**
-   * Shadow Cabinet appointments (player suggestion #52). When this party's
+   * Shadow Cabinet appointments. When this party's
    * chair is the resolved Leader of the Opposition, they may name characters to
    * shadow versions of the country's cabinet posts. Keyed by cabinet position
    * id (from the country's parliamentary cabinet config); each value records

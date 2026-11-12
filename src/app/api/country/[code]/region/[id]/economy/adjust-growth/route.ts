@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   calculateDailyGrowthCost,
   GROWTH_ADJUST_COST_PER_PERCENT,
@@ -22,6 +22,9 @@ import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 const adjustGrowthSchema = z.object({
   sectorId: z.string().min(1, "Sector ID is required"),
@@ -74,9 +77,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Character not found");
     }
 
-    const corporation = await db
-      .collection<Corporation>("corporations")
-      .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+    const corporation = await corporationsCollection(db).findOne({
+      ceoId: character._id,
+      ceoVacant: { $ne: true },
+    });
     if (!corporation) {
       return errorResponse(400, "You don't own a corporation");
     }
@@ -86,7 +90,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const sector = await corporateSectorsCollection(db).findOne({
       _id: new ObjectId(sectorId),
       corporationId: corporation._id,
       stateId,
@@ -118,10 +122,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // against a yen-magnitude cost, falsely rejecting affordable expansions.)
     const adjustCost = sector.revenue * GROWTH_ADJUST_COST_PER_PERCENT;
     const corpCurrencyCode = resolveCorpLiquidCurrencyCode(corporation);
-    let newGrowthRate: number;
+    const previousGrowthRate = sector.targetGrowthRate ?? 0;
+    const newGrowthRate = previousGrowthRate + (direction === "expand" ? 1 : -1);
 
     if (direction === "expand") {
-      newGrowthRate = (sector.targetGrowthRate ?? 0) + 1;
       if (newGrowthRate > MAX_GROWTH_RATE) {
         return errorResponse(400, `Growth rate cannot exceed ${MAX_GROWTH_RATE}%`);
       }
@@ -136,25 +140,8 @@ export async function POST(request: Request, { params }: RouteParams) {
           )
         );
       }
-      // Deduct capital (corp's local currency)
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $inc: { liquidCapital: -adjustCost }, $set: { updatedAt: new Date() } }
-        );
-    } else {
-      newGrowthRate = (sector.targetGrowthRate ?? 0) - 1;
-      if (newGrowthRate < MIN_GROWTH_RATE) {
-        return errorResponse(400, `Growth rate cannot go below ${MIN_GROWTH_RATE}%`);
-      }
-      // Return capital (corp's local currency)
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $inc: { liquidCapital: adjustCost }, $set: { updatedAt: new Date() } }
-        );
+    } else if (newGrowthRate < MIN_GROWTH_RATE) {
+      return errorResponse(400, `Growth rate cannot go below ${MIN_GROWTH_RATE}%`);
     }
 
     // Update sector growth rate and recalculate daily growth cost from per-turn growth basis.
@@ -162,9 +149,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // currentGrowthCost reflects the actual charge for next turn.
     const perTurnGrowthRate = newGrowthRate / GROWTH_RATE_TURNS_PER_YEAR;
     // getBankId: shared-bank members (IE → ECB) have no doc under their own id.
-    const centralBank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ _id: getBankId(countryId) });
+    const centralBank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
     const primeRate =
       centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
     const marketSharePct = await fetchSectorMarketSharePercent(db, sector, corporation);
@@ -175,8 +160,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       marketSharePct
     );
 
-    await db.collection<CorporateSector>("corporateSectors").updateOne(
-      { _id: sector._id },
+    // Claim the step on the rate this request read, so parallel clicks cannot
+    // each pay or refund against the same starting rate.
+    const sectors = corporateSectorsCollection(db);
+    const claimed = await sectors.updateOne(
+      { _id: sector._id, targetGrowthRate: sector.targetGrowthRate },
       {
         $set: {
           targetGrowthRate: newGrowthRate,
@@ -185,6 +173,43 @@ export async function POST(request: Request, { params }: RouteParams) {
         },
       }
     );
+    if (claimed.matchedCount === 0) {
+      return errorResponse(409, "Growth rate changed. Refresh and try again.");
+    }
+
+    const corporations = corporationsCollection(db);
+    if (direction === "expand") {
+      const debited = await corporations.updateOne(
+        { _id: corporation._id, liquidCapital: { $gte: adjustCost } },
+        { $inc: { liquidCapital: -adjustCost }, $set: { updatedAt: new Date() } }
+      );
+      if (debited.matchedCount === 0) {
+        await sectors.updateOne(
+          { _id: sector._id, targetGrowthRate: newGrowthRate },
+          {
+            $set: {
+              targetGrowthRate: previousGrowthRate,
+              currentGrowthCost: sector.currentGrowthCost ?? 0,
+              updatedAt: new Date(),
+            },
+          }
+        );
+        return errorResponse(
+          400,
+          insufficientCapitalMessage(
+            "Expanding",
+            adjustCost,
+            corporation.liquidCapital,
+            corpCurrencyCode
+          )
+        );
+      }
+    } else {
+      await corporations.updateOne(
+        { _id: corporation._id },
+        { $inc: { liquidCapital: adjustCost }, $set: { updatedAt: new Date() } }
+      );
+    }
 
     const verb = direction === "expand" ? "Expanded" : "Downsized";
     const capitalChange = direction === "expand" ? -adjustCost : adjustCost;

@@ -11,6 +11,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { savePartyBudgetForScope } from "@/lib/partyBudgetGuards";
 import { getTreasuryReserveSummary } from "@/lib/partyTreasuryPlan";
 import { getTreasuryPresetLabel, type TreasuryPresetId } from "@/lib/treasury/partyTreasuryPresets";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -85,7 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const summary = getTreasuryReserveSummary(party.treasury ?? 0, parsed.data);
     const presetLabel = getTreasuryPresetLabel(parsed.data.treasuryPreset as TreasuryPresetId);
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "treasury_plan_changed",
       username: auth.user.username,

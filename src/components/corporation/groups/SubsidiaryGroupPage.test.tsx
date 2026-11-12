@@ -26,7 +26,6 @@ const base = {
   settings: { name: "Harbor Group", supplyPolicy: "independent" },
   currentTurn: 20,
   canManage: true,
-  managementEnabled: true,
   supplyEngineEnabled: false,
   directionsEnabled: true,
   internalSupplyEnabled: true,

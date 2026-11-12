@@ -7,7 +7,7 @@ import { ensureBankFailureResponseWindow } from "@/lib/crises/bankFailureRespons
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { BankCharter, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
+import type { BankCharter, BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -17,7 +17,7 @@ import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { recordBankingStage } from "@/lib/banking/telemetry";
 import { archiveCharter } from "@/lib/banking/charterHistory";
 import { getCashReserves } from "@/lib/banking/bankCash";
-import { MONEY_MOVE_COLLECTION, turnMoveKey } from "@/lib/banking/moneyMove";
+import { turnMoveKey } from "@/lib/banking/moneyMove";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { oid } from "@/lib/banking/rules/boundary";
 import { computeConfidence, type ConfidenceBand } from "@/lib/banking/confidence";
@@ -39,6 +39,11 @@ import {
   depositTakerFails,
   propBankFails,
 } from "@/lib/banking/rules/solvency";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 // Defined in the rules zone; re-exported for the turn's tests and dashboards.
 export { CONTAGION_PANIC_TURNS, FLIGHT_RATE_BY_BAND, RUN_FAILURE_COVER_FRACTION };
@@ -108,8 +113,9 @@ export async function processBankSolvencyTurn(
 
   const propEnabled = policy.propTrading;
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       {
         "bankCharter.status": "active",
@@ -163,8 +169,9 @@ export async function processBankSolvencyTurn(
       }
 
       if (failedByCurrency.size > 0) {
-        const peers = await db
-          .collection<Corporation>("corporations")
+        const peers = await (
+          await getCorporationsCollection(db)
+        )
           .find({
             "bankCharter.status": "active",
             "bankCharter.type": { $in: ["retail", "universal"] },
@@ -202,7 +209,7 @@ export async function processBankSolvencyTurn(
         panicTurns = Math.max(0, row.panicTurnsBefore - 1);
       }
 
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         {
           _id: row.corpId,
           "bankCharter.status": "active",
@@ -227,7 +234,7 @@ export async function processBankSolvencyTurn(
 
     for (const [hex, panicTurns] of newlyPanicked) {
       summary.contagionTriggered += 1;
-      await db.collection<Corporation>("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: new ObjectId(hex), "bankCharter.status": "active" },
         {
           $set: {
@@ -241,8 +248,9 @@ export async function processBankSolvencyTurn(
 
   await processFinancialCrisisGuarantees(db, turn, policy);
 
-  const unresolved = await db
-    .collection<Corporation>("corporations")
+  const unresolved = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       "bankCharter.status": "failed",
       "bankCharter.depositorsResolvedTurn": { $exists: false },
@@ -273,7 +281,9 @@ async function evaluateOneBank(
   policy: BankingPolicySnapshot
 ): Promise<{ row: EvalResult; forcedLiquidation: boolean } | null> {
   const propEnabled = policy.propTrading;
-  const live = await db.collection<Corporation>("corporations").findOne(
+  const live = await (
+    await getCorporationsCollection(db)
+  ).findOne(
     { _id: corp._id },
     {
       projection: {
@@ -333,7 +343,9 @@ async function evaluateOneBank(
     charter = liq.charter;
     forcedLiquidation = liq.forced;
     if (!liq.forced) {
-      const markedUpdate = await db.collection<Corporation>("corporations").updateOne(
+      const markedUpdate = await (
+        await getCorporationsCollection(db)
+      ).updateOne(
         {
           _id: corp._id,
           bankCharter: beforeMarkCharter,
@@ -407,16 +419,16 @@ async function evaluateOneBank(
       // An empty vault can be the result of an unfinished debit. Leave that
       // bank for recovery before testing failure against half-delivered cash.
       if (outflow === 0) {
-        const unfinished = await db
-          .collection<{ _id: string; status?: string }>(MONEY_MOVE_COLLECTION)
-          .findOne(
-            {
-              _id: flightKey,
-              status: "partial",
-            },
-            // Existence only: recovery loads the record it needs.
-            { projection: { _id: 1 } }
-          );
+        const unfinished = await bankMoneyMovesCollection<{ _id: string; status?: string }>(
+          db
+        ).findOne(
+          {
+            _id: flightKey,
+            status: "partial",
+          },
+          // Existence only: recovery loads the record it needs.
+          { projection: { _id: 1 } }
+        );
         if (unfinished) return null;
       }
       const cbDocId = getBankId(getCountryIdForCurrency(currency));
@@ -463,9 +475,9 @@ async function evaluateOneBank(
       });
       if (flightMove.status === "partial" || flightMove.status === "rejected" || flightMove.error)
         return null;
-      const afterFlight = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: corp._id }, { projection: { bankCharter: 1 } });
+      const afterFlight = await (
+        await getCorporationsCollection(db)
+      ).findOne({ _id: corp._id }, { projection: { bankCharter: 1 } });
       if (!afterFlight?.bankCharter) return null;
       const settledCharter = afterFlight.bankCharter;
       // Replays may have loaded the already-reduced balances at the start of
@@ -524,7 +536,9 @@ async function evaluateOneBank(
       totalDeposits,
       lastSolvencyTurn: turn,
     };
-    const failed = await db.collection<Corporation>("corporations").updateOne(
+    const failed = await (
+      await getCorporationsCollection(db)
+    ).updateOne(
       {
         _id: corp._id,
         bankUnderwritingFunding: { $exists: false },
@@ -615,22 +629,20 @@ async function evaluateOneBank(
 /**
  * On failure, the loans this bank made AS A LENDER die with it.
  *
- * Its borrowers keep the cash and the asset is written off, which is a real
- * loss the estate cannot recover: chasing an interbank borrower for early
- * repayment because its lender failed is a second failure, not a recovery.
+ * Borrowers keep the cash and the asset is written off: chasing an interbank
+ * borrower early because its lender failed is a second failure, not a
+ * recovery.
  *
- * What this deliberately no longer touches is the claims AGAINST this bank.
- * Those used to be written off here, before anyone had asked whether the estate
- * could pay them, so a bank that failed holding enough cash to repay its
- * lenders repaid nobody. They are settled in priority order by
- * `returnDepositBook`, which runs in the resolution sweep later this turn.
+ * Claims AGAINST this bank are NOT touched here. They are settled in priority
+ * order by `returnDepositBook`, which runs in the resolution sweep later this
+ * turn.
  */
 async function writeOffLenderSideInterbankOnFailure(
   db: Db,
   failedCorpId: ObjectId,
   turn: number
 ): Promise<void> {
-  await db.collection<InterbankLoan>("interbankLoans").updateMany(
+  await interbankLoansCollection(db).updateMany(
     {
       lenderCorporationId: failedCorpId,
       status: "current",
@@ -657,8 +669,7 @@ async function sumLoanOutstanding(
   if (filter.lastProcessedTurn !== undefined) {
     match.lastProcessedTurn = filter.lastProcessedTurn;
   }
-  const rows = await db
-    .collection<BankLoan>("bankLoans")
+  const rows = await bankLoansCollection(db)
     .aggregate<{ total: number }>([
       { $match: match },
       { $group: { _id: null, total: { $sum: "$outstanding" } } },
@@ -673,8 +684,7 @@ async function sumInterbankDefaultsLastTurn(
   lenderCorporationId: ObjectId,
   turn: number
 ): Promise<number> {
-  const rows = await db
-    .collection<InterbankLoan>("interbankLoans")
+  const rows = await interbankLoansCollection(db)
     .aggregate<{ total: number }>([
       {
         $match: {

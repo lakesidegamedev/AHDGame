@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
-import { getGameState } from "@/lib/gameState";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
@@ -59,9 +58,6 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
   const { code } = await params;
   const countryId = code.toUpperCase() as CountryId;
   if (!COUNTRY_CONFIGS[countryId]) notFound();
-
-  const gameState = await getGameState();
-  const conflictsEnabled = gameState?.conflictsEnabled === true;
 
   const positionId = DEFENSE_POSITION_BY_COUNTRY[countryId];
   if (!positionId) notFound();
@@ -284,7 +280,6 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
       <div className="mt-6">
         <NavairCommandClient
           key={formations.map((f) => `${f.id}:${f.station}:${f.mission}:${f.supply}`).join("|")}
-          conflictsEnabled={conflictsEnabled}
           summary={summary}
           countryCode={code}
           positionId={positionId}
@@ -297,7 +292,6 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
         <BasingAccess
           country={countryId}
           positionId={positionId}
-          enabled={conflictsEnabled}
           agreements={agreements.filter((a) => a.host === countryId || a.guest === countryId)}
           countries={Object.entries(COUNTRY_CONFIGS)
             .filter(([id]) => id !== countryId)

@@ -1,29 +1,23 @@
 import { personalNetWorth } from "@/lib/portfolio/rules/netWorth";
 import type { Db, ObjectId } from "mongodb";
 import type { Bond, Character, Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
 import { computeLocDebtInternal } from "@/lib/lineOfCredit/netWorth";
 import { corpLiquidCapitalToAnchor, fxRateForCorpFromMap } from "@/lib/currency/corporationCapital";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 /**
  * ONE definition of a character's net worth, in ₳.
  *
- * There were two: the live wealth-list route and the persisted per-turn
- * snapshot each carried their own ~60-line copy. The snapshot is what
- * `wealthChange24h` / `rankChange24h` are computed against, so any difference
- * between the two makes the leaderboard disagree with its own change column —
- * silently, and for every affected player (#592).
- *
- * They had already drifted on the share price: the route resolved it through
- * `getPublicShareQuote` (which falls back to `DEFAULT_SHARE_PRICE`) while the
- * snapshot read `corp.sharePrice ?? 0`. Today every corporation without a real
- * price stores an explicit `0`, so both skip the holding and the outputs agree
- * — the divergence is latent rather than live. It becomes live the moment one
- * corporation has no `sharePrice` field at all. This module resolves the price
- * the market-facing way, once.
+ * The live wealth-list route and the persisted per-turn snapshot must agree,
+ * since `wealthChange24h` / `rankChange24h` compute against the snapshot;
+ * divergence silently makes the leaderboard disagree with its own change
+ * column. Price resolves the market-facing way via `getPublicShareQuote`.
  */
 
 /** Per-character valuation components, all in ₳. */
@@ -85,8 +79,7 @@ export async function withHeldStakeIssuers(
   corporations: readonly CorpWealthSlice[]
 ): Promise<CorpWealthSlice[]> {
   const byId = new Map<string, CorpWealthSlice>(corporations.map((c) => [c._id.toString(), c]));
-  const corporateHeld = await db
-    .collection<Corporation>("corporations")
+  const corporateHeld = await corporationsCollection(db)
     .find(
       { "shareholders.corporationId": { $exists: true } },
       { projection: CORP_WEALTH_PROJECTION }
@@ -283,8 +276,9 @@ export async function loadFundValueByCharacter(
   characterIdSet: ReadonlySet<string>
 ): Promise<Map<string, number>> {
   if (characterIds.length === 0) return new Map();
-  const positions = await db
-    .collection<FundPositionSlice & { holderKind: string }>("indexFundPositions")
+  const positions = await indexFundPositionsCollection<FundPositionSlice & { holderKind: string }>(
+    db
+  )
     .find(
       { holderKind: "character", characterId: { $in: [...characterIds] }, units: { $gt: 0 } },
       { projection: { fundId: 1, characterId: 1, units: 1 } }
@@ -292,8 +286,7 @@ export async function loadFundValueByCharacter(
     .toArray();
   if (positions.length === 0) return new Map();
   const fundIds = [...new Map(positions.map((p) => [p.fundId.toString(), p.fundId])).values()];
-  const funds = await db
-    .collection<{ _id: ObjectId; quotedNav?: number }>("indexFunds")
+  const funds = await indexFundsCollection<{ _id: ObjectId; quotedNav?: number }>(db)
     .find({ _id: { $in: fundIds } }, { projection: { quotedNav: 1 } })
     .toArray();
   const navByFundId = new Map(funds.map((f) => [f._id.toString(), f.quotedNav ?? 0]));

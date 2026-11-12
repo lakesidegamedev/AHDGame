@@ -105,7 +105,7 @@ War arrives as separate lines, because a war going well and a tired public are d
 
 When a war ends, the effort and alliance lines vanish that turn; exhaustion heals at a point a year and a defeat penalty fades over three years. See [A War, Start to Finish](/wiki/a-war-start-to-finish).
 
-Active crises can add direct approval effects each turn, on top of the metric score. A major crisis can swing approval by several points a turn. See [Crisis Interaction](/wiki/crisis-interaction). Favorability changes from [Player Random Events](/wiki/player-events) feed public standing, and most responses to [World Events](/wiki/world-events) move approval up or down.
+Active crises can add direct approval effects each turn, on top of the metric score. A major crisis can swing approval by several points a turn. See [Crises](/wiki/crisis-interaction). Favorability changes from [Player Random Events](/wiki/player-events) feed public standing, and most responses to [World Events](/wiki/world-events) move approval up or down.
 
 ## What the head of government can do
 

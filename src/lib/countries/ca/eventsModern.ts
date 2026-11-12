@@ -1,0 +1,195 @@
+import { pe, type PackEvent } from "@/lib/events/pree/packTypes";
+
+/**
+ * Modern-years country events for Canada (2027 onward), seeded with
+ * requiresCountryIds: ["CA"]. Definitions and handlers are both generated
+ * from this one list.
+ */
+const MODERN = { minYear: 2027, requiresCountryIds: ["CA"], cooldown: [48, 96] } as const;
+
+export const CA_MODERN_PACK: PackEvent[] = [
+  {
+    ...MODERN,
+    kind: "pree.ca.wildfireSmoke",
+    title: "Smoke Over the Valley",
+    headline:
+      "Wildfire smoke has settled over town and the air quality warning is at its highest level.",
+    body: "The fire is a long way off, but the sky has been orange for three days. Schools are moving classes indoors and the arena is being set up as a clean-air shelter.",
+    baseWeight: 35,
+    options: [
+      {
+        id: "volunteerShelter",
+        label: "Volunteer at the clean-air shelter",
+        description: "Hand out masks and water at the arena.",
+        tiers: [
+          "Families remember who showed up",
+          "A long, useful shift",
+          "You come home coughing",
+        ],
+        high: pe(3),
+        mid: pe(1),
+        low: pe(0, -100),
+      },
+      {
+        id: "buyPurifiers",
+        label: "Buy air purifiers for the seniors' residence",
+        description: "Pay for filters out of your own pocket.",
+        stat: "charisma",
+        tiers: [
+          "The local paper runs the story",
+          "The staff are grateful",
+          "The units sit in boxes",
+        ],
+        high: pe(4, -400),
+        mid: pe(2, -400),
+        low: pe(0, -400),
+      },
+      {
+        id: "stayIndoors",
+        label: "Keep the windows shut and wait",
+        description: "The wind will change eventually.",
+        isDefault: true,
+        tiers: ["Rain arrives early", "A week of grey skies", "The smoke lingers for weeks"],
+        high: pe(0),
+        mid: [],
+        low: pe(-1),
+      },
+    ],
+  },
+  {
+    ...MODERN,
+    kind: "pree.ca.interprovincialTrade",
+    title: "The Trucking Permit",
+    headline: "A local brewery cannot ship to the next province without a second set of permits.",
+    body: "The owner says the paperwork costs more than the beer. A cross-border trade deal between the provinces has been promised for years, and she wants someone to say so in public.",
+    baseWeight: 30,
+    eligibility: ["politician"],
+    options: [
+      {
+        id: "championDeal",
+        label: "Campaign to scrap the permit",
+        description: "Make internal trade barriers your issue.",
+        stat: "debate",
+        tiers: [
+          "Business groups line up behind you",
+          "A solid round of coverage",
+          "The provincial minister calls you naive",
+        ],
+        high: pe(4),
+        mid: pe(2),
+        low: pe(-1),
+      },
+      {
+        id: "helpPaperwork",
+        label: "Help her with the forms",
+        description: "Have your office walk her through the permits.",
+        isDefault: true,
+        tiers: ["The shipment goes out", "A slow but steady fix", "The permit is refused anyway"],
+        high: pe(2),
+        mid: pe(1),
+        low: pe(0),
+      },
+      {
+        id: "investBrewery",
+        label: "Buy a stake in the brewery",
+        description: "If the barriers fall, the brewery grows.",
+        stat: "businessAcumen",
+        tiers: ["Sales double across the border", "A modest return", "The stake loses value"],
+        high: pe(0, 600),
+        mid: pe(0, 150),
+        low: pe(0, -300),
+      },
+    ],
+  },
+  {
+    ...MODERN,
+    kind: "pree.ca.northernHousing",
+    title: "The Northern Housing Visit",
+    headline: "A remote community has invited you to see its housing waitlist in person.",
+    body: "The flight in costs more than a week in the city. Twelve people share some of the homes, and the band council has a plan for new units if anyone will fund the materials.",
+    baseWeight: 25,
+    options: [
+      {
+        id: "makeTrip",
+        label: "Make the trip and listen",
+        description: "Spend two days with the council.",
+        stat: "energy",
+        tiers: [
+          "The council trusts you with its plan",
+          "A frank, useful visit",
+          "Weather strands you for three days",
+        ],
+        high: pe(4, -200),
+        mid: pe(2, -200),
+        low: pe(0, -500),
+      },
+      {
+        id: "fundMaterials",
+        label: "Donate toward the materials",
+        description: "Send money for lumber and insulation.",
+        tiers: [
+          "The first units go up before winter",
+          "The money helps",
+          "Shipping eats most of it",
+        ],
+        high: pe(3, -600),
+        mid: pe(1, -600),
+        low: pe(0, -600),
+      },
+      {
+        id: "sendRegrets",
+        label: "Send your regrets",
+        description: "Your schedule is full this month.",
+        isDefault: true,
+        tiers: ["Nobody notices", "A polite reply", "The council tells the press you said no"],
+        high: [],
+        mid: [],
+        low: pe(-2),
+      },
+    ],
+  },
+  {
+    ...MODERN,
+    kind: "pree.ca.arenaRenewal",
+    title: "The Old Arena",
+    headline: "The town's hockey arena has failed its roof inspection.",
+    body: "The minor hockey league has nowhere to play next season. Council can patch the roof, build a new rink on the edge of town, or sell the land to a developer.",
+    baseWeight: 30,
+    options: [
+      {
+        id: "backNewRink",
+        label: "Back a new multi-use rink",
+        description: "Argue for a building that lasts fifty years.",
+        stat: "charisma",
+        tiers: [
+          "The hockey parents adore you",
+          "The plan goes to a vote",
+          "Taxpayers balk at the cost",
+        ],
+        high: pe(4),
+        mid: pe(1),
+        low: pe(-2),
+      },
+      {
+        id: "patchRoof",
+        label: "Patch the roof and keep playing",
+        description: "Cheap, quick and familiar.",
+        isDefault: true,
+        tiers: ["The patch holds for years", "One more season", "The roof leaks on opening night"],
+        high: pe(1),
+        mid: [],
+        low: pe(-1),
+      },
+      {
+        id: "sellLand",
+        label: "Invest with the developer",
+        description: "Condos on the old rink site.",
+        stat: "businessAcumen",
+        tiers: ["The units sell out", "A small profit", "The league never forgives you"],
+        high: pe(-1, 700),
+        mid: pe(-1, 200),
+        low: pe(-3, -100),
+      },
+    ],
+  },
+];

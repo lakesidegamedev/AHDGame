@@ -14,17 +14,16 @@ import type { NavairUnit, NavairMission, NavalMission, AirMission } from "./type
 /**
  * Standing missions for formations nobody has given orders to.
  *
- * This is what makes the subsystem live rather than inert. A mission is stored on the
- * unit and persists until a commander changes it, but most of the world is run by nobody:
- * NPC countries, players who have not opened the war room, and every unit that existed
- * before this subsystem did. Without a sensible default, every navy in the game sits in
- * port with a null mission and nothing ever happens.
+ * A mission persists on the unit until a commander changes it, but most of
+ * the world is run by nobody: NPC countries, players who have not opened
+ * the war room, and units predating this subsystem. Without a default, every
+ * navy sits in port with a null mission and nothing happens.
  *
- * Deliberately NOT an AI. There is no search, no scoring, no per turn re-planning. It is
- * a small set of doctrine rules that answer "what would this formation obviously be doing"
- * from facts already on the unit. That keeps it cheap enough to run for every formation in
- * the world every turn, and predictable enough that a player can out-think it, which is
- * the point of giving players orders at all.
+ * Deliberately NOT an AI: no search, no scoring, no per-turn re-planning.
+ * A small set of doctrine rules answering "what would this formation
+ * obviously be doing" from facts already on the unit, cheap enough to run
+ * for every formation every turn and predictable enough for a player to
+ * out-think it.
  */
 
 export interface MissionContext {

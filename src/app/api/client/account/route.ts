@@ -8,6 +8,8 @@ import { isPatreonActive, isPlusOrBetter } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { cookies } from "next/headers";
 import { getAuthUserFromToken } from "@/lib/auth";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const OFFLINE_ENTITLEMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -22,7 +24,7 @@ export async function GET() {
   }
 
   const db = await getDb();
-  const user = await db.collection<User>("users").findOne(
+  const user = await usersCollection(db).findOne(
     { _id: new ObjectId(auth.user.userId) },
     {
       projection: {
@@ -40,7 +42,7 @@ export async function GET() {
   );
   if (!user) return errorResponse(401, "User not found");
   const character = user.activeCharacterId
-    ? await db.collection("characters").findOne(
+    ? await charactersCollection(db).findOne(
         {
           _id: user.activeCharacterId,
           userId: new ObjectId(auth.user.userId),

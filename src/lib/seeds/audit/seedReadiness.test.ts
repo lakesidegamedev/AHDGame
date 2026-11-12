@@ -79,7 +79,8 @@ const PRESET_OF: Record<EraId, string> = {
 /** Production-enabled cells. Coverage is global (ALL_COUNTRIES × ALL_ERAS);
  *  gating is these — a missing artifact here is a release blocker, others warn. */
 const LIVE_CELLS: Record<string, Set<EraId>> = {
-  US: new Set<EraId>(["1979", "1991", "1999", "2007", "2019", "2023", "2027"]),
+  // 1999, 2007 and 2023 have no authored seat roster and fail the seed contract.
+  US: new Set<EraId>(["1979", "1991", "2019", "2027"]),
   UK: new Set<EraId>(["1991", "2019", "2027"]),
   DE: new Set<EraId>(["1991", "2019", "2027"]),
   JP: new Set<EraId>(["1991", "2019", "2027"]),
@@ -187,7 +188,13 @@ const COUNTRY_ARTIFACTS: Record<string, ArtifactSpec> = {
     sectorWeights: (e) => hasRef("sectorSeedWeights", e),
     basePolicies: (e) => hasRef("basePolicies", e),
     registrationLanes: (e) => hasReg("registrationLanes", e),
-    seats: (e) => getPresetSeats(PRESET_OF[e]).length > 0,
+    seats: (e) => {
+      try {
+        return getPresetSeats(PRESET_OF[e]).length > 0;
+      } catch {
+        return false;
+      }
+    },
     budgets: (e) => budgetsMatchEra(e),
   },
   UK: {

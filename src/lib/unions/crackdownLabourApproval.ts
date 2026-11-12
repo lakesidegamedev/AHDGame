@@ -1,9 +1,9 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import { segmentsFor } from "@/lib/crises/unionBanStrike";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** A standing crackdown slowly costs the executive standing with labor voters. */
 export const CRACKDOWN_LABOUR_APPROVAL_COST_PER_TURN = 0.25;
@@ -13,8 +13,7 @@ export async function processCrackdownLabourApprovalTurn(
   db: Db,
   currentTurn: number
 ): Promise<number> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       { unionsBanned: true, unionEnforcementPosture: "crackdown" },
       { projection: { countryId: 1 } }
@@ -28,22 +27,23 @@ export async function processCrackdownLabourApprovalTurn(
     if (!executiveId) continue;
     const marker = `lastUnionCrackdownApprovalTurn.${countryId}`;
     const set: Record<string, unknown> = { [marker]: currentTurn };
-    for (const archetypeId of segmentsFor(countryId).labour) {
-      set[`archetypeApprovals.${archetypeId}`] = {
+    for (const bucketId of segmentsFor(countryId).labour) {
+      set[`bucketApprovals.${bucketId}`] = {
         $max: [
           -100,
           {
             $subtract: [
-              { $ifNull: [`$archetypeApprovals.${archetypeId}`, 0] },
+              { $ifNull: [`$bucketApprovals.${bucketId}`, 0] },
               CRACKDOWN_LABOUR_APPROVAL_COST_PER_TURN,
             ],
           },
         ],
       };
     }
-    const result = await db
-      .collection<Character>("characters")
-      .updateOne({ _id: executiveId, [marker]: { $ne: currentTurn } }, [{ $set: set }]);
+    const result = await charactersCollection(db).updateOne(
+      { _id: executiveId, [marker]: { $ne: currentTurn } },
+      [{ $set: set }]
+    );
     if (result.modifiedCount > 0) charged += 1;
   }
   return charged;

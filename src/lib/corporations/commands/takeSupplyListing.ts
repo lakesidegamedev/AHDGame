@@ -9,7 +9,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Corporation } from "@/lib/db/types";
 import { isAgreementPremiumLegal, type SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import type { SupplyListing } from "@/lib/db/types/supplyListing";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
@@ -25,6 +24,9 @@ import {
   requireSupplyExchangeAccess,
 } from "@/lib/corporations/supplyExchange/guards";
 import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 /** Below this the remainder of a listing is rounding dust and the take consumes it whole. */
 const LISTING_DUST_UNITS = 1e-6;
@@ -53,7 +55,7 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
     const gate = await requireSupplyExchangeAccess(db, auth.user.userId);
     if (gate) return gate;
 
-    const listings = db.collection<SupplyListing>("supplyListings");
+    const listings = supplyListingsCollection(db);
     const turn = await getCurrentTurn(db);
     const transferRestriction = await controllerTransferBarrierError(db, taker, turn, new Date());
     if (transferRestriction) return errorResponse(403, transferRestriction);
@@ -78,9 +80,7 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
       return errorResponse(409, "This offer's price is outside the contract band");
     }
 
-    const publisher = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: listing.corporationId });
+    const publisher = await corporationsCollection(db).findOne({ _id: listing.corporationId });
     // The same staleness rule the board applies when listing: the offer binds
     // only while the CEO who posted it still runs the corporation.
     // AI listings carry no publishing user (the turn engine reposts them each
@@ -185,7 +185,7 @@ export async function takeSupplyListing(request: Request, takerCorpId: string) {
       updatedAt: now,
     };
     try {
-      await db.collection<SupplyAgreement>("supplyAgreements").insertOne(agreement);
+      await supplyAgreementsCollection(db).insertOne(agreement);
     } catch (error) {
       // Give the units back so a failed write does not eat the publisher's offer.
       try {

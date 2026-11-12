@@ -45,7 +45,7 @@
  * adjusted — the era shift is purely in the cohort composition.
  */
 
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { POPULATION_MULTIPLIERS } from "./era1991PopulationMultipliers";
 
@@ -58,7 +58,7 @@ function deepClone<T>(value: T): T {
 }
 
 /**
- * Apply 1991-era cohort-share adjustments to a single `StateDemographics`
+ * Apply 1991-era cohort-share adjustments to a single `CensusGroupView`
  * document. Pure function — no DB, no Date. Mutates a clone, not the
  * input. Idempotent: re-applying does not compound (re-normalisation
  * pulls populations back to summing 100 each call).
@@ -67,9 +67,9 @@ function deepClone<T>(value: T): T {
  * missing from the country override) pass through unchanged.
  */
 export function applyEra1991DemographicAdjustments(
-  demographics: StateDemographics,
+  demographics: CensusGroupView,
   countryId: CountryId
-): StateDemographics {
+): CensusGroupView {
   const overrides = POPULATION_MULTIPLIERS[countryId];
   if (!overrides) return demographics;
   const out = deepClone(demographics);

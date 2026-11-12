@@ -11,7 +11,7 @@ import { nationalPartyEnterSchema } from "@/lib/api/schemas/elections";
 import {
   NATIONAL_ALL_POSITIONS,
   notifyNationalCandidacyDeclared,
-} from "@/lib/nationalPartyElections";
+} from "@/lib/elections/party/nationalPartyElections";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type {
@@ -28,6 +28,12 @@ import { hasTurnBackedWindowClosed } from "@/lib/time/turnBackedWindow";
 import { isActiveNationalPartyCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -91,12 +97,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Filter by countryId to avoid cross-country sequential ID collisions
-    const election = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, position, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      );
+    const election = await nationalPartyElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, position, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    );
 
     if (!election) {
       logRequest("POST", path, 400, Date.now() - start);
@@ -117,9 +121,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // elections (the accelerated 12-turn chair race at iteration start) so
     // brand-new players can stand immediately.
     if (!election.founding) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(authUser.userId) },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,
@@ -160,21 +165,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date(gameTime.effectiveNow);
     const character = authUser.character;
 
-    const existingCandidate = await db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
-      .findOne({ electionId: election._id, characterId: character._id });
+    const existingCandidate = await nationalPartyCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: character._id,
+    });
 
     if (withdraw) {
       if (!existingCandidate || existingCandidate.status === "withdrawn") {
         logRequest("POST", path, 400, Date.now() - start);
         return errorResponse(400, "You are not an active candidate in this election");
       }
-      await db
-        .collection<NationalPartyCandidate>("nationalPartyCandidates")
-        .updateOne(
-          { _id: existingCandidate._id },
-          { $set: { status: "withdrawn", withdrawnAt: now } }
-        );
+      await nationalPartyCandidatesCollection(db).updateOne(
+        { _id: existingCandidate._id },
+        { $set: { status: "withdrawn", withdrawnAt: now } }
+      );
       logRequest("POST", path, 200, Date.now() - start);
       return NextResponse.json({
         success: true,
@@ -185,8 +189,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Block running for multiple national positions at once (batched queries)
     // Filter by countryId to avoid cross-country sequential ID collisions
     const otherPositions = NATIONAL_ALL_POSITIONS.filter((p) => p !== position);
-    const otherElections = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
+    const otherElections = await nationalPartyElectionsCollection(db)
       .find({
         partyId,
         countryId: partyCountryId,
@@ -200,13 +203,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
     if (openOtherElections.length > 0) {
       const otherElectionIds = openOtherElections.map((e) => e._id);
-      const blockingCand = await db
-        .collection<NationalPartyCandidate>("nationalPartyCandidates")
-        .findOne({
-          electionId: { $in: otherElectionIds },
-          characterId: character._id,
-          status: "active",
-        });
+      const blockingCand = await nationalPartyCandidatesCollection(db).findOne({
+        electionId: { $in: otherElectionIds },
+        characterId: character._id,
+        status: "active",
+      });
       if (blockingCand) {
         const blockingElection = openOtherElections.find((e) =>
           e._id.equals(blockingCand.electionId)
@@ -220,23 +221,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const openCommitteeElection = await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      );
+    const openCommitteeElection = await nationalCommitteeElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    );
     if (
       openCommitteeElection &&
       !hasTurnBackedWindowClosed(openCommitteeElection, gameTime.currentTurn, gameTime.effectiveNow)
     ) {
-      const committeeCandidate = await db
-        .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-        .findOne({
-          electionId: openCommitteeElection._id,
-          characterId: character._id,
-          status: "active",
-        });
+      const committeeCandidate = await nationalCommitteeCandidatesCollection(db).findOne({
+        electionId: openCommitteeElection._id,
+        characterId: character._id,
+        status: "active",
+      });
       if (committeeCandidate) {
         logRequest("POST", path, 400, Date.now() - start);
         return errorResponse(
@@ -251,12 +248,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         logRequest("POST", path, 400, Date.now() - start);
         return errorResponse(400, "You are already a candidate in this election");
       }
-      await db
-        .collection<NationalPartyCandidate>("nationalPartyCandidates")
-        .updateOne(
-          { _id: existingCandidate._id },
-          { $set: { status: "active", enteredAt: now }, $unset: { withdrawnAt: "" } }
-        );
+      await nationalPartyCandidatesCollection(db).updateOne(
+        { _id: existingCandidate._id },
+        { $set: { status: "active", enteredAt: now }, $unset: { withdrawnAt: "" } }
+      );
       logRequest("POST", path, 200, Date.now() - start);
       return NextResponse.json({
         success: true,
@@ -276,12 +271,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     try {
-      await db.collection("nationalPartyCandidates").insertOne(newCandidate);
+      await nationalPartyCandidatesCollection<Document>(db).insertOne(newCandidate);
     } catch (error) {
       if (isActiveNationalPartyCandidateDuplicateKey(error)) {
-        const activeCandidate = await db
-          .collection<NationalPartyCandidate>("nationalPartyCandidates")
-          .findOne({ partyId, characterId: character._id, status: "active" });
+        const activeCandidate = await nationalPartyCandidatesCollection(db).findOne({
+          partyId,
+          characterId: character._id,
+          status: "active",
+        });
 
         if (activeCandidate?.electionId.equals(election._id)) {
           logRequest("POST", path, 400, Date.now() - start);

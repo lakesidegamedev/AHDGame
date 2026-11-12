@@ -6,6 +6,9 @@ import type { User, PoliticalParty } from "@/lib/db/types";
 import { eligibleIdentitySignals } from "@/lib/auth/identitySignals";
 import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
 import { hashSensitiveSignal } from "@/lib/utils/hashSignal";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Hash a list of identity values, dropping any that hash to null. The client
  * grouper matches on these hashes, so a hash of one value must equal a hash of
@@ -25,16 +28,14 @@ export async function GET() {
     const db = await getDb();
 
     // Exclude admin accounts — moderators cannot see or affect admins
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ role: { $ne: "admin" } })
       .toArray();
 
-    const characters = await db.collection("characters").find({}).toArray();
+    const characters = await charactersCollection(db).find({}).toArray();
     const charByUser = new Map(characters.map((c) => [c.userId.toString(), c]));
 
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({}, { projection: { sequentialId: 1, countryId: 1, name: 1 } })
       .toArray();
     const partyNameMap = new Map<string, string>(

@@ -1,26 +1,16 @@
 import type { Db } from "mongodb";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 /**
  * Live commodity price ratios for defence lot costing.
  *
- * `lotProductionCost` has always accepted a ratio map and always been called without one, so
- * every contract was costed at the recipe's NOMINAL input share: the price floor and the
- * minister's price band did not move when steel did. That made the floor a constant dressed up
- * as a cost, and it meant a supplier could be held to a price struck in a cheap market long
- * after the market stopped being cheap.
- *
- * Same source and same shape the corporation turn's `priceRatioByCommodity` uses
- * (`globalPrice / basePrice` off the `commodityPrices` collection), so a lot's cost floor and a
- * plant's actual input bill move together instead of being two numbers that happen to agree on
- * the day they were written.
- *
- * Deliberately the WORLD ratio, not a country's reachable ratio. The reachable overlay exists
- * because a plant buys in its own market, and using it here would be more precise - but it is
- * per country per commodity and the award form is a client component that quotes a band before
- * any of that is in scope. A world ratio is the same number for both ends of the negotiation,
- * which is the property a price band needs most.
+ * Shares its source and shape with the corporation turn's `priceRatioByCommodity`
+ * (`globalPrice / basePrice`), so a lot's cost floor and a plant's input bill move
+ * together. Deliberately the WORLD ratio, not per-country: the award form is a
+ * client component that quotes a band before country data is in scope, and both
+ * ends of a negotiation need the same number.
  */
 export type CommodityPriceRatios = ReadonlyMap<CommodityType, number>;
 
@@ -55,8 +45,7 @@ export function priceRatiosFrom(prices: readonly CommodityPrice[]): CommodityPri
  * the class of bug the anchor-rate module was written to remove.
  */
 export async function loadDefencePriceRatios(db: Db): Promise<CommodityPriceRatios> {
-  const prices = await db
-    .collection<CommodityPrice>("commodityPrices")
+  const prices = await commodityPricesCollection(db)
     .find({}, { projection: { commodity: 1, globalPrice: 1 } })
     .toArray();
   return priceRatiosFrom(prices);

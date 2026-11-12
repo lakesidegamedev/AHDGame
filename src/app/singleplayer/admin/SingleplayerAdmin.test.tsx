@@ -26,7 +26,7 @@ const status = {
     featureFlags: {
       ...DEFAULT_SINGLEPLAYER_FEATURE_FLAGS,
       forexEnabled: false,
-      worldEventsEnabled: true,
+      sectorTechTreesEnabled: true,
     },
   },
 } as unknown as SingleplayerStatus;
@@ -45,7 +45,7 @@ describe("SingleplayerAdmin running-world feature flags", () => {
       expect(input.checked).toBe(
         flag.key === "forexEnabled"
           ? false
-          : flag.key === "worldEventsEnabled"
+          : flag.key === "sectorTechTreesEnabled"
             ? true
             : DEFAULT_SINGLEPLAYER_FEATURE_FLAGS[flag.key]
       );
@@ -74,7 +74,7 @@ describe("SingleplayerAdmin running-world feature flags", () => {
       featureFlags: {
         ...DEFAULT_SINGLEPLAYER_FEATURE_FLAGS,
         forexEnabled: true,
-        worldEventsEnabled: true,
+        sectorTechTreesEnabled: true,
       },
     });
   });

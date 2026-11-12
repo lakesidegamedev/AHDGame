@@ -4,21 +4,20 @@
  * mandate and preserves existing office holders until a separate certified handover.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-} from "@/lib/db/types";
 
 import {
   decideRussianPresidentialResult,
   type RussianPresidentialResult,
 } from "./rules/presidentialResult";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianPresidentialElectionResultsCollection } from "@/lib/db/repositories/russianPresidentialElectionResults";
 export const RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION = "russianPresidentialElectionResults";
 export interface RussianPresidentialResultRecord {
   _id: string;
@@ -60,21 +59,20 @@ export async function materializeRussianPresidentialElectionResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Russian result certification needs a transaction, turn and time");
-  const results = db.collection<RussianPresidentialResultRecord>(
-    RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION
-  );
+  const results = russianPresidentialElectionResultsCollection<RussianPresidentialResultRecord>(db);
   const previous = await results.findOne({ _id: electionId.toHexString() }, { session });
   if (previous) {
     if (previous.countryId !== "RU" || !previous.electionId.equals(electionId))
       throw new Error("Russian result identity changed");
     return previous;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default")
     throw new Error("No 1991 Russian presidential mandate in this world");
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const election = await elections.findOne(
     { _id: electionId, countryId: "RU", electionType: "president", status: "completed" },
     { session, projection: { russianPresidentialRound: 1, endTurn: 1 } }
@@ -82,7 +80,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
   const binding = election?.russianPresidentialRound;
   if (!binding || !Number.isSafeInteger(election?.endTurn) || election!.endTurn! > turn)
     throw new Error("Russian presidential ballot is not bound or completed");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     { session, projection: { ruSovietSuccessionSinceTurn: 1, ruPresidencyMandateSinceTurn: 1 } }
@@ -97,7 +95,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     )
   )
     throw new Error("Russian presidential constitutional mandate changed");
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   let tally = await tallies.findOne(
     { electionId, finalized: { $ne: true } },
     { session, projection: { totalVotes: 1, candidateParties: 1 } }
@@ -105,8 +103,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
   if (!tally) {
     if (await tallies.findOne({ electionId }, { session, projection: { _id: 1 } }))
       throw new Error("Russian tally was finalized without a certified result");
-    const roster = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const roster = await electionCandidatesCollection(db)
       .find(
         { electionId, status: "active" },
         { session, projection: { characterName: 1, party: 1 } }
@@ -132,8 +129,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     Object.keys(tally.totalVotes).sort().join(",") !== [...candidateIds].sort().join(",")
   )
     throw new Error("Russian presidential tally does not match its registered roster");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId, _id: { $in: candidateIds.map((id) => new ObjectId(id)) } },
       {
@@ -193,7 +189,7 @@ export async function materializeRussianPresidentialElectionResult(input: {
     const ownerId = winner.isNPP ? winner.nppId : winner.characterId;
     if (!ownerId) throw new Error("Russian presidential winner has no owner");
     const owner = winner.isNPP
-      ? await db.collection<NPP>("npps").findOne(
+      ? await nppsCollection(db).findOne(
           {
             _id: ownerId,
             countryId: "RU",
@@ -201,19 +197,17 @@ export async function materializeRussianPresidentialElectionResult(input: {
           },
           { session, projection: { _id: 1 } }
         )
-      : await db
-          .collection<Character>("characters")
-          .findOne(
-            { _id: ownerId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
-            { session, projection: { _id: 1 } }
-          );
+      : await charactersCollection(db).findOne(
+          { _id: ownerId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
+          { session, projection: { _id: 1 } }
+        );
     const mateId = winner.runningMateId ?? winner.russianRunningMateNppId;
     const mateIsNpp = !winner.runningMateId;
     const samePerson = !!mateId && mateId.equals(ownerId) && mateIsNpp === !!winner.isNPP;
     const mate =
       mateId && !samePerson
         ? mateIsNpp
-          ? await db.collection<NPP>("npps").findOne(
+          ? await nppsCollection(db).findOne(
               {
                 _id: mateId,
                 countryId: "RU",
@@ -222,12 +216,10 @@ export async function materializeRussianPresidentialElectionResult(input: {
               },
               { session, projection: { name: 1, party: 1 } }
             )
-          : await db
-              .collection<Character>("characters")
-              .findOne(
-                { _id: mateId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
-                { session, projection: { name: 1, party: 1 } }
-              )
+          : await charactersCollection(db).findOne(
+              { _id: mateId, countryId: "RU", federationPendingResidenceId: { $exists: false } },
+              { session, projection: { name: 1, party: 1 } }
+            )
         : null;
     if (!owner || !mate) {
       decision = { outcome: "repeat", reason: "invalid-ballot" };

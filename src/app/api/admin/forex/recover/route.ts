@@ -8,6 +8,7 @@ import {
   recoverStaleFillClaims,
 } from "@/lib/forex/fillRecovery";
 import type { CurrencyOrder } from "@/lib/db/types";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 // GET /api/admin/forex/recover - list peer-fill intents stuck in `processing`.
 // Unresolvable intents stay `processing` by design; this listing is how they
@@ -20,8 +21,7 @@ export async function GET() {
 
     const db = await getDb();
     const now = new Date();
-    const stuck = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    const stuck = await currencyOrdersCollection(db)
       .find({ status: "processing", processingFillKey: { $exists: true } })
       .limit(100)
       .toArray();

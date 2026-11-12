@@ -53,6 +53,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   fundedValuationOwnSiteCreditStage: 1,
   producerJointRunStage: 1,
   producerRunPlanStage: 1,
+  producerTariffStage: 1,
   producerSalesAdvancePriceStage: 1,
   producerZombieRestartStage: 1,
   producerHouseholdIncomeSpendStage: 1,

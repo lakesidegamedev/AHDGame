@@ -11,8 +11,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
 import { anchorToCorpLiquidCapital, getCorpFxRate } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({ amount: z.number().refine((n) => n !== 0, "Amount must be non-zero") });
 
@@ -29,18 +29,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Admin amount is entered in ₳ (internal/anchor units). Convert to the
     // corp's home currency before writing so the value matches the rest of
     // liquidCapital (which is stored in home currency post forex migration).
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
     const fxRate = await getCorpFxRate(db, corp);
     const amountInCorpCapital = anchorToCorpLiquidCapital(parsed.data.amount, corp, fxRate);
-    const result = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: new ObjectId(id) },
-        { $inc: { liquidCapital: amountInCorpCapital }, $set: { updatedAt: new Date() } }
-      );
+    const result = await corporationsCollection(db).updateOne(
+      { _id: new ObjectId(id) },
+      { $inc: { liquidCapital: amountInCorpCapital }, $set: { updatedAt: new Date() } }
+    );
     if (result.matchedCount === 0) throw notFound("Corporation not found");
 
     return NextResponse.json({ success: true });

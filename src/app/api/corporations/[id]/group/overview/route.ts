@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { loadPublicSubsidiaryGroups } from "@/lib/corporations/groups/publicListing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireBasicAuth();
@@ -32,8 +32,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const members =
       group.parentGroupId || !group.managementAvailable
         ? []
-        : await db
-            .collection<Corporation>("corporations")
+        : await corporationsCollection(db)
             .find(
               { _id: { $in: group.members.map((m) => new ObjectId(m.id)) } },
               {

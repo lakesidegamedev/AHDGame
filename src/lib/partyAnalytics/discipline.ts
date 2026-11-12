@@ -11,6 +11,11 @@ import type {
   PartyAnalyticsDisciplineSection,
   PartyAnalyticsRiskItem,
 } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
 
 const LOW_LOYALTY_THRESHOLD = 40;
 const WHIP_BREAKER_STUBBORNNESS = 70;
@@ -105,8 +110,7 @@ export async function buildPartyDisciplineAnalytics(
     };
   }
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find({
       countryId,
       party: partyId,
@@ -117,8 +121,7 @@ export async function buildPartyDisciplineAnalytics(
 
   const riskItems = npps.map((npp) => toRiskItem(countryId, npp, partyId, stateId));
 
-  const caucuses = await db
-    .collection<Caucus>("caucuses")
+  const caucuses = await caucusesCollection(db)
     .find({ countryId, partyId, disbandedAt: null })
     .toArray();
   const activeChairIds = caucuses
@@ -129,8 +132,7 @@ export async function buildPartyDisciplineAnalytics(
   const memberships =
     caucusIds.length === 0
       ? ([] as CaucusMembership[])
-      : await db
-          .collection<CaucusMembership>("caucusMemberships")
+      : await caucusMembershipsCollection(db)
           .find({
             caucusId: { $in: caucusIds },
             memberType: "npp",
@@ -141,8 +143,7 @@ export async function buildPartyDisciplineAnalytics(
   const [relationships, chairs, defianceSnapshot] = await Promise.all([
     activeChairIds.length === 0 || memberships.length === 0
       ? Promise.resolve([] as NPPRelationship[])
-      : db
-          .collection<NPPRelationship>("nppRelationships")
+      : nppRelationshipsCollection(db)
           .find({
             characterId: { $in: activeChairIds },
             nppId: { $in: memberships.map((membership) => membership.memberId) },
@@ -150,8 +151,7 @@ export async function buildPartyDisciplineAnalytics(
           .toArray(),
     caucusIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: activeChairIds } })
           .project<Pick<Character, "_id" | "name">>({ _id: 1, name: 1 })
           .toArray(),

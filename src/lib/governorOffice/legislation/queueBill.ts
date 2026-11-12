@@ -1,7 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
 import type {
-  Character,
   GovernorQueuedBill,
   NPP,
   ElectedOfficial,
@@ -14,6 +13,11 @@ import { BILL_PROPOSE_ACTION_COST, getProvisionCostTotal } from "@shared/constan
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { getGameState } from "@/lib/gameState";
 import { validateStateBillProvisions } from "@/lib/legislature/commands/validateStateBillProvisions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 export interface QueueBillInput {
   countryId: CountryId;
@@ -61,7 +65,7 @@ export async function queueBill(
   } = input;
 
   // One pending queue per state.
-  const pending = await db.collection<GovernorQueuedBill>("governorLegislationQueue").findOne({
+  const pending = await governorLegislationQueueCollection(db).findOne({
     countryId,
     stateId,
     status: "pending",
@@ -71,14 +75,14 @@ export async function queueBill(
   }
 
   // Target NPP eligibility.
-  const npp = await db.collection<NPP>("npps").findOne({ _id: targetNppId });
+  const npp = await nppsCollection(db).findOne({ _id: targetNppId });
   if (!npp || npp.retiredAt != null) {
     return { status: 400, body: { error: "Target NPP is unavailable." } };
   }
   if (npp.party !== character.party) {
     return { status: 400, body: { error: "NPP is not in your party." } };
   }
-  const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const seat = await electedOfficialsCollection(db).findOne({
     nppId: targetNppId,
     officeType: getSubNationalLegislatureKey(countryId),
     state: stateId.toUpperCase(),
@@ -89,7 +93,7 @@ export async function queueBill(
       body: { error: "NPP does not hold a state-legislature seat in this state." },
     };
   }
-  const activeNppBill = await db.collection<StateBill>("stateBills").findOne({
+  const activeNppBill = await stateBillsCollection(db).findOne({
     sponsorNppId: targetNppId,
     status: { $nin: STATE_TERMINAL_STATUSES },
   });
@@ -117,7 +121,7 @@ export async function queueBill(
   const actionCost = BILL_PROPOSE_ACTION_COST;
 
   // Atomic spend.
-  const spend = await db.collection<Character>("characters").updateOne(
+  const spend = await charactersCollection(db).updateOne(
     {
       _id: character._id,
       actions: { $gte: actionCost },
@@ -159,6 +163,6 @@ export async function queueBill(
     createdAt: new Date(),
     updatedAt: new Date(),
   };
-  await db.collection<GovernorQueuedBill>("governorLegislationQueue").insertOne(doc);
+  await governorLegislationQueueCollection(db).insertOne(doc);
   return { status: 200, body: { queueId: id.toString() } };
 }

@@ -29,6 +29,14 @@ import {
 } from "@/lib/seeds/reference/statePartyOrg";
 import { politicalParties as SEED_PARTIES } from "@/lib/seeds/reference/politicalParties";
 import { logger } from "@/lib/observability/logger";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 /**
  * Canonical US seed name for each seeded abbreviation, used as a fallback when
@@ -36,9 +44,9 @@ import { logger } from "@/lib/observability/logger";
  * seeds still use (e.g. "REP" → "GOP" on the production world).
  */
 const US_SEED_PARTY_NAME_BY_ABBR = new Map(
-  SEED_PARTIES.filter((p) => p.countryId === "US" && p.abbreviation && p.name).map(
-    (p) => [p.abbreviation.toUpperCase(), p.name.trim().toLowerCase()] as const
-  )
+  SEED_PARTIES.filter(
+    (p) => countryHasFeature("usTurn", p.countryId) && p.abbreviation && p.name
+  ).map((p) => [p.abbreviation.toUpperCase(), p.name.trim().toLowerCase()] as const)
 );
 
 export interface StatehoodResult {
@@ -110,7 +118,7 @@ export async function seedAdmittedStatePolitics(
     const stateId = decision.stateId;
 
     const seats = buildUsStateSeats(stateId, INITIAL_HOUSE_SEATS_ON_ADMISSION, now);
-    await db.collection<Seat>("seats").bulkWrite(
+    await seatsCollection(db).bulkWrite(
       seats.map((seat) => {
         const { _id, ...body } = seat;
         return {
@@ -131,10 +139,7 @@ export async function seedAdmittedStatePolitics(
     // Fetch the whole US roster rather than filtering on the seed's
     // abbreviations: a live world can rename a party, and the renamed row must
     // still be reachable by the name fallback below.
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
-      .find({ countryId: "US" })
-      .toArray();
+    const parties = await politicalPartiesCollection(db).find({ countryId: "US" }).toArray();
     const partyByAbbr = new Map(
       parties.map((party) => [party.abbreviation?.toUpperCase(), party] as const)
     );
@@ -183,7 +188,7 @@ export async function seedAdmittedStatePolitics(
       }
     );
     if (orgRows.length > 0) {
-      await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+      await statePartyOrgCollection(db).bulkWrite(
         orgRows.map((org) => {
           const { _id, ...body } = org;
           return {
@@ -207,10 +212,8 @@ export async function seedAdmittedStatePolitics(
       // seeded "REP" to "GOP", which used to abort the whole admission.
       const party = resolveSeedParty(share.abbr);
       if (!party) {
-        // Warn and continue rather than throw. Aborting here used to strand the
-        // admission after the org rows were written but before the
-        // registration-pool upsert, leaving the state permanently outside the
-        // drift/decay phase (it skips states with no pool row).
+        // Warn and continue: throwing here leaves the state permanently
+        // outside drift/decay, since it was admitted without a pool row.
         logger.warn(
           "Statehood",
           `No US party matches seed abbreviation "${share.abbr}" for ${stateId} — skipping its registration shares`
@@ -223,7 +226,7 @@ export async function seedAdmittedStatePolitics(
       // surface that write). Update the row we already created.
       const orgId = getStatePartyOrgDocumentId(stateId, party);
       // statePartyOrg is keyed by a composite STRING id, not an ObjectId.
-      await db.collection<{ _id: string }>("statePartyOrg").updateOne(
+      await statePartyOrgCollection<{ _id: string }>(db).updateOne(
         { _id: orgId },
         {
           $set: {
@@ -235,7 +238,7 @@ export async function seedAdmittedStatePolitics(
         }
       );
     }
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").updateOne(
+    await stateRegistrationPoolCollection(db).updateOne(
       { _id: `US_${stateId}` },
       {
         $set: {
@@ -253,9 +256,10 @@ export async function seedAdmittedStatePolitics(
 
     // A territory has no officials. Skip if any exist so a re-run (or an
     // admin-seeded delegation) is never duplicated.
-    const existingOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .countDocuments({ state: stateId, officeType: { $in: ["senate", "house"] } });
+    const existingOfficials = await electedOfficialsCollection(db).countDocuments({
+      state: stateId,
+      officeType: { $in: ["senate", "house"] },
+    });
     if (existingOfficials > 0) continue;
 
     const officials: Omit<ElectedOfficial, "_id">[] = [];
@@ -281,9 +285,7 @@ export async function seedAdmittedStatePolitics(
         updatedAt: now,
       });
     }
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .insertMany(officials as ElectedOfficial[]);
+    await electedOfficialsCollection(db).insertMany(officials as ElectedOfficial[]);
   }
 }
 
@@ -292,9 +294,9 @@ export async function runStatehoodAdmission(
   _turn: number,
   currentYearOverride?: number
 ): Promise<StatehoodResult> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" } as Partial<GameState>);
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" } as Partial<GameState>);
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).
   const currentYear = currentYearOverride ?? gameState?.currentYear;
@@ -307,10 +309,14 @@ export async function runStatehoodAdmission(
 
   const preset = gameState?.preset;
   const candidateIds = TERRITORY_ADMISSIONS.map((t) => t.stateId);
-  const existing = (await db
-    .collection<State>("states")
-    .find({ _id: { $in: candidateIds } }, { projection: { _id: 1, admittedYear: 1 } })
-    .toArray()) as unknown as Array<{ _id: string; admittedYear?: number }>;
+  const existing = await (
+    await getStatesCollection(db)
+  )
+    .find<{ _id: string; admittedYear?: number }>(
+      { _id: { $in: candidateIds } },
+      { projection: { _id: 1, admittedYear: 1 } }
+    )
+    .toArray();
   const alreadyAdmitted = new Set(
     existing.filter((s) => typeof s.admittedYear === "number").map((s) => s._id)
   );
@@ -319,11 +325,11 @@ export async function runStatehoodAdmission(
   if (pending.length === 0) {
     // Nothing can ever be admitted in this world — stamp the year so the query
     // above does not run again until the calendar moves.
-    await db
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" } as Partial<GameState>, {
-        $set: { lastStatehoodYear: currentYear },
-      });
+    await (
+      await getGameStateCollection(db)
+    ).updateOne({ _id: "current" } as Partial<GameState>, {
+      $set: { lastStatehoodYear: currentYear },
+    });
     return { ran: true, year: currentYear, admitted: [] };
   }
 
@@ -347,11 +353,13 @@ export async function runStatehoodAdmission(
         },
       },
     }));
-    await db.collection<State>("states").bulkWrite(ops);
+    await (await getStatesCollection(db)).bulkWrite(ops);
     await seedAdmittedStatePolitics(db, admitted, new Date(), preset);
   }
 
-  await db.collection<GameState>("gameState").updateOne({ _id: "current" } as Partial<GameState>, {
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" } as Partial<GameState>, {
     $set: { lastStatehoodYear: currentYear },
   });
 

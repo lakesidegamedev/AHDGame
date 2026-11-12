@@ -22,8 +22,13 @@ import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBrea
 import { getGameState } from "@/lib/gameState";
 import { nppCabinetVote } from "@/lib/cabinetNominationLifecycle";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, NPP, Character } from "@/lib/db/types";
-import { FOMC_TERM_TURNS, type CentralBank, type FomcNomination } from "@/lib/db/types/centralBank";
+import type { ElectedOfficial, NPP } from "@/lib/db/types";
+import { FOMC_TERM_TURNS, type FomcNomination } from "@/lib/db/types/centralBank";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { fomcNominationsCollection } from "@/lib/db/repositories/fomcNominations";
 
 /** Resolve a player character's owning userId for notifications. */
 async function nomineeUserId(
@@ -31,9 +36,10 @@ async function nomineeUserId(
   characterId: ObjectId | null
 ): Promise<ObjectId | null> {
   if (!characterId) return null;
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { userId: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { userId: 1 } }
+  );
   return char?.userId ?? null;
 }
 
@@ -80,7 +86,7 @@ async function castNppFomcVotes(
   const setFields: Record<string, unknown> = { updatedAt: new Date() };
   for (const [k, v] of Object.entries(voteUpdates)) setFields[`votes.${k}`] = v;
 
-  await db.collection<FomcNomination>("fomcNominations").updateOne(
+  await fomcNominationsCollection(db).updateOne(
     { _id: nom._id },
     {
       $set: setFields,
@@ -97,7 +103,7 @@ async function installConfirmedSeat(
   currentTurn: number,
   cabinetHolders: ReadonlySet<string>
 ): Promise<boolean> {
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: nom.bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: nom.bankId });
   const targetSeat = bank?.fomcBoard?.find((seat) => seat.seatId === nom.seatId);
   if (!bank?.fomcBoard || !targetSeat) return false;
   if (
@@ -151,7 +157,7 @@ async function installConfirmedSeat(
     }
   }
 
-  await db.collection<CentralBank>("centralBanks").updateOne({ _id: nom.bankId }, { $set: set });
+  await centralBanksCollection(db).updateOne({ _id: nom.bankId }, { $set: set });
   return true;
 }
 
@@ -178,22 +184,22 @@ export async function processFomcNominationLifecycle(
   async function scopeFor(countryId: CountryId): Promise<CountryScope> {
     const cached = scopeCache.get(countryId);
     if (cached) return cached;
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId, officeType: "senate", isNPP: true, nppId: { $exists: true } })
       .toArray();
     const ids = officials
       .map((o) => o.nppId)
       .filter((id): id is ObjectId => id instanceof ObjectId);
     const rows = ids.length
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: ids } })
           .toArray()
       : [];
-    const pres = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const pres = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     const scope: CountryScope = {
       officials,
       nppMap: new Map(rows.map((n) => [n._id.toString(), n])),
@@ -204,8 +210,7 @@ export async function processFomcNominationLifecycle(
   }
 
   // ── A. Catch-up votes on active nominations ────────────────────────────────
-  const active = await db
-    .collection<FomcNomination>("fomcNominations")
+  const active = await fomcNominationsCollection(db)
     .find({ status: "active", votingEndsOnTurn: { $gt: currentTurn } })
     .toArray();
   for (const nom of active) {
@@ -214,8 +219,7 @@ export async function processFomcNominationLifecycle(
   }
 
   // ── B. Resolve expired nominations ─────────────────────────────────────────
-  const expired = await db
-    .collection<FomcNomination>("fomcNominations")
+  const expired = await fomcNominationsCollection(db)
     .find({ status: "active", votingEndsOnTurn: { $lte: currentTurn } })
     .toArray();
 
@@ -234,12 +238,10 @@ export async function processFomcNominationLifecycle(
     const seatLabel = nom.makeChair ? "Fed Chair" : `FOMC seat ${nom.seatId}`;
 
     if (passed) {
-      await db
-        .collection<FomcNomination>("fomcNominations")
-        .updateOne(
-          { _id: nom._id },
-          { $set: { status: "confirmed", confirmedAt: now, updatedAt: now } }
-        );
+      await fomcNominationsCollection(db).updateOne(
+        { _id: nom._id },
+        { $set: { status: "confirmed", confirmedAt: now, updatedAt: now } }
+      );
       result.confirmed++;
       if (nom.occupantType === "player") {
         const userId = await nomineeUserId(db, nom.nomineeCharacterId);
@@ -253,12 +255,10 @@ export async function processFomcNominationLifecycle(
         }
       }
     } else {
-      await db
-        .collection<FomcNomination>("fomcNominations")
-        .updateOne(
-          { _id: nom._id },
-          { $set: { status: "rejected", rejectedAt: now, updatedAt: now } }
-        );
+      await fomcNominationsCollection(db).updateOne(
+        { _id: nom._id },
+        { $set: { status: "rejected", rejectedAt: now, updatedAt: now } }
+      );
       result.rejected++;
       const rejectedNomineeUserId =
         nom.occupantType === "player" ? await nomineeUserId(db, nom.nomineeCharacterId) : null;
@@ -271,7 +271,7 @@ export async function processFomcNominationLifecycle(
         });
       }
       // The seat stays vacant and only the proposer can refill it, so a silent
-      // rejection deadlocks the board again (ticket #1238): tell the president
+      // rejection deadlocks the board again: tell the president
       // their pick failed and that they may nominate again.
       const proposerId = await nomineeUserId(db, nom.proposedByPresidentId);
       if (

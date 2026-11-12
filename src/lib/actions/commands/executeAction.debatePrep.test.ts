@@ -15,18 +15,12 @@ vi.mock("@/lib/gameState", () => ({
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn().mockResolvedValue(false),
 }));
-vi.mock("@/lib/stats/featureFlag", () => ({
-  isRpgStatsEnabled: vi.fn().mockResolvedValue(true),
-}));
 vi.mock("@/lib/achievements/triggers", () => ({
   checkActionAchievements: vi.fn().mockResolvedValue(undefined),
   checkFundsAchievements: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { executeCharacterAction } from "./executeAction";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
-
-const mockFlag = vi.mocked(isRpgStatsEnabled);
 
 describe("executeCharacterAction — debate prep gate", () => {
   let findOneAndUpdate: ReturnType<typeof vi.fn>;
@@ -76,18 +70,6 @@ describe("executeCharacterAction — debate prep gate", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFlag.mockResolvedValue(true);
-  });
-
-  it("rejects with the quote reason when the stat system is disabled", async () => {
-    mockFlag.mockResolvedValue(false);
-    const res = await run(makeCharacter(5), () => 0);
-    expect(res).toEqual({
-      ok: false,
-      error: "The stat system is not currently enabled.",
-      status: 400,
-    });
-    expect(findOneAndUpdate).not.toHaveBeenCalled();
   });
 
   it("rejects with the quote reason when no stat block is allocated", async () => {

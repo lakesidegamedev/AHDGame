@@ -2,6 +2,14 @@ import type { Migration } from "../types";
 import { ensureGovernmentContractIndexes } from "@/lib/governmentContracts/persistence";
 import type { DefenceContract } from "@/lib/db/types/defenceContract";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
+import { defenceProcurementAllocationsCollection } from "@/lib/db/repositories/defenceProcurementAllocations";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 /** Withdraw only unanswered legacy offers; active and historical signed contracts retain their terms. */
 export const migration: Migration = {
@@ -9,14 +17,14 @@ export const migration: Migration = {
   description: "Install country tender indexes and retire unanswered direct government offers.",
   idempotent: true,
   execute: async (db, ctx) => {
-    const defence = db.collection<
+    const defence = defenceContractsCollection<
       DefenceContract & { biddingCutover?: boolean; biddingCutoverReleased?: boolean }
-    >("defenceContracts");
+    >(db);
     const pending = await defence.countDocuments({
       status: "pending",
       tenderId: { $exists: false },
     });
-    const extraction = await db.collection("extractionContracts").countDocuments({
+    const extraction = await extractionContractsCollection<Document>(db).countDocuments({
       status: "offered",
       tenderId: { $exists: false },
       revokedTurn: { $exists: false },
@@ -30,9 +38,10 @@ export const migration: Migration = {
         ],
       };
     await ensureGovernmentContractIndexes(db);
-    const state = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const state = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const turn = state?.currentTurn ?? 1;
     await defence.updateMany({ status: "pending", tenderId: { $exists: false } }, [
       {
@@ -76,7 +85,7 @@ export const migration: Migration = {
       )
       .toArray();
     if (release.length) {
-      await db.collection("federalBudget").bulkWrite(
+      await federalBudgetCollection(db).bulkWrite(
         release.map((c) => {
           const marker = `governmentDirectOfferWithdrawals.${c._id.toHexString()}`;
           const amount = c.encumberedAmount ?? 0;
@@ -95,8 +104,7 @@ export const migration: Migration = {
           };
         })
       );
-      const budgetRows = await db
-        .collection("federalBudget")
+      const budgetRows = await federalBudgetCollection(db)
         .find(
           { countryId: { $in: [...new Set(release.map((c) => c.countryId))] } },
           { projection: { countryId: 1, governmentDirectOfferWithdrawals: 1 } }
@@ -114,7 +122,7 @@ export const migration: Migration = {
           );
       const allocations = release.filter((c) => c.allocationWindowId && (c.allocatedLots ?? 0) > 0);
       if (allocations.length)
-        await db.collection("defenceProcurementAllocations").bulkWrite(
+        await defenceProcurementAllocationsCollection<Document>(db).bulkWrite(
           allocations.map((c) => {
             const marker = `governmentDirectOfferWithdrawals.${c._id.toHexString()}`;
             const field = `supplierAmounts.${c.corporationId.toHexString()}`,
@@ -136,10 +144,10 @@ export const migration: Migration = {
           })
         );
       if (allocations.length) {
-        const quotaRows = await db
-          .collection<{ _id: string; governmentDirectOfferWithdrawals?: Record<string, boolean> }>(
-            "defenceProcurementAllocations"
-          )
+        const quotaRows = await defenceProcurementAllocationsCollection<{
+          _id: string;
+          governmentDirectOfferWithdrawals?: Record<string, boolean>;
+        }>(db)
           .find(
             { _id: { $in: allocations.map((c) => c.allocationWindowId!) } },
             { projection: { governmentDirectOfferWithdrawals: 1 } }
@@ -158,18 +166,15 @@ export const migration: Migration = {
         { $set: { biddingCutoverReleased: true, encumberedAmount: 0 } }
       );
     }
-    const result = await db
-      .collection("extractionContracts")
-      .updateMany(
-        { status: "offered", tenderId: { $exists: false }, revokedTurn: { $exists: false } },
-        { $set: { status: "expired", revokedTurn: turn, biddingCutover: true } }
-      );
+    const result = await extractionContractsCollection<Document>(db).updateMany(
+      { status: "offered", tenderId: { $exists: false }, revokedTurn: { $exists: false } },
+      { $set: { status: "expired", revokedTurn: turn, biddingCutover: true } }
+    );
     const [withdrawnDefence, withdrawnExtraction] = await Promise.all([
       defence
         .find({ biddingCutover: true }, { projection: { _id: 1, corporationId: 1, countryId: 1 } })
         .toArray(),
-      db
-        .collection<ExtractionContract & { biddingCutover?: boolean }>("extractionContracts")
+      extractionContractsCollection<ExtractionContract & { biddingCutover?: boolean }>(db)
         .find({ biddingCutover: true }, { projection: { _id: 1, corporationId: 1, countryId: 1 } })
         .toArray(),
     ]);
@@ -178,8 +183,7 @@ export const migration: Migration = {
       ...withdrawnExtraction.map((c) => ({ ...c, type: "contract_expired" })),
     ];
     if (withdrawn.length) {
-      const corporations = await db
-        .collection("corporations")
+      const corporations = await corporationsCollection(db)
         .find(
           { _id: { $in: withdrawn.map((c) => c.corporationId) } },
           { projection: { userId: 1, name: 1 } }
@@ -214,7 +218,7 @@ export const migration: Migration = {
             ]
           : [];
       });
-      if (notices.length) await db.collection("notifications").bulkWrite(notices);
+      if (notices.length) await notificationsCollection<Document>(db).bulkWrite(notices);
     }
     return {
       documentsScanned: pending + extraction,

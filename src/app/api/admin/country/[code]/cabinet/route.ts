@@ -28,15 +28,22 @@ import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { getCountryState } from "@/lib/countryState";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
-import type { Character, ElectedOfficial, CareerEvent } from "@/lib/db/types";
+import type { ElectedOfficial, CareerEvent } from "@/lib/db/types";
 import type { OfficeType } from "@/lib/db/types/character";
 import { getUKCabinetCooldownsCollection } from "@/lib/db/collections/ukGovernment";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
-import { canHoldAdditionalAppointment, roleSlotForPosition } from "@/lib/uk/dualMinistry/rules";
+import {
+  canHoldAdditionalAppointment,
+  roleSlotForPosition,
+} from "@/lib/countries/uk/dualMinistry/rules";
 import { reconcileUkSharedPool } from "@/lib/cabinet/ministerialActionPool";
-import { preserveSurvivingCabinetRow } from "@/lib/uk/dualMinistry/survivor";
+import { preserveSurvivingCabinetRow } from "@/lib/countries/uk/dualMinistry/survivor";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
+import type { Document } from "mongodb";
 
 const actionSchema = z
   .object({
@@ -67,12 +74,10 @@ async function withdrawActiveNominations(
   countryId: CountryId,
   positionId: string
 ): Promise<void> {
-  await db
-    .collection("cabinetNominations")
-    .updateMany(
-      { countryId, positionId, status: { $in: ["active", "proposed"] } },
-      { $set: { status: "withdrawn", updatedAt: new Date() } }
-    );
+  await cabinetNominationsCollection<Document>(db).updateMany(
+    { countryId, positionId, status: { $in: ["active", "proposed"] } },
+    { $set: { status: "withdrawn", updatedAt: new Date() } }
+  );
 }
 
 /** Vacate a seat: delete member rows and restore the holder's office state. */
@@ -88,9 +93,7 @@ async function vacateSeat(
 
   await getCabinetMembersCollection(db).deleteOne({ countryId, positionId });
 
-  // A surviving second row keeps a UK dual holder in cabinet (issue #2049):
-  // repoint at it and skip the restore below. An NPP-held seat has no
-  // character office to restore, so this is skipped for NPP members.
+  // A surviving second row keeps a dual holder in cabinet: repoint at it and skip the restore below.
   if (
     member.characterId &&
     (await preserveSurvivingCabinetRow(db, countryId, member.characterId, now))
@@ -100,30 +103,26 @@ async function vacateSeat(
 
   // Restore the character's currentOffice to their legislative seat (if any)
   // so they keep the right bonuses after leaving cabinet — mirrors the
-  // PM-facing fire flow in src/lib/uk/cabinetApi.ts. An NPP-held seat has no
+  // PM-facing fire flow in src/lib/countries/uk/cabinetApi.ts. An NPP-held seat has no
   // character office to restore, so this is skipped for NPP members.
   if (member.characterId) {
     const eligibleOfficeTypes = getCabinetEligibleOfficeTypes(countryId);
-    const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const seat = await electedOfficialsCollection(db).findOne({
       characterId: member.characterId,
       officeType: { $in: eligibleOfficeTypes },
       countryId,
     });
     if (seat) {
       const restoreOffice = { type: seat.officeType, state: seat.state! } as OfficeType;
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: member.characterId },
-          { $set: { currentOffice: restoreOffice, updatedAt: now } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: member.characterId },
+        { $set: { currentOffice: restoreOffice, updatedAt: now } }
+      );
     } else {
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: member.characterId },
-          { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: member.characterId },
+        { $unset: { currentOffice: "" }, $set: { updatedAt: now } }
+      );
     }
   }
 
@@ -192,7 +191,7 @@ export const POST = withAdminRoute(
 
     // action === "appoint"
     const characterId = new ObjectId(parsed.data.characterId!);
-    const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
+    const targetChar = await charactersCollection(db).findOne({ _id: characterId });
     if (!targetChar) {
       throw notFound("Character");
     }
@@ -213,9 +212,7 @@ export const POST = withAdminRoute(
     const heldSlots = heldRows
       .map((row) => row.roleSlot ?? roleSlotForPosition(countryId, row.positionId))
       .filter((slot): slot is NonNullable<typeof slot> => slot != null);
-    // Outside the UK rows carry no slot, so the slot check below is vacuous
-    // there: any other held seat blocks the appointment (the pre-#2049
-    // one-seat rule, with its same-seat refresh carve-out).
+    // Outside the UK rows carry no slot, so the slot check is vacuous: any other held seat blocks the appointment (same-seat refresh is carved out below).
     if (targetSlot == null && heldRows.some((row) => row.positionId !== positionId)) {
       return errorResponse(409, "This character already holds another cabinet position");
     }
@@ -228,7 +225,7 @@ export const POST = withAdminRoute(
     await vacateSeat(db, countryId, positionId);
 
     const now = new Date();
-    const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const seat = await electedOfficialsCollection(db).findOne({
       characterId: targetChar._id,
       officeType: { $in: getCabinetEligibleOfficeTypes(countryId) },
       countryId,
@@ -265,7 +262,7 @@ export const POST = withAdminRoute(
       partyCountryId: countryId,
       date: now,
     };
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: targetChar._id },
       {
         $set: { currentOffice: cabinetOffice, updatedAt: now },

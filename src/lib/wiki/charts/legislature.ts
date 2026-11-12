@@ -11,7 +11,7 @@ import {
   LEGISLATIVE_APPROVAL_VOTE_SLOPE,
   PRESIDENTIAL_APPROVAL_VOTE_SLOPE,
   approvalVoteMultiplier,
-} from "@/lib/electionEngine/approvalVoteMultiplier";
+} from "@/lib/elections/engine/approvalVoteMultiplier";
 import { WAR_EXHAUSTION_FLOOR, warExhaustion } from "@/lib/military/rules/warExhaustionCurve";
 import {
   PENSION_ACCRUAL_RATE,

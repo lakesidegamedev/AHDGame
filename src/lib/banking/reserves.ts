@@ -1,6 +1,5 @@
 import { loadEuroMonetaryUnion, syncEuroMonetaryPolicy } from "@/lib/currency/euro/service";
 import type { Db } from "mongodb";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId, getMonetaryPolicyScope } from "@/lib/centralBank/helpers";
@@ -11,6 +10,7 @@ import {
   RESERVE_REQUIREMENT_MIN,
   defaultReserveRequirement,
 } from "@/lib/banking/rules/reserves";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 // The bounds live in `reserveBounds.ts` because a client component needs them
 // and this module reaches the database and the turn engine. Re-exported here so
@@ -33,9 +33,10 @@ export type SetReserveRequirementResult =
 export async function getReserveRequirement(db: Db, currency: CurrencyCode): Promise<number> {
   const countryId = getCountryIdForCurrency(currency);
   const bankId = getBankId(countryId);
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: bankId }, { projection: { bankReserveRequirement: 1 } });
+  const bank = await centralBanksCollection(db).findOne(
+    { _id: bankId },
+    { projection: { bankReserveRequirement: 1 } }
+  );
 
   const stored = bank?.bankReserveRequirement;
   if (typeof stored === "number" && Number.isFinite(stored)) {
@@ -71,7 +72,7 @@ export async function setReserveRequirement(
 
   const countryId = getCountryIdForCurrency(currency);
   const { bankId } = await getMonetaryPolicyScope(db, countryId);
-  const result = await db.collection<CentralBank>("centralBanks").updateOne(
+  const result = await centralBanksCollection(db).updateOne(
     { _id: bankId },
     {
       $set: {

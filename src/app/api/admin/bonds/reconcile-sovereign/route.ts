@@ -1,9 +1,9 @@
 // POST /api/admin/bonds/reconcile-sovereign
 //
 // Converts unrepresented sovereign debt principal into tradeable bond series,
-// staggered across multiple maturities with term-premium yields. The gap is
-// computed as budget.debt.principal minus the total issued of all active
-// sovereign bonds for the country. Each tranche is issued at
+// staggered across maturities with term-premium yields. The gap is
+// budget.debt.principal minus the total issued of all active sovereign bonds
+// for the country. Each tranche is issued at
 // getSovereignCouponRate(primeRate, maturityTurns) so longer-dated paper
 // carries a higher yield.
 //

@@ -2,7 +2,6 @@
 import { ObjectId, type Db, type Document } from "mongodb";
 import { isDeepStrictEqual } from "node:util";
 import * as Sentry from "@sentry/nextjs";
-import type { FederalBudget, GameConfig } from "@/lib/db/types";
 import type { TreasuryTransferRecord } from "@/lib/db/types/centralBank";
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { CountryId } from "@/lib/constants/countries";
@@ -13,12 +12,7 @@ import { validateTreasuryReserveTransfer } from "./rules/treasuryReserveTransfer
 import { treasuryAnchorValuation } from "./rules/treasuryAccrual";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { getBankId } from "@/lib/centralBank/helpers";
-import {
-  claimMoneyMove,
-  MONEY_MOVE_COLLECTION,
-  SETTLED_KEYS_CAP,
-  legStamp,
-} from "@/lib/banking/moneyMove";
+import { claimMoneyMove, SETTLED_KEYS_CAP, legStamp } from "@/lib/banking/moneyMove";
 import { recoverProjections, type SettlementResult } from "@/lib/banking/settlementJournal";
 import type { TransitionProjection } from "@/lib/banking/rules/boundary";
 import { prepareAuditRecord } from "@/lib/audit/recordAudit";
@@ -31,6 +25,14 @@ import { resolveLedgerTurn } from "@/lib/ledger/ledgerTurn";
 import { accountId } from "@/lib/ledger/accounts";
 import { buildTxDocs, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export class TreasuryReserveTransferRejected extends Error {
   constructor(
@@ -97,10 +99,10 @@ function assertSame(saved: Command, input: Command): void {
     );
 }
 async function prepare(db: Db, command: Command): Promise<void> {
-  const budgetId = command.countryId === "US" ? "federal" : command.countryId;
+  const budgetId = countryHasFeature("usLib", command.countryId) ? "federal" : command.countryId;
   const [budget, config] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-    db.collection<GameConfig>("gameConfig").findOne(
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -113,9 +115,10 @@ async function prepare(db: Db, command: Command): Promise<void> {
   ]);
   if (!budget) throw new TreasuryReserveTransferRejected("Federal budget not found", 404);
   const bankId = getBankId(command.countryId);
-  const bank = await db
-    .collection<BalanceDocument>("centralBanks")
-    .findOne({ _id: bankId }, { projection: { reserveBalance: 1 } });
+  const bank = await centralBanksCollection<BalanceDocument>(db).findOne(
+    { _id: bankId },
+    { projection: { reserveBalance: 1 } }
+  );
   if (!bank) throw new TreasuryReserveTransferRejected("Central bank not found", 404);
   if (bank.reserveBalance !== undefined && !Number.isFinite(bank.reserveBalance))
     throw new TreasuryReserveTransferRejected("Central bank reserves require reconciliation");
@@ -165,12 +168,14 @@ async function prepare(db: Db, command: Command): Promise<void> {
   };
   const projections: TransitionProjection[] = [];
   const [rate, state, thresholds, cadence] = await Promise.all([
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
-      .findOne({ currencyCode: currency }, { projection: { rate: 1 } }),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db).findOne(
+      { currencyCode: currency },
+      { projection: { rate: 1 } }
+    ),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    ),
     loadTxThresholds(db),
     loadTurnLengthMinutes(db),
   ]);
@@ -357,19 +362,18 @@ async function prepare(db: Db, command: Command): Promise<void> {
   if (claim.status === "rejected") throw new TreasuryReserveTransferRejected(claim.error);
 }
 async function release(db: Db, key: string, bankId: string): Promise<void> {
-  await db
-    .collection<BalanceDocument>("centralBanks")
-    .updateOne(
-      { _id: bankId, pendingTreasuryReserveKey: key },
-      { $unset: { pendingTreasuryReserveKey: "" } }
-    );
+  await centralBanksCollection<BalanceDocument>(db).updateOne(
+    { _id: bankId, pendingTreasuryReserveKey: key },
+    { $unset: { pendingTreasuryReserveKey: "" } }
+  );
 }
 async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
   const plan = receipt.treasuryReserveTransfer;
   if (!plan.audit || plan.auditDelivered) {
-    await db
-      .collection<Receipt>(MONEY_MOVE_COLLECTION)
-      .updateOne({ _id: receipt._id }, { $set: { treasuryReserveRecoveryPending: false } });
+    await bankMoneyMovesCollection<Receipt>(db).updateOne(
+      { _id: receipt._id },
+      { $set: { treasuryReserveRecoveryPending: false } }
+    );
     return;
   }
   try {
@@ -377,18 +381,17 @@ async function publishAudit(db: Db, receipt: Receipt): Promise<void> {
       ...plan.audit,
       ...(plan.state === "rejected" ? { outcome: "rejected" as const, reason: plan.error } : {}),
     };
-    const result = await db
-      .collection<ActionAuditRecord>("actionAuditLog")
-      .updateOne({ _id: audit._id }, { $setOnInsert: audit }, { upsert: true });
+    const result = await actionAuditLogCollection(db).updateOne(
+      { _id: audit._id },
+      { $setOnInsert: audit },
+      { upsert: true }
+    );
     if (
       result.matchedCount === 1 &&
-      !isDeepStrictEqual(
-        await db.collection<ActionAuditRecord>("actionAuditLog").findOne({ _id: audit._id }),
-        audit
-      )
+      !isDeepStrictEqual(await actionAuditLogCollection(db).findOne({ _id: audit._id }), audit)
     )
       throw new Error("Treasury transfer audit differs from original receipt");
-    await db.collection<Receipt>(MONEY_MOVE_COLLECTION).updateOne(
+    await bankMoneyMovesCollection<Receipt>(db).updateOne(
       { _id: receipt._id },
       {
         $set: {
@@ -408,7 +411,7 @@ export async function executeTreasuryReserveTransfer(
   command: Command
 ): Promise<TreasuryTransferRecord> {
   const key = commandKey(command.operationId),
-    journal = db.collection<Receipt>(MONEY_MOVE_COLLECTION);
+    journal = bankMoneyMovesCollection<Receipt>(db);
   let receipt = await journal.findOne({ _id: key });
   if (!receipt) {
     await prepare(db, command);
@@ -427,7 +430,7 @@ export async function resumeTreasuryReserveTransfer(
   db: Db,
   key: string
 ): Promise<SettlementResult> {
-  const journal = db.collection<Receipt>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<Receipt>(db);
   let receipt = await journal.findOne({ _id: key });
   if (!receipt?.treasuryReserveTransfer) throw new Error("Treasury transfer receipt missing");
   let plan = receipt.treasuryReserveTransfer;
@@ -449,7 +452,7 @@ export async function resumeTreasuryReserveTransfer(
     await publishAudit(db, receipt);
     return result("replayed");
   }
-  const banks = db.collection<BalanceDocument>("centralBanks");
+  const banks = centralBanksCollection<BalanceDocument>(db);
   if (plan.state === "planning") {
     const claimed = await banks.updateOne(
       {
@@ -499,7 +502,7 @@ export async function resumeTreasuryReserveTransfer(
     if (plan.state === "rejected") return resumeTreasuryReserveTransfer(db, key);
     if (plan.state !== "admitted") throw new Error("Treasury transfer admission incomplete");
   }
-  const budgets = db.collection<BalanceDocument>("federalBudget");
+  const budgets = federalBudgetCollection<BalanceDocument>(db);
   // Freeze delivery generations only after this command owns the reservation.
   // They survive the bounded shared receipt array and prevent an old suspended
   // attempt from applying again after later transfers have evicted its stamp.
@@ -696,7 +699,7 @@ export async function resumeTreasuryReserveTransfer(
 const indexed = new WeakSet<Db>();
 export async function resumeTreasuryReserveTransfers(db: Db): Promise<void> {
   if (!indexed.has(db)) {
-    await db.collection(MONEY_MOVE_COLLECTION).createIndex(
+    await bankMoneyMovesCollection<Document>(db).createIndex(
       { treasuryReserveRecoveryPending: 1, _id: 1 },
       {
         name: "treasury_reserve_pending",
@@ -705,8 +708,7 @@ export async function resumeTreasuryReserveTransfers(db: Db): Promise<void> {
     );
     indexed.add(db);
   }
-  const pending = await db
-    .collection<Receipt>(MONEY_MOVE_COLLECTION)
+  const pending = await bankMoneyMovesCollection<Receipt>(db)
     .find({ treasuryReserveRecoveryPending: true })
     .project<{ _id: string }>({ _id: 1 })
     .sort({ _id: 1 })

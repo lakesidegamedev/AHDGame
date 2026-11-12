@@ -8,7 +8,7 @@ import { loadCharacterFundPortfolio } from "@/lib/indexFunds/corporationPortfoli
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type { Corporation, PortfolioHistory, Bond, Character } from "@/lib/db/types";
+import type { PortfolioHistory, Character } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { getGameState } from "@/lib/gameState";
@@ -36,6 +36,10 @@ import {
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 type PortfolioHistoryReading = Pick<
   PortfolioHistory,
@@ -142,8 +146,7 @@ export async function loadPortfolioForCharacter(
   const currentTurn = gameState?.currentTurn ?? 1;
 
   // Find all corporations where this character is a shareholder
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ "shareholders.characterId": charId })
     .project({
       name: 1,
@@ -234,8 +237,7 @@ export async function loadPortfolioForCharacter(
   });
 
   // Find all bonds where this character is a holder
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ "holders.characterId": charId, matured: false })
     .toArray();
 
@@ -248,8 +250,7 @@ export async function loadPortfolioForCharacter(
     const bondCorpIds = [
       ...new Set(bonds.filter(isCorporateBond).map((bond) => bond.corporationId.toString())),
     ];
-    const bondCorps = await db
-      .collection<Corporation>("corporations")
+    const bondCorps = await corporationsCollection(db)
       .find({ _id: { $in: bondCorpIds.map((id) => new ObjectId(id)) } })
       .project({ name: 1, sequentialId: 1, brandColor: 1 })
       .toArray();
@@ -311,8 +312,7 @@ export async function loadPortfolioForCharacter(
   const [historyDescending, earliestSnapshot] = summaryOnly
     ? [[] as PortfolioHistoryReading[], null as PortfolioHistoryReading | null]
     : await Promise.all([
-        db
-          .collection<PortfolioHistory>("portfolioHistory")
+        portfolioHistoryCollection(db)
           .find({ characterId: charId })
           .sort({ turn: -1 })
           .limit(500)
@@ -336,8 +336,7 @@ export async function loadPortfolioForCharacter(
           .toArray(),
         options.profile
           ? Promise.resolve(null)
-          : db
-              .collection<PortfolioHistory>("portfolioHistory")
+          : portfolioHistoryCollection(db)
               .find({ characterId: charId })
               .sort({ turn: 1 })
               .limit(1)
@@ -363,7 +362,7 @@ export async function loadPortfolioForCharacter(
   // Load exchange rates so multi-currency personal wealth is correctly summed
   let exchangeRates: Partial<Record<CurrencyCode, number>> | undefined;
   if (forexEnabled) {
-    const ratesDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const ratesDocs = await exchangeRatesCollection(db).find({}).toArray();
     exchangeRates = Object.fromEntries(ratesDocs.map((r) => [r.currencyCode, r.rate])) as Partial<
       Record<CurrencyCode, number>
     >;

@@ -28,6 +28,9 @@ import {
   FOUNDING_CONFIDENCE_PENALTY_MAX,
   type CompensationTier,
 } from "./constants";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 /** A NPC/unowned taking — no investor it expropriated, so no approval/political movement. */
 function isNpcOrUnowned(triggers: string[]): boolean {
@@ -211,25 +214,28 @@ export async function loadRegisterStanding(
   db: Db,
   countryId: CountryId
 ): Promise<RegisterStanding> {
-  const leader = await db
-    .collection<CountryLeaderState>("countryLeaderStates")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const leader = await countryLeaderStatesCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   const legitimacy =
     typeof leader?.popularLegitimacy === "number" ? Math.round(leader.popularLegitimacy) : null;
 
   let economicPosition: number | null = null;
   const seq = Number(leader?.governingPartyId);
   if (Number.isFinite(seq)) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: seq }, { projection: { economicPosition: 1 } });
+    const party = await politicalPartiesCollection(db).findOne(
+      { countryId, sequentialId: seq },
+      { projection: { economicPosition: 1 } }
+    );
     if (party && typeof party.economicPosition === "number")
       economicPosition = party.economicPosition;
   }
 
-  const approvalDoc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const approvalDoc = await governmentApprovalsCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   const approval =
     typeof approvalDoc?.approvalRating === "number" ? Math.round(approvalDoc.approvalRating) : null;
 

@@ -8,6 +8,7 @@ import type {
 import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { unrecordedHistoricalParty } from "@/lib/wiki/rules/executiveIdentity";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface RecordCountryEventInput {
   countryId: CountryId;
@@ -46,12 +47,10 @@ export async function recordCountryEvent(
     // Keep the label in the event itself so party/profile edits cannot rewrite it.
     const party =
       input.party && /^\d+$/.test(input.party)
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne(
-              { countryId: input.countryId, sequentialId: Number(input.party) },
-              { projection: { name: 1, abbreviation: 1 } }
-            )
+        ? await politicalPartiesCollection(db).findOne(
+            { countryId: input.countryId, sequentialId: Number(input.party) },
+            { projection: { name: 1, abbreviation: 1 } }
+          )
         : null;
     const partyLabel = party
       ? party.abbreviation

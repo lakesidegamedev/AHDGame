@@ -5,7 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { partyDonateSchema } from "@/lib/api/schemas/settings";
-import type { StatePartyOrg, Character, State } from "@/lib/db/types";
+import type { StatePartyOrg, State } from "@/lib/db/types";
 import {
   findPartyBySequentialId,
   getPartyIdString,
@@ -32,6 +32,11 @@ import {
   type MoneyFlowLegOutcome,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -71,7 +76,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (transferGuard) return transferGuard;
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -92,9 +97,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     if (!stateParty) {
       return errorResponse(404, "State party not found");
@@ -102,7 +105,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Check authorization: must be a member of this state party
     const [character, forexEnabled] = await Promise.all([
-      db.collection<Character>("characters").findOne({ _id: authUser.character._id }),
+      charactersCollection(db).findOne({ _id: authUser.character._id }),
       isForexEnabled(),
     ]);
 
@@ -133,8 +136,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${authUser.character._id.toHexString()}:${statePartyKey}:${amount}:${campaignFundsField}`;
-    const characters = db.collection<Character>("characters");
-    const stateParties = db.collection<StatePartyOrg>("statePartyOrg");
+    const characters = charactersCollection(db);
+    const stateParties = statePartyOrgCollection(db);
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
     if (previousReceipt && previousReceipt.fingerprint !== fingerprint) {
@@ -214,7 +217,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
 
       // Fire-and-forget: log fund flow for admin activity tracking
-      void db.collection("activityLog").insertOne({
+      void activityLogCollection<Document>(db).insertOne({
         type: "fund_event",
         timestamp: new Date(),
         userId: new ObjectId(authUser.userId),

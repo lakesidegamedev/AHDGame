@@ -5,29 +5,15 @@ import { NextResponse } from "next/server";
 /**
  * Origin-side compression for JSON API responses.
  *
- * Why this exists
- * ---------------
- * Every API response in this app carries `Cache-Control: no-transform` so that
- * Cloudflare never re-encodes a body with zstd — a Content-Encoding some
- * Android System WebView builds cannot decode, which surfaced as a thrown
- * "Network error" in client `fetch()` (Lakeside bug #0795). Correct as that is
- * for compatibility, `no-transform` also suppresses *all* compression:
+ * Every response sets `Cache-Control: no-transform` so Cloudflare never re-encodes
+ * to zstd, which some Android WebView builds cannot decode and which surfaces as
+ * a thrown "Network error". But `no-transform` also makes Next's compression
+ * middleware and Cloudflare skip all compression, shipping large bodies
+ * uncompressed.
  *
- *   - Next's `next start` compression middleware is the `compression` package,
- *     which deliberately skips any response whose Cache-Control contains
- *     `no-transform`.
- *   - Cloudflare honours the directive too, so it forwards the body verbatim
- *     instead of compressing it at the edge.
- *
- * Measured in production on 2026-10-24: `GET /api/corporations/1` was 923,100
- * bytes on the wire with no `content-encoding`, and `/api/corporations/1/history`
- * was 429,978 bytes, both despite `Accept-Encoding: gzip, br`.
- *
- * This helper encodes the body ourselves, at the origin. The response still
- * says `no-transform`, so Cloudflare passes the bytes straight through: the
- * client always receives gzip/Brotli (which every WebView decodes) and never
- * zstd. It is therefore a pure transfer-size win with no change to the
- * compatibility fix it sits on top of.
+ * Encoding here at the origin fixes that: `no-transform` lets the bytes pass
+ * through, and the client always receives gzip/Brotli which every WebView
+ * decodes. Pure transfer-size win; the compatibility fix is unchanged.
  */
 
 const gzipAsync = promisify(gzip);

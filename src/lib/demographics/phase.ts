@@ -6,6 +6,7 @@
 import { loadPandemicSignal } from "@/lib/livingConflict/pandemicSignal";
 import { loadPendingRefugeeReceptions } from "@/lib/livingConflict/refugeeReception";
 import { loadPendingConflictCivilianLosses } from "@/lib/livingConflict/civilianLoss";
+import { loadPendingCrisisPopulationOrders } from "@/lib/livingConflict/crisisPopulationOutbox";
 import { planConflictCivilianLosses } from "@/lib/livingConflict/rules/civilianLoss";
 import {
   planRefugeeReceptions,
@@ -44,6 +45,13 @@ import {
 import { inheritedCalibrationRegion } from "@/lib/resetMetrics/rules/conversionCalibration";
 import { loadResetPolicyPressure } from "@/lib/resetMetrics/loadPolicyPressure";
 import { fertilityPolicyIndex } from "@/lib/resetMetrics/rules/fertilityPolicy";
+import {
+  mortalityImprovementFactor,
+  presetUsesDemographicPaths,
+  regionPathTfr,
+} from "./rules/demographicPaths";
+import { persistAgingCostPressure } from "@/lib/societyPressures/shell";
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resolveVotingAgeEligible } from "@/lib/constants/votingAge";
@@ -87,6 +95,14 @@ import {
   estimateConscriptionEffects,
   type ConscriptionPolicy,
 } from "./conscription";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 /** Per-region net internal-migration change capped per turn (circuit-breaker). */
 const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
@@ -95,6 +111,8 @@ const MAX_INTERNAL_CHANGE_FRACTION = 0.05;
  * Replacement TFR anchoring the index→TFR map (from the Task-6 stationarity
  * calibration). Index 50 (neutral `birthRate`) → this TFR → flat population.
  * MUST stay in sync with `cohortFlows.sim.test.ts`'s REPLACEMENT_TFR.
+ * Presets on country demography paths (2027) set births from the path
+ * instead; see `rules/demographicPaths.ts`.
  */
 const REPLACEMENT_TFR = 2.06;
 
@@ -161,21 +179,15 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 
 /**
  * Surfaced-metric display bounds (mirror of `metricDefinitions.ts` population
- * category). The STOCK (`state.population`) is driven by the UN-clamped flow;
- * only the surfaced metric VALUE is clamped here so a rare >±bound region
- * saturates the readout rather than feeding an out-of-range value into approval
- * scoring (design audit-7). `medianAge` (years) has no fixed bound.
+ * category). `state.population` is driven by the un-clamped flow; only the
+ * surfaced VALUE is clamped so a rare out-of-range region saturates the
+ * readout rather than feeding approval scoring. `medianAge` has no bound.
  *
- * The policy `migrationRate` is deliberately NOT overwritten: this phase READS
- * it as the policy input for the international flow, so writing the realized rate
- * back onto it would (a) slowly erode the immigration-policy signal each turn
- * (realized = input × popNow/popAfter < input while the population grows) and
- * (b) feed a clamp back into the stock input — both forbidden by audit-7.
- * Instead the realized rate is surfaced as a SEPARATE readout,
- * `population.realizedMigrationRate` (§8.2 coexistence wiring): same flow value
- * the migration step actually moved, written alongside (never onto) the policy
- * input so the UI can show realized-vs-policy without eroding the signal. It is
- * excluded from approval scoring (a derived readout, like the others).
+ * The policy `migrationRate` is NOT overwritten: this phase reads it as the
+ * international-flow input, and writing the realized rate back would erode
+ * the policy signal and feed a clamp into the stock input. The realized rate
+ * is surfaced separately as `population.realizedMigrationRate` (excluded from
+ * approval scoring) so UI can show realized-vs-policy.
  */
 const METRIC_BOUNDS = {
   populationGrowth: [-3, 5],
@@ -188,21 +200,20 @@ const METRIC_BOUNDS = {
 } as const;
 
 /**
- * Demographic-flows turn phase (design §4.2/§4.3). Runs AFTER `metricEngine`
- * (reads the `birthRate` / healthcare / `migrationRate` metrics it produces).
- * Advances each region's age×sex vector one turn and persists into three collections:
+ * Demographic-flows turn phase. Runs AFTER `metricEngine` (reads the `birthRate` /
+ * healthcare / `migrationRate` metrics it produces). Advances each region's
+ * age×sex vector one turn and persists into three collections:
  *   - the vector            → `regionDemographics`
  *   - `states`: `population` = Σ (SSOT level) + `votingEligiblePopulation` (Σ ages
- *     ≥ votingAgeEligible, the electorate) + `workingAgePopulation` (labor force L)
- *   - the dynamic metrics    → `macroMetrics.population.*` (SP5 re-home)
+ *     ≥ votingAgeEligible) + `workingAgePopulation`
+ *   - the dynamic metrics    → `macroMetrics.population.*`
  * Skips NATIONAL_SCOPE synthetic docs. Two-stage: (1) per-region LOCAL flows
  * (aging/mortality/fertility/international, from `advanceCohort`), then (2) a
- * per-country INTERNAL migration pass (cross-region, zero-sum, N1/F-B/circuit-
- * breaker — design §4.4) over the intermediate vectors; readouts are derived from
- * the FINAL vectors. International net is per-region from its own `migrationRate`
- * metric; gateway-weighted NATIONAL international allocation remains a later
- * refinement. Current EU membership pairs origin and destination demand through
- * conserved age×sex transfers; unmatched demand keeps the rest-of-world cap.
+ * per-country INTERNAL migration pass (cross-region, zero-sum, circuit-breaker)
+ * over the intermediate vectors; readouts are derived from the FINAL vectors.
+ * International net is per-region from its own `migrationRate` metric. EU
+ * membership pairs origin and destination demand through conserved age×sex
+ * transfers; unmatched demand keeps the rest-of-world cap.
  * Returns the region count + internal-migration circuit-breaker trips.
  */
 /**
@@ -224,12 +235,10 @@ export async function runDemographicFlows(
   if (prior) return prior;
   // A missing receipt is safe to replan only when this marker proves the
   // interrupted phase used freeze-before-write rather than the legacy path.
-  const attempt = await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current", worldEpochId },
-      { $set: { demographicFlowAttempt: { worldEpochId, turn } } }
-    );
+  const attempt = await gameStateCollection(db).updateOne(
+    { _id: "current", worldEpochId },
+    { $set: { demographicFlowAttempt: { worldEpochId, turn } } }
+  );
   if (attempt.matchedCount !== 1)
     throw new Error("Population world identity changed before planning");
   // SP5: population/economic inputs live on macroMetrics; the healthcare
@@ -254,10 +263,13 @@ export async function runDemographicFlows(
   } as Record<string, 1>;
   const [demos, states, macroMetrics, gameState, labourConfig, politicalInputs, euMemberships] =
     await Promise.all([
-      db.collection<RegionDemographics>("regionDemographics").find({}).toArray(),
-      db.collection<State>("states").find({}).toArray(),
-      db.collection("macroMetrics").find({}).project<MetricsDoc>(METRICS_PROJECTION).toArray(),
-      db.collection("gameState").findOne<
+      regionDemographicsCollection(db).find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
+      macroMetricsCollection<Document>(db)
+        .find({})
+        .project<MetricsDoc>(METRICS_PROJECTION)
+        .toArray(),
+      gameStateCollection<Document>(db).findOne<
         {
           votingAgeEligible?: number;
           votingAgeEligibleByCountry?: Partial<Record<string, number>>;
@@ -267,40 +279,31 @@ export async function runDemographicFlows(
           currentTurn?: number;
           startingYear?: number;
           conscription?: Record<string, Partial<ConscriptionPolicy>>;
-          livingConflictsEnabled?: boolean;
+          preset?: string;
         } & ResetVersionState
       >({}),
       // v2: read the labour mode via the SAME db (so tests' mock db is honored) and
       // feed it as preloaded — never let getLabourSystemMode hit its own getDb.
-      db
-        .collection<GameConfig>("gameConfig")
+      gameConfigCollection(db)
         .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } })
         .catch(() => null),
       // Bridge A supplies the healthcare.* mortality inputs. The macro read
       // above carries no political values, so without this every region would
       // share one mortality curve.
       loadPoliticalMacroInputs(db, turn),
-      db
-        .collection<OrganizationMembership>("organizationMemberships")
+      organizationMembershipsCollection(db)
         .find({ organizationId: "EU" }, { projection: { countryId: 1, status: 1 } })
         .toArray(),
     ]);
 
-  const pandemic = await loadPandemicSignal(db, gameState?.livingConflictsEnabled === true);
-  const [receptionOrders, civilianLossOrders] = await Promise.all([
-    loadPendingRefugeeReceptions(
-      db,
-      worldEpochId,
-      turn,
-      gameState?.livingConflictsEnabled === true
-    ),
-    loadPendingConflictCivilianLosses(
-      db,
-      worldEpochId,
-      turn,
-      gameState?.livingConflictsEnabled === true
-    ),
+  const pandemic = await loadPandemicSignal(db);
+  const [conflictReceptions, conflictLosses, crisisOrders] = await Promise.all([
+    loadPendingRefugeeReceptions(db, worldEpochId, turn),
+    loadPendingConflictCivilianLosses(db, worldEpochId, turn),
+    loadPendingCrisisPopulationOrders(db, worldEpochId, turn),
   ]);
+  const receptionOrders = [...conflictReceptions, ...crisisOrders.reception];
+  const civilianLossOrders = [...conflictLosses, ...crisisOrders.civilianLoss];
 
   // Configurable age thresholds (defaults 18 / 18 / 64; future laws write gameState).
   // Voting age is resolved per country because electoral-law enactment writes the
@@ -331,8 +334,7 @@ export async function runDemographicFlows(
   const v2HealthByRegion = new Map<string, ResetMetricSnapshot>();
   if (v2Countries.size > 0) {
     if (!gameState?.resetWorldId) throw new Error("V2 cohorts lack their reset world identity");
-    const healthBoards = await db
-      .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+    const healthBoards = await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
       .find(
         {
           worldId: gameState.resetWorldId,
@@ -421,10 +423,10 @@ export async function runDemographicFlows(
     blocPop += popNow;
 
     // Per-region international net from its migrationRate metric (annual % → per-turn migrants),
-    // then scaled by ECONOMIC PULL (design 2026-06-15): a stronger regional economy attracts
+    // then scaled by ECONOMIC PULL: a stronger regional economy attracts
     // more foreign migrants (and a weaker one sheds more). Sign-aware + policy-gated; a neutral
-    // economy / missing metrics → ×1.0 (parity). Capped per-region at ±MAX%/yr (design
-    // 2026-06-16) AFTER the pull so a high-growth boom can't push net past the ceiling.
+    // economy / missing metrics → ×1.0 (parity). Capped per-region at ±MAX%/yr
+    // AFTER the pull so a high-growth boom can't push net past the ceiling.
     // Bridge A — same shape as birthRate: the seeded rate is authored per
     // region. For legacy countries society.integration shifts it ±1.5 annual
     // percentage points at the board extremes, unchanged at 50. Playables read
@@ -565,6 +567,25 @@ export async function runDemographicFlows(
     TURNS_PER_YEAR
   );
 
+  // Country demography paths (2027 world): the national TFR follows the
+  // country path and each region keeps its seeded spread around the
+  // population-weighted country mean of the seeded birthRate index.
+  const usePaths = presetUsesDemographicPaths(gameState?.preset) && gameYear !== null;
+  const countryMeanBirthIndex = new Map<string, number>();
+  if (usePaths) {
+    const sums = new Map<string, { weighted: number; pop: number }>();
+    for (const p of preps) {
+      if (v2Countries.has(p.countryId as "US" | "UK" | "JP")) continue;
+      const pop = totalPopulation(p.before);
+      const acc = sums.get(p.countryId) ?? { weighted: 0, pop: 0 };
+      acc.weighted += val(p.m?.population?.birthRate, 50) * pop;
+      acc.pop += pop;
+      sums.set(p.countryId, acc);
+    }
+    for (const [countryId, acc] of sums)
+      countryMeanBirthIndex.set(countryId, acc.pop > 0 ? acc.weighted / acc.pop : 50);
+  }
+
   // Pass 1c: advance each cohort with the bounded net.
   const works: RegionWork[] = [];
   for (const p of preps) {
@@ -629,6 +650,16 @@ export async function runDemographicFlows(
       migrantShareMale: 0.5,
       servingFemaleByAge: p.conscription.servingFemaleByAge,
     };
+    if (usePaths && !useResetMetrics) {
+      inputs.fertilityRate = regionPathTfr({
+        countryId: p.countryId,
+        year: gameYear!,
+        demographyScore,
+        regionIndex: seededBirthRate,
+        countryMeanIndex: countryMeanBirthIndex.get(p.countryId) ?? seededBirthRate,
+      });
+      inputs.mortalityImprovement = mortalityImprovementFactor(p.countryId, gameYear!);
+    }
     if (useResetMetrics) {
       const board = v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)!;
       const reference =
@@ -811,7 +842,10 @@ export async function runDemographicFlows(
     const eligible = Math.round(votingAgePopulation(vector, votingAgeFor(countryId)));
     const working = Math.round(workingAgePopulation(vector, workLo, workHi));
     // populationGrowth spans the FULL turn: pre-local `before` → post-internal `vector`.
-    const pm = derivePopulationMetrics(before, vector, flows, TURNS_PER_YEAR);
+    const pm = derivePopulationMetrics(before, vector, flows, TURNS_PER_YEAR, {
+      workingAgeMin: workLo,
+      retirementAge: workHi,
+    });
 
     regions.push({
       regionId,
@@ -850,7 +884,7 @@ export async function runDemographicFlows(
     });
   }
 
-  return freezeAndApplyDemographicFlowPlan(db, {
+  const stats = await freezeAndApplyDemographicFlowPlan(db, {
     worldEpochId,
     turn,
     regions,
@@ -858,4 +892,16 @@ export async function runDemographicFlows(
     refugeeReceptions: receptions.results,
     civilianLosses: civilianLosses.results,
   });
+  // 2027 world: pension and health cost pressure from this turn's national
+  // age structures, read back by the federal budget.
+  if (presetUsesSocietyPressures(gameState?.preset) && gameYear !== null) {
+    await persistAgingCostPressure(db, {
+      turn,
+      year: gameYear,
+      workingAge: workLo,
+      retirementAge: workHi,
+      regions: works.map((w) => ({ countryId: w.countryId, vector: w.vector })),
+    });
+  }
+  return stats;
 }

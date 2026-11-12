@@ -4,6 +4,7 @@ import {
   GUBERNATORIAL_ACTION_CAP,
   GUBERNATORIAL_ACTION_REGEN_INTERVAL,
 } from "@/lib/constants/governorOffice";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /**
  * Regenerate office AP for every active office-holder, capped at
@@ -12,8 +13,7 @@ import {
  * Mirrors `processMinisterialActionRegen` shape for cabinet members.
  */
 export async function processGovernorAPRegen(db: Db, currentTurn: number): Promise<number> {
-  const states = await db
-    .collection<GovernorOfficeState>("governorOfficeState")
+  const states = await governorOfficeStateCollection(db)
     .find({})
     .project<Pick<GovernorOfficeState, "_id" | "gubernatorialActions" | "lastActionGrantedTurn">>({
       _id: 1,
@@ -65,7 +65,7 @@ export async function processGovernorAPRegen(db: Db, currentTurn: number): Promi
     regen++;
   }
   if (ops.length > 0) {
-    const result = await db.collection<GovernorOfficeState>("governorOfficeState").bulkWrite(ops);
+    const result = await governorOfficeStateCollection(db).bulkWrite(ops);
     regen = result.modifiedCount;
   }
   return regen;

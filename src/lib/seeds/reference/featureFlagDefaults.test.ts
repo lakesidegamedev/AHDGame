@@ -42,7 +42,9 @@ function flagFieldsOf(file: string, iface: string): string[] {
   return fields;
 }
 
-const LADDER_TOPS: Record<string, string> = {
+const LADDER_TOPS: Record<string, string | number> = {
+  producerTariffStage: 1,
+  outputBasis: "value_added",
   nppForeignPolicyMode: "active",
   nppForeignPolicyStage: "war",
   nppEntryViabilityMode: "enforce",
@@ -53,9 +55,9 @@ const LADDER_TOPS: Record<string, string> = {
 };
 
 describe("fresh-world flag policy", () => {
-  it("excludes only NPP v5", () => {
+  it("seeds NPP autonomy at v6", () => {
     expect(Object.keys(FRESH_WORLD_FLAG_EXCLUSIONS)).toEqual(["nppAutonomyLevel"]);
-    expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyLevel).toBe("v4");
+    expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyLevel).toBe("v6");
     expect(DEFAULT_GAME_STATE_FLAGS.nppAutonomyEnabled).toBe(true);
   });
 
@@ -83,7 +85,7 @@ describe("fresh-world flag policy", () => {
 
   it("reads the flag fields from the type sources", () => {
     expect(flagFieldsOf("gameState.ts", "GameState")).toEqual(
-      expect.arrayContaining(["forexEnabled", "nppAutonomyLevel", "macroGrowthV1"])
+      expect.arrayContaining(["forexEnabled", "nppAutonomyLevel", "eraSystemEnabled"])
     );
     expect(flagFieldsOf("gameConfig.ts", "GameConfig")).toEqual(
       expect.arrayContaining(["treasuryCashLedgerEnabled", "marketSystemMode", "maintenanceMode"])
@@ -110,6 +112,36 @@ describe("fresh-world flag policy", () => {
     }
     for (const key of Object.keys(FRESH_WORLD_GAME_CONFIG_FLAGS)) {
       expect(NON_GAMEPLAY_GAME_CONFIG_FIELDS).not.toHaveProperty(key);
+    }
+  });
+
+  it("seeds value-added output growth for fresh worlds and only on insert for top-ups", () => {
+    expect(FRESH_WORLD_GAME_CONFIG_FLAGS.outputBasis).toBe("value_added");
+    const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
+    expect(flags).toHaveProperty("outputBasis", "value_added");
+    expect(settings).not.toHaveProperty("outputBasis");
+  });
+
+  it("seeds the operational switches on for fresh worlds and only on insert for top-ups", () => {
+    const switches = [
+      "priceLevelEnabled",
+      "fiscalStabilizerEnabled",
+      "crisisV2EmergentEnabled",
+      "crisisV2StagesEnabled",
+      "executiveSuccessionEnabled",
+      "leaderLegacyEnabled",
+      "campaignLiveGdpBasisEnabled",
+      "byElectionFillEnabled",
+      "scotusNppNominationsEnabled",
+      "scotusPendingDocketEnabled",
+      "preeGenericFallbackEnabled",
+      "cyberOperationsEnabled",
+    ];
+    const { settings, flags } = splitFreshWorldGameConfigFlags(referenceGameConfig);
+    for (const key of switches) {
+      expect(FRESH_WORLD_GAME_CONFIG_FLAGS).toHaveProperty(key, true);
+      expect(flags).toHaveProperty(key, true);
+      expect(settings).not.toHaveProperty(key);
     }
   });
 
@@ -141,7 +173,7 @@ describe("missingGameStateFlagDefaults", () => {
   it("preserves an explicit false on an existing world", () => {
     const out = missingGameStateFlagDefaults({ autoDisastersEnabled: false });
     expect(out).not.toHaveProperty("autoDisastersEnabled");
-    expect(out).toMatchObject({ forexEnabled: true, rpgStatsEnabled: true });
+    expect(out).toMatchObject({ forexEnabled: true, sectorTechTreesEnabled: true });
   });
 
   it("treats the NPP autonomy pair as one flag: legacy explicit disable wins", () => {

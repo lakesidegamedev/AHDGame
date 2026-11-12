@@ -19,6 +19,8 @@ import {
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import type { CountryId } from "@/lib/constants/countries";
 import { buildApprovalBreakdown } from "@/lib/country/rules/approvalBreakdown";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 export interface NationalApprovalData {
   governmentApproval: number;
@@ -46,11 +48,10 @@ export async function loadNationalApproval(
   // governmentApprovals lookup is independent of stateMetrics — fetch in parallel
   const [allStates, approvalDoc] = await Promise.all([
     prefetched?.allStates ??
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ countryId }, { projection: { _id: 1, population: 1 } })
         .toArray(),
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: countryId }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId }),
   ]);
   const stateIds = allStates.map((s) => s._id);
   // SP5: merged two-store view. Scoped to the country like `snapshotApprovalHistory`

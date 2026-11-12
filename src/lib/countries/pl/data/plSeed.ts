@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { plRegions } from "@/lib/seeds/pl/plRegions";
 import { plRegions1953 } from "@/lib/seeds/pl/plRegions1953";
 import { plParties } from "@/lib/seeds/pl/plParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -14,13 +13,10 @@ import {
 export function getPlSeedConfig(preset: string): EasternBlocSeedConfig {
   const is1953 = preset === "1953-default";
   const regions = is1953 ? plRegions1953 : plRegions;
-  // 1953 default rescaled to ~1.7x GDP/capita (Zł 300B / 25.5M = Zł 11,765;
-  // #income-gdp-scale-audit): the prior 40,000 implied ratio ~3.5-4.6x pre-fix
-  // (medianIncomeGdpScale1953.test.ts band is [0.8, 2.6]) — a bare guess
-  // disconnected from the 1953 budget's own GDP scale. Scaled by ~0.49 off
-  // the old figures, preserving each region's relative standing (Poland set
-  // slightly above the bloc's CS/HU calibration, matching its historically
-  // higher postwar consumer living standard).
+  // Rescaled to ~1.7x GDP/capita (Zł 300B / 25.5M = Zł 11,765) so median income
+  // sits inside the band in medianIncomeGdpScale1953.test.ts ([0.8, 2.6]) and
+  // matches the 1953 budget's GDP scale. Each region's relative standing is
+  // preserved; Poland sits slightly above the bloc's CS/HU calibration.
   const defaultIncome = is1953 ? 19_600 : 100_000;
   const metrics = makeEasternBlocStateMetrics(
     "PL",
@@ -100,10 +96,8 @@ export function getPlSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "PL",
-    categoryId: "pl_voterGroups",
     regions,
     parties: plParties,
-    categories: makeEasternBlocCategories("pl_voterGroups", "Poland Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

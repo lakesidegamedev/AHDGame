@@ -19,6 +19,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
 import { canActAsChair } from "@/lib/parties/actingChair";
 import { MAX_PARTY_LEADERSHIP_TITLE_LENGTH } from "@/lib/parties/partyRoleLabels";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const updateSchema = z.object({
   color: z
@@ -120,9 +121,7 @@ export async function PATCH(
       return errorResponse(400, "No valid updates provided");
     }
 
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id }, { $set: updates });
+    await politicalPartiesCollection(db).updateOne({ _id: party._id }, { $set: updates });
 
     return NextResponse.json({ success: true, message: "Party settings updated" });
   } catch (error) {

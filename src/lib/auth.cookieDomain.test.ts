@@ -10,7 +10,7 @@ vi.mock("@/lib/db/collections", () => ({
   getUsersCollection: vi.fn(),
   getCharactersCollection: vi.fn(),
 }));
-vi.mock("@/lib/env", () => ({}));
+vi.mock("@/lib/config/validatedEnv", () => ({}));
 
 describe("getAuthCookieOptions — Lakeside SSO cookie Domain", () => {
   const original = {

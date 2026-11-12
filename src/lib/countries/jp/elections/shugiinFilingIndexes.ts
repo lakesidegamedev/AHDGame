@@ -4,6 +4,8 @@
  */
 
 import type { CreateIndexesOptions, Db, IndexSpecification } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 export type JapanShugiinFilingIndex = [string, IndexSpecification, CreateIndexesOptions];
 
@@ -49,7 +51,7 @@ export function ensureJapanShugiinFilingIndexes(db: Db): Promise<void> {
   const existing = ensures.get(db);
   if (existing) return existing;
   const pending = (async () => {
-    const electionCandidates = db.collection("electionCandidates");
+    const electionCandidates = electionCandidatesCollection<Document>(db);
     // Backfill existing party nominations before creating the guard so upgraded worlds
     // receive the same uniqueness guarantee as newly filed candidates. Independent
     // nominations intentionally have no shared party-slot key.

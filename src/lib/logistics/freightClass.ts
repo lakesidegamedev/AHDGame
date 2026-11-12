@@ -8,33 +8,24 @@
 /**
  * Freight classification for the landed-price sourcing pass.
  *
- * Every commodity is either physically shipped (in one of three freight
- * classes) or not shipped at all (services and freight itself). A shipped
- * commodity spends shared freight capacity when it crosses a state line;
- * intra-state delivery is free by design.
+ * Every commodity is physically shipped in one of three classes or not shipped
+ * at all (services and freight itself). A shipped commodity spends shared
+ * freight capacity when it crosses a state line; intra-state delivery is free.
  *
- * The `grid` class is the exception and the reason it exists. Energy and
- * natural gas are delivered by wire and pipe, not by truck, so they must not
- * draw on the haulage fleet the other two classes share. Before this class
- * existed they were typed `null` (never shipped), which meant a state could
- * only ever consume what it generated, while their PRICE was pooled nationally
- * via COMMODITIES_NATIONAL_REGIONAL_PRICE_BLEND. The price said national market
- * and the physics said the state you built in: measured on prod at t225, energy
- * ran 128 states in local surplus against 100 short with state prices from 1.17
- * to 4.34, and 27.8% of all energy produced went unsold. Grid flows now move,
- * consume no TEU, and pay distance in transmission loss and a wheeling charge
- * instead of against a hard capacity ceiling.
+ * The `grid` class exists because energy and natural gas travel by wire and
+ * pipe, not truck, so they must not draw on the haulage fleet the other two
+ * classes share. Typing them as not shipped would confine a state to what it
+ * generates while their price is pooled nationally, splitting price from
+ * physics. Grid flows consume no TEU and pay distance in transmission loss and
+ * a wheeling charge instead of against a capacity ceiling.
  *
- * This is the "freight-class field on the commodity table" from the
- * interstate-logistics plan (Rev 4). The single `freight` commodity remains
- * one shared capacity pool. Classes determine TEU use and shipping cost, not
- * reserved capacity slices.
+ * The single `freight` commodity remains one shared capacity pool. Classes
+ * determine TEU use and shipping cost, not reserved capacity slices.
  */
 
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
 
 export type FreightClass = "bulk" | "special" | "grid";
-export type HauledFreightClass = Exclude<FreightClass, "grid">;
 
 /** Freight TEU used per commodity unit for one state-line crossing. */
 export const FREIGHT_TEU_PER_UNIT_HOP: Record<FreightClass, number> = {

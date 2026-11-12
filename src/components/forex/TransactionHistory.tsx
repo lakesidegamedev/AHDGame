@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { formatCurrencyFull } from "@/lib/utils/formatters";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 type TradeSourceUI =

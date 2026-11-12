@@ -1,6 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { LeadershipRemovalRuleset } from "@/lib/uk/leadership/leadershipRemoval";
+import type { LeadershipRemovalRuleset } from "@/lib/countries/uk/leadership/leadershipRemoval";
 
 /** Party family for leadership-removal defaults + committee naming. */
 export type LeadershipPartyFamily = "con" | "lab" | "other";
@@ -90,14 +90,11 @@ export interface UKPartyLeadership {
   /** Turn a survived ballot resolved on; drives the immunity window. Null = never. */
   lastSurvivalTurn: number | null;
   /**
-   * Receipts for conference committee motions (ticket #862) applied to this
-   * ruleset. The conference apply writes the ruleset patch and pushes the
-   * motion id here in ONE conditional update guarded by
-   * `appliedConferenceMotionIds: {$ne: motionId}` (same-motion exactly-once)
-   * AND `lastAmendedTurn` equal to the observed value (distinct-motion
-   * cooldown serialization: the first writer moves the turn, later distinct
-   * writers miss and void). Absent = none applied (covers every legacy row,
-   * no migration).
+   * Receipts for conference committee motions applied to this ruleset.
+   * The apply writes the patch and pushes the motion id in ONE conditional
+   * update guarded by `appliedConferenceMotionIds: {$ne: motionId}` (same-motion
+   * exactly-once) AND `lastAmendedTurn` equal to the observed value
+   * (distinct-motion cooldown). Absent = none applied.
    */
   appliedConferenceMotionIds?: string[];
   /** The one live challenge for this party, if any. */

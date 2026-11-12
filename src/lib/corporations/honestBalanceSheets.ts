@@ -10,6 +10,7 @@ import type { Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 export const HONEST_LOANS_STAGE = 1;
 /** Stage 3 caps escrow buybacks by the issuer's cash. */
@@ -23,8 +24,7 @@ export async function loadConstructionLoanDebtAnchorByCorpId(
   db: Db,
   fxByCurrency: ReadonlyMap<CurrencyCode, number>
 ): Promise<Map<string, number>> {
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find(
       {
         borrowerType: "corporation",

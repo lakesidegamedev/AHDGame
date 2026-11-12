@@ -8,6 +8,8 @@ import type { Db } from "mongodb";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate, InterventionPolicy } from "@/lib/db/types/exchangeRate";
 import { FOREX_AND_MACRO_CHART_HISTORY_TURNS } from "@/lib/constants/turnTime";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface FxSettlement {
   turn: number;
@@ -35,7 +37,7 @@ export async function reserveDefenceSettlement(
     guard.chairCharacterId = bank.chairCharacterId;
     guard.chairInfamy = bank.chairInfamy === undefined ? { $exists: false } : bank.chairInfamy;
   }
-  const result = await db.collection<CentralBank>("centralBanks").updateOne(guard, {
+  const result = await centralBanksCollection(db).updateOne(guard, {
     ...(Object.keys(inc).length ? { $inc: inc } : {}),
     $set: {
       fxInterventionSettlement: receipt,
@@ -71,22 +73,18 @@ export async function publishDefenceSettlement(
       ...policy,
       updatedAt: now,
     };
-    const write = await db
-      .collection<ExchangeRate>("exchangeRates")
-      .updateOne(
-        { _id: receipt.countryId, rate: fx.rate, updatedAt: fx.updatedAt },
-        { $set: fields }
-      );
+    const write = await exchangeRatesCollection(db).updateOne(
+      { _id: receipt.countryId, rate: fx.rate, updatedAt: fx.updatedAt },
+      { $set: fields }
+    );
     if (write.matchedCount !== 1)
       throw new Error("FX publication changed; paid settlement remains pending");
     next = { ...fx, ...fields };
   }
-  const clear = await db
-    .collection<CentralBank>("centralBanks")
-    .updateOne(
-      { _id: bank._id, "fxInterventionSettlement.turn": receipt.turn },
-      { $unset: { fxInterventionSettlement: "" }, $set: { lastFxInterventionTurn: receipt.turn } }
-    );
+  const clear = await centralBanksCollection(db).updateOne(
+    { _id: bank._id, "fxInterventionSettlement.turn": receipt.turn },
+    { $unset: { fxInterventionSettlement: "" }, $set: { lastFxInterventionTurn: receipt.turn } }
+  );
   if (clear.matchedCount !== 1)
     throw new Error("FX publication receipt changed; reconcile before retrying");
   bank.lastFxInterventionTurn = receipt.turn;

@@ -1,46 +1,40 @@
 import type { Db } from "mongodb";
-import type { Election, GameState } from "@/lib/db/types";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
-/**
- * Detect when the live pre-iteration "founding" phase is complete and end it.
+/*
+ * Detect completion of the pre-iteration founding phase and end it.
  *
- * The founding election spawns one cycle-0 race per in-scope seat at bootstrap
- * (see the founding branch in `pickNextCanonicalCycle`). Every political nation
- * therefore has cycle-0 races; economy-only / coming-soon nations spawn none.
- * The phase is complete once every founding race has resolved — i.e. there are
- * NO active/upcoming cycle-0 races left AND at least one has resolved (the
- * latter guards against firing on turn 1 before the races exist).
+ * The founding phase spawns one cycle-0 race per in-scope seat. It is complete
+ * once every founding race has resolved: no active/upcoming cycle-0 races
+ * remain, and at least one has resolved (guards the first turn).
  *
- * On completion we:
- *   - flip `preIteration.active` off and stamp `completedTurn`;
- *   - stamp `preIterationTurns = newTurn − 1` so the calendar resumes at the era
- *     start (turn 1) next turn and every canonical anchor shifts forward by the
- *     same amount (see `getCycleAnchors`), preserving the historical mapping;
- *   - invalidate the game-time cache so the pin lifts immediately.
+ * On completion: clear preIteration.active, stamp completedTurn, stamp
+ * preIterationTurns = newTurn - 1 so the calendar resumes at turn 1 next turn
+ * and canonical anchors shift to preserve the historical mapping, then
+ * invalidate the game-time cache.
  *
- * The `preIteration.active` flip is written to the DB here, but the current
- * turn's in-memory `gameState` snapshot still reads `active: true` — so the
- * canonical spawners guarded on it stay suppressed for the rest of THIS turn and
- * only resume (with the offset applied) next turn. That one-turn lag avoids a
- * half-applied tick where cycle-1 spawns before the offset lands.
- *
- * Runs AFTER election resolution + government formation each turn, and is a
- * no-op unless a pre-iteration is active.
+ * The DB flip happens here but the current in-memory gameState still reads
+ * active: true, so cycle-1 spawns wait one turn until the offset lands. Runs
+ * after election resolution and government formation; no-op when inactive.
  */
 export async function detectPreIterationComplete(
   db: Db,
   newTurn: number
 ): Promise<{ completed: boolean }> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { preIteration: 1, preset: 1, startingPartiesMode: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" },
+    { projection: { preIteration: 1, preset: 1, startingPartiesMode: 1 } }
+  );
   if (!gameState?.preIteration?.active) return { completed: false };
 
-  const elections = db.collection<Election>("elections");
+  const elections = await getElectionsCollection(db);
   const [pending, resolvedElections] = await Promise.all([
     elections.countDocuments({ cycle: 0, status: { $in: ["active", "upcoming"] } }),
     elections
@@ -59,15 +53,13 @@ export async function detectPreIterationComplete(
   // two batched queries only when every race has otherwise finished.
   const resolvedIds = resolvedElections.map((election) => election._id);
   const [candidateCoverage, tallyCoverage] = await Promise.all([
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .aggregate([
         { $match: { electionId: { $in: resolvedIds } } },
         { $group: { _id: "$electionId", candidates: { $sum: 1 } } },
       ])
       .toArray(),
-    db
-      .collection("electionVoteTallies")
+    electionVoteTalliesCollection<Document>(db)
       .aggregate([
         {
           $match: {
@@ -113,7 +105,9 @@ export async function detectPreIterationComplete(
     return { completed: false };
   }
 
-  await db.collection<GameState>("gameState").updateOne(
+  await (
+    await getGameStateCollection(db)
+  ).updateOne(
     { _id: "current" },
     {
       $set: {

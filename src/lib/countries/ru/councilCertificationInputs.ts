@@ -1,24 +1,19 @@
 /**
- * Council certification retains frozen registration and previously counted withdrawals.
- * loadRussianCouncilCertificationInputs checks actual owners and pending Duma
- * mandates in bounded batches, preserving voter counts separately from nominee marks.
+ * Retains frozen registration and previously counted withdrawals.
+ * Checks owners and pending Duma mandates in bounded batches,
+ * keeping voter counts separate from nominee marks.
  */
 import { type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  NPP,
-} from "@/lib/db/types";
+import type { CountryGameState, Election, ElectionCandidate } from "@/lib/db/types";
 import type { RussianCouncilCohortBallot } from "./rules/councilCohort";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 
 import { russianDumaBoundRoot } from "./dumaConvocationAuthority";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
 export async function loadRussianCouncilCertificationInputs(input: {
   db: Db;
   session: ClientSession;
@@ -27,8 +22,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
 }) {
   const { db, session, cohort, country } = input;
   const electionIds = cohort.map((row) => row._id);
-  const counted = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const counted = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: electionIds } },
       {
@@ -50,8 +44,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
     counted.some((row) => row.finalized || row.russianCouncilBallot?.certifiedCohortId)
   )
     throw new Error("Council certification needs one unique unfinalized tally per subject");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: electionIds } },
       {
@@ -74,8 +67,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
   const npcIds = candidates.filter((row) => row.isNPP && row.nppId).map((row) => row.nppId!);
   const playerIds = candidates.filter((row) => !row.isNPP).map((row) => row.characterId);
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             _id: { $in: npcIds },
@@ -88,8 +80,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -103,8 +94,7 @@ export async function loadRussianCouncilCertificationInputs(input: {
   const pendingDuma = new Set<string>();
   const dumaRoot = russianDumaBoundRoot(country);
   if (dumaRoot) {
-    const receipts = await db
-      .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
+    const receipts = await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db)
       .find(
         {
           countryId: "RU",

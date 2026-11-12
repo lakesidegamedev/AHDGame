@@ -2,11 +2,9 @@ import type { Db } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
 import type {
-  Bond,
   Character,
   Corporation,
   CorporateSector,
-  CentralBank,
   CorporationExitReason,
 } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
@@ -44,7 +42,10 @@ import { logWireEvent, wireHeadlineCorpDissolved } from "@/lib/wireEvent";
 import { badRequest } from "@/lib/api/errors";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { distributeCrossEquityInKind } from "@/lib/corporations/distributeCrossEquityInKind";
-import { payFundShareholderRows } from "@/lib/corporations/payFundShareholders";
+import {
+  payFundShareholderRows,
+  payNppShareholderRows,
+} from "@/lib/corporations/payFundShareholders";
 import { writeOffFundHoldingsInDissolvedCorporation } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { disposeLeavingSectors } from "@/lib/corporations/nppPickup";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
@@ -55,6 +56,21 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { reserveSectorsForRestore } from "@/lib/corporations/securedConstructionProperty";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import {
+  addInstitutionalBondPayout,
+  emptyInstitutionalBondPayouts,
+  assertNoBankTreasuryHolders,
+  payInstitutionalBondHolders,
+  selfHeldBondUnits,
+} from "@/lib/bonds/payInstitutionalBondHolders";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -84,8 +100,7 @@ export async function executeCorporationBondDefaultDissolution(
     throw badRequest("National corporations cannot be dissolved here");
   }
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false })
     .toArray();
 
@@ -93,8 +108,7 @@ export async function executeCorporationBondDefaultDissolution(
     throw badRequest("Bond default dissolution requires at least one defaulted bond");
   }
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corporation._id })
     .toArray();
   if (!(await reserveSectorsForRestore(db, sectors))) {
@@ -115,8 +129,7 @@ export async function executeCorporationBondDefaultDissolution(
   // Cash out any non-matured bonds the dissolving corp held as a creditor.
   // These are assets on the corp's balance sheet that must roll into liquidCapital
   // before the settlement snapshot so shareholders receive their full book value.
-  const heldCreditorBonds = await db
-    .collection<Bond>("bonds")
+  const heldCreditorBonds = await bondsCollection(db)
     .find({ "holders.corporationId": corporation._id, matured: false })
     .toArray();
 
@@ -148,7 +161,7 @@ export async function executeCorporationBondDefaultDissolution(
       // issuer's debt stays consistent (publicFloat + holderUnits ==
       // totalIssued/face). Pre-fix the $pull dropped the holder without
       // restoring float, orphaning the units on the surviving issuer.
-      await db.collection<Bond>("bonds").updateOne(
+      await bondsCollection(db).updateOne(
         { _id: bond._id, sovereignMaturityClaim: { $exists: false } },
         {
           $pull: { holders: { corporationId: corporation._id } },
@@ -167,19 +180,16 @@ export async function executeCorporationBondDefaultDissolution(
   await distributeCrossEquityInKind(db, corporation, now, currentTurn);
 
   if (assetLiquidationInc > 0) {
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id },
-        { $inc: { liquidCapital: assetLiquidationInc }, $set: { updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id },
+      { $inc: { liquidCapital: assetLiquidationInc }, $set: { updatedAt: now } }
+    );
   }
 
   const refreshedCorporation =
-    (await db.collection<Corporation>("corporations").findOne({ _id: corporation._id })) ??
-    corporation;
+    (await corporationsCollection(db).findOne({ _id: corporation._id })) ?? corporation;
 
-  const centralBanks = await db.collection<CentralBank>("centralBanks").find({}).toArray();
+  const centralBanks = await centralBanksCollection(db).find({}).toArray();
   const primeMap = buildPrimeRateMap(centralBanks);
   // D11: under plants the settlement basis is replacement-cost book, not NPV.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
@@ -209,10 +219,18 @@ export async function executeCorporationBondDefaultDissolution(
     corpFxRate
   );
 
+  // A bond the issuer holds itself is a claim on itself: it cancels, so it
+  // neither dilutes the other creditors nor takes a share of the pool.
+  const bondsNetOfSelfHeld = bonds.map((b) => {
+    const selfUnits = selfHeldBondUnits(b);
+    return selfUnits > 0
+      ? { ...b, totalIssued: Math.max(0, b.totalIssued - selfUnits * BOND_UNIT_FACE_VALUE) }
+      : b;
+  });
   const dissolvePreview = previewDissolveSettlement(
     refreshedCorporation,
     sectorNpv,
-    bonds,
+    bondsNetOfSelfHeld,
     liquidCapitalAnchor,
     fxByCurrency,
     { plantsEnabled, sectorBookAnchor }
@@ -220,8 +238,6 @@ export async function executeCorporationBondDefaultDissolution(
   const { bondRecoveryPool, shareholderPool, totalBondClaims } = dissolvePreview;
 
   // Fetch names for character, imperial, and corporate equity shareholders.
-  // Bug #0540: corporate shareholders were previously excluded from payouts;
-  // we now distribute to all three buckets plus the publicFloat slice.
   const regularShareholderIds = (refreshedCorporation.shareholders ?? [])
     .map((s) => s.characterId)
     .filter((id): id is ObjectId => id !== undefined);
@@ -234,20 +250,17 @@ export async function executeCorporationBondDefaultDissolution(
 
   const [shareholderChars, imperialShareholderChars, corpShareholderDocs] = await Promise.all([
     regularShareholderIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: regularShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
     imperialShareholderIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialShareholderIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [],
     corpShareholderIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: corpShareholderIds } },
             { projection: { _id: 1, name: 1, liquidCurrencyCode: 1, countryId: 1 } }
@@ -275,15 +288,18 @@ export async function executeCorporationBondDefaultDissolution(
   const charBondPay = new Map<string, number>();
   const imperialBondPay = new Map<string, number>();
   const corpBondPay = new Map<string, number>();
+  const institutionalBondPay = emptyInstitutionalBondPayouts();
 
   for (const bond of bonds) {
     const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
     const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
+    assertNoBankTreasuryHolders([bond]);
     for (const h of bond.holders) {
       const faceLocal = h.units * BOND_UNIT_FACE_VALUE;
       const faceAnchor = corpCapitalToAnchor(faceLocal, bondCcy, bondRate);
       const pay = Math.round(ratio * faceAnchor * 100) / 100;
       if (pay <= 0) continue;
+      if (addInstitutionalBondPayout(institutionalBondPay, h, pay)) continue;
       if (h.characterId) {
         const k = h.characterId.toString();
         charBondPay.set(k, (charBondPay.get(k) ?? 0) + pay);
@@ -354,8 +370,7 @@ export async function executeCorporationBondDefaultDissolution(
   if (charAll.size > 0) {
     const forexEnabled = await isForexEnabled();
     const charIds = [...charAll].map((id) => new ObjectId(id));
-    const charDocs = await db
-      .collection<Character>("characters")
+    const charDocs = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .project<Pick<Character, "_id" | "countryId">>({ _id: 1, countryId: 1 })
       .toArray();
@@ -418,15 +433,14 @@ export async function executeCorporationBondDefaultDissolution(
         },
       };
     });
-    await db.collection<Character>("characters").bulkWrite(charOps);
+    await charactersCollection(db).bulkWrite(charOps);
   }
 
   // Merge imperial bond + share payouts and write to imperialCharacters
   if (imperialAll.size > 0) {
     const forexEnabled = await isForexEnabled();
     const imperialIds = [...imperialAll].map((id) => new ObjectId(id));
-    const imperialDocs = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const imperialDocs = await imperialCharactersCollection(db)
       .find({ _id: { $in: imperialIds } })
       .project<Pick<ImperialCharacter, "_id" | "countryId">>({ _id: 1, countryId: 1 })
       .toArray();
@@ -496,13 +510,12 @@ export async function executeCorporationBondDefaultDissolution(
         },
       };
     });
-    await db.collection("imperialCharacters").bulkWrite(imperialOps);
+    await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
   }
 
   if (corpBondPay.size > 0) {
     const creditorIds = [...corpBondPay.keys()].map((id) => new ObjectId(id));
-    const creditorDocs = await db
-      .collection<Corporation>("corporations")
+    const creditorDocs = await corporationsCollection(db)
       .find({ _id: { $in: creditorIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const creditorMap = new Map(creditorDocs.map((c) => [c._id.toString(), c]));
@@ -544,12 +557,22 @@ export async function executeCorporationBondDefaultDissolution(
         },
       };
     });
-    await db.collection<Corporation>("corporations").bulkWrite(corpOps);
+    await corporationsCollection(db).bulkWrite(corpOps);
   }
 
-  // Bug #0540 fix: pro-rata payout to CORPORATE EQUITY shareholders. Before this,
-  // their share of the pool was silently dropped (allocateShareholderPool
-  // skipped corp rows while still counting their shares in the denominator).
+  dissolutionTxEntries.push(
+    ...(await payInstitutionalBondHolders(db, institutionalBondPay, {
+      turn: currentTurn,
+      now,
+      source: "default_dissolution_payout",
+      issuerId: refreshedCorporation._id,
+      issuerName: refreshedCorporation.name,
+      txType: "bond_dissolution_payout",
+    }))
+  );
+
+  // Pro-rata payout to corporate equity shareholders, whose share of the pool
+  // was previously dropped (skipped in allocation while still counted in the denominator).
   if (allocation.corporationRows.length > 0) {
     const equityOps = allocation.corporationRows
       .filter((row) => row.payout > 0)
@@ -590,11 +613,11 @@ export async function executeCorporationBondDefaultDissolution(
         };
       });
     if (equityOps.length > 0) {
-      await db.collection<Corporation>("corporations").bulkWrite(equityOps);
+      await corporationsCollection(db).bulkWrite(equityOps);
     }
   }
 
-  // Bug #0540 fix: publicFloat slice escheats to the country's central bank
+  // fix: publicFloat slice escheats to the country's central bank
   // reserve. Pre-fix, this allocation was silently destroyed.
   if (allocation.publicFloatRow && allocation.publicFloatRow.payout > 0) {
     const cbId = getBankId(refreshedCorporation.countryId);
@@ -607,9 +630,10 @@ export async function executeCorporationBondDefaultDissolution(
     const floatCurrency = (refreshedCorporation.liquidCurrencyCode ??
       COUNTRY_CURRENCY_MAP[refreshedCorporation.countryId as keyof typeof COUNTRY_CURRENCY_MAP] ??
       "USD") as CurrencyCode;
-    await db
-      .collection<CentralBank>("centralBanks")
-      .updateOne({ _id: cbId }, { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } });
+    await centralBanksCollection(db).updateOne(
+      { _id: cbId },
+      { $inc: { reserveBalance: floatLocal }, $set: { updatedAt: now } }
+    );
 
     dissolutionTxEntries.push({
       type: "corp_dissolution_distribution",
@@ -632,19 +656,12 @@ export async function executeCorporationBondDefaultDissolution(
     });
   }
 
-  // #3451 gap fix: index funds are the fourth shareholder bucket. Voluntary
-  // dissolution (dissolve route) and nationalization already settle their fund
-  // holders via payFundShareholderRows, but this bond-default path never did:
-  // allocateShareholderPool counted fund shares in the payout denominator while
-  // paying the fund nothing and leaving its holding in place. The corp is then
-  // deleted below, so every fund that held a bankrupt corp kept a dangling
-  // holding marked at stale value forever (the "ghost" holdings dominating the
-  // index-fund book). Pay the fund its ₳ pool slice and drop the holding, exactly
-  // as the other two whole-corp payout flows do.
+  // Index funds are a shareholder bucket: pay the fund its pool slice and
+  // drop its holding, matching the dissolve and nationalization flows.
+  // Otherwise the corp is deleted with dangling fund holdings left behind.
   if (allocation.fundRows.length > 0) {
-    // #992 tranche 3: book each fund credit with the same
-    // corp_dissolution_distribution type as the other shareholder buckets so
-    // the shadow ledger sees the fund side as a two-sided transfer.
+    // Book each fund credit with the same corp_dissolution_distribution type
+    // as other shareholder buckets so the shadow ledger sees a two-sided transfer.
     const { txEntries: fundTxEntries } = await payFundShareholderRows(
       db,
       allocation.fundRows,
@@ -661,23 +678,15 @@ export async function executeCorporationBondDefaultDissolution(
     );
     dissolutionTxEntries.push(...fundTxEntries);
   }
+  await payNppShareholderRows(db, allocation.nppRows, now);
 
-  // Emit the bond_default tx for the defaulting corp (subject side) BEFORE
-  // we delete the corp doc so admin queries can still resolve it via
-  // counterparty=defaulting corp; the recipient tx rows above already carry
-  // the corp _id + name. The amount on this row is the gross bondRecoveryPool
-  // in the corp's home currency.
-  //
-  // #3237: only emitted when the corp actually had bonds. This executor is
-  // also the generic insolvency wind-down (requireDefaultedBonds: false, used
-  // by NPP auto-insolvency and character deletion); a bond-less dissolution
-  // has no default event — emitting the row anyway produced a stream of
-  // misleading amount-0 "Bond default settlement" ledger entries. The
-  // corp_dissolution_distribution / bond_dissolution_payout rows above fully
-  // describe a bond-less wind-down. Real defaults still log exactly once per
-  // event (the corp doc is deleted at the end of this routine, so it cannot
-  // re-emit), including 100%-haircut defaults where the pool is 0 but claims
-  // in meta are non-zero.
+  // Emit the bond_default tx (subject side) BEFORE deleting the corp doc so
+  // admin queries still resolve counterparty; recipient rows already carry
+  // _id + name. Amount is gross bondRecoveryPool in the corp's home currency.
+  // Only emitted when the corp actually had bonds: this executor is also the
+  // generic insolvency wind-down, and a bond-less dissolution has no default
+  // event. Real defaults log once (corp is deleted here, cannot re-emit),
+  // including 100%-haircut defaults with a zero pool but non-zero claims.
   const corpHomeCurrency = (refreshedCorporation.liquidCurrencyCode ??
     COUNTRY_CURRENCY_MAP[refreshedCorporation.countryId as keyof typeof COUNTRY_CURRENCY_MAP] ??
     "USD") as CurrencyCode;
@@ -729,13 +738,13 @@ export async function executeCorporationBondDefaultDissolution(
 
   const bondIds = bonds.map((b) => b._id);
   if (bondIds.length > 0) {
-    await db.collection("bondHistory").deleteMany({ bondId: { $in: bondIds } });
+    await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: bondIds } });
   }
 
   // NPP successors take the sectors over so their plants keep producing; only
   // what they cannot take returns to the unowned pool.
   const disposal = await disposeLeavingSectors(db, refreshedCorporation, sectors, now);
-  await db.collection<Bond>("bonds").deleteMany({ corporationId: refreshedCorporation._id });
+  await bondsCollection(db).deleteMany({ corporationId: refreshedCorporation._id });
   await releaseCorporationHeldSharesToFloat(db, refreshedCorporation._id, now);
 
   // A zero-pool wind-down pays funds nothing, so payFundShareholderRows never
@@ -751,7 +760,7 @@ export async function executeCorporationBondDefaultDissolution(
     deletedAt: now,
   });
 
-  await db.collection<Corporation>("corporations").deleteOne({ _id: refreshedCorporation._id });
+  await corporationsCollection(db).deleteOne({ _id: refreshedCorporation._id });
   await recordCorporationExit(db, refreshedCorporation, {
     reason:
       options.exitReason ?? (options.requireDefaultedBonds ? "bond_default" : "forced_liquidation"),

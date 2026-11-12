@@ -1,53 +1,36 @@
 /**
  * National Front bloc-list quotas.
  *
- * WHAT A BLOC-LIST ELECTION IS. Several one-party states did not hold a contest
- * between parties at all. They ran a SINGLE list, agreed in advance, on which
- * every participating party had a fixed seat quota, and the electorate voted the
- * list up or down. The DDR's National Front is the type specimen: the 1954
- * Volkskammer returned 466 seats on one list with 99.46% of the vote, and the
- * seat split was a negotiated allocation, not an outcome.
+ * WHAT A BLOC-LIST ELECTION IS. Several one-party states did not contest
+ * between parties. They ran a SINGLE list, agreed in advance, with each
+ * participating party holding a fixed seat quota, and the electorate voted the
+ * list up or down. The DDR's National Front is the type specimen: 1954
+ * Volkskammer, 466 seats on one list, 99.46% of the vote, seat split a
+ * negotiated allocation rather than an outcome.
  *
- *   SED   117    Free German Trade Union Federation (FDGB)  53
- *   CDU    52    Democratic Women's League (DFD)            29
- *   LDPD   52    Free German Youth (FDJ)                    29
- *   NDPD   52    Cultural Association (Kulturbund)          18
- *   DBD    52    Peasants Mutual Aid (VdgB)                 12
- *
- * WHY THE GAME NEEDS THIS RATHER THAN A VOTE MULTIPLIER. Before this, the DDR
- * resolved as ordinary multi-seat proportional PR with the ruling party carrying
- * `DEFAULT_OPS_VOTE_MULTIPLIERS.ruling` (3.0) against the bloc parties' 0.375.
- * That multiplier is one factor in a stack that also contains policy-distance
- * appeal, party fit, regional bases and per-group favourability, and the appeal
- * term swings far wider than 8x. So the weighting lost. On the live 1953 world
- * the Berlin-Ost Volkskammer race projected:
- *
- *   LDPD 35.9%   SED 19.1%   DBD 19.0%   CDU 17.8%   NDPD 8.2%
- *
- * against the 66.7 / 8.3 / 8.3 / 8.3 / 8.3 the character-creation notice
- * promises players. The ruling party of a one-party state was running third and
- * would have handed the largest Volkskammer delegation to the LDPD. Raising the
- * multiplier only moves the threshold at which a well-fitted candidate breaks
- * it; the multiplier is simply the wrong instrument for a chamber whose seats
+ * WHY A QUOTA RATHER THAN A VOTE MULTIPLIER. Proportional PR with the ruling
+ * party's vote multiplier (3.0) against the bloc parties' 0.375 fails because
+ * the multiplier is one factor among policy-distance appeal, party fit,
+ * regional bases and group favourability, and the appeal term swings far wider
+ * than 8x. The ruling party of a one-party state could rank third and hand the
+ * largest delegation to a bloc party. Raising the multiplier only moves the
+ * threshold; the multiplier is the wrong instrument for a chamber whose seats
  * were never contested between parties.
  *
- * Under a quota the numbers cannot be gamed by candidate positioning, because
- * the party split is not an outcome of the vote. The vote decides WHO fills each
- * party's slots, which is the contest DDR politics actually had, and the one the
- * players are already in.
+ * Under a quota the party split is not an outcome of the vote, so candidate
+ * positioning cannot game it. The vote decides WHO fills each party's slots,
+ * which is the contest DDR politics actually had.
  *
- * MASS ORGANISATIONS. The game models five DD parties and no mass organisations,
- * so the 141 seats held by the FDGB, DFD, FDJ, Kulturbund and VdgB have to go
- * somewhere. They fold into the SED, which is where their political control
- * actually sat: all five were SED-run transmission belts whose delegations voted
- * with the party. That gives the SED 25.1% nominal + 30.3% organisational =
- * 55.4%, and leaves each bloc party on its exact historical 11.2%. Rounded to
- * 55 / 11.25 x 4, which sums to 100 exactly.
+ * MASS ORGANISATIONS. The game models five DD parties and no mass
+ * organisations, so the 141 seats held by the FDGB, DFD, FDJ, Kulturbund and
+ * VdgB fold into the SED, where their political control sat: all five were
+ * SED-run transmission belts whose delegations voted with the party. That gives
+ * SED 25.1% nominal + 30.3% organisational = 55.4%, leaving each bloc party on
+ * its historical 11.2%. Rounded to 55 / 11.25 x 4, summing to 100 exactly.
  *
- * The alternative, giving the SED only its nominal 25%, would model the
- * institution and lose the politics: a ruling party without a working majority
- * in its own rubber-stamp parliament cannot govern, and the DDR's SED plainly
- * could.
+ * Giving the SED only its nominal 25% would model the institution and lose the
+ * politics: a ruling party without a working majority in its own rubber-stamp
+ * parliament cannot govern, and the DDR's SED plainly could.
  */
 
 import type { CountryId, GovernmentType } from "./countries";

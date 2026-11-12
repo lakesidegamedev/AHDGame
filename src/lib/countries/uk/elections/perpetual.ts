@@ -22,30 +22,27 @@ import {
   getGeneralWindow,
   justResolvedInSameTurn,
   sendBatchedElectionAnnouncements,
-} from "@/lib/turn/perpetualElections/engine";
+} from "@/lib/elections/scheduling/engine";
 import {
   UK_GOVERNOR_REGIONS,
   ensureRegionalGovernorElections,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Ensure every UK region has an active/upcoming Commons election.
  *
- * Spawns anchor to the **canonical LARP schedule** via
- * {@link pickNextCanonicalCycle}. When the admin fast-forwards a regular
- * cycle via the "Modify Timers" PATCH, the next regular stays on calendar
- * (endTurn = anchors.ukCommons + (N - 1) x UK_COMMONS_CYCLE_PERIOD_HOURS). A snap
- * election resets the term clock: the post-snap regular ends at
- * `snap.endTurn + 240`, and every later regular keeps counting from that
- * shifted schedule (`shiftedScheduleEndTurn + 240`) until another snap moves
- * it again. The stamp is the scheduled turn, so admin acceleration still
+ * Spawns anchor to the canonical LARP schedule via
+ * {@link pickNextCanonicalCycle}. A regular fast-forward stays on calendar
+ * (endTurn = anchors.ukCommons + (N - 1) x UK_COMMONS_CYCLE_PERIOD_HOURS). A
+ * snap election resets the term clock: the post-snap regular ends at
+ * `snap.endTurn + 240`, and later regulars count from that shifted schedule
+ * until another snap. The stamp is the scheduled turn, so admin acceleration
  * cannot drag the calendar. See `planNextLowerChamberCycle`.
  *
- * 24h-primary / 24h-general gate: if currentTurn has eaten too deep into the
- * next canonical window, the spawner walks forward to the following cycle
- * rather than producing a stub race.
- *
- * Called from turnSystem after ensurePerpetualElections.
+ * If currentTurn has eaten too deep into the next canonical window, the spawner
+ * walks forward rather than producing a stub race.
  */
 export async function ensureUKElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
@@ -53,8 +50,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
   const currentTurn = inFlightTurn ?? persistedTurn;
   const commonsSeatsByRegion = getUkCommonsSeats(ctx.preset);
 
-  const ukRegions = await db
-    .collection<State>("states")
+  const ukRegions = await statesCollection(db)
     .find({ countryId: "UK" }, { projection: { _id: 1 } })
     .toArray();
   const regionIds = ukRegions.map((r) => r._id as string);
@@ -63,8 +59,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
 
   // Include snap_commons so a live snap suppresses spawning a regular, and a
   // resolved snap contributes to cycle-period / cycle-number calculations.
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       countryId: "UK",
       electionType: { $in: ["commons", "snap_commons"] },
@@ -72,10 +67,8 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
     })
     .toArray();
 
-  // Heal live races that still carry the modern 650-seat map under a 1953
-  // world (or any other era mismatch). Same pattern as NG houseDistricts
-  // force-heal — without this, projections keep reading the wrong totalSeats
-  // until the next cycle, even after allocateSeats is era-aware (#1058).
+  // Heal live races whose totalSeats does not match the era's expected map.
+  // Without this, projections read the wrong totalSeats until the next cycle.
   const seatHealOps: AnyBulkWriteOperation<Election>[] = liveElections.flatMap((e) => {
     const expected = e.state ? commonsSeatsByRegion[e.state] : undefined;
     if (expected == null || e.totalSeats === expected) return [];
@@ -90,8 +83,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
   });
   const liveCommons = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       countryId: "UK",
       electionType: { $in: ["commons", "snap_commons"] },
@@ -126,7 +118,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
     });
   }
   if (seatHealOps.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(seatHealOps);
+    await electionsCollection(db).bulkWrite(seatHealOps);
     console.log(`[Turn] ensureUKElections: healed ${seatHealOps.length} Commons field(s)`);
   }
 
@@ -199,8 +191,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
 
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
@@ -208,9 +199,7 @@ export async function ensureUKElections(now: Date, inFlightTurn?: number): Promi
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureUKElections: spawned ${toActuallyInsert.length} missing Commons election(s)`
     );
@@ -247,11 +236,10 @@ export async function ensureUKRegionalCouncilElections(
     })
   );
   if (seatSyncOps.length > 0) {
-    await db.collection<State>("states").bulkWrite(seatSyncOps, { ordered: false });
+    await statesCollection(db).bulkWrite(seatSyncOps, { ordered: false });
   }
 
-  const ukRegions = await db
-    .collection<State>("states")
+  const ukRegions = await statesCollection(db)
     .find({ countryId: "UK" }, { projection: { _id: 1 } })
     .toArray();
   const devolution = await readUKDevolutionState(db, ctx.startingYear);
@@ -259,14 +247,12 @@ export async function ensureUKRegionalCouncilElections(
 
   if (regionIds.length === 0) return;
 
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({ electionType: "regionalCouncil", status: { $in: ["active", "upcoming"] } })
     .toArray();
   const liveCouncils = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({ electionType: "regionalCouncil", status: { $in: ["completed", "resolved"] } })
     .sort({ updatedAt: -1 })
     .toArray();
@@ -357,8 +343,7 @@ export async function ensureUKRegionalCouncilElections(
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
 
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
@@ -366,9 +351,7 @@ export async function ensureUKRegionalCouncilElections(
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureUKRegionalCouncilElections: spawned ${toActuallyInsert.length} missing Regional Council election(s)`
     );

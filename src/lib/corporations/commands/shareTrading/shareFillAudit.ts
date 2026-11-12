@@ -7,7 +7,6 @@ import {
   claimMoneyFlowReceipt,
   failMoneyFlowReceipt,
   keyedInsertId,
-  NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION,
   type MoneyFlowReceipt,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { emitTx, type EmitTxOutcome, type TxInput } from "@/lib/financialTxLog/emit";
@@ -16,7 +15,6 @@ import {
   type RecordShareTradeInput,
   type RecordShareTradeOutcome,
 } from "@/lib/corporations/shareTradeHistory";
-import { FUND_TRANSACTION_COLLECTION } from "@/lib/indexFunds/fundQueries";
 import {
   buildShareFillMoneyKey,
   executeShareFillMoneyFlow,
@@ -26,28 +24,32 @@ import {
 } from "./shareFillMoney";
 import type { IndexFundTransaction } from "@/lib/db/types";
 import type { ShareOrder } from "@/lib/db/types/corporation";
-import type { ShareListing, ShareOffer } from "@/lib/db/types/shareListings";
+import type { ShareListing } from "@/lib/db/types/shareListings";
 import type { ShareTradeParty } from "@/lib/db/types/shareTradeHistory";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
+import { nonAtomicMoneyFlowReceiptsCollection } from "@/lib/db/repositories/nonAtomicMoneyFlowReceipts";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 /**
- * Durable audit for peer order-book fills (issue #1672).
+ * Durable audit for peer order-book fills.
  *
- * Fill money moves as keyed legs (shareFillMoney.ts): every fill attempt
- * mints one key, stamps it on the order inside the atomic claim write, and
- * persists a resume plan on a money-flow receipt before money moves. This
- * module owns the audit side: all audit rows (financial-tx log,
- * fund-transaction row, trade-history row) insert under deterministic `_id`s
- * derived from the attempt key, so a crash between money and audit is
- * repaired by convergent re-insertion instead of leaving missing audit, and
- * a retry never duplicates rows.
+ * Fill money moves as keyed legs (shareFillMoney.ts): every fill attempt mints
+ * one key, stamps it on the order inside the atomic claim write, and persists
+ * a resume plan on a money-flow receipt before money moves. This module owns
+ * the audit side: all audit rows (financial-tx log, fund-transaction row,
+ * trade-history row) insert under deterministic `_id`s derived from the attempt
+ * key, so a crash between money and audit is repaired by convergent
+ * re-insertion instead of leaving missing audit, and a retry never duplicates
+ * rows.
  *
- * Recovery runs money first, audit second: the periodic pass re-drives
- * stranded money receipts from their stored plans (converging balances),
- * then inserts planned audit rows only after the receipt records
- * `moneyCommitted`. Anything earlier (claim never landed, or landed but
- * money unproven) settles `failed` or stays `in_progress` (TTL-visible) for
- * ops instead of guessing.
+ * Recovery runs money first, audit second: the periodic pass re-drives stranded
+ * money receipts from their stored plans, then inserts planned audit rows only
+ * after the receipt records `moneyCommitted`. Anything earlier settles
+ * `failed` or stays `in_progress` (TTL-visible) for ops instead of guessing.
  */
 
 /** Deterministic-insert domains for one fill attempt's audit rows. */
@@ -116,11 +118,11 @@ export interface ShareFillAuditPlan {
 export type ShareFillReceipt = MoneyFlowReceipt & { shareFillPlan?: ShareFillAuditPlan };
 
 function receipts(db: Db): Collection<MoneyFlowReceipt> {
-  return db.collection<MoneyFlowReceipt>(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION);
+  return nonAtomicMoneyFlowReceiptsCollection<MoneyFlowReceipt>(db);
 }
 
 function receiptsEx(db: Db): Collection<ShareFillReceipt> {
-  return db.collection<ShareFillReceipt>(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION);
+  return nonAtomicMoneyFlowReceiptsCollection<ShareFillReceipt>(db);
 }
 
 export function isShareFillAuditPlan(value: unknown): value is ShareFillAuditPlan {
@@ -418,9 +420,9 @@ export async function beginShareFillAttempt(
   plan: ShareFillAuditPlan,
   fingerprint: string
 ): Promise<string> {
-  const activation = await db
-    .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
+  const activation = await gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
   if (
     activation?.stockHoldingTaxStartTurn === undefined ||
     plan.turn < activation.stockHoldingTaxStartTurn
@@ -467,12 +469,10 @@ export async function markShareFillMoneyCommitted(
   if (receipt?.shareFillPlan?.claimSnapshot) {
     const plan = receipt.shareFillPlan;
     if (plan.targetKind === "listing" && plan.offerIdHex)
-      await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: new ObjectId(plan.offerIdHex), acceptFillKey: key },
-          { $set: { status: "accepted" } }
-        );
+      await shareOffersCollection(db).updateOne(
+        { _id: new ObjectId(plan.offerIdHex), acceptFillKey: key },
+        { $set: { status: "accepted" } }
+      );
     await db
       .collection<ShareOrder | ShareListing>(
         plan.targetKind === "listing" ? "shareListings" : "shareOrders"
@@ -515,12 +515,10 @@ export async function restoreFailedShareFillClaim(db: Db, key: string): Promise<
       }
     );
   if (plan.targetKind === "listing" && plan.offerIdHex)
-    await db
-      .collection<ShareOffer>("shareOffers")
-      .updateOne(
-        { _id: new ObjectId(plan.offerIdHex), status: "accepted", acceptFillKey: key },
-        { $set: { status: "pending" }, $unset: { acceptFillKey: "" } }
-      );
+    await shareOffersCollection(db).updateOne(
+      { _id: new ObjectId(plan.offerIdHex), status: "accepted", acceptFillKey: key },
+      { $set: { status: "pending" }, $unset: { acceptFillKey: "" } }
+    );
 }
 
 export async function settleShareFillAttempt(
@@ -582,9 +580,10 @@ export async function insertShareFillAuditRows(
   }
   if (rows.fundTx) {
     try {
-      await db
-        .collection<IndexFundTransaction>(FUND_TRANSACTION_COLLECTION)
-        .insertOne({ ...rows.fundTx, _id: keyedInsertId(key, SHARE_FILL_FUND_TX_DOMAIN) });
+      await indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne({
+        ...rows.fundTx,
+        _id: keyedInsertId(key, SHARE_FILL_FUND_TX_DOMAIN),
+      });
     } catch (err) {
       if (isDuplicateKeyError(err)) {
         outcome = foldOutcome(outcome, "already-applied");
@@ -675,7 +674,7 @@ async function applyShareFillRecovery(
     plan.offerIdHex &&
     order.activeShareFillKey === key
   ) {
-    const offers = db.collection<ShareOffer>("shareOffers");
+    const offers = shareOffersCollection(db);
     // Claim the listing first so cancellation cannot return its inventory
     // while acceptance claims the offer. The pending-offer CAS arbitrates a
     // concurrent buyer cancellation without spending refunded escrow.
@@ -729,18 +728,16 @@ async function applyShareFillRecovery(
         // The audit plan precedes both claims and owns the immutable money
         // inputs, including a crash between money-receipt insert and plan store.
         if (money?.status === "in_progress")
-          await db
-            .collection<MoneyFlowReceipt & { shareFillMoneyPlan?: ShareFillMoneyPlan }>(
-              NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION
-            )
-            .updateOne(
-              {
-                _id: buildShareFillMoneyKey(key),
-                status: "in_progress",
-                shareFillMoneyPlan: { $exists: false },
-              },
-              { $set: { shareFillMoneyPlan: plan.listingMoneyPlan } }
-            );
+          await nonAtomicMoneyFlowReceiptsCollection<
+            MoneyFlowReceipt & { shareFillMoneyPlan?: ShareFillMoneyPlan }
+          >(db).updateOne(
+            {
+              _id: buildShareFillMoneyKey(key),
+              status: "in_progress",
+              shareFillMoneyPlan: { $exists: false },
+            },
+            { $set: { shareFillMoneyPlan: plan.listingMoneyPlan } }
+          );
         await executeShareFillMoneyFlow(db, plan.listingMoneyPlan);
         const committed = await receiptsEx(db).findOne({ _id: key });
         if (committed?.shareFillPlan?.moneyCommitted)
@@ -787,9 +784,10 @@ export async function recoverShareFillAttempt(
  */
 export async function repairStrandedShareFillClaim(db: Db, order: ShareOrder): Promise<boolean> {
   if (order.status !== "filled" || order.sharesRemaining <= 0) return false;
-  await db
-    .collection<ShareOrder>("shareOrders")
-    .updateOne({ _id: order._id }, { $set: { status: "open", updatedAt: new Date() } });
+  await shareOrdersCollection(db).updateOne(
+    { _id: order._id },
+    { $set: { status: "open", updatedAt: new Date() } }
+  );
   return true;
 }
 
@@ -820,29 +818,18 @@ export async function prepareShareFillClaim(
 }
 
 /**
- * Per-world rotation cursors for the orphan scan (issue #1672 starvation
- * follow-up). A head-of-queue scan re-reads the same stuck prefix every
- * pass: uncommitted receipts whose claim landed but whose money is unproven
- * never settle, so later uncommitted receipts (provably dead, claim never
- * landed) and planless receipts behind a full plan phase are never examined.
- * Each phase therefore resumes after the last key it examined, wrapping to
- * the head when it runs past the tail, so repeated bounded passes visit
- * every receipt once per cycle and settle each phase's drainable rows.
+ * Per-world rotation cursors for the orphan scan, so repeated bounded passes
+ * visit every receipt once per cycle instead of re-reading the same stuck
+ * head-of-queue prefix forever. Each phase resumes after the last key it
+ * examined, wrapping to the head past the tail. Keyset pagination (`_id`
+ * bounds on a sorted scan) survives rows settling between passes: a settled
+ * row drops out of the filter while the cursor stays a valid lower bound.
  *
- * Keyed by stable MongoClient identity plus databaseName, never by Db
- * handle and never module-global state: production `getDb()` calls
- * `client.db(dbName)` on every invocation and the driver returns a NEW Db
- * wrapper each time, so a `WeakMap<Db, ...>` would reset rotation on every
- * cron tick and re-read the same stuck prefix forever. The pooled
- * MongoClient instance (`Db.client`) is stable across those calls, and the
- * database name scopes worlds that share one client. Db handles without a
- * client identity (in-memory test fakes) fall back to per-handle cursors.
- * Keyset pagination (`_id` bounds on a sorted scan) survives rows settling
- * between passes: a settled row simply drops out of the filter while the
- * cursor stays a valid lower bound.
- *
- * Never key by URI or connection string: those are secrets and must not be
- * retained in module state or logged.
+ * Keyed by stable `Db.client` identity plus `databaseName`, never by `Db`
+ * handle: `getDb()` returns a new Db wrapper per call, so a `WeakMap<Db, ...>`
+ * would reset rotation every cron tick. Handles without a client identity
+ * (in-memory test fakes) fall back to per-handle cursors. Never key by URI or
+ * connection string: those are secrets and must not be retained or logged.
  */
 interface ShareFillOrphanCursors {
   committedAfter?: string;
@@ -939,46 +926,30 @@ function isShareFillPlanlessReceipt(doc: ShareFillReceipt): boolean {
 }
 
 /**
- * Bounded orphan scan for wiring by a periodic driver (no fill path owns a
- * pass over all orders, and the turn matcher must not scan receipts either).
- * The per-order stamp hook covers any order that sees another fill; this
- * covers lonely orders whose receipt outlives them.
+ * Bounded orphan scan driven periodically: no fill path owns a pass over all
+ * orders, and the turn matcher must not scan receipts. Covers lonely orders
+ * whose receipt outlives them; per-order fills are handled by the stamp hook.
  *
- * Fairness: uncommitted receipts whose claim landed never settle, so a
- * head-of-queue scan starves every receipt behind them, and a full plan
- * phase starves the planless phase. Committed plans (actionable work) keep
- * priority and are visited first each pass; the uncommitted and planless
- * phases then rotate via per-world cursors, and the planless phase is
- * guaranteed at least half of whatever budget the committed phase leaves
- * (unused planless cap backfills to uncommitted, so an empty planless phase
- * costs the pass nothing). Every pass settles what it can, so repeated
- * passes drain every phase monotonically.
+ * Fairness: a head-of-queue scan starves receipts behind uncommitted claims,
+ * and a full plan phase starves the planless phase. Committed plans first, then
+ * uncommitted and planless rotate via per-world cursors; planless gets at least
+ * half of whatever budget committed leaves. Each pass settles what it can, so
+ * repeated passes drain monotonically.
  *
- * Reads are batched: at most two sorted receipts queries per phase plus a
- * single `$in` load of the referenced orders, instead of one receipt read
- * plus one order read per row (one extra committed window only when the
- * reserve below goes unused, so an idle pass still drains at full budget).
- * Audit inserts and settle writes stay per row (distinct deterministic
- * `_id`s per attempt); the pass runs outside `processTurn`, so it is
- * outside the turn round-trip budgets.
+ * Batched reads: at most two sorted receipts queries per phase plus one `$in`
+ * order load. Audit inserts and settle writes remain per row.
  *
- * Plan-less receipts (claim insert landed, plan store never did, so the
- * order claim never ran) settle `failed` via the shared loaded-receipt
- * path, which needs no order read for them: otherwise they stay
- * `in_progress` forever, since no order ever stamps a key whose plan never
- * landed. Failing is truthful because `beginShareFillAttempt` persists the
- * plan before the order claim runs.
+ * Plan-less receipts (claim landed, plan store never did) settle `failed` via
+ * the shared loaded-receipt path; no order ever stamps them, so failing is
+ * truthful since beginShareFillAttempt persists the plan before the claim.
  *
- * Age grace: a live route fill sits between `claimMoneyFlowReceipt` and the
- * plan store (or mid-money-writes) with a fresh `updatedAt` while this pass
- * runs; the turn lock does not guard API routes, so the pass must not race
- * it. Candidates younger than `SHARE_FILL_ORPHAN_MIN_AGE_MS` stay untouched
- * for a later pass and are not reported as examined. The per-order stamp
- * hook (`recoverShareFillAttempt`) keeps its immediate path: it is driven
- * by the next fill on the same order, so it cannot race itself.
+ * Age grace: a live route fill sits between claimMoneyFlowReceipt and the plan
+ * store with fresh `updatedAt`, and the turn lock does not guard API routes.
+ * Candidates younger than SHARE_FILL_ORPHAN_MIN_AGE_MS stay untouched and are
+ * not counted as examined.
  *
- * Per-receipt failures are captured with the receipt key only, never plan
- * or order contents, and the receipt stays `in_progress` for the next pass.
+ * Per-receipt failures are captured with the receipt key only, never plan or
+ * order contents; the receipt stays in_progress for the next pass.
  */
 export const SHARE_FILL_ORPHAN_MIN_AGE_MS = 5 * 60 * 1000;
 
@@ -1132,14 +1103,12 @@ async function recoverLoadedReceipts(
   const projection = { _id: 1, sharesRemaining: 1, activeShareFillKey: 1, lastShareFillKey: 1 };
   const [orders, listings] = await Promise.all([
     orderIds.length
-      ? db
-          .collection<ShareOrder>("shareOrders")
+      ? shareOrdersCollection(db)
           .find({ _id: { $in: orderIds } }, { projection })
           .toArray()
       : [],
     listingIds.length
-      ? db
-          .collection<ShareListing>("shareListings")
+      ? shareListingsCollection(db)
           .find({ _id: { $in: listingIds } }, { projection })
           .toArray()
       : [],
@@ -1188,11 +1157,10 @@ export async function runShareFillRecoveryPass(
   if (shareFillRecoveryRunning) return emptyPassSummary("skipped-concurrent");
   shareFillRecoveryRunning = true;
   try {
-    // Money first, audit second (issue #1672): a crash between two money
-    // legs converges the balances here so the audit pass below observes
-    // settled money; a crash between money and audit lands the missing rows
-    // there. Settled/missing skips report nothing: they examined no live
-    // prefix.
+    // Money first, audit second: a crash between money legs converges the
+    // balances here so the audit pass observes settled money; a crash
+    // between money and audit lands the missing rows there. Settled/missing
+    // skips examined no live prefix, so they report nothing.
     const summary = emptyPassSummary("completed");
     const moneyResults = await recoverShareFillMoneyOrphans(db, limit, now);
     for (const money of moneyResults) {

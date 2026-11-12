@@ -22,6 +22,8 @@ import {
   getCountryForCurrency,
   getCrossRate,
 } from "@/lib/currency/marketMaker";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface AutoConvertParams {
   character: PersonalWealthHolder & { _id: ObjectId };
@@ -168,8 +170,8 @@ async function topUpPersonalBalanceInCurrency(
       if (!fromCountryId || !toCountryId) continue;
 
       const [rawFromExRate, rawToExRate] = await Promise.all([
-        db.collection<ExchangeRate>("exchangeRates").findOne({ _id: fromCountryId }),
-        db.collection<ExchangeRate>("exchangeRates").findOne({ _id: toCountryId }),
+        exchangeRatesCollection(db).findOne({ _id: fromCountryId }),
+        exchangeRatesCollection(db).findOne({ _id: toCountryId }),
       ]);
       const [fromExRate, toExRate] = await resolveEuroConversionQuotes(
         db,
@@ -351,8 +353,8 @@ export async function autoConvertForPurchase(
   }
 
   const [rawFromExRate, rawToExRate, union] = await Promise.all([
-    db.collection<ExchangeRate>("exchangeRates").findOne({ _id: fromCountryId }),
-    db.collection<ExchangeRate>("exchangeRates").findOne({ _id: toCountryId }),
+    exchangeRatesCollection(db).findOne({ _id: fromCountryId }),
+    exchangeRatesCollection(db).findOne({ _id: toCountryId }),
     loadEuroMonetaryUnion(db),
   ]);
 
@@ -492,8 +494,8 @@ export async function convertForExplicitPay(
   }
 
   const [rawFromExRate, rawToExRate, union] = await Promise.all([
-    db.collection<ExchangeRate>("exchangeRates").findOne({ _id: fromCountryId }),
-    db.collection<ExchangeRate>("exchangeRates").findOne({ _id: toCountryId }),
+    exchangeRatesCollection(db).findOne({ _id: fromCountryId }),
+    exchangeRatesCollection(db).findOne({ _id: toCountryId }),
     loadEuroMonetaryUnion(db),
   ]);
 
@@ -603,7 +605,7 @@ export async function reverseExplicitPayConversion(
       { $inc: { [requiredField]: -received, [`currencyBalances.personal.${payCurrency}`]: paid } }
     );
   if (result.modifiedCount === 0) return false;
-  await db.collection<TradeHistoryEntry>("tradeHistory").insertOne({
+  await tradeHistoryCollection(db).insertOne({
     buyerCharacterId: characterId,
     sellerCharacterId: null,
     fromCurrency: requiredCurrency,

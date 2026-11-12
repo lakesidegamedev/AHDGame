@@ -1,16 +1,9 @@
 /**
  * Which bloc each entity actually belongs to, read from live membership.
  *
- * The globe's bloc mode used to paint from a hand-written 1953 judgment table:
- * every country the era touched was filed West, East or non-aligned by
- * sympathy. That made a handsome map and a misleading one — Spain and Brazil
- * were blue without being in NATO, West Germany was blue two years before it
- * joined, and the colours could not move when a nation actually acceded or
- * withdrew. This reads the treaty instead: a bloc's colour is its ROLL.
- *
- * Derived from the era's `channels` rather than from a hardcoded pair of org
- * ids, so whichever organisations carry a pole in a given era are the ones that
- * colour the map. Only channels that govern accession count — an org that
+ * A bloc's colour is its roll: derived from the era's `channels` rather than
+ * hardcoded org ids, so whichever organisations carry a pole in a given era
+ * colour the map. Only channels that govern accession count, so an org that
  * carries influence without a membership gate (the EU) does not make a country
  * "West".
  */
@@ -150,21 +143,17 @@ export function blocOrgFor(preset: string | undefined, bloc: WorldBloc): string 
 
 /**
  * The accession-governing organisations a country may NOT hold alongside
- * `organizationId` — the bloc alliances of every other pole in this world.
+ * `organizationId` (the bloc alliances of every other pole).
  *
- * You cannot be in NATO and the Warsaw Pact at once. That is not a cosmetic
- * rule: `loadBlocMembership` above writes `out[countryId] = bloc` once per row
- * with no precedence, so a country holding a row in both poles reads as whichever
- * document Mongo returned last, and every military and alignment call downstream
- * reads that map. A dual member's own bloc is a coin flip.
+ * Not cosmetic: `loadBlocMembership` writes `out[countryId] = bloc` per row
+ * with no precedence, so a country in both poles reads as whichever document
+ * Mongo returned last, and all military and alignment calls downstream read
+ * that map.
  *
- * Empty for an org that does not govern accession (joining the UN costs a country
- * nothing it already holds), and empty where the era has only one such channel.
- *
- * Built-in channels are keyed on the PRESET, exactly as `blocOrgFor` above is.
- * Callers may supply a topology that also includes player-founded Bloc channels.
- * A year-derived built-in lookup would drop the Warsaw Pact from a 1953 world
- * once its clock passes 1991, silently disabling exclusivity mid-game.
+ * Empty for orgs that do not govern accession, and where the era has only one
+ * such channel. Built-in channels are keyed on the PRESET exactly as
+ * `blocOrgFor` is, so passing the clock past 1991 in a 1953 world does not
+ * silently drop the Warsaw Pact and disable exclusivity mid-game.
  */
 export function rivalBlocOrgsFor(
   preset: string | undefined,

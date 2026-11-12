@@ -15,7 +15,6 @@ import {
   compareActionsPageCrises,
 } from "@/lib/crises/actionsPageCrises";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
-import { isCrisisAidBillsEnabled, isCrisisInteractionEnabled } from "@/lib/crises/featureFlag";
 import { conditionalJson } from "@/lib/api/conditionalJson";
 import {
   globalResponseRoleFor,
@@ -24,8 +23,10 @@ import {
   optionsForGlobalResponder,
   visibleGlobalResponses,
 } from "@/lib/livingConflict/globalResponse";
+import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import type { CampaignRequirementResult } from "@/lib/livingConflict/campaign";
 import type { CampaignCapabilitySnapshot } from "@/lib/db/types/livingConflictCampaign";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export interface ActiveCrisisForCharacter {
   crisis: Crisis;
@@ -41,6 +42,8 @@ export interface ActiveCrisisForCharacter {
    * it. Without this the card offers options the command path must refuse.
    */
   optionAvailability: Record<string, CampaignRequirementResult> | null;
+  /** Stage, severity, forecast and the character's levers. Null for crises outside v2. */
+  v2: CrisisV2Summary | null;
 }
 
 export async function GET(request: Request) {
@@ -49,12 +52,6 @@ export async function GET(request: Request) {
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    // Feature gate: return empty if crisis interaction system is disabled
-    const enabled = await isCrisisInteractionEnabled();
-    if (!enabled) {
-      return NextResponse.json({ crises: [] });
-    }
-
     const db = await getDb();
 
     const character = user.character;
@@ -62,14 +59,6 @@ export async function GET(request: Request) {
     const stateId = crisisDecisionRegion(character);
 
     const characterRoles = await resolveCharacterRoles(db, character);
-
-    // An interaction keeps the `aid` node type it was promoted to even after
-    // crisisAidBillsEnabled is turned off, but the command path then refuses it
-    // and the crisis page renders no controls. Do not advertise it as actionable.
-    // Read at most once, and only if an aid node actually turns up: this feed is
-    // polled by every player once a minute.
-    let aidFlagOnce: Promise<boolean> | null = null;
-    const aidBillsEnabled = (): Promise<boolean> => (aidFlagOnce ??= isCrisisAidBillsEnabled());
 
     // Find active crises that affect this character, plus any crisis with a
     // collective-fund node — those are contributable by national leaders
@@ -82,7 +71,7 @@ export async function GET(request: Request) {
     orClauses.push({ "interactionDefinition.decisionTree.type": "collective" });
     const filter: Record<string, unknown> = { status: "active", $or: orClauses };
 
-    const crises = await db.collection<Crisis>("crises").find(filter).toArray();
+    const crises = await crisesCollection(db).find(filter).toArray();
 
     // Every crisis in this response is answered by the same character, so the
     // capability snapshot is identical across all of them. Memoised per country
@@ -110,6 +99,8 @@ export async function GET(request: Request) {
       crises.filter((crisis) => crisis.interactionDefinition).map((crisis) => crisis._id)
     );
 
+    const v2ByCrisisId = await loadCrisisV2Summaries(db, crises, character._id);
+
     // Enrich with interaction data
     const enriched: ActiveCrisisForCharacter[] = await Promise.all(
       crises.map(async (crisis: Crisis) => {
@@ -128,9 +119,7 @@ export async function GET(request: Request) {
               }
             : storedCurrentNode;
 
-        // Multi-responder (global choice) crises: each country's leader answers
-        // once. A leader whose country already responded can no longer act, so
-        // the prompt drops off their Actions page.
+        // Multi-responder (global choice) crises: each country's leader answers once. A leader whose country already responded cannot act.
         const multiResponder = !!currentNode && isMultiResponderNode(crisis, currentNode);
         const alreadyResponded =
           multiResponder && countryId
@@ -147,7 +136,6 @@ export async function GET(request: Request) {
               ) &&
               canRespondToCrisis(crisis, currentNode, countryId, crisisDecisionRegion(character)) &&
               !alreadyResponded &&
-              (currentNode.type !== "aid" || (await aidBillsEnabled())) &&
               (!crisis.globalResponse || !!globalResponseRoleFor(crisis, countryId))
             : false;
 
@@ -199,6 +187,7 @@ export async function GET(request: Request) {
           timeRemainingMinutes,
           hasContributed,
           optionAvailability,
+          v2: v2ByCrisisId.get(crisis._id.toString()) ?? null,
         };
       })
     );

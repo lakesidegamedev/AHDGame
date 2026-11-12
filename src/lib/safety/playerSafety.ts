@@ -1,14 +1,11 @@
 import { ObjectId, type Db } from "mongodb";
 import { ApiError, badRequest, notFound } from "@/lib/api/errors";
 import { createNotifications } from "@/lib/notifications";
-import type {
-  Character,
-  PlayerContentReport,
-  PlayerMail,
-  PlayerReportContext,
-  PlayerReportReason,
-  User,
-} from "@/lib/db/types";
+import type { PlayerContentReport, PlayerReportContext, PlayerReportReason } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { playerContentReportsCollection } from "@/lib/db/repositories/playerContentReports";
 
 /**
  * Player-to-player safety: reporting objectionable content and blocking
@@ -39,9 +36,10 @@ export const PLAYER_REPORT_CONTEXTS: readonly PlayerReportContext[] = [
 
 async function loadTargetCharacter(db: Db, characterId: string) {
   if (!ObjectId.isValid(characterId)) throw notFound("Player not found");
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(characterId) }, { projection: { _id: 1, name: 1, userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: new ObjectId(characterId) },
+    { projection: { _id: 1, name: 1, userId: 1 } }
+  );
   if (!character?.userId) throw notFound("Player not found");
   return character;
 }
@@ -66,7 +64,7 @@ export async function reportPlayer(
   const reporter = new ObjectId(reporterUserId);
   if (target.userId.equals(reporter)) throw badRequest("You cannot report yourself");
 
-  const reports = db.collection<Omit<PlayerContentReport, "_id">>(PLAYER_CONTENT_REPORTS);
+  const reports = playerContentReportsCollection<Omit<PlayerContentReport, "_id">>(db);
   const open = await reports.findOne({
     reportedByUserId: reporter,
     targetUserId: target.userId,
@@ -88,8 +86,7 @@ export async function reportPlayer(
     createdAt: new Date(),
   });
 
-  const staff = await db
-    .collection<User>("users")
+  const staff = await usersCollection(db)
     .find(
       { $or: [{ isAdmin: true }, { role: "admin" }, { role: "moderator" }] },
       { projection: { _id: 1 } }
@@ -116,7 +113,7 @@ export async function blockPlayer(
   const self = new ObjectId(userId);
   if (target.userId.equals(self)) throw badRequest("You cannot block yourself");
 
-  const result = await db.collection<User>("users").updateOne(
+  const result = await usersCollection(db).updateOne(
     {
       _id: self,
       $or: [
@@ -150,9 +147,7 @@ export async function unblockPlayer(
     throw badRequest("Missing player");
   }
   const self = new ObjectId(userId);
-  await db
-    .collection<User>("users")
-    .updateOne({ _id: self }, { $pull: { blockedUserIds: targetUserId } });
+  await usersCollection(db).updateOne({ _id: self }, { $pull: { blockedUserIds: targetUserId } });
   await setMailHiddenFrom(db, self, targetUserId, false);
 }
 
@@ -163,18 +158,15 @@ async function setMailHiddenFrom(
   sender: ObjectId,
   hidden: boolean
 ): Promise<void> {
-  const senderCharacterIds = await db
-    .collection<Character>("characters")
+  const senderCharacterIds = await charactersCollection(db)
     .find({ userId: sender }, { projection: { _id: 1 } })
     .map((c) => c._id)
     .toArray();
   if (senderCharacterIds.length === 0) return;
-  await db
-    .collection<PlayerMail>("playerMail")
-    .updateMany(
-      { toUserId: recipient, fromCharacterId: { $in: senderCharacterIds } },
-      hidden ? { $set: { blockedByRecipient: true } } : { $unset: { blockedByRecipient: "" } }
-    );
+  await playerMailCollection(db).updateMany(
+    { toUserId: recipient, fromCharacterId: { $in: senderCharacterIds } },
+    hidden ? { $set: { blockedByRecipient: true } } : { $unset: { blockedByRecipient: "" } }
+  );
 }
 
 export async function hasBlocked(
@@ -182,9 +174,10 @@ export async function hasBlocked(
   userId: ObjectId,
   otherUserId: ObjectId
 ): Promise<boolean> {
-  const hit = await db
-    .collection<User>("users")
-    .findOne({ _id: userId, blockedUserIds: otherUserId }, { projection: { _id: 1 } });
+  const hit = await usersCollection(db).findOne(
+    { _id: userId, blockedUserIds: otherUserId },
+    { projection: { _id: 1 } }
+  );
   return hit !== null;
 }
 
@@ -196,14 +189,14 @@ export interface BlockedPlayer {
 
 /** The viewer's block list with a recognisable name for each entry. */
 export async function listBlockedPlayers(db: Db, userId: string): Promise<BlockedPlayer[]> {
-  const self = await db
-    .collection<User>("users")
-    .findOne({ _id: new ObjectId(userId) }, { projection: { blockedUserIds: 1 } });
+  const self = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { blockedUserIds: 1 } }
+  );
   const ids = self?.blockedUserIds ?? [];
   if (ids.length === 0) return [];
   // Character names only: account usernames are login identifiers, not public.
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId: { $in: ids } }, { projection: { userId: 1, name: 1 } })
     .toArray();
   const nameByUser = new Map(characters.map((c) => [c.userId.toHexString(), c.name]));

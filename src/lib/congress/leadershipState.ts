@@ -4,7 +4,6 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { resolveLeadershipElection, isLeadershipElectionClosed } from "./leadershipElections";
 import type {
   CongressLeader,
-  Character,
   NPP,
   PoliticalParty,
   SenateLeadershipElection,
@@ -20,6 +19,9 @@ import {
   computeCongressLeadershipTally,
   type VoteByParty,
 } from "@/lib/congress/governmentVoteBreakdown";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface LeaderDisplay {
   characterId: string;
@@ -134,8 +136,7 @@ async function loadLeaderDisplays(
   leaderRoles: LeadershipRole[],
   partyMap: Map<string, PoliticalParty>
 ): Promise<Map<LeadershipRole, LeaderDisplay>> {
-  const leaderDocs = await db
-    .collection<CongressLeader>("congressLeaders")
+  const leaderDocs = await congressLeadersCollection(db)
     .find({ role: { $in: leaderRoles } })
     .toArray();
   // First doc per role, matching the per-role findOne this replaces.
@@ -148,8 +149,7 @@ async function loadLeaderDisplays(
   if (seated.length === 0) return out;
 
   const holderIds = seated.map((doc) => doc.characterId);
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find(
       { _id: { $in: holderIds } },
       { projection: { avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 } }
@@ -159,8 +159,7 @@ async function loadLeaderDisplays(
   const nppIds = holderIds.filter((id) => !charById.has(id.toString()));
   const npps =
     nppIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find(
             { _id: { $in: nppIds } },
             { projection: { homeState: 1, avatarUrl: 1, sequentialId: 1 } }
@@ -256,8 +255,7 @@ async function loadNomineeDisplays(db: Db, nomineeIds: ObjectId[]): Promise<Nomi
   const borderByNominee: NomineeDisplay["borderByNominee"] = new Map();
   if (nomineeIds.length === 0) return { avatarByNominee, borderByNominee };
 
-  const nomineeChars = await db
-    .collection<Character>("characters")
+  const nomineeChars = await charactersCollection(db)
     .find({ _id: { $in: nomineeIds } }, { projection: { _id: 1, avatarUrl: 1, userId: 1 } })
     .toArray();
   for (const c of nomineeChars) avatarByNominee.set(c._id.toString(), c.avatarUrl);
@@ -274,8 +272,7 @@ async function loadNomineeDisplays(db: Db, nomineeIds: ObjectId[]): Promise<Nomi
   const foundCharIds = new Set(nomineeChars.map((c) => c._id.toString()));
   const nppNomineeIds = nomineeIds.filter((id) => !foundCharIds.has(id.toString()));
   if (nppNomineeIds.length > 0) {
-    const nppDocs = await db
-      .collection<NPP>("npps")
+    const nppDocs = await nppsCollection(db)
       .find({ _id: { $in: nppNomineeIds } }, { projection: { _id: 1, avatarUrl: 1 } })
       .toArray();
     for (const npp of nppDocs) {

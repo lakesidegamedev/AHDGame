@@ -6,14 +6,9 @@ import { allRegionCodes } from "@/lib/maps/regionManifest";
 import type { CountryId } from "@/lib/constants/countries";
 
 // GET /api/maps/region-ownership
-// Public read for every region code in the manifest (all shards — British Isles,
-// Germany, Brazil, China, Japan — via allRegionCodes()):
-//   { ownership: { regionCode: countryId },
-//     regions:   { regionCode: { countryId, name, population, houseDistricts, region } } }
-// `ownership` drives which owner each region renders under (world/UK maps, and the
-// Germany overlay — DE in unified eras, DE+DD in 1979); `regions` carries the live,
-// preset-correct figures the IE map displays. Adding a shard to the manifest
-// extends this automatically — no edit here.
+// Returns { ownership: { regionCode: countryId }, regions: {...} } for all
+// region codes in the manifest. `ownership` drives map rendering; `regions`
+// carries live preset-correct figures. Adding a shard auto-extends this.
 export async function GET() {
   try {
     const db = await getDb();

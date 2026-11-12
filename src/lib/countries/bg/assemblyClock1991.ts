@@ -4,7 +4,7 @@
  * starting another cohort. Other presets retain their existing scheduler.
  */
 import type { Election } from "@/lib/db/types";
-import { buildCanonicalSpawn, justResolvedInSameTurn } from "@/lib/turn/perpetualElections/engine";
+import { buildCanonicalSpawn, justResolvedInSameTurn } from "@/lib/elections/scheduling/engine";
 import { getSeatIdFromElection } from "@/lib/seats";
 import { turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { turnToGameMonth, calendarTurn } from "@/lib/utils/gameDate";

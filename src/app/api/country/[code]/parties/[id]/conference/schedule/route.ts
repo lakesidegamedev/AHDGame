@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
@@ -8,7 +9,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { getGameTime } from "@/lib/time/gameTime";
-import { scheduleConference } from "@/lib/uk/conference/conferenceCommands";
+import { scheduleConference } from "@/lib/countries/uk/conference/conferenceCommands";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -28,7 +29,7 @@ async function postHandler(_request: Request, { params }: RouteParams) {
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country code");
     }
-    if (countryId !== "UK") {
+    if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
       return errorResponse(400, "Party conferences are a UK mechanic");
     }
 

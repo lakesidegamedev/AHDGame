@@ -9,6 +9,9 @@ import {
   regionalDefaultLaws,
 } from "@/lib/politicalLegislation/regionalDefaults";
 import { ObjectId } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 // GET /api/game/current-policies — Returns current policy option indices for a given state or federal level.
 // Auth: public
@@ -26,7 +29,7 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const policies = await db.collection<StatePolicy>("statePolicies").find({ stateId }).toArray();
+    const policies = await statePoliciesCollection(db).find({ stateId }).toArray();
 
     // Executive orders are temporary nudges, not real law. For bill-proposal
     // purposes (which is what this endpoint feeds), the "current law" is the
@@ -38,8 +41,7 @@ export async function GET(request: Request) {
     const orderById = orderIds.length
       ? new Map(
           (
-            await db
-              .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
+            await governorExecutiveOrdersCollection(db)
               .find({ _id: { $in: orderIds } })
               .toArray()
           ).map((o) => [o._id!.toString(), o])
@@ -75,9 +77,10 @@ export async function GET(request: Request) {
     // NATIONAL_SCOPE_IDS rather than paying for a `states` lookup that would
     // miss anyway, and a genuine miss (unknown region) fills in nothing.
     if (!NATIONAL_SCOPE_IDS.has(stateId)) {
-      const region = await db
-        .collection<{ _id: string; countryId?: string }>("states")
-        .findOne({ _id: stateId }, { projection: { countryId: 1 } });
+      const region = await statesCollection<{ _id: string; countryId?: string }>(db).findOne(
+        { _id: stateId },
+        { projection: { countryId: 1 } }
+      );
       for (const law of regionalDefaultLaws(region?.countryId ?? "")) {
         policyMap[law.id] ??= REGIONAL_DEFAULT_LEVEL;
       }

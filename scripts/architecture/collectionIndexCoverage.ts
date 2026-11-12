@@ -6,6 +6,7 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
     "Immutable receipt chunks are written by SHA-256 _id and read only by the bounded list of hashes in one frozen turn manifest. Reset deletes all chunks; there are no secondary scans or TTL queries.",
   fundWritedownCompensationLedger: "Retired world receipts have no active secondary access path.",
   procurementRestrictions: "One restriction per country, read and updated by its country _id.",
+  frontierRaces: "One document per programme race, read and written by its race _id.",
   vietnamEscalation: "One singleton, read and upserted by _id.",
   appliedWorldTransitions:
     "One receipt per authored rule, upserted by _id; the bounded rule roster is read once.",
@@ -35,8 +36,12 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
   productAdvertisingClearances: "Append-only receipts, inserted and looked up by payable _id.",
   turnWorkerControl:
     "One singleton (_id 'current'): the turn worker's heartbeat and the single open admin turn request, read and written by _id.",
+  partyRenewalStates:
+    "One document per country, read in one bounded $in by the renewal phase and by country _id in the party frontier; history lives inside it.",
   marketAdjustmentSignals:
     "One document per country, upserted and read by its country _id; the 12-point history lives inside it.",
+  crisisAlertState:
+    "One document per active crisis, read in one bounded $in by crisis id and upserted by that _id once a turn; no secondary scans.",
 };
 
 export function missingCollectionIndexPolicies(

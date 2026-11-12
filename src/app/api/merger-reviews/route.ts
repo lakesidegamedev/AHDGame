@@ -3,12 +3,12 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
 import type { MergerReview } from "@/lib/db/types/mergerReview";
-import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
 import { getGameState } from "@/lib/gameState";
 import { autoResolveDecision } from "@/lib/corporations/mergerReview/constants";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
 
 export interface MergerReviewSummary {
   id: string;
@@ -49,19 +49,14 @@ export async function GET() {
     const userId = new ObjectId(auth.user.userId);
 
     const [myCorps, gameState] = await Promise.all([
-      db
-        .collection<Corporation>("corporations")
-        .find({ userId })
-        .project<{ _id: ObjectId }>({ _id: 1 })
-        .toArray(),
+      corporationsCollection(db).find({ userId }).project<{ _id: ObjectId }>({ _id: 1 }).toArray(),
       getGameState(db),
     ]);
 
     const myCorpIds = myCorps.map((c) => c._id);
     if (myCorpIds.length === 0) return NextResponse.json({ involving: [] });
 
-    const involvingDocs = await db
-      .collection<MergerReview>(MERGER_REVIEWS)
+    const involvingDocs = await mergerReviewsCollection<MergerReview>(db)
       .find({
         $or: [
           { acquirerCorporationId: { $in: myCorpIds } },

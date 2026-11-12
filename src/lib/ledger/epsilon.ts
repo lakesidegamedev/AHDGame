@@ -1,10 +1,8 @@
 import type { LedgerLeg } from "@/lib/ledger/types";
 
 /**
- * Float tolerance for conservation checks. ε = max(0.01₳, 1e-9 × max|leg|):
- * a fixed floor for tiny entries, scaling with magnitude for large ones so a
- * 100T carry-trade isn't judged by the same absolute slack as a $5 tip.
- * See docs/plans/2026-07-05-shadow-ledger-plan.md §1.2.
+ * Float tolerance for conservation checks. ε = max(0.01, 1e-9 × max|leg|):
+ * a floor for tiny entries that scales with magnitude for large ones.
  */
 export function epsilonFor(magnitudes: number[]): number {
   const maxMag = magnitudes.reduce((m, v) => Math.max(m, Math.abs(v)), 0);

@@ -1,44 +1,30 @@
 import type { DocketCaseAxis, DocketCaseEffect } from "@/lib/db/types/scotus";
 
 /**
- * Authored pool of "surprise" Docket case templates (#3607) — flavor-only,
- * non-historical case names/topics, in the style of a real SCOTUS case name
- * ("X v. Y") but about a dispute that never actually happened.
+ * Authored pool of "surprise" Docket case templates: flavor-only, non-historical
+ * case names/topics.
  *
- * Unlike a curated historical `DocketCase` (one authored `effect` that only
- * fires on divergence from a real historical ruling), a surprise case has no
- * real-world ruling to diverge from — every spawn produces a ruling, decided
- * purely by the sitting Court's current majority headcount on the case's
- * tagged axis (see `scotusSurpriseCaseTurn.ts`). That headcount can land
- * either way, so each template carries TWO candidate effects instead of one:
+ * Unlike a curated historical `DocketCase` (one authored `effect` that fires on
+ * divergence from a real ruling), a surprise case has no real-world ruling to
+ * diverge from. Every spawn is decided by the sitting Court's majority headcount
+ * on the case's tagged axis (see `scotusSurpriseCaseTurn.ts`), which can land
+ * either way, so each template carries TWO candidate effects:
  *
  *  - `positiveEffect` fires when the majority headcount is positive
- *    (right-leaning, by the shared [-5,+5] lean-scale convention used by
- *    `ideology.ts`/`legislationTypes.ts`'s `deriveStanceScore` — negative
- *    lean/score is left, positive is right).
+ *    (right-leaning, per the shared [-5,+5] lean convention).
  *  - `negativeEffect` fires when the majority headcount is negative
  *    (left-leaning).
  *
- * There is no "tie" effect — a headcount tie (`majoritySide === 0`,
- * vanishingly rare, only possible with an even seated count split exactly in
- * half) produces a ruling with no clear majority direction, so no policy
- * effect is applied that turn (see `scotusSurpriseCaseTurn.ts`).
+ * No "tie" effect: an exact headcount tie is vanishingly rare and applies no
+ * policy effect that turn.
  *
- * Every effect below references a REAL, already-seeded `legislationTypeId`/
- * `policyOptionId` pair from `src/lib/seeds/reference/legislationTypes.ts`
- * — the same convention the curated Docket content tickets (#3599-3602) use,
- * so a surprise ruling flows through the exact same
- * enactment -> metric-registry -> regional-lean-drift pipeline unmodified.
- * `positiveEffect`/`negativeEffect` always reference option index 5 (mild
- * right) / index 1 (mild left) of that type's usual 7-option ladder — a
- * deliberately mild pick, not the most extreme option on the ladder, so a
- * surprise ruling reads as meaningfully smaller than a landmark historical
- * case by default (per #3607's "rarer and/or lower-magnitude" guidance).
- * `policyOption.economic`/`.social`/`.effectDirection` are looked up from the
- * real legislation type at enactment time (`billEnactment.ts`
- * `processProvisionEnactment`), so `effectDirection` here is just kept in
- * sync with that option's authored value for readability — not a source of
- * truth `onBillEnacted` depends on.
+ * Every effect references a REAL, already-seeded `legislationTypeId`/
+ * `policyOptionId` pair from `seeds/reference/legislationTypes.ts`, so a
+ * surprise ruling flows through the same enactment -> metric-registry ->
+ * regional-lean-drift pipeline unmodified. Effects target a deliberately mild
+ * option on the usual 7-option ladder so a surprise reads as smaller than a
+ * landmark historical case. `effectDirection` is kept in sync with the authored
+ * option for readability only; enactment looks it up from the real type.
  */
 export interface SurpriseCaseTemplate {
   /**
@@ -83,19 +69,22 @@ export function templatesForYear(
   );
 }
 
+/** First year the modern docket themes can be heard. */
+const MODERN_DOCKET_FROM_YEAR = 2027;
+
 export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
   {
     templateKey: "phantom-fizz-bottling-v-interstate-commerce-guild",
     title: "Phantom Fizz Bottling Co. v. Interstate Commerce Guild",
     axis: "economic",
     positiveEffect: {
-      legislationTypeId: "us_minimum_wage",
-      policyOptionId: "minimum_wage_opt_5",
+      legislationTypeId: "us.economy.workerSecurity.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_minimum_wage",
-      policyOptionId: "minimum_wage_opt_1",
+      legislationTypeId: "us.economy.workerSecurity.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     // The ICC regulated interstate carriers from 1887 until it was abolished
@@ -107,13 +96,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Great Lakes Ferry Cooperative v. National Highway Trust",
     axis: "economic",
     positiveEffect: {
-      legislationTypeId: "us_transportation",
-      policyOptionId: "transportation_opt_5",
+      legislationTypeId: "us.infrastructure.transit.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_transportation",
-      policyOptionId: "transportation_opt_1",
+      legislationTypeId: "us.infrastructure.transit.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     // The Highway Trust Fund was created by the 1956 Federal-Aid Highway Act.
@@ -124,13 +113,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Sunbelt Solar Cartel v. Federal Power Commission",
     axis: "economic",
     positiveEffect: {
-      legislationTypeId: "us_clean_energy",
-      policyOptionId: "clean_energy_opt_5",
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_clean_energy",
-      policyOptionId: "clean_energy_opt_1",
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     // A solar cartel needs a solar industry: commercial photovoltaics date to
@@ -143,13 +132,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Confederated Cannery Workers v. Bureau of the Budget",
     axis: "economic",
     positiveEffect: {
-      legislationTypeId: "us_federal_spending_stimulus",
-      policyOptionId: "federal_spending_stimulus_opt_5",
+      legislationTypeId: "us.economy.stability.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_federal_spending_stimulus",
-      policyOptionId: "federal_spending_stimulus_opt_1",
+      legislationTypeId: "us.economy.stability.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     // The Bureau of the Budget ran from 1921 until it was reorganised into OMB
@@ -161,13 +150,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Brass Lantern Tavern League v. Board of Election Supervisors",
     axis: "social",
     positiveEffect: {
-      legislationTypeId: "us_civics_voting_rights",
-      policyOptionId: "civics_voting_rights_opt_5",
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_civics_voting_rights",
-      policyOptionId: "civics_voting_rights_opt_1",
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -181,13 +170,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     // legislationTypes.ts. positiveEffect/negativeEffect still map correctly
     // to majoritySide 1/-1; only the effectDirection sign differs per type.
     positiveEffect: {
-      legislationTypeId: "us_law_enforcement_criminal_justice",
-      policyOptionId: "law_enforcement_criminal_justice_opt_5",
+      legislationTypeId: "us.order.policeStrength.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     negativeEffect: {
-      legislationTypeId: "us_law_enforcement_criminal_justice",
-      policyOptionId: "law_enforcement_criminal_justice_opt_1",
+      legislationTypeId: "us.order.policeStrength.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
   },
@@ -196,14 +185,14 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Moonlight Drive-In Owners' Guild v. Secretary of Homeland Affairs",
     axis: "social",
     positiveEffect: {
-      legislationTypeId: "us_border_security_enforcement",
-      policyOptionId: "border_security_enforcement_opt_5",
-      effectDirection: -1,
+      legislationTypeId: "us.sec.immigrationNationality",
+      policyOptionId: "l4",
+      effectDirection: 1,
     },
     negativeEffect: {
-      legislationTypeId: "us_border_security_enforcement",
-      policyOptionId: "border_security_enforcement_opt_1",
-      effectDirection: 1,
+      legislationTypeId: "us.sec.immigrationNationality",
+      policyOptionId: "l0",
+      effectDirection: -1,
     },
     // Drive-ins are pure 1950s, but there was no Homeland department to sue
     // until 2002. The title fixes the era, not the subject.
@@ -214,13 +203,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "In re Wandering Carnival License v. Bureau of Visas",
     axis: "social",
     positiveEffect: {
-      legislationTypeId: "us_legal_immigration_visas",
-      policyOptionId: "legal_immigration_visas_opt_5",
+      legislationTypeId: "us.sec.immigrationNationality",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_legal_immigration_visas",
-      policyOptionId: "legal_immigration_visas_opt_1",
+      legislationTypeId: "us.sec.immigrationNationality",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -234,13 +223,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Tidewater Shipyard Local v. Office of Price Stabilization",
     axis: "economic",
     positiveEffect: {
-      legislationTypeId: "us_minimum_wage",
-      policyOptionId: "minimum_wage_opt_5",
+      legislationTypeId: "us.economy.workerSecurity.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_minimum_wage",
-      policyOptionId: "minimum_wage_opt_1",
+      legislationTypeId: "us.economy.workerSecurity.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     // The OPS ran Korean War wage and price controls from 1950 until it was
@@ -252,13 +241,13 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Consolidated Rail Brotherhood v. Reconstruction Finance Corporation",
     axis: "economic",
     positiveEffect: {
-      legislationTypeId: "us_transportation",
-      policyOptionId: "transportation_opt_5",
+      legislationTypeId: "us.infrastructure.transit.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_transportation",
-      policyOptionId: "transportation_opt_1",
+      legislationTypeId: "us.infrastructure.transit.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     // The RFC lent to railroads from 1932 until Congress abolished it in 1957.
@@ -269,17 +258,307 @@ export const SURPRISE_CASE_TEMPLATES: SurpriseCaseTemplate[] = [
     title: "Emporia Civic League v. County Registrar of Voters",
     axis: "social",
     positiveEffect: {
-      legislationTypeId: "us_civics_voting_rights",
-      policyOptionId: "civics_voting_rights_opt_5",
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
     negativeEffect: {
-      legislationTypeId: "us_civics_voting_rights",
-      policyOptionId: "civics_voting_rights_opt_1",
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
     // County registrars held the discretion this case turns on until the 1965
     // Voting Rights Act put covered jurisdictions under federal preclearance.
     activeUntil: 1968,
+  },
+  // Modern themes: algorithms and data, housing, elections, grid and climate,
+  // platforms, gig work and schooling. Fictional parties throughout.
+  {
+    templateKey: "harborlight-analytics-v-federal-algorithm-review-board",
+    title: "Harborlight Analytics v. Federal Algorithm Review Board",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.education.research.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.education.research.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "riverbend-tenants-union-v-automated-screening-services",
+    title: "Riverbend Tenants Union v. Automated Screening Services",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.infrastructure.publicHousing.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.infrastructure.publicHousing.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "open-ledger-cooperative-v-national-data-custodian",
+    title: "Open Ledger Cooperative v. National Data Custodian",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.infrastructure.utilities.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.infrastructure.utilities.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "cedar-county-voters-v-state-election-board-of-certification",
+    title: "Cedar County Voters v. State Election Board of Certification",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "midland-grid-operators-v-department-of-resilience",
+    title: "Midland Grid Operators v. Department of Resilience",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "friends-of-the-salt-marsh-v-coastal-permitting-authority",
+    title: "Friends of the Salt Marsh v. Coastal Permitting Authority",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.environment.stewardship.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.environment.stewardship.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "brightwater-publishers-v-federal-platform-commission",
+    title: "Brightwater Publishers v. Federal Platform Commission",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.sec.publicBroadcasting",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.sec.publicBroadcasting",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "lakeshore-gig-drivers-v-dispatchwise-holdings",
+    title: "Lakeshore Gig Drivers v. Dispatchwise Holdings",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.education.adultSkills.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.education.adultSkills.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "quillfeather-learning-v-state-board-of-instruction",
+    title: "Quillfeather Learning v. State Board of Instruction",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.education.standards.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.education.standards.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "in-re-biometric-checkpoint-program",
+    title: "In re Biometric Checkpoint Program",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.order.policeStrength.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.order.policeStrength.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "pinewood-hospital-network-v-telehealth-licensing-council",
+    title: "Pinewood Hospital Network v. Telehealth Licensing Council",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.health.prevention.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.health.prevention.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "northgate-county-v-redistricting-commission-of-the-state",
+    title: "Northgate County v. Redistricting Commission of the State",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "sandstone-freight-v-autonomous-corridor-authority",
+    title: "Sandstone Freight v. Autonomous Corridor Authority",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.infrastructure.transit.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.infrastructure.transit.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "coalition-for-open-ballots-v-secretary-of-the-commonwealth",
+    title: "Coalition for Open Ballots v. Secretary of the Commonwealth",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.governance.integrity.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.governance.integrity.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "tidewater-fishers-v-offshore-wind-leasing-office",
+    title: "Tidewater Fishers v. Offshore Wind Leasing Office",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "ironbridge-pension-trustees-v-treasury-fund-office",
+    title: "Ironbridge Pension Trustees v. Treasury Fund Office",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.health.socialInsurance.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.health.socialInsurance.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "merrimack-school-district-v-virtual-academy-network",
+    title: "Merrimack School District v. Virtual Academy Network",
+    axis: "social",
+    positiveEffect: {
+      legislationTypeId: "us.education.universalSchooling.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.education.universalSchooling.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
+  },
+  {
+    templateKey: "amberfield-growers-v-heat-safety-enforcement-bureau",
+    title: "Amberfield Growers v. Heat Safety Enforcement Bureau",
+    axis: "economic",
+    positiveEffect: {
+      legislationTypeId: "us.education.adultSkills.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
+    },
+    negativeEffect: {
+      legislationTypeId: "us.education.adultSkills.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
+    },
+    activeFrom: MODERN_DOCKET_FROM_YEAR,
   },
 ];

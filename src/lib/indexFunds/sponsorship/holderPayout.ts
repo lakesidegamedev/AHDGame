@@ -16,14 +16,13 @@ import {
   loadFxRatesRecord,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
-import type { Corporation } from "@/lib/db/types";
 import { ObjectId, type Db, type Document } from "mongodb";
 import type { IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types/indexFund";
 import { buildPersonalBalanceInc, loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { loadFundPayoutFxRate } from "@/lib/indexFunds/dividendPassThrough";
-
-const FUND_TX = "indexFundTransactions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 
 /** One holder's wind-up payout, before it is settled with the rest of the book. */
 export interface FundHolderCashPayout {
@@ -198,13 +197,11 @@ export async function payFundHoldersCash(
   }
 
   if (paid.length) {
-    await db
-      .collection<IndexFundTransaction>(FUND_TX)
-      .insertMany(
-        paid.map(({ position, payoutAnchor }) =>
-          holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now)
-        )
-      );
+    await indexFundTransactionsCollection<IndexFundTransaction>(db).insertMany(
+      paid.map(({ position, payoutAnchor }) =>
+        holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now)
+      )
+    );
   }
 
   return {
@@ -226,19 +223,17 @@ export async function payFundHolderCash(
   if (payoutAnchor <= 0) return false;
 
   if (position.holderKind === "corporation" && position.corporationId) {
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne(
-        { _id: position.corporationId },
-        { projection: { liquidCurrencyCode: 1, countryId: 1 } }
-      );
+    const corp = await corporationsCollection(db).findOne(
+      { _id: position.corporationId },
+      { projection: { liquidCurrencyCode: 1, countryId: 1 } }
+    );
     if (!corp) return false;
     const currency = resolveCorpLiquidCurrencyCode(corp);
     const forexEnabled = await isForexEnabled();
     const rates = forexEnabled ? await loadFxRatesRecord(db) : {};
     const rate = forexEnabled && currency ? rates[currency] : 1;
     if (!rate || rate <= 0) throw new Error("Corporate payout exchange rate unavailable");
-    const credited = await db.collection("corporations").updateOne(
+    const credited = await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $inc: { liquidCapital: anchorToCorpLiquidCapital(payoutAnchor, corp, rate) },
@@ -294,7 +289,7 @@ async function insertHolderReceipt(
   currentTurn: number,
   now: Date
 ): Promise<void> {
-  await db
-    .collection<IndexFundTransaction>(FUND_TX)
-    .insertOne(holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now));
+  await indexFundTransactionsCollection<IndexFundTransaction>(db).insertOne(
+    holderReceiptDoc(fund, position, payoutAnchor, currentTurn, now)
+  );
 }

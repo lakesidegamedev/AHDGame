@@ -3,6 +3,7 @@ import { COUNTRY_CURRENCY_MAP, CURRENCY_ANCHOR_COUNTRY } from "@/lib/constants/c
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Shared forex normalization helpers for cross-country leaderboard ranking.
@@ -15,7 +16,7 @@ import type { ExchangeRate } from "@/lib/db/types";
 
 /** Fetch all exchange-rate docs keyed by their `countryId`. */
 export async function fetchExchangeRateMap(db: Db): Promise<Map<string, ExchangeRate>> {
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   return new Map(rates.map((r) => [r.countryId, r]));
 }
 

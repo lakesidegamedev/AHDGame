@@ -2,7 +2,6 @@
 import { ObjectId, type Db, type Filter } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { managementAuthority } from "./authority";
-import type { Corporation } from "@/lib/db/types";
 import { ensureFederalBudget } from "@/lib/turn/ensureFederalBudget";
 import { getGameState } from "@/lib/gameState";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -20,6 +19,7 @@ import { tenders } from "./persistence";
 import { contractCurrencyQuotes, contractCapacityQuotes } from "./presentation";
 import { viewerTenderIds } from "./viewerOpportunities";
 import type { GovernmentTender, TenderTab, ContractType, TenderView } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export function boardFilter(
   countryId: string,
@@ -70,8 +70,7 @@ export async function tenderView(
       : {};
   const ownedCorporationIds = new Set<string>();
   if (user && ObjectId.isValid(user.userId)) {
-    const owned = await db
-      .collection("corporations")
+    const owned = await corporationsCollection(db)
       .find(
         { userId: new ObjectId(user.userId), ceoVacant: { $ne: true } },
         { projection: { _id: 1 } }
@@ -87,8 +86,7 @@ export async function tenderView(
       .filter((b) => !b.withdrawn)
       .map((b) => new ObjectId(b.corporationId));
     const corporations = ids.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { _id: { $in: ids } },
             { projection: { userId: 1, shareholders: 1, totalShares: 1 } }

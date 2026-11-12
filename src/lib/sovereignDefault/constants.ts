@@ -1,36 +1,26 @@
 /**
- * Sovereign default subsystem — single source of truth for tunables.
- *
- * Design reference: docs/plans/archive/2026-05/2026-05-04-sovereign-default-design.md
+ * Sovereign default subsystem: single source of truth for tunables.
  *
  * Calibration provenance per section:
  *   - Trigger / market demand: D/GDP penalty curve calibrated against
  *     Greece 2010-12 (D/GDP ~150%, demand collapse below 0.7) and Japan
  *     (D/GDP ~260% with reserve-currency-style monetary autonomy keeping
  *     demand intact). Inflation/FX coefficients reproduce Argentina 2001
- *     (peso collapse + ~30% inflation) when paired.
- *   - Failed-auction trigger (3x): real-world sovereigns rarely have three
- *     consecutive truly-failed primary auctions; setting the count to 3
- *     means crisis fires in extreme stress only.
- *   - Crisis windows (12h executive, 24h per chamber): time-boxed to keep
- *     real-time gameplay from stalling. Calibration target: 1-2 game days.
- *   - Margin penalties: financial-sector multiplier 1.5x reflects the
- *     historical observation that banks bear the brunt of sovereign
- *     defaults (deposit runs, write-downs). Tier-4 multipliers (0.7x)
- *     reflect that exporters benefit from FX depreciation post-default.
- *   - Resolution-path GDP penalties (12% / 6% / 2%): chosen to make
- *     repudiate the most painful path while not bricking the country.
- *     Calibrated to Russia 1998 (~-5% over a year), Argentina 2001
- *     (~-11% over two years), Greece bailouts (~-3% per year for 4y).
- *   - Cascade depth (3 levels): empirically, sovereign-default cascades
- *     beyond 3 levels are rare (each level requires a critical-mass of
- *     bond holders going insolvent). Cap prevents runaway computation.
+ *     when paired.
+ *   - Failed-auction trigger (3x): three consecutive truly-failed primary
+ *     auctions means crisis fires in extreme stress only.
+ *   - Crisis windows (12h executive, 24h per chamber): time-boxed so
+ *     real-time gameplay does not stall. Target: 1-2 game days.
+ *   - Margin penalties: financial-sector 1.5x reflects banks bearing the
+ *     brunt of sovereign defaults; Tier-4 0.7x reflects exporters
+ *     benefiting from FX depreciation post-default.
+ *   - Resolution-path GDP penalties (12% / 6% / 2%): repudiate is the most
+ *     painful path without bricking the country. Calibrated to Russia 1998,
+ *     Argentina 2001, Greece bailouts.
+ *   - Cascade depth (3 levels): cascades beyond 3 levels are rare, and the
+ *     cap prevents runaway computation.
  *   - Recovery floor (48 turns = 2 game days): minimum time-out before
  *     bond markets reopen, matching IMF program timelines.
- *
- * All values are first-draft. Phase 10 balancing pass logs scenarios
- * against these coefficients and may adjust where outcomes are unrealistic.
- * Each rebalance should record its motivation in commits and the design doc.
  */
 
 import type { OperatingSectorType } from "@/lib/constants/corporations";
@@ -67,22 +57,10 @@ export const DEMAND_UNDERSUBSCRIBED_THRESHOLD = 0.7;
 export const FAILED_AUCTION_COUNT_FOR_CRISIS = 3;
 
 /**
- * Autonomous-world crisis eligibility (refs #3236).
- *
- * Non-player-enabled countries are normally excluded from the failed-auction →
- * crisis pipeline (the Phase 12 "Coming Soon must never default" guard in
- * crisisDetection.ts). When the world is NPP-governed (global autonomy ≥ v1)
- * there IS a governing brain that can resolve a sovereign crisis exactly like
- * player-enabled countries do (npcExecutiveAutoPropose fires immediately for
- * NPC/vacant executives), so an NPP-governed country with EXTREME fundamentals
- * is allowed through the gate.
- *
- * The band is deliberately conservative: debt/GDP must be at or beyond the
- * existing demand cliff (200%, DGDP_CLIFF_FLOOR) before a disabled country can
- * even start counting failed auctions — far above anything in the live world —
- * and the crisis itself still requires FAILED_AUCTION_COUNT_FOR_CRISIS
- * consecutive annual auction failures on top. Below the band, disabled-country
- * behavior is unchanged.
+ * Debt/GDP floor for NPP-governed (autonomy ≥ v1) countries to enter the
+ * failed-auction → crisis pipeline, bypassing the disabled-country guard.
+ * Set at the demand cliff (200%) so disabled countries only count failed
+ * auctions when EXTREME, plus the normal consecutive-failure requirement.
  */
 export const AUTONOMOUS_CRISIS_MIN_DEBT_TO_GDP = 2.0;
 

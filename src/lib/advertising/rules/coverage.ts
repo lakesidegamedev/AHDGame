@@ -1,16 +1,15 @@
 /**
- * Portable coverage rules for advertising agreements (issue #2235).
+ * Portable coverage rules for advertising agreements.
  *
  * Rules zone: plain data in, plain data out. No database, clock, randomness,
- * environment, or network. The turn shell loads operating models, sector
- * footprints, and technology counts and passes them in.
+ * environment, or network. The turn shell loads models, footprints, and tech
+ * counts and passes them in.
  *
- * Coverage is supplier reach by state: a national component from owned
- * Media and Entertainment operating models (diminishing returns across
- * models), a footprint boost where the supplier runs active sectors, and a
- * small technology term. Overlap weights that reach by the buyer's
- * revenue-weighted operating states. Everything is bounded: coverage and
- * overlap live in [0, 1], efficacy in [1, 1 + AD_MAX_COVERAGE_BONUS].
+ * Coverage is supplier reach by state: national component from owned media
+ * operating models (diminishing across models), footprint boost where the
+ * supplier runs active sectors, and a small tech term. Overlap weights reach
+ * by the buyer's revenue-weighted operating states. Bounds: coverage and
+ * overlap in [0, 1], efficacy in [1, 1 + AD_MAX_COVERAGE_BONUS].
  */
 import { clamp01, round4 } from "@/lib/numeric/rules";
 import { effectiveMediaOperatingModelId } from "@/lib/mediaOperatingModels/catalog";

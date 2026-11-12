@@ -1,6 +1,9 @@
 import type { Db } from "mongodb";
 import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib/db/types";
 import { buildOrderRevertPolicyFields } from "@/lib/governorOffice/orders/revertPolicy";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 /**
  * Turn phase: process active executive orders.
@@ -16,19 +19,17 @@ export async function processGovernorExecutiveOrders(
   db: Db,
   currentTurn: number
 ): Promise<{ expired: number; superseded: number }> {
-  const active = await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
-    .find({ status: "active" })
-    .toArray();
+  const active = await governorExecutiveOrdersCollection(db).find({ status: "active" }).toArray();
   const now = new Date();
   let expired = 0;
   let superseded = 0;
 
   for (const order of active) {
     if (!order._id) continue;
-    const policy = await db
-      .collection<StatePolicy>("statePolicies")
-      .findOne({ stateId: order.stateId, legislationTypeId: order.legislationTypeId });
+    const policy = await statePoliciesCollection(db).findOne({
+      stateId: order.stateId,
+      legislationTypeId: order.legislationTypeId,
+    });
     const policyMatchesOrder =
       policy?.enactedBy?.kind === "order" &&
       policy.enactedBy.id.toString() === order._id.toString();
@@ -36,7 +37,7 @@ export async function processGovernorExecutiveOrders(
     if (!policyMatchesOrder) {
       const supersedingBillId =
         policy?.enactedBy?.kind === "bill" ? policy.enactedBy.id : undefined;
-      await db.collection<GovernorExecutiveOrder>("governorExecutiveOrders").updateOne(
+      await governorExecutiveOrdersCollection(db).updateOne(
         { _id: order._id },
         {
           $set: {
@@ -54,10 +55,11 @@ export async function processGovernorExecutiveOrders(
       // effectDirection from the type's own ladder — 5-level new-generation
       // ladders center at 2; the old hardcoded center-3 misdirects them
       // (political-legislation spec §10 option-count sweep).
-      const legislationType = await db
-        .collection<LegislationType>("legislationTypes")
-        .findOne({ _id: order.legislationTypeId }, { projection: { policyOptions: 1 } });
-      await db.collection<StatePolicy>("statePolicies").updateOne(
+      const legislationType = await legislationTypesCollection(db).findOne(
+        { _id: order.legislationTypeId },
+        { projection: { policyOptions: 1 } }
+      );
+      await statePoliciesCollection(db).updateOne(
         { stateId: order.stateId, legislationTypeId: order.legislationTypeId },
         {
           $set: {
@@ -65,9 +67,10 @@ export async function processGovernorExecutiveOrders(
           },
         }
       );
-      await db
-        .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
-        .updateOne({ _id: order._id }, { $set: { status: "expired", updatedAt: now } });
+      await governorExecutiveOrdersCollection(db).updateOne(
+        { _id: order._id },
+        { $set: { status: "expired", updatedAt: now } }
+      );
       expired++;
     }
   }

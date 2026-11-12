@@ -7,6 +7,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { statusBarLayoutSchema } from "@/lib/api/schemas/settings";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/settings/status-bar — Updates the authenticated user's status bar layout preference
 // Auth: requireBasicAuth
@@ -26,12 +27,10 @@ export async function PATCH(request: Request) {
     const { layout } = parsed.data;
 
     const db = await getDb();
-    await db
-      .collection<User>("users")
-      .updateOne(
-        { _id: new ObjectId(auth.user.userId) },
-        { $set: { statusBarLayout: layout, updatedAt: new Date() } }
-      );
+    await usersCollection(db).updateOne(
+      { _id: new ObjectId(auth.user.userId) },
+      { $set: { statusBarLayout: layout, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

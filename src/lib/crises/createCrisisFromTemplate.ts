@@ -1,11 +1,21 @@
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Crisis, CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
 import { getTemplateDuration } from "./templates";
-import { isCrisisInteractionEnabled } from "./featureFlag";
 import { createCrisisInteraction } from "./interactionEngine";
 import { floorCrisisDuration } from "./crisisDuration";
 import { resolveCrisisLocationName, interpolateLocation } from "./crisisLocation";
+import { createCrisisInstance } from "./v2/instance";
+import { legacyDefinitionForTemplate } from "@/lib/turn/crisisV2/legacyContent";
+import type { CrisisScope } from "./v2/types";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+
+const V2_SCOPE_BY_CRISIS_SCOPE: Record<Crisis["scope"], CrisisScope> = {
+  region: "state",
+  country: "national",
+  global: "global",
+};
 
 export interface CreateCrisisParams {
   template: CrisisTemplate;
@@ -97,16 +107,28 @@ export async function createCrisisFromTemplate(
     autoSource: params.autoSource,
     interactionDefinition: template.interactionDefinition,
     globalResponse: params.globalResponse ?? template.globalResponse,
+    // With the stages switch on, the crisis runs on Crisis v2. The first step
+    // lands on the start turn so start-turn effects fire when the crisis is
+    // spawned ahead of the crisis phase. Off, the legacy engine runs it.
+    ...((await isLiveWorldSwitchOn(db, "crisisV2StagesEnabled"))
+      ? {
+          v2: createCrisisInstance(
+            legacyDefinitionForTemplate(template, params.templateKey),
+            currentTurn,
+            {
+              scope: V2_SCOPE_BY_CRISIS_SCOPE[scope],
+              evaluateOnStart: true,
+            }
+          ),
+        }
+      : {}),
+    ...(template.opportunity === true ? { opportunity: true } : {}),
     ...(livingConflictEventId !== undefined ? { livingConflictEventId } : {}),
   };
 
-  const result = await db.collection<Crisis>("crises").insertOne(crisis as Crisis);
+  const result = await crisesCollection(db).insertOne(crisis as Crisis);
 
-  if (
-    crisis.interactionDefinition &&
-    !params.deferInteractionUntilStart &&
-    (await isCrisisInteractionEnabled())
-  ) {
+  if (crisis.interactionDefinition && !params.deferInteractionUntilStart) {
     await createCrisisInteraction(db, { ...(crisis as Crisis), _id: result.insertedId });
   }
 

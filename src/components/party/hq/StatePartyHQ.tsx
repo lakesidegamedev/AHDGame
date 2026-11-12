@@ -11,7 +11,7 @@ import { StateDrawer } from "./StateDrawer";
 import { StatePartyMap, countryHasMap, type MapColorBy } from "./StatePartyMap";
 import { sumBulkEstimate, type BulkMode, type BulkPreview } from "./bulkEstimate";
 import { orgTier, toneColor } from "./orgTier";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { fmtMoney } from "./formatters";
 

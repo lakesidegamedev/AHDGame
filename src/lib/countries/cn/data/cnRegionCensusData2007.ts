@@ -1,18 +1,8 @@
 /**
- * China Region Census Profiles — 2007 (WTO boom peak).
+ * China Region Census Profiles, 2007 (WTO boom peak).
  *
- * 2007-default companion to {@link cnRegionCensusData} (the 2019 profiles).
- *
- * Era anchor: 2005 1%-sample population survey (NBS), read forward to 2007.
- * Every value below is independently authored from historical knowledge of
- * each macro-region in that year — NOT derived by scaling any other era's file.
- *
- * Era character: ~45% urban nationally at the peak of the WTO export boom;
- * the largest migration in human history is flowing from the central and
- * southwestern hinterland to Guangdong, Zhejiang, Jiangsu and Shanghai;
- * the 1999 university enrollment expansion is starting to show in young-adult
- * attainment; the Northeast has stabilized after xiagang but lags the coast.
- * Income uses era-neutral relative tiers (no RMB thresholds).
+ * Every value is independently authored, not scaled from another era.
+ * Income uses era-neutral relative tiers, not RMB thresholds.
  */
 
 import type { CNRegionLayer1 } from "@/lib/seeds/cn/cnRegionCensusData";

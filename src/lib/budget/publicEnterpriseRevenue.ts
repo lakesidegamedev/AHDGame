@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector, FederalRevenue, StateMetrics } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { type CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -32,6 +31,12 @@ import type { GameConfig } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
 import { soeCapacityReplacementCostAnchor } from "@/lib/economy/soe";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { CORPORATE_SECTOR_LEAN_FIELDS } from "@/lib/db/collections/corporateSectors";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Safety ceiling for a SYNTHETIC *scaled* national corp's per-turn budget impact,
@@ -47,27 +52,25 @@ import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 export const MAX_SCALED_ENTERPRISE_REVENUE_GDP_SHARE = 0.03;
 
 /**
- * P3b — SOE remittance under the plants tier: amortized capex.
+ * SOE remittance under the plants tier: amortized capex.
  *
  * Below plants an SOE's operating income deducted `currentGrowthCost` every
- * turn: the growth slider was a continuous capital charge, so a state
- * enterprise that was expanding remitted less. Under plants the growth slider
- * no longer buys anything (see `sectorProfitBasis`) so that deduction is a
- * phantom charge — but simply deleting it hands every SOE a permanent, one-off
- * WINDFALL on flip day: the capital charge vanishes and remittances step up,
- * even though the enterprise is now buying capacity with real, lumpier build
- * orders.
+ * turn: the growth slider was a continuous capital charge, so an expanding
+ * enterprise remitted less. Under plants the growth slider no longer buys
+ * anything (see `sectorProfitBasis`), so that deduction is a phantom charge,
+ * but deleting it without replacement hands every SOE a permanent windfall on
+ * flip day even as the enterprise now buys capacity with lumpier build orders.
  *
- * The honest replacement is to spread the capitalized build spend that IS on
- * the books (`constructionInProgressAnchor`) across the life of the asset:
+ * The replacement spreads capitalized build spend that IS on the books
+ * (`constructionInProgressAnchor`) across the asset's life:
  *
  *     capexDeductionPerTurn = outstandingCIP × CAPEX_AMORTIZATION_PER_TURN
  *
- * The rate is 1 / (2 × TURNS_PER_YEAR) — a two-game-year straight line. It is a
+ * The rate is 1 / (2 × TURNS_PER_YEAR), a two-game-year straight line. It is a
  * REMITTANCE-SIDE accounting charge only: it does not move cash (the corp
  * already paid the build), it stops the treasury from sweeping out money the
  * enterprise has committed to construction. A sector with nothing in flight
- * deducts nothing, so a steady-state SOE is unaffected either way.
+ * deducts nothing, so a steady-state SOE is unaffected.
  *
  * Tunable calibration knob.
  */
@@ -77,18 +80,12 @@ export const CAPEX_AMORTIZATION_PER_TURN = 1 / (2 * TURNS_PER_YEAR);
  * Governor ramp weight for the plants IDLE-UPKEEP charge: 0 on the flip turn,
  * rising linearly to 1 over `rampTurns`.
  *
- * SINGLE SOURCE OF TRUTH. The turn processor charges idle upkeep through the
- * same ramp (`plantsRampLambda` in sectorTurn) so the flip turn is a numeric
- * no-op. The remittance mirror below used to apply the charge at FULL strength
- * from the flip turn, so SOE remittances stepped down discontinuously on flip
- * day even though the turn processor charged nothing — a duplicated formula
- * that drifted from the one it was mirroring. Anything that mirrors the idle
- * charge must call THIS, never re-derive it.
+ * SINGLE SOURCE OF TRUTH: the turn processor and the budget remittance mirror
+ * must both call this, never re-derive the ramp, or the flip turn steps
+ * discontinuously.
  *
- * A sector with no `plantsStartTurn` (or a caller that cannot supply the
- * current turn) gets 1 — matching the turn processor's "no anchor ⇒ no ramp",
- * i.e. a sector that has been under plants since before the anchor existed is
- * already past its ramp.
+ * A sector with no `plantsStartTurn` (or no current turn) gets 1, matching
+ * the turn processor's "no anchor means no ramp".
  */
 export function plantsUpkeepRampLambda(
   plantsStartTurn: number | null | undefined,
@@ -101,10 +98,8 @@ export function plantsUpkeepRampLambda(
 
 /**
  * Everything the budget pass needs to mirror the plants tier, resolved ONCE per
- * turn instead of once per country. `getMarketSystemModeForDb` used to be called
- * inside each of the two per-country entry points below, which is one extra DB
- * round trip per country per turn (30-50 of them, every turn, for a value that
- * cannot change mid-pass).
+ * turn instead of once per country. `getMarketSystemModeForDb` is a DB round trip
+ * whose result cannot change mid-pass.
  */
 export interface PlantsBudgetContext {
   plantsEnabled: boolean;
@@ -131,12 +126,11 @@ export async function loadPlantsBudgetContext(
     return { plantsEnabled: false, currentTurn: null, rampTurns: MARKET_REALIZATION_RAMP_TURNS };
   }
   const [state, config] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { marketGovernorRampTurns: 1 } }),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { marketGovernorRampTurns: 1 } }
+    ),
   ]);
   const rampTurns =
     typeof config?.marketGovernorRampTurns === "number" && config.marketGovernorRampTurns >= 1
@@ -155,9 +149,10 @@ export async function loadPlantsBudgetContext(
  * corps. Returns 0 when unavailable, in which case the caller skips the clamp.
  */
 async function readCountryGdp(db: Db, countryId: CountryId): Promise<number> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { gdp: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { gdp: 1 } }
+  );
   return typeof budget?.gdp === "number" && budget.gdp > 0 ? budget.gdp : 0;
 }
 
@@ -219,7 +214,7 @@ export function estimateNationalizedOperatingIncome(
         })
       : 0;
     const effectiveMargin = Math.max(0, Math.min(100, sector.profitMargin + soePenalty));
-    // MOTHBALLED plants earn nothing (ticket #1072). `sector.revenue` is the
+    // MOTHBALLED plants earn nothing. `sector.revenue` is the
     // plants-tier nameplate (capacity x mix price) and mothballing does not
     // touch it, so without this the treasury kept booking a cold plant's full
     // nameplate at its seeded margin as budget revenue and as remittable
@@ -227,30 +222,23 @@ export function estimateNationalizedOperatingIncome(
     // sector "earns exactly 0" (`marketHourlyRevenue`, sectorTurn D12).
     const earningRevenueAnchor = plantsEnabled && sector.mothballed === true ? 0 : revenueAnchor;
     const maintenance = earningRevenueAnchor * (1 - effectiveMargin / 100);
-    // Plants: the growth charge is vestigial, but dropping it outright is a
-    // one-off remittance windfall. Replace it with the two real capital costs
-    // the plants tier creates — amortized construction-in-progress and the
-    // upkeep on idle plants — both expressed DAILY to match `revenueAnchor`
-    // (the CIP rate is per-TURN, hence × TURNS_PER_DAY).
+    // Plants: growth charge is vestigial, but dropping it is a one-off
+    // windfall. Replace it with two real capital costs, both DAILY to match
+    // `revenueAnchor` (CIP rate is per-TURN, hence × TURNS_PER_DAY):
+    // amortized CIP and idle-plant upkeep.
     //
-    // Idle upkeep mirrors the turn processor's additive charge
-    // (`plantsUpkeepCost` in sectorTurn): under plants `revenue` IS
-    // capacity × mixPrice, so `revenue × (1 − utilization)` is exactly the
-    // nominal value of the idle units, and the same (1 − margin) ×
-    // IDLE_UPKEEP_FRACTION rate applies.
+    // Idle upkeep mirrors the turn processor (`plantsUpkeepCost`): under
+    // plants `revenue` IS capacity × mixPrice, so `revenue × (1 − utilization)`
+    // is the nominal idle value, and the same (1 − margin) × IDLE_UPKEEP_FRACTION
+    // rate applies.
     //
-    // PLANT utilization is `capitalUtilization` (produced ÷ plant capacity,
-    // written for every sector under plants), NOT `capacityUtilization` —
-    // that field is EXTRACTION GEOLOGY utilization and is only ever written
-    // for sectorType === "extraction", so reading it here made this charge
-    // exactly 0 for every non-extraction SOE sector. A sector with no
-    // persisted value yet is treated as fully utilized (charge 0) rather than
-    // fully idle — the pre-flip default must not invent a cost.
+    // PLANT utilization is `capitalUtilization` (produced ÷ plant capacity),
+    // NOT `capacityUtilization` (extraction geology, only written for
+    // sectorType === "extraction"). A sector with no persisted value counts
+    // as fully utilized (charge 0).
     //
-    // FLIP IDENTITY: the charge is faded in over the SAME governor ramp the
-    // turn processor uses (λ = 0 on the flip turn). Without it the remittance
-    // stepped down on flip day against a turn processor that was still
-    // charging nothing.
+    // FLIP IDENTITY: fade in over the SAME governor ramp as the turn
+    // processor (λ = 0 on the flip turn).
     const upkeepLambda = plantsEnabled
       ? plantsUpkeepRampLambda(
           sector.plantsStartTurn,
@@ -333,8 +321,7 @@ export async function calculateCountryOwnedBudgetRevenue(
    */
   hoistedFxByCurrency?: ReadonlyMap<CurrencyCode, number>
 ): Promise<Partial<Record<keyof FederalRevenue, number>>> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ countryOwnerId: countryId }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
     .toArray();
 
@@ -349,11 +336,10 @@ export async function calculateCountryOwnedBudgetRevenue(
 
   const corporationIds = corporations.map((corporation) => corporation._id);
   const [allSectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: corporationIds } },
-        { projection: { buildQueue: 0, plantsPnl: 0, soldByCommodity: 0 } }
+        { projection: CORPORATE_SECTOR_LEAN_FIELDS }
       )
       .toArray(),
     hoistedFxByCurrency ? Promise.resolve(hoistedFxByCurrency) : loadFxRatesByCurrency(db),
@@ -463,8 +449,7 @@ export async function estimateCountryOwnedBudgetNetLocal(
   /** Same hoisting contract as {@link calculateCountryOwnedBudgetRevenue}. */
   plantsContext?: PlantsBudgetContext
 ): Promise<number> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ countryOwnerId: countryId }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
     .toArray();
   if (corporations.length === 0) return 0;
@@ -475,11 +460,10 @@ export async function estimateCountryOwnedBudgetNetLocal(
 
   const corporationIds = corporations.map((c) => c._id);
   const [allSectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: corporationIds } },
-        { projection: { buildQueue: 0, plantsPnl: 0, soldByCommodity: 0 } }
+        { projection: CORPORATE_SECTOR_LEAN_FIELDS }
       )
       .toArray(),
     loadFxRatesByCurrency(db),
@@ -502,9 +486,10 @@ export async function estimateCountryOwnedBudgetNetLocal(
   // grant can exist (plants tier), so nothing else pays for it.
   const grantYear = plants.plantsEnabled
     ? ((
-        await db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentYear: 1 } })
+        await gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: { currentYear: 1 } }
+        )
       )?.currentYear ?? null)
     : null;
   // Dynamic import: a static one closes the cycle budget/revenue →

@@ -1,22 +1,23 @@
 /**
  * POST /api/admin/heal/stale-admin-appointments
  *
- * Removes stale admin-appointed officials that should have been replaced
- * by election winners. This handles cases where:
- * 1. Admin appointed someone to a seat
- * 2. An election resolved for that seat with a different winner
- * 3. The admin-appointed record was never cleaned up
+ * Removes admin-appointed officials that should have been replaced by
+ * election winners but were never cleaned up.
  *
- * The endpoint identifies duplicates by seat key (officeType + state + senateClass/district).
- * When choosing which to keep:
- * - Prefer filled records (has characterId or nppId) over vacant ones
- * - Among equally-filled records, keep the most recent (by electedAt then updatedAt)
+ * Duplicates are identified by seat key (officeType + state +
+ * senateClass/district). Among duplicates, prefer filled records
+ * (characterId or nppId) over vacant, then the most recent by electedAt
+ * then updatedAt.
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { ElectedOfficial, Character, NPP } from "@/lib/db/types";
+import type { ElectedOfficial, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 interface DuplicateSeat {
   seatKey: string;
@@ -76,7 +77,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get all officials
-    const officials = await db.collection<ElectedOfficial>("electedOfficials").find({}).toArray();
+    const officials = await electedOfficialsCollection(db).find({}).toArray();
 
     // Group by seat key
     const bySeat = new Map<string, ElectedOfficial[]>();
@@ -144,7 +145,7 @@ export async function POST() {
     const now = new Date();
 
     // Get all officials
-    const officials = await db.collection<ElectedOfficial>("electedOfficials").find({}).toArray();
+    const officials = await electedOfficialsCollection(db).find({}).toArray();
 
     // Group by seat key
     const bySeat = new Map<string, ElectedOfficial[]>();
@@ -172,30 +173,27 @@ export async function POST() {
       for (const stale of toRemove) {
         // Clear currentOffice from character/NPP if they still reference this office
         if (stale.characterId) {
-          const char = await db
-            .collection<Character>("characters")
-            .findOne({ _id: stale.characterId });
+          const char = await charactersCollection(db).findOne({ _id: stale.characterId });
           if (char?.currentOffice?.type === stale.officeType) {
-            await db
-              .collection("characters")
-              .updateOne(
-                { _id: stale.characterId },
-                { $set: { currentOffice: null, updatedAt: now } }
-              );
+            await charactersCollection(db).updateOne(
+              { _id: stale.characterId },
+              { $set: { currentOffice: null, updatedAt: now } }
+            );
             clearedCharacters++;
           }
         } else if (stale.nppId) {
-          const npp = await db.collection<NPP>("npps").findOne({ _id: stale.nppId });
+          const npp = await nppsCollection(db).findOne({ _id: stale.nppId });
           if (npp?.currentOffice?.type === stale.officeType) {
-            await db
-              .collection("npps")
-              .updateOne({ _id: stale.nppId }, { $set: { currentOffice: null, updatedAt: now } });
+            await nppsCollection<Document>(db).updateOne(
+              { _id: stale.nppId },
+              { $set: { currentOffice: null, updatedAt: now } }
+            );
             clearedNPPs++;
           }
         }
 
         // Delete the stale record
-        await db.collection("electedOfficials").deleteOne({ _id: stale._id });
+        await electedOfficialsCollection<Document>(db).deleteOne({ _id: stale._id });
         removedCount++;
         const fillStatus = isFilled(stale) ? "" : " [vacant]";
         removedNames.push(

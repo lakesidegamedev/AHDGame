@@ -10,21 +10,10 @@ import { ELECTION_2024_MARGIN } from "@/lib/data/2024ElectionResults";
 import { ELECTION_1952_MARGIN } from "@/lib/data/1952ElectionResults";
 
 /**
- * Per-preset presidential-margin baseline. Each reset era anchors its initial
- * state lean (and therefore initial party Org) to the presidential election
- * nearest the era's start:
- *
- *   1953-default → 1952 (Stevenson v Eisenhower)
- *   1979-default → 1980 (Carter v Reagan)
- *   1991-default → 1988 (Dukakis v Bush)
- *   1999-default → 2000 (Gore v Bush)
- *   2007-default → 2008 (Obama v McCain)
- *   2019-default → 2020 (Biden v Trump)
- *   2023-default → 2024 (Harris v Trump)
- *   2027-default → 2024 (latest certified presidential result before Jan 2027)
- *
- * Keep this map in sync with `ELECTION_BASELINES` in
- * `src/lib/seeds/calibration/electionBaselines.ts`, which the seed-readiness
+ * Per-preset presidential-margin baseline. Each era anchors its state lean
+ * (and initial party Org) to the presidential election nearest the era start.
+ * Keep in sync with ELECTION_BASELINES in
+ * src/lib/seeds/calibration/electionBaselines.ts, which the seed-readiness
  * audit uses to score derived leans against the same election.
  */
 const PRESET_MARGINS: Record<string, Record<string, number>> = {

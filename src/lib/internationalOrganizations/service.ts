@@ -20,6 +20,7 @@ import {
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { nppGovernedMembers } from "@/lib/internationalOrganizations/ballotRoll";
+import { loadCountryTiers } from "@/lib/country/countryTier";
 import {
   loadWithdrawnMemberKeys,
   recordOrganizationWithdrawal,
@@ -59,13 +60,16 @@ import { getCountryConfig } from "@/lib/constants/countries";
 import { DEFAULT_CUSTOM_ORG_CATEGORY } from "@/lib/constants/orgCategory";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
-import type { Character } from "@/lib/db/types";
 import {
   isOrganizationFounded,
   loadOrgFoundingContext,
   resolveSeedRoster,
   type OrgFoundingContext,
 } from "./founding";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /**
  * Read-side aggregates used by the world page and per-org views.
@@ -92,16 +96,15 @@ export interface OrganizationSummary {
      */
     hasVote: boolean;
     /**
-     * Whether this member casts a ballot ON EVERY OTHER INSTRUMENT — a leadership
-     * election, sanctions, aid, dues, a directive, and a free-trade agreement,
-     * which is unanimous but voted only by its own named parties.
+     * Whether this member casts a ballot ON EVERY OTHER INSTRUMENT (leadership
+     * election, sanctions, aid, dues, a directive, an FTA voted by its own named
+     * parties).
      *
      * Wider than `hasVote`: in active mode it also covers modelled members run by
-     * an NPP government. They are trusted here, where a silence merely costs a
-     * yes or is a party declining its own deal, and kept off an admission,
-     * declaration, or entry resolution, where a silence is a veto. Pick the field
-     * that matches the ballot you are rendering — showing a threshold the
-     * resolver will not apply is the whole of ticket #1257.
+     * an NPP government. They are trusted here, where silence merely costs a yes
+     * or declines a party's own deal, and kept off admission, declaration, or
+     * entry resolutions where silence is a veto. Pick the field matching the
+     * ballot you render, or you show a threshold the resolver will not apply.
      */
     hasPolicyVote: boolean;
     /**
@@ -148,9 +151,10 @@ async function loadCustomOrganizations(db: Db): Promise<CustomInternationalOrgan
  * allowed to do — the classic way a gated UI drifts from its API.
  */
 async function loadCategoryContext(db: Db): Promise<{ preset?: string; coldWarEnded: boolean }> {
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, coldWarEndedTurn: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, coldWarEndedTurn: 1 } }
+  );
   return { preset: gs?.preset, coldWarEnded: gs?.coldWarEndedTurn != null };
 }
 
@@ -245,9 +249,10 @@ async function resolvePermanentLeadership(
   if (!memberCountryIds.has(leaderCountry)) return vacant;
   const hogId = await getHeadOfGovernmentCharacterId(db, leaderCountry);
   if (!hogId) return vacant;
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: hogId }, { projection: { name: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: hogId },
+    { projection: { name: 1 } }
+  );
   return {
     ...base,
     holderCharacterId: hogId,
@@ -267,6 +272,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
     leadership,
     leadershipElections,
     customOrgs,
+    tiers,
   ] = await Promise.all([
     (await getOrganizationMembershipsCollection(db)).find({}).toArray(),
     getAllCountryAccess(db),
@@ -274,8 +280,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
     (await getOrganizationLegislationCollection(db))
       .find({ status: { $in: ["pending", "active"] } })
       .toArray(),
-    db
-      .collection("bills")
+    billsCollection<Document>(db)
       .find({
         status: { $nin: NATIONAL_TERMINAL_STATUSES },
         internationalAction: { $exists: true },
@@ -288,7 +293,11 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
     (await getOrganizationLeadershipCollection(db)).find({}).toArray(),
     (await getOrganizationLeadershipElectionsCollection(db)).find({ status: "pending" }).toArray(),
     loadCustomOrganizations(db),
+    loadCountryTiers(db),
   ]);
+  // Background members vote by script on every ballot the policy roll
+  // covers, so they hold a policy vote exactly as the resolver seats them.
+  const backgroundMembers = new Set<string>(tiers.backgroundIds);
 
   const membersByOrg = new Map<InternationalOrganizationId, OrganizationMembership[]>();
   for (const m of memberships) {
@@ -364,8 +373,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
         .map((m) => m.countryId)
         .filter((c): c is CountryId => c in COUNTRY_CONFIGS && hasBillLifecycle(c as CountryId));
       if (members.length === 0) continue;
-      const formations = await db
-        .collection<GovernmentFormation>("governmentFormations")
+      const formations = await governmentFormationsCollection(db)
         .find({
           _id: { $in: members },
           status: "formed",
@@ -429,6 +437,7 @@ export async function loadOrganizationSummaries(db: Db): Promise<OrganizationSum
         hasPolicyVote:
           hasVote ||
           nppGoverned.has(m.countryId as CountryId) ||
+          backgroundMembers.has(m.countryId) ||
           activeRolls.get(id)?.has(m.countryId) === true,
         isCountry,
       };

@@ -1,18 +1,15 @@
 /**
  * POST /api/admin/elections/snap-timers
  *
- * Snaps all active-election timers to exact turn-fire boundaries.
+ * Re-anchors each future timer so it lands exactly when its turn fires.
  *
- * Turns process at the top of each hour. When primaryEndTime / endTime are
- * set to an arbitrary wall-clock time (e.g. "now + 72h"), the LARP week
- * shown to players may be one turn off because the deadline falls mid-turn.
+ * Turns process at the top of each hour. A timer set to an arbitrary
+ * wall-clock time (e.g. "now + 72h") can land mid-turn, so the LARP week
+ * shown to players may be one turn off.
  *
- * This route re-anchors each future timer so it lands exactly when its
- * corresponding turn will fire:
- *   snapped = nextScheduledTurn + (turnsLeft - 1) × 1h
+ * snapped = nextScheduledTurn + (turnsLeft - 1) * 1h
  *
- * The LARP week count is preserved (same number of turns remaining); only
- * the minute/second portion is zeroed out to align with the scheduler.
+ * The turn count remaining is preserved; only minute/second is zeroed.
  */
 
 import { NextResponse } from "next/server";
@@ -21,6 +18,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameTime } from "@/lib/time/gameTime";
 import type { Election, GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const TURN_MS = 60 * 60 * 1000; // turns fire every hour
 
@@ -34,7 +33,7 @@ export async function POST() {
 
     const db = await getDb();
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     if (!gameState) {
       return errorResponse(404, "Game state not found");
@@ -58,8 +57,7 @@ export async function POST() {
         })();
 
     // Fetch every active (non-completed) election that still has a future timer.
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({
         status: { $in: ["active", "upcoming"] },
         $or: [{ endTime: { $gt: now } }, { primaryEndTime: { $gt: now } }],
@@ -103,9 +101,9 @@ export async function POST() {
       return NextResponse.json({ message: "All timers are already aligned — nothing to update." });
     }
 
-    await db
-      .collection<Election>("elections")
-      .bulkWrite(updates.map(({ filter, update }) => ({ updateOne: { filter, update } })));
+    await electionsCollection(db).bulkWrite(
+      updates.map(({ filter, update }) => ({ updateOne: { filter, update } }))
+    );
 
     return NextResponse.json({
       message: `Snapped ${updates.length} election timer${updates.length !== 1 ? "s" : ""} to turn boundaries. Next turn: ${nextTurn.toLocaleTimeString()}.`,

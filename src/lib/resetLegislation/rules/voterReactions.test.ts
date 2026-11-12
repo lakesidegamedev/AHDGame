@@ -1,5 +1,5 @@
-import { remapArchetypeValuesToUnits } from "@/lib/demographics/granularElectorate";
-import { calcEffectiveFavorability } from "@/lib/electionEngine/voteCalculations";
+import { bucketValuesToUnits } from "@/lib/demographics/granularElectorate";
+import { calcEffectiveFavorability } from "@/lib/elections/engine/voteCalculations";
 import { describe, expect, it } from "vitest";
 import catalog from "../familyCatalog.json";
 import {
@@ -45,7 +45,7 @@ describe("v2 legislative voter reactions", () => {
     }
   );
   it.each(["US", "UK", "JP"])(
-    "reaches %s election favorability through live bucket remapping",
+    "reaches %s election favorability through live bucket mapping",
     (country) => {
       const effects = v2EnactmentApproval([provision], country);
       const [bucket, amount] = Object.entries(effects)[0]!;
@@ -59,11 +59,10 @@ describe("v2 legislative voter reactions", () => {
           bucketWeights: { [bucket]: 1 },
         },
       ];
-      const forApproval = remapArchetypeValuesToUnits(effects, units, country)["synthetic-cell"]!;
-      const againstApproval = remapArchetypeValuesToUnits(
+      const forApproval = bucketValuesToUnits(effects, units)["synthetic-cell"]!;
+      const againstApproval = bucketValuesToUnits(
         Object.fromEntries(Object.entries(effects).map(([key, value]) => [key, -value])),
-        units,
-        country
+        units
       )["synthetic-cell"]!;
       expect(forApproval).toBe(amount);
       expect(againstApproval).toBe(-amount);

@@ -43,15 +43,15 @@ describe("buildConicGradient", () => {
 });
 
 describe("CarveUpSlice shape", () => {
-  it("requires candidateId, candidateName, color, pct; archetype optional", () => {
+  it("requires candidateId, candidateName, color, pct; partyLabel optional", () => {
     const minimal: CarveUpSlice = {
       candidateId: "a",
       candidateName: "A",
       color: "#f00",
       pct: 25,
     };
-    const withArchetype: CarveUpSlice = { ...minimal, archetype: "Populist" };
-    expect(minimal.archetype).toBeUndefined();
-    expect(withArchetype.archetype).toBe("Populist");
+    const withLabel: CarveUpSlice = { ...minimal, partyLabel: "Populist" };
+    expect(minimal.partyLabel).toBeUndefined();
+    expect(withLabel.partyLabel).toBe("Populist");
   });
 });

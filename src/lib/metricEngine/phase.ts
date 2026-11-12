@@ -6,9 +6,11 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { cabinetMacroRegistry } from "@/lib/resetCabinet/rules/gameplay";
 import { sumObservedOutput, outputHistorySpanTurns } from "./rules/outputVolume";
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { StateMetrics, GameConfig } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
+import type { FederalBudget } from "@/lib/db/types/budget";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
 import { isLabourMacroEnabled } from "@/lib/labour/featureFlag";
 import { getEraEnvelope } from "@/lib/era/metricCatalog";
 import { resolveGameYear } from "@/lib/era/era";
@@ -32,6 +34,15 @@ import {
 } from "@/lib/turn/gdpGrowth";
 import { evaluateRegistry } from "./evaluate";
 import { compoundGdpLevel } from "./gdpLevel";
+import {
+  GDP_SMOOTHING_INERTIA,
+  advancePriceIndex,
+  PRICE_INDEX_BASE,
+  resolvePriceIndex,
+  smoothNationalGdpPerTurn,
+  toNominalOutput,
+  toRealOutput,
+} from "./priceLevel";
 import { advanceCapitalStock, seedCapitalStock } from "./capitalStock";
 import { combineAdditionalCapitalInvestment } from "./publicCapital";
 import {
@@ -51,11 +62,7 @@ import {
   type OutputTrendState,
 } from "./outputTrend";
 import { applySectorBlend, convergenceBonus } from "./convergence";
-import {
-  buildMacroGrowthInputs,
-  type CountryMacroRaw,
-  type MacroGrowthInputs,
-} from "./macroGrowthInputs";
+import { buildMacroGrowthInputs, type CountryMacroRaw } from "./macroGrowthInputs";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { getEraMonetaryBaseline } from "@/lib/constants/monetaryEra";
 import {
@@ -112,6 +119,22 @@ import {
   crisisPotentialGrowthPenalty,
   type CrisisEconomicExposure,
 } from "@/lib/livingConflict/rules/economicExposure";
+import { loadSocietyLawPositions, presetUsesSocietyPressures } from "@/lib/societyPressures/shell";
+import { automationPolicyFor, loadAutomationPolicies } from "@/lib/automationPolicy/policies";
+import { NO_SOCIETY_LAWS } from "@/lib/societyPressures/rules/laws";
+import {
+  advanceRegionSocietyPressures,
+  type SocietyPressureState,
+} from "@/lib/societyPressures/rules/region";
+import { fundingResponse } from "./spendingChannel";
+import { EDU_SPEND_HALF_SAT } from "./registry/education";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 /** Default unemployment when a state has no prior reading (matches gdpGrowth.ts `?? 4.5`). */
 const DEFAULT_UNEMPLOYMENT = 4.5;
@@ -131,16 +154,12 @@ const BESPOKE_NODE_IDS = new Set([
 ]);
 
 /**
- * The engine animates the MACRO categories only.
- *
- * Its political nodes still exist and are still modelled — they just no longer
- * own a stored value. They are evaluated by `processPoliticalMetricsDynamics`
- * as pure target functions and folded into the board through the engine term
- * (see politicalMetrics/engineNodes.ts). Persisting them here as well would
- * write a legacy political value nothing reads, into a store being retired.
- *
- * Filtering a topologically sorted list keeps it topologically sorted, so the
- * remaining nodes' same-turn dependencies still resolve in order.
+ * The engine animates MACRO categories only. Political nodes are still
+ * evaluated but hold no stored value: they are pure target functions folded in
+ * through the engine term (see politicalMetrics/engineNodes.ts). Persisting
+ * them here would write a legacy value nothing reads into a retiring store.
+ * Filtering a topologically sorted list keeps it sorted, so same-turn
+ * dependencies still resolve in order.
  */
 const MACRO_NODES = METRIC_REGISTRY_SORTED.filter((n) => MACRO_CATEGORIES.has(n.categoryId));
 const CABINET_V2_MACRO_NODES = cabinetMacroRegistry(MACRO_NODES);
@@ -232,6 +251,8 @@ interface PrevMetricsDoc {
   _id: string;
   labourEmployment?: EmploymentState;
   labourProductivity?: ProductivityState;
+  /** 2027 world: automation absorption, housing stock and education index. */
+  societyPressure?: SocietyPressureState;
   livingConflictExposure?: CrisisEconomicExposure;
   /** §6.1 (P7b): the region's LAGGED economic model, for sector GDP concentration. */
   economicModel?: EconomicModelState;
@@ -246,6 +267,7 @@ interface PrevMetricsDoc {
     laborForce?: { value?: number };
     labourDemand?: { value?: number };
     labourDemandTurn?: number;
+    automationDisplaced?: { value?: number };
   };
 }
 
@@ -260,53 +282,42 @@ function finite(value: unknown): number | undefined {
  * unemployment (golden-master gated, R2). Skips NATIONAL_SCOPE synthetic docs.
  */
 export async function runMetricEngine(db: Db, turn: number): Promise<number> {
-  // Era envelopes: live year for the metric era catalog's engine clamps; null
-  // while eraSystemEnabled is off (no clamps — byte-identical legacy).
-  const eraGameState = await db.collection<import("@/lib/db/types").GameState>("gameState").findOne(
+  // Era envelopes: live year for the metric era catalog's engine clamps.
+  const eraGameState = await gameStateCollection<import("@/lib/db/types").GameState>(db).findOne(
     { _id: "current" },
     {
       projection: {
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
-        eraSystemEnabled: 1,
-        macroGrowthV1: 1,
         preset: 1,
-        livingConflictsEnabled: 1,
         resetWorldId: 1,
         resetVersionSeeds: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
         cabinetSystemVersion: 1,
-        departmentFinanceEnabled: 1,
-        regionalLegislationFinanceEnabled: 1,
       },
     }
   );
-  const eraYear = eraGameState?.eraSystemEnabled ? resolveGameYear(eraGameState) : null;
-  // Macro-growth v1 (design §4): O2 convergence + O3 sector blend on potential.
-  const macroGrowthEnabled = eraGameState?.macroGrowthV1 === true;
-  const armedConflicts = eraGameState?.livingConflictsEnabled
-    ? await db
-        .collection<LivingConflictState>("livingConflicts")
-        .find(
-          {
-            defKey: { $in: ["yugoslav_dissolution", "russia_ukraine_security", "arab_uprisings"] },
-          },
-          {
-            projection: {
-              defKey: 1,
-              hasOpened: 1,
-              status: 1,
-              tracks: 1,
-              representedActors: 1,
-              arabRegional: 1,
-              realizedInfrastructureDamage: 1,
-            },
-          }
-        )
-        .toArray()
-    : [];
+  const eraYear = eraGameState ? resolveGameYear(eraGameState) : null;
+  const armedConflicts = await livingConflictsCollection<LivingConflictState>(db)
+    .find(
+      {
+        defKey: { $in: ["yugoslav_dissolution", "russia_ukraine_security", "arab_uprisings"] },
+      },
+      {
+        projection: {
+          defKey: 1,
+          hasOpened: 1,
+          status: 1,
+          tracks: 1,
+          representedActors: 1,
+          arabRegional: 1,
+          realizedInfrastructureDamage: 1,
+        },
+      }
+    )
+    .toArray();
 
   // SP5: prev values live in TWO stores post-split — macroMetrics carries
   // economic/population (+ economicModel) for every country; stateMetrics
@@ -331,6 +342,11 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     "economic.labourTightness.value": 1,
     "economic.labourParticipationDemandBonus.value": 1,
     "economic.labourDemandTurn": 1,
+    // 2027 society pressures (absent in other worlds, so projecting is free).
+    societyPressure: 1,
+    "economic.automationDisplaced.value": 1,
+    "social.housingSupplyGrowth.value": 1,
+    "education.universityEnrollment.value": 1,
     // Generic nodes (P2+): prev value/simBaseline + external seed/lagged reads,
     // derived from the registry at module load.
     ...GENERIC_PROJECTION,
@@ -354,16 +370,12 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     warDamageByCountryId,
     capacityObligations,
   ] = await Promise.all([
-    db.collection<State>("states").find({}).toArray(),
-    db
-      .collection<StateMetrics>("macroMetrics")
-      .find({})
-      .project<PrevMetricsDoc>(PREV_PROJECTION)
-      .toArray(),
+    statesCollection(db).find({}).toArray(),
+    macroMetricsCollection(db).find({}).project<PrevMetricsDoc>(PREV_PROJECTION).toArray(),
     sectorRevenueTaxProvider(db, turn),
     // Per-country prime rate drives capital investment (P1c-0). Batched here so
     // there is no per-region round trip.
-    db.collection<{ _id: string; primeRate?: number }>("centralBanks").find({}).toArray(),
+    centralBanksCollection<{ _id: string; primeRate?: number }>(db).find({}).toArray(),
     // Per-region per-capita budget spend by category (P2 spending backbone). One
     // batched provider read; nodes consume it via {spending} inputs.
     spendingProvider(db),
@@ -378,14 +390,14 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // v2-2: read the labour mode via the SAME db (mock-db safe — see the
     // demographics-phase gotcha) so labourWageIndexDelta only feeds
     // medianIncome at labourSystemMode ≥ "macro".
-    db
-      .collection<GameConfig>("gameConfig")
+    gameConfigCollection(db)
       .findOne(
         { _id: "default" },
         {
           projection: {
             labourSystemMode: 1,
             privateBankingEnabled: 1,
+            priceLevelEnabled: 1,
           },
         }
       )
@@ -395,8 +407,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // and their potential growth was near-uniform. Non-playable regions are
     // absent from this map and keep the legacy read untouched.
     loadPoliticalMacroInputs(db, turn),
-    db
-      .collection<{ _id: string; status?: string }>("countryGameStates")
+    countryGameStatesCollection<{ _id: string; status?: string }>(db)
       .find({ status: "active" })
       .project<{ _id: string }>({ _id: 1 })
       .toArray(),
@@ -420,6 +431,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     labourConfig?.privateBankingEnabled === true
   );
   const labourMacroEnabled = await isLabourMacroEnabled(labourConfig ?? null);
+  const priceLevelEnabled = labourConfig?.priceLevelEnabled === true;
 
   // Resolve a country's prime rate: live central-bank doc → config default.
   const primeRateByBankId = new Map<string, number>();
@@ -478,11 +490,19 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   });
 
   const employmentPolicies = await loadEmploymentPolicies(db, turn, realStates, {
-    national: eraGameState?.departmentFinanceEnabled === true,
-    regional: eraGameState?.regionalLegislationFinanceEnabled === true,
+    national: true,
+    regional: true,
     year: eraYear ?? undefined,
     baselineYear: eraGameState?.startingYear,
   });
+
+  // 2027 world: enacted zoning and wage insurance laws, one read for all countries.
+  const societyOn = presetUsesSocietyPressures(eraGameState?.preset ?? undefined);
+  const societyLaws = societyOn
+    ? await loadSocietyLawPositions(db, [...new Set(realStates.map((s) => s.countryId))])
+    : new Map<string, typeof NO_SOCIETY_LAWS>();
+  // 2027 world: the US and UK automation laws that speed re-employment.
+  const automationPolicies = societyOn ? await loadAutomationPolicies(db) : undefined;
 
   // One in-memory pass over the political boards already loaded above. This
   // avoids a country-by-country query loop on the multiplayer turn path.
@@ -542,7 +562,10 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     updateOne: {
       filter: { _id: string };
       update: {
-        $set: Record<string, number | Date | EmploymentState | ProductivityState>;
+        $set: Record<
+          string,
+          number | Date | EmploymentState | ProductivityState | SocietyPressureState
+        >;
         $unset?: Record<string, "">;
       };
     };
@@ -576,109 +599,142 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
 
   // ── Macro-growth v1 (design §4): per-country convergence + openness inputs ──
   // Computed once per turn, applied to every region's potential in the loop.
-  // Empty/inert when the flag is off (byte-identical legacy).
-  let macroInputs: MacroGrowthInputs = { byCountry: new Map(), frontierPcAnchor: 0 };
-  // Shared by O2 (per-capita anchor normalization) and O1c (₳→local corp
-  // investment). Empty when the flag is off (the loop guards on macroGrowthEnabled).
-  let fxByCurrency = new Map<import("@/lib/constants/currencies").CurrencyCode, number>();
-  if (macroGrowthEnabled) {
-    fxByCurrency = await loadValuationFxRates(db);
-    // National state-ownership concentration (SOCI) per country — lagged command signal.
-    const sociByCountry = new Map<string, number>();
-    const budgets = await db
-      .collection<{ _id: string; countryId?: string; stateOwnershipConcentration?: number }>(
-        "federalBudget"
-      )
-      .find({}, { projection: { countryId: 1, stateOwnershipConcentration: 1 } })
-      .toArray();
-    for (const b of budgets) {
-      const cid = b.countryId || (b._id === "federal" ? "US" : b._id);
-      if (typeof b.stateOwnershipConcentration === "number") {
-        sociByCountry.set(cid, b.stateOwnershipConcentration);
+  // fxByCurrency is shared by O2 (per-capita anchor normalization) and O1c
+  // (₳→local corp investment).
+  const fxByCurrency = await loadValuationFxRates(db);
+  // National state-ownership concentration (SOCI) per country — lagged command signal.
+  const sociByCountry = new Map<string, number>();
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
+    .find(
+      {},
+      {
+        projection: {
+          countryId: 1,
+          stateOwnershipConcentration: 1,
+          priceIndex: 1,
+          gdp: 1,
+          gdpSmoothed: 1,
+          "economicFactors.inflationRate": 1,
+        },
       }
+    )
+    .toArray();
+  // Price level per country: `state.gdp` is nominal (real output times the index).
+  // The index before this turn deflates it for the real economy; the index after
+  // inflates the compounded real output back.
+  const priceIndexBefore = new Map<string, number>();
+  const priceIndexAfter = new Map<string, number>();
+  const budgetIdByCountry = new Map<string, string>();
+  const smoothedGdpBefore = new Map<string, number | undefined>();
+  const inflationByCountry = new Map<string, number>();
+  for (const b of budgets) {
+    const cid = b.countryId || (b._id === "federal" ? "US" : b._id);
+    budgetIdByCountry.set(cid, b._id);
+    priceIndexBefore.set(
+      cid,
+      priceLevelEnabled ? resolvePriceIndex(b.priceIndex) : PRICE_INDEX_BASE
+    );
+    smoothedGdpBefore.set(cid, b.gdpSmoothed ?? b.gdp);
+    // An unseeded budget has no inflation to compound.
+    inflationByCountry.set(cid, b.economicFactors?.inflationRate ?? 0);
+    if (typeof b.stateOwnershipConcentration === "number") {
+      sociByCountry.set(cid, b.stateOwnershipConcentration);
     }
-    // Σ GDP + population per country from the states already loaded.
-    const gdpByCountry = new Map<string, number>();
-    const popByCountry = new Map<string, number>();
-    for (const s of realStates) {
-      gdpByCountry.set(s.countryId, (gdpByCountry.get(s.countryId) ?? 0) + (s.gdp ?? 0));
-      popByCountry.set(s.countryId, (popByCountry.get(s.countryId) ?? 0) + (s.population ?? 0));
-    }
-    const rows: CountryMacroRaw[] = [];
-    const activeCountryIds = new Set(countryGameStates.map((row) => row._id));
-    const developmentTotals = new Map<
-      string,
-      Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
-    >();
-    const developmentCounts = new Map<
-      string,
-      Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
-    >();
-    const developmentPaths = {
-      industrialPolicyExecution: "economic.industrialPolicyExecution",
-      workforceSkill: "education.workforceSkill",
-      transportEfficiency: "infrastructure.transportEfficiency",
-    } as const;
-    const publicCapitalByCountry = new Map<string, number>();
-    for (const state of realStates) {
-      const totals = developmentTotals.get(state.countryId) ?? {
-        industrialPolicyExecution: 0,
-        workforceSkill: 0,
-        transportEfficiency: 0,
-      };
-      const counts = developmentCounts.get(state.countryId) ?? {
-        industrialPolicyExecution: 0,
-        workforceSkill: 0,
-        transportEfficiency: 0,
-      };
-      const prevDoc = prevDocById.get(state._id);
-      for (const [key, path] of Object.entries(developmentPaths) as Array<
-        [keyof typeof developmentPaths, string]
-      >) {
-        const value =
-          politicalInputs.legacyUnit(state._id, path) ?? readMetricPath(prevDoc, path, "value");
-        if (value === undefined) continue;
-        totals[key] += value;
-        counts[key] += 1;
-      }
-      developmentTotals.set(state.countryId, totals);
-      developmentCounts.set(state.countryId, counts);
-      publicCapitalByCountry.set(
-        state.countryId,
-        (publicCapitalByCountry.get(state.countryId) ?? 0) +
-          (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
-      );
-    }
-    for (const countryId of gdpByCountry.keys()) {
-      const nationalDocId = getNationalDocId(countryId as CountryId);
-      // The active-country filter is applied by the pure precompute below.
-      // Older worlds with an empty registry retain the national-doc fallback.
-      if (!nationalDocId) continue;
-      const natDoc = prevDocById.get(nationalDocId);
-      const totals = developmentTotals.get(countryId);
-      const counts = developmentCounts.get(countryId);
-      const average = (key: keyof typeof developmentPaths): number | undefined =>
-        totals && counts && counts[key] > 0 ? totals[key] / counts[key] : undefined;
-      rows.push({
-        countryId,
-        gdpLocalMillions: gdpByCountry.get(countryId) ?? 0,
-        population: popByCountry.get(countryId) ?? 0,
-        soci: sociByCountry.get(countryId),
-        // Lagged national gate metrics (prev-turn national doc — the C3 lag).
-        tradeGrowth: readMetricPath(natDoc, "economic.tradeGrowth", "value"),
-        economicFreedom: readMetricPath(natDoc, "economic.economicFreedom", "value"),
-        industrialPolicyExecution: average("industrialPolicyExecution"),
-        workforceSkill: average("workforceSkill"),
-        transportEfficiency: average("transportEfficiency"),
-        publicInvestmentEffort: Math.min(
-          1,
-          (publicCapitalByCountry.get(countryId) ?? 0) /
-            Math.max(1, (gdpByCountry.get(countryId) ?? 0) * 0.05)
-        ),
-      });
-    }
-    macroInputs = buildMacroGrowthInputs(rows, eraGameState?.preset, activeCountryIds);
   }
+  for (const [cid, before] of priceIndexBefore) {
+    priceIndexAfter.set(
+      cid,
+      priceLevelEnabled
+        ? advancePriceIndex(before, inflationByCountry.get(cid) ?? 0, TURNS_PER_YEAR)
+        : PRICE_INDEX_BASE
+    );
+  }
+  const realGdpOf = (s: { countryId: string; gdp?: number }) =>
+    toRealOutput(s.gdp ?? 0, priceIndexBefore.get(s.countryId));
+  const nominalGdpByCountry = new Map<string, number>();
+  // Σ GDP + population per country from the states already loaded.
+  const gdpByCountry = new Map<string, number>();
+  const popByCountry = new Map<string, number>();
+  for (const s of realStates) {
+    gdpByCountry.set(s.countryId, (gdpByCountry.get(s.countryId) ?? 0) + realGdpOf(s));
+    popByCountry.set(s.countryId, (popByCountry.get(s.countryId) ?? 0) + (s.population ?? 0));
+  }
+  const rows: CountryMacroRaw[] = [];
+  const activeCountryIds = new Set(countryGameStates.map((row) => row._id));
+  const developmentTotals = new Map<
+    string,
+    Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
+  >();
+  const developmentCounts = new Map<
+    string,
+    Record<"industrialPolicyExecution" | "workforceSkill" | "transportEfficiency", number>
+  >();
+  const developmentPaths = {
+    industrialPolicyExecution: "economic.industrialPolicyExecution",
+    workforceSkill: "education.workforceSkill",
+    transportEfficiency: "infrastructure.transportEfficiency",
+  } as const;
+  const publicCapitalByCountry = new Map<string, number>();
+  for (const state of realStates) {
+    const totals = developmentTotals.get(state.countryId) ?? {
+      industrialPolicyExecution: 0,
+      workforceSkill: 0,
+      transportEfficiency: 0,
+    };
+    const counts = developmentCounts.get(state.countryId) ?? {
+      industrialPolicyExecution: 0,
+      workforceSkill: 0,
+      transportEfficiency: 0,
+    };
+    const prevDoc = prevDocById.get(state._id);
+    for (const [key, path] of Object.entries(developmentPaths) as Array<
+      [keyof typeof developmentPaths, string]
+    >) {
+      const value =
+        politicalInputs.legacyUnit(state._id, path) ?? readMetricPath(prevDoc, path, "value");
+      if (value === undefined) continue;
+      totals[key] += value;
+      counts[key] += 1;
+    }
+    developmentTotals.set(state.countryId, totals);
+    developmentCounts.set(state.countryId, counts);
+    publicCapitalByCountry.set(
+      state.countryId,
+      (publicCapitalByCountry.get(state.countryId) ?? 0) +
+        (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
+    );
+  }
+  for (const countryId of gdpByCountry.keys()) {
+    const nationalDocId = getNationalDocId(countryId as CountryId);
+    // The active-country filter is applied by the pure precompute below.
+    // Older worlds with an empty registry retain the national-doc fallback.
+    if (!nationalDocId) continue;
+    const natDoc = prevDocById.get(nationalDocId);
+    const totals = developmentTotals.get(countryId);
+    const counts = developmentCounts.get(countryId);
+    const average = (key: keyof typeof developmentPaths): number | undefined =>
+      totals && counts && counts[key] > 0 ? totals[key] / counts[key] : undefined;
+    rows.push({
+      countryId,
+      gdpLocalMillions: gdpByCountry.get(countryId) ?? 0,
+      population: popByCountry.get(countryId) ?? 0,
+      soci: sociByCountry.get(countryId),
+      // Lagged national gate metrics (prev-turn national doc — the C3 lag).
+      tradeGrowth: readMetricPath(natDoc, "economic.tradeGrowth", "value"),
+      economicFreedom: readMetricPath(natDoc, "economic.economicFreedom", "value"),
+      industrialPolicyExecution: average("industrialPolicyExecution"),
+      workforceSkill: average("workforceSkill"),
+      transportEfficiency: average("transportEfficiency"),
+      publicInvestmentEffort: Math.min(
+        1,
+        (publicCapitalByCountry.get(countryId) ?? 0) /
+          Math.max(1, (gdpByCountry.get(countryId) ?? 0) * 0.05)
+      ),
+    });
+  }
+  const macroInputs = buildMacroGrowthInputs(rows, eraGameState?.preset, activeCountryIds);
 
   // Per-country memos: synergy nudges and era envelopes depend only on the
   // country (model, directives, era year), not the state, so compute each
@@ -692,7 +748,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     const ownedForState = sectorTax.ownedByState.get(state._id) ?? [];
     // P2/D7: prior realized-revenue baseline + how many turns ago it was taken.
     // Only meaningful under plants; the node ignores both fields otherwise.
-    // Ticket #1084: once the snapshot is tagged `host`, compare host-currency
+    // Once the snapshot is tagged `host`, compare host-currency
     // sums so FX restatement cannot annualize into a per-turn GDP jig. Untagged
     // (legacy ₳) snapshots keep the ₳ path for one turn, then we rewrite as host.
     const prevRealized = finite(state.sectorRealizedRevenue);
@@ -701,7 +757,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     const nowHost = sumHostRealizedRevenue(ownedForState);
     const nowAnchor = sumRealizedRevenue(ownedForState, sectorTax.plantsEnabled);
     // Trailing revenue trend (host currency only, so FX cannot leak into it —
-    // same rule as the one-turn snapshot, ticket #1084). On the legacy→host
+    // same rule as the one-turn snapshot). On the legacy→host
     // flip turn the EMA seeds fresh from this turn's host sum and the snapshot
     // log restarts; until a snapshot matures past the minimum span the node
     // keeps using the one-turn fallback.
@@ -756,33 +812,35 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       model: prevDocById.get(getNationalDocId(countryId) ?? "")?.economicModel,
     };
 
-    // Advance the Solow capital stock off THIS turn's output level (pre-compound
-    // state.gdp, millions — same unit as K). Cold-start seeds K ≈ 3×gdp (P1c-0).
-    const output = state.gdp ?? 0;
+    // Advance the Solow capital stock off THIS turn's REAL output level (pre-compound
+    // state.gdp deflated, millions — same unit as K). Cold-start seeds K ≈ 3×gdp (P1c-0).
+    const output = realGdpOf(state);
+    const priceIndexNow = priceIndexBefore.get(countryId);
     const capital = state.capitalStock ?? seedCapitalStock(output);
     // O1c (design §5): fold THIS turn's paid corp growth cost into investment,
-    // capped at 5% of region GDP/yr. Only when the flag is on AND the write is
-    // from this turn (fresh-or-zero). ₳ → local-millions via the country's FX.
+    // capped at 5% of region GDP/yr. Only when the write is from this turn
+    // (fresh-or-zero). ₳ → local-millions via the country's FX.
     let corpInvestPerTurn = 0;
-    if (macroGrowthEnabled && state.corpGrowthInvestmentTurn === turn) {
+    if (state.corpGrowthInvestmentTurn === turn) {
       const anchor = state.corpGrowthInvestmentAnchor ?? 0;
       const currency = COUNTRY_CURRENCY_MAP[countryId as keyof typeof COUNTRY_CURRENCY_MAP];
       const fx = currency ? (fxByCurrency.get(currency) ?? 1) : 1;
       const localMillions = (anchor * fx) / 1_000_000;
-      corpInvestPerTurn = Math.max(0, localMillions);
+      corpInvestPerTurn = Math.max(0, toRealOutput(localMillions, priceIndexNow));
     }
-    const additionalCapitalPerTurn = macroGrowthEnabled
-      ? combineAdditionalCapitalInvestment({
-          outputAnnualLocalMillions: output,
-          publicCapitalBudgetAnnualLocalMillions: countryMacro
-            ? (spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0)
-            : 0,
-          corporateInvestmentPerTurnLocalMillions: corpInvestPerTurn,
-          ownPcAnchor: countryMacro?.ownPcAnchor ?? 0,
-          frontierPcAnchor: macroInputs.frontierPcAnchor,
-          turnsPerYear: TURNS_PER_YEAR,
-        })
-      : 0;
+    const additionalCapitalPerTurn = combineAdditionalCapitalInvestment({
+      outputAnnualLocalMillions: output,
+      publicCapitalBudgetAnnualLocalMillions: countryMacro
+        ? toRealOutput(
+            spendingRollup.publicCapitalAnnualLocalMillionsByRegion.get(state._id) ?? 0,
+            priceIndexNow
+          )
+        : 0,
+      corporateInvestmentPerTurnLocalMillions: corpInvestPerTurn,
+      ownPcAnchor: countryMacro?.ownPcAnchor ?? 0,
+      frontierPcAnchor: macroInputs.frontierPcAnchor,
+      turnsPerYear: TURNS_PER_YEAR,
+    });
     const capStep = advanceCapitalStock(
       capital,
       output,
@@ -865,24 +923,22 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       potentialGrowth(gL, capStep.annualizedGrowth, tfp) +
       cabinetProductionPressure(cabinetEffects);
     // Macro-growth v1 (design §4): add the convergence bonus (O2) OUTSIDE the TFP
-    // clamp, then blend the LAGGED sector signal (O3). Flag off ⇒ potential ===
-    // basePotential (byte-identical). frontierPc = live max across countries.
+    // clamp, then blend the LAGGED sector signal (O3). frontierPc = live max
+    // across countries.
     let potential = basePotential;
-    if (macroGrowthEnabled) {
-      // Playable economies only (cm present ⇒ has a national doc + gdp/pop). O2
-      // then O3, both scoped the same way so a latent region gets neither.
-      if (countryMacro) {
-        potential =
-          basePotential +
-          convergenceBonus(
-            countryMacro.ownPcAnchor,
-            macroInputs.frontierPcAnchor,
-            countryMacro.openness
-          );
-        const sectorLagged = prevSectorValue.get(state._id);
-        if (sectorLagged !== undefined) {
-          potential = applySectorBlend(potential, sectorLagged);
-        }
+    // Playable economies only (cm present ⇒ has a national doc + gdp/pop). O2
+    // then O3, both scoped the same way so a latent region gets neither.
+    if (countryMacro) {
+      potential =
+        basePotential +
+        convergenceBonus(
+          countryMacro.ownPcAnchor,
+          macroInputs.frontierPcAnchor,
+          countryMacro.openness
+        );
+      const sectorLagged = prevSectorValue.get(state._id);
+      if (sectorLagged !== undefined) {
+        potential = applySectorBlend(potential, sectorLagged);
       }
     }
     // Institutional failure lowers the economy's annual supply-side growth
@@ -989,11 +1045,11 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       if (automationDelta !== undefined) {
         seedCurrent["economic.automationIndexDelta"] = automationDelta;
       }
-      // #791: use a same-turn demand-over-supply reading when the corporation
+      // Use a same-turn demand-over-supply reading when the corporation
       // phase produced a fresh demand snapshot. If corporations were paused,
       // retain the last measured tightness rather than pairing stale demand
-      // with today's labor force. Corporate staffing itself continues to use
-      // the previous turn's ratio, so no same-turn feedback loop is introduced.
+      // with today's labor force. Corporate staffing uses the previous turn's
+      // ratio, so no same-turn feedback loop is introduced.
       const tightness = hasCurrentLabourDemand
         ? currentLabourTightness
         : readMetricPath(prevDoc, "economic.labourTightness", "value");
@@ -1062,6 +1118,42 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     }
     const envelopes = { ...cachedEnvelopes };
 
+    // 2027 world: education, automation absorption and housing for this region.
+    // Housing pressure moves the cost of living target; absorbed workers become
+    // background labour demand in the employment step below.
+    const society = societyOn
+      ? advanceRegionSocietyPressures({
+          turn,
+          turnsPerYear: TURNS_PER_YEAR,
+          countryId,
+          previous: priorMetricDoc?.societyPressure,
+          adults: state.votingEligiblePopulation ?? (state.population ?? 0) * 0.78,
+          automationDisplaced: hasCurrentLabourDemand
+            ? (readMetricPath(priorMetricDoc, "economic.automationDisplaced", "value") ?? 0)
+            : undefined,
+          supplyGrowthPct:
+            readMetricPath(prevDoc, "social.housingSupplyGrowth", "value") ??
+            politicalInputs.legacyValue(state._id, "social.housingSupplyGrowth") ??
+            undefined,
+          universityEnrollment:
+            readMetricPath(prevDoc, "education.universityEnrollment", "value") ??
+            politicalInputs.legacyValue(state._id, "education.universityEnrollment") ??
+            undefined,
+          educationSpendingResponse: fundingResponse(
+            spending.education ?? 0,
+            EDU_SPEND_HALF_SAT,
+            100
+          ),
+          outputGap: hasTrend ? state.outputGap : 0,
+          laws: societyLaws.get(countryId) ?? NO_SOCIETY_LAWS,
+          automation: automationPolicyFor(automationPolicies, countryId),
+        })
+      : undefined;
+    if (society) {
+      targetNudges["economic.costOfLiving"] =
+        (targetNudges["economic.costOfLiving"] ?? 0) + society.costOfLivingNudge;
+    }
+
     const registry =
       resetSystemVersionsForCountry(eraGameState, RESET_V2_READY, countryId).cabinet === "v2"
         ? CABINET_V2_MACRO_NODES
@@ -1084,6 +1176,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
             outputGap: hasTrend ? state.outputGap : 0,
             medianIncome: readMetricPath(prevDoc, "economic.medianIncome", "value"),
             policy: employmentPolicies.get(state._id),
+            absorbedJobs: society?.absorbedJobs,
             previous: prevDoc?.labourEmployment,
           })
         : undefined;
@@ -1159,7 +1252,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       if (prevVal === undefined) continue;
       setFields[`${n.id}.value`] = r.value;
       setFields[`${n.id}.simBaseline`] = r.simBaseline;
-      // #909: persist the per-turn delta so the UI's rate-of-change / TrendChip
+      // Persist the per-turn delta so the UI's rate-of-change / TrendChip
       // has data for every engine-animated metric. Previously only
       // independenceDesire wrote a `trend`, so every other metric rendered
       // "flat" regardless of actual movement (the reported "rate of change is
@@ -1182,13 +1275,23 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // Macro only. Every node evaluated above is a macro node, so the filter is
     // a guard rather than a router: a political path reaching it would mean
     // something is trying to persist a board metric into the macro doc.
-    const macroSet: Record<string, number | Date | EmploymentState | ProductivityState> = {};
+    const macroSet: Record<
+      string,
+      number | Date | EmploymentState | ProductivityState | SocietyPressureState
+    > = {};
     for (const [key, value] of Object.entries(setFields)) {
       if (key === "lastUpdated") continue;
       if (isMacroMetricPath(key)) macroSet[key] = value;
     }
     if (Object.keys(macroSet).length > 0) {
       if (employment) macroSet.labourEmployment = employment.state;
+      if (society) {
+        macroSet.societyPressure = society.state;
+        macroSet["population.housingPressure.value"] =
+          Math.round(society.state.housingPressure * 10) / 10;
+        macroSet["population.tertiaryAttainment.value"] =
+          Math.round(society.state.educationIndex * 10) / 10;
+      }
       if (persistCrisisExposure) {
         for (const [key, value] of Object.entries(crisisExposure))
           macroSet[`livingConflictExposure.${key}`] = value;
@@ -1209,7 +1312,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
 
     // Compound the region's GDP LEVEL by the INTEGRATED gdpGrowth this turn (exact
     // per-turn form). state.gdp is the SSOT (millions); national GDP = Σ state.gdp.
-    const compoundedGdp = compoundGdpLevel(state.gdp ?? 0, integratedGdp, TURNS_PER_YEAR);
+    const compoundedGdp = compoundGdpLevel(output, integratedGdp, TURNS_PER_YEAR);
     // Conflict destruction and its budget-funded repair move the stock once; the
     // applied ledger is written with the stock so a replayed turn changes nothing.
     const capacityEntries = capacityByRegion.get(state._id) ?? [];
@@ -1239,6 +1342,8 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       }
     }
     const newGdp = capacityFold?.gdp ?? compoundedGdp;
+    const newNominalGdp = toNominalOutput(newGdp, priceIndexAfter.get(countryId));
+    nominalGdpByCountry.set(countryId, (nominalGdpByCountry.get(countryId) ?? 0) + newNominalGdp);
     if (employment)
       macroSet.labourProductivity = advanceProductivity({
         previous: prevDoc?.labourProductivity,
@@ -1253,21 +1358,18 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         filter: { _id: state._id },
         update: {
           $set: {
-            gdp: newGdp,
+            gdp: newNominalGdp,
             capitalStock: capacityFold?.capitalStock ?? capStep.capital,
             ...(capacityFold ? { conflictCapacityApplied: capacityFold.applied } : {}),
             outputGap: trendStep.gap,
             outputTrendGrowth: trendStep.trendGrowth,
             realOutputStartTurn,
             ...(legacyGapStep ? { legacyOutputGap: legacyGapStep.gap } : {}),
-            // P2/D7: snapshot THIS turn's realized owned-sector revenue as the
-            // next turn's baseline. Written in every mode (not just plants) so a
-            // flip to plants already has a one-turn-old baseline and does not
-            // spend a turn on the legacy fallback. The BASIS is still plants-
-            // gated: below plants this stays the nameplate sum it has always
-            // been, so non-plants worlds see no level shift.
-            // Under plants the snapshot is HOST currency (ticket #1084) so the
-            // next turn's ratio is FX-invariant.
+            // Snapshot THIS turn's realized owned-sector revenue as next turn's
+            // baseline, in every mode so a flip to plants has a one-turn-old baseline.
+            // BASIS stays plants-gated: below plants it is the nameplate sum, so
+            // non-plants worlds see no level shift. Under plants the snapshot is HOST
+            // currency so next turn's ratio is FX-invariant.
             sectorRealizedRevenue: sectorTax.plantsEnabled
               ? nowHost
               : sumRealizedRevenue(ownedForState, false),
@@ -1305,11 +1407,55 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   }
 
   if (macroOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(macroOps);
+    await macroMetricsCollection(db).bulkWrite(macroOps);
   }
   if (stateOps.length > 0) {
-    await db.collection<State>("states").bulkWrite(stateOps);
+    await statesCollection(db).bulkWrite(stateOps);
   }
   await settleCapacityObligations(db, settledCapacityIds);
+  if (priceLevelEnabled) {
+    await advanceBudgetGdpBasis(db, {
+      budgetIdByCountry,
+      priceIndexAfter,
+      smoothedGdpBefore,
+      nominalGdpMillionsByCountry: nominalGdpByCountry,
+    });
+  }
   return realStates.length;
+}
+
+/**
+ * Writes each country's price index and the budget GDP basis once per turn. Both
+ * `gdp` and `gdpSmoothed` carry the same smoothed nominal level, so every budget
+ * reader (debt ratio, spending envelopes, deposit-book return, inflation fiscal
+ * term) sees one up-to-date basis instead of a fiscal-close snapshot.
+ */
+async function advanceBudgetGdpBasis(
+  db: Db,
+  input: {
+    budgetIdByCountry: Map<string, string>;
+    priceIndexAfter: Map<string, number>;
+    smoothedGdpBefore: Map<string, number | undefined>;
+    nominalGdpMillionsByCountry: Map<string, number>;
+  }
+): Promise<void> {
+  const ops: AnyBulkWriteOperation<FederalBudget>[] = [];
+  for (const [countryId, millions] of input.nominalGdpMillionsByCountry) {
+    const budgetId = input.budgetIdByCountry.get(countryId);
+    const priceIndex = input.priceIndexAfter.get(countryId);
+    if (budgetId === undefined || priceIndex === undefined) continue;
+    const $set: Record<string, number> = { priceIndex };
+    if (millions > 0) {
+      const smoothed = smoothNationalGdpPerTurn(
+        input.smoothedGdpBefore.get(countryId),
+        millions * 1_000_000,
+        GDP_SMOOTHING_INERTIA,
+        TURNS_PER_YEAR
+      );
+      $set.gdp = smoothed;
+      $set.gdpSmoothed = smoothed;
+    }
+    ops.push({ updateOne: { filter: { _id: budgetId as never }, update: { $set } } });
+  }
+  if (ops.length > 0) await (await getFederalBudgetCollection(db)).bulkWrite(ops);
 }

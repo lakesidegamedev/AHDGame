@@ -21,15 +21,15 @@ import {
 import type { GameState } from "@/lib/db/types";
 import { resolveGameYear } from "@/lib/era/era";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const influenceSchema = z.object({
   targetEntityId: z.string().min(1).max(8),
   amountLocal: z.number().positive().max(1e15),
 });
 
-/** Player-facing copy for each refusal. Never blame the player for a closed gate. */
+/** Player-facing copy for each refusal. */
 const FAILURE_MESSAGE: Record<CommitPlayFailure, string> = {
-  "gate-off": "Bloc influence is not enabled in this world.",
   "no-channel": "This organization carries no influence in the current era.",
   "unknown-target": "That nation has no alignment on record.",
   "target-locked": "That nation is locked to its bloc — influence cannot move it.",
@@ -91,9 +91,10 @@ export async function POST(
 
     // Read the clock here so the command stays free of clock lookups and is
     // trivially testable.
-    const gs = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1, startingYear: 1 } });
+    const gs = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1 } }
+    );
     const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();
     const turn = await getCurrentTurn(db);
 

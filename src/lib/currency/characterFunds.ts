@@ -3,6 +3,7 @@ import type { Character, ExchangeRate } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Minimum fields needed for personal wealth operations.
@@ -347,9 +348,10 @@ export async function loadCharacterFxRate(
   db: Db,
   homeCurrency: CurrencyCode
 ): Promise<{ rate: number; ok: boolean }> {
-  const rateDoc = await db
-    .collection<ExchangeRate>("exchangeRates")
-    .findOne({ currencyCode: homeCurrency }, { projection: { rate: 1 } });
+  const rateDoc = await exchangeRatesCollection(db).findOne(
+    { currencyCode: homeCurrency },
+    { projection: { rate: 1 } }
+  );
   if (!rateDoc || !Number.isFinite(rateDoc.rate) || rateDoc.rate <= 0) {
     return { rate: 1.0, ok: false };
   }

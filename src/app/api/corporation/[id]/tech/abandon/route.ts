@@ -1,6 +1,6 @@
 /**
  * POST /api/corporation/[id]/tech/abandon — CEO abandons a decade's committed
- * tech lane (to switch tracks). Gated by `sectorTechTreesEnabled`. CEO only.
+ * tech lane (to switch tracks). CEO only.
  * Removes that decade's unlocked nodes and frees the lane; NO refund. Logic in
  * the shared command (lib/corporations/commands/techTree/abandonTechDecade).
  */
@@ -12,10 +12,10 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { abandonTechDecade } from "@/lib/corporations/commands/techTree/abandonTechDecade";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const abandonSchema = z.object({
   decadeId: z.string().min(1).max(16),
@@ -44,10 +44,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
-    if (!(await isSectorTechTreesEnabled(gameState ?? undefined))) {
-      return errorResponse(404, "Tech trees are not enabled");
-    }
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;

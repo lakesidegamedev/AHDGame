@@ -1,31 +1,22 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * USSR regions as State-compatible documents (1979-era). The USSR is seeded in
- * both the 1953 and 1979 presets. Differentiated from other countries by `countryId: "RU"`.
+ * USSR regions as State-compatible documents (1979-era). Seeded in both the
+ * 1953 and 1979 presets; identified by `countryId: "RU"`.
  *
- * SEED INDEPENDENCE — values are authored for ~1979 directly (1979 USSR census).
- * The USSR is modelled as **14 larger regions**: ten RSFSR (Russia) economic
- * macro-regions plus Kazakhstan, Transcaucasia (Georgia+Armenia+Azerbaijan),
- * Central Asia (Uzbek+Kyrgyz+Tajik+Turkmen) and Moldova. All were constituent
- * union republics — NOT sovereign satellite states like PL/RO/HU/DD/CS/BG.
- * Ukraine, Byelorussia and the Baltics (Estonia+Latvia+Lithuania) were regions
- * here too until they were promoted to their own playable countries
- * (UKR/BLR/BAL), each with its own region shard and legislature.
- * Total population 194,100,000; the full 1979 USSR was ~261M, the 66.7M
- * difference being those three departed republics.
+ * Values authored for ~1979 directly (1979 USSR census). Modelled as 14
+ * larger regions: ten RSFSR macro-regions plus Kazakhstan, Transcaucasia,
+ * Central Asia and Moldova. Ukraine, Byelorussia and the Baltics were
+ * promoted to their own playable countries (UKR/BLR/BAL), each with its own
+ * region shard and legislature; their seats are excluded here.
  *
- * houseDistricts sum = 559. The real Soviet of the Union seated 750; the 191
- * seats for Ukraine (143), Byelorussia (27) and the Baltics (21) now belong to
- * those countries' own chambers.
- *
- * - `population` — 1979 census estimates (people).
- * - `gdp` — approximate 1979 regional net material product (millions of rubles).
- * - `houseDistricts` — Soviet of the Union seats allocated to the region
- *     (population-apportioned by largest remainder; sum = 559).
- * - `stateSenateSeats` — republic/regional Supreme Soviet seat count.
- * - `region` — grouping used for regional filters.
- * - `votingSystem` — fptp placeholder (the Supreme Soviet used single-list elections).
+ * - `population` , 1979 census estimates (people).
+ * - `gdp` , approximate 1979 regional net material product (millions of rubles).
+ * - `houseDistricts` , Soviet of the Union seats apportioned to the region
+ *     by largest remainder (sum = 559).
+ * - `stateSenateSeats` , republic/regional Supreme Soviet seat count.
+ * - `region` , grouping used for regional filters.
+ * - `votingSystem` , fptp placeholder (the Supreme Soviet used single-list elections).
  */
 export const ruRegions: State[] = [
   // ── RSFSR (Russia) economic macro-regions ──────────────────────────────────

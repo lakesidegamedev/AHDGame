@@ -17,6 +17,9 @@ import {
 } from "@/lib/parties/priorityRegion";
 import type { ElectedOfficial, PoliticalParty, State } from "@/lib/db/types";
 import { PRIORITY_REGION_LOCKOUT_TURNS } from "@/lib/turn/politicalStrength/strengthConstants";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /**
  * Returns the state IDs in this country where the given party holds the
@@ -35,8 +38,7 @@ async function listPartyStateExecutives(
   partySequentialId: number
 ): Promise<string[]> {
   const partyIdStr = String(partySequentialId);
-  const rows = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const rows = await electedOfficialsCollection(db)
     .find({
       countryId,
       party: partyIdStr,
@@ -176,8 +178,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // State-existence check against the actual states collection — every
     // picked state must exist and belong to this country.
-    const stateDocs = await db
-      .collection<State>("states")
+    const stateDocs = await statesCollection(db)
       .find({ _id: { $in: upperStateIds }, countryId })
       .project<{ _id: string }>({ _id: 1 })
       .toArray();
@@ -191,7 +192,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // updateOne filter so two concurrent setters racing against an
     // expired lockout don't both win.
     const now = new Date();
-    const result = await db.collection<PoliticalParty>("politicalParties").updateOne(
+    const result = await politicalPartiesCollection(db).updateOne(
       {
         _id: party._id,
         // Guard: only set if currently unlocked. `priorityRegion` either

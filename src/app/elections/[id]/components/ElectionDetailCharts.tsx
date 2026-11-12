@@ -74,24 +74,6 @@ export function PieChart({
   );
 }
 
-export function primaryPieSlices(
-  candidates: CandidateDetail[]
-): { label: string; pct: number; color: string }[] {
-  if (candidates.length === 0) return [];
-  const party = candidates[0];
-  // Use the same color source as the candidate bar so chart and bar agree.
-  const colorMap = buildCandidateColorMap(
-    candidates.map((c) => ({ candidateId: c.id, campaignColor: c.campaignColor ?? null })),
-    party.party,
-    party.partyColor
-  );
-  return candidates.map((c) => ({
-    label: c.characterName,
-    pct: c.sharePct ?? 0,
-    color: colorMap[c.id] ?? party.partyColor,
-  }));
-}
-
 export function PrimaryLineGraph({
   snapshots,
   partyId,

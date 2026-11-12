@@ -25,6 +25,7 @@ import {
   takeHoldingShares,
 } from "@/lib/corporations/rules/holdingTerms";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const schema = z.object({
   shares: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
@@ -46,7 +47,7 @@ export async function quoteSaleTax(
     if (!body.success) return errorResponse(body.status, body.error);
     const db = await getDb();
     const userId = new ObjectId(auth.user.userId);
-    const user = await db.collection<User>("users").findOne(
+    const user = await usersCollection(db).findOne(
       { _id: userId },
       {
         projection: {

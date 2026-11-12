@@ -27,7 +27,7 @@ vi.mock("@/lib/db/collections/manifestos", async (importOriginal) => {
 });
 
 import * as route from "./route";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 
 const ELECTION_ID = new ObjectId();
 const CHARACTER_ID = new ObjectId();

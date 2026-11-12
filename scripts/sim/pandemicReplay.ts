@@ -149,10 +149,7 @@ async function main() {
       for (const [name, rows] of saved) if (rows.length) await db.collection(name).insertMany(rows);
       await db
         .collection("gameState")
-        .updateOne(
-          { _id: "current" as never },
-          { $set: { livingConflictsEnabled: true, crisisInteractionEnabled: true } }
-        );
+        .updateOne({ _id: "current" as never }, { $set: { livingConflictsEnabled: true } });
       await db.collection("characters").insertMany(leaders);
       const roles = new Map(
         await Promise.all(

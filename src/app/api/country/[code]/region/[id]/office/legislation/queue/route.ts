@@ -26,6 +26,10 @@ import type {
   StateBill,
   StateBillProvision,
 } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorLegislationQueueCollection } from "@/lib/db/repositories/governorLegislationQueue";
 
 // POST /api/country/[code]/region/[id]/office/legislation/queue — Queue a state bill.
 export async function POST(
@@ -109,7 +113,7 @@ export async function GET(
       return errorResponse(403, "Not authorized for this office");
     }
 
-    const pending = await db.collection<GovernorQueuedBill>("governorLegislationQueue").findOne({
+    const pending = await governorLegislationQueueCollection(db).findOne({
       countryId,
       stateId,
       status: "pending",
@@ -122,8 +126,7 @@ export async function GET(
     const officeParty = access.officeParty;
     let eligibleNpps: Array<{ _id: string; name: string; partyAbbreviation?: string }> = [];
     if (officeParty) {
-      const seats = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const seats = await electedOfficialsCollection(db)
         .find({
           officeType: getSubNationalLegislatureKey(countryId),
           state: stateId,
@@ -132,14 +135,12 @@ export async function GET(
         .toArray();
       const nppIds = seats.map((s) => s.nppId).filter((x): x is ObjectId => !!x);
       const npps = nppIds.length
-        ? await db
-            .collection<NPP>("npps")
+        ? await nppsCollection(db)
             .find({ _id: { $in: nppIds }, party: officeParty, retiredAt: null })
             .toArray()
         : [];
       const blocking = npps.length
-        ? await db
-            .collection<StateBill>("stateBills")
+        ? await stateBillsCollection(db)
             .find({
               sponsorNppId: { $in: npps.map((n) => n._id) },
               status: { $nin: STATE_TERMINAL_STATUSES },

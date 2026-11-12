@@ -1,20 +1,12 @@
 /**
- * JP Layer-1 demographic model — census-consuming rebuild.
+ * JP Layer-1 demographic model, census-driven.
  *
- * Architecture:
- *   - dims: ["ethnicity","age","education","income","urbanization"]
- *   - census: real per-region census data from jpRegionCensusData*.ts
- *   - composition: maps each of the 10 JP archetypes to census dim/key weights
- *   - positions: per-era, reflecting documented JP political history
- *     (LDP dominance 1979, 1991 bubble collapse + 1993 coalition break,
- *      1999 lost decade, 2007 DPJ surge, 2019 Abenomics era, 2023 post-Abe)
- *   - region/archetype leans EMERGE from census × positions — never hand-calibrated
+ * dims: [ethnicity, age, education, income, urbanization]
+ * census: real per-region data from jpRegionCensusData*.ts
+ * composition: maps the 10 JP archetypes to census dim/key weights
+ * positions: per-era, reflecting documented JP political history
  *
- * Era-fact anchors validated in jp.test.ts:
- *   1979: Rural (TOH, SHI, CGK) → RIGHT (LDP stronghold); KAN (Tokyo) centrist/mild left
- *   2019: KAN (Tokyo) left-leaning vs rural (most left metro); TOH/SHI/CGK strongly RIGHT
- *   1993 (modelled under 1991): opposition surge reflected in urban positions
- *   2009 (modelled under 2007): DPJ victory reflected in urban left shift
+ * Region and archetype leans EMERGE from census × positions, never hand-calibrated.
  */
 
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
@@ -146,9 +138,8 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
     civicMultiplier: 0.75,
   },
   /**
-   * Retirees & Elderly: 65+ Japan — world's oldest population.
-   * Senior, suburban/rural, diverse education (historically high-school dominant).
-   * Highest turnout; broadly conservative; strong LDP loyalty.
+   * Retirees & Elderly: 65+, highest turnout, broadly conservative, strong LDP loyalty.
+   * Senior, middle-income, suburban/rural, historically high-school dominant.
    */
   retiree: {
     weights: [
@@ -229,7 +220,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from jpDemographicCategories.ts) ─────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ─────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   salaryman_conservative: { economicLean: 1, socialLean: 1 },
@@ -249,34 +240,10 @@ const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number 
 // Scale: economicLean -5 (redistribution) to +5 (free market)
 //        socialLean   -5 (progressive) to +5 (traditional/conservative)
 //
-// Historical basis:
-//   1979: LDP dominance at peak. Ohira era. Conservative rural lock solid.
-//         Urban blue-collar → Socialists (JSP); students/intellectuals left.
-//         Young population but LDP wins rural/suburban vote decisively.
-//         Japan's "1955 system" fully intact.
-//
-//   1991: Bubble has just burst. LDP fractured internally (Takeshita scandal, 1989).
-//         Komeito growing in urban areas. JSP had a brief surge then collapsed.
-//         1993 coalition (Hosokawa) reflecting early opposition surge — positions
-//         shift toward urban resentment of LDP. Rural still locked.
-//
-//   1999: Post-reform (Hashimoto cuts), lost decade deep. Koizumi not yet PM.
-//         LDP-Komeito coalition formed 1999. Youth "employment ice age" begins.
-//         Urban discontent growing but fragmented opposition.
-//
-//   2007: Koizumi's structural reforms (2001-2006) realigned politics.
-//         "Postal election" (2005) LDP landslide gave way to 2007 Upper House loss.
-//         DPJ growing: 2009 historic victory approaching (modelled as left surge).
-//         Education starts to predict urban/left vs rural/right more sharply.
-//
-//   2019: Abe era. LDP dominance restored; constitutional revision focus.
-//         Rural seniors: LDP stronghold. Urban educated: marginally left (CDP).
-//         Low youth turnout suppresses left signal. Reform populists (Ishin) growing.
-//         Korean community: Zainichi historically backed progressive parties.
-//
-//   2023: Post-Abe assassination. Kishida era. LDP scandals (Unification Church links).
-//         Urban and educated voters drifting from LDP. Rural still firmly right.
-//         Ishin surging in Kansai. Youth somewhat more engaged post-controversy.
+// Each era's positions encode its realignment: rural/senior LDP lock holds
+// throughout, urban/educated lean left and sharpen over time, and Zainichi
+// Korean voters back progressive parties. Later eras reflect Koizumi reform
+// realignment, the DPJ surge, the Abe restoration, and post-Abe LDP drift.
 
 type DimPositions = Record<string, DemographicPosition>;
 type EraPositions = Record<string, DimPositions>;
@@ -319,10 +286,10 @@ const POSITIONS_1953: EraPositions = {
 
 const POSITIONS_1979: EraPositions = {
   ethnicity: {
-    // 1979: near-homogeneous Japan. The zainichi Korean community (concentrated
-    // in Kansai) historically voted for progressive parties due to discrimination.
-    // Other foreign residents negligible. Ethnicity signal comes mainly from korean key.
-    // japanese is set near-neutral so age/education/urbanization carry the regional signal.
+    // 1979 Japan: the zainichi Korean community (concentrated in Kansai)
+    // historically voted progressive due to discrimination. Other foreign
+    // residents are negligible. Japanese is near-neutral so age, education
+    // and urbanization carry regional signal.
     japanese: { economicLean: 0.47, socialLean: 0.5 }, // Near-neutral: other dims carry regional differentiation
     chinese: { economicLean: -0.53, socialLean: -0.5 },
     korean: { economicLean: -2.03, socialLean: -1.5 }, // Zainichi: historically JSP/progressive

@@ -6,7 +6,6 @@ import { requireAuth, requireHumanSessionWithCharacter } from "@/lib/api/require
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAuthAdmin } from "@/lib/auth";
 import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { canManageOffice } from "@/lib/governorOffice/access";
 import { checkStateTrifecta } from "@/lib/redistricting/trifecta";
 import { computeRedistrictCaps } from "@/lib/redistricting/caps";
@@ -15,6 +14,8 @@ import { validateRedistrictMap } from "@/lib/redistricting/legality";
 import type { CongressionalDistrict, DistrictSquares, RedistrictLedgerEntry } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { redistrictLedgerCollection } from "@/lib/db/repositories/redistrictLedger";
 
 const BodySchema = z.object({
   districts: z
@@ -49,9 +50,6 @@ export async function POST(
     const db = await getDb();
 
     const gs = await getGameState();
-    if (!isRedistrictingEnabled(gs)) {
-      return errorResponse(404, "Redistricting is not enabled");
-    }
     // US-only by construction: only US states have congressionalDistricts docs, so
     // non-US countries fall through to the "No districts to redraw" 404 below.
 
@@ -81,8 +79,7 @@ export async function POST(
     }
 
     // Load the live map.
-    const docs = (await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    const docs = (await congressionalDistrictsCollection(db)
       .find({ countryId, stateId } as Partial<CongressionalDistrict>)
       .sort({ index: 1 })
       .toArray()) as CongressionalDistrict[];
@@ -124,7 +121,7 @@ export async function POST(
     const before = docs.map((d) => d.squares);
     for (let i = 0; i < docs.length; i++) {
       const sq = proposed[i];
-      await db.collection<CongressionalDistrict>("congressionalDistricts").updateOne(
+      await congressionalDistrictsCollection(db).updateOne(
         { _id: docs[i]._id },
         {
           $set: {
@@ -138,7 +135,7 @@ export async function POST(
         }
       );
     }
-    await db.collection<RedistrictLedgerEntry>("redistrictLedger").insertOne({
+    await redistrictLedgerCollection(db).insertOne({
       _id: new ObjectId(),
       countryId: countryId as CountryId,
       stateId,
@@ -183,8 +180,7 @@ export async function GET(
     const db = await getDb();
     const gs = await getGameState();
 
-    const docs = (await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    const docs = (await congressionalDistrictsCollection(db)
       .find({ countryId, stateId } as Partial<CongressionalDistrict>)
       .sort({ index: 1 })
       .toArray()) as CongressionalDistrict[];
@@ -206,8 +202,7 @@ export async function GET(
     // Eligibility, with a human-readable reason for the first failing gate.
     let reason: string | null = null;
     const currentYear = gs?.currentYear;
-    if (!isRedistrictingEnabled(gs)) reason = "Redistricting is not enabled.";
-    else if (docs.length === 0) reason = "This state has no districts.";
+    if (docs.length === 0) reason = "This state has no districts.";
     else if (isAdmin) {
       // Admins bypass governor, trifecta, census-year, and commission gates.
       if (!character) reason = "You need an active character to submit a redraw.";

@@ -5,7 +5,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { CrisisTemplate } from "@/lib/db/types/crisis";
 import { createCrisisFromTemplate } from "./createCrisisFromTemplate";
 
-vi.mock("./featureFlag", () => ({ isCrisisInteractionEnabled: vi.fn().mockResolvedValue(false) }));
 vi.mock("./crisisLocation", () => ({
   resolveCrisisLocationName: vi.fn().mockResolvedValue("Testland"),
   interpolateLocation: (text: string) => text,

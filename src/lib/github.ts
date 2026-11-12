@@ -1,4 +1,5 @@
 import { formatTicketPlatform } from "@/lib/tickets/platform";
+import { servicesConfig } from "@/lib/config/services";
 
 /**
  * Create a GitHub issue from feedback.
@@ -27,8 +28,8 @@ export async function createGitHubIssue(opts: {
   reporterUsername?: string | null;
   screenshotUrl?: string;
 }): Promise<{ url: string; number: number } | null> {
-  const token = process.env.GIT_TOKEN;
-  const repo = process.env.GITHUB_REPO;
+  const token = servicesConfig.gitToken();
+  const repo = servicesConfig.githubRepo();
 
   if (!token || !repo) {
     return null;
@@ -130,8 +131,8 @@ export async function createPlayerSuggestionGitHubIssue(opts: {
   reporterDiscordSubmit?: string | null;
   screenshotUrl?: string;
 }): Promise<{ url: string; number: number } | null> {
-  const token = process.env.GIT_TOKEN;
-  const repo = process.env.GITHUB_REPO;
+  const token = servicesConfig.gitToken();
+  const repo = servicesConfig.githubRepo();
 
   if (!token || !repo) {
     return null;
@@ -205,8 +206,8 @@ export async function createPlayerSuggestionGitHubIssue(opts: {
 }
 
 function getGhHeaders(): Record<string, string> | null {
-  const token = process.env.GIT_TOKEN;
-  const repo = process.env.GITHUB_REPO;
+  const token = servicesConfig.gitToken();
+  const repo = servicesConfig.githubRepo();
   if (!token || !repo) return null;
   return {
     Authorization: `Bearer ${token}`,
@@ -308,7 +309,7 @@ export async function syncFeedbackToGitHub(opts: {
   const headers = getGhHeaders();
   if (!headers) return;
 
-  const repo = process.env.GITHUB_REPO!;
+  const repo = servicesConfig.githubRepo()!;
   const { githubIssueNumber } = opts;
 
   try {
@@ -465,7 +466,7 @@ export async function syncSuggestionToGitHub(opts: {
   const headers = getGhHeaders();
   if (!headers) return;
 
-  const repo = process.env.GITHUB_REPO!;
+  const repo = servicesConfig.githubRepo()!;
   const { githubIssueNumber } = opts;
 
   try {

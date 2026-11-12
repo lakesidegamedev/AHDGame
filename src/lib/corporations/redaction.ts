@@ -50,22 +50,21 @@ const PRIVATE_REDACTED_CORP_FIELDS = [
 ] as const;
 
 /**
- * C2: the plants tier added a whole PHYSICAL book to each sector row, and
- * redaction never grew to cover it. A private corporation is supposed to leak
- * strictly LESS than a public one; before this list was extended it leaked
- * strictly more, to anonymous viewers, because the route returns the private
- * payload before the public fog-of-war pass ever runs.
+ * The plants tier added a whole PHYSICAL book to each sector row, and redaction
+ * must cover it: a private corporation is supposed to leak strictly LESS than a
+ * public one, and the route returns the private payload before the public
+ * fog-of-war pass ever runs.
  *
  * Two things make the physicals non-optional here:
  *
  *   1. Under plants, revenue IS capacity × mix price. Stripping `revenue` while
- *      publishing `capacityUnits` redacts nothing — the number is
+ *      publishing `capacityUnits` redacts nothing because the number is
  *      reconstructible from a public price.
  *   2. `fillRate` is attack-targeting intel (see financialFogOfWar.ts): it tells
- *      a rival the incumbent cannot defend its market, and unlike the money
- *      figures it does not degrade with corp size. Public corps only ever see
- *      the coarse band; a private corp must not disclose even that, so
- *      `fillRateBand` goes too.
+ *      a rival the incumbent cannot defend its market, and unlike money figures
+ *      it does not degrade with corp size. Public corps only ever see the coarse
+ *      band; a private corp must not disclose even that, so `fillRateBand` goes
+ *      too.
  */
 const PRIVATE_REDACTED_SECTOR_FIELDS = [
   "revenue",

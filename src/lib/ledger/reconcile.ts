@@ -2,7 +2,6 @@ import * as Sentry from "@sentry/nextjs";
 import { ObjectId, type Db } from "mongodb";
 import { accountCurrency, accountKind, isRealAccount } from "@/lib/ledger/accounts";
 import { epsilonFor, isAnchorBalanced, nativeImbalance } from "@/lib/ledger/epsilon";
-import { LEDGER_ENTRIES_COLLECTION } from "@/lib/ledger/emit";
 import { loadBalanceSnapshot, loadPreForexBalanceCheckpoint } from "@/lib/ledger/balanceSnapshot";
 import type {
   BalanceSnapshot,
@@ -15,6 +14,8 @@ import type {
   StockVsFlowFinding,
   TrialBalanceFinding,
 } from "@/lib/ledger/types";
+import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export const LEDGER_RECONCILIATIONS_COLLECTION = "ledgerReconciliations";
 
@@ -48,18 +49,16 @@ export interface ReconcileInput {
 }
 
 /**
- * Pure reconciler — no DB. Given this turn's ledger entries and the opening /
+ * Pure reconciler, no DB. Given this turn's ledger entries and the opening /
  * closing authoritative-balance snapshots, produce a green/amber/red report.
  *
  * 1. Trial balance (Invariant #1): every entry sums to ~0 in ₳; single-currency
- *    entries also net to ~0 natively (the t841 catch). Violation → red.
- * 2. Stock-vs-flow: per real account, Σ primary-leg ₳ vs actual balance delta.
- *    Divergence (incl. accounts that moved with NO legs) → amber, and drives the
- *    Phase 3 coverage sweep. Expected to be noisy until coverage lands.
- * 3. Money supply: per currency, Σ mints − Σ sinks by reason. Reported; the big
- *    `unattributed` bucket is the Phase 3 backlog.
- *
- * See docs/plans/2026-07-05-shadow-ledger-plan.md §2.
+ *    entries also net to ~0 natively. Violation -> red.
+ * 2. Stock-vs-flow: per real account, sum of primary-leg ₳ vs actual balance
+ *    delta. Divergence (incl. accounts that moved with no legs) -> amber.
+ *    Expected to be noisy until coverage lands.
+ * 3. Money supply: per currency, sum of mints minus sum of sinks by reason.
+ *    Reported; the large `unattributed` bucket is known backlog.
  */
 export function reconcileLedger(input: ReconcileInput): ReconcileReport {
   const { turn, entries } = input;
@@ -255,8 +254,8 @@ function rateForAccount(
  * pre-forex rate. After it, flows are valued at the closing rate.
  */
 /**
- * Account-lifecycle evidence for a divergent account, read off the snapshot
- * key pair (#992). Pure hint: callers must still treat the finding as
+ * Account-lifecycle evidence for a divergent account from the snapshot
+ * key pair. Pure hint: callers must still treat the finding as
  * unexplained divergence, never as reconciled.
  */
 function lifecycleHintFor(
@@ -357,8 +356,7 @@ export async function reconcileTurn(
   opts: { skipStockVsFlow?: boolean; savingsAccountsMode?: string | null } = {}
 ): Promise<ReconcileReport | null> {
   try {
-    const entries = await db
-      .collection<LedgerEntry>(LEDGER_ENTRIES_COLLECTION)
+    const entries = await ledgerEntriesCollection<LedgerEntry>(db)
       // Reconciliation is intentionally shadow-only. Its three checks need
       // the entry identity, origin and legs, not the write timestamp/source
       // reference or denormalized `balanced` flag on every entry this turn.
@@ -389,7 +387,7 @@ export async function reconcileTurn(
     });
 
     const doc: LedgerReconciliation = { ...report, _id: new ObjectId() };
-    await db.collection<LedgerReconciliation>(LEDGER_RECONCILIATIONS_COLLECTION).insertOne(doc);
+    await ledgerReconciliationsCollection<LedgerReconciliation>(db).insertOne(doc);
 
     if (report.trialBalance.status === "red") {
       Sentry.captureMessage(
@@ -414,7 +412,8 @@ export async function reconcileTurn(
 
 /** Fetch the most recent persisted reconciliation (for the ops-dash / Watchtower section). */
 export async function loadLatestReconciliation(db: Db): Promise<LedgerReconciliation | null> {
-  return db
-    .collection<LedgerReconciliation>(LEDGER_RECONCILIATIONS_COLLECTION)
-    .findOne({}, { sort: { turn: -1 } });
+  return ledgerReconciliationsCollection<LedgerReconciliation>(db).findOne(
+    {},
+    { sort: { turn: -1 } }
+  );
 }

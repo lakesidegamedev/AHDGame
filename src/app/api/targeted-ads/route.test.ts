@@ -127,10 +127,8 @@ describe("standing targeted ad actions", () => {
           _id: "CA",
           countryId: "US",
           categoryWeights: {},
-          groups: {},
           lastUpdated: new Date(0),
         },
-        categories: [],
         demographicDefaults: null,
         enriched: [],
         year: null,
@@ -184,10 +182,8 @@ describe("standing targeted ad actions", () => {
           _id: "CA",
           countryId: "US",
           categoryWeights: {},
-          groups: {},
           lastUpdated: new Date(0),
         },
-        categories: [],
         demographicDefaults: null,
         enriched: [],
         year: null,
@@ -325,7 +321,7 @@ describe("standing targeted ad actions", () => {
     });
     expect(db.collection("elections").findOne.mock.calls[0][0]).toMatchObject({
       _id: { $in: [candidate.electionId] },
-      electionType: { $in: ["president", "uachtaran"] },
+      electionType: { $in: ["president", "uachtaran", "special_president"] },
       status: "active",
       countryId: character.countryId,
     });

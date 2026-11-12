@@ -7,6 +7,9 @@ import type {
 } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildCorporationExit, type CorporationExitSnapshot } from "./rules";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { corporationExitsCollection } from "@/lib/db/repositories/corporationExits";
 
 /**
  * Write the exit row for a corporation that has just been deleted. Call it
@@ -35,8 +38,7 @@ export async function recordCorporationExit(
 ): Promise<void> {
   try {
     const turn = params.turn ?? (await getCurrentTurn(db));
-    const last = await db
-      .collection<CorporationHistory>("corporationHistory")
+    const last = await corporationHistoryCollection(db)
       .find({ corporationId: corporation._id }, { projection: { revenue: 1 } })
       .sort({ turn: -1 })
       .limit(1)
@@ -51,9 +53,11 @@ export async function recordCorporationExit(
       now: params.now ?? new Date(),
     });
     const { _id, ...fields } = exit;
-    await db
-      .collection<CorporationExit>("corporationExits")
-      .updateOne({ _id }, { $setOnInsert: fields }, { upsert: true });
+    await corporationExitsCollection(db).updateOne(
+      { _id },
+      { $setOnInsert: fields },
+      { upsert: true }
+    );
 
     const userId = corporation.userId?.toString();
     if (
@@ -64,9 +68,10 @@ export async function recordCorporationExit(
       !params.cooldownExempt
     ) {
       // `$max` makes retries safe and never moves the anchor backwards.
-      await db
-        .collection<User>("users")
-        .updateOne({ _id: corporation.userId }, { $max: { lastCorporationFoundedTurn: turn } });
+      await usersCollection(db).updateOne(
+        { _id: corporation.userId },
+        { $max: { lastCorporationFoundedTurn: turn } }
+      );
     }
   } catch (error) {
     if (params.strict) throw error;

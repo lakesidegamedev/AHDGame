@@ -1,21 +1,13 @@
 /**
- * Austria 1953 metric overlays — occupied Second Republic / early reconstruction.
- *
- * Base `atStateMetrics` is authored on ~1979 (late Kreisky) values. Without this
- * overlay a 1953-default world keeps 1979 life expectancy (~72.4), literacy 99,
- * and near-full-employment Austro-Keynesian metrics — anachronistic for a country
- * still under four-power occupation (State Treaty 1955) with life expectancy near
- * 67 (Statistik Austria / UN Demographic Yearbook 1950-55). Region ids match
+ * Austria 1953 metric overlays. Base `atStateMetrics` is authored on ~1979
+ * values; without this overlay a 1953 world keeps anachronistic late-Kreisky
+ * metrics (life expectancy ~72.4, near-full employment). Region ids match
  * `atRegionCensusData1953`.
  *
- * `medianIncome` is annual household schilling, re-derived (#income-gdp-scale-audit)
- * against the 1953 budget's own GDP/capita — the old Maddison-scaled-off-1979-
- * nominal method (the same mistake diagnosed and fixed for FR/ES/TR) measured
- * out at ratio 8.06x GDP/capita (öS 85B / 6.93M = öS 12,266;
- * medianIncomeGdpScale1953.test.ts band is [0.8, 2.6]). Re-authored at 18,400
- * (ratio ~1.55). Broadband/internet did not exist.
- * `population.birthRate` is the 0–100 fertility INDEX (metricDefinitions), not
- * a crude birth rate — TFR ~2.1 maps to the mid-50s of that index.
+ * `medianIncome` is annual household schilling, scaled so its ratio to 1953
+ * GDP per capita falls in [0.8, 2.6] (see medianIncomeGdpScale1953.test.ts).
+ * `population.birthRate` is the 0 to 100 fertility index (metricDefinitions),
+ * not a crude birth rate; TFR ~2.1 maps to the mid-50s of that index.
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 

@@ -14,6 +14,7 @@ import {
   getPartyLogoFilename,
   getPartyLogoStoragePrefix,
 } from "@/lib/partyLogoStorage";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -125,9 +126,10 @@ export async function POST(request: Request) {
     }
 
     // Update party record
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id }, { $set: { logoUrl: url, updatedAt: new Date() } });
+    await politicalPartiesCollection(db).updateOne(
+      { _id: party._id },
+      { $set: { logoUrl: url, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ url });
   } catch (error) {

@@ -1,3 +1,4 @@
+import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Crisis, CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
@@ -12,16 +13,29 @@ import {
 import { DEFAULT_DISASTER_COOLDOWN_TURNS } from "./autoCrisisConstants";
 import { disasterTemplatesForCountry } from "./selectDisasterTemplate";
 import { getTemplateDuration } from "./templates";
-import { regionMatchesTags } from "./regionHazards";
+import { getClimateExposureTags, regionMatchesTags } from "./regionHazards";
 import { loadCooldownMap, isOnCooldown, stampCooldown } from "./autoCrisisCooldown";
 import { floorCrisisDuration } from "./crisisDuration";
 import { interpolateLocation } from "./crisisLocation";
 import { isTemplateAllowedInYear } from "./crisisEraWindow";
 import {
   climateLossMultiplier,
+  climateProfileForStartingYear,
   weatherDisasterCadence,
   WEATHER_DISASTER_KEYS,
 } from "./rules/climateFeedback";
+import { climateExposureFromTags, uninsuredLossMultiplier } from "./rules/climateEffects";
+import type { SpawnDirector } from "./spawnDirector";
+import { legacyDefinitionId } from "./v2/legacyConvert";
+import { createCrisisInstance } from "./v2/instance";
+import { SPAWN_PRIORITY } from "./v2/spawnBudget";
+import { legacyDefinitionFor } from "@/lib/turn/crisisV2/legacyContent";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
 
 interface ResilienceRow {
   _id: string;
@@ -32,7 +46,7 @@ interface ResilienceRow {
 async function chargeDisasterFiscalLoss(db: Db, crisis: Crisis): Promise<void> {
   const amount = crisis.autoDisasterFiscalCost;
   if (!amount || amount <= 0) return;
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     {
       countryId: crisis.countryIds[0] as FederalBudget["countryId"],
       disasterFiscalReceipts: { $ne: crisis._id.toString() },
@@ -132,15 +146,21 @@ export async function processAutoDisasterSpawn(
   db: Db,
   countryId: CountryId,
   currentTurn: number,
-  opts?: { enabled?: boolean; climatePressure?: number }
+  opts?: {
+    enabled?: boolean;
+    climatePressure?: number;
+    /**
+     * Budget for concurrent crises. When given, a disaster the budget refuses
+     * stays due and lands on the first turn it fits.
+     */
+    director?: SpawnDirector;
+  }
 ): Promise<void> {
   if (opts?.enabled !== true) return;
 
   const pressure = Math.max(0, Math.min(1, opts.climatePressure ?? 0));
 
-  const cgs = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: countryId });
+  const cgs = await countryGameStatesCollection(db).findOne({ _id: countryId });
 
   const baselineDue = shouldSpawn(
     cgs?.lastDisasterTurn as number | undefined,
@@ -157,7 +177,7 @@ export async function processAutoDisasterSpawn(
     return;
   }
 
-  const existing = await db.collection<Crisis>("crises").findOne({
+  const existing = await crisesCollection(db).findOne({
     autoSource: "disaster",
     countryIds: countryId,
     $or: [{ status: "active" }, { startTurn: currentTurn }],
@@ -176,21 +196,18 @@ export async function processAutoDisasterSpawn(
     }
     // An interrupted first attempt may have inserted the crisis but failed
     // before stamping cadence. Reconcile both writes from the stored event.
-    await db
-      .collection<CountryGameState>("countryGameStates")
-      .updateOne(
-        { _id: countryId },
-        { $max: { lastDisasterTurn: existing.startTurn } },
-        { upsert: true }
-      );
+    await countryGameStatesCollection(db).updateOne(
+      { _id: countryId },
+      { $max: { lastDisasterTurn: existing.startTurn } },
+      { upsert: true }
+    );
     return;
   }
 
   // Province/state/region-scale areas only. Constituencies are excluded: they
   // are sub-regional (e.g. single UK seats) and too small to host a
   // nation-scale natural disaster; "nation" is the country-level pseudo-region.
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId, regionType: { $nin: [null, "nation", "constituency"] } } as never)
     .toArray();
   if (regions.length === 0) return;
@@ -204,7 +221,7 @@ export async function processAutoDisasterSpawn(
   // ones. They carry no window today, so this is a no-op for the current
   // catalogue — but it means a future era-bound disaster (an industrial or
   // nuclear one, say) cannot be added here and silently escape the gate.
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   const currentYear = gs?.currentYear;
   const eligibleTemplates = disasterTemplatesForCountry(countryId).filter(({ template }) =>
     isTemplateAllowedInYear(template, currentYear)
@@ -225,8 +242,7 @@ export async function processAutoDisasterSpawn(
   const seed = currentTurn + staggerHash(countryId);
   const resilienceByRegion = new Map<string, number>();
   if (pressure > 0) {
-    const resilienceRows = await db
-      .collection<ResilienceRow>("stateMetrics")
+    const resilienceRows = await stateMetricsCollection<ResilienceRow>(db)
       .find(
         { _id: { $in: regions.map((region) => region._id) } },
         { projection: { _id: 1, "environment.climateResilience.value": 1 } }
@@ -239,6 +255,18 @@ export async function processAutoDisasterSpawn(
     }
   }
   const { region, key, template } = chooseCandidate(candidates, seed, pressure, resilienceByRegion);
+  if (
+    opts.director &&
+    !opts.director.allow({
+      key: `${key}:${region._id}`,
+      definitionId: legacyDefinitionId(key),
+      scope: "state",
+      countryIds: [countryId],
+      priority: SPAWN_PRIORITY.disaster,
+    })
+  ) {
+    return;
+  }
 
   const resolvedDuration = getTemplateDuration(template, "region");
   const durationTurns = floorCrisisDuration(
@@ -255,15 +283,27 @@ export async function processAutoDisasterSpawn(
 
   let fiscalCost = 0;
   if (WEATHER_DISASTER_KEYS.has(key)) {
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId }, { projection: { gdp: 1, gdpSmoothed: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { gdp: 1, gdpSmoothed: 1 } }
+    );
     const gdp = budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : budget?.gdp;
+    // Worlds with broader climate effects also shift uninsured loss onto the
+    // budget as insurers retreat from exposed regions.
+    const uninsured = climateProfileForStartingYear(gs?.startingYear).broaderEffects
+      ? uninsuredLossMultiplier(
+          pressure,
+          climateExposureFromTags(getClimateExposureTags(countryId, region._id))
+        )
+      : 1;
     if (typeof gdp === "number" && Number.isFinite(gdp) && gdp > 0)
       fiscalCost = Math.max(
         0,
         Math.round(
-          gdp * 0.0002 * climateLossMultiplier(pressure, resilienceByRegion.get(region._id) ?? 50)
+          gdp *
+            0.0002 *
+            climateLossMultiplier(pressure, resilienceByRegion.get(region._id) ?? 50) *
+            uninsured
         )
       );
   }
@@ -290,13 +330,23 @@ export async function processAutoDisasterSpawn(
     autoGenerated: true,
     autoSource: "disaster",
     templateKey: key,
+    ...((await isLiveWorldSwitchOn(db, "crisisV2StagesEnabled"))
+      ? {
+          v2: createCrisisInstance(legacyDefinitionFor(key), currentTurn, {
+            scope: "state",
+            evaluateOnStart: true,
+          }),
+        }
+      : {}),
     ...(fiscalCost > 0 ? { autoDisasterFiscalCost: fiscalCost } : {}),
   };
 
-  await db.collection<Crisis>("crises").insertOne(crisis);
+  await crisesCollection(db).insertOne(crisis);
   await chargeDisasterFiscalLoss(db, crisis);
   await stampCooldown(db, cooldowns, key, countryId, currentTurn);
-  await db
-    .collection<CountryGameState>("countryGameStates")
-    .updateOne({ _id: countryId }, { $set: { lastDisasterTurn: currentTurn } }, { upsert: true });
+  await countryGameStatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: { lastDisasterTurn: currentTurn } },
+    { upsert: true }
+  );
 }

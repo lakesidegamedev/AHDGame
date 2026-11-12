@@ -6,7 +6,6 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
   Corporation,
   ExchangeRate,
-  FederalBudget,
   GameState,
   LegislationType,
   ShareListing,
@@ -34,6 +33,16 @@ import {
 } from "@/lib/corporations/rules/legacyHoldingBasis";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 export const STOCK_HOLDING_MIGRATION_ID = "2026-10-16-stock-holding-tax-tiers";
 function ownerKey(
@@ -76,23 +85,14 @@ function historyEvents(rows: readonly ShareTradeHistory[], owner: string): Legac
 }
 
 async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  if (
-    await db
-      .collection<ShareOrder>("shareOrders")
-      .countDocuments({ activeShareFillKey: { $exists: true } })
-  )
+  if (await shareOrdersCollection(db).countDocuments({ activeShareFillKey: { $exists: true } }))
     throw new Error("Recover pending share fills before migrating stock holdings");
-  if (
-    await db
-      .collection<ShareListing>("shareListings")
-      .countDocuments({ activeShareFillKey: { $exists: true } })
-  )
+  if (await shareListingsCollection(db).countDocuments({ activeShareFillKey: { $exists: true } }))
     throw new Error("Recover pending listing fills before migrating stock holdings");
   const [state, corps, orders, listings, history, exchange, national, regional, types, policies] =
     await Promise.all([
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      db
-        .collection<Corporation>("corporations")
+      gameStateCollection(db).findOne({ _id: "current" }),
+      corporationsCollection(db)
         .find(
           {},
           {
@@ -107,8 +107,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
           }
         )
         .toArray(),
-      db
-        .collection<ShareOrder>("shareOrders")
+      shareOrdersCollection(db)
         .find({
           type: "sell",
           status: "open",
@@ -117,34 +116,25 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
           placerFundId: { $exists: false },
         })
         .toArray(),
-      db
-        .collection<ShareListing>("shareListings")
+      shareListingsCollection(db)
         .find({ status: "open", sellerCorporationId: { $exists: false } })
         .toArray(),
-      db
-        .collection<ShareTradeHistory>("shareTradeHistory")
-        .find({})
-        .sort({ turn: 1, createdAt: 1, _id: 1 })
-        .toArray(),
-      db
-        .collection<ExchangeRate>("exchangeRates")
+      shareTradeHistoryCollection(db).find({}).sort({ turn: 1, createdAt: 1, _id: 1 }).toArray(),
+      exchangeRatesCollection(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find({}, { projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .find({}, { projection: { countryId: 1, taxRates: 1 } })
         .toArray(),
-      db
-        .collection<LegislationType>("legislationTypes")
+      legislationTypesCollection(db)
         .find({
           $or: [{ "taxRateChange.taxType": "incomeTax" }, { "taxSlider.taxType": "incomeTax" }],
         })
         .toArray(),
-      db.collection<StatePolicy>("statePolicies").find({}).toArray(),
+      statePoliciesCollection(db).find({}).toArray(),
     ]);
   if (!state) throw new Error("Stock holding migration requires a world");
   const turn = state.currentTurn;
@@ -354,7 +344,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
           " capital-gains provisions. Activation occurs only after all writes succeed.",
       ],
     };
-  if (quoteOps.length) await db.collection<Corporation>("corporations").bulkWrite(quoteOps);
+  if (quoteOps.length) await corporationsCollection(db).bulkWrite(quoteOps);
   for (const [collection, ops] of [
     ["corporations", corpOps],
     ["shareOrders", orderOps],
@@ -390,7 +380,7 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
       },
     ]);
   if (clones.length)
-    await db.collection<LegislationType>("legislationTypes").bulkWrite(
+    await legislationTypesCollection(db).bulkWrite(
       clones.map((type) => ({
         updateOne: { filter: { _id: type._id }, update: { $setOnInsert: type }, upsert: true },
       }))
@@ -428,8 +418,8 @@ async function migrate(db: Db, ctx: MigrationContext): Promise<MigrationResult> 
       });
     }
   }
-  if (policyOps.length) await db.collection<StatePolicy>("statePolicies").bulkWrite(policyOps);
-  const activation = await db.collection<GameState>("gameState").updateOne(
+  if (policyOps.length) await statePoliciesCollection(db).bulkWrite(policyOps);
+  const activation = await gameStateCollection(db).updateOne(
     {
       _id: "current",
       currentTurn: turn,
@@ -455,7 +445,7 @@ export const migration: Migration = {
   async execute(db, ctx) {
     if (ctx.dryRun) return migrate(db, ctx);
     const acquiredAt = new Date();
-    const lock = await db.collection<GameState>("gameState").updateOne(
+    const lock = await gameStateCollection(db).updateOne(
       { _id: "current", isActive: false, isProcessing: { $ne: true } },
       {
         $set: {
@@ -471,8 +461,7 @@ export const migration: Migration = {
         "Pause the world and finish the active turn before applying stock holding taxes"
       );
     const timer = setInterval(() => {
-      void db
-        .collection<GameState>("gameState")
+      void gameStateCollection(db)
         .updateOne(
           { _id: "current", processingKind: "stockTaxMigration", processingStartedAt: acquiredAt },
           { $set: { processingHeartbeatAt: new Date() } }
@@ -486,7 +475,7 @@ export const migration: Migration = {
       return result;
     } finally {
       clearInterval(timer);
-      await db.collection<GameState>("gameState").updateOne(
+      await gameStateCollection(db).updateOne(
         { _id: "current", processingKind: "stockTaxMigration", processingStartedAt: acquiredAt },
         {
           $set: {

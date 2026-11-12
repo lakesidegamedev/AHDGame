@@ -6,8 +6,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { policyShiftSchema } from "@/lib/api/schemas/settings";
-import type { Character } from "@/lib/db/types";
 import { resolvePolicyShiftPayment } from "@/lib/positionUpdateVouchers/rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/settings/policy — Shifts the authenticated character's economic or social policy position by one step
 // Auth: requireAuthWithCharacter
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
           },
         };
 
-    const updatedCharacter = await db.collection<Character>("characters").findOneAndUpdate(
+    const updatedCharacter = await charactersCollection(db).findOneAndUpdate(
       { _id: user.character._id, ...paymentFilter, ...boundFilter },
       [
         {
@@ -76,12 +76,10 @@ export async function POST(request: Request) {
     );
 
     if (!updatedCharacter) {
-      const freshCharacter = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: user.character._id },
-          { projection: { actions: 1, policies: 1, positionUpdateVouchers: 1 } }
-        );
+      const freshCharacter = await charactersCollection(db).findOne(
+        { _id: user.character._id },
+        { projection: { actions: 1, policies: 1, positionUpdateVouchers: 1 } }
+      );
       const currentPolicy = freshCharacter?.policies?.[axisKey] ?? user.character.policies[axisKey];
       if (direction > 0 ? currentPolicy >= 5 : currentPolicy <= -5) {
         return errorResponse(400, "Policy cannot go beyond -5 or 5.");

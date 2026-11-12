@@ -80,7 +80,7 @@ describe("unknown persisted sector types", () => {
     const standard = SECTOR_STRATEGIES.media.find((s) => s.id === "standard");
     expect(getStrategy("media", "removed_strategy")).toBe(standard);
     // Several catalogs prepend future recipes, so index 0 can be a locked
-    // recipe. The fallback must never be positional (#4244).
+    // recipe. The fallback must never be positional.
     expect(SECTOR_STRATEGIES.media[0]?.id).not.toBe("standard");
   });
 

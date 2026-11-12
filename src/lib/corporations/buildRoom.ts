@@ -24,6 +24,9 @@ import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentS
 import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
 import { loadFundedBuildDemand } from "./loadFundedBuildDemand";
 import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 type Balance = { supply: number; demand: number };
 
@@ -47,8 +50,7 @@ export interface BuildRoomContext {
 export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
   const [reachableBooks, priceDocs, funded] = await Promise.all([
     loadReachableBooks(db),
-    db
-      .collection<CommodityPrice>("commodityPrices")
+    commodityPricesCollection(db)
       .find(
         {},
         {
@@ -196,8 +198,7 @@ async function loadBuildingSectors(
 ): Promise<{ countryId: string; sector: LaneIdentity & Pick<CorporateSector, "buildQueue"> }[]> {
   const uniqueCountries = [...new Set(countryIds)];
   if (uniqueCountries.length === 0) return [];
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: { $in: uniqueCountries as State["countryId"][] } },
       { projection: { _id: 1, countryId: 1 } }
@@ -205,8 +206,7 @@ async function loadBuildingSectors(
     .toArray();
   const countryByState = new Map(states.map((s) => [s._id, s.countryId as string]));
   if (countryByState.size === 0) return [];
-  const building = await db
-    .collection<CorporateSector>("corporateSectors")
+  const building = await corporateSectorsCollection(db)
     .find(
       {
         stateId: { $in: [...countryByState.keys()] },

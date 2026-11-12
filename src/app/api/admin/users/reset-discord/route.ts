@@ -11,6 +11,8 @@ import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/aut
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
 import { z } from "zod";
 import type { User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const resetDiscordSchema = z.object({
   userId: schemas.objectId,
@@ -35,11 +37,11 @@ export const POST = withNoStore(async (request: Request) => {
     const objectId = new ObjectId(userId);
 
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
+    const usersCollectionHandle = usersCollection(db);
 
     // Fresh target read. Ban state is intentionally not part of any filter:
     // a banned target stays repairable, as with the admin password reset.
-    const targetUser = await usersCollection.findOne({ _id: objectId });
+    const targetUser = await usersCollectionHandle.findOne({ _id: objectId });
     if (!targetUser) {
       return errorResponse(404, "User not found");
     }
@@ -87,7 +89,7 @@ export const POST = withNoStore(async (request: Request) => {
 
     // Discord ids carry a nonempty unique index. A second account holding this
     // id anyway is an invariant violation: fail closed, never merge or bulk-fix.
-    const duplicate = await usersCollection.findOne(
+    const duplicate = await usersCollectionHandle.findOne(
       { discordId, _id: { $ne: objectId } },
       { projection: { _id: 1 } }
     );
@@ -105,7 +107,7 @@ export const POST = withNoStore(async (request: Request) => {
     // fence arrived concurrently. A lost race surfaces as matchedCount 0.
     let updated;
     try {
-      updated = await usersCollection.updateOne(
+      updated = await usersCollectionHandle.updateOne(
         {
           _id: objectId,
           password: targetUser.password ?? null,
@@ -150,7 +152,7 @@ export const POST = withNoStore(async (request: Request) => {
     // committed, so they must not convert success into a retryable failure.
     let characterName: string | undefined;
     try {
-      const character = await db.collection("characters").findOne({ userId: objectId });
+      const character = await charactersCollection(db).findOne({ userId: objectId });
       characterName = character?.name;
     } catch {
       characterName = undefined;

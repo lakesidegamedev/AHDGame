@@ -1,10 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { createMockDb } from "@/lib/test-utils/mockDb";
 import {
   loadCampaignPriceLevel,
   anchorToLocal,
-  loadCampaignFxRate,
   getCampaignCurrency,
   campaignLocalRate,
   campaignAnchorToLocal,
@@ -68,32 +67,6 @@ describe("campaign frozen-basis euro handling (#2291)", () => {
     expect(campaignAnchorToLocal(100_000, "FR", euroWorldRates, "1991-default")).toBe(
       Math.round(100_000 * 4.2)
     );
-  });
-});
-
-describe("loadCampaignFxRate", () => {
-  let db: MockDb;
-  beforeEach(() => {
-    vi.clearAllMocks();
-    db = createMockDb();
-    db.collection("exchangeRates");
-  });
-
-  it("returns the stored rate and currency for the country", async () => {
-    db.collectionMocks.exchangeRates!.findOne.mockResolvedValue({
-      currencyCode: "USD",
-      rate: 0.94,
-    });
-    const r = await loadCampaignFxRate(db as unknown as Db, "US");
-    expect(r.currencyCode).toBe("USD");
-    expect(r.rate).toBe(0.94);
-  });
-
-  it("falls back to rate 1 when no rate doc exists", async () => {
-    db.collectionMocks.exchangeRates!.findOne.mockResolvedValue(null);
-    const r = await loadCampaignFxRate(db as unknown as Db, "US");
-    expect(r.rate).toBe(1);
-    expect(r.currencyCode).toBe("USD");
   });
 });
 

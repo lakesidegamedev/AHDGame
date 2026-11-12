@@ -16,21 +16,23 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function applyExchangeRateDepreciation(
   db: Db,
   countryId: CountryId,
   percent: number
 ): Promise<{ ok: boolean; previousRate?: number; newRate?: number }> {
-  const row = await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: countryId });
+  const row = await exchangeRatesCollection(db).findOne({ _id: countryId });
   if (!row) return { ok: false };
 
   const previousRate = row.rate;
   const newRate = previousRate * (1 + percent);
 
-  await db
-    .collection<ExchangeRate>("exchangeRates")
-    .updateOne({ _id: countryId }, { $set: { rate: newRate, updatedAt: new Date() } });
+  await exchangeRatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: { rate: newRate, updatedAt: new Date() } }
+  );
 
   return { ok: true, previousRate, newRate };
 }

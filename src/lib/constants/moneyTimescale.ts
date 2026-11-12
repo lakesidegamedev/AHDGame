@@ -3,22 +3,15 @@ import { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corpo
 /**
  * The one place that converts a stored money figure into a display period.
  *
- * Every money figure the economy persists (sector revenue, realized revenue,
- * maintenance, wages, growth cost, profit, corp income) is a **daily** rate on
- * the 24-turn financial day. Surfaces used to each do their own arithmetic:
- * the sectors tab offered `/hr` (÷24) and `/yr` (×2), the sector detail page
- * hard-coded `/day` with a per-hour column, and the corporation financials tab
- * repeated the ÷24 and ×2 inline. Same stored number, three different units,
- * no shared label — which is what made the numbers unreadable across screens
- * (player report, #gameplay-advisors, 2026-07-30).
+ * Every persisted money figure (sector revenue, realized revenue, maintenance,
+ * wages, growth cost, profit, corp income) is a **daily** rate on the 24-turn
+ * financial day. `daily` is canonical because it is the storage basis; `turn`
+ * and `annual` are views on it.
  *
- * `daily` is canonical because it is the basis the values are stored in, so it
- * needs no conversion and cannot drift. The other two are views on it.
- *
- * The annual factor is deliberately 2, not 365: a game year is
- * GROWTH_RATE_TURNS_PER_YEAR (48) turns and a financial day is TURNS_PER_DAY
- * (24) turns, so one game year is two financial days. Deriving it from the two
- * constants keeps it correct if either clock ever moves.
+ * The annual factor is 2, not 365: a game year is GROWTH_RATE_TURNS_PER_YEAR
+ * (48) turns and a financial day is TURNS_PER_DAY (24), so one year is two
+ * financial days. Deriving it from both constants stays correct if a clock
+ * moves.
  */
 export type MoneyPeriod = "turn" | "daily" | "annual";
 

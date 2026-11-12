@@ -8,22 +8,15 @@
 /**
  * US party registration + organization seed for the 2007-default preset.
  *
- * Anchored to the 2004–2006 state registration landscape and the 2008
- * presidential result (the era's election oracle). Key 2007-era characteristics
  * vs the 2023 seed:
- *
- *   - Independents/unaffiliated run LOWER (~13–15 pts vs ~16–22 in 2023) — the
- *     big de-alignment surge is mostly post-2008. Formal party registration is
- *     correspondingly higher.
- *   - The "ancestral Democrat" South: WV, KY, LA, OK (and registration-less AR)
- *     still carried majority *Democratic registration* in 2007 even as they
- *     voted Republican federally — encoded as DEM reg > REP reg but a Republican
- *     org/lean edge (override states below).
- *   - VA, NC, FL, OH, IN are competitive/leanR here (the 2008 Obama coalition
- *     flipped several only that cycle); CO/NV/NH still competitive.
+ *   - Independents/unaffiliated run LOWER (~13-15 pts); the big de-alignment
+ *     surge is mostly post-2008, so formal party registration is higher.
+ *   - The "ancestral Democrat" South: WV, KY, LA, OK (and registration-less
+ *     AR) still carried majority Democratic registration in 2007 even as
+ *     they voted Republican federally (override states below).
+ *   - VA, NC, FL, OH, IN are competitive/leanR here; CO/NV/NH competitive.
  *
  * US-only: non-US countries fall back to their 2019 lanes on a 2007 reset.
- * Curated from state SoS 2006–07 registration data + 2008 election results.
  */
 
 import type { StateRegistrationSeed } from "@/lib/seeds/registration/registrationLanes";

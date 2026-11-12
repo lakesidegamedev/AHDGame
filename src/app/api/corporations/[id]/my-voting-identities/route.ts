@@ -5,7 +5,9 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -73,8 +75,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // 2. Corporation identities — corps where this user is CEO and that hold shares
-    const managedCorps = await db
-      .collection<Corporation>("corporations")
+    const managedCorps = await corporationsCollection(db)
       .find(
         { ceoId: voterCharacter._id, ceoType: { $ne: "npp" } },
         { projection: { _id: 1, name: 1, sequentialId: 1 } }
@@ -97,9 +98,10 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // 3. If voteId provided, mark which identities have already voted
     if (voteId && ObjectId.isValid(voteId) && identities.length > 0) {
-      const vote = await db
-        .collection("corporationVotes")
-        .findOne({ _id: new ObjectId(voteId), corporationId: corporation._id });
+      const vote = await corporationVotesCollection<Document>(db).findOne({
+        _id: new ObjectId(voteId),
+        corporationId: corporation._id,
+      });
 
       if (vote) {
         const votedCharIds = new Set(

@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { CommodityPriceHistory } from "@/lib/db/types/commodityPriceHistory";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 /** Headline goods most players trade or build with, in display order. */
 export const BOARD_COMMODITIES: readonly CommodityType[] = [
@@ -39,8 +41,7 @@ const SERIES_TURNS = 12;
  * turn index) with a turn floor, the same history the commodity pages chart.
  */
 export async function loadCommodityBoard(db: Db): Promise<CommodityBoardWidgetData | null> {
-  const prices = await db
-    .collection<CommodityPrice>("commodityPrices")
+  const prices = await commodityPricesCollection(db)
     .find(
       { commodity: { $in: [...BOARD_COMMODITIES] } },
       { projection: { _id: 0, commodity: 1, globalPrice: 1, turn: 1 } }
@@ -48,8 +49,7 @@ export async function loadCommodityBoard(db: Db): Promise<CommodityBoardWidgetDa
     .toArray();
   if (prices.length === 0) return null;
   const turn = Math.max(...prices.map((row) => row.turn ?? 0));
-  const history = await db
-    .collection<CommodityPriceHistory>("commodityPriceHistory")
+  const history = await commodityPriceHistoryCollection(db)
     .find(
       {
         commodity: { $in: prices.map((row) => row.commodity) },

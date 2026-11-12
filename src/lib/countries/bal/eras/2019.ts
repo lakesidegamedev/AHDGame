@@ -3,18 +3,11 @@ import type { CountryEraOverride } from "../../contract";
 /**
  * BAL, 2019.
  *
- * ⚠ GENERATED from `__snapshots__/bal.pre-move.json`. Regenerate with:
+ * ⚠ GENERATED, edit via the generator script. DIFFERENCES ONLY; unnamed fields
+ * come from base modules.
  *
- *     npx tsx scripts/countries/gen-country-eras.ts BAL --force
- *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
- *
- * No config override: this era uses BAL's base configuration. The field
- * is ABSENT rather than an empty object, because `getCountryConfig` merges
- * shallowly and `config: {}` reads as an override that supplies nothing.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
+ * No `config` field: absent rather than `{}`, because `getCountryConfig`
+ * merges shallowly and `config: {}` reads as a no-op override.
  */
 export const BAL_2019: CountryEraOverride = {
   preset: "2019-default",

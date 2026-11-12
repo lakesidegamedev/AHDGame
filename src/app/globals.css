@@ -1745,3 +1745,11 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
     padding-bottom: 0;
   }
 }
+
+/* The cookie banner ships in the first paint so a new visitor's consent choice
+   is never the Largest Contentful Paint element (see CookieConsentBanner). A
+   player who already decided is hidden by the attribute the inline script in
+   the root layout sets before paint. */
+html[data-cookie-consent] [data-cookie-consent-banner] {
+  display: none;
+}

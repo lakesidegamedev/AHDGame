@@ -14,6 +14,8 @@ import {
   russianDumaConvocationTermEnd,
   validateRussianDumaConvocationClock,
 } from "./rules/dumaConvocation";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
+import { russianDumaConvocationsCollection } from "@/lib/db/repositories/russianDumaConvocations";
 
 export const RUSSIAN_DUMA_CONVOCATIONS_COLLECTION = "russianDumaConvocations";
 export interface RussianDumaConvocationRecord {
@@ -134,9 +136,10 @@ export async function loadCurrentRussianDumaClock(input: {
     return null;
   const current = country.ruDumaCurrentConvocationCohortId;
   if (current) {
-    const row = await db
-      .collection<RussianDumaConvocationRecord>(RUSSIAN_DUMA_CONVOCATIONS_COLLECTION)
-      .findOne({ _id: current.toHexString() }, { session });
+    const row = await russianDumaConvocationsCollection<RussianDumaConvocationRecord>(db).findOne(
+      { _id: current.toHexString() },
+      { session }
+    );
     if (!row) throw new Error("Current Duma lacks its seating journal");
     validateRecord(row, country, turn);
     if (
@@ -147,21 +150,21 @@ export async function loadCurrentRussianDumaClock(input: {
       !row.resultId
     )
       throw new Error("Current Duma has no actual certified seating");
-    const seating = await db
-      .collection<RussianAssemblySeatingRecord>("russianAssemblySeatings")
-      .findOne(
-        { _id: `${current.toHexString()}:duma` },
-        {
-          session,
-          projection: {
-            countryId: 1,
-            preset: 1,
-            dumaRootCohortId: 1,
-            seatedOnTurn: 1,
-            dumaTermEndTurn: 1,
-          },
-        }
-      );
+    const seating = await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(
+      db
+    ).findOne(
+      { _id: `${current.toHexString()}:duma` },
+      {
+        session,
+        projection: {
+          countryId: 1,
+          preset: 1,
+          dumaRootCohortId: 1,
+          seatedOnTurn: 1,
+          dumaTermEndTurn: 1,
+        },
+      }
+    );
     if (
       !seating ||
       seating.countryId !== "RU" ||
@@ -178,24 +181,22 @@ export async function loadCurrentRussianDumaClock(input: {
       termEndTurn: row.termEndTurn,
     });
   }
-  const first = await db
-    .collection<RussianAssemblySeatingRecord>("russianAssemblySeatings")
-    .findOne(
-      {
-        _id: `${country.ruFirstDumaElectionCohortId.toHexString()}:${country.ruFirstCouncilElectionCohortId.toHexString()}`,
+  const first = await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db).findOne(
+    {
+      _id: `${country.ruFirstDumaElectionCohortId.toHexString()}:${country.ruFirstCouncilElectionCohortId.toHexString()}`,
+    },
+    {
+      session,
+      projection: {
+        countryId: 1,
+        preset: 1,
+        dumaRootCohortId: 1,
+        councilRootCohortId: 1,
+        seatedOnTurn: 1,
+        dumaTermEndTurn: 1,
       },
-      {
-        session,
-        projection: {
-          countryId: 1,
-          preset: 1,
-          dumaRootCohortId: 1,
-          councilRootCohortId: 1,
-          seatedOnTurn: 1,
-          dumaTermEndTurn: 1,
-        },
-      }
-    );
+    }
+  );
   if (
     !first ||
     first.countryId !== "RU" ||
@@ -232,9 +233,10 @@ export async function loadRussianDumaAuthority(input: {
   if (!country.ruDumaConvocationCohortId) return { number: 1, record: null };
   if (!country.ruFirstDumaElectionCohortId || !country.ruFirstCouncilElectionCohortId)
     throw new Error("Ordinary Duma cannot replace missing first Assembly roots");
-  const record = await db
-    .collection<RussianDumaConvocationRecord>(RUSSIAN_DUMA_CONVOCATIONS_COLLECTION)
-    .findOne({ _id: root.toHexString() }, { session });
+  const record = await russianDumaConvocationsCollection<RussianDumaConvocationRecord>(db).findOne(
+    { _id: root.toHexString() },
+    { session }
+  );
   if (!record) throw new Error("Ordinary Duma campaign lacks its immutable journal");
   validateRecord(record, country, turn);
   if (record.electoralMandate) {

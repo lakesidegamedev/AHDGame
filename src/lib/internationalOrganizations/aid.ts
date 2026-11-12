@@ -11,7 +11,6 @@ import type { Db } from "mongodb";
 import { type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { InternationalOrganizationId } from "@/lib/constants/internationalOrganizations";
-import type { FederalBudget } from "@/lib/db/types";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import {
   convertLocal,
@@ -19,6 +18,9 @@ import {
   localToUsd,
   resolveOrgFundCurrencyCountry,
 } from "./organizationFund";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Aid packages disburse from the organization's pooled fund (capitalized by
@@ -55,19 +57,16 @@ async function applyOrganizationAidBoost(
 ): Promise<void> {
   const boost = aidGrowthBoost(amountUsd);
   if (boost <= 0) return;
-  const states = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const states = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find({ countryId: recipient })
     .project<{ _id: string }>({ _id: 1 })
     .toArray();
   if (states.length === 0) return;
   // SP5: economic.* lives on macroMetrics.
-  await db
-    .collection<{ _id: string }>("macroMetrics")
-    .updateMany(
-      { _id: { $in: states.map((s) => s._id) } },
-      { $inc: { [AID_BOOST_METRIC_PATH]: boost }, $set: { lastUpdated: new Date() } }
-    );
+  await macroMetricsCollection<{ _id: string }>(db).updateMany(
+    { _id: { $in: states.map((s) => s._id) } },
+    { $inc: { [AID_BOOST_METRIC_PATH]: boost }, $set: { lastUpdated: new Date() } }
+  );
 }
 
 /**
@@ -145,7 +144,7 @@ export async function payOrganizationAid(
     // Aid credits cash, not income: revenue/spending/surplus are untouched, and
     // `debt.principal` belongs to the bond ledger (see bonds/sovereignPrincipal.ts),
     // so a cash-only $inc correctly leaves it alone (#1975).
-    const credit = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const credit = await federalBudgetCollection(db).updateOne(
       { countryId: recipient },
       {
         $inc: { treasuryBalance: recipientLocal },

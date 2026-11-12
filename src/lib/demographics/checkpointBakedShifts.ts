@@ -1,68 +1,20 @@
 /**
  * Checkpoint de-duplication for the interpolated era baseline.
  *
- * THE PROBLEM
- * -----------
- * The era anchor tables (`DEMOGRAPHIC_POSITIONS` / `STATE_POSITION_OVERRIDES`
- * in `src/lib/seeds/demographicCategories.ts`) are authored from real election
- * results, so a later anchor already contains the history that the era
- * checkpoints in `eraCheckpoints.ts` model as a live pull. Alabama's
- * `race.white` economic lean is authored at −3.0 in 1953 and +2.5 in 1979 —
- * that +5.5 IS the Southern realignment. `SOUTHERN_REALIGNMENT_CHECKPOINT`
- * separately applies a durable +3.5 to the same (dim, bucket, state, axis)
- * through `durableRealignment.ts` → `layer1PositionOverrides`.
+ * Era anchor tables are authored from real results, so a later anchor
+ * already contains the movement checkpoints model as a live pull. Adding a
+ * checkpoint overlay on top would count the same history twice and pin
+ * states at the axis edge. This module subtracts from each anchor exactly
+ * what checkpoints had delivered by that anchor's year, so
+ * interpolated baseline + durable overlay == authored anchor.
  *
- * Interpolating the anchors as a live baseline therefore counts the same
- * history twice: a 1953-seeded world reaching 1979 would land on +2.5
- * (baseline) + 3.5 (overlay) = +6.0, clamped to the +5 axis edge, pinning the
- * state at the extreme of the scale.
+ * Subtraction is sound only where the checkpoint is guaranteed to run:
+ * every checkpoint always fires (fallback start turn), and checkpoints
+ * only run in 1953-seeded worlds. CHECKPOINT_SEED_YEAR is the shared gate
+ * for both; keep it in sync with eraCheckpointTurn.
  *
- * THE FIX
- * -------
- * Subtract from each anchor exactly what the checkpoints had delivered by that
- * anchor's year, so that
- *
- *     interpolated baseline  +  durable overlay  ==  the authored anchor
- *
- * at every anchor, and moves smoothly between them. The checkpoint keeps
- * owning the movement (gravity), while the anchors keep describing history
- * (seed truth), and neither double-counts the other.
- *
- * WHY THIS IS SAFE TO DO UNCONDITIONALLY (given the 1953 gate)
- * -----------------------------------------------------------
- * Subtracting a shift that never gets re-added would silently move the
- * electorate the wrong way, so this is only sound where the checkpoint is
- * GUARANTEED to run. Two facts make that true:
- *
- *  1. Every checkpoint always fires. `resolveCheckpointStartTurn` returns
- *     `fallbackStartTurn` when the trigger case is missing, undecided, or
- *     diverged — a differently-composed Court delays history, it never
- *     cancels it. Brown v. Board is additionally `historicalOutcomeLocked`
- *     (`src/lib/scotus/divergence.ts`), so it always affirms at its real date.
- *  2. Checkpoints only run in 1953-seeded worlds —
- *     `eraCheckpointTurn.ts` returns early unless `startingYear === 1953`.
- *
- * So this module applies the subtraction under that exact same gate and no
- * other. A world seeded in any later era never runs the checkpoints and
- * therefore uses its authored anchors untouched. `CHECKPOINT_SEED_YEAR` below
- * is deliberately the single shared constant behind both gates: if the
- * checkpoint processor's gate ever widens, this must widen with it or the two
- * halves will disagree.
- *
- * PACING vs HISTORY
- * -----------------
- * The subtraction uses `EraCheckpoint.historicalWindow` (real-world years),
- * NOT `fallbackStartTurn`/`durationTurns` (in-world turns). The anchors were
- * authored against history, so the amount baked into the 1979 table is the
- * amount history had delivered by 1979 — independent of whether a particular
- * world's docket paced the pull early or late. Using in-world turns here would
- * make a pure function of the year depend on world state.
- *
- * In practice every registered checkpoint's window closes by 1975, so at the
- * only anchors that exist today the subtraction is all-or-nothing: zero at
- * 1953, the full `totalShift` at 1979 and later. The fractional path is
- * implemented anyway so that adding an anchor inside a window (or a checkpoint
- * spanning one) stays correct without a rewrite.
+ * Uses EraCheckpoint.historicalWindow (real years), never in-world turns,
+ * so a pure function of year does not depend on world state.
  */
 import { ERA_CHECKPOINTS, type EraCheckpoint } from "./eraCheckpoints";
 

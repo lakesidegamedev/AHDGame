@@ -240,21 +240,14 @@ export interface StrengthVM {
 /**
  * Why this viewer may not contribute campaign strength, or null when they may.
  *
- * Only the presidential engine reads `campaignStrength`; the down-ballot
- * engines ignore it and the server rejects those contributions outright, so
- * the desk says so rather than quoting a price for nothing. A campaign whose
- * election row did not resolve falls in here too: the server cannot check the
- * race, so it refuses, and the desk must not promise otherwise.
+ * Only the presidential engine reads `campaignStrength`; the server rejects
+ * down-ballot contributions outright.
  *
- * Suspension and the cross-border rule used to be carried for free by the
- * `canAct` gate this control no longer sits behind: `canManage` and
- * `canSurrogate` both require `!campaignSuspended`, and both are only ever
- * true for someone in the race's own country. Opening the control to every
- * player means stating those two rules here instead of inheriting them.
+ * Suspension and the cross-border rule are enforced here rather than inherited
+ * from `canAct`: the desk is open to every player, so these rules must be
+ * stated explicitly.
  *
- * Affordability is NOT decided here. It stays in `canContribute`, which
- * disables the button while leaving the price on screen, so a player who is
- * merely short of funds still sees what they are short of.
+ * Affordability is decided in `canContribute`, which leaves the price on screen.
  */
 function campaignStrengthBlockedReason(
   campaign: CampaignData,

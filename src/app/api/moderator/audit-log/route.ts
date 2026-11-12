@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError } from "@/lib/api/errors";
 import type { ModAuditLogEntry } from "@/lib/db/types";
+import { modAuditLogCollection } from "@/lib/db/repositories/modAuditLog";
 
 // GET /api/moderator/audit-log — list mod action audit log.
 // Moderators see only their own actions; admins see all.
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10)));
 
     const db = await getDb();
-    const auditLogs = db.collection<ModAuditLogEntry>("modAuditLog");
+    const auditLogs = modAuditLogCollection(db);
 
     // Build query filter
     const filter: Record<string, unknown> = {};

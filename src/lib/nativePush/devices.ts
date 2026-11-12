@@ -1,10 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
 import type { PushDevice, PushProvider } from "./types";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
+import { nativePushDevicesCollection } from "@/lib/db/repositories/nativePushDevices";
 
 const indexes = new WeakMap<Db, Promise<unknown>>();
 export async function pushDevices(db: Db) {
-  const collection = db.collection<PushDevice>("nativePushDevices");
+  const collection = nativePushDevicesCollection<PushDevice>(db);
   let ready = indexes.get(db);
   if (!ready) {
     ready = collection
@@ -14,7 +17,9 @@ export async function pushDevices(db: Db) {
         { key: { nextAttemptAt: 1, leaseUntil: 1 } },
         { key: { userId: 1 } },
       ])
-      .then(() => db.collection("notifications").createIndex({ userId: 1, createdAt: 1, _id: 1 }))
+      .then(() =>
+        notificationsCollection<Document>(db).createIndex({ userId: 1, createdAt: 1, _id: 1 })
+      )
       .catch((error: unknown) => {
         indexes.delete(db);
         throw error;

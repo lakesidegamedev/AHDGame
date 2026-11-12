@@ -1,6 +1,5 @@
 /**
- * Applies a reviewed producer opening plan to the live world (funded-market
- * cutover, phase B slice S1).
+ * Applies a reviewed producer opening plan to the live world.
  *
  * The plan is built by `scripts/migrations/captureProducerOpening.ts` from the
  * live world at an idle turn boundary. This writes exactly that plan:
@@ -11,12 +10,17 @@
  * - stamping `gameState.producerOpening` last, after every sector and company
  *   is verified. The funded path refuses to start without that marker.
  *
- * It never creates cash or input stock (the plan guarantees both are zero) and
- * refuses any unresolved modeled-loss carry.
+ * It never creates cash or input stock and refuses any unresolved modeled-loss
+ * carry.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { ProducerOpeningPlan } from "./migrationRules";
 import type { ProducerOpeningMarker } from "./liveMode";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { producerOpeningsCollection } from "@/lib/db/repositories/producerOpenings";
 
 export const PRODUCER_OPENINGS = "producerOpenings";
 
@@ -46,11 +50,11 @@ export async function applyProducerOpening(
     turn: plan.completedTurn,
     digest: input.planDigest,
   };
-  const state = await db
-    .collection<{ _id: string; producerOpening?: ProducerOpeningMarker; worldEpochId?: string }>(
-      "gameState"
-    )
-    .findOne({ _id: "current" }, { projection: { producerOpening: 1, worldEpochId: 1 } });
+  const state = await gameStateCollection<{
+    _id: string;
+    producerOpening?: ProducerOpeningMarker;
+    worldEpochId?: string;
+  }>(db).findOne({ _id: "current" }, { projection: { producerOpening: 1, worldEpochId: 1 } });
   if (state?.worldEpochId !== plan.worldEpoch)
     throw new Error("Opening plan is for a different world");
   const existing = state?.producerOpening;
@@ -77,7 +81,7 @@ export async function applyProducerOpening(
     ],
   });
 
-  await db.collection(PRODUCER_OPENINGS).updateOne(
+  await producerOpeningsCollection<Document>(db).updateOne(
     { _id: input.planDigest as never },
     {
       $setOnInsert: {
@@ -95,7 +99,7 @@ export async function applyProducerOpening(
   );
 
   if (plan.sectors.length > 0) {
-    const result = await db.collection("corporateSectors").bulkWrite(
+    const result = await corporateSectorsCollection<Document>(db).bulkWrite(
       plan.sectors.map((sector) => {
         const quotes: Record<string, unknown> = {};
         for (const q of sector.quotes) if (!(q.commodity in quotes)) quotes[q.commodity] = q.policy;
@@ -132,7 +136,7 @@ export async function applyProducerOpening(
   }
 
   if (plan.accounts.length > 0) {
-    const result = await db.collection("corporations").bulkWrite(
+    const result = await corporationsCollection(db).bulkWrite(
       plan.accounts.map((account) => ({
         updateOne: {
           filter: { _id: oid(account.id), ...openOrSame("producerPayables") } as never,
@@ -151,27 +155,26 @@ export async function applyProducerOpening(
   // an approved non-cash opening adjustment (kept in producerOpenings above).
   const cleared = plan.nonCashOpeningAdjustments.map((a) => oid(a.accountId));
   if (cleared.length > 0)
-    await db.collection("corporations").updateMany({ _id: { $in: cleared } } as never, {
+    await corporationsCollection(db).updateMany({ _id: { $in: cleared } } as never, {
       $unset: { operatingCashArrearsByCurrency: "" },
     });
 
-  const opened = await db.collection("corporateSectors").countDocuments({
+  const opened = await corporateSectorsCollection<Document>(db).countDocuments({
     "producerInventory.worldEpoch": generation.worldEpoch,
     "producerInventory.turn": generation.turn,
   });
   if (opened !== plan.sectors.length)
     throw new Error(`Opening verified ${opened} of ${plan.sectors.length} sectors`);
 
-  const stamped = await db
-    .collection<{ _id: string }>("gameState")
-    .updateOne(
-      { _id: "current", worldEpochId: plan.worldEpoch, producerOpening: { $exists: false } },
-      { $set: { producerOpening: marker } }
-    );
+  const stamped = await gameStateCollection<{ _id: string }>(db).updateOne(
+    { _id: "current", worldEpochId: plan.worldEpoch, producerOpening: { $exists: false } },
+    { $set: { producerOpening: marker } }
+  );
   if (stamped.matchedCount !== 1) throw new Error("Opening marker could not be stamped");
-  await db
-    .collection(PRODUCER_OPENINGS)
-    .updateOne({ _id: input.planDigest as never }, { $set: { completedAt: new Date() } });
+  await producerOpeningsCollection<Document>(db).updateOne(
+    { _id: input.planDigest as never },
+    { $set: { completedAt: new Date() } }
+  );
   return {
     status: "applied",
     sectors: plan.sectors.length,

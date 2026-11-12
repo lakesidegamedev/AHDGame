@@ -18,8 +18,8 @@ import { createHash, randomBytes } from "crypto";
 import type { Db } from "mongodb";
 import { readGameState } from "./guards";
 import type { HealEnv, HealPlan, TouchedDocs } from "./types";
+import { healTokensCollection } from "@/lib/db/repositories/healTokens";
 
-const HEAL_TOKENS_COLLECTION = "healTokens";
 const TOKEN_TTL_MS = 10 * 60 * 1000;
 
 export interface HealToken {
@@ -108,10 +108,11 @@ export async function ensureTokenIndexes(db: Db): Promise<void> {
   // Mongo reaps consumed and abandoned tokens on its own; nothing reads a
   // token after the run that consumed it, and the healRuns marker keeps the
   // permanent record.
-  await db
-    .collection<HealToken>(HEAL_TOKENS_COLLECTION)
-    .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 3600 });
-  await db.collection<HealToken>(HEAL_TOKENS_COLLECTION).createIndex({ defectId: 1, env: 1 });
+  await healTokensCollection<HealToken>(db).createIndex(
+    { expiresAt: 1 },
+    { expireAfterSeconds: 3600 }
+  );
+  await healTokensCollection<HealToken>(db).createIndex({ defectId: 1, env: 1 });
 }
 
 export async function issueToken(
@@ -144,7 +145,7 @@ export async function issueToken(
     expiresAt: new Date(args.now.getTime() + TOKEN_TTL_MS),
     operator: args.operator,
   };
-  await db.collection<HealToken>(HEAL_TOKENS_COLLECTION).insertOne(token);
+  await healTokensCollection<HealToken>(db).insertOne(token);
   return token;
 }
 
@@ -165,9 +166,7 @@ export async function checkToken(
     now: Date;
   }
 ): Promise<TokenCheck> {
-  const token = await db
-    .collection<HealToken>(HEAL_TOKENS_COLLECTION)
-    .findOne({ _id: args.tokenId });
+  const token = await healTokensCollection<HealToken>(db).findOne({ _id: args.tokenId });
 
   if (!token) return { ok: false, reason: "unknown confirm token — run heal_plan first" };
   if (token.consumedAt) {
@@ -212,11 +211,9 @@ export async function consumeToken(
   runId: string,
   now: Date
 ): Promise<boolean> {
-  const res = await db
-    .collection<HealToken>(HEAL_TOKENS_COLLECTION)
-    .updateOne(
-      { _id: tokenId, consumedAt: { $exists: false } },
-      { $set: { consumedAt: now, consumedByRunId: runId } }
-    );
+  const res = await healTokensCollection<HealToken>(db).updateOne(
+    { _id: tokenId, consumedAt: { $exists: false } },
+    { $set: { consumedAt: now, consumedByRunId: runId } }
+  );
   return res.modifiedCount === 1;
 }

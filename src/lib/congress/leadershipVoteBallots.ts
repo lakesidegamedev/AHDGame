@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type BallotCollectionName =
   "speakerLeadershipBallots" | "houseLeadershipBallots" | "senateLeadershipBallots";
@@ -30,12 +31,10 @@ async function seatWeightForCharacter(
   voterCharacterId: ObjectId,
   officeType: "house" | "senate"
 ): Promise<number> {
-  const official = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(
-      { characterId: voterCharacterId, officeType, countryId: "US" },
-      { projection: { seatsHeld: 1 } }
-    );
+  const official = await electedOfficialsCollection(db).findOne(
+    { characterId: voterCharacterId, officeType, countryId: "US" },
+    { projection: { seatsHeld: 1 } }
+  );
   return official?.seatsHeld ?? 1;
 }
 

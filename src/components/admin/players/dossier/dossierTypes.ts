@@ -13,66 +13,27 @@
 
 import type { ActionAuditRecord } from "@/components/admin/forensics/types";
 import { currencySymbol } from "@/components/admin/forensics/types";
+import type {
+  DossierAltLinkRow,
+  DossierClusterRow,
+  DossierDeviceIpRow,
+  DossierFinancialRow,
+  DossierMoneyTotals,
+  DossierSessionRow,
+} from "@/lib/audit/dossier";
 
 export type DossierContext = "admin" | "moderator";
 
 // ─── Dossier response (JSON shapes of src/lib/audit/dossier.ts) ────────────
 
-export interface DossierDeviceIpRow {
-  ip: string | null;
-  fingerprint: string | null;
-  trackingId: string | null;
-  source: string;
-  lastSeen: string;
-}
-
-export interface DossierSessionRow {
-  id: string;
-  type: "login" | "logout";
-  timestamp: string;
-  ipAddress: string | null;
-  fingerprint: string | null;
-  trackingId: string | null;
-  userAgent?: string;
-}
-
-export interface DossierMoneyTotals {
-  creditsIn: number;
-  debitsOut: number;
-  net: number;
-}
-
-export interface DossierFinancialRow {
-  id: string;
-  type: string;
-  turn: number;
-  createdAt: string;
-  subjectType: string;
-  subjectId?: string;
-  subjectName: string;
-  amount: number;
-  currencyCode: string;
-  anchorAmount?: number;
-  counterpartyName?: string;
-  flagged: boolean;
-}
-
-export interface DossierAltLinkRow {
-  otherUserId: string;
-  otherUsername: string | null;
-  confidence: number;
-  signalCount: number;
-  topSignal: string | null;
-}
-
-export interface DossierClusterRow {
-  id: string;
-  confidence: number;
-  size: number;
-  status: string;
-  role: "operator" | "burner" | "associate";
-  topEvidence: string[];
-}
+export type {
+  DossierAltLinkRow,
+  DossierClusterRow,
+  DossierDeviceIpRow,
+  DossierFinancialRow,
+  DossierMoneyTotals,
+  DossierSessionRow,
+} from "@/lib/audit/dossier";
 
 export interface DossierIpDetails {
   checkedAt: string;

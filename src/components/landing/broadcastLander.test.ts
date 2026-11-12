@@ -129,3 +129,74 @@ describe("the dissolved Soviet Union", () => {
     expect(dissolvedStateGeometry(topojson.mesh, topology, ["nowhere"])).toBeNull();
   });
 });
+
+describe("2027 broadcast lander content", () => {
+  const config = ERA_CONFIGS["2027"];
+  const lander = config.broadcast!;
+  const yearOf = (date: string) => Number(/\d{4}/.exec(date)?.[0]);
+
+  it("is a broadcast lander with no dissolved state", () => {
+    expect(lander).toBeDefined();
+    expect(config.wireframeColor).toBeNull();
+    expect(lander.dissolvedStateFeatureIds ?? []).toEqual([]);
+    expect(lander.showcaseBadge).toBe("Looking ahead");
+  });
+
+  it("runs the crawl oldest first from January 2027 to 2050, orbit item last", () => {
+    const dated = lander.ticker.filter((item) => item.date !== "In orbit");
+    const years = dated.map((item) => yearOf(item.date));
+    expect(years[0]).toBe(2027);
+    expect(years[years.length - 1]).toBe(2050);
+    expect(years).toEqual([...years].sort((a, b) => a - b));
+    expect(lander.ticker[lander.ticker.length - 1].date).toBe("In orbit");
+  });
+
+  it("files every dated headline from a real place", () => {
+    for (const item of lander.ticker) {
+      if (item.date === "In orbit") {
+        expect(item.place).toBeUndefined();
+        continue;
+      }
+      expect(item.place, item.text).toBeDefined();
+      const [lon, lat] = item.place!.lonLat;
+      expect(Math.abs(lon)).toBeLessThanOrEqual(180);
+      expect(Math.abs(lat)).toBeLessThanOrEqual(90);
+    }
+  });
+
+  it("tours the years ahead in date order, not the Cold War from 1953", () => {
+    expect(lander.showcase.length).toBeGreaterThan(5);
+    expect(new Set(lander.showcase.map((entry) => entry.id)).size).toBe(lander.showcase.length);
+    const years = lander.showcase.map((entry) => entry.year);
+    expect(years).toEqual([...years].sort((a, b) => a - b));
+    for (const entry of lander.showcase) {
+      expect(entry.year, entry.id).toBeGreaterThanOrEqual(2027);
+      expect(entry.year, entry.id).toBeLessThanOrEqual(2050);
+      const [lon, lat] = entry.lonLat;
+      expect(Math.abs(lon)).toBeLessThanOrEqual(180);
+      expect(Math.abs(lat)).toBeLessThanOrEqual(90);
+    }
+  });
+
+  it("highlights the era year inside the headline", () => {
+    expect(config.heroHeadline).toContain("2027");
+  });
+
+  it("links no explainer, because no 2027 explainer page exists", () => {
+    expect(config.explainer).toBeUndefined();
+  });
+
+  it("keeps dashes and real politicians out of the copy players read", () => {
+    const copy = [
+      lander.orbitLabel,
+      config.label,
+      config.heroDek,
+      config.playSectionDek,
+      config.worldSectionDek,
+      ...config.eraChips,
+      ...lander.ticker.flatMap((item) => [item.date, item.text, item.place?.name ?? ""]),
+      ...lander.showcase.flatMap((entry) => [entry.title, entry.description]),
+    ];
+    for (const text of copy) expect(text, text).not.toMatch(DASHES);
+  });
+});

@@ -1,10 +1,12 @@
 import { clamp } from "@/lib/numeric/rules";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { getCountryState, updateCountryState } from "@/lib/countryState";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { logger } from "../observability/logger";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * Per-law EMA pull toward the enacted option's social stance. 0.05 moves a
@@ -36,20 +38,20 @@ interface LegislationTypeOptionsRow {
 }
 
 /**
- * Drift each country's social-axis position (−5 libertarian … +5
+ * Drift each country's social-axis position (-5 libertarian ... +5
  * authoritarian) toward the social stance of national laws enacted since the
  * stored watermark. A law qualifies only when its legislation type's option
  * set is socially differentiated (some option has a non-zero `social` score):
- * economic-only laws must not drag the axis toward center, but a centrist
- * option of a genuinely social law DOES moderate it. The position always
- * writes, so the field self-heals onto countryState docs created before P6b.
+ * economic-only and all-zero option sets must not drag the axis, but a
+ * centrist option of a genuinely social law DOES moderate it. The position
+ * always writes, so the field self-heals onto older countryState docs.
  *
- * Sequential turn phase: reads the statePolicies rows the bill-lifecycle
- * phases wrote earlier this turn, so it must run after bill enactment.
+ * Sequential turn phase: reads statePolicies rows written earlier this turn,
+ * so it must run after bill enactment.
  *
- * `enactmentTurn` is the turn the bill phases stamp onto enacted policies —
- * i.e. `gameState.currentTurn`, which the turn system only advances AFTER all
- * phases run. Passing `newTurn` here would off-by-one past every enactment.
+ * `enactmentTurn` is `gameState.currentTurn`, which the turn system advances
+ * only AFTER all phases run. Passing `newTurn` would off-by-one every
+ * enactment.
  */
 export async function processSocialAxisDrift(
   db: Db,
@@ -58,11 +60,11 @@ export async function processSocialAxisDrift(
   let countriesProcessed = 0;
   let lawsCounted = 0;
 
-  // Countries are independent (own state doc, own national policies); run the
-  // drift for all of them concurrently instead of a serial walk. Registered
-  // only: a dissolved country's state doc is kept as a historical record, and
-  // drifting it every turn would keep mutating the record after death.
-  const registered = await getRegisteredCountryIds(db);
+  // Countries are independent (own state doc, own policies); run drift
+  // concurrently. Registered only: a dissolved country's state doc is a
+  // historical record that must not keep mutating. Full-simulation only:
+  // background countries have no politicians or government for this phase.
+  const registered = await getFullSimulationCountryIds(db);
   await Promise.all(
     registered.map(async (countryId) => {
       // Isolate each country: a single country's read/write failure must not
@@ -75,8 +77,7 @@ export async function processSocialAxisDrift(
         // bill phases (stamped enactedTurn = enactmentTurn) are counted once.
         const watermark = state.socialAxisDriftTurn ?? enactmentTurn - 1;
 
-        const rows = await db
-          .collection<NationalPolicyRow>("statePolicies")
+        const rows = await statePoliciesCollection<NationalPolicyRow>(db)
           .find({
             stateId: getNationalStateId(countryId),
             enactedTurn: { $gt: watermark, $lte: enactmentTurn },
@@ -88,8 +89,7 @@ export async function processSocialAxisDrift(
         let counted = 0;
         if (rows.length > 0) {
           const typeIds = [...new Set(rows.map((r) => r.legislationTypeId))];
-          const types = await db
-            .collection<LegislationTypeOptionsRow>("legislationTypes")
+          const types = await legislationTypesCollection<LegislationTypeOptionsRow>(db)
             .find({ _id: { $in: typeIds } })
             .project<LegislationTypeOptionsRow>({ policyOptions: 1 })
             .toArray();

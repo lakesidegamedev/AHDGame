@@ -66,7 +66,7 @@ export async function awardContract(
     selfDealing?: DefenceContract["selfDealing"];
     /**
      * Suppliers without a player CEO have nobody who can accept. Activate immediately so
-     * the order delivers rather than sitting pending forever (ticket #1087).
+     * the order delivers rather than sitting pending forever.
      */
     activateImmediately?: boolean;
   }
@@ -399,7 +399,7 @@ export async function respondToContract(
 }
 
 /**
- * The contractor's production-line allocation for one order (suggestion #281).
+ * The contractor's production-line allocation for one order.
  *
  * Bounded by the caller against what the plant has free - this write only guards that the
  * contract is still live, so a CEO cannot re-allocate an order the minister has withdrawn.

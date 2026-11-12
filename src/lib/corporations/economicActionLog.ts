@@ -4,6 +4,8 @@ import * as Sentry from "@sentry/nextjs";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import type { Document } from "mongodb";
 
 /**
  * Economic action types logged to `actionLogs` for automation detection.
@@ -78,7 +80,7 @@ export async function logEconomicAction(db: Db, params: EconomicActionLogParams)
   try {
     const characterId = toObjectId(params.characterId);
     const userId = toObjectId(params.userId);
-    const insertResult = await db.collection("actionLogs").insertOne({
+    const insertResult = await actionLogsCollection<Document>(db).insertOne({
       characterId,
       userId,
       actionType: params.actionType,

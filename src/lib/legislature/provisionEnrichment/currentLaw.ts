@@ -11,6 +11,8 @@ import { resolveOptionLabel, splitLegacySnapshot } from "./optionLabel";
 import { resolveProvisionPolicyOption, type ResolvableProvision } from "./resolvePolicyOption";
 import type { FiscalScope, ProvisionLabel } from "./types";
 import { readTaxPolicyRate } from "@/lib/budget/rules/incomeTaxPolicy";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /** The frozen labels a provision carries once it has been through the snapshot pass. */
 export interface SnapshotFields {
@@ -193,8 +195,7 @@ export async function loadLiveCurrentPolicies(
   if (canonical.length === 0) return out;
   const equivalents = [...new Set(canonical.flatMap((id) => getEquivalentLegislationTypeIds(id)))];
 
-  const policies = await db
-    .collection<StatePolicy>("statePolicies")
+  const policies = await statePoliciesCollection(db)
     .find({ stateId: policyStoreId(scope), legislationTypeId: { $in: equivalents } })
     .toArray();
   for (const policy of policies) {
@@ -213,8 +214,7 @@ export async function loadLiveCurrentPolicies(
   const missing = canonical.filter((id) => !out.has(id));
   if (missing.length === 0) return out;
 
-  const laws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const laws = await enactedLawsCollection(db)
     .find({
       legislationTypeId: {
         $in: [...new Set(missing.flatMap((id) => getEquivalentLegislationTypeIds(id)))],

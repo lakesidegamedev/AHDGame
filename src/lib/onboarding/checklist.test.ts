@@ -66,6 +66,17 @@ describe("buildOnboardingStepContent", () => {
     expect(uk[0].link).toBe("/country/uk/region/LDN");
   });
 
+  it("walks a Canadian player through their home province and Parliament", () => {
+    const ca = buildOnboardingStepContent(makeCharacter({ countryId: "CA", homeState: "CA_QC" }));
+    expect(ca[0].title).toBe("Scout your home province");
+    expect(ca[0].link).toBe("/country/ca/region/CA_QC");
+    expect(ca.find((s) => s.id === "first-vote")!.link).toBe("/country/ca/legislature");
+    for (const step of ca) {
+      expect(step.link).not.toMatch(/\/country\/(?!ca\/)/);
+      expect(step.link).not.toMatch(/exchange=(?!CA)/);
+    }
+  });
+
   it("routes first-vote to the canonical legislature route, never the /congress redirect", () => {
     // /congress is a redirect shell to /country/{code}/legislature. Linking a
     // guided step at a redirect softlocks the coach, so no surface may use it.
@@ -77,7 +88,7 @@ describe("buildOnboardingStepContent", () => {
   });
 
   it("contains no em-dashes or en-dashes in any player-facing copy", () => {
-    for (const countryId of ["US", "UK", "DE", "JP"] as const) {
+    for (const countryId of ["US", "UK", "DE", "JP", "CA"] as const) {
       for (const step of buildOnboardingStepContent(makeCharacter({ countryId }))) {
         expect(step.title).not.toMatch(/[–—]/);
         expect(step.body).not.toMatch(/[–—]/);

@@ -32,6 +32,7 @@ import { BAL_GEOGRAPHY } from "@/lib/countries/bal/geography";
 import { GR_GEOGRAPHY } from "@/lib/countries/gr/geography";
 import { AT_GEOGRAPHY } from "@/lib/countries/at/geography";
 import { FI_GEOGRAPHY } from "@/lib/countries/fi/geography";
+import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 
 // Seceded nations (SCO/WAL) have no static seed bundle — their metrics are
 // fanned out from the UK aggregate at secession — and UKR's regions are a
@@ -42,6 +43,7 @@ export const RAW_BUNDLES: Partial<Record<CountryId, StateMetrics[]>> = {
   DE: DE_GEOGRAPHY.rawMetrics,
   JP: JP_GEOGRAPHY.rawMetrics,
   IE: IE_GEOGRAPHY.rawMetrics,
+  CA: CA_GEOGRAPHY.rawMetrics,
   BR: BR_GEOGRAPHY.rawMetrics,
   CN: CN_GEOGRAPHY.rawMetrics,
   NG: NG_GEOGRAPHY.rawMetrics,

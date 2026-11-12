@@ -20,8 +20,8 @@ import { getDb } from "@/lib/mongodb";
 import {
   accumulatePresidentVoteTurn,
   type PresidentVoteTurnDryRun,
-} from "@/lib/presidentialElectionEngine";
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
+} from "@/lib/elections/presidential/presidentialElectionEngine";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
 
 const COUNTRY = process.env.COUNTRY ?? "US";
 /** Favorability levels to price. 100 = today (no attack). */

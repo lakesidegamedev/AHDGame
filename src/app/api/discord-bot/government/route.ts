@@ -14,7 +14,6 @@ import { getGovernmentFormationsCollection } from "@/lib/db/collections/governme
 import type {
   ElectedOfficial,
   PoliticalParty,
-  Character,
   CongressLeader,
   CabinetMember,
   LeadershipRole,
@@ -24,6 +23,11 @@ import { LEADERSHIP_ROLE_LABEL } from "@/lib/congress/leadership/electionRoleMap
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -104,16 +108,11 @@ export async function GET(request: Request) {
     const directElection = isDirectElection(countryConfig);
 
     const [executives, leaders, cabinetMembers] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({ countryId: country, officeType: { $in: officeTypes } })
         .toArray(),
-      directElection
-        ? db.collection<CongressLeader>("congressLeaders").find({}).toArray()
-        : Promise.resolve([]),
-      directElection
-        ? db.collection<CabinetMember>("cabinetMembers").find({}).toArray()
-        : Promise.resolve([]),
+      directElection ? congressLeadersCollection(db).find({}).toArray() : Promise.resolve([]),
+      directElection ? cabinetMembersCollection(db).find({}).toArray() : Promise.resolve([]),
     ]);
 
     // Collect all character IDs for profile URL lookups
@@ -134,8 +133,7 @@ export async function GET(request: Request) {
 
     const characters =
       charObjectIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: charObjectIds } })
             .project({ _id: 1, sequentialId: 1, party: 1, countryId: 1 })
             .toArray()
@@ -165,8 +163,7 @@ export async function GET(request: Request) {
 
     const parties =
       partyLookups.length > 0
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({
               $or: partyLookups.map((l) => ({
                 countryId: l.countryId,
@@ -288,8 +285,7 @@ export async function GET(request: Request) {
           .filter((n) => !isNaN(n));
         const gfParties =
           partySeqIds.length > 0
-            ? await db
-                .collection<PoliticalParty>("politicalParties")
+            ? await politicalPartiesCollection(db)
                 .find({ countryId: country, sequentialId: { $in: partySeqIds } })
                 .toArray()
             : [];

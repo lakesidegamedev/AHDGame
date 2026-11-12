@@ -6,6 +6,9 @@ import type {
   PartyMembershipEventReason,
   PoliticalParty,
 } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
+import { partyMembershipEventsCollection } from "@/lib/db/repositories/partyMembershipEvents";
 
 /** Shape passed to the UI for one observed membership transition. */
 export interface PartyHistoryEntry {
@@ -55,8 +58,7 @@ export async function fetchPartyHistory(
   db: Db,
   characterId: ObjectId
 ): Promise<PartyHistoryEntry[]> {
-  const docs = await db
-    .collection<PartyMembershipEvent>("partyMembershipEvents")
+  const docs = await partyMembershipEventsCollection(db)
     .find({
       characterId,
       reason: { $in: UI_REASONS },
@@ -104,8 +106,7 @@ export async function fetchPartyNameChanges(
     .filter((id) => Number.isInteger(id));
   if (sequentialIds.length === 0) return [];
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ sequentialId: { $in: sequentialIds } })
     .project({ _id: 1, countryId: 1, sequentialId: 1 })
     .toArray();
@@ -115,8 +116,7 @@ export async function fetchPartyNameChanges(
   if (relevantParties.length === 0) return [];
 
   const partyByObjectId = new Map(relevantParties.map((party) => [party._id.toString(), party]));
-  const proposals = await db
-    .collection<CommitteeProposal>("committeeProposals")
+  const proposals = await committeeProposalsCollection(db)
     .find({
       type: "rename",
       status: "passed",

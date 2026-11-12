@@ -12,51 +12,28 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
- * Support incident #1694. US central bank liquidity injections (turns 274,
- * 365, 392, 405, 449 and 455) credited private banks' vaults and booked the
- * same amount as INTEREST-BEARING central bank margin debt. The banks never
- * asked for the cash. The margin interest exceeded their income and consumed
- * their own capital, until the solvency pass failed them or supervision
- * revoked them as undercapitalized. Resolution then repaid the injected debt
- * from the vault and paid the owners nothing.
+ * Restores banks charged margin interest on central bank liquidity injections
+ * they never requested.
  *
- * The code half (injected debt is interest-free) is PR #5035.
+ * Each bank that paid injection interest gets it refunded to the owning
+ * corporation's liquidCapital, summed from its `cb-margin-interest` money moves.
+ * Banks closed by the injections and not yet rechartered are reopened through
+ * `issueCharter`, which posts the required capital out of the refund.
  *
- * WHAT IS RESTITUTED
+ * Deliberately NOT reopened: banks whose owners already rechartered (refund
+ * only), and banks whose estate never resolved (recharter refused).
  *
- * 1. Every bank that received an injection gets back the margin interest it
- *    paid, credited to the owning corporation's liquidCapital. Every dollar of
- *    these banks' margin debt came from injections (debt at closure equals the
- *    injected total for each), so all of their `cb_margin_interest` payments
- *    are injection interest. Totals are summed from the applied
- *    `cb-margin-interest:<bank>:<turn>` money moves, to the cent.
+ * Idempotency: the refund writes a durable marker in the same atomic update as
+ * the increment, under a filter requiring its absence; the reopen step runs only
+ * on a pending marker with an inactive charter.
  *
- * 2. Banks closed by the injections and not yet rechartered by their owners
- *    are reopened with their original charter type through `issueCharter`,
- *    the normal player path, which posts the required capital out of the
- *    refunded cash. Books start clean: the household deposit book already
- *    went back to the money supply at resolution.
- *
- * Deliberately NOT reopened here:
- *   - American Broadcasting Company and the corporation at sequential 883:
- *     their owners already rechartered; refund only.
- *   - Continental Merchants Bancorp (AI): its estate never resolved
- *     (no depositorsResolvedTurn), so a recharter is refused until it does.
- *   - Greenbaum Group and Artemis Global: injection interest refunded, but
- *     their failures were driven mainly by a deposit run, assessed separately.
- *
- * IDEMPOTENCY
- *
- * The refund writes a durable `remediation["AHD-1694-..."]` marker in the
- * same atomic update as the increment, under a filter requiring its absence.
- * The reopen step only runs on a corporation whose marker has
- * `reopen: "pending"` and whose charter is not active, and stamps the result.
- *
- * This heal MINTS MONEY on purpose: it restores capital the injection
- * interest destroyed. Each credit emits a `restitution_credit` tx row so the
- * shadow ledger books an attributed mint.
+ * This heal MINTS MONEY on purpose, restoring capital the interest destroyed.
+ * Each credit emits a `restitution_credit` tx row so the shadow ledger books it.
  */
 
 export const DEFECT_ID = "AHD-1694-injected-bank-restoration";
@@ -171,8 +148,7 @@ type CorpDoc = Pick<Corporation, "_id" | "name" | "bankCharter" | "liquidCapital
 };
 
 async function load(db: Db): Promise<Map<string, CorpDoc>> {
-  const docs = await db
-    .collection<CorpDoc>("corporations")
+  const docs = await corporationsCollection<CorpDoc>(db)
     .find(
       { _id: { $in: ROWS.map((row) => new ObjectId(row.corporationId)) } },
       { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
@@ -234,9 +210,7 @@ async function plan(db: Db): Promise<HealPlan> {
     const doc = docs.get(row.corporationId);
     if (!doc) continue;
     // Eligibility is checked as if the refund had landed: capital comes from it.
-    const corp = (await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: doc._id })) as Corporation;
+    const corp = (await corporationsCollection(db).findOne({ _id: doc._id })) as Corporation;
     const marker = markerOf(doc);
     const refunded = marker ? 0 : row.refund;
     const eligibility = await checkCharterEligibility(
@@ -286,7 +260,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       refund: row.refund,
       reopen: row.reopenAs ? "pending" : "not-planned",
     };
-    const res = await db.collection<CorpDoc>("corporations").updateOne(
+    const res = await corporationsCollection<CorpDoc>(db).updateOne(
       { _id: new ObjectId(row.corporationId), [MARKER_PATH]: { $exists: false } },
       {
         $inc: { liquidCapital: row.refund },
@@ -302,9 +276,10 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   if (credited.length > 0) {
     const turn =
       (
-        await db
-          .collection<{ _id: string; currentTurn?: number }>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+        await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+          { _id: "current" },
+          { projection: { currentTurn: 1 } }
+        )
       )?.currentTurn ?? 0;
     const entries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = credited.map(
       (row) => ({
@@ -332,25 +307,26 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   let reopened = 0;
   for (const row of reopens) {
     const id = new ObjectId(row.corporationId);
-    const doc = await db
-      .collection<CorpDoc>("corporations")
-      .findOne({ _id: id }, { projection: { bankCharter: 1, remediation: 1 } });
+    const doc = await corporationsCollection<CorpDoc>(db).findOne(
+      { _id: id },
+      { projection: { bankCharter: 1, remediation: 1 } }
+    );
     if (!doc || doc.bankCharter?.status === "active" || markerOf(doc)?.reopen !== "pending")
       continue;
     const result = await issueCharter(db, id, row.reopenAs!, CURRENCY);
     const outcome: Marker["reopen"] = result.ok
       ? "done"
       : `refused: ${(result.reasons[0] ?? "ineligible").slice(0, 120)}`;
-    await db
-      .collection<CorpDoc>("corporations")
-      .updateOne({ _id: id }, { $set: { [`${MARKER_PATH}.reopen`]: outcome } });
+    await corporationsCollection<CorpDoc>(db).updateOne(
+      { _id: id },
+      { $set: { [`${MARKER_PATH}.reopen`]: outcome } }
+    );
     if (result.ok) reopened += 1;
     notes.push(`${row.name}: reopen as ${row.reopenAs} ${outcome}`);
   }
 
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

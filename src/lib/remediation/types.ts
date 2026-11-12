@@ -1,24 +1,19 @@
 // Remediation ledger types.
 //
-// A `Defect` is ONE corruption-class bug carrying BOTH halves of its fix:
-// the code change that stops new bad rows, and the data heal that repairs the
-// rows already written. Shipping one without the other is the standard failure
-// mode: code-only leaves players staring at wrong numbers forever, heal-only
-// re-corrupts on the next turn.
+// A `Defect` is ONE corruption-class bug carrying BOTH halves of its fix: the
+// code change that stops new bad rows, and the data heal that repairs rows
+// already written. Shipping one without the other leaves players with wrong
+// numbers forever or re-corrupts on the next turn.
 //
-// The lifecycle is fixed and the runner enforces it:
+// Lifecycle (enforced by the runner): detect -> plan -> apply -> verify.
+// `detect`, `plan` and `verify` are read only. `apply` is the only writer and
+// cannot run without a live confirm token minted by `plan` against the exact
+// world state it saw (see token.ts).
 //
-//   detect -> plan -> apply -> verify
-//
-// `detect`, `plan` and `verify` are READ ONLY and always safe to call. `apply`
-// is the only writer, and it cannot run without a live confirm token minted by
-// `plan` against the exact world state it saw (see token.ts).
-//
-// Deliberately parallel to src/lib/migrations/types.ts, and it reuses that
-// module's result shape so one vocabulary covers both systems. The split:
-// migrations are one-shot schema/data cutovers ordered in a registry; heals are
-// idempotent repairs to state that a shipped bug produced. If re-running it is
-// not a safe no-op, it is a migration, not a heal.
+// Parallel to src/lib/migrations/types.ts and reusing its result shape.
+// Split: migrations are one-shot schema/data cutovers; heals are idempotent
+// repairs to state a shipped bug produced. If re-running is not a safe no-op,
+// it is a migration, not a heal.
 
 import type { Db } from "mongodb";
 import type { MigrationResult } from "@/lib/migrations/types";
@@ -68,9 +63,8 @@ export interface HealPlan {
   /** Documents to be mutated or deleted. Snapshotted to healBackups before any write. */
   touched: TouchedDocs[];
   /**
-   * Net currency this heal creates (positive) or destroys (negative), in the
-   * relevant local units. MUST be 0 unless the defect declares `mintsMoney`.
-   * Half the incident history on this box is a heal that quietly printed money.
+   * Net currency this heal creates (positive) or destroys (negative), in local
+   * units. MUST be 0 unless the defect declares `mintsMoney`.
    */
   moneyDelta: number;
   /** One line an operator can read and approve. */

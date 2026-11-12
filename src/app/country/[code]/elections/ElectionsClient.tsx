@@ -20,7 +20,6 @@ import { fetchAllElections } from "@/lib/elections/fetchAllElections";
 import { useCountdownTimer } from "@/hooks/useCountdownTimer";
 import { useCountryManifestos } from "@/hooks/useCountryManifestos";
 import { useElectionActions } from "@/hooks/useElectionActions";
-import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
 import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
@@ -29,6 +28,7 @@ import type { CharacterBasic, ElectionDisplay, GameStateDisplay } from "@/lib/db
 import type { CompositionResponse } from "@/lib/elections/electionResponseTypes";
 import { EmptyState } from "@/components/ui";
 import { isMapAvailable, selectElectionGroups } from "@/app/elections/components/electionsMapModel";
+import { useHasSession } from "@/contexts/AuthDataContext";
 import {
   electionNightTitle,
   pickElectionNightAnchor,
@@ -36,7 +36,7 @@ import {
 import { resolveChamberForOffice } from "@/lib/elections/officeResolution";
 import { CommonsCarveUpPanel } from "@/components/uk/elections/CommonsCarveUpPanel";
 import { ManifestoFlavorBar } from "@/components/uk/elections/ManifestoFlavorBar";
-import { buildCommonsCarveUpSlices } from "@/lib/uk/elections/commonsCarveUp";
+import { buildCommonsCarveUpSlices } from "@/lib/countries/uk/elections/commonsCarveUp";
 import { ELECTION_STATE_NAMES } from "@/app/elections/electionsHelpers";
 import { isCommonsGeneralElection } from "@/lib/utils/electionLabels";
 
@@ -53,6 +53,7 @@ import { ElectionsControls } from "./components/ElectionsControls";
 import { ElectionsSkeleton } from "./components/ElectionsSkeleton";
 import { OfficeSection } from "./components/OfficeSection";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // The map pulls in react-simple-maps and only renders behind a toggle, so keep
 // it out of this page's initial bundle.
@@ -146,19 +147,23 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
 
   useCountdownTimer();
 
+  // A signed-out visitor has no character. Asking anyway answers 401, which is
+  // a console error on an otherwise public page.
+  const hasSession = useHasSession();
+
   const fetchSecondary = useCallback(async () => {
     try {
       const opts = { signal: AbortSignal.timeout(15_000) };
       const [charRes, compositionRes, gameStateRes] = await Promise.all([
-        fetch("/api/character/me", opts),
+        hasSession ? fetch("/api/character/me", opts) : Promise.resolve(null),
         fetch(`/api/elections/composition?country=${countryId}`, opts),
-        fetch("/api/game/turn/status", opts),
+        fetch(`/api/game/turn/status`, opts),
       ]);
-      if (charRes.ok) {
+      if (charRes?.ok) {
         const data = await charRes.json();
         setCharacter(data.character);
         setCharacterChecked(true);
-      } else if (charRes.status === 404) {
+      } else if (!charRes || charRes.status === 404) {
         setCharacterChecked(true);
       }
       if (compositionRes.ok) setComposition(await compositionRes.json());
@@ -175,7 +180,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
     } catch (err) {
       console.error("Error fetching election secondaries:", err);
     }
-  }, [countryId]);
+  }, [countryId, hasSession]);
 
   const fetchData = useCallback(
     async (background = false) => {
@@ -215,13 +220,10 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
     isInAnyRace,
     confirmDialog,
   } = useElectionActions({ character, elections, onSuccess: fetchData });
-  const { liveElectionResultsEnabled } = useWorldFlags();
 
   const allRegions = useMemo(() => [...new Set(elections.map((e) => e.state))].sort(), [elections]);
 
-  // One derivation for both views: `mapGroups` stays country-wide while the list
-  // honors the region filter. Deriving them separately is what previously let the
-  // map read region-filtered data and collapse to a single region.
+  // One derivation for both views: `mapGroups` stays country-wide while the list honors the region filter. Separate derivations let the map read region-filtered data and collapse to one region.
   const { listElections: filtered, mapGroups: groupsAll } = useMemo(
     () =>
       selectElectionGroups(elections, allRegions, {
@@ -249,7 +251,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
   // the viewer has filtered to, so keying off `filtered` would refetch the whole
   // batch on every filter click.
   const manifestoElectionIds = useMemo(() => {
-    if (countryId !== "UK") return [];
+    if (!countryHasFeature("ukUi", countryId)) return [];
     return elections
       .filter((e) => isCommonsGeneralElection(e.electionType) && e.candidates.length > 0)
       .map((e) => e.id);
@@ -290,7 +292,7 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
    */
   const sectionFooter = useCallback(
     (sectionKey: string) => {
-      if (countryId !== "UK" || sectionKey !== "commons") return null;
+      if (!countryHasFeature("ukUi", countryId) || sectionKey !== "commons") return null;
       const contested = filtered.filter(
         (e) => isCommonsGeneralElection(e.electionType) && e.candidates.length > 0
       );
@@ -387,18 +389,17 @@ export default function ElectionsClient({ code, initialElections }: ElectionsCli
               />
             )}
 
-            {liveElectionResultsEnabled &&
-              (() => {
-                const anchor = pickElectionNightAnchor(filtered);
-                if (!anchor) return null;
-                return (
-                  <EmbeddedParliamentaryResults
-                    electionId={anchor.id}
-                    electionType={anchor.electionType}
-                    title={electionNightTitle(anchor.electionType)}
-                  />
-                );
-              })()}
+            {(() => {
+              const anchor = pickElectionNightAnchor(filtered);
+              if (!anchor) return null;
+              return (
+                <EmbeddedParliamentaryResults
+                  electionId={anchor.id}
+                  electionType={anchor.electionType}
+                  title={electionNightTitle(anchor.electionType)}
+                />
+              );
+            })()}
 
             {effectiveView === "map" && (
               <div className="rounded-xl border border-card-border bg-card p-5">

@@ -8,6 +8,7 @@ import { CandidateTotalsPanel } from "./CandidateTotalsPanel";
 import { RaceResultCard } from "./RaceResultCard";
 import { ResultsTable } from "./ResultsTable";
 import { ResultsBlendView } from "../../blend/ResultsBlendView";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Browser-only (react-simple-maps) — lazy-load with a matching skeleton.
 const ElectoralResultsMap = dynamic(
@@ -36,7 +37,7 @@ export function PresidentialResultsView({ data }: { data: ElectionResultsRespons
   // The map is US-shaped. Simulated frames keep real state ids unless the
   // board was fabricated from nothing (sim-unit-*), which the map can't plot.
   const useMap =
-    election.countryId === "US" &&
+    countryHasFeature("usUi", election.countryId) &&
     units.length > 0 &&
     !units.some((u) => u.id.startsWith("sim-unit"));
 

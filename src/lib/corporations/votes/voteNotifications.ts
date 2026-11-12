@@ -1,26 +1,9 @@
-import type { Db, ObjectId } from "mongodb";
-import type { CorporationVote, CorporationVoteType } from "@/lib/db/types/corporationVote";
+import type { Db, Document, ObjectId } from "mongodb";
+import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import { createNotification } from "@/lib/notifications";
-
-export function voteTypeLabel(type: CorporationVoteType): string {
-  switch (type) {
-    case "governance_change":
-      return "Restructuring Vote";
-    case "dissolution":
-      return "Dissolution Vote";
-    case "relocation":
-      return "Relocation Vote";
-    case "share_issuance":
-      return "Share Issuance Vote";
-    case "adopt_supershares":
-      return "Supershare Vote";
-    case "ticker_change":
-      return "Ticker Change Vote";
-    case "ceo_salary":
-      return "CEO Pay Vote";
-  }
-}
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export function proposalSummary(vote: CorporationVote): string {
   switch (vote.type) {
@@ -42,19 +25,19 @@ export function proposalSummary(vote: CorporationVote): string {
 }
 
 async function getShareholderUserIds(db: Db, corporationId: ObjectId): Promise<ObjectId[]> {
-  const corp = await db
-    .collection("corporations")
-    .findOne({ _id: corporationId }, { projection: { shareholders: 1 } });
+  const corp = await corporationsCollection<Document>(db).findOne(
+    { _id: corporationId },
+    { projection: { shareholders: 1 } }
+  );
   if (!corp?.shareholders?.length) return [];
   const characterIds = corp.shareholders
     .filter((s: { characterId?: ObjectId }) => s.characterId)
     .map((s: { characterId: ObjectId }) => s.characterId);
   if (!characterIds.length) return [];
-  const characters = await db
-    .collection("characters")
-    .find({ _id: { $in: characterIds } }, { projection: { userId: 1 } })
+  const characters = await charactersCollection(db)
+    .find<{ userId: ObjectId }>({ _id: { $in: characterIds } }, { projection: { userId: 1 } })
     .toArray();
-  return characters.map((c) => (c as unknown as { userId: ObjectId }).userId);
+  return characters.map((c) => c.userId);
 }
 
 function buildTitleAndMessage(

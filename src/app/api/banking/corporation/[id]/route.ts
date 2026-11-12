@@ -50,9 +50,14 @@ import {
   bandsForProfile,
   getCreditBand,
 } from "@/lib/banking/creditBands";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { BankCharter, BankCharterType, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -166,12 +171,10 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     const privateEnabled = policy.privateBanking;
     const propTradingEnabled = policy.propTrading;
 
-    const ownsFinancial = !!(await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne(
-        { corporationId: corporation._id, sectorType: "financial" },
-        { projection: { _id: 1 } }
-      ));
+    const ownsFinancial = !!(await corporateSectorsCollection(db).findOne(
+      { corporationId: corporation._id, sectorType: "financial" },
+      { projection: { _id: 1 } }
+    ));
 
     const charter = corporation.bankCharter;
     const hasActiveCharter = charter?.status === "active";
@@ -301,8 +304,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
     // even though the turn and the charter's own totalLoans ignore them.
     const loans =
       hasActiveCharter && charter
-        ? await db
-            .collection<BankLoan>("bankLoans")
+        ? await bankLoansCollection(db)
             .find({
               bankCorporationId: corporation._id,
               ...loanCharterEpochFilter(charter.charteredTurn),
@@ -314,8 +316,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     const interbankLoans =
       hasActiveCharter && propTradingEnabled
-        ? await db
-            .collection<InterbankLoan>("interbankLoans")
+        ? await interbankLoansCollection(db)
             .find({
               $or: [
                 { lenderCorporationId: corporation._id },
@@ -328,9 +329,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
             .toArray()
         : [];
 
-    // Live capacity × equity cap, not the cached turn stamp. Pointer deposits
-    // used to zero book equity and pin the cached ceiling at $0 until the next
-    // bankingTurn; the console must show the number the next turn will use.
+    // Live capacity x equity cap, not the cached turn stamp. The cached ceiling can be stale until the next bankingTurn, so the console must show the number the next turn will use.
     const sheet =
       hasActiveCharter && charter
         ? bankBalanceSheet({
@@ -342,9 +341,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
         : null;
     const depositCeiling = sheet ? sheet.depositCeiling : null;
 
-    // The console used to ship raw ObjectId hex for every borrower and every
-    // blacklist entry, which the UI then printed (truncated, for the loan
-    // book). Nobody can read that, and a player has no way to produce one.
+    // The UI prints borrower and blacklist names, not raw ObjectId hex.
     // Resolve names once here so both surfaces render people and companies.
     const blacklistVisible = isCeo || isAdmin || isChair;
     const rawBlacklist = charter?.blacklist;
@@ -366,8 +363,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
 
     const [namedCharacters, namedCorporations] = await Promise.all([
       characterIdsToName.size > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: [...characterIdsToName].map((id) => new ObjectId(id)) } },
               { projection: { name: 1, sequentialId: 1 } }
@@ -375,8 +371,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
             .toArray()
         : Promise.resolve([]),
       corporationIdsToName.size > 0
-        ? db
-            .collection<Corporation>("corporations")
+        ? corporationsCollection(db)
             .find(
               { _id: { $in: [...corporationIdsToName].map((id) => new ObjectId(id)) } },
               { projection: { name: 1, sequentialId: 1, tickerSymbol: 1 } }
@@ -663,12 +658,7 @@ async function handleGET(_request: Request, { params }: RouteParams) {
         status: loan.status,
         arrearsTurns: loan.arrearsTurns ?? 0,
       })),
-      // The household book, by rating, best credit first. This is what the
-      // console used to be unable to show: the book was one lump with one rate,
-      // so "NPC bulk outstanding (implied)" was genuinely all there was to say.
-      // Per-band targets mirror the turn's funding derivation (deposit base
-      // after reserves, less non-household loans) from console-visible inputs,
-      // so each row shows where the stance is steering it, not just where it is.
+      // The household book, best credit first. Per-band targets mirror the turn's funding derivation (deposit base after reserves, less non-household loans), so each row shows where the stance is steering it, not just where it is.
       householdBook,
       // Where the charter is in its life and what that admits. The console
       // shows the stage and disables what the stage refuses, so a player is

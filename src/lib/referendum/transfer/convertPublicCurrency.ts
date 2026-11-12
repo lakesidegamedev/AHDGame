@@ -3,6 +3,11 @@ import { redenominatePublicRegion } from "./rules/publicCurrency";
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import { scaleDeep } from "../secede/docScale";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { infraProjectsCollection } from "@/lib/db/repositories/infraProjects";
+import type { Document } from "mongodb";
+import { conflictCapacityObligationsCollection } from "@/lib/db/repositories/conflictCapacityObligations";
 
 export async function convertPublicCurrency(
   db: Db,
@@ -10,10 +15,10 @@ export async function convertPublicCurrency(
   scale: number
 ): Promise<void> {
   if (scale === 1) return;
-  const state = await db.collection<State>("states").findOne({ _id: regionId });
+  const state = await statesCollection(db).findOne({ _id: regionId });
   if (!state) throw new Error("Missing transferred region");
   const set = redenominatePublicRegion(state, scale);
-  await db.collection<State>("states").updateOne({ _id: regionId }, { $set: set });
+  await statesCollection(db).updateOne({ _id: regionId }, { $set: set });
   await convertBudgetMoney(
     db,
     "stateBudgets",
@@ -36,15 +41,18 @@ export async function convertPublicCurrency(
     ],
     scale
   );
-  await db
-    .collection<{ _id: string }>("macroMetrics")
-    .updateOne({ _id: regionId }, { $mul: { "economic.medianIncome.value": scale } });
-  await db
-    .collection("infraProjects")
-    .updateMany({ regionId }, { $mul: { upkeepBase: scale, constructionCostBase: scale } });
-  await db
-    .collection("conflictCapacityObligations")
-    .updateMany({ regionId }, { $mul: { capitalStockBefore: scale, destroyedCapital: scale } });
+  await macroMetricsCollection<{ _id: string }>(db).updateOne(
+    { _id: regionId },
+    { $mul: { "economic.medianIncome.value": scale } }
+  );
+  await infraProjectsCollection<Document>(db).updateMany(
+    { regionId },
+    { $mul: { upkeepBase: scale, constructionCostBase: scale } }
+  );
+  await conflictCapacityObligationsCollection<Document>(db).updateMany(
+    { regionId },
+    { $mul: { capitalStockBefore: scale, destroyedCapital: scale } }
+  );
 }
 
 async function convertBudgetMoney(

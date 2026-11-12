@@ -4,7 +4,6 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { spendPoliticalStrength } from "@/lib/parties/commands/spendPoliticalStrength";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { canSpendOnStateParty } from "@/lib/parties/access";
@@ -21,6 +20,10 @@ import type {
   ElectionCandidate,
   StatePartyOrg,
 } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 const BodySchema = z.object({ districtIndex: z.number().int().min(1) });
 const CAMPAIGN_BASE_PS_COST = 2;
@@ -42,9 +45,6 @@ export async function POST(
     const character = auth.user.character;
 
     const db = await getDb();
-    if (!isRedistrictingEnabled(await getGameState(db))) {
-      return errorResponse(404, "Redistricting is not enabled");
-    }
 
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) return errorResponse(400, "Invalid body");
@@ -53,13 +53,12 @@ export async function POST(
     const party = await findPartyBySequentialId(db, partyId, countryId as CountryId);
     if (!party) return errorResponse(404, "Party not found");
 
-    const spo = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ countryId: countryId as CountryId, stateId, partyId: String(party.sequentialId) });
+    const spo = await statePartyOrgCollection(db).findOne({
+      countryId: countryId as CountryId,
+      stateId,
+      partyId: String(party.sequentialId),
+    });
     if (!canSpendOnStateParty(party, spo, auth.user)) {
-      // Ticket #1167: the old message named neither the rule nor the way to
-      // satisfy it, so a party member who had simply never been appointed read
-      // it as a bug. Say who may act and what to ask for.
       return errorResponse(
         403,
         `Campaigning for ${party.name} draws on its party organisation, so it is limited to its officers. You need to be its chair, vice chair or campaigner in ${stateId}, or hold one of those roles nationally. A party leader can appoint you from the party's management page.`
@@ -67,7 +66,7 @@ export async function POST(
     }
 
     // Active house race for this state.
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       countryId: countryId as CountryId,
       state: stateId,
       electionType: "house",
@@ -78,17 +77,20 @@ export async function POST(
     }
 
     // The target district must actually exist in this state's map.
-    const districtCount = await db
-      .collection<CongressionalDistrict>("congressionalDistricts")
-      .countDocuments({ countryId: countryId as CountryId, stateId });
+    const districtCount = await congressionalDistrictsCollection(db).countDocuments({
+      countryId: countryId as CountryId,
+      stateId,
+    });
     if (districtCount === 0 || districtIndex > districtCount) {
       return errorResponse(400, "District does not exist");
     }
 
     // Efficiency: is the actor an active candidate in this race?
-    const isCandidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .findOne({ electionId: election._id, characterId: character._id, status: "active" });
+    const isCandidate = await electionCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: character._id,
+      status: "active",
+    });
     const efficiency = isCandidate ? CAMPAIGN_SELF_EFFICIENCY : CAMPAIGN_ALLY_EFFICIENCY;
 
     const gs = await getGameState(db);
@@ -117,9 +119,10 @@ export async function POST(
     const current =
       election.districtCampaignBoosts?.[String(districtIndex)]?.[String(party.sequentialId)] ?? 0;
     const next = applyCampaignBoost(current, CAMPAIGN_BOOST_PER_ACTION * efficiency);
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: election._id }, { $set: { [key]: next, updatedAt: new Date() } });
+    await electionsCollection(db).updateOne(
+      { _id: election._id },
+      { $set: { [key]: next, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ ok: true, boost: next, psCost: spend.effectiveCost, efficiency });
   } catch (error) {

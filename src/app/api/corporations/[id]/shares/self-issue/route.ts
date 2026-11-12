@@ -12,14 +12,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { subsidiaryIssuanceBlockReason } from "@/lib/corporations/subsidiaries/issuanceGuard";
 import { CEO_SELF_ISSUANCE_PREMIUM, MAX_SELF_ISSUANCE_PERCENT } from "@/lib/constants/corporations";
-import type {
-  Character,
-  Corporation,
-  GameState,
-  ShareListing,
-  ShareOrder,
-  User,
-} from "@/lib/db/types";
+import type { Corporation, GameState, ShareListing, ShareOrder, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -46,6 +39,14 @@ import {
   atomicallyDebitImperialCash,
   refundImperialCash,
 } from "@/lib/financialTxLog/atomicCashGuard";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -58,7 +59,7 @@ async function restoreIssuanceCooldown(
   const updatedAt = new Date();
 
   if (corporation.lastShareIssuance) {
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $set: {
@@ -70,7 +71,7 @@ async function restoreIssuanceCooldown(
     return;
   }
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corporation._id },
     {
       $unset: { lastShareIssuance: "" },
@@ -117,12 +118,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const subBlock = await subsidiaryIssuanceBlockReason(corporation);
+    const subBlock = subsidiaryIssuanceBlockReason(corporation);
     if (subBlock) return errorResponse(403, subBlock);
 
-    const openShareholderVote = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ corporationId: corporation._id, status: "open" }, { projection: { _id: 1 } });
+    const openShareholderVote = await corporationVotesCollection(db).findOne(
+      { corporationId: corporation._id, status: "open" },
+      { projection: { _id: 1 } }
+    );
     if (openShareholderVote) {
       return errorResponse(400, "Cannot issue shares while a shareholder vote is open");
     }
@@ -147,9 +149,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const totalCost = corpLiquidCapitalToAnchor(totalCostLocal, corporation, corpFxRate);
 
     // Resolve character type
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
@@ -161,7 +161,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const forexEnabled = await isForexEnabled();
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(auth.user.userId),
       });
@@ -176,7 +176,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(auth.user.userId) }
         : { userId: new ObjectId(auth.user.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }
@@ -201,7 +201,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     let ceoDoc = await db.collection(collectionName).findOne({ _id: ceoCharId });
 
     if (forexEnabled && ceoDoc) {
-      const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+      const gs = await gameStateCollection(db).findOne({ _id: "current" });
       const convertResult = await autoConvertForPurchase(db, {
         character: ceoDoc as PersonalWealthHolder & { _id: ObjectId },
         requiredCurrency: homeCurrency,
@@ -239,13 +239,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const totalCostInCorpCapital = anchorToCorpLiquidCapital(totalCost, corporation, corpFxRate);
 
-    const cooldownResult = await db
-      .collection<Corporation>("corporations")
-      .findOneAndUpdate(
-        cooldownQuery as never,
-        { $set: { lastShareIssuance: now, updatedAt: now } },
-        { returnDocument: "after" }
-      );
+    const cooldownResult = await corporationsCollection(db).findOneAndUpdate(
+      cooldownQuery as never,
+      { $set: { lastShareIssuance: now, updatedAt: now } },
+      { returnDocument: "after" }
+    );
 
     if (!cooldownResult) {
       const elapsed = corporation.lastShareIssuance
@@ -328,20 +326,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     // shareholders + publicFloat + open listings + open debited sell orders.
     // If it drifts, shares have silently been added or lost — report to
     // Sentry so we can trace the next "shares disappeared" claim.
-    const freshCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: corporation._id });
+    const freshCorp = await corporationsCollection(db).findOne({ _id: corporation._id });
     const newTotalShares =
       freshCorp?.totalShares ?? (corporation.totalShares ?? 10_000_000) + shares;
 
     if (freshCorp) {
       const [openListings, openSellOrders] = await Promise.all([
-        db
-          .collection<ShareListing>("shareListings")
+        shareListingsCollection(db)
           .find({ corporationId: corporation._id, status: "open" })
           .toArray(),
-        db
-          .collection<ShareOrder>("shareOrders")
+        shareOrdersCollection(db)
           .find({
             corporationId: corporation._id,
             type: "sell",

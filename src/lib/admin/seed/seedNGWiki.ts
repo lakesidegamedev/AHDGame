@@ -8,6 +8,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { WikiPage } from "@/lib/db/types";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 const NG_WIKI_PAGES: Array<
   Pick<WikiPage, "slug" | "title" | "description" | "content" | "tags" | "category">
@@ -80,7 +81,7 @@ Nigeria is one of Africa's largest economies, heavily shaped by **petroleum**. O
 
 export async function seedNGWiki(db: Db) {
   // A world reset must not replace an existing article or its edit metadata.
-  const coll = db.collection<WikiPage>("wikiPages");
+  const coll = wikiPagesCollection(db);
   const now = new Date();
 
   for (const page of NG_WIKI_PAGES) {

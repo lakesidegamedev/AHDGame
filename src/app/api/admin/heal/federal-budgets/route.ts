@@ -21,6 +21,13 @@ import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import type { FederalTaxRates } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 const FEDERAL_TAX_RATE_KEYS: ReadonlySet<keyof FederalTaxRates> = new Set([
   "incomeTax",
@@ -54,7 +61,7 @@ export async function GET() {
     const db = await getDb();
 
     // ── National budget diagnostics ──────────────────────────────────────
-    const nationalBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+    const nationalBudgets = await federalBudgetCollection(db).find({}).toArray();
     const nationalDiagnostics = [];
     // Era year gates which cost forms the per-law breakdown uses, so it matches
     // `recalcSpending` (calculateFederalSpending). Null (flag off) ⇒ legacy costs.
@@ -72,18 +79,14 @@ export async function GET() {
       const debtInterest = budget.debt.principal * budget.debt.interestRate;
       const recalcSpending = await calculateFederalSpending(db, budget, debtInterest);
 
-      const states = await db
-        .collection<State>("states")
-        .find({ countryId: budgetCountryId })
-        .toArray();
+      const states = await statesCollection(db).find({ countryId: budgetCountryId }).toArray();
       const population = states.reduce((sum, s) => sum + (s.population ?? 0), 0);
       const nationalMedianIncome = await resolveNationalMedianIncome(db, budgetCountryId);
 
-      const enactedLaws = await db
-        .collection<EnactedLaw>("enactedLaws")
+      const enactedLaws = await enactedLawsCollection(db)
         .find({
           scope: "national",
-          ...(budgetCountryId === "US"
+          ...(countryHasFeature("usApi", budgetCountryId)
             ? { $or: [{ countryId: "US" }, { countryId: { $exists: false } }] }
             : { countryId: budgetCountryId }),
           repealedAt: { $exists: false },
@@ -156,8 +159,8 @@ export async function GET() {
     }
 
     // ── Regional/state budget diagnostics ────────────────────────────────
-    const stateBudgets = await db.collection<StateBudget>("stateBudgets").find({}).toArray();
-    const allStates = await db.collection<State>("states").find({}).toArray();
+    const stateBudgets = await stateBudgetsCollection(db).find({}).toArray();
+    const allStates = await statesCollection(db).find({}).toArray();
     const stateMap = new Map(allStates.map((s) => [s._id, s]));
 
     // Build a map of countryId → national budget for federal grant calculation
@@ -254,9 +257,10 @@ export async function POST() {
     // ── Step 1: Re-seed enacted laws from current legislation type definitions ──
     // Fixes stale cost fields left by previous seeds
     const { generateDefaultEnactedLaws } = await import("@/lib/seeds/reference/budgets");
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, startingYear: 1 } }
+    );
     const preset =
       gameState?.preset ??
       ((gameState?.startingYear ?? 2019) <= 1991 ? "1991-default" : "2019-default");
@@ -278,7 +282,7 @@ export async function POST() {
         update.$unset = unsetFields;
       }
 
-      const result = await db.collection<EnactedLaw>("enactedLaws").updateOne(
+      const result = await enactedLawsCollection(db).updateOne(
         {
           legislationTypeId: law.legislationTypeId,
           scope: law.scope,
@@ -296,8 +300,7 @@ export async function POST() {
     const { legislationTypes } = await import("@/lib/seeds/reference/legislationTypes");
     const ltMap = new Map(legislationTypes.map((lt: { _id: string }) => [lt._id, lt]));
 
-    const allEnactedLaws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const allEnactedLaws = await enactedLawsCollection(db)
       .find({ repealedAt: { $exists: false } })
       .toArray();
 
@@ -341,20 +344,19 @@ export async function POST() {
       if (Object.keys(setFields).length > 0) {
         const update: Record<string, unknown> = { $set: setFields };
         if (Object.keys(unsetFields).length > 0) update.$unset = unsetFields;
-        const result = await db
-          .collection<EnactedLaw>("enactedLaws")
-          .updateOne({ _id: law._id }, update);
+        const result = await enactedLawsCollection(db).updateOne({ _id: law._id }, update);
         if (result.modifiedCount > 0) lawsUpdated++;
       }
     }
 
     // ── Step 2: Heal national budgets ────────────────────────────────────
-    const nationalBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+    const nationalBudgets = await federalBudgetCollection(db).find({}).toArray();
     let nationalHealed = 0;
 
     // Pre-fetch all legislation types with taxRateChange for rate sync
-    const taxLegTypes = await db
-      .collection<import("@/lib/db/types").LegislationType>("legislationTypes")
+    const taxLegTypes = await legislationTypesCollection<import("@/lib/db/types").LegislationType>(
+      db
+    )
       .find({ taxRateChange: { $exists: true } })
       .toArray();
     const taxTypeByLegId = new Map(taxLegTypes.map((lt) => [lt._id, lt.taxRateChange!.taxType]));
@@ -368,8 +370,7 @@ export async function POST() {
       // Each enacted law with a `rate` field overrides the corresponding budget taxRate.
       const budgetCountryId = (budget.countryId ||
         (budget._id === "federal" ? "US" : budget._id)) as CountryId;
-      const taxEnactedLaws = await db
-        .collection<EnactedLaw>("enactedLaws")
+      const taxEnactedLaws = await enactedLawsCollection(db)
         .find({
           scope: "national",
           countryId: budgetCountryId,
@@ -405,7 +406,7 @@ export async function POST() {
 
       const surplus = revenue.total - finalSpending.total;
 
-      await db.collection<FederalBudget>("federalBudget").updateOne(
+      await federalBudgetCollection(db).updateOne(
         { _id: budget._id },
         {
           $set: {
@@ -421,8 +422,8 @@ export async function POST() {
     }
 
     // ── Step 3: Heal regional/state budgets ──────────────────────────────
-    const stateBudgets = await db.collection<StateBudget>("stateBudgets").find({}).toArray();
-    const allStates = await db.collection<State>("states").find({}).toArray();
+    const stateBudgets = await stateBudgetsCollection(db).find({}).toArray();
+    const allStates = await statesCollection(db).find({}).toArray();
     const stateMap = new Map(allStates.map((s) => [s._id, s]));
     let regionalHealed = 0;
 
@@ -459,7 +460,7 @@ export async function POST() {
 
       const surplus = revenue.total - finalSpending.total;
 
-      await db.collection<StateBudget>("stateBudgets").updateOne(
+      await stateBudgetsCollection(db).updateOne(
         { _id: sb._id },
         {
           $set: {

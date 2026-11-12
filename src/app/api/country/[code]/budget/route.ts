@@ -1,10 +1,10 @@
 /**
- * UK Budget authoring (epic #856, ticket #858).
+ * UK Budget authoring.
  *
- * GET  /api/country/[code]/budget → current fiscal-year draft + tax levers +
+ * GET  /api/country/[code]/budget -> current fiscal-year draft + tax levers +
  *      spending categories + whether the caller is the Chancellor.
  * POST /api/country/[code]/budget  body { taxRates, programLevels, action }
- *      action "save" → draft; "table" → validate, table, and create the
+ *      action "save" -> draft; "table" -> validate, table, and create the
  *      vote-vehicle bill so the Commons votes on it.
  *
  * The Chancellor may author. The Prime Minister acts when that office is vacant.
@@ -24,19 +24,21 @@ import { UK_LAWS } from "@/lib/politicalLegislation/laws/ukLaws";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getEnactedLevels } from "@/lib/politicalLegislation/enactedLevels";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { Bill } from "@/lib/db/types/legislation";
 import {
   getBudgetForFiscalYear,
   upsertBudgetDraft,
   tableBudgetWithBill,
 } from "@/lib/db/collections/ukBudgets";
-import { validateBudget } from "@/lib/uk/budget/budgetValidation";
+import { validateBudget } from "@/lib/countries/uk/budget/budgetValidation";
 import {
   buildAnnualBudgetProvisions,
   previewAnnualBudget,
   resolveAnnualBudgetAuthority,
-} from "@/lib/uk/budget/annualBudget";
+} from "@/lib/countries/uk/budget/annualBudget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const CHANCELLOR_POSITION_ID = "chancellor";
 
@@ -83,7 +85,7 @@ async function resolveContext(request: Request, code: string) {
   if (!COUNTRY_CONFIGS[countryId]) {
     return { error: errorResponse(400, "Invalid country") };
   }
-  if (countryId !== "UK") {
+  if (!countryHasFeature("ukApi", countryId)) {
     return { error: errorResponse(400, "The Budget is UK-only") };
   }
   const auth = await requireHumanSessionWithCharacter(request);
@@ -119,13 +121,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const [budget, federalBudget, enactedLevels, voteBill] = await Promise.all([
       getBudgetForFiscalYear(ctx.db, ctx.fiscalYear),
-      ctx.db.collection<FederalBudget>("federalBudget").findOne({ _id: "UK" }),
+      federalBudgetCollection(ctx.db).findOne({ _id: "UK" }),
       getEnactedLevels(ctx.db, "UK"),
       // The Budget's vote-vehicle bill (ticket #1268): without this the panel
       // shows a bare "tabled" state while the Commons vote is pending and the
       // Chancellor cannot tell the vote is progressing.
-      ctx.db
-        .collection<Bill>("bills")
+      billsCollection(ctx.db)
         .find(
           { countryId: "UK", category: "budget", budgetFiscalYear: ctx.fiscalYear },
           {

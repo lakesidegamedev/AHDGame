@@ -4,11 +4,6 @@ import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
-const isEnabledMock = vi.fn();
-vi.mock("./featureFlag", () => ({
-  isSubsidiaryCorporationsEnabled: () => isEnabledMock(),
-}));
-
 import { canActOnCorporationAsParent, canDirectSubsidiaryAsParent } from "./authorization";
 
 const parentId = new ObjectId();
@@ -29,21 +24,13 @@ let db: MockDb;
 beforeEach(() => {
   vi.clearAllMocks();
   db = createMockDb();
-  isEnabledMock.mockResolvedValue(true);
   db.collection("corporations").findOne = vi
     .fn()
     .mockResolvedValue({ _id: parentId, userId: callerUserId, ceoVacant: false });
 });
 
 describe("canActOnCorporationAsParent", () => {
-  it("is false when the feature flag is off", async () => {
-    isEnabledMock.mockResolvedValue(false);
-    expect(
-      await canActOnCorporationAsParent(db as unknown as Db, callerUserId, sub(60, true))
-    ).toBe(false);
-  });
-
-  it("is true when flag on, formalized, parent controls >50%, and caller is parent CEO", async () => {
+  it("is true when formalized, parent controls >50%, and caller is parent CEO", async () => {
     expect(
       await canActOnCorporationAsParent(db as unknown as Db, callerUserId, sub(60, true))
     ).toBe(true);

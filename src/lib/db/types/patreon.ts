@@ -83,8 +83,6 @@ export const PATREON_HIGHLIGHT_COLORS = {
   default: "#d4a24c",
 } as const;
 
-export type PatreonHighlightColorKey = keyof typeof PATREON_HIGHLIGHT_COLORS;
-
 export const PATREON_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function isPatreonActive(tier: PatreonTier, expiresAt?: Date | null): boolean {

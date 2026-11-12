@@ -10,6 +10,9 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import { canActAsChair } from "@/lib/parties/actingChair";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 const voteSchema = z.object({
   vote: z.enum(["yes", "no"]),
@@ -51,9 +54,7 @@ export async function POST(
     const db = await getDb();
     const gameTime = await getGameTime();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId, countryId });
+    const coalition = await coalitionsCollection(db).findOne({ sequentialId, countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -72,9 +73,10 @@ export async function POST(
     }
 
     // Find the user's party and verify they are the national chair
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ chairId: character._id, countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      chairId: character._id,
+      countryId,
+    });
     if (!party) {
       throw forbidden("You must be a national party chair to vote on a disband.");
     }
@@ -100,7 +102,7 @@ export async function POST(
       votedAt: now,
     };
 
-    await db.collection("coalitions").updateOne({ _id: coalition._id }, [
+    await coalitionsCollection<Document>(db).updateOne({ _id: coalition._id }, [
       {
         $set: {
           "disbandVote.votes": {

@@ -8,11 +8,12 @@ import { RU_CABINET_POSITIONS } from "@/lib/constants/ruCabinet";
 import { DD_CABINET_POSITIONS } from "@/lib/constants/ddCabinet";
 import { SCO_CABINET_POSITIONS } from "@/lib/constants/scoCabinet";
 import { WAL_CABINET_POSITIONS } from "@/lib/constants/walCabinet";
+import { getCabinetPositions } from "@/lib/constants/cabinetPositions";
 import { getCountryFlagUrl } from "@/lib/constants";
 
 /** Countries that use the parliamentary direct-appointment cabinet pattern. */
 export type ParliamentaryCabinetCountryId =
-  "UK" | "DE" | "JP" | "IE" | "CN" | "RU" | "DD" | "SCO" | "WAL";
+  "UK" | "DE" | "JP" | "IE" | "CN" | "RU" | "DD" | "SCO" | "WAL" | "CA" | "QC";
 
 export interface ParliamentaryCabinetHero {
   src: string;
@@ -180,6 +181,36 @@ export const PARLIAMENTARY_CABINET_CONFIGS: Record<
       alt: "Senedd, Cardiff",
       tagline: "Senedd · Cabinet Secretaries appointed by the First Minister",
       titleFor: () => "Welsh Government",
+    },
+  },
+  CA: {
+    countryId: "CA",
+    positions: getCabinetPositions("CA"),
+    governmentLinkPath: "/country/ca/executive",
+    chamberMemberLabel: "Member of Parliament",
+    chamberName: "House of Commons",
+    description:
+      "The Prime Minister appoints ministers to the federal Cabinet without a confirmation vote. Ministers lead departments covering finance, foreign affairs, national defence, justice, public safety, industry, trade, natural resources, health, housing and intergovernmental affairs, and govern only while the Prime Minister holds the confidence of the House of Commons. They serve at the Prime Minister's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/parliament-hill",
+      alt: "Parliament Hill, Ottawa",
+      tagline: "Parliament Hill · Ministers appointed by the Prime Minister",
+      titleFor: () => "Cabinet of Canada",
+    },
+  },
+  QC: {
+    countryId: "QC",
+    positions: getCabinetPositions("QC"),
+    governmentLinkPath: "/country/qc/executive",
+    chamberMemberLabel: "Member of the National Assembly",
+    chamberName: "National Assembly",
+    description:
+      "The Premier appoints ministers to the Executive Council of an independent Quebec without a confirmation vote. Ministers lead departments covering finance, international relations, justice and public security, defence, health, education, the economy, municipal affairs, transport, the environment and employment, governing through a National Assembly majority. They serve at the Premier's pleasure and can be dismissed at any time.",
+    hero: {
+      src: "/api/images/hero/quebec-parliament",
+      alt: "The Parliament Building, Quebec City",
+      tagline: "Parliament Building · Ministers appointed by the Premier",
+      titleFor: () => "Executive Council of Quebec",
     },
   },
 };

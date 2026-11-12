@@ -4,6 +4,7 @@ import { generateUniqueNPPNameAndGender, isNameFromCountryPool } from "./nameGen
 import { selectPoliticianImage, weightedRandomEthnicity } from "./generator";
 import type { CountryId } from "@/lib/constants/countries";
 import { syncDenormalizedNppName } from "./syncDenormalizedName";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Rename NPPs that were seeded from the wrong name pool.
@@ -45,8 +46,7 @@ export async function planNppNameHeal(
   const query: Record<string, unknown> = { retiredAt: null };
   if (options.countryId) query.countryId = options.countryId;
 
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(query)
     .project<HealCandidate>({
       name: 1,
@@ -125,7 +125,7 @@ export async function applyNppNameHeal(
   let candidaciesUpdated = 0;
 
   for (const rename of renames) {
-    await db.collection<NPP>("npps").updateOne(
+    await nppsCollection(db).updateOne(
       { _id: rename.nppId },
       {
         $set: {

@@ -17,6 +17,8 @@ const COUNTRY_CODES: Record<CountryId, string> = {
   IE: "IE",
   SCO: "SCO",
   WAL: "WAL",
+  CA: "CA",
+  QC: "QC",
   BR: "BR",
   CN: "CN",
   NG: "NG",

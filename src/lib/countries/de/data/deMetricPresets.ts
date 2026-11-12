@@ -1,14 +1,13 @@
 /**
- * Per-region, per-era HAND-AUTHORED values for Germany's new overhaul ROOT metrics
- * (`UNIFORM_METRIC_PATHS`). Consumed via `getRegionMetricPresets`
- * (src/lib/seeds/metricPresets.ts) and overlaid by `seedDEStateMetrics` / `seedDEBaselines`
- * AFTER `applyEra1991Adjustments`, so the preset is the SINGLE SOURCE OF TRUTH for these
- * metrics in both eras. `uniformMetricDefault` is a fallback only.
+ * Per-region, per-era hand-authored values for Germany's overhaul ROOT metrics
+ * (`UNIFORM_METRIC_PATHS`). Consumed via `getRegionMetricPresets` and overlaid
+ * by `seedDEStateMetrics` / `seedDEBaselines` AFTER `applyEra1991Adjustments`,
+ * so the preset is the single source of truth for these metrics in both eras.
+ * `uniformMetricDefault` is a fallback only.
  *
- * BOTH eras are authored (national baseline + East/West archetype + per-Land tilts), per the
- * 2026-06-15 decision. 2019 = post-Wende unified Germany; 1991 = the immediate
- * post-reunification year (Aufbau Ost beginning, Treuhand deindustrialization of the East,
- * pre-Euro/pre-Schuldenbremse/pre-Maastricht, nuclear power active, Energiewende not yet begun).
+ * Both eras are authored (national baseline + East/West archetype + per-Land
+ * tilts). 2019 = post-Wende unified Germany; 1991 = immediate post-reunification
+ * (Aufbau Ost beginning, Treuhand deindustrialization of the East, pre-Euro).
  */
 
 /** A per-region map of metricPath → numeric value (only the metrics DE authors). */

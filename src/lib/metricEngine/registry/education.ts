@@ -1,59 +1,33 @@
 import { fundingResponse } from "../spendingChannel";
 import type { EngineNodeContext, RegistryNode } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
- * Education outcome nodes (spec P2a §4.1), LIVE in `METRIC_REGISTRY` via the
- * generic phase wiring. Cold-start is parity-preserving by construction: with no
- * stored simBaseline, evalNode's fallbacks yield `value = storedValue` exactly
- * (no maxPolicyDelta cap), so going live does not move any metric at t0 — the
- * seed governs the LEVEL; these compute() formulas govern the DYNAMICS (how the
- * value responds to spending/poverty/upstream shifts). Constants are first-pass
- * directional; the per-phase balance pass tunes magnitudes.
+ * Education outcome nodes, LIVE in `METRIC_REGISTRY` via generic phase wiring.
+ * Cold-start is parity-preserving: with no stored simBaseline, evalNode's
+ * fallbacks yield `value = storedValue` exactly, so going live does not move
+ * any metric at t0. The seed governs the LEVEL; these compute() formulas
+ * govern the DYNAMICS. Constants are first-pass directional.
  *
- * Drivers (design §4.1): `{spending:education}` via the diminishing-returns
- * channel; childPoverty as a LAGGED edge (live since P3a); socialCohesion and
- * medianIncome animated in P3d/P3a (their bare-string reads resolved into topo
- * edges on registration); academicPressure / apprenticeshipRate remain
- * seedCurrent roots.
+ * Drivers: `{spending:education}` via diminishing returns; childPoverty as a
+ * LAGGED edge; socialCohesion and medianIncome resolve into topo edges on
+ * registration; academicPressure / apprenticeshipRate remain seedCurrent roots.
  */
 
-// Calibration anchors (per-metric, P2a parity will tune). `*_HALF_SAT` is the
-// per-capita education spend at which the channel reaches half its max response.
+// Calibration anchors. `*_HALF_SAT` is the per-capita education spend at which
+// the channel reaches half its max response.
 //
-// Recalibrated (ticket #826 item 14 / coordinated 6-category spend-response pass,
-// 2026-07-01). The toy value of 1 meant fundingResponse saturated to ~99.9% of max
-// at ANY realistic per-capita spend, so enacting an education bill barely moved
-// highSchoolGradRate/testPerformance/etc -- confirmed live in production (WA
-// testPerformance simBaseline 95.21 pre-fix) and confirmed analytically: with
-// halfSat=1, fundingResponse($806, 1, 100) = 99.88%.
+// The half-sat must sit inside the realistic spend range or the response
+// saturates at any plausible spend and funding changes barely move outcomes.
+// The spending channel sums federal-plus-state per-capita and all five
+// education budgetCategory levers stack additively: baseline ~$806/capita,
+// single flagship lever max ~$1303, five-lever theoretical max ~$6515
+// (~$8274 after the US era ramp).
 //
-// Real per-capita range, grounded in the actual seed + legislation data:
-//  - Baseline (today): US federal FY2023 baselineSpendingByCategory.education =
-//    $270B / 334.9M population = $806.21/capita
-//    (src/lib/seeds/reference/budgets.ts NATIONAL_BUDGET_SEED_CONFIGS_2023).
-//  - Floor: $0 -- every education-budgetCategory bill has a full-defund/
-//    "abolition" policy option.
-//  - Ceiling: the engine's spending channel SUMS federal-per-capita (national
-//    pop) + state-per-capita (region pop) (src/lib/metricEngine/spendingProvider.ts),
-//    and ALL FIVE budgetCategory:"education" US legislationTypes stack additively
-//    (src/lib/budget/spending.ts calculateFederalSpending/calculateStateSpending
-//    sum every enacted law's annualCostPerCapita in a category). Maxing every
-//    lever's top (`withPerCapitaCosts`) option in src/lib/seeds/reference/
-//    legislationTypes.ts: us_federal_education_funding $1303 (national) +
-//    us_federal_science_funding $1042 (national) + us_school_standards $261
-//    (national) + us_state_education_funding $3040 (state) +
-//    us_state_higher_education $869 (state) = $6515/capita theoretical max
-//    (before the COST_SCALE_ANCHORS US era ramp, which can push this to ~$8274
-//    at 2020s-era GDP/capita, scaleHigh=1.27).
-//
-// EDU_SPEND_HALF_SAT=1300 sits close to the single flagship lever's max cost
-// ($1303, us_federal_education_funding) -- an intentional game-design anchor: a
-// dedicated education administration that fully funds JUST that one bill reaches
-// ~50% of max response. Response at today's $806 baseline: 38.28%. Response at
-// the full $6515 five-bill stacked max: 83.37%. That's real, perceptible slope
-// (0% -> 38% -> 50% -> 83%) across the whole realistic range instead of the old
-// ~99.88%-to-99.98% near-total saturation.
-const EDU_SPEND_HALF_SAT = 1300;
+// 1300 is anchored to the flagship lever's max, so fully funding just that one
+// bill reaches ~50% of max response. Response runs ~38% at today's baseline up
+// to ~83% at the stacked max: real slope across the whole range.
+export const EDU_SPEND_HALF_SAT = 1300;
 
 const spendResp = (ctx: EngineNodeContext): number =>
   fundingResponse(ctx.spending["education"] ?? 0, EDU_SPEND_HALF_SAT, 100); // 0..100
@@ -165,7 +139,7 @@ export const universityEnrollmentNode: RegistryNode = {
   categoryId: "education",
   metricId: "universityEnrollment",
   kind: "derived",
-  // #909: the single higher-education enrolment metric (collegeEnrollment was
+  // The single higher-education enrolment metric (collegeEnrollment was
   // merged in). GCSE-driven where a country models GCSE attainment (UK/IE/JP/…);
   // HS-grad-driven in the US — the former collegeEnrollment model — so US states
   // keep their meaningful ~78 series instead of collapsing to the GCSE fallback.
@@ -174,10 +148,10 @@ export const universityEnrollmentNode: RegistryNode = {
   inertia: 0.8,
   // 2dp: inherited from the merged-in collegeEnrollment node — the US education
   // secretary's tier effects (±0.01–0.02/turn) are reabsorbed at a coarser
-  // grain (bug #0800; regressed by the #909 merge which dropped the 2dp).
+  // grain (; regressed by the merge which dropped the 2dp).
   decimals: 2,
   compute: (ctx) => {
-    if (ctx.countryId === "US") {
+    if (countryHasFeature("usLib", ctx.countryId)) {
       const gradRate = ctx.current["education.highSchoolGradRate"] ?? 88;
       // Anchor 55 (the former collegeEnrollment equilibrium) keeps the
       // downstream socialMobility center (55) at zero deviation.
@@ -191,7 +165,7 @@ export const universityEnrollmentNode: RegistryNode = {
 /**
  * Education derived nodes, registered in `METRIC_REGISTRY` (registry/index.ts).
  * Topo order within the tier: gradRate → literacy; testPerf + gradRate →
- * workforceSkill; {gcseAttainment, gradRate} → universityEnrollment (#909).
+ * workforceSkill; {gcseAttainment, gradRate} → universityEnrollment.
  */
 export const EDUCATION_NODES: RegistryNode[] = [
   highSchoolGradRateNode,

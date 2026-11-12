@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Db } from "mongodb";
 import type { GameConfig } from "@/lib/db/types";
-import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export interface ConstructionAdmission {
   token: string;
@@ -14,7 +17,7 @@ export async function acquireConstructionAdmission(
   db: Db,
   admission: ConstructionAdmission
 ): Promise<boolean> {
-  const config = db.collection<GameConfig>("gameConfig");
+  const config = gameConfigCollection(db);
   const guard = {
     _id: "default",
     privateBankingEnabled: true,
@@ -37,9 +40,10 @@ export async function acquireConstructionAdmission(
 
 export async function releaseConstructionAdmission(db: Db, token?: string): Promise<void> {
   if (!token) return;
-  await db
-    .collection<GameConfig>("gameConfig")
-    .updateOne({ _id: "default" }, { $pull: { bankConstructionAdmissions: { token } } });
+  await gameConfigCollection(db).updateOne(
+    { _id: "default" },
+    { $pull: { bankConstructionAdmissions: { token } } }
+  );
 }
 
 /** Leave recovery enabled until every persisted cash or collateral obligation is clear. */
@@ -47,7 +51,7 @@ export async function setConstructionFinanceEnabled(
   db: Db,
   enabled: boolean
 ): Promise<{ ok: boolean; error?: string }> {
-  const config = db.collection<GameConfig>("gameConfig");
+  const config = gameConfigCollection(db);
   if (enabled) {
     const result = await config.updateOne(
       {
@@ -99,7 +103,7 @@ export async function setConstructionFinanceEnabled(
     return { ok: false, error: "A construction request or cash receipt is still admitted" };
   try {
     const [claims, leases] = await Promise.all([
-      db.collection<CorporateSector>("corporateSectors").countDocuments({
+      corporateSectorsCollection(db).countDocuments({
         $or: [
           {
             "constructionFinancing.status": { $in: ["awaiting_approval", "funding", "building"] },
@@ -108,9 +112,7 @@ export async function setConstructionFinanceEnabled(
           { constructionPropertyTransition: { $exists: true } },
         ],
       }),
-      db
-        .collection<Corporation>("corporations")
-        .countDocuments({ bankConstructionFunding: { $exists: true } }),
+      corporationsCollection(db).countDocuments({ bankConstructionFunding: { $exists: true } }),
     ]);
     if (claims || leases)
       return {
@@ -148,24 +150,21 @@ export async function setConstructionFinanceEnabled(
 
 /** A killed pre-reservation request has no sector claim or bank cash lease to retain. */
 export async function recoverConstructionAdmissions(db: Db, turn: number): Promise<void> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { bankConstructionAdmissions: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { bankConstructionAdmissions: 1 } }
+  );
   for (const admission of config?.bankConstructionAdmissions ?? []) {
     if (admission.turn >= turn) continue;
     const [claim, bank] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne(
-          { "constructionFinancing.admissionToken": admission.token },
-          { projection: { constructionFinancing: 1 } }
-        ),
-      db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { "bankConstructionFunding.loanId": admission.loanId },
-          { projection: { _id: 1 } }
-        ),
+      corporateSectorsCollection(db).findOne(
+        { "constructionFinancing.admissionToken": admission.token },
+        { projection: { constructionFinancing: 1 } }
+      ),
+      corporationsCollection(db).findOne(
+        { "bankConstructionFunding.loanId": admission.loanId },
+        { projection: { _id: 1 } }
+      ),
     ]);
     const state = claim?.constructionFinancing;
     if (

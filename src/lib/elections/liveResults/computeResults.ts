@@ -24,18 +24,22 @@ export const WESTMINSTER_STYLE_TYPES = new Set([
   "snap_commons",
   "holyrood",
   "senedd",
+  "qcAssembly",
   "dail",
   "shugiin",
   "snap_shugiin",
   "sangiin",
   "bundestag",
   "landtag",
+  "provincialLegislature",
   // Beta-country parliamentary lower chambers (FR/IT/ES/SE/TR)
   "assembleeNationale",
   "cameraDeputati",
   "congresoDiputados",
   "riksdag",
   "milletMeclisi",
+  "caCommons",
+  "snap_caCommons",
 ]);
 
 /**
@@ -59,6 +63,8 @@ export const NATIONAL_AGGREGATION_TYPES = new Set([
   "congresoDiputados",
   "riksdag",
   "milletMeclisi",
+  "caCommons",
+  "snap_caCommons",
 ]);
 
 export const CHAMBER_LABELS: Record<string, string> = {
@@ -67,12 +73,14 @@ export const CHAMBER_LABELS: Record<string, string> = {
   snap_commons: "House of Commons",
   holyrood: "Scottish Parliament",
   senedd: "Senedd",
+  qcAssembly: "National Assembly",
   dail: "Dáil Éireann",
   shugiin: "Shūgiin",
   snap_shugiin: "Shūgiin",
   sangiin: "Sangiin",
   bundestag: "Bundestag",
   landtag: "Landtag",
+  provincialLegislature: "Provincial Legislature",
   npcDelegate: "National People's Congress",
   peoplesCongress: "People's Congress",
   regionalCouncil: "Regional Council",
@@ -82,6 +90,8 @@ export const CHAMBER_LABELS: Record<string, string> = {
   congresoDiputados: "Congress of Deputies",
   riksdag: "Riksdag",
   milletMeclisi: "Grand National Assembly",
+  caCommons: "House of Commons",
+  snap_caCommons: "House of Commons",
 };
 
 /** FNV-1a → 0..1. Stable across processes; drives per-unit reveal offsets. */

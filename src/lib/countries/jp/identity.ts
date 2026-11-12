@@ -12,24 +12,18 @@ import type { TreasuryIdentity } from "@/lib/constants/treasuryIdentity";
 import type { CountryIdentity } from "../contract";
 
 /**
- * Japan's names, labels and surface text. Phase D2.
+ * Japan's names, labels and surface text.
  *
- * ⚠️ GENERATED FROM THE PRE-MOVE SNAPSHOT, NOT TRANSCRIBED. Every value below
- * was read out of `__snapshots__/jp.pre-move.json`, which was emitted from the
- * live registries before anything moved. The plan's single stated risk is
- * transcription error, and 350-plus lines of hand-copying is how that risk
- * arrives, so no value here was retyped.
+ * ⚠️ VALUES ARE GENERATED FROM THE PRE-MOVE SNAPSHOT
+ * (`__snapshots__/jp.pre-move.json`), not transcribed, to avoid hand-copying
+ * errors.
  *
- * ⚠️ TREASURY_IDENTITY IS NOT HERE, DELIBERATELY. It is computed
- * (`Object.fromEntries` at treasuryIdentity.ts:324) from TREASURY_TEXT plus the
- * national palette, so it recomposes itself once the text moves. The plan's D2
- * list names both; forwarding the derived one would create a second source of
- * the same values. Only the authored text moves.
+ * ⚠️ TREASURY_IDENTITY IS NOT HERE, DELIBERATELY. It is computed from
+ * TREASURY_TEXT plus the national palette, so it recomposes itself once the
+ * text moves. Only the authored text moves.
  *
- * ⚠️ NO `eraNames`. ERA_COUNTRY_NAMES holds 1953 and 1979 entries for DE and RU
- * only; Japan has none. Snapshotting "Japan's value" would capture `undefined`
- * and authoring a fallback would invent an authored value, so the field is
- * absent and the harness asserts that.
+ * ⚠️ NO `eraNames`: ERA_COUNTRY_NAMES only holds DE and RU; Japan has none.
+ * The field is absent and the harness asserts that.
  */
 
 const cabinet: CabinetIdentity = {

@@ -66,6 +66,12 @@ import {
   computeZeroStateRegionWeights,
   allocateSeatsByWeights,
 } from "@/lib/sim/backfillMissingSeats";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 export interface SeedNppPriorsPopulationResult {
   nppsCreated: number;
@@ -170,13 +176,11 @@ type OrgRow = {
  */
 async function reserveNppSequentialIdBlock(db: Db, count: number): Promise<number> {
   if (count <= 0) return 0;
-  const counter = await db
-    .collection<Counter>("counters")
-    .findOneAndUpdate(
-      { _id: "npp" },
-      { $inc: { seq: count } },
-      { upsert: true, returnDocument: "after" }
-    );
+  const counter = await countersCollection(db).findOneAndUpdate(
+    { _id: "npp" },
+    { $inc: { seq: count } },
+    { upsert: true, returnDocument: "after" }
+  );
   if (!counter?.seq) {
     throw new Error("Failed to reserve npp sequential id block");
   }
@@ -191,8 +195,7 @@ export async function seedNppPriorsPopulation(
 
   // Real sub-national regions only - excludes national executive races that
   // pass a country code as `state`.
-  const stateDocs = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const stateDocs = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find({}, { projection: { _id: 1, countryId: 1 } })
     .toArray();
   const validRegionKeys = new Set(stateDocs.map((s) => `${s.countryId}:${s._id}`));
@@ -203,8 +206,7 @@ export async function seedNppPriorsPopulation(
   // Cycle-0 founding elections are the seat-count truth: they're generated
   // from each country's own region/config data by `spawnFoundingElections`,
   // which must have already run when this is called.
-  const elections = await db
-    .collection<Pick<Election, "countryId" | "state" | "cycle">>("elections")
+  const elections = await electionsCollection<Pick<Election, "countryId" | "state" | "cycle">>(db)
     .find({ cycle: 0 }, { projection: { countryId: 1, state: 1 } })
     .toArray();
 
@@ -233,8 +235,7 @@ export async function seedNppPriorsPopulation(
     return { nppsCreated: 0, byCountry: {} };
   }
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       {},
       {
@@ -256,8 +257,7 @@ export async function seedNppPriorsPopulation(
     partiesByCountry.set(p.countryId, list);
   }
 
-  const orgRows = await db
-    .collection<OrgRow>("statePartyOrg")
+  const orgRows = await statePartyOrgCollection<OrgRow>(db)
     .find(
       {},
       {
@@ -281,8 +281,7 @@ export async function seedNppPriorsPopulation(
     orgRowsByRegion.set(key, list);
   }
 
-  const existingNpps = await db
-    .collection<NPP>("npps")
+  const existingNpps = await nppsCollection(db)
     .find({ retiredAt: null }, { projection: { name: 1, countryId: 1, homeState: 1, party: 1 } })
     .toArray();
   const existingNames = new Set(existingNpps.map((n) => n.name));
@@ -386,7 +385,7 @@ export async function seedNppPriorsPopulation(
       retiredAt: null,
       influenceState: { totalTimesInfluenced: 0 },
       ...NPP_ECONOMY_DEFAULTS,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       electionCooldowns: {},
       createdAt: now,
       updatedAt: now,
@@ -394,7 +393,7 @@ export async function seedNppPriorsPopulation(
     return npp;
   });
 
-  await db.collection<NPP>("npps").insertMany(toInsert);
+  await nppsCollection(db).insertMany(toInsert);
   log(
     `Seeded NPP priors population: ${toInsert.length} NPPs across ${
       Object.keys(byCountry).length

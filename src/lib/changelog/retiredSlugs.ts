@@ -1,14 +1,10 @@
 /**
- * Public changelog URLs that no longer have a post, and where they now live.
+ * Retired public changelog slugs and where they now live.
  *
- * `/changelog/<slug>` is the published address of a public entry and every one
- * of these was in the sitemap. The 2026-09-06 consolidation folded twenty patch
- * posts into the six releases that actually carried them, so the addresses have
- * to keep resolving: they are linked from Discord, from the wiki and from
- * players' own posts.
- *
- * Nothing else may be added here. A release post is never retired, because a
- * version is now minted once per release rather than once per pull request.
+ * `/changelog/<slug>` is the published address of an entry and these were in
+ * the sitemap, so they must keep resolving: they are linked from Discord, the
+ * wiki and players' posts. Nothing else may be added here; a release post is
+ * never retired.
  */
 export const RETIRED_PUBLIC_CHANGELOG_SLUGS: Readonly<Record<string, string>> = {
   "1.1.1": "1.1.0",

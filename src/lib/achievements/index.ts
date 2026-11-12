@@ -15,6 +15,11 @@ import {
   setCachedRarity,
   invalidateRarityCache,
 } from "./cache";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 async function maybeAwardCompletionist(
   userId: ObjectId,
@@ -29,9 +34,10 @@ async function maybeAwardCompletionist(
       .filter((definition) => definition.slug !== "completionist")
       .map((definition) => definition._id);
     if (requiredIds.length === 0) return;
-    const earnedCount = await db
-      .collection<CharacterAchievement>("characterAchievements")
-      .countDocuments({ userId, achievementId: { $in: requiredIds } });
+    const earnedCount = await characterAchievementsCollection(db).countDocuments({
+      userId,
+      achievementId: { $in: requiredIds },
+    });
     if (earnedCount === requiredIds.length) {
       await awardAchievement(userId, "completionist", characterId);
     }
@@ -52,7 +58,7 @@ export async function getAchievementBySlug(slug: string): Promise<Achievement | 
     }
 
     const db = await getDb();
-    const achievement = await db.collection<Achievement>("achievements").findOne({ slug });
+    const achievement = await achievementsCollection(db).findOne({ slug });
     return achievement;
   } catch (error) {
     console.error("[achievements] getAchievementBySlug error:", error);
@@ -69,11 +75,7 @@ export async function getAllAchievements(): Promise<Achievement[]> {
     if (cached) return cached;
 
     const db = await getDb();
-    const list = await db
-      .collection<Achievement>("achievements")
-      .find({})
-      .sort({ order: 1 })
-      .toArray();
+    const list = await achievementsCollection(db).find({}).sort({ order: 1 }).toArray();
     setCachedDefinitions(list);
     return list;
   } catch (error) {
@@ -105,14 +107,14 @@ export async function awardAchievement(
 
     const db = await getDb();
 
-    const existing = await db.collection<CharacterAchievement>("characterAchievements").findOne({
+    const existing = await characterAchievementsCollection(db).findOne({
       userId,
       achievementId: achievement._id,
     });
     if (existing) return false;
 
     try {
-      await db.collection<CharacterAchievement>("characterAchievements").insertOne({
+      await characterAchievementsCollection(db).insertOne({
         _id: new ObjectId(),
         userId,
         characterId,
@@ -170,8 +172,7 @@ export async function awardAchievements(
     if (cached) {
       achievements = cached.filter((a) => achievementSlugs.includes(a.slug));
     } else {
-      achievements = await db
-        .collection<Achievement>("achievements")
+      achievements = await achievementsCollection(db)
         .find({ slug: { $in: achievementSlugs } })
         .toArray();
     }
@@ -179,8 +180,7 @@ export async function awardAchievements(
 
     // 2. Check which ones the account already has (single query)
     const achievementIds = achievements.map((a) => a._id);
-    const existing = await db
-      .collection<CharacterAchievement>("characterAchievements")
+    const existing = await characterAchievementsCollection(db)
       .find(
         { userId, achievementId: { $in: achievementIds } },
         { projection: { achievementId: 1 } }
@@ -204,9 +204,7 @@ export async function awardAchievements(
     // ordered: false so duplicate-key races (concurrent award of same achievement)
     // insert the non-duplicate documents instead of aborting the entire batch.
     try {
-      await db
-        .collection<CharacterAchievement>("characterAchievements")
-        .insertMany(toInsert, { ordered: false });
+      await characterAchievementsCollection(db).insertMany(toInsert, { ordered: false });
     } catch (bulkError: unknown) {
       // E11000 duplicate key errors are expected from race conditions — the
       // successful inserts still went through with ordered: false.
@@ -248,7 +246,7 @@ export async function revokeAchievement(
     }
 
     const db = await getDb();
-    const result = await db.collection<CharacterAchievement>("characterAchievements").deleteOne({
+    const result = await characterAchievementsCollection(db).deleteOne({
       userId,
       achievementId: achievement._id,
     });
@@ -276,16 +274,12 @@ export async function getAccountAchievements(userId: ObjectId): Promise<
 > {
   try {
     const db = await getDb();
-    const cas = await db
-      .collection<CharacterAchievement>("characterAchievements")
-      .find({ userId })
-      .toArray();
+    const cas = await characterAchievementsCollection(db).find({ userId }).toArray();
 
     const achievementIds = cas.map((ca) => ca.achievementId);
     if (achievementIds.length === 0) return [];
 
-    const achievements = await db
-      .collection<Achievement>("achievements")
+    const achievements = await achievementsCollection(db)
       .find({ _id: { $in: achievementIds } })
       .toArray();
 
@@ -315,15 +309,16 @@ export async function getAchievementRarityMap(): Promise<Map<string, number>> {
 
     const db = await getDb();
     // Count accounts with characters rather than character docs
-    const totalAccounts = await db.collection("users").countDocuments({ hasCompletedSetup: true });
+    const totalAccounts = await usersCollection<Document>(db).countDocuments({
+      hasCompletedSetup: true,
+    });
     if (totalAccounts === 0) {
       const empty = new Map<string, number>();
       setCachedRarity(empty);
       return empty;
     }
 
-    const counts = await db
-      .collection<CharacterAchievement>("characterAchievements")
+    const counts = await characterAchievementsCollection(db)
       .aggregate<{ _id: ObjectId; count: number }>([
         { $group: { _id: "$achievementId", count: { $sum: 1 } } },
       ])
@@ -348,9 +343,10 @@ export async function getAchievementRarityMap(): Promise<Map<string, number>> {
 export async function resolveUserIdFromCharacter(characterId: ObjectId): Promise<ObjectId | null> {
   try {
     const db = await getDb();
-    const character = await db
-      .collection<{ _id: ObjectId; userId: ObjectId }>("characters")
-      .findOne({ _id: characterId }, { projection: { userId: 1 } });
+    const character = await charactersCollection<{ _id: ObjectId; userId: ObjectId }>(db).findOne(
+      { _id: characterId },
+      { projection: { userId: 1 } }
+    );
     return character?.userId ?? null;
   } catch (error) {
     console.error("[achievements] resolveUserIdFromCharacter error:", error);

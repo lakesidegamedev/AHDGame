@@ -1,23 +1,9 @@
-/**
- * 1992 UK Regional Polling Data
- *
- * Vote share percentages for Westminster voting intention by region,
- * derived from the 1992 General Election per-region results. Sources:
- * UK Parliament Library research briefings on the 1992 GE.
- *
- * Used by `calculateUKStatePartyOrgs` when the active preset is
- * `1991-default`. Compared to the 2020 dataset:
- *  - Reform UK doesn't exist yet (no entry; the slug resolves to a
- *    non-DB party under 1991-default anyway, so it would be skipped).
- *  - Greens hover at ~1% nationally (post-1989 EP-election bump
- *    already evaporating).
- *  - SCO has SNP at 22% (vs 48% in 2019) and Labour dominant.
- *  - WAL has Plaid at 9%, Labour dominant.
- *  - NIR has UUP as the dominant unionist (~35%, replacing DUP's later
- *    lead) and SF at ~10% (much smaller than the modern ~27%). SDLP +
- *    Alliance aren't seeded as default parties so their slugs would
- *    fall through the DB lookup and be skipped — those seats fall back
- *    to "independent" via the historical-seat resolver.
+/*
+ * 1992 UK regional Westminster vote shares, derived from 1992 General Election
+ * per-region results (UK Parliament Library research briefings).
+ * Used by calculateUKStatePartyOrgs under the 1991-default preset. Parties not
+ * seeded at 1991-default (e.g. Reform, SDLP, Alliance) resolve to no DB row and
+ * are skipped; their seats fall back to independent via the historical-seat resolver.
  */
 
 export const UK_REGION_POLLING_1992: Record<string, Record<string, number>> = {

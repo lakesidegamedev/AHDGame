@@ -7,6 +7,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** One corporation the seized corporation holds shares in, as read for the taking. */
 type HeldStake = Pick<
@@ -38,8 +39,8 @@ export function heldStakeValueAnchor(
  * Transfer shares owned by the seized corporation in other corporations to the
  * National Corporation. When a corporation owns shares in other corporations,
  * those shares must be transferred rather than silently destroyed during
- * dissolution (Bug #0803). They move as shares only: the buyout already paid
- * the seized corporation's holders their market value (#3041), so crediting
+ * dissolution. They move as shares only: the buyout already paid
+ * the seized corporation's holders their market value, so crediting
  * that value again as cash would create money.
  */
 export async function transferOwnedSharesToNatCorp(
@@ -49,7 +50,7 @@ export async function transferOwnedSharesToNatCorp(
   heldStakes: HeldStake[],
   now: Date
 ): Promise<void> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   for (const targetCorp of heldStakes) {
     const shareholderEntry = targetCorp.shareholders?.find((sh) =>

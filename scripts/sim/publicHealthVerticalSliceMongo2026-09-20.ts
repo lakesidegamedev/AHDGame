@@ -49,7 +49,6 @@ export async function seedFixture(client: MongoClient, databaseName: string): Pr
       currentYear: 2023,
       startingYear: 2023,
       eraSystemEnabled: false,
-      departmentProgramSliceEnabled: true,
     }),
     db.collection<{ _id: string; [key: string]: unknown }>("gameConfig").insertOne({
       _id: "default",
@@ -136,13 +135,9 @@ export async function runMongoVerticalSlice(env: NodeJS.ProcessEnv = process.env
     await seedFixture(client, fixtureDatabaseName);
     const db = client.db(fixtureDatabaseName);
     const before = await db.collection("federalBudget").findOne({ countryId: "US" });
-    const first = await processDepartmentProgramSettlement(db, 10, {
-      departmentProgramSliceEnabled: true,
-    });
+    const first = await processDepartmentProgramSettlement(db, 10, {});
     const afterFirst = await db.collection("federalBudget").findOne({ countryId: "US" });
-    const replay = await processDepartmentProgramSettlement(db, 10, {
-      departmentProgramSliceEnabled: true,
-    });
+    const replay = await processDepartmentProgramSettlement(db, 10, {});
     const afterReplay = await db.collection("federalBudget").findOne({ countryId: "US" });
     const delivery = await loadPublicHealthDeliveryMultiplier(db, 10, true);
     const program =

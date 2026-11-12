@@ -10,16 +10,19 @@ import type { ExchangeRate } from "@/lib/db/types";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { GovernmentTender } from "./types";
 import { extractionCapacityQuote, type ContractCurrencyQuote } from "./rules/presentation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export async function contractCurrencyQuotes(db: Db, countryId: CountryId, preset?: string) {
   const [rates, budget] = await Promise.all([
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
-    db
-      .collection<{ countryId: string; currencyCode?: CurrencyCode }>("federalBudget")
-      .findOne({ countryId }, { projection: { currencyCode: 1 } }),
+    federalBudgetCollection<{ countryId: string; currencyCode?: CurrencyCode }>(db).findOne(
+      { countryId },
+      { projection: { currencyCode: 1 } }
+    ),
   ]);
   const byCode = new Map(rates.map((r) => [r.currencyCode, r.rate]));
   const quote = (code: CurrencyCode | undefined): ContractCurrencyQuote | null => {
@@ -38,8 +41,7 @@ export async function contractCapacityQuotes(
     ...new Set(rows.flatMap((r) => (r.terms.type === "extraction" ? [r.terms.stateId] : []))),
   ];
   const docs = stateIds.length
-    ? await db
-        .collection<StateResourceCapacity>("stateResourceCapacity")
+    ? await stateResourceCapacityCollection(db)
         .find(
           { countryId: countryId as CountryId, stateId: { $in: stateIds } },
           { projection: { stateId: 1, resources: 1 } }

@@ -1,470 +1,74 @@
 /** Create and heal Japan's regional races while retaining their frozen electoral rules. */
-import type { AnyBulkWriteOperation } from "mongodb";
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import { getDb } from "@/lib/mongodb";
 import type { CountryGameState, Election, ElectionStatus, State } from "@/lib/db/types";
-import {
-  getJpSangiinClassSeats,
-  getJpSangiinSeats,
-  getJpShugiinSeats,
-} from "@/lib/constants/states";
 import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import { pickNextCanonicalCycle, turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getSeatIdFromElection } from "@/lib/seats";
-import { getElectionMethod } from "@/lib/elections/electionMethod";
-import { planNextLowerChamberCycle } from "@/lib/elections/snapShift";
 import {
-  endTimeToLarpTurn,
   getCurrentTurnAndCtx,
   getGeneralWindow,
   justResolvedInSameTurn,
   sendBatchedElectionAnnouncements,
-} from "@/lib/turn/perpetualElections/engine";
-import { ensureRegionalGovernorElections } from "@/lib/turn/perpetualElections/shared";
-import {
-  japanShugiinFrozenRegionCapacity,
-  japanShugiinRulesForRegion,
-} from "@/lib/countries/jp/rules/shugiinElectoralLaw";
+} from "@/lib/elections/scheduling/engine";
+import { ensureRegionalGovernorElections } from "@/lib/elections/scheduling/shared";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
+import { JP_SANGIIN_SPEC, JP_SHUGIIN_SPEC } from "./chamberSpecs";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * Ensure every JP region has an active or upcoming Shugiin election.
  *
- * Spawns anchor to the **canonical LARP schedule** via
- * {@link pickNextCanonicalCycle}. When the admin fast-forwards a regular
- * cycle via "Modify Timers", the next regular stays on calendar
- * (endTurn = anchors.jpShugiin + (N - 1) x dur.durationHours). A snap election
- * resets the term clock: the post-snap regular anchors to `snap.endTurn + 192`,
- * and later regulars keep counting from that shifted schedule until another
- * snap moves it. See `planNextLowerChamberCycle`.
- *
- * 24h-primary / 24h-general gate: if currentTurn has eaten too deep into the
- * next canonical window, the spawner walks forward to the following cycle
- * rather than producing a stub race.
+ * Spawns anchor to the canonical schedule. A snap election resets the term
+ * clock; later regulars count from the shifted schedule until another snap
+ * moves it. See `planNextLowerChamberCycle`. If the current turn has eaten too
+ * deep into the next canonical window, the spawner walks forward to the
+ * following cycle rather than producing a stub race.
  */
 export async function ensureJPElections(now: Date, inFlightTurn?: number): Promise<void> {
   const db = await getDb();
-  const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
-  const currentTurn = inFlightTurn ?? persistedTurn;
-  const jpCountryState = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "JP" }, { projection: { jpShugiinElectoralMandate: 1 } });
-  // Era-specific apportionment: 466 in 1953, 512 in 1991, and 465 after 1994.
-  const shugiinSeatsByRegion = getJpShugiinSeats(ctx.preset);
-
-  const jpRegions = await db
-    .collection<State>("states")
-    .find({ countryId: "JP" }, { projection: { _id: 1 } })
-    .toArray();
-  // Fail closed if a state row is added before its seat map. Inventing a
-  // one-seat race would make the malformed row self-perpetuating across cycles.
-  const regionIds = jpRegions
-    .map((r) => r._id as string)
-    .filter((regionId) => (shugiinSeatsByRegion[regionId] ?? 0) > 0);
-  if (regionIds.length === 0) return;
-
-  // Active/upcoming regular or snap Shugiin elections suppress spawning.
-  const liveElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId: "JP",
-      electionType: { $in: ["shugiin", "snap_shugiin"] },
-      status: { $in: ["active", "upcoming"] },
-    })
-    .toArray();
-  const liveShugiin = new Set(liveElections.map((e) => e.state));
-  // Keep pre-reform active/upcoming races on the current era allocator. This
-  // also heals 1991 races frozen with the former candidate-limited SNTV model.
-  // Mixed-reform races own their district/list counter and stay untouched.
-  const eraMethod = getElectionMethod("JP", "shugiin", ctx.preset);
-  if (eraMethod) {
-    const methodHealOps = liveElections
-      .filter(
-        (e) =>
-          e.japanShugiinRules?.ruleVersion !== "mixed-1994-v1" && e.allocationMethod !== eraMethod
-      )
-      .map((e): AnyBulkWriteOperation<Election> => ({
-        updateOne: {
-          filter: {
-            _id: e._id,
-            ...(e.allocationMethod === undefined
-              ? { allocationMethod: { $exists: false } }
-              : { allocationMethod: e.allocationMethod }),
-            status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-            "japanShugiinRules.ruleVersion": { $ne: "mixed-1994-v1" },
-          },
-          update: { $set: { allocationMethod: eraMethod, updatedAt: now } },
-        },
-      }));
-    if (methodHealOps.length > 0) {
-      await db.collection<Election>("elections").bulkWrite(methodHealOps);
-    }
-  }
-  const seatHealOps = liveElections.flatMap((e) => {
-    const authoritative = japanShugiinFrozenRegionCapacity(
-      e.japanShugiinRules
-        ? {
-            law: e.japanShugiinRules.ruleVersion,
-            totalSeats: e.japanShugiinRules.districtSeats + e.japanShugiinRules.listSeats,
-            districtSeats: e.japanShugiinRules.districtSeats,
-            listSeats: e.japanShugiinRules.listSeats,
-          }
-        : undefined,
-      e.state,
-      shugiinSeatsByRegion[e.state]
-    );
-    if (typeof authoritative !== "number" || authoritative <= 0 || e.totalSeats === authoritative)
-      return [];
-    return [
-      {
-        updateOne: {
-          filter: {
-            _id: e._id,
-            totalSeats: e.totalSeats,
-            status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-          },
-          update: { $set: { totalSeats: authoritative, updatedAt: now } },
-        },
-      },
-    ];
+  const jpCountryState = await countryGameStatesCollection(db).findOne(
+    { _id: "JP" },
+    { projection: { jpShugiinElectoralMandate: 1 } }
+  );
+  await ensureChamberElections(JP_SHUGIIN_SPEC, now, inFlightTurn, {
+    extra: jpCountryState?.jpShugiinElectoralMandate,
   });
-  if (seatHealOps.length > 0) {
-    await db.collection<Election>("elections").bulkWrite(seatHealOps);
-  }
-
-  const completedElections = await db
-    .collection<Election>("elections")
-    .find({
-      electionType: { $in: ["shugiin", "snap_shugiin"] },
-      countryId: "JP",
-      status: { $in: ["completed", "resolved"] },
-    })
-    .sort({ updatedAt: -1 })
-    .toArray();
-
-  function lastCompleted(regionId: string): Election | undefined {
-    return completedElections.find((e) => e.state === regionId);
-  }
-
-  const dur = DEFAULT_DURATIONS.shugiin.durationHours;
-  const genDur = getGeneralWindow("shugiin");
-
-  const toInsert: Omit<Election, "_id">[] = [];
-
-  for (const regionId of regionIds) {
-    if (liveShugiin.has(regionId)) continue;
-
-    const prev = lastCompleted(regionId);
-    if (justResolvedInSameTurn(prev, now, currentTurn)) continue;
-
-    // A called snap, and every regular spawned on its shifted term clock,
-    // anchors the next regular. See `planNextLowerChamberCycle`.
-    const plan = planNextLowerChamberCycle({
-      electionType: "shugiin",
-      snapType: "snap_shugiin",
-      prev,
-      currentTurn,
-      ctx,
-      endTimeToTurn: (endTime) => endTimeToLarpTurn(endTime, now, currentTurn),
-    });
-    if (!plan) continue;
-    const { spawn } = plan;
-
-    const startTime = turnToWallClock(spawn.startTurn, now, currentTurn);
-    const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-    const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-    const status: "active" | "upcoming" = spawn.startTurn <= currentTurn ? "active" : "upcoming";
-
-    const japanRules = japanShugiinRulesForRegion(
-      ctx.preset,
-      regionId,
-      shugiinSeatsByRegion[regionId] ?? 0,
-      jpCountryState?.jpShugiinElectoralMandate
-    );
-    toInsert.push({
-      countryId: "JP",
-      electionType: "shugiin",
-      state: regionId,
-      ...(japanRules?.law === "mixed-1994-v1"
-        ? {}
-        : { allocationMethod: getElectionMethod("JP", "shugiin", ctx.preset) }),
-      ...(japanRules
-        ? {
-            japanShugiinRules: {
-              ruleVersion: japanRules.law,
-              districtSeats: japanRules.districtSeats,
-              listSeats: japanRules.listSeats,
-              ...(japanRules.authorizedOnTurn != null
-                ? { authorizedOnTurn: japanRules.authorizedOnTurn }
-                : {}),
-              ...(japanRules.reformBillId ? { reformBillId: japanRules.reformBillId } : {}),
-            },
-          }
-        : {}),
-      seatId: getSeatIdFromElection({
-        countryId: "JP",
-        electionType: "shugiin",
-        state: regionId,
-      }),
-      cycle: spawn.cycle,
-      electionYear: plan.electionYear,
-      ...(plan.shiftedScheduleEndTurn != null && {
-        shiftedScheduleEndTurn: plan.shiftedScheduleEndTurn,
-      }),
-      status,
-      // The preset apportionment is authoritative. A prior cycle may have been
-      // created before its era map existed (1953 carried the modern 465-seat map).
-      totalSeats: japanRules?.totalSeats ?? shugiinSeatsByRegion[regionId] ?? 1,
-      startTime,
-      primaryEndTime,
-      endTime,
-      startTurn: spawn.startTurn,
-      primaryEndTurn: spawn.primaryEndTurn,
-      endTurn: spawn.endTurn,
-      durationHours: dur,
-      primaryDurationHours: dur - genDur,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  if (toInsert.length === 0) return;
-
-  // Guard against duplicates
-  const orFilters = toInsert.map((e) => ({
-    electionType: "shugiin" as const,
-    state: e.state,
-    status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-  }));
-  const existing = await db
-    .collection<Election>("elections")
-    .find({ $or: orFilters }, { projection: { state: 1 } })
-    .toArray();
-  const existingStates = new Set(existing.map((e) => e.state));
-  const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-
-  if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
-    console.log(
-      `[Turn] ensureJPElections: spawned ${toActuallyInsert.length} missing Shugiin election(s)`
-    );
-    sendBatchedElectionAnnouncements(toActuallyInsert, now);
-  }
 }
 
 // ─── Japan: Sangiin (House of Councillors) Half-Elections ────────────────────
 
 /**
  * Ensure Sangiin elections exist for JP regions in BOTH classes.
- * Half of the active era's Sangiin seats (252 in 1991, otherwise 248) are
- * contested every 3 game years (144 turns) per class; each class runs on its
- * own 6-year (288-turn) cycle anchored to its real-world election date
- * (JP_SANGIIN_CYCLE1_END_TURN). Each class is processed independently.
  *
- * Spawned cycles anchor to the **canonical LARP schedule** via
- * {@link pickNextCanonicalCycle}. A new cycle's `endTime` is derived from the
- * real-world Sangiin election year, not from `now + 144h`. If the admin fast-
- * forwards a prior cycle, the next cycle is not pulled along with it — it
- * stays on the calendar. When the canonical next-cycle window is already past
- * (or would leave <24h primary / <24h general remaining from `currentTurn`),
- * the spawner skips forward to the following Sangiin half-election.
- *
- * Status is set relative to the canonical startTurn:
- *   • startTurn > currentTurn → "upcoming" (startTime in the future)
- *   • startTurn ≤ currentTurn → "active"  (startTime anchored at startTurn,
- *     which may be in the past — primary/general windows still align to the
- *     canonical endTurn).
- *
- * `advanceElectionTimers` flips "upcoming" → "active" once startTime ≤ now.
+ * Each class runs a 6-year (288-turn) cycle anchored to its real-world
+ * election date; half of the era's seats (252 in 1991, else 248) are contested
+ * every 3 game years (144 turns). Status is "active" from the spawn turn: the
+ * primary opens at once and the general stays on its real-world year.
  */
 export async function ensureJPCouncillorElections(
   now: Date,
   classOverride?: 1 | 2,
   inFlightTurn?: number
 ): Promise<void> {
-  const db = await getDb();
-  const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
-  const currentTurn = inFlightTurn ?? persistedTurn;
-  const sangiinSeatsByRegion = getJpSangiinSeats(ctx.preset);
-
-  // Process both classes unless a specific override is given
-  const classesToProcess: (1 | 2)[] = classOverride ? [classOverride] : [1, 2];
-  // Find ALL JP regions — each region participates in both classes (half seats per class)
-  const jpRegions = await db
-    .collection<State>("states")
-    .find({ countryId: "JP" }, { projection: { _id: 1 } })
-    .toArray();
-  const regionIds = jpRegions
-    .map((r) => r._id as string)
-    .filter((regionId) => (sangiinSeatsByRegion[regionId] ?? 0) > 0);
-  if (regionIds.length === 0) return;
-
-  const dur = DEFAULT_DURATIONS.sangiin.durationHours;
-  const genDur = getGeneralWindow("sangiin");
-
-  for (const chamberClass of classesToProcess) {
-    // Check for active/upcoming Sangiin elections for this class in any region
-    const liveElections = await db
-      .collection<Election>("elections")
-      .find({
-        electionType: "sangiin",
-        countryId: "JP",
-        chamberClass,
-        state: { $in: regionIds },
-        status: { $in: ["active", "upcoming"] },
-      })
-      .toArray();
-    const liveSangiin = new Set(liveElections.map((e) => e.state));
-    const seatHealOps = liveElections.flatMap((e) => {
-      const regionalTotal = sangiinSeatsByRegion[e.state];
-      if (typeof regionalTotal !== "number" || regionalTotal <= 0) return [];
-      const authoritative = getJpSangiinClassSeats(ctx.preset, e.state, chamberClass);
-      if (e.totalSeats === authoritative) return [];
-      return [
-        {
-          updateOne: {
-            filter: {
-              _id: e._id,
-              totalSeats: e.totalSeats,
-              status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-            },
-            update: { $set: { totalSeats: authoritative, updatedAt: now } },
-          },
-        },
-      ];
-    });
-    if (seatHealOps.length > 0) {
-      await db.collection<Election>("elections").bulkWrite(seatHealOps);
-    }
-
-    const completedElections = await db
-      .collection<Election>("elections")
-      .find({
-        electionType: "sangiin",
-        countryId: "JP",
-        chamberClass,
-        state: { $in: regionIds },
-        status: { $in: ["completed", "resolved"] },
-      })
-      .sort({ updatedAt: -1 })
-      .toArray();
-
-    function lastCompleted(regionId: string): Election | undefined {
-      return completedElections.find((e) => e.state === regionId);
-    }
-
-    const toInsert: Omit<Election, "_id">[] = [];
-
-    for (const regionId of regionIds) {
-      if (liveSangiin.has(regionId)) continue;
-
-      const prev = lastCompleted(regionId);
-      if (justResolvedInSameTurn(prev, now, currentTurn)) continue;
-      const prevCycle = prev?.cycle ?? 0;
-
-      const spawn = pickNextCanonicalCycle({
-        electionType: "sangiin",
-        chamberClass,
-        prevCycle,
-        currentTurn,
-        ctx,
-      });
-      if (!spawn) continue; // exhausted the skip bound — don't spawn a malformed cycle
-
-      // Open the primary immediately: Sangiin's 6-year per-class cycle (288
-      // turns) far exceeds its 144h `durationHours`, so the canonical
-      // `startTurn` would otherwise leave a long "Opens in X turns" dead zone
-      // after the prior half-election. Mirror DE — `primaryEndTurn` / `endTurn`
-      // stay canonical so the general still lands on its real-world year.
-      const startTurn = currentTurn;
-      const startTime = now;
-      const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-      const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-      const status: "active" | "upcoming" = "active";
-
-      // Each class contests half the region's total Sangiin seats. Class 1
-      // receives the extra seat when the modern regional total is odd.
-      const classSeats = getJpSangiinClassSeats(ctx.preset, regionId, chamberClass);
-
-      toInsert.push({
-        countryId: "JP",
-        electionType: "sangiin",
-        state: regionId,
-        chamberClass,
-        seatId: getSeatIdFromElection({
-          countryId: "JP",
-          electionType: "sangiin",
-          state: regionId,
-          chamberClass,
-        }),
-        cycle: spawn.cycle,
-        electionYear: electionToLarpYear("sangiin", spawn.cycle, undefined, chamberClass, ctx),
-        status,
-        // The preset map is authoritative. Carrying a prior total forward made
-        // the old ceil-for-both-classes defect permanent in Hokkaido and Kyushu.
-        totalSeats: classSeats,
-        startTime,
-        primaryEndTime,
-        endTime,
-        startTurn,
-        primaryEndTurn: spawn.primaryEndTurn,
-        endTurn: spawn.endTurn,
-        durationHours: dur,
-        primaryDurationHours: dur - genDur,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    if (toInsert.length === 0) continue;
-
-    // Guard against duplicates — must match both state AND chamberClass
-    const orFilters = toInsert.map((e) => ({
-      electionType: "sangiin" as const,
-      chamberClass,
-      state: e.state,
-      status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-    }));
-    const existing = await db
-      .collection<Election>("elections")
-      .find({ $or: orFilters }, { projection: { state: 1 } })
-      .toArray();
-    const existingStates = new Set(existing.map((e) => e.state));
-    const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-
-    if (toActuallyInsert.length > 0) {
-      await db
-        .collection<Election>("elections")
-        .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
-      console.log(
-        `[Turn] ensureJPCouncillorElections: spawned ${toActuallyInsert.length} Sangiin election(s) (Class ${chamberClass})`
-      );
-      sendBatchedElectionAnnouncements(toActuallyInsert, now);
-    }
-  }
+  await ensureChamberElections(JP_SANGIIN_SPEC, now, inFlightTurn, {
+    chamberClass: classOverride,
+  });
 }
 
 // ─── Japan: Regional Council (prefectural assembly) ──────────────────────────
 
 /**
- * Ensure every JP region has an active or upcoming regionalCouncil election.
+ * Mirrors the region's live Shugiin race (timestamps, cycle, electionYear)
+ * so both resolve together on a JP-correct calendar, bypassing the
+ * UK-anchored regionalCouncil branch in canonicalCycle.ts. Falls back to
+ * the Shugiin canonical schedule when no live race exists.
  *
- * Synchronized with the Shugiin cycle — the JP analogue of the UK pattern
- * (Regional Council tracks Commons). When a live Shugiin race exists for the
- * region, the regional council mirrors its timestamps, cycle, and electionYear
- * exactly so both resolve together on a JP-correct calendar. This sidesteps the
- * UK-anchored `regionalCouncil` branch in canonicalCycle.ts (which would put JP
- * councils on the UK GE calendar). When no live Shugiin exists to mirror, falls
- * back to the Shugiin canonical schedule.
- *
- * Ordering note: this runs concurrently with ensureJPElections (the country
- * election phases share a Promise.all), so a Shugiin race created on the same
- * turn may not be visible yet. That's fine — in steady state and on the
- * first-deploy heal a live Shugiin from prior turns is present (mirror path),
- * and at clean roll-over/bootstrap the fallback recomputes the identical
- * Shugiin canonical cycle, so both land on the same schedule either way.
+ * Runs concurrently with ensureJPElections, so a Shugiin created this turn
+ * may not be visible. Both paths converge on the same schedule, so that's fine.
  */
 export async function ensureJPRegionalCouncilElections(
   now: Date,
@@ -474,8 +78,7 @@ export async function ensureJPRegionalCouncilElections(
   const { currentTurn: persistedTurn, ctx } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
 
-  const jpRegions = await db
-    .collection<State>("states")
+  const jpRegions = await statesCollection(db)
     .find({ countryId: "JP" }, { projection: { _id: 1, stateSenateSeats: 1 } })
     .toArray();
   const regions = jpRegions.map((r) => ({ id: r._id as string, seats: r.stateSenateSeats }));
@@ -483,8 +86,7 @@ export async function ensureJPRegionalCouncilElections(
 
   // Country-scoped: UK's spawner relies on disjoint region IDs and is not
   // country-scoped; JP's is scoped to avoid cross-country contamination.
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       electionType: "regionalCouncil",
       countryId: "JP",
@@ -493,8 +95,7 @@ export async function ensureJPRegionalCouncilElections(
     .toArray();
   const liveCouncils = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       electionType: "regionalCouncil",
       countryId: "JP",
@@ -511,8 +112,7 @@ export async function ensureJPRegionalCouncilElections(
   const genDur = getGeneralWindow("regionalCouncil");
 
   // Sync source: live Shugiin (regular or snap) per region.
-  const liveShugiinElections = await db
-    .collection<Election>("elections")
+  const liveShugiinElections = await electionsCollection(db)
     .find({
       electionType: { $in: ["shugiin", "snap_shugiin"] },
       countryId: "JP",
@@ -614,17 +214,14 @@ export async function ensureJPRegionalCouncilElections(
     state: e.state,
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureJPRegionalCouncilElections: spawned ${toActuallyInsert.length} missing Regional Council election(s)`
     );

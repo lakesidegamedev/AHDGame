@@ -6,6 +6,12 @@ import { COUNTRY_CONFIGS, isParliamentarySystemForGovernmentType } from "@/lib/c
 import { getCountryState } from "@/lib/countryState";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -21,8 +27,7 @@ export async function queryGovernment(db: Db, country: string) {
   const isParliamentary = isParliamentarySystemForGovernmentType(runtime.governmentType);
 
   const [executives, leaders, cabinetMembers] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: country,
         officeType: {
@@ -37,8 +42,8 @@ export async function queryGovernment(db: Db, country: string) {
         },
       } as Filter<ElectedOfficial>)
       .toArray(),
-    db.collection("congressLeaders").find({ countryId: country }).toArray(),
-    db.collection("cabinetMembers").find({ countryId: country }).toArray(),
+    congressLeadersCollection<Document>(db).find({ countryId: country }).toArray(),
+    cabinetMembersCollection<Document>(db).find({ countryId: country }).toArray(),
   ]);
 
   // Collect character IDs for profile URL lookups
@@ -73,8 +78,7 @@ export async function queryGovernment(db: Db, country: string) {
 
   const characters =
     charObjectIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: charObjectIds } })
           .project<Pick<Character, "_id" | "sequentialId" | "party" | "countryId" | "avatarUrl">>({
             _id: 1,
@@ -107,8 +111,7 @@ export async function queryGovernment(db: Db, country: string) {
 
   const parties =
     partyLookups.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             $or: partyLookups.map((l) => ({
               countryId: l.countryId,
@@ -189,8 +192,7 @@ export async function queryGovernment(db: Db, country: string) {
       .filter(Boolean);
     const partyDocs =
       partySeqIds.length > 0
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({
               sequentialId: { $in: partySeqIds },
               countryId: country,

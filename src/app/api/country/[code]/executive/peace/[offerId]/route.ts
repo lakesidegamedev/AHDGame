@@ -18,7 +18,7 @@ import { loadTermSettlement } from "@/lib/settlement/queries/termSettlement";
 import { acceptPeace } from "@/lib/military/acceptPeace";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
 import { getCountryState } from "@/lib/countryState";
-import type { FederalBudget } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const bodySchema = z.object({ action: z.enum(["accept", "reject", "withdraw"]) });
 
@@ -43,11 +43,8 @@ export async function POST(
     const db = await getDb();
     const gs = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
-    const currentTurn = gs.currentTurn ?? 0;
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const currentTurn = gs?.currentTurn ?? 0;
 
     const gate = await requirePeaceNegotiator(db, countryId, character._id, auth.user.isAdmin);
     if (!gate.ok) return gate.response;
@@ -109,9 +106,8 @@ export async function POST(
       return NextResponse.json({ success: true, status });
     }
 
-    // A client may retry after the server committed but its response was lost.
-    // Completed application receipts make that retry a successful read of the same
-    // result instead of a misleading "no longer open" conflict.
+    // A client may retry after the server committed but the response was lost.
+    // Completed application receipts make the retry a successful read of the same result.
     if (recognizedAcceptance && offer.application?.phase === "completed") {
       const warResolved = offer.application.resolutionWinner !== null;
       if (warResolved) await flushServerPosthog();
@@ -136,9 +132,10 @@ export async function POST(
       // figure that could have drifted while the offer sat.
       let maxAmount: number | null = null;
       if (offer.term.kind === "indemnity") {
-        const payerBudget = await db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ countryId: offer.term.payer }, { projection: { gdp: 1 } });
+        const payerBudget = await federalBudgetCollection(db).findOne(
+          { countryId: offer.term.payer },
+          { projection: { gdp: 1 } }
+        );
         maxAmount = maxIndemnityForGdp(payerBudget?.gdp);
       }
       // The target's system is re-read too: a country converted by some other route

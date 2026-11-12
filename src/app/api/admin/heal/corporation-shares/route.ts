@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
+import type { ShareListing, ShareOrder } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 /**
  * POST /api/admin/heal/corporation-shares
@@ -16,15 +19,14 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const corporations = await db.collection<Corporation>("corporations").find({}).toArray();
+    const corporations = await corporationsCollection(db).find({}).toArray();
 
     // Aggregate reserved shares per corporation.
     // Corporate sell orders and flagged character sell orders debit at creation.
     // Legacy unflagged character orders retain holdings and must not count twice.
     // Open listings also debit at creation and belong in the issued-share total.
     const reservedByCorp = new Map<string, number>();
-    const openSellOrders = await db
-      .collection<ShareOrder>("shareOrders")
+    const openSellOrders = await shareOrdersCollection(db)
       .find({
         type: "sell",
         status: "open",
@@ -35,10 +37,7 @@ export async function POST() {
       const key = order.corporationId.toString();
       reservedByCorp.set(key, (reservedByCorp.get(key) ?? 0) + order.sharesRemaining);
     }
-    const openListings = await db
-      .collection<ShareListing>("shareListings")
-      .find({ status: "open" })
-      .toArray();
+    const openListings = await shareListingsCollection(db).find({ status: "open" }).toArray();
     for (const listing of openListings) {
       const key = listing.corporationId.toString();
       reservedByCorp.set(key, (reservedByCorp.get(key) ?? 0) + listing.sharesRemaining);
@@ -55,9 +54,10 @@ export async function POST() {
       const correctTotal = shareholderTotal + (corp.publicFloat ?? 0) + reservedInOrders;
 
       if (correctTotal !== (corp.totalShares ?? 0)) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne({ _id: corp._id }, { $set: { totalShares: correctTotal } });
+        await corporationsCollection(db).updateOne(
+          { _id: corp._id },
+          { $set: { totalShares: correctTotal } }
+        );
 
         fixes.push({
           name: corp.name,

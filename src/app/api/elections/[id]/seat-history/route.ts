@@ -19,6 +19,11 @@ import {
   summarizeSeatCycle,
   type SeatCycleInput,
 } from "@/lib/campaignManager/rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 
@@ -73,8 +78,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return errorResponse(resolved.reason === "invalid_id" ? 400 : 404, "Election not found");
     }
 
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find(adjacentElectionsQuery(resolved.election))
       .project<SeatElection>({
         _id: 1,
@@ -91,8 +95,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const ids: ObjectId[] = elections.map((e) => e._id);
 
     const [candidates, tallies] = await Promise.all([
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: { $in: ids } })
         .project<Pick<ElectionCandidate, "_id" | "electionId" | "characterName" | "party">>({
           _id: 1,
@@ -101,8 +104,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           party: 1,
         })
         .toArray(),
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: ids } })
         .project<SeatTally>({
           electionId: 1,
@@ -125,8 +127,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     // Party ids repeat across countries; legacy rows without one are US (as enrichElection treats them).
     const countryId = resolved.election.countryId ?? "US";
     const [parties, gameState] = await Promise.all([
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({
           countryId,
           sequentialId: { $in: [...partyIds].filter(Number.isFinite) },
@@ -140,7 +141,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         .toArray(),
       // Only legacy rows without a baked year need the preset's anchors.
       elections.some((e) => e.electionYear == null)
-        ? db.collection<GameState>("gameState").findOne(
+        ? gameStateCollection(db).findOne(
             { _id: "current" },
             {
               projection: { startingYear: 1, preset: 1, preIterationTurns: 1, preIteration: 1 },

@@ -5,6 +5,9 @@ import type { ConflictDoc } from "@/lib/db/types/conflict";
 import type { OrganizationLegislation } from "@/lib/db/types/internationalOrganization";
 import type { OrganizationSummary } from "@/lib/internationalOrganizations/service";
 import { classifyWarEntry, hostSideOf, type WarEntryStake } from "@/lib/military/warEntryPolicy";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { organizationLegislationCollection } from "@/lib/db/repositories/organizationLegislation";
 
 export interface MemberWarEntryStatus {
   countryId: string;
@@ -58,8 +61,7 @@ export async function loadBlocWarEntryStatusByDisplayOrg(
   const displayOrgs = organizations.filter((org) => militaryOrgIdForDisplay(org) !== null);
   if (displayOrgs.length === 0) return new Map();
   const militaryOrgIds = [...new Set(displayOrgs.map((org) => militaryOrgIdForDisplay(org)!))];
-  const resolutions = await db
-    .collection<OrganizationLegislation>("organizationLegislation")
+  const resolutions = await organizationLegislationCollection(db)
     .find({
       organizationId: { $in: militaryOrgIds },
       type: "join_conflict",
@@ -73,12 +75,10 @@ export async function loadBlocWarEntryStatusByDisplayOrg(
     .map((resolution) => resolution.joinConflictTheaterId)
     .filter((id): id is string => Boolean(id));
   const [conflicts, bills] = await Promise.all([
-    db
-      .collection<ConflictDoc>("conflicts")
+    conflictsCollection(db)
       .find({ _id: { $in: theaterIds } })
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({ "provisions.resolutionId": { $in: resolutionIds } })
       .toArray(),
   ]);

@@ -6,6 +6,7 @@ import { requireHumanSession } from "@/lib/api/requireAuth";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 const schema = z.object({ recapId: schemas.objectId });
 
@@ -28,12 +29,10 @@ export async function POST(request: Request) {
     // Ownership + one-time are both enforced in the filter: only the owner's own
     // still-unviewed recap matches, so a second call (or a foreign user, or a
     // bad id) simply no-ops with updated:false — never throws, never double-sets.
-    const result = await db
-      .collection<RetiredCharacter>("retiredCharacters")
-      .updateOne(
-        { _id: new ObjectId(parsed.data.recapId), userId, recapViewedAt: { $exists: false } },
-        { $set: { recapViewedAt: new Date() } }
-      );
+    const result = await retiredCharactersCollection(db).updateOne(
+      { _id: new ObjectId(parsed.data.recapId), userId, recapViewedAt: { $exists: false } },
+      { $set: { recapViewedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, updated: result.modifiedCount > 0 });
   } catch (error) {

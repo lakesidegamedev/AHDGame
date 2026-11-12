@@ -10,37 +10,22 @@ import assert from "node:assert/strict";
 import { buildGranularPollPayloadForState } from "@/lib/actions/granularPollPayload";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { targetedAdBonuses } from "@/lib/campaignTargeting/rules";
-import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/electionEngine/types";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
-import { personalStatTenureRetentionForCandidate } from "@/lib/electionEngine/rules/tenureRetention";
-import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
+import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/elections/engine/types";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
+import { personalStatTenureRetentionForCandidate } from "@/lib/elections/rules/tenureRetention";
+import type { CensusGroupView } from "@/lib/db/types";
 
 const SOURCE_REVISION = "98ffb6ded3a4110e94598e98ce582ad2c0ba9eeb";
 const stateId = "CT";
 const countryId = "US";
 const population = 100_000;
-const legacyCategories = [
-  {
-    _id: "legacy-all",
-    name: "Legacy substrate placeholder",
-    groups: [
-      {
-        id: "legacy-all",
-        name: "All voters",
-        defaultEconomicLean: 0,
-        defaultSocialLean: 0,
-        defaultTurnout: 60,
-      },
-    ],
-  },
-] as unknown as DemographicCategory[];
 const legacyDemographics = {
   _id: stateId,
   categoryWeights: { "legacy-all": 100 },
   groups: {
     "legacy-all": { population: 100, turnout: 60, economicLean: 0, socialLean: 0 },
   },
-} as unknown as StateDemographics;
+} as unknown as CensusGroupView;
 
 const offices = [
   { label: "governor", options: { votingSystem: "fptp" as const }, incumbency: undefined },
@@ -97,7 +82,7 @@ function makeCandidate(
   party: string,
   favorability: number,
   isNPP: boolean,
-  archetypeApprovals: Record<string, number>
+  bucketApprovals: Record<string, number>
 ): EnrichedCandidate {
   return {
     candidateId,
@@ -113,7 +98,7 @@ function makeCandidate(
     politicalInfluence: 50,
     nationalInfluence: 50,
     support: 50,
-    archetypeApprovals,
+    bucketApprovals,
     infamy: 0,
   };
 }
@@ -180,8 +165,6 @@ for (const office of offices) {
             currentTurn,
             statePopulation: population,
             demographics: legacyDemographics,
-            categories: legacyCategories,
-            liveTurnouts: { "legacy-all": 60 },
             enriched: candidates,
             cache: "shared",
           });
@@ -220,7 +203,7 @@ for (const office of offices) {
             economicPosition: player.charEP,
             socialPosition: player.charSP,
             favorability: player.favorability,
-            archetypeApprovals: player.archetypeApprovals,
+            bucketApprovals: player.bucketApprovals,
             politicalInfluence: player.politicalInfluence,
             nationalInfluence: player.nationalInfluence,
           },
@@ -232,7 +215,7 @@ for (const office of offices) {
               economicPosition: opponent.charEP,
               socialPosition: opponent.charSP,
               favorability: opponent.favorability,
-              archetypeApprovals: opponent.archetypeApprovals,
+              bucketApprovals: opponent.bucketApprovals,
               politicalInfluence: opponent.politicalInfluence,
               nationalInfluence: opponent.nationalInfluence,
               isNPP: opponent.isNPP,
@@ -300,8 +283,7 @@ for (const office of offices) {
           tallySubstrate.totalPool,
           tallySubstrate.totalPool,
           population,
-          tallySubstrate.demographics,
-          tallySubstrate.categories,
+          tallySubstrate.electorate,
           new Map(),
           voteOptions
         );

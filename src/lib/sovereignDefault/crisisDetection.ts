@@ -1,18 +1,11 @@
 /**
- * Sovereign auction outcome detection — runs once per country at fiscal-year close.
+ * Sovereign auction outcome detection, once per country at fiscal-year close.
  *
- * Pipeline:
- *   1. Load federal-budget row.
- *   2. Skip if state ∈ {crisisPending, crisisResolving, recovering} (terminal-for-detection).
- *   3. Skip if no required issuance (no auction → no signal).
- *   4. Load demand snapshot, compute market demand.
- *   5. Classify outcome, derive new counter, compute next state.
- *   6. Persist state + counter + last-demand to federalBudget.
- *   7. On crisisPending entry: write fire timestamps, insert SovereignCrisisDecision, emit crisis news.
- *   8. Otherwise: emit undersubscribed/failed news for player visibility.
- *
- * Phase 4 only handles entry into `crisisPending`. Resolution paths and recovery
- * are owned by Phase 5+.
+ * Loads the budget row, skips terminal-for-detection states and cases with no
+ * required issuance, classifies the outcome, and persists state, counter, and
+ * last-demand. On entry into `crisisPending` it writes fire timestamps, inserts
+ * the crisis decision, and emits crisis news; otherwise it emits
+ * undersubscribed/failed news. Resolution and recovery are Phase 5+.
  */
 
 import { ObjectId, type Db } from "mongodb";
@@ -39,6 +32,8 @@ import { EXTREME_DISTRESS_DEBT_TO_GDP } from "@/lib/budget/debt";
 import { npcExecutiveAutoPropose } from "./npc/npcExecutiveAutoPropose";
 import { applyPopulistSurgeOnCrisis } from "./political/applyPopulistSurge";
 import { getCountryAccessFromDb } from "@/lib/countryAccess";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
@@ -51,6 +46,34 @@ export interface EvaluationSummary {
   firedThisEvaluation: boolean;
 }
 
+/** Open the decision row a fired sovereign crisis is resolved against. */
+export async function insertSovereignCrisisDecision(
+  db: Db,
+  countryCode: CountryId,
+  currentTurn: number,
+  realtimeMs: number
+): Promise<SovereignCrisisDecision> {
+  const decision: SovereignCrisisDecision = {
+    _id: new ObjectId(),
+    countryCode,
+    state: "open",
+    firedAtTurn: currentTurn,
+    firedAtRealtimeMs: realtimeMs,
+    executiveChoice: null,
+    executiveProposedAtRealtimeMs: null,
+    // Phase 9 will derive this from country government type. Defaulting to
+    // false here means the decision row is structurally complete but
+    // legislative ratification wiring is intentionally deferred.
+    requiresLegislativeRatification: false,
+    legislativeBillId: null,
+    resolvedAt: null,
+    resolvedReason: null,
+    createdAt: new Date(realtimeMs),
+  };
+  await sovereignCrisisDecisionsCollection(db).insertOne(decision);
+  return decision;
+}
+
 export async function evaluateSovereignAuctionForCountry(
   db: Db,
   countryCode: CountryId,
@@ -58,22 +81,15 @@ export async function evaluateSovereignAuctionForCountry(
   realtimeMs: number
 ): Promise<EvaluationSummary | null> {
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return null;
 
   const currentState: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
-  // "recovering" is normally terminal-for-detection — Phase 5+ resolution
-  // paths own transitions out of it. But a country whose STRUCTURAL deficit
-  // never clears (refs #3813) can sit in "recovering" forever: the recovery
-  // exit gate requires a primary-surplus streak that never arrives, so
-  // `processTreasuryTurn`'s per-turn interest accrual (which runs
-  // unconditionally, independent of crisis state) is free to reflate the
-  // debt/GDP ratio right back past extreme distress with NO further check
-  // ever running again — a defaulted-and-"recovered" country would silently
-  // out-spiral its own default. Once a "recovering" country has genuinely
-  // reflated back past the extreme-distress band, treat it as re-eligible
-  // for detection exactly like a "normal" country, rather than shielding it
-  // indefinitely.
+  // "recovering" is normally terminal for detection, but a country with a
+  // structural deficit can sit there forever: unconditional per-turn interest
+  // can reflate debt/GDP past extreme distress with no further check. Once a
+  // "recovering" country reflates past that band, re-allow detection as if
+  // "normal" instead of shielding it indefinitely.
   const recoveringButReflated =
     currentState === "recovering" && (budget.debtToGdpRatio ?? 0) >= EXTREME_DISTRESS_DEBT_TO_GDP;
   if (
@@ -104,33 +120,19 @@ export async function evaluateSovereignAuctionForCountry(
       : demand.demandRatio;
   const classified = classifyAuctionOutcome(effectiveRatio);
 
-  // Player-enabled gate: countries flagged "Coming Soon" (or with the
-  // Players Enabled toggle off) in the admin panel must never tip into a
-  // sovereign default. They still get scored — `/api/world/sovereign-watch`
-  // recomputes demand + DSA fresh from the snapshot, so the dashboard stays
-  // truthful — but we skip the failed-auction counter increment, the state
-  // transition, decision-row creation, news, and the populist surge.
-  //
-  // We do persist `lastAuctionDemandRatio` so admin tools and raw-DB
-  // inspection see the most recent market signal for the disabled country
-  // (live consumers always recompute, so the persisted value is purely a
-  // record-of-last-auction).
-  //
-  // Exception (refs #3236): an NPP-governed country (global autonomy ≥ v1 and
-  // not player-enabled) with EXTREME fundamentals goes through the full
-  // pipeline — the autonomy brain resolves the crisis the same way it does for
-  // player-enabled countries (npcExecutiveAutoPropose fires immediately for
-  // NPC/vacant executives, then NPC legislators ratify). Without this, fully
-  // autonomous worlds could run debt/GDP past 300% with ratings, auctions, and
-  // the crisis state machine all frozen. The debt/GDP floor keeps live-world
-  // preview countries (nowhere near 200%) byte-identical to the old behavior.
+  // Player-disabled countries are scored but never default: no counter
+  // increment, state transition, decisions, news, or populist surge. We do persist
+  // lastAuctionDemandRatio as a record of the last market signal.
+  // Exception: an NPP-governed country at extreme debt/GDP runs the full pipeline,
+  // otherwise autonomous worlds freeze the crisis state machine entirely.
   const access = await getCountryAccessFromDb(db, countryCode);
   const autonomousCrisisEligible =
     access.nppGoverned && snapshot.debtToGdp >= AUTONOMOUS_CRISIS_MIN_DEBT_TO_GDP;
   if (!access.enabledForPlayers && !autonomousCrisisEligible) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budgetId }, { $set: { lastAuctionDemandRatio: demand.demandRatio } });
+    await federalBudgetCollection(db).updateOne(
+      { _id: budgetId },
+      { $set: { lastAuctionDemandRatio: demand.demandRatio } }
+    );
     return {
       countryCode,
       outcome: classified.outcome,
@@ -167,29 +169,10 @@ export async function evaluateSovereignAuctionForCountry(
     };
   }
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: baseUpdate });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: baseUpdate });
 
   if (transition.firedThisEvaluation) {
-    const decision: SovereignCrisisDecision = {
-      _id: new ObjectId(),
-      countryCode,
-      state: "open",
-      firedAtTurn: currentTurn,
-      firedAtRealtimeMs: realtimeMs,
-      executiveChoice: null,
-      executiveProposedAtRealtimeMs: null,
-      // Phase 9 will derive this from country government type. Defaulting to
-      // false here means the decision row is structurally complete but
-      // legislative ratification wiring is intentionally deferred.
-      requiresLegislativeRatification: false,
-      legislativeBillId: null,
-      resolvedAt: null,
-      resolvedReason: null,
-      createdAt: new Date(realtimeMs),
-    };
-    await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").insertOne(decision);
+    const decision = await insertSovereignCrisisDecision(db, countryCode, currentTurn, realtimeMs);
     await emitCrisisFiredNews(countryCode, currentTurn);
     // Phase 10: NPC-controlled and vacant executives auto-propose immediately —
     // no 12-hour wait. Player executives skip this and use the UI within the

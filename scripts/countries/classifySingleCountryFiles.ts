@@ -255,7 +255,7 @@ const DATA_DIRS = [
   // country's row makes a file country-AWARE, which this guard has always said
   // is not ownership. Only the per-country config directories belong here.
   "src/lib/turn/billLifecycle/configs/",
-  "src/lib/turn/perpetualElections/countries/",
+  "src/lib/elections/scheduling/countries/",
 ];
 
 /**
@@ -481,7 +481,7 @@ function isCountryFolderShim(raw: string): boolean {
   // detector that only accepted `export *` then called every one of them a data
   // file holding UK facts.
   return statements.every((s) =>
-    /^(?:export\s+\*\s+from|export\s*\{[^}]*\}\s*from|import)\s+["']@\/lib\/countries\/[^"']+["']$/.test(
+    /^(?:export\s+\*\s+from|export\s*\{[^}]*\}\s*from|import)\s+["']@\/lib\/(?:countries|elections\/scheduling\/countries|elections\/resolution)\/[^"']+["']$/.test(
       s
     )
   );
@@ -556,6 +556,9 @@ export function singleCountryFiles(): Owned[] {
       // which is where every data module actually is.
       if (/^src\/app\//.test(file) || /^src\/components\//.test(file)) continue;
       if (/^scripts\//.test(file)) continue;
+      // Collection handles name a collection, not a fact about its country, and
+      // the data access ratchet requires every handle to live in this directory.
+      if (/^src\/lib\/db\/repositories\//.test(file)) continue;
       const source = readFileSync(file, "utf8");
       // A forwarder holds no copy, so it is not the country's data by
       // definition -- it is the absence of a second one.

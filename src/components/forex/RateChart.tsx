@@ -10,7 +10,7 @@ import {
 } from "@/components/forex/forexChartTimeframe";
 import { alignSeries, collectTurns } from "@/components/forex/chartSeriesUtils";
 import { CURRENCY_COLORS, CURRENCY_FLAG_CODE } from "@/components/forex/currencyDisplay";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { CountryFlag } from "@/components/CountryFlag";
 import { computeStrengthVsReferencePercent } from "@/lib/forex/rateSemantics";
 import { formatRate as formatAbsolute } from "./formatters";

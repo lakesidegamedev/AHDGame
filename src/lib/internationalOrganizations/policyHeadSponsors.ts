@@ -1,10 +1,15 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import { getCountryState, primeCountryStates } from "@/lib/countryState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface PolicyHeadSponsor {
   _id: ObjectId;
@@ -28,20 +33,17 @@ export async function loadPolicyHeadSponsors(
   );
 
   const [formations, presidents, legacyGovernments] = await Promise.all([
-    db
-      .collection<GovernmentFormation>("governmentFormations")
+    governmentFormationsCollection(db)
       .find({ _id: { $in: countryIds }, status: "formed" })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: { $in: [...presidential] },
         officeType: "president",
         characterId: { $ne: null },
       })
       .toArray(),
-    db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    parliamentaryGovernmentsCollection(db)
       .find({ _id: { $in: countryIds.filter((countryId) => !presidential.has(countryId)) } })
       .toArray(),
   ]);
@@ -76,15 +78,13 @@ export async function loadPolicyHeadSponsors(
   }
 
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find(
         { _id: { $in: [...playerHeadByCountry.values()] } },
         { projection: { _id: 1, name: 1, party: 1 } }
       )
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { _id: { $in: [...nppHeadByCountry.values()] } },
         { projection: { _id: 1, name: 1, party: 1 } }

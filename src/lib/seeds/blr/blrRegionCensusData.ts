@@ -1,27 +1,16 @@
 /**
- * Byelorussian SSR Layer-1 census (1979), one entry per oblast. Each dim sums
- * to 100. ethnicity: belarusian (titular) / russian / other.
+ * Byelorussian SSR Layer-1 census (1979), one entry per oblast. Each dim
+ * sums to 100. ethnicity: belarusian (titular) / russian / other.
  *
- * The keys MUST be the region `_id` values from blrRegions.ts (the `BLR_` codes
- * that also key public/blr-regions.json). This bundle was once keyed on
- * `BY_BEL`, the old country code, against a region that did not exist, which
- * left Byelorussia with no per-region demographics, metrics or baselines in
- * either Cold-War era. Keep the geometry, the region seed and this file on the
- * same code set.
+ * Keys MUST be the region `_id` values from blrRegions.ts (the `BLR_` codes
+ * that also key public/blr-regions.json). Keep the geometry, the region
+ * seed and this file on the same code set.
  *
  * By 1979 the republic is the union's machine-building and electronics
- * showcase. Three long-running trends separate it from 1953:
- * - Urbanisation has more than doubled. The rural exodus went to Minsk above
- *   all, which is why the capital oblast reads two thirds urban while Brest and
- *   Grodno are still barely half.
- * - The Russian share has roughly doubled republic-wide on cadre and technical
- *   in-migration, concentrated in Minsk and the industrial east. Russification
- *   also shows up in schooling rather than in the ethnicity dim: the titular
- *   share stays high while Belarusian-language education shrinks.
- * - Education has been rebuilt from the bottom: near-universal literacy, a large
- *   vocational (tekhnikum/PTU) stream feeding the plants, and a real university
- *   layer in Minsk that did not exist in 1953.
- * The west/east split from 1953 survives all of it, only narrower.
+ * showcase: urbanisation is more than double 1953's (the rural exodus went
+ * to Minsk), the Russian share has roughly doubled on cadre in-migration,
+ * and education has been rebuilt with near-universal literacy and a real
+ * university layer in Minsk. The west/east split survives, narrower.
  */
 export const blrRegionCensusData = {
   BLR_MIN: {

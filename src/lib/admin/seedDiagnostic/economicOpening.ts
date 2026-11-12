@@ -13,31 +13,39 @@ import { FOREX_ACTIVE_CURRENCIES, getSeedCurrencyCode } from "@/lib/constants/cu
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { countriesByTier } from "@/lib/world/eraRoster";
 import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { MacroCountryState } from "@/lib/world/macro/types";
-import type { Bond } from "@/lib/db/types/bond";
 import type { SeedDiagnosticCheck } from "./types";
 import { check } from "./checkFactory";
 import { nonFinitePaths, openingBalanceWithinEnvelope, reconciles } from "./rules/economicOpening";
 import { OPENING_INFLATION_BOUNDS } from "@/lib/seeds/reference/openingInflation1991";
 import { openingInflationProblem } from "@/lib/seeds/reference/rules/openingInflation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 
 export async function checkEconomicOpening(db: Db, preset: string): Promise<SeedDiagnosticCheck[]> {
   if (preset !== "1991-default") return [];
   const [fx, banks, budgets, corporations, sectors, resources, macro, bonds, funds] =
     await Promise.all([
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
-      db.collection<{ countryId: string; primeRate: number }>("centralBanks").find({}).toArray(),
-      db.collection<FederalBudget>("federalBudget").find({}).toArray(),
-      db.collection<Corporation>("corporations").find({}).toArray(),
-      db.collection("corporateSectors").find({}).toArray(),
-      db.collection<StateResourceCapacity>("stateResourceCapacity").find({}).toArray(),
-      db.collection<MacroCountryState>("macroCountries").find({}).toArray(),
-      db.collection<Bond>("bonds").find({ issuerType: "sovereign", defaulted: false }).toArray(),
-      db.collection("indexFunds").find({}).toArray(),
+      exchangeRatesCollection(db).find({}).toArray(),
+      centralBanksCollection<{ countryId: string; primeRate: number }>(db).find({}).toArray(),
+      federalBudgetCollection(db).find({}).toArray(),
+      corporationsCollection(db).find({}).toArray(),
+      corporateSectorsCollection<Document>(db).find({}).toArray(),
+      stateResourceCapacityCollection(db).find({}).toArray(),
+      macroCountriesCollection<MacroCountryState>(db).find({}).toArray(),
+      bondsCollection(db).find({ issuerType: "sovereign", defaulted: false }).toArray(),
+      indexFundsCollection<Document>(db).find({}).toArray(),
     ]);
   const checks: SeedDiagnosticCheck[] = [];
   const assert = (scope: string, metric: string, valid: boolean, note?: string) => {
@@ -279,7 +287,8 @@ export async function checkEconomicOpening(db: Db, preset: string): Promise<Seed
   assert(
     "DD",
     "post-reunification-absence",
-    !fx.some((row) => row.countryId === "DD") && !banks.some((row) => row.countryId === "DD")
+    !fx.some((row) => countryHasFeature("ddAdmin", row.countryId)) &&
+      !banks.some((row) => countryHasFeature("ddAdmin", row.countryId))
   );
   return checks;
 }

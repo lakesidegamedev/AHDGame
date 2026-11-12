@@ -4,7 +4,6 @@
  * Seeding order (dependency-safe):
  *   1. UK regions (states collection, countryId: "UK")
  *   2. UK political parties (politicalParties collection)
- *   3. UK demographic categories (demographicCategories collection)
  *   4. UK region demographics (stateDemographics + demographicDefaults collections)
  *   5. UK demographic turnout modifiers (stateDemographicTurnout collection)
  *   6. UK state party orgs (statePartyOrg collection — one per region × party)
@@ -21,20 +20,18 @@ import { connectDb, closeDb } from "../utils/db";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
-  StateDemographics,
+  CensusGroupView,
   StateDemographicTurnout,
   StatePartyOrg,
   StateMetrics,
 } from "../../src/lib/db/types";
 import { ukRegions } from "../../src/lib/seeds/uk/ukRegions";
 import { ukParties } from "../../src/lib/seeds/uk/ukParties";
-import { ukDemographicCategories } from "../../src/lib/seeds/uk/ukDemographicCategories";
 import { ukRegionDemographics } from "../../src/lib/seeds/uk/ukRegionDemographics";
 import { ukDemographicTurnout } from "../../src/lib/seeds/uk/ukDemographicTurnout";
 import { ukStateMetrics } from "../../src/lib/seeds/uk/ukStateMetrics";
 import { calculateUKStatePartyOrgs } from "../../src/lib/seeds/uk/ukStatePartyOrgCalculations";
-import { calculateStateLean } from "../../src/lib/utils/demographics";
+import { calculateStateLeanForCache } from "../../src/lib/demographics/cachedStateLean";
 import { ObjectId } from "mongodb";
 import { getNextSequentialId } from "../../src/lib/db/sequentialId";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -82,34 +79,23 @@ async function main() {
   }
   console.log(`   ✓ Upserted ${ukParties.length} UK parties.`);
 
-  // ── 3. UK Demographic Categories ──────────────────────────────────────────
-  console.log("3. Seeding UK demographic categories (voter archetypes)...");
-  for (const category of ukDemographicCategories) {
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-  }
-  const groupCount = ukDemographicCategories.reduce((s, c) => s + c.groups.length, 0);
-  console.log(
-    `   ✓ Upserted ${ukDemographicCategories.length} category (${groupCount} UK voter archetypes).`
-  );
-
   // ── 4. UK Region Demographics ──────────────────────────────────────────────
   console.log("4. Seeding UK region demographics...");
   for (const sd of ukRegionDemographics) {
+    const { groups: _groups, ...storedDemographics } = sd;
     await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .collection<CensusGroupView>("stateDemographics")
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
     await db
-      .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
+      .collection<CensusGroupView>("demographicDefaults")
+      .updateOne({ _id: sd._id }, { $set: storedDemographics }, { upsert: true });
 
-    // Cache economic/social lean on the region document
-    const allCategories = await db
-      .collection<DemographicCategory>("demographicCategories")
-      .find({})
-      .toArray();
-    const lean = calculateStateLean(sd, allCategories);
+    const lean = calculateStateLeanForCache(sd, [], {
+      countryId: "UK",
+      stateId: sd._id,
+      preset: "2019-default",
+      demographicDefaults: sd,
+    });
     await db.collection<State>("states").updateOne(
       { _id: sd._id },
       {
@@ -165,7 +151,7 @@ async function main() {
   console.log("\n=== UK Seed Complete ===");
   console.log(
     `Regions: ${ukRegions.length}, Parties: ${ukParties.length}, ` +
-      `Archetypes: ${groupCount}, Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
+      `Party Orgs: ${ukStatePartyOrgs.length}, Metrics: ${ukStateMetrics.length}`
   );
 }
 

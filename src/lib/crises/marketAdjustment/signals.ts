@@ -5,6 +5,9 @@
  */
 import type { Db } from "mongodb";
 import { lossShareByCountry } from "./lossShare";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { marketAdjustmentSignalsCollection } from "@/lib/db/repositories/marketAdjustmentSignals";
 
 export const MARKET_ADJUSTMENT_SIGNALS = "marketAdjustmentSignals";
 /** Turns of loss-share history kept per country. */
@@ -19,9 +22,10 @@ interface SignalDoc {
 }
 
 async function marketAdjustmentStage(db: Db): Promise<number> {
-  const cfg = await db
-    .collection<{ marketAdjustmentStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { marketAdjustmentStage: 1 } });
+  const cfg = await gameConfigCollection<{ marketAdjustmentStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { marketAdjustmentStage: 1 } }
+  );
   return typeof cfg?.marketAdjustmentStage === "number" ? cfg.marketAdjustmentStage : 0;
 }
 
@@ -31,12 +35,11 @@ export async function marketAdjustmentEnabled(db: Db): Promise<boolean> {
 
 /** Record this turn's loss share for every country with settled funded capacity. Idempotent per turn. */
 export async function recordLossShares(db: Db, turn: number): Promise<number> {
-  const rows = await db
-    .collection<{
-      countryId?: string;
-      capitalStock?: number;
-      producerSettlement?: { turn?: number; profit?: number };
-    }>("corporateSectors")
+  const rows = await corporateSectorsCollection<{
+    countryId?: string;
+    capitalStock?: number;
+    producerSettlement?: { turn?: number; profit?: number };
+  }>(db)
     .find(
       { "producerSettlement.turn": turn },
       {
@@ -70,9 +73,9 @@ export async function recordLossShares(db: Db, turn: number): Promise<number> {
   }));
   if (ops.length === 0) return 0;
   try {
-    const res = await db
-      .collection<SignalDoc>(MARKET_ADJUSTMENT_SIGNALS)
-      .bulkWrite(ops as never, { ordered: false });
+    const res = await marketAdjustmentSignalsCollection<SignalDoc>(db).bulkWrite(ops as never, {
+      ordered: false,
+    });
     return res.modifiedCount + res.upsertedCount;
   } catch (err) {
     // A retried turn finds each document already stamped; the upsert then
@@ -93,7 +96,7 @@ export async function loadLossShareSignal(
   db: Db,
   countryId: string
 ): Promise<{ current: number; history: number[] } | null> {
-  const doc = await db.collection<SignalDoc>(MARKET_ADJUSTMENT_SIGNALS).findOne({ _id: countryId });
+  const doc = await marketAdjustmentSignalsCollection<SignalDoc>(db).findOne({ _id: countryId });
   const points = doc?.points ?? [];
   if (points.length === 0) return null;
   const history = points.map((p) => p.value);

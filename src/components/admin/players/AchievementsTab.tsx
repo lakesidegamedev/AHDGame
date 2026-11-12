@@ -71,16 +71,14 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleGrant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!grantCharacterId || !grantSlug) return;
+  const postAchievement = async (action: string, body: Record<string, string>) => {
     setActionLoading(true);
     setActionMsg(null);
     try {
-      const res = await fetch(`${apiBase}/achievements/grant`, {
+      const res = await fetch(`${apiBase}/achievements/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId: grantCharacterId, achievementSlug: grantSlug }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (res.ok) {
@@ -94,56 +92,27 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleGrant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!grantCharacterId || !grantSlug) return;
+    await postAchievement("grant", { characterId: grantCharacterId, achievementSlug: grantSlug });
   };
 
   const handleRevoke = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!revokeCharacterId || !revokeSlug) return;
-    setActionLoading(true);
-    setActionMsg(null);
-    try {
-      const res = await fetch(`${apiBase}/achievements/revoke`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId: revokeCharacterId, achievementSlug: revokeSlug }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setActionMsg({ text: data.message, ok: true });
-        fetchData();
-      } else {
-        setActionMsg({ text: apiErrorText(data, "Failed"), ok: false });
-      }
-    } catch {
-      setActionMsg({ text: "Network error", ok: false });
-    } finally {
-      setActionLoading(false);
-    }
+    await postAchievement("revoke", {
+      characterId: revokeCharacterId,
+      achievementSlug: revokeSlug,
+    });
   };
 
   const handleBulkGrant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!confirm(`Grant "${bulkSlug}" to ALL characters?`)) return;
-    setActionLoading(true);
-    setActionMsg(null);
-    try {
-      const res = await fetch(`${apiBase}/achievements/bulk-grant`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ achievementSlug: bulkSlug }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setActionMsg({ text: data.message, ok: true });
-        fetchData();
-      } else {
-        setActionMsg({ text: apiErrorText(data, "Failed"), ok: false });
-      }
-    } catch {
-      setActionMsg({ text: "Network error", ok: false });
-    } finally {
-      setActionLoading(false);
-    }
+    await postAchievement("bulk-grant", { achievementSlug: bulkSlug });
   };
 
   const handleSyncNames = async () => {

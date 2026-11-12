@@ -20,19 +20,15 @@ export const STALE_MARKET_MODE_STAMP_UNSET: Readonly<Record<string, "">> = Objec
  * Per-world state the turn engine, admin routes and rollout scripts stamp onto
  * `gameConfig`, cleared on reset.
  *
- * `gameConfig` is never dropped (see RESET_DROP_COLLECTIONS in runCoreSeed.ts),
- * so anything anchored to the outgoing world's turn counter outlives it unless
- * it is listed here. A fresh seed never writes any of these keys, so absent is
- * exactly the state a new world starts from. Measured on a world reset at turn
- * 1329: `retailDemandTransitionStartTurn: 514` kept Retail capacity frozen until
- * turn 706, and `commodityNominalPriceIndex: 1.957` divided every commodity
- * price ratio from turn 2 because the index never re-anchors backwards.
+ * `gameConfig` is never dropped on reset, so anything anchored to the outgoing
+ * world's turn counter outlives it unless listed here. A fresh seed never
+ * writes these keys, so absent is exactly the state a new world starts from.
  *
  * Same shape and rationale as `STALE_PROGRESS_GAME_STATE_UNSET` on `gameState`:
- * an explicit `$unset` list, not a blanket drop, so the operational fields
- * beside them survive. Every turn-anchored GameConfig field is either listed
- * here or in TURN_ANCHORED_GAME_CONFIG_KEPT, enforced by
- * coreGameConfigUpdate.test.ts. ⚠️ The market-guard *configuration* knobs
+ * an explicit `$unset` list, not a blanket drop, so operational fields beside
+ * them survive. Every turn-anchored GameConfig field is either listed here or
+ * in TURN_ANCHORED_GAME_CONFIG_KEPT, enforced by
+ * coreGameConfigUpdate.test.ts. The market-guard *configuration* knobs
  * (`marketGuardEnabled`, `marketGuardDropPct`, `marketGuardGraceTurns`) are
  * admin settings, not per-world state, and must NOT be listed here.
  */

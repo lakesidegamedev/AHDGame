@@ -16,6 +16,7 @@ import { budgetKeyForLaw } from "@/lib/politicalLegislation/budgetKeys";
 import { applyEraRevenueCap } from "@/lib/budget/revenue";
 import { getEraContext } from "@/lib/era/context";
 import { programCostScaleForLaw } from "@/lib/politicalLegislation/programCostScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface AnnualBudgetMeasures {
   /** Political-law id to the Chancellor's target effective rate. */
@@ -74,9 +75,10 @@ export async function buildAnnualBudgetProvisions(
 ): Promise<AnnualBudgetProvisionResult> {
   const ukLaws = getCatalog("UK");
   const taxLaws = new Map(ukLaws.filter((law) => law.kind === "tax").map((law) => [law.id, law]));
-  const currentBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: "UK" }, { projection: { taxRates: 1 } });
+  const currentBudget = await federalBudgetCollection(db).findOne(
+    { _id: "UK" },
+    { projection: { taxRates: 1 } }
+  );
 
   const provisions: BillProvision[] = [];
   for (const [lawId, targetRate] of Object.entries(measures.taxRates)) {
@@ -142,7 +144,7 @@ export async function previewAnnualBudget(
   if (!compiled.ok) return compiled;
 
   const [budget, currentLevels, fiscalBase, eraContext] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: "UK" }),
+    federalBudgetCollection(db).findOne({ _id: "UK" }),
     getEnactedLevels(db, "UK"),
     countryFiscalBase(db, "UK"),
     getEraContext(db).catch(() => null),

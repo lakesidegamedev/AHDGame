@@ -10,7 +10,7 @@ import { requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import type { z } from "zod";
-import type { Corporation, ExtractionContract } from "@/lib/db/types";
+import type { ExtractionContract } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
@@ -52,6 +52,10 @@ import { validateBid, ContractError } from "./eligibility";
 import { activateDefenceBid } from "./defence";
 import type { publishTenderSchema, bidSchema } from "./schemas";
 import type { GovernmentTender, ContractBid } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import type { Document } from "mongodb";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
 
 /**
  * When live plant floors rise past a frozen open-tender maximum (yen-scale GDP drift or
@@ -191,9 +195,10 @@ export async function publishTender(
     const config = await loadContractIssuanceSettings(db);
     if (!config.contractIssuanceEnabled)
       throw new ContractError("Extraction contract issuance is disabled.");
-    const capacity = await db
-      .collection("stateResourceCapacity")
-      .findOne({ stateId: input.terms.stateId, countryId });
+    const capacity = await stateResourceCapacityCollection<Document>(db).findOne({
+      stateId: input.terms.stateId,
+      countryId,
+    });
     if (!(capacity?.resources?.[input.terms.resource] > 0))
       throw new ContractError("This resource is not available in this country's selected state.");
   }
@@ -296,9 +301,7 @@ export async function submitBid(
     userId: user.userId,
   };
   const withdrawingCorp = input.withdraw
-    ? await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: new ObjectId(input.corporationId) })
+    ? await corporationsCollection(db).findOne({ _id: new ObjectId(input.corporationId) })
     : null;
   if (input.withdraw && (!withdrawingCorp || requireCeo(withdrawingCorp, user.userId)))
     throw new ContractError("Only the CEO may withdraw this bid.", 403);
@@ -471,7 +474,7 @@ async function awardLocked(
     await activateDefenceBid(db, t, bid, user, turn, now);
   } else {
     const settings = await loadContractIssuanceSettings(db);
-    const col = db.collection<ExtractionContract>("extractionContracts");
+    const col = extractionContractsCollection(db);
     let contract = await col.findOne({ _id: new ObjectId(t.contractId) });
     if (!contractsEnabled && !contract)
       throw new ContractError(GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, 503);
@@ -509,11 +512,39 @@ async function awardLocked(
       throw new ContractError(
         "A different award attempt owns this payment. Refresh before retrying."
       );
+    const offered = contract;
+    const reopenFailedAward = async () => {
+      const removed = await col.deleteOne({
+        _id: offered._id,
+        status: "offered",
+        signingFeeAttemptKey: t.awardAttemptId,
+        signingFeeSettled: { $ne: true },
+      });
+      const remaining = removed.deletedCount
+        ? null
+        : await col.findOne({ _id: offered._id }, { projection: { _id: 1 } });
+      if (!remaining)
+        await tenders(db).updateOne(
+          { _id: t._id, status: "awarding", awardLeaseKey: t.awardLeaseKey },
+          {
+            $set: { status: "open" },
+            $unset: {
+              winningCorporationId: "",
+              awardReason: "",
+              awardedBy: "",
+              awardedTurn: "",
+              awardAttemptId: "",
+              awardSelfDealing: "",
+            },
+          }
+        );
+    };
     if (!contract.signingFeeSettled || contract.status !== "active") {
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: contract.corporationId });
-      if (!corp) throw new ContractError("The selected corporation no longer exists.");
+      const corp = await corporationsCollection(db).findOne({ _id: contract.corporationId });
+      if (!corp) {
+        await reopenFailedAward();
+        throw new ContractError("The selected corporation no longer exists.");
+      }
       const result = await settleTenderSigningFee(
         db,
         contract,
@@ -524,30 +555,7 @@ async function awardLocked(
         settings.contractIssuanceEnabled === true && contractsEnabled
       );
       if (!result.ok) {
-        const removed = await col.deleteOne({
-          _id: contract._id,
-          status: "offered",
-          signingFeeAttemptKey: t.awardAttemptId,
-          signingFeeSettled: { $ne: true },
-        });
-        const remaining = removed.deletedCount
-          ? null
-          : await col.findOne({ _id: contract._id }, { projection: { _id: 1 } });
-        if (!remaining)
-          await tenders(db).updateOne(
-            { _id: t._id, status: "awarding", awardLeaseKey: t.awardLeaseKey },
-            {
-              $set: { status: "open" },
-              $unset: {
-                winningCorporationId: "",
-                awardReason: "",
-                awardedBy: "",
-                awardedTurn: "",
-                awardAttemptId: "",
-                awardSelfDealing: "",
-              },
-            }
-          );
+        await reopenFailedAward();
         throw new ContractError(result.error ?? "The signing fee was refused.", 402);
       }
     }

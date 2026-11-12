@@ -14,6 +14,7 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { getDb } from "@/lib/mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -118,7 +119,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         : { countryId: { $exists: false } }),
     };
     if (parsed.data.bankCorporationId === null) {
-      const result = await db.collection<Corporation>("corporations").updateOne(CEO_FILTER, {
+      const result = await corporationsCollection(db).updateOne(CEO_FILTER, {
         $unset: { primaryUnderwritingMandate: "" },
         $set: { updatedAt: now },
         $inc: { primaryUnderwritingMandateRevision: 1 },
@@ -135,7 +136,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
     const currencyCode = resolveCorpLiquidCurrencyCode(corporation);
     if (!currencyCode) return errorResponse(409, "Corporation currency is unavailable");
-    const bank = await db.collection<Corporation>("corporations").findOne(
+    const bank = await corporationsCollection(db).findOne(
       {
         _id: bankId,
         "bankCharter.status": "active",
@@ -156,7 +157,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     ) {
       return errorResponse(409, "The selected bank is no longer eligible in this currency");
     }
-    const result = await db.collection<Corporation>("corporations").updateOne(CEO_FILTER, {
+    const result = await corporationsCollection(db).updateOne(CEO_FILTER, {
       $set: {
         primaryUnderwritingMandate: {
           bankCorporationId: bank._id,

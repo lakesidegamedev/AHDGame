@@ -9,15 +9,15 @@
 
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bond } from "@/lib/db/types/bond";
 import { REPUDIATE_BOND_MARKET_PRICE } from "../constants";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export async function markCountryBondsRepudiated(
   db: Db,
   countryCode: CountryId,
   currentTurn: number
 ): Promise<{ bondsAffected: number }> {
-  const result = await db.collection<Bond>("bonds").updateMany(
+  const result = await bondsCollection(db).updateMany(
     {
       issuerType: "sovereign",
       countryId: countryCode,

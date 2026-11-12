@@ -7,11 +7,13 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { suggestionCommentSchema } from "@/lib/api/schemas/suggestion";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { containsSlur } from "@/lib/moderation";
-import type { Character, PoliticalParty, SuggestionComment } from "@/lib/db/types";
+import type { PoliticalParty, SuggestionComment } from "@/lib/db/types";
 import { getSuggestionCommentsCollection } from "@/lib/db/collections/suggestionComments";
 import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { createNotification } from "@/lib/notifications";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // GET /api/suggestions/public/[issueNumber]/comments — List comments (newest first, or ?order=asc
 // for oldest first; paginated).
@@ -57,8 +59,7 @@ export async function GET(
       userIds.length > 0 ? await fetchBordersByUserIds(db, userIds) : new Map<string, unknown>();
 
     // Batch-load character + party data for comment authors
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ userId: { $in: userIds } })
       .project({
         userId: 1,
@@ -76,8 +77,7 @@ export async function GET(
     }
     const partyMap = new Map<string, PoliticalParty>();
     if (partySeqIds.size > 0) {
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ sequentialId: { $in: [...partySeqIds].map(Number) } })
         .toArray();
       for (const p of parties) partyMap.set(`${p.countryId}:${p.sequentialId}`, p);
@@ -170,8 +170,7 @@ export async function POST(
       return errorResponse(404, "Suggestion not found");
     }
 
-    const character = await db
-      .collection<Character>("characters")
+    const character = await charactersCollection(db)
       .findOne({ userId: new ObjectId(user.userId) });
 
     if (!character) {
@@ -212,7 +211,7 @@ export async function POST(
 
     let authorPartyAbbrev: string | null = null;
     if (character.party && character.party !== "independent") {
-      const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+      const party = await politicalPartiesCollection(db).findOne({
         sequentialId: parseInt(character.party),
         countryId: character.countryId,
       });

@@ -5,13 +5,14 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // GET /api/game-time — Return current game state (turn, year, iteration)
 // Auth: public
 // Errors: none (returns defaults if no game state exists)
 export async function GET() {
   const db = await getDb();
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
   return NextResponse.json({
     currentTurn: gameState?.currentTurn ?? 1,
@@ -42,18 +43,16 @@ export async function PATCH(request: Request) {
     const db = await getDb();
     // Maintain the global iteration registry alongside the current iteration so
     // generated wiki office pages always show every known iteration section.
-    const current = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const current = await gameStateCollection(db).findOne({ _id: "current" });
     const { orderIterations } = await import("@/lib/wiki/officeIteration");
     const iterationHistory = orderIterations(current?.iterationHistory ?? [], [
       parsed.data.iteration,
     ]);
-    await db
-      .collection<GameState>("gameState")
-      .updateOne(
-        { _id: "current" },
-        { $set: { iteration: parsed.data.iteration, iterationHistory, updatedAt: new Date() } },
-        { upsert: true }
-      );
+    await gameStateCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { iteration: parsed.data.iteration, iterationHistory, updatedAt: new Date() } },
+      { upsert: true }
+    );
 
     return NextResponse.json({
       success: true,

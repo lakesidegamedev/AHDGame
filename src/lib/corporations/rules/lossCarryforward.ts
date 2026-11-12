@@ -1,8 +1,7 @@
 /**
- * Tax loss carryforward (owner decision 2026-10-21, a soft cushion for
- * corporations): a turn's taxable loss is banked, and later profitable turns
- * offset up to LOSS_CARRYFORWARD_USE_CAP of their taxable profit with it, as
- * in real corporate tax law. No money is created; future tax is deferred.
+ * Tax loss carryforward: a turn's taxable loss is banked, and later profitable
+ * turns offset up to LOSS_CARRYFORWARD_USE_CAP of their taxable profit with it,
+ * as in real corporate tax law. No money is created; future tax is deferred.
  *
  * Pure: plain data in, plain data out.
  */

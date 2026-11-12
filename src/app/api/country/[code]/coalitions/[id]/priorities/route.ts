@@ -22,6 +22,8 @@ import {
   parseCoalitionCountry,
   resolveCoalitionPriorityViewer,
 } from "@/lib/coalitions/priorityApi";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 const objectIdString = z.string().regex(/^[0-9a-fA-F]{24}$/);
 
@@ -93,12 +95,10 @@ export async function GET(
     );
 
     if (changed) {
-      await db
-        .collection("coalitions")
-        .updateOne(
-          { _id: context.coalition._id },
-          { $set: { priorities: normalizedPriorities, updatedAt: now } }
-        );
+      await coalitionsCollection<Document>(db).updateOne(
+        { _id: context.coalition._id },
+        { $set: { priorities: normalizedPriorities, updatedAt: now } }
+      );
     }
 
     return NextResponse.json(payload);
@@ -158,10 +158,8 @@ export async function POST(
       (priority) => priority.status === "active"
     ).length;
 
-    // For leadership-goal priorities the caller passes an absolute ISO expiry.
-    // Convert that to the equivalent game-clock turn so the server-side expiry
-    // check uses the game clock (durable against drift) — see
-    // docs/plans/archive/2026-05/2026-05-20-clock-mismatch-design.md.
+    // Caller passes an absolute ISO expiry; convert to a game-clock turn so
+    // the expiry check is durable against clock drift.
     const leadershipExpiresAt =
       parsed.data.type === "leadership_goal" ? new Date(parsed.data.expiresAt) : null;
     const leadershipExpiresOnTurn = leadershipExpiresAt
@@ -232,9 +230,10 @@ export async function POST(
     }
 
     const priorities = [...existingPriorities, nextPriority];
-    await db
-      .collection("coalitions")
-      .updateOne({ _id: context.coalition._id }, { $set: { priorities, updatedAt: now } });
+    await coalitionsCollection<Document>(db).updateOne(
+      { _id: context.coalition._id },
+      { $set: { priorities, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

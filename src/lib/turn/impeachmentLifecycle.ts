@@ -1,5 +1,5 @@
 import type { Db } from "@/lib/mongodb";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { Impeachment, ImpeachmentStage } from "@/lib/db/types/impeachment";
 import {
   getLowerChamberOfficeType,
@@ -20,6 +20,9 @@ import {
 import { IMPEACHMENT_SENATE_VOTING_TURNS } from "@/lib/constants/impeachment";
 import { createNotification } from "@/lib/notifications";
 import { autoVoteNppsForImpeachmentStage } from "@/lib/impeachment/autoVoteNpps";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 /**
  * Advance every open impeachment whose current-stage voting window has closed.
@@ -36,20 +39,17 @@ export async function processImpeachmentLifecycle(
   currentTurn: number,
   now: Date
 ): Promise<{ resolved: number }> {
-  const open = await db
-    .collection<Impeachment>("impeachments")
+  const open = await impeachmentsCollection(db)
     .find({ stage: { $in: ["house", "senate"] } })
     .toArray();
 
   let resolved = 0;
 
   const claim = async (imp: Impeachment, stage: ImpeachmentStage): Promise<boolean> => {
-    const res = await db
-      .collection<Impeachment>("impeachments")
-      .updateOne(
-        { _id: imp._id, stage: imp.stage },
-        { $set: { stage, resolvedOnTurn: currentTurn, updatedAt: now } }
-      );
+    const res = await impeachmentsCollection(db).updateOne(
+      { _id: imp._id, stage: imp.stage },
+      { $set: { stage, resolvedOnTurn: currentTurn, updatedAt: now } }
+    );
     return res.modifiedCount > 0;
   };
 
@@ -62,7 +62,7 @@ export async function processImpeachmentLifecycle(
       isGovernor && imp.state
         ? governorOfficialFilter(imp.countryId, imp.state)
         : getExecutiveOfficialFilter(imp.countryId, "president");
-    const holder = await db.collection<ElectedOfficial>("electedOfficials").findOne(holderFilter);
+    const holder = await electedOfficialsCollection(db).findOne(holderFilter);
     const stillHolds =
       holder?.characterId != null &&
       holder.characterId.toString() === imp.targetCharacterId.toString();
@@ -89,9 +89,10 @@ export async function processImpeachmentLifecycle(
       if (passesSenateConviction(tally)) {
         if (await claim(imp, "convicted")) {
           await removeImpeachedGovernor(db, imp.countryId, imp.state!, imp.targetCharacterId, now);
-          const targetChar = await db
-            .collection<Character>("characters")
-            .findOne({ _id: imp.targetCharacterId }, { projection: { userId: 1, name: 1 } });
+          const targetChar = await charactersCollection(db).findOne(
+            { _id: imp.targetCharacterId },
+            { projection: { userId: 1, name: 1 } }
+          );
           if (targetChar?.userId) {
             await createNotification({
               userId: targetChar.userId,
@@ -122,7 +123,7 @@ export async function processImpeachmentLifecycle(
         stageVotes
       );
       if (passesHouseImpeachment(tally)) {
-        const advanced = await db.collection<Impeachment>("impeachments").updateOne(
+        const advanced = await impeachmentsCollection(db).updateOne(
           { _id: imp._id, stage: "house" },
           {
             $set: {
@@ -154,9 +155,10 @@ export async function processImpeachmentLifecycle(
     if (upperOffice && passesSenateConviction(tally)) {
       if (await claim(imp, "convicted")) {
         await removeImpeachedExecutive(db, imp.countryId, "president", imp.targetCharacterId, now);
-        const targetChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: imp.targetCharacterId }, { projection: { userId: 1, name: 1 } });
+        const targetChar = await charactersCollection(db).findOne(
+          { _id: imp.targetCharacterId },
+          { projection: { userId: 1, name: 1 } }
+        );
         if (targetChar?.userId) {
           await createNotification({
             userId: targetChar.userId,

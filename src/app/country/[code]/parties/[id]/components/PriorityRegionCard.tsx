@@ -12,18 +12,11 @@ import { apiErrorText } from "@/lib/errors/catalog";
 /**
  * Chair-Office card for setting the party's Priority Region cluster.
  *
- * Behavior:
- *   - Shows the current cluster (state names) + remaining lockout turns
- *     when one is set, regardless of whether the slot is currently
- *     editable.
- *   - When unlocked (no cluster set OR lockout expired), renders a state
- *     picker. Player selects 2-3 (or 2-4 if Phase F's anchor lookup
- *     adds the bonus) states from the country's full state list.
- *   - Adjacency validation runs server-side on submit; client just
- *     enforces basic size + duplicate rules pre-submit so the player
- *     gets fast feedback.
- *   - Once set, the slot locks for PRIORITY_REGION_LOCKOUT_TURNS (168)
- *     turns. No clears, no re-sets in that window.
+ * Shows the current cluster and remaining lockout when set. When unlocked,
+ * renders a state picker (2-3 states, 2-4 with the anchor bonus). Adjacency
+ * is validated server-side; the client only pre-checks size and duplicates
+ * for fast feedback. Once set, the slot locks for
+ * PRIORITY_REGION_LOCKOUT_TURNS turns with no clears or resets.
  */
 
 interface PriorityRegionResponse {
@@ -104,9 +97,8 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
     return set;
   }, [picked, states, countryCode]);
 
-  // Anchor preview: would the *currently picked* cluster qualify for the
-  // +1 governor-anchor slot? Used to set the displayed cap (3 vs 4) so
-  // the player understands why a 4th pick is enabled.
+  // Anchor preview: does the current pick include a governor-anchor
+  // state? Sets the displayed cap (3 vs 4) so the 4th pick is explained.
   const hasAnchorOnPicks = useMemo(
     () => picked.some((id) => governorStateSet.has(id)),
     [picked, governorStateSet]

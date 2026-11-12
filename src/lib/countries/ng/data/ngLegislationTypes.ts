@@ -8,30 +8,21 @@ import {
 /**
  * Nigeria country-specific legislation.
  *
- * Weight-sign convention for `effectTargetsWeighted` (mirrors the audited
- * IE/CN/JP seeds — see `ieLegislationTypes.ts` for the full derivation):
+ * effectTargetsWeighted sign convention (mirrors IE/CN/JP seeds):
+ *   contribution = effectDirection x weight x MAX x scope x effectSign
+ *   effectSign = isHigherBetter ? +1 : -1 (baked in by the engine)
  *
- *   Engine per target:
- *     contribution = effectDirection × weight × MAX × scope × effectSign
- *     effectSign   = isHigherBetter ? +1 : -1   (baked in by the engine)
+ * taxRateOptions sets effectDirection by stance: right +1, left -1, center 0
+ * (tax helper pre-inverts, so a metric improves under RIGHT exactly when its
+ * weight is POSITIVE). The helper also ticks smallBusinessFormation (right +,
+ * left -).
  *
- *   `taxRateOptions` sets effectDirection by stance: right → +1, left → −1,
- *   center → 0 (the tax helper pre-inverts, so a metric improves under the
- *   RIGHT option exactly when its weight is POSITIVE). The helper also injects
- *   a per-option `smallBusinessFormation` tick (right +, left −), which is the
- *   natural right-side upside the P6c symmetry guard credits.
+ * Stance-to-rate direction by tax family:
+ *   - Direct/progressive (CIT, PIT, PPT, CGT, stamp): LOW rate = RIGHT.
+ *   - Consumption/trade (VAT, customs): LOW rate = LEFT.
+ *   - Excise (sin/carbon framing): LOW rate = RIGHT.
  *
- *   Stance ↔ rate direction differs by tax family (matches CN/IE):
- *     - Direct/progressive taxes (CIT, PIT, PPT, CGT, stamp): LOW rate = RIGHT.
- *     - Consumption / trade taxes (VAT, customs): LOW rate = LEFT.
- *     - Excise (sin/carbon framing): LOW rate = RIGHT (abolition is market-coded).
- *
- * Nigeria legislates in English, so titles and descriptions are English (no
- * transliteration flavor, unlike the CN/IE seeds). Metric ids are drawn from
- * the NG metric set authored in `ngStateMetrics.ts`.
- *
- * Sub-phases: 5a tax (this batch); 5b economic/infra/energy; 5c social/
- * health/security/foreign (appended below as they land).
+ * Titles are English; metric ids come from `ngStateMetrics.ts`.
  */
 
 function ngCommitteePositions(domainLabel: string): LegislationType["positions"] {
@@ -3638,26 +3629,22 @@ export const ngLegislationTypes: LegislationType[] = [
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
-//  Spending calibration — attach `budgetCategory` + per-capita NGN cost to NG
-//  spending programs so the federal budget seeds full expenditure lines (without
-//  this, deriveEnactedLaws skips them and NG spending is baseline-only / inert
-//  to policy choices). Mirrors the CN calibration pattern.
+//  Spending calibration , attach `budgetCategory` + per-capita NGN cost to NG
+//  spending programs so the federal budget seeds full expenditure lines;
+//  without this, deriveEnactedLaws skips them and NG spending is baseline-only.
+//  Mirrors the CN calibration pattern.
 //
-//  Per-capita figures are NGN/capita/year at the seeded default option (index 2,
-//  the center bracket). The NG_SPENDING_CURVE grades cost across the 5 options;
-//  NG authors the higher-spending option on the LEFT (index 0), so the curve is
-//  highest at index 0 and lowest at index 4, =1.0 at the center.
+//  Per-capita figures are NGN/capita/year at index 2 (center bracket).
+//  NG authors the higher-spending option on the LEFT, so NG_SPENDING_CURVE is
+//  highest at index 0 and =1.0 at the center.
 //
-//  Σ(per-capita × 200M population) per category reconciles to NG 2019
-//  baselineSpendingByCategory in src/lib/seeds/reference/budgets.ts. The absolute
-//  costs are GDP-indexed per era by COST_SCALE_ANCHORS.NG (so the 1991 preset
-//  scales them down ~40× rather than over-stating a ₦1.8T-GDP budget).
+//  Σ(per-capita × 200M) per category reconciles to the NG 2019
+//  baselineSpendingByCategory; costs are GDP-indexed per era by
+//  COST_SCALE_ANCHORS.NG so the 1991 preset scales them down instead of
+//  over-stating a small budget.
 //
-//  Regulatory / rule-only types (taxes, minimum wage, labour rights, industrial
-//  vs-market stance, anti-corruption, judiciary, electoral, federalism, press
-//  freedom, immigration, disability, gender, local government, population,
-//  foreign policy, regional integration, petroleum/fiscal stance, environmental
-//  rules) carry no standing expenditure line and are intentionally omitted.
+//  Rule-only types (taxes, wage, rights, stances, judiciary, etc.) carry no
+//  standing expenditure line and are intentionally omitted.
 // ════════════════════════════════════════════════════════════════════════════
 const NG_SPENDING_CURVE = [1.8, 1.4, 1.0, 0.6, 0.3];
 

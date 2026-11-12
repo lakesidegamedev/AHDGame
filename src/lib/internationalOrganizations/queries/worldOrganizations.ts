@@ -10,7 +10,6 @@ import {
   ORG_PROPOSAL_VOTING_TURNS,
   orgTributeRateAnnual,
 } from "@/lib/constants/internationalOrganizations";
-import { isIntOrgAlignmentEnabled } from "@/lib/alignment/featureFlag";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
@@ -39,6 +38,7 @@ import {
 import { loadBlocWarEntryStatusByDisplayOrg } from "@/lib/internationalOrganizations/warEntryStatus";
 import { loadMembershipDefenseWarnings } from "@/lib/internationalOrganizations/membershipDefenseWarnings";
 import { loadPactEntryWarnings } from "@/lib/military/treatyDefence";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 // Re-exported from its own module: `entityGdp` builds on it, and this view
 // builds on `entityGdp`. Kept exported here so existing callers are unaffected.
@@ -46,12 +46,9 @@ export { loadUsdGdpByCountry };
 
 export async function loadWorldOrganizationsView(db: Db) {
   await ensureFoundingMembershipsAndLeadership(db);
-  const [summaries, currentTurn, alignmentFlag] = await Promise.all([
+  const [summaries, currentTurn] = await Promise.all([
     loadOrganizationSummaries(db),
     getCurrentTurn(db),
-    db
-      .collection<{ intOrgAlignmentEnabled?: boolean }>("gameState")
-      .findOne({ _id: "current" } as never, { projection: { intOrgAlignmentEnabled: 1 } }),
   ]);
 
   // Derived metrics are GDP-weighted across the WHOLE membership, not just the
@@ -75,12 +72,8 @@ export async function loadWorldOrganizationsView(db: Db) {
       loadPactEntryWarnings(db),
     ]
   );
-  // Entity-wide throughout. `loadUsdGdpByCountry` used to be called here as
-  // well, for a country-only member table; `loadGdpUsdMillionsByEntity` is a
-  // superset of it (it starts from the same query and adds macro entities), so
-  // keeping both would have been two reads for one answer.
-  // One read for the whole sweep: the dues/tribute split needs it per org, and
-  // `getAllCountryAccess` is two round-trips.
+  // One read for the whole sweep: the dues/tribute split needs GDP per org.
+  // `loadGdpUsdMillionsByEntity` is a superset of the country-only loader.
   const [access, gdpByEntity, worldGdpMillions] = await Promise.all([
     getAllCountryAccess(db),
     loadGdpUsdMillionsByEntity(db, [...allEntities], preset),
@@ -102,8 +95,7 @@ export async function loadWorldOrganizationsView(db: Db) {
   // line is still empty is not silently unrated. Macro-tier members have no
   // federalBudget; their defense-sector share of capacity fills the gap.
   const defensePctByCountry = new Map<string, number>();
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ countryId: { $in: [...allMembers] } })
     .project<Pick<FederalBudget, "countryId" | "gdp" | "spending" | "baselineSpendingByCategory">>({
       countryId: 1,
@@ -170,11 +162,8 @@ export async function loadWorldOrganizationsView(db: Db) {
           "US") as CountryId;
         const duesRateAnnual = fundRow?.duesRateAnnual ?? DEFAULT_ORG_DUES_RATE_ANNUAL;
         const fundRate = getGdpAnchorRate(fundCountry, preset);
-        // Dues and tribute PARTITION the roll — `orgMembership` is explicit that
-        // nobody is billed both and nobody is billed neither — so the projected
-        // income has to split the same way the charge does. Summing every priced
-        // member into the dues line, as this used to, billed France and Italy at
-        // the dues rate on paper while the turn phase charged them tribute.
+        // Dues and tribute PARTITION the roll: each member is billed exactly
+        // one, so projected income must split the same way the charge does.
         const annualOf = (
           rows: typeof memberGdp,
           rate: number // annual, as a fraction of GDP
@@ -233,10 +222,5 @@ export async function loadWorldOrganizationsView(db: Db) {
     definitions: INTERNATIONAL_ORGANIZATIONS,
     currentTurn,
     proposalVotingWindowTurns: ORG_PROPOSAL_VOTING_TURNS,
-    // Drives whether the per-org Influence tab is offered at all. Fail-closed,
-    // like every other alignment surface: a world with the gate off must show
-    // no trace of the feature, not a tab explaining it is unavailable. Read
-    // from the db already in hand rather than letting the helper open its own.
-    intOrgAlignmentEnabled: await isIntOrgAlignmentEnabled(alignmentFlag ?? {}),
   };
 }

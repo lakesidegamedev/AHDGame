@@ -1,6 +1,5 @@
 import { euroLedgerCrossRate, type EuroMonetaryUnion } from "@/lib/currency/euro/rules";
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import type { CurrencyOrder } from "@/lib/db/types/currencyOrder";
@@ -19,6 +18,12 @@ import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import { recoverStaleFillClaims } from "@/lib/forex/fillRecovery";
 import { sendSystemMail } from "@/lib/mail/systemMail";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 // ── Limit order processing ──────────────────────────────────────────────────
 
@@ -65,7 +70,7 @@ export async function processTriggeredLimitOrders(
   // Claims carrying a peer-fill intent are EXCLUDED from the blind reset: a
   // fill may already have moved money, and resetting to open would strand it.
   // Those go through intent recovery (finish or undo) instead.
-  await db.collection<CurrencyOrder>("currencyOrders").updateMany(
+  await currencyOrdersCollection(db).updateMany(
     {
       status: "processing",
       updatedAt: { $lt: new Date(now.getTime() - 2 * MS_PER_TURN) },
@@ -76,12 +81,11 @@ export async function processTriggeredLimitOrders(
   await recoverStaleFillClaims(db, now);
 
   // Load current rates into a map for quick lookup
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   const rateMap = new Map(rates.map((r) => [r.currencyCode, r.rate]));
 
   // Find open/partial limit orders, sorted by creation date (FIFO)
-  const openOrders = await db
-    .collection<CurrencyOrder>("currencyOrders")
+  const openOrders = await currencyOrdersCollection(db)
     .find({
       type: "limit",
       status: { $in: ["open", "partial"] },
@@ -105,10 +109,9 @@ export async function processTriggeredLimitOrders(
     const fixedRate = euroLedgerCrossRate(union, order.fromCurrency, order.toCurrency);
     const crossRate = fixedRate ?? toRate / fromRate;
 
-    // If the rate document was malformed this turn (e.g. a NaN cascade like
-    // the turn-269 incident upstream), skip the order rather than filling
-    // it at Infinity/NaN and poisoning the destination balance via $inc.
-    // The order re-evaluates next turn once rates recover.
+    // If the rate is malformed this turn (e.g. a NaN cascade upstream), skip
+    // the order rather than filling at Infinity/NaN and poisoning the
+    // destination balance via $inc. It re-evaluates next turn.
     if (!Number.isFinite(crossRate) || crossRate <= 0) continue;
 
     // Buy: fill when cross rate >= limit (player gets at least as much toCurrency as expected)
@@ -125,12 +128,10 @@ export async function processTriggeredLimitOrders(
     // ── Atomic claim: open/partial → processing ───────────────────────────
     // This is the idempotency guard. If the process crashes after this point
     // the order stays in "processing", not "open", and will not be replayed.
-    const claimResult = await db
-      .collection<CurrencyOrder>("currencyOrders")
-      .updateOne(
-        { _id: order._id, status: { $in: ["open", "partial"] } },
-        { $set: { status: "processing" as const, updatedAt: now } }
-      );
+    const claimResult = await currencyOrdersCollection(db).updateOne(
+      { _id: order._id, status: { $in: ["open", "partial"] } },
+      { $set: { status: "processing" as const, updatedAt: now } }
+    );
     if (claimResult.modifiedCount === 0) {
       // Another process already claimed it (or it was cancelled/expired concurrently).
       continue;
@@ -178,7 +179,7 @@ export async function processTriggeredLimitOrders(
       const reserveBankId = toCountryEntry
         ? getBankId(toCountryEntry.countryId as Parameters<typeof getBankId>[0])
         : fromBankId;
-      const banks = db.collection<CentralBank>("centralBanks");
+      const banks = centralBanksCollection(db);
       if (reserveBankId === fromBankId) {
         await banks.updateOne(
           { _id: fromBankId },
@@ -215,15 +216,16 @@ export async function processTriggeredLimitOrders(
     // Credit the purchased toCurrency to the character's personal balance.
     // The fromCurrency was escrowed at order creation time — no deduction needed here.
     const creditInc = buildPersonalBalanceInc(toAmount, order.toCurrency, true);
-    const creditResult = await db
-      .collection("characters")
-      .updateOne({ _id: order.characterId }, { $inc: creditInc });
+    const creditResult = await charactersCollection(db).updateOne(
+      { _id: order.characterId },
+      { $inc: creditInc }
+    );
 
     // Character was deleted between order creation and fill — cancel the order
     // so it doesn't retry every turn. Escrowed funds are unrecoverable.
     // Record the trade for audit trail since spread was already collected.
     if (creditResult.modifiedCount === 0) {
-      await db.collection<TradeHistoryEntry>("tradeHistory").insertOne({
+      await tradeHistoryCollection(db).insertOne({
         buyerCharacterId: order.characterId,
         sellerCharacterId: null,
         fromCurrency: order.fromCurrency,
@@ -237,15 +239,16 @@ export async function processTriggeredLimitOrders(
         source: "limit_order",
       } as TradeHistoryEntry);
 
-      await db
-        .collection<CurrencyOrder>("currencyOrders")
-        .updateOne({ _id: order._id }, { $set: { status: "expired" as const, updatedAt: now } });
+      await currencyOrdersCollection(db).updateOne(
+        { _id: order._id },
+        { $set: { status: "expired" as const, updatedAt: now } }
+      );
       continue;
     }
 
     // forexEnabled is always true here — this phase only runs inside the gameState.forexEnabled gate
     // Record trade history entry
-    await db.collection<TradeHistoryEntry>("tradeHistory").insertOne({
+    await tradeHistoryCollection(db).insertOne({
       buyerCharacterId: order.characterId,
       sellerCharacterId: null, // market maker
       fromCurrency: order.fromCurrency,
@@ -263,7 +266,7 @@ export async function processTriggeredLimitOrders(
     const newFilledAmount = order.filledAmount + remainingAmount;
     const newStatus = newFilledAmount >= order.amount ? "filled" : "partial";
 
-    await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+    await currencyOrdersCollection(db).updateOne(
       { _id: order._id },
       {
         $set: {
@@ -296,7 +299,7 @@ export async function processTriggeredLimitOrders(
  * Stamped credits make an interrupted batch safe to retry on the next turn.
  */
 export async function expireStaleOrders(db: Db, currentTurn: number, now: Date): Promise<number> {
-  const orders = db.collection<CurrencyOrder>("currencyOrders");
+  const orders = currencyOrdersCollection(db);
   const transitionResult = await orders.updateMany(
     { status: { $in: ["open", "partial"] }, expiresAtTurn: { $lte: currentTurn } },
     { $set: { status: "expired" as const, expiryRefundState: "pending", updatedAt: now } }
@@ -334,7 +337,7 @@ export async function expireStaleOrders(db: Db, currentTurn: number, now: Date):
       },
     });
   }
-  if (refundOps.length) await db.collection<Character>("characters").bulkWrite(refundOps);
+  if (refundOps.length) await (await getCharactersCollection(db)).bulkWrite(refundOps);
   if (pending.length)
     await orders.updateMany(
       {
@@ -354,7 +357,7 @@ export async function expireStaleOrders(db: Db, currentTurn: number, now: Date):
     },
   }));
   if (cleanupOps.length) {
-    await db.collection<Character>("characters").bulkWrite(cleanupOps);
+    await (await getCharactersCollection(db)).bulkWrite(cleanupOps);
     await orders.updateMany(
       {
         _id: { $in: pending.map((order) => order._id) },
@@ -384,8 +387,9 @@ export async function sendFillNotifications(
     )
     .map((n) => n.characterId);
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { _id: { $in: uniqueOids } },
       { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } }

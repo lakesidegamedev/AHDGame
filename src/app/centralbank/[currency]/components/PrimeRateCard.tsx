@@ -125,13 +125,12 @@ export function PrimeRateCard({
   const turnsSinceLast = lastRateChangeTurn !== null ? currentTurn - lastRateChangeTurn : Infinity;
   const cooldownRemaining = Math.max(0, RATE_CHANGE_COOLDOWN_TURNS - turnsSinceLast);
   const onCooldown = cooldownRemaining > 0;
-  // The stored rate can sit off the quarter-point grid, because an autonomous
-  // chair sets a continuous Taylor-rule value. The API only accepts grid rates,
-  // so step from the nearest grid point rather than from the raw rate: from an
-  // off-grid base every offer would be off-grid too and the chair could never
-  // move the rate at all (ticket #1238). The floor and ceiling still key off
-  // the real current rate, since that is what the delta limits are measured
-  // against.
+  // The stored rate can sit off the quarter-point grid because an autonomous
+  // chair sets a continuous Taylor-rule value, but the API only accepts grid
+  // rates. Step from the nearest grid point rather than the raw rate: from an
+  // off-grid base every offer would be off-grid and the chair could never move
+  // the rate. The floor and ceiling still key off the real current rate, since
+  // that is what the delta limits are measured against.
   const gridBase = snapToPrimeRateGrid(primeRate);
   const limits = computeRateLimits({
     primeRate,

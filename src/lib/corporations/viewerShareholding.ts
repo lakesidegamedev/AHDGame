@@ -1,5 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * True when the viewer holds shares (> 0) in `corporation`, either directly
@@ -17,9 +19,10 @@ export async function viewerHoldsShares(
   const userId = new ObjectId(viewerUserId);
 
   if (holders.some((sh) => sh.characterId)) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId }, { projection: { _id: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { userId },
+      { projection: { _id: 1 } }
+    );
     if (
       character &&
       holders.some((sh) => sh.characterId && sh.characterId.toString() === character._id.toString())
@@ -30,7 +33,7 @@ export async function viewerHoldsShares(
 
   const holderCorpIds = holders.flatMap((sh) => (sh.corporationId ? [sh.corporationId] : []));
   if (holderCorpIds.length > 0) {
-    const ownCorp = await db.collection<Corporation>("corporations").findOne(
+    const ownCorp = await corporationsCollection(db).findOne(
       { _id: { $in: holderCorpIds }, userId, ceoVacant: { $ne: true } },
       {
         projection: { _id: 1 },

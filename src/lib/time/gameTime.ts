@@ -2,6 +2,8 @@ import { getDb } from "@/lib/mongodb";
 import type { GameState, TurnLog } from "@/lib/db/types";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
 
 export interface GameTimeContext {
   currentTurn: number;
@@ -63,7 +65,7 @@ export async function reconcileGameStateClock(
   gameState: GameState
 ): Promise<Pick<GameTimeContext, "currentTurn" | "lastTurnProcessed"> & { currentYear: number }> {
   const db = await getDb();
-  const turnLogCollection = db.collection<TurnLog>("turnLogs") as {
+  const turnLogCollection = turnLogsCollection(db) as {
     find: (filter: Record<string, unknown>, options: Record<string, unknown>) => unknown;
   };
   const turnLogCursor = turnLogCollection.find(createTurnLogRepairFilter(gameState), {
@@ -111,15 +113,15 @@ export async function reconcileGameStateClock(
     repairedLastTurnProcessed.getTime() !== new Date(gameState.lastTurnProcessed).getTime();
 
   if (needsRepair) {
-    const gameStateCollection = db.collection<GameState>("gameState") as {
+    const gameStates = gameStateCollection(db) as {
       updateOne?: (
         filter: Record<string, unknown>,
         update: Record<string, unknown>
       ) => Promise<unknown>;
     };
 
-    if (typeof gameStateCollection.updateOne === "function") {
-      await gameStateCollection.updateOne(
+    if (typeof gameStates.updateOne === "function") {
+      await gameStates.updateOne(
         { _id: "current" },
         {
           $set: {
@@ -164,7 +166,7 @@ export async function getGameTime(): Promise<GameTimeContext> {
 
 async function loadGameTime(): Promise<GameTimeContext> {
   const db = await getDb();
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

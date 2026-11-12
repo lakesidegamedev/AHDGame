@@ -1,19 +1,7 @@
 /**
- * United Kingdom Region Census Profiles — 1999 era.
- *
- * 1999-default companion to {@link ukRegionCensusData} (the 2019 profiles).
- * Anchored to the UK Census 2001 and late-1990s Labour Force Survey data.
- *
- * Era anchors (early Blair government): devolution to Scotland, Wales and
- * Northern Ireland just enacted; "Cool Britannia" London boom and rising
- * diversity in the capital; university expansion only beginning (degree-level
- * attainment in the high teens to mid-20s); deindustrialization largely
- * complete in the North East, South Wales and Clydeside; minimal seniors
- * bulge compared with later eras.
- *
- * All values independently authored from historical knowledge of each region
- * in 1999 — NOT scaled or derived from any other era's data. Income uses
- * era-neutral relative tiers (no £ thresholds).
+ * UK region census profiles, 1999 era, companion to {@link ukRegionCensusData}.
+ * Values authored independently for 1999, not scaled from another era.
+ * Income uses era-neutral relative tiers, no currency thresholds.
  */
 
 import type { UKRegionLayer1 } from "@/lib/countries/uk/data/ukRegionCensusData";

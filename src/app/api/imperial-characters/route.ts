@@ -19,6 +19,12 @@ import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { User } from "@/lib/db/types/user";
 import type { CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const IMPERIAL_STARTING_CAPITAL = 50_000_000;
 const IMPERIAL_INITIAL_SHARES = 10_000_000;
@@ -64,9 +70,9 @@ export async function POST(request: Request) {
     }
 
     // Check no imperial character already exists for this country
-    const existing = await db
-      .collection<ImperialCharacter>("imperialCharacters")
-      .findOne({ countryId: countryId as CountryId });
+    const existing = await imperialCharactersCollection(db).findOne({
+      countryId: countryId as CountryId,
+    });
     if (existing) {
       return errorResponse(400, `An imperial character already exists for ${countryId}`);
     }
@@ -76,9 +82,10 @@ export async function POST(request: Request) {
       return errorResponse(400, "Imperial configuration not found for this country");
     }
 
-    const world = await db
-      .collection<{ _id: string; currentTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const world = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const now = new Date();
     const adminUserId = new ObjectId(auth.admin.userId);
     const imperialId = new ObjectId();
@@ -102,7 +109,7 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    await db.collection<ImperialCharacter>("imperialCharacters").insertOne(imperialCharacter);
+    await imperialCharactersCollection(db).insertOne(imperialCharacter);
 
     // Create starter corporation
     const corpSequentialId = await getNextSequentialId(db, "corporation");
@@ -130,10 +137,10 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    await db.collection<Corporation>("corporations").insertOne(corporation as Corporation);
+    await corporationsCollection(db).insertOne(corporation as Corporation);
 
     // Update user document: set active imperial character
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: adminUserId },
       {
         $set: {
@@ -145,7 +152,7 @@ export async function POST(request: Request) {
     );
 
     // Soft-delete existing ceremonial NPP for this country
-    await db.collection("npps").updateMany(
+    await nppsCollection<Document>(db).updateMany(
       {
         countryId: countryId as CountryId,
         retiredAt: { $ne: null },
@@ -188,9 +195,9 @@ export async function GET(request: Request) {
     const config = COUNTRY_CONFIGS[countryId as CountryId];
     const resolvedCountryId = config?.imperialSharedWith ?? countryId;
 
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
-      .findOne({ countryId: resolvedCountryId as CountryId });
+    const imperial = await imperialCharactersCollection(db).findOne({
+      countryId: resolvedCountryId as CountryId,
+    });
 
     if (!imperial) {
       return NextResponse.json({ imperial: null });

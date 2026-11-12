@@ -5,6 +5,7 @@
  */
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resolveGameYear } from "@/lib/era/era";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export function bankingWorldYear(
   state: {
@@ -30,7 +31,11 @@ export function bankingSeparationDefault(input: {
   year: number | null;
   eraUnitScale: number;
 }): "separated" | "universal" {
-  if (input.countryId === "US" && input.year !== null && Number.isFinite(input.year))
+  if (
+    countryHasFeature("usLib", input.countryId) &&
+    input.year !== null &&
+    Number.isFinite(input.year)
+  )
     return input.year < 1999 ? "separated" : "universal";
   return input.eraUnitScale > 1 ? "separated" : "universal";
 }

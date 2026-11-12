@@ -1,29 +1,20 @@
 /**
  * Shared loader for the regional-bases inputs to `projectPrimaryByState`.
  *
- * Both the live stagger and every UI/snapshot callsite must thread the same
- * state-org levels + home-state map into the projection so projection and
- * actual results converge. Without this, party-aligned-but-regionally-funded
- * wins look like "upsets" against the projected centrist winner, inflating
- * momentum bonuses and misleading the UI's projected-winners map.
+ * Projection and actual results must use the same state-org levels and
+ * home-state map, or party-aligned-but-regionally-funded wins look like
+ * upsets against the projected centrist winner, inflating momentum bonuses and
+ * misleading the UI's projected-winners map.
  *
- * Used by:
- *   - presidential primary state-detail page
- *   - party primary overview page
- *   - enrichElection projection
- *   - primaryResolution snapshot projection
- *   - admin debug primary-projection route
- *   - primaryStaggerPhase (uses an inline path to scope the query to the
- *     wave's states; this helper is for the all-states callers)
- *
- * The query is sparse (rows only exist after build actions) and runs once
- * per render. No pagination or batching needed at expected scale.
- *
- * See docs/plans/archive/2026-05/2026-05-27-presidential-primary-regional-bases-design.md
+ * The query is sparse (rows only exist after build actions) and runs once per
+ * render; no pagination or batching needed at expected scale.
  */
 
 import type { Db, ObjectId } from "mongodb";
 import type { CharacterStateOrg, ElectionCandidate, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 export interface RegionalBonusInput {
   /** Election-level candidate rows (player + NPP). */
@@ -57,8 +48,7 @@ export async function loadRegionalBonusMaps(
     .map((c) => c.characterId);
 
   const stateOrgRows = characterIds.length
-    ? await db
-        .collection<CharacterStateOrg>("characterStateOrg")
+    ? await characterStateOrgCollection(db)
         .find({ characterId: { $in: characterIds }, level: { $gt: 0 } })
         .toArray()
     : [];
@@ -114,14 +104,12 @@ export async function loadRegionalBonusMapsWithLookup(
 
   const [chars, npps] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<{ _id: ObjectId; homeState?: string }>("characters")
+      ? charactersCollection<{ _id: ObjectId; homeState?: string }>(db)
           .find({ _id: { $in: characterIds } }, { projection: { homeState: 1 } })
           .toArray()
       : Promise.resolve([]),
     nppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { homeState: 1 } })
           .toArray()
       : Promise.resolve([]),

@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import BackButton from "@/components/BackButton";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondDetail, BondUserContext, PricePoint, Holder } from "./components/bondTypes";
 import { BondHeroPanel } from "./components/BondHeroPanel";

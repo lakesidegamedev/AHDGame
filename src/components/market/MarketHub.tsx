@@ -14,6 +14,7 @@ import type { SupplyOffersResponse } from "./supplyOfferUi";
 import { StockMarketChart } from "@/app/country/[code]/stockmarket/components/MarketOverview";
 import { useMarketJson } from "./useMarketJson";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
+import { useHasSession } from "@/contexts/AuthDataContext";
 import { buildRuntimeExchangeMeta } from "@/app/country/[code]/stockmarket/stockMarketRouting";
 import {
   ExchangeSelector,
@@ -23,9 +24,8 @@ import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { aggregateExchangeTotals } from "@/lib/stockExchange/aggregate";
 import type { ExchangeData } from "@/app/country/[code]/stockmarket/types";
 
-// One panel per tab, and only the selected tab renders. They used to ship in the
-// first load of /market (6.2k views / 30 days, 71 KB gzipped of route-only JS);
-// the overview stays eager because it is the default tab.
+// One panel per tab, and only the selected tab renders. The overview stays
+// eager because it is the default tab.
 const PanelFallback = () => (
   <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
 );
@@ -124,8 +124,13 @@ export function MarketHub() {
   // through the response cache.
   const commodities = useMarketJson<{ commodities?: CommodityData[] }>("/api/commodities");
   const sectors = useMarketJson<SectorsForSaleResponse>(sectorsUrl(1));
+  // Standing supply offers name the viewer's corporations and require auth, so
+  // a signed-out visit must not request them (the 401 is a console error).
+  const hasSession = useHasSession();
   const offers = useMarketJson<SupplyOffersResponse>(
-    `/api/supply-offers?${offersQuery(DEFAULT_OFFER_FILTERS, 1, SUPPLY_PAGE_SIZE)}`
+    hasSession
+      ? `/api/supply-offers?${offersQuery(DEFAULT_OFFER_FILTERS, 1, SUPPLY_PAGE_SIZE)}`
+      : null
   );
   const list = commodities.data?.commodities ?? null;
   const supplyEnabled = offers.data?.enabled === true;

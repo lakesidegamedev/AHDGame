@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Bill, Tariff, TariffProvision } from "@/lib/db/types";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { FederalBudget, FederalTaxRates } from "@/lib/db/types/budget";
+import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { sectorPolicyTargetMatches, type OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -23,6 +23,10 @@ import {
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getCurrentTurn } from "@/lib/currentTurn";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 function finiteRate(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -186,22 +190,20 @@ export function computeCountryTariffPressure(
 }
 
 /**
- * Compute blend weights for commodity margin calculation for a (countryId, sectorType) pair.
- * Economy-wide and sector tariffs always contribute; origin-country and corp-specific
- * contribute only where the targeted entities have presence (via allSectorKeys).
+ * Blend weights for commodity margin across a (countryId, sectorType) pair.
+ * Economy-wide and sector tariffs always contribute; origin-country and
+ * corp-specific ones contribute only where targets have presence.
  *
- * The blend starts at 50/25/25 (global / national / local) with no tariff pressure and
- * shifts linearly toward 25/50/25 at 100% effective tariff coverage.
+ * Blend starts at 50/25/25 (global/national/local) with no pressure and shifts
+ * linearly to 25/50/25 at 100% effective tariff coverage.
  *
- * When `ftaCoverage` is supplied, the broad scopes scale by `(1 − partner-exposure share)`
- * (same proportional model as `getDomesticTariffMalus`) and the narrow scopes flip binary:
- * an `origin_country` tariff aimed at an FTA partner contributes 0; a `corporation` tariff
- * aimed at a corp HQ'd in an FTA partner contributes 0. Non-partner foreign trade still
- * pulls the blend toward national as before.
+ * With `ftaCoverage`, broad scopes scale by `(1 - partner-exposure share)`;
+ * narrow scopes flip binary: origin_country or corporation tariffs targeting
+ * an FTA partner contribute 0.
  *
  * allSectorKeys format:
- *   origin_country scope: `${sectorCountryId}:${originCountryId}:${sectorType}`
- *   corporation scope:    `${sectorCountryId}:corp:${corpId}:${sectorType}`
+ *   origin_country: `${sectorCountryId}:${originCountryId}:${sectorType}`
+ *   corporation:    `${sectorCountryId}:corp:${corpId}:${sectorType}`
  */
 export function getTariffBlendWeights(
   tariffs: Tariff[],
@@ -322,20 +324,17 @@ export function getForeignTariffMarginModifier(
 
 /**
  * Margin malus for domestic corps from economy-wide and sector tariffs only.
- * At 100% combined rate → -10pp. Scales linearly.
+ * At 100% combined rate, -10pp. Scales linearly.
  *
- * Only economy-wide and sector scope layers contribute because those are the tariffs
- * broad enough to create domestic supply-chain friction. Origin-country and corp-specific
- * tariffs are too narrow to create systemic domestic cost pressure.
+ * Origin-country and corp-specific tariffs are too narrow to create systemic
+ * domestic supply-chain friction, so they do not contribute.
  *
  * When `ftaCoverage` is supplied, each contributing layer is scaled by
- * `(1 − partner-exposure share)` — the FTA-partner share of foreign trade in
- * the country (economy-wide) or the matching sector type (sector). A country
- * whose foreign-corp footprint is fully FTA-covered pays no malus from those
- * broad tariffs, since duty-free partner inputs relieve the supply-chain
- * friction that motivates the malus.
+ * (1 - partner-exposure share). A fully FTA-covered footprint pays no malus
+ * from these broad tariffs since duty-free partner inputs relieve the
+ * friction that motivates it.
  *
- * Returns 0 for foreign corps (they pay the full rate via getForeignTariffMarginModifier).
+ * Returns 0 for foreign corps.
  */
 export function getDomesticTariffMalus(
   tariffs: Tariff[],
@@ -403,20 +402,19 @@ export function tariffProvisionFilter(
 
 /**
  * Upsert a tariff document for a trade bill provision and report whether the
- * rate materially changed. Uses the five-field composite key so re-enacting the
- * same scope replaces rather than duplicates the tariff. Most recent bill wins
- * within the same scope.
+ * rate materially changed. Uses the five-field composite key so re-enacting
+ * the same scope replaces rather than duplicates. Most recent bill wins
+ * within a scope.
  *
- * This function is intentionally **idempotent and side-effect-free** beyond the
- * tariff doc and a self-healing budget tax-rate sync (so `reconcileSignedTariffBills`
- * — which replays every signed tariff bill on every GET — can run safely as a
- * pure data rebuild). Sentiment pulses are emitted by the bill-enactment path
- * via `fireTariffProvisionSentiment`, gated on the returned `rateChanged` flag.
+ * Idempotent and side-effect-free beyond the tariff doc and a self-healing
+ * budget tax-rate sync, so replaying signed tariff bills on every GET is
+ * safe. Sentiment pulses are fired by the bill-enactment path, gated on
+ * `rateChanged`.
  *
- * Returns `{ rateChanged }`:
- *   - `true`  — first time this scope is set, or rate differs from the existing doc.
- *               Callers in real-enactment paths should fire dependent side effects.
- *   - `false` — same-rate replay (idempotent reconcile pass). Skip side effects.
+ * Returns { rateChanged }:
+ *   - true  - first set for this scope, or rate differs from existing doc.
+ *             Real-enactment callers should fire dependent side effects.
+ *   - false - same-rate replay (idempotent reconcile pass). Skip side effects.
  */
 export async function applyTariffProvision(
   db: Db,
@@ -432,10 +430,10 @@ export async function applyTariffProvision(
   // enacts that both see "no existing" double-fire pulses — acceptable given
   // the 24h pulse TTL and negligible policy-enactment frequency vs. the
   // read-path replay rate.
-  const existing = await db.collection<Tariff>("tariffs").findOne(filter);
+  const existing = await tariffsCollection(db).findOne(filter);
   const rateChanged = !existing || finiteRate(existing.rate) !== finiteRate(provision.rate);
 
-  await db.collection<Tariff>("tariffs").updateOne(
+  await tariffsCollection(db).updateOne(
     filter,
     {
       $set: { rate: provision.rate, sourceBillId, updatedAt: now },
@@ -455,7 +453,7 @@ export async function applyTariffProvision(
   // (e.g., write-failed mid-enactment) is still healed on next replay.
   if (provision.scopeType === "economy_wide") {
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
     const normalizedTaxRates = normalizeFederalTaxRates(budget?.taxRates);
     if (
       budget &&
@@ -470,9 +468,10 @@ export async function applyTariffProvision(
       // rare rate-change event (a tariff bill just enacted), not a per-turn
       // hot loop, so a direct read here (rather than a caller-hoisted map)
       // stays cheap. Same netting rule as `refreshNationalBudgetRevenue`.
-      const moneyWiringConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } });
+      const moneyWiringConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { interstateMoneyWiringEnabled: 1 } }
+      );
       let sourcedImports: { tariffPaidAnchor: number; importValueAnchor: number } | undefined;
       if (moneyWiringConfig?.interstateMoneyWiringEnabled === true) {
         const [sourcedByCountry] = await Promise.all([
@@ -495,7 +494,7 @@ export async function applyTariffProvision(
         sourcedImports
       );
       const newSurplus = newRevenue.total - (budget.spending?.total ?? 0);
-      await db.collection<FederalBudget>("federalBudget").updateOne(
+      await federalBudgetCollection(db).updateOne(
         { _id: budgetId },
         {
           $set: {
@@ -540,26 +539,20 @@ export async function fireTariffProvisionSentiment(
  * Emit foreign-side sentiment pulses for every signed sector tariff in a
  * country, modelling the market shock when an FTA exemption disappears.
  *
- * Call from the FTA-withdrawal path (`updateOrganizationLegislationForWithdrawal`)
- * AFTER the legislation document has been updated. The existing FTA filter at
- * pulse-application time (`pulseAppliesToCorp`) reads the now-current FTA pair
- * set, so corps still covered by other active FTAs correctly suppress the pulse
- * — only newly-exposed (and already-non-partner) corps see the dip.
+ * Call after the legislation document has been updated: the FTA filter at
+ * pulse-application time reads the now-current FTA pair set, so corps still
+ * covered by other active FTAs suppress the pulse; only newly-exposed corps
+ * see the dip.
  *
- * Asymmetric vs. enactment:
- *   - Enactment fires both `+0.07 domestic` and `-0.07 foreign`: both sides have
- *     a real shock (domestic cheers protection, foreign braces for cost).
- *   - Rescission fires only `-0.07 foreign`: domestic corps' situation is
- *     unchanged on rescission — they had nominal protection before and still
- *     have it; only foreign corps' real exposure flips.
+ * Asymmetric vs. enactment: rescission fires only `-0.07 foreign`. Domestic
+ * corps are unchanged (they had nominal protection and still do); only foreign
+ * corps' real exposure flips.
  *
- * Mirrors `fireTariffProvisionSentiment`'s scope filter: only sector tariffs
- * emit pulses. Economy-wide / origin-country / corporation-scope tariffs are
- * skipped by symmetry with the enactment path.
+ * Only sector tariffs emit pulses; economy-wide, origin-country, and
+ * corporation-scope tariffs are skipped, matching enactment.
  */
 export async function fireFtaRescissionSentiment(db: Db, countryId: CountryId): Promise<void> {
-  const signedBills = await db
-    .collection<Bill>("bills")
+  const signedBills = await billsCollection(db)
     .find({
       countryId,
       status: "signed",

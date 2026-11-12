@@ -15,6 +15,10 @@ import { loadOwnedMetricInputs } from "@/lib/resetMetrics/loadOwnedInputs";
 import { ownedPoliticalModifiers } from "@/lib/resetMetrics/rules/ownedInputs";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
 import type { MacroEconomicValues, StateMetricValues } from "@/lib/constants/corporations";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface StateViewContext {
   states: TurnStateProjection[];
@@ -39,7 +43,7 @@ export interface StateViewContext {
 type StateMetricsDoc = Awaited<ReturnType<typeof findMergedRegionMetricsMany>>[number];
 
 /**
- * State-scoped view context for the corporation detail view (#587).
+ * State-scoped view context for the corporation detail view.
  *
  * Loads the merged region metrics, extraction capacities, game era state,
  * political margin overlays (SP4 §4a, playable regions only among this
@@ -64,14 +68,13 @@ export async function loadStateViewContext(
       ? await Promise.all([
           // Legacy-shaped view for the margin engine's stored reads.
           findMergedRegionMetricsMany(db, { _id: { $in: uniqueStateIds } }),
-          db
-            .collection<StateResourceCapacity>("stateResourceCapacity")
+          stateResourceCapacityCollection(db)
             .find(
               { stateId: { $in: uniqueStateIds } },
               { projection: { stateId: 1, resources: 1 } }
             )
             .toArray(),
-          db.collection<GameState>("gameState").findOne(
+          gameStateCollection(db).findOne(
             { _id: "current" },
             {
               projection: {
@@ -82,7 +85,6 @@ export async function loadStateViewContext(
                 stockHoldingTaxStartTurn: 1,
                 passThroughOwnerTaxStartTurn: 1,
                 startingYear: 1,
-                eraSystemEnabled: 1,
               },
             }
           ),
@@ -90,19 +92,16 @@ export async function loadStateViewContext(
       : [
           [],
           [],
-          await db
-            .collection<GameState>("gameState")
-            .findOne(
-              { _id: "current" },
-              { projection: { stockHoldingTaxStartTurn: 1, passThroughOwnerTaxStartTurn: 1 } }
-            ),
+          await gameStateCollection(db).findOne(
+            { _id: "current" },
+            { projection: { stockHoldingTaxStartTurn: 1, passThroughOwnerTaxStartTurn: 1 } }
+          ),
         ];
   const states = allStates.filter((s) => uniqueStateIdSet.has(s._id));
   // SP4 §4a: political margin overlays for playable regions among this corp's states.
   const politicalDocs: PoliticalMetricsDoc[] =
     uniqueStateIds.length > 0
-      ? await db
-          .collection<PoliticalMetricsDoc>("politicalMetrics")
+      ? await politicalMetricsCollection(db)
           .find({ _id: { $in: uniqueStateIds } })
           .toArray()
       : [];
@@ -129,8 +128,7 @@ export async function loadStateViewContext(
     countryIds.push(corporation.countryOwnerId);
   }
   const [federalBudgets, economicModelByCountry] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(
         { countryId: { $in: countryIds } },
         {

@@ -1,8 +1,7 @@
 import type { ObjectId, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import { requireMinister, type MinisterAuth, type MinisterResult } from "./requireMinister";
+import { requireMinister, type MinisterResult } from "./requireMinister";
 
-export type ForeignMinisterAuth = MinisterAuth;
 export type ForeignMinisterResult = MinisterResult;
 
 /**

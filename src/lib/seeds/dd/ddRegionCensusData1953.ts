@@ -1,22 +1,12 @@
 /**
- * East Germany Region Census Profiles — Layer 1 (1953, the nascent GDR).
+ * East Germany region census profiles, 1953.
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Authored for ~1953 directly. NOT imported/transformed from ddRegionCensusData.ts.
+ * Authored directly for 1953; never derive or transform from another era.
+ * Keys match ddRegions1953.ts (BEO/MV/BB/ST/SN/TH).
  *
- * Keyed to the same eastern-Länder codes as the 1979 bundle (BEO/MV/BB/ST/SN/TH)
- * — matching ddRegions1953.ts.
- *
- * Key 1953 anchors (vs 1979):
- * - Education: HIGHER primary_or_below — the 1952 education reform was brand-new;
- *   polytechnic secondary not yet universal; vocational Berufsschule dominant.
- * - Urbanization: LOWER urban — East Berlin still recovering; the north
- *   more agrarian than 1979.
- * - Age: HIGHER young (born 1930s-40s baby-lull + postwar bump) but also
- *   higher senior share (WWII survivors who didn't flee); mid cohort thinned by war.
- * - Income: more compressed (hardship levelling + SED wage policy).
- * - Ethnicity: near-monoethnic German; small group of expelled Silesians/Sudeten
- *   Germans still settling; negligible other.
+ * 1953 differs from 1979: higher primary_or_below (1952 reform was new),
+ * lower urban, higher young and senior with a war-thinned mid cohort,
+ * more compressed income, near-monoethnic German.
  *
  * Each dimension sums to 100 (%).
  */

@@ -1,20 +1,13 @@
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import { PARTY_ROSTERS_2027 } from "@/lib/seeds/partyRosters2027";
 
-/**
- * Hungary ruling party (Cold-War presets) — era-specific identity.
+/*
+ * Hungary ruling party, era-specific identity.
  *
- *  - 1953: Magyar Dolgozók Pártja (MDP), the "Hungarian Working People's Party"
- *    (1948–1956) — Rákosi's hardline Stalinist ruling party, the ACTUAL party in
- *    power in 1953.
- *  - 1979: Magyar Szocialista Munkáspárt (MSZMP) — Kádár's party, founded only in
- *    late 1956 out of the crushed revolution; by 1979 running "goulash communism."
- *
- * The MSZMP did not exist until October/November 1956, so it cannot be seeded
- * into a 1953 world. Each entry is gated to its own preset via `validForPresets`;
- * `seedEasternBloc` filters with `isPartyValidForPreset` so only the entry
- * matching the active preset is upserted, and the shared `seedOrder` never
- * collides. Positions on the -5..+5 scale.
+ * 1953 and 1979 use different ruling parties. Each entry is gated to its own preset
+ * via `validForPresets`; `seedEasternBloc` filters with `isPartyValidForPreset` so only
+ * the entry matching the active preset is upserted, and the shared `seedOrder` never
+ * collides. Positions are on the -5..+5 scale.
  */
 export const huParties: PartySeed[] = [
   ...(PARTY_ROSTERS_2027.HU ?? []),

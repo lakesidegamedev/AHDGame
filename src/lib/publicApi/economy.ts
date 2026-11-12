@@ -10,13 +10,21 @@ import { bgAssemblyName, bgAssemblyPartySeats } from "@/lib/countries/bg/rules/a
 import { getCountryState } from "@/lib/countryState";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { aggregateExchangeTotals } from "@/lib/stockExchange/aggregate";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { liveNationalGdpUnits, resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const HISTORY_CAP = 12;
@@ -26,21 +34,19 @@ export async function queryCountrySummary(db: Db, country: string) {
   if (!countryConfig) return null;
 
   const [executive, parties, officials, gfDoc] = await Promise.all([
-    db.collection<ElectedOfficial>("electedOfficials").findOne({
+    electedOfficialsCollection(db).findOne({
       countryId: country,
       officeType: {
         $in: ["president", "prime_minister", "primeMinister", "chancellor", "taoiseach"],
       },
     } as Filter<ElectedOfficial>),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: country } as Filter<PoliticalParty>)
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: country,
-        ...(country === "BG" ? { officeType: "assemblyDeputy" } : {}),
+        ...(countryHasFeature("bgAdmin", country) ? { officeType: "assemblyDeputy" } : {}),
       } as Filter<ElectedOfficial>)
       .toArray(),
     getGovernmentFormationsCollection(db).findOne({ countryId: country as CountryId }),
@@ -56,15 +62,16 @@ export async function queryCountrySummary(db: Db, country: string) {
 
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
-  const seatCounts =
-    country === "BG"
-      ? new Map(Object.entries(bgAssemblyPartySeats(officials)))
-      : new Map<string, number>();
-  if (country !== "BG")
+  const seatCounts = countryHasFeature("bgAdmin", country)
+    ? new Map(Object.entries(bgAssemblyPartySeats(officials)))
+    : new Map<string, number>();
+  if (!countryHasFeature("bgAdmin", country))
     for (const official of officials) {
       if (official.party) seatCounts.set(official.party, (seatCounts.get(official.party) ?? 0) + 1);
     }
-  const totalSeats = country === "BG" ? await getLiveLowerChamberSeats(db, "BG") : officials.length;
+  const totalSeats = countryHasFeature("bgAdmin", country)
+    ? await getLiveLowerChamberSeats(db, "BG")
+    : officials.length;
 
   const legislatureComposition = [...seatCounts.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -106,15 +113,13 @@ export async function queryCountryEconomy(db: Db, country: string) {
   const exchangeApiKey = getExchangeApiKey(country as CountryId);
 
   const [centralBank, snapshot, budget, states] = await Promise.all([
-    db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ countryId: country } as Filter<CentralBank>),
+    centralBanksCollection(db).findOne({ countryId: country } as Filter<CentralBank>),
     exchangeApiKey
-      ? db
-          .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-          .findOne({ _id: exchangeApiKey as unknown as StockExchangeSnapshot["_id"] })
+      ? stockExchangeSnapshotsCollection(db).findOne({
+          _id: exchangeApiKey as unknown as StockExchangeSnapshot["_id"],
+        })
       : Promise.resolve(null),
-    db.collection<FederalBudget>("federalBudget").findOne(
+    federalBudgetCollection(db).findOne(
       { _id: getNationalBudgetId(country as CountryId) },
       {
         projection: {
@@ -133,8 +138,7 @@ export async function queryCountryEconomy(db: Db, country: string) {
         },
       }
     ),
-    db
-      .collection<Pick<State, "population" | "gdp">>("states")
+    statesCollection<Pick<State, "population" | "gdp">>(db)
       .find({ countryId: country }, { projection: { population: 1, gdp: 1 } })
       .toArray(),
   ]);
@@ -228,46 +232,40 @@ export async function queryLegislature(db: Db, country: string) {
 
   const chamberName = (countryConfig as unknown as Record<string, unknown>).legislature as
     { lowerChamber?: { name?: string } } | undefined;
-  const bgAssembly =
-    country === "BG"
-      ? await Promise.all([
-          getGameStatePreset(db),
-          db
-            .collection<{
-              _id: string;
-              bgOrdinaryAssemblySinceTurn?: number;
-              bgGrandAssemblyContinuationSinceTurn?: number;
-              bgConstitution1991SinceTurn?: number;
-              bgGrandAssemblyDissolutionSinceTurn?: number;
-            }>("countryGameStates")
-            .findOne(
-              { _id: "BG" },
-              {
-                projection: {
-                  bgOrdinaryAssemblySinceTurn: 1,
-                  bgGrandAssemblyContinuationSinceTurn: 1,
-                  bgConstitution1991SinceTurn: 1,
-                  bgGrandAssemblyDissolutionSinceTurn: 1,
-                },
-              }
-            ),
-        ])
-      : null;
+  const bgAssembly = countryHasFeature("bgAdmin", country)
+    ? await Promise.all([
+        getGameStatePreset(db),
+        countryGameStatesCollection<{
+          _id: string;
+          bgOrdinaryAssemblySinceTurn?: number;
+          bgGrandAssemblyContinuationSinceTurn?: number;
+          bgConstitution1991SinceTurn?: number;
+          bgGrandAssemblyDissolutionSinceTurn?: number;
+        }>(db).findOne(
+          { _id: "BG" },
+          {
+            projection: {
+              bgOrdinaryAssemblySinceTurn: 1,
+              bgGrandAssemblyContinuationSinceTurn: 1,
+              bgConstitution1991SinceTurn: 1,
+              bgGrandAssemblyDissolutionSinceTurn: 1,
+            },
+          }
+        ),
+      ])
+    : null;
 
   const [officials, parties, pendingBills, recentlyPassed] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: country,
-        ...(country === "BG" ? { officeType: "assemblyDeputy" } : {}),
+        ...(countryHasFeature("bgAdmin", country) ? { officeType: "assemblyDeputy" } : {}),
       } as Filter<ElectedOfficial>)
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: country } as Filter<PoliticalParty>)
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({
         countryId: country,
         status: { $in: ["floor_vote", "other_chamber"] },
@@ -275,8 +273,7 @@ export async function queryLegislature(db: Db, country: string) {
       .sort({ proposedAt: -1 })
       .limit(5)
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find({
         countryId: country,
         status: { $in: ["enacted", "passed"] },
@@ -287,15 +284,16 @@ export async function queryLegislature(db: Db, country: string) {
   ]);
 
   const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
-  const seatCounts =
-    country === "BG"
-      ? new Map(Object.entries(bgAssemblyPartySeats(officials)))
-      : new Map<string, number>();
-  if (country !== "BG")
+  const seatCounts = countryHasFeature("bgAdmin", country)
+    ? new Map(Object.entries(bgAssemblyPartySeats(officials)))
+    : new Map<string, number>();
+  if (!countryHasFeature("bgAdmin", country))
     for (const official of officials) {
       if (official.party) seatCounts.set(official.party, (seatCounts.get(official.party) ?? 0) + 1);
     }
-  const totalSeats = country === "BG" ? await getLiveLowerChamberSeats(db, "BG") : officials.length;
+  const totalSeats = countryHasFeature("bgAdmin", country)
+    ? await getLiveLowerChamberSeats(db, "BG")
+    : officials.length;
 
   const composition = [...seatCounts.entries()]
     .sort((a, b) => b[1] - a[1])

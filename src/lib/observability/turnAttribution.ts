@@ -1,13 +1,11 @@
 /**
  * Interval-based attribution of a turn's wall time to phases and subsystems.
  *
- * Per-phase `ms` values cannot be summed. Phases inside one `Promise.all`
- * group each report the group's shared wall time (about 60 per-country
- * election and bill phases run together), so naive sums reach 1.2x to 1.5x
- * the turn and overstate any saving. This splits every slice of the turn's
- * wall clock equally among the phases open during it, so the attribution sums
- * to the covered wall time. Equal split is a neutral prior on one JavaScript
- * thread, not a CPU measurement (#2691).
+ * Per-phase `ms` values cannot be summed: phases inside one `Promise.all`
+ * group each report the group's shared wall time, so naive sums overstate
+ * the turn by 1.2x to 1.5x. This splits each slice of wall clock equally
+ * among the phases open during it, so attribution sums to covered wall time.
+ * Equal split is a neutral prior on one JS thread, not a CPU measurement.
  *
  * Pure: plain data in, plain data out.
  */
@@ -30,16 +28,16 @@ const EXPLICIT: Record<string, Subsystem> = Object.fromEntries([
     "corporationTurn topSectorsRecompute unownedSectorGrowth stateOwnershipConcentration extractionAutoStrategy autoSectorSeed prospectingResolution expireCharters contractSettlement commandEconomy defenceWindfallRecovery"
   ).map((p) => [p, "Corporations & sectors"]),
   ...words(
-    "incomeTaxBases playerIncomeTax indexFunds bondTurn resetTreasuryCash stockExchangeSnapshot recomputeSharePrices bankingTurn lineOfCreditTurn fundGeneration portfolioSnapshot corpPortfolioSnapshot investorRankingSnapshot savingsInterestTurn bankSupervision bankSolvencyTurn pensionTurn treasuryTurn forexTurn ledgerReconcile ledgerPreForexSnapshot ledgerBalanceSnapshot moneySupplySnapshot interestRateSnapshot wealthListSnapshot inactiveShareholderShareRelease bannedShareholderRelease settlement npcBankPolicyTurn savingsShadowTurn brettonWoodsTurn fomcMeetings fomcNominations centralBankChairTurn centralBankChairSelection centralBankChairExecutiveRemoval investorConfidenceDecay"
+    "incomeTaxBases playerIncomeTax indexFunds bondTurn resetTreasuryCash stockExchangeSnapshot recomputeSharePrices bankingTurn lineOfCreditTurn fundGeneration portfolioSnapshot corpPortfolioSnapshot investorRankingSnapshot savingsInterestTurn bankSupervision bankSolvencyTurn pensionTurn frontierRaces treasuryTurn forexTurn ledgerReconcile ledgerPreForexSnapshot ledgerBalanceSnapshot moneySupplySnapshot interestRateSnapshot wealthListSnapshot inactiveShareholderShareRelease bannedShareholderRelease settlement npcBankPolicyTurn savingsShadowTurn brettonWoodsTurn fomcMeetings fomcNominations centralBankChairTurn centralBankChairSelection centralBankChairExecutiveRemoval investorConfidenceDecay"
   ).map((p) => [p, "Capital markets & banking"]),
   ...words(
     "russianAssemblyCampaigns voteAccumulation electionResolution primaryResolution primarySnapshots partyGOTV campaignTurn campaignFieldOffices generateChallengers candidatePartySweep runningMateSurrogateActionReset leadershipPartyEligibility electionTimers autoReelectionEntry withdrawInactiveCandidates staleCandidateCleanup byElectionWatcher commonsByElectionWatcher parliamentaryVacancyWatcher perpetualElections turnoutDecay campaignSpendReset campaignBoostDecay postConversionElections playerEndorsementPartySweep executiveEndorsements governorEndorsements"
   ).map((p) => [p, "Elections & campaigns"]),
   ...words(
-    "russianCouncilComposition billLifecycle resetLawEnactmentReconciliation ministerialOrders cabinetNominations parliamentaryGovernmentPhases parliamentaryGovernmentFormation parliamentaryGovernmentConfidence regionalBudgetProcessing departmentProgramSettlement subsidyBudget cnPresidentSync scotusTurn stateBillTimers justiceActionReset vicePresidentActionReset presidentialSuccession impeachmentLifecycle referendumLifecycle coalitionDisbandVotes leadershipVacate cabinetYearCrossing officeStateSeed fiscalYear fiscalBaseGrowth policyEffects ukLeadershipChallenges ukJrSurpriseTurn statehood governorAPRegen governorExecutiveOrders governorLegislationQueue governorAddressExpiry politicalMetricsDynamics approvalSnapshot archetypeApprovalDecay demographicEffects demographicFlows partyHistorySnapshot partyOrgTurn partyActionGeneration partyTierTurn partyInfluenceTurn partyMemberCountReconcile nationalPartyElections statePartyElections nationalCommitteeElections leadershipElections ukPartyConferences regDriftDecay socialAxisDrift supportDecay supportAccrual clearResolvedSupport independenceDesireDrift alignment unionsTurn caucusTax emptyPartyCleanup priorityRegionDecay pressureDecay metricDecay playerRandomEvents actionRefresh"
+    "russianCouncilComposition billLifecycle resetLawEnactmentReconciliation ministerialOrders cabinetNominations parliamentaryGovernmentPhases parliamentaryGovernmentFormation parliamentaryGovernmentConfidence regionalBudgetProcessing departmentProgramSettlement subsidyBudget cnPresidentSync scotusTurn stateBillTimers justiceActionReset vicePresidentActionReset presidentialSuccession impeachmentLifecycle referendumLifecycle coalitionDisbandVotes leadershipVacate cabinetYearCrossing officeStateSeed fiscalYear fiscalBaseGrowth policyEffects ukLeadershipChallenges ukJrSurpriseTurn statehood governorAPRegen governorExecutiveOrders governorLegislationQueue governorAddressExpiry politicalMetricsDynamics approvalSnapshot bucketApprovalDecay demographicEffects demographicFlows partyHistorySnapshot partyOrgTurn partyActionGeneration partyTierTurn partyInfluenceTurn partyMemberCountReconcile nationalPartyElections statePartyElections nationalCommitteeElections leadershipElections ukPartyConferences regDriftDecay socialAxisDrift supportDecay supportAccrual clearResolvedSupport independenceDesireDrift alignment unionsTurn caucusTax emptyPartyCleanup priorityRegionDecay pressureDecay metricDecay playerRandomEvents actionRefresh"
   ).map((p) => [p, "Governance & opinion"]),
   ...words(
-    "economicVitalSigns commodityPrices inflationRecalc economicModel crisisTurn autoCrisisTurn autoDisasterTurn internationalOrganizations mutualDefence nationalMetrics coldWarTension intelligenceTurn navairOperations sphereSponsorTurn worldEventsScheduler worldEventsMaintenance tradeGrowthMirror macroCountryTurn decolonization eraCrossing militaryBranchYearCrossing census longHorizonContext detectPreIterationComplete"
+    "economicVitalSigns commodityPrices inflationRecalc economicModel crisisTurn crisisV2Turn autoCrisisTurn autoDisasterTurn internationalOrganizations mutualDefence nationalMetrics coldWarTension intelligenceTurn navairOperations sphereSponsorTurn worldEventsScheduler worldEventsMaintenance tradeGrowthMirror macroCountryTurn countryBriefs decolonization eraCrossing militaryBranchYearCrossing census longHorizonContext detectPreIterationComplete"
   ).map((p) => [p, "Macro economy & world"]),
   ...words(
     "metricHistory researchTelemetry metricEngine financialSuspectScan auditAnomalyScan suspiciousDetection gameHealthSnapshot activityLogging metricActivation"

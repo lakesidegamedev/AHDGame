@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { LegislationType } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 import { mechanicalLegislationTypes } from "@/lib/mechanicalLaws/legislation";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 /**
  * Give a live world the Competition, Subsidiary Limits and Foreign Investment
@@ -20,7 +21,7 @@ import { mechanicalLegislationTypes } from "@/lib/mechanicalLaws/legislation";
  */
 async function backfillMechanicalLawTypes(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
-  const collection = db.collection<LegislationType>("legislationTypes");
+  const collection = legislationTypesCollection(db);
   const existing = await collection
     .find(
       { _id: { $in: mechanicalLegislationTypes.map((t) => t._id) } },

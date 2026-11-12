@@ -1,0 +1,113 @@
+/**
+ * Support decay turn-phase processor: regresses each active election
+ * candidate's Support toward DEFAULT_CANDIDATE_SUPPORT by
+ * SUPPORT_DECAY_PER_TURN per turn. Skips resolved elections and
+ * withdrawn candidates (withdrawal does not clear the field).
+ */
+
+import type { Db } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import type { Election, ElectionCandidate } from "@/lib/db/types";
+import {
+  DEFAULT_CANDIDATE_SUPPORT,
+  SUPPORT_DECAY_PER_TURN,
+} from "@/lib/elections/engine/electionFormulaFactors";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+
+export interface SupportDecayResult {
+  candidatesUpdated: number;
+}
+
+/**
+ * Apply one turn's worth of mean-regression decay toward
+ * `DEFAULT_CANDIDATE_SUPPORT` to every active candidate of every active
+ * election. Returns how many rows were touched (i.e. moved by ≥ 0.01).
+ */
+export async function processSupportDecay(
+  _turn: number,
+  _now: Date,
+  injectedDb?: Db
+): Promise<SupportDecayResult> {
+  const db = injectedDb ?? (await getDb());
+
+  // Pull active elections — only their candidates decay. `status` widens
+  // to string in the type union; the literal "active" is what tally /
+  // resolution code uses elsewhere.
+  const activeElections = await electionsCollection(db)
+    .find({ status: "active" }, { projection: { _id: 1 } })
+    .toArray();
+  if (activeElections.length === 0) return { candidatesUpdated: 0 };
+
+  const electionIds = activeElections.map((e) => e._id);
+  const candidates = await electionCandidatesCollection(db)
+    .find({
+      electionId: { $in: electionIds },
+      status: "active",
+      support: { $exists: true },
+    })
+    .toArray();
+  if (candidates.length === 0) return { candidatesUpdated: 0 };
+
+  // Batched: a sequential updateOne per candidate is the same pattern that made the indexFunds turn take 108s+ at ~10,700 NPPs. Candidate count scales with country × NPP density, so toward a 30-50-country sim this needs bulkWrite.
+  const ops: { updateOne: { filter: { _id: ElectionCandidate["_id"] }; update: object } }[] = [];
+  for (const c of candidates) {
+    const current = c.support;
+    if (current == null || !Number.isFinite(current)) continue;
+    const next = regressToward(current, DEFAULT_CANDIDATE_SUPPORT, SUPPORT_DECAY_PER_TURN);
+    if (Math.abs(next - current) < 0.001) continue;
+    ops.push({ updateOne: { filter: { _id: c._id }, update: { $set: { support: next } } } });
+  }
+  if (ops.length === 0) return { candidatesUpdated: 0 };
+
+  await electionCandidatesCollection(db).bulkWrite(ops);
+
+  return { candidatesUpdated: ops.length };
+}
+
+/**
+ * Move `value` toward `target` by `step`, never overshooting. Pure
+ * helper, exported for tests. Linear regression-to-mean: a candidate
+ * 10 above the midpoint loses `step`, 10 below gains `step`, within
+ * `step` snaps to it.
+ */
+export function regressToward(value: number, target: number, step: number): number {
+  const delta = target - value;
+  if (Math.abs(delta) <= step) return target;
+  return value + Math.sign(delta) * step;
+}
+
+export interface ClearResolvedSupportResult {
+  candidatesCleared: number;
+}
+
+/**
+ * Sweep that `$unset`s `support` on every candidate row whose election
+ * has reached `"resolved"` status and that still has a Support value.
+ *
+ * Implements the §3.1 lifecycle item:
+ *
+ *   "cleared at `Election.status === "resolved"` (set to undefined;
+ *    applies to both primaries and direct generals)"
+ *
+ * Idempotent — once an election's candidates are cleared, the projection
+ * filter excludes them on subsequent runs.
+ */
+export async function processClearResolvedSupport(
+  injectedDb?: Db
+): Promise<ClearResolvedSupportResult> {
+  const db = injectedDb ?? (await getDb());
+
+  const resolvedElections = await electionsCollection(db)
+    .find({ status: "resolved" }, { projection: { _id: 1 } })
+    .toArray();
+  if (resolvedElections.length === 0) return { candidatesCleared: 0 };
+
+  const resolvedElectionIds = resolvedElections.map((e) => e._id);
+  const result = await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: resolvedElectionIds }, support: { $exists: true } },
+    { $unset: { support: "" } }
+  );
+
+  return { candidatesCleared: result.modifiedCount ?? 0 };
+}

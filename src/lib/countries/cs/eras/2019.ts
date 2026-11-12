@@ -3,18 +3,14 @@ import type { CountryEraOverride } from "../../contract";
 /**
  * CS, 2019.
  *
- * ⚠ GENERATED from `__snapshots__/cs.pre-move.json`. Regenerate with:
- *
+ * GENERATED from `__snapshots__/cs.pre-move.json`. Regenerate with:
  *     npx tsx scripts/countries/gen-country-eras.ts CS --force
  *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
+ * DIFFERENCES ONLY. Everything not named here comes from the base modules.
  *
- * No config override: this era uses CS's base configuration. The field
- * is ABSENT rather than an empty object, because `getCountryConfig` merges
- * shallowly and `config: {}` reads as an override that supplies nothing.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
+ * `config` is absent rather than `{}` because `getCountryConfig` merges
+ * shallowly and `config: {}` reads as an override supplying nothing.
+ * `ordersOfBattle` is absent so this era falls back to the base set.
  */
 export const CS_2019: CountryEraOverride = {
   preset: "2019-default",

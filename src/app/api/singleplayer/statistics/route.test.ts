@@ -82,7 +82,7 @@ describe("GET /api/singleplayer/statistics", () => {
       singleplayerConfig: {
         mode: "normal",
         difficulty: "normal",
-        featureFlags: { autoSectorSeedEnabled: true },
+        featureFlags: { playerRandomEventsEnabled: true },
       },
       forexEnabled: false,
     };
@@ -96,8 +96,8 @@ describe("GET /api/singleplayer/statistics", () => {
       [...ALLOWED_FEATURE_FLAGS].sort()
     );
     expect(payload.setup.featureFlags.forexEnabled).toBe(false);
-    expect(payload.setup.featureFlags.autoSectorSeedEnabled).toBe(true);
-    expect(payload.setup.featureFlags.rpgStatsEnabled).toBe(false);
+    expect(payload.setup.featureFlags.playerRandomEventsEnabled).toBe(true);
+    expect(payload.setup.featureFlags.sectorTechTreesEnabled).toBe(false);
     expect(payload.metricDefinitionVersion).toBe(METRIC_DEFINITION_VERSION);
   });
 

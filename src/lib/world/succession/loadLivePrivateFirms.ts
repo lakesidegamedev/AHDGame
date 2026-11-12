@@ -1,12 +1,15 @@
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { State } from "@/lib/db/types/state";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { sectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
 import type { PrivateSuccessionFirm } from "./rules/privateFacilities";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Snapshot the current private corporations and paid facility basis. The
  * settlement writer must refresh this before applying any claim. */
@@ -19,21 +22,18 @@ export async function loadLivePrivateSuccessionFirms(
 ): Promise<PrivateSuccessionFirm[]> {
   if (!Number.isFinite(currentYear) || !Number.isFinite(eraUnitScale) || eraUnitScale <= 0)
     throw new Error("Private firm inventory needs a valid era valuation basis");
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevelFor } = buildSourceRegionHierarchy(states);
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const privateCorporations = corporations.filter(
     (corp) => !isStateOwned(corp) && !isNppOwned(corp)
   );
   const sectors = privateCorporations.length
-    ? await db
-        .collection<CorporateSector>("corporateSectors")
+    ? await corporateSectorsCollection(db)
         .find({ corporationId: { $in: privateCorporations.map((corp) => corp._id) } }, { session })
         .toArray()
     : [];

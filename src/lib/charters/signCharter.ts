@@ -1,27 +1,21 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PartyCharter } from "@/lib/db/types";
+import type { PartyCharter } from "@/lib/db/types";
 import { ratifyCharter } from "./ratifyCharter";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
- * Phase 6 — record a founder's signature on a charter. Transitions the
- * charter to `ratified` (and spawns the `politicalParties` row) once all
- * 3 founders have signed.
+ * Record a founder's signature on a charter. Transitions the charter to
+ * `ratified` (and spawns the `politicalParties` row) once all 3 founders
+ * have signed.
  *
- * Founder identity is `characterId` — but auth runs against the session's
- * `userId`, so the caller passes both: `signerCharacterId` (which slot to
- * sign) and `signerUserId` (the authenticated session user, used to verify
- * the character is owned by the caller).
+ * `signerCharacterId` is the founder slot to sign; `signerUserId` is the
+ * authenticated session user, used to verify ownership of that character.
  *
- * Edge cases:
- *  - Character isn't a founder → returns `not-a-founder`.
- *  - Caller doesn't own the character → returns `not-character-owner`.
- *  - Charter not in `pending-signatures` → returns `not-signable`.
- *  - Character already signed → no-op (idempotent), returns the current
- *    signature count.
- *  - Character already rejected → returns `already-rejected`; they must
- *    invalidate via `replaceFounder` first.
- *
- * See plan §"Phase 6 — Tasks" 6.2.
+ * Returns `not-a-founder`, `not-character-owner`, `not-signable`,
+ * `already-rejected` on the corresponding edge case; signing twice is an
+ * idempotent no-op. A character who rejected must be replaced via
+ * `replaceFounder` before signing.
  */
 export type SignCharterResult =
   | {
@@ -54,7 +48,7 @@ export async function signCharter(
   db: Db,
   now: Date = new Date()
 ): Promise<SignCharterResult> {
-  const charter = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const charter = await partyChartersCollection(db).findOne({ _id: charterId });
   if (!charter) return { ok: false, reason: "charter-not-found" };
   if (charter.status !== "pending-signatures") {
     return { ok: false, reason: "not-signable" };
@@ -67,9 +61,10 @@ export async function signCharter(
 
   // Auth: the session userId must own the character that's signing. Without
   // this check, any logged-in user could sign for any other founder slot.
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: signerCharacterId }, { projection: { userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: signerCharacterId },
+    { projection: { userId: 1 } }
+  );
   if (!character?.userId || !character.userId.equals(signerUserId)) {
     return { ok: false, reason: "not-character-owner" };
   }
@@ -86,7 +81,7 @@ export async function signCharter(
   // afterward. If the guard fails the user sees `not-signable` at the
   // re-read.
   if (!charter.signatures[sigIndex].signedAt) {
-    await db.collection<PartyCharter>("partyCharters").updateOne(
+    await partyChartersCollection(db).updateOne(
       {
         _id: charterId,
         status: "pending-signatures",
@@ -103,7 +98,7 @@ export async function signCharter(
 
   // Re-read so the count reflects all concurrent updates that may have
   // landed since we read the charter for validation.
-  const fresh = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const fresh = await partyChartersCollection(db).findOne({ _id: charterId });
   // If the charter is no longer signable (race with expire / reject),
   // surface that to the caller rather than silently reporting a stale
   // count from the pre-race read.

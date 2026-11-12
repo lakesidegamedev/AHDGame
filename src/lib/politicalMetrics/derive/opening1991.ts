@@ -4,12 +4,13 @@ import { US_GEOGRAPHY } from "@/lib/countries/us/geography";
 import { UK_GEOGRAPHY } from "@/lib/countries/uk/geography";
 import { deriveCountryBoard } from "./deriveFamilies";
 import type { PoliticalMetricId } from "../types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const TEXTURE_1991_BOUND = 12;
 export function deriveRegionalTexture1991() {
   const result: Record<string, Record<string, Partial<Record<PoliticalMetricId, number>>>> = {};
   for (const cc of ["US", "UK"] as const) {
-    const geography = cc === "US" ? US_GEOGRAPHY : UK_GEOGRAPHY;
+    const geography = countryHasFeature("usLib", cc) ? US_GEOGRAPHY : UK_GEOGRAPHY;
     const regions = geography.regionBundles["1991-default"];
     if (!regions?.length) throw new Error(`Missing ${cc} 1991 regions`);
     const populations = new Map(regions.map((region) => [region._id, region.population]));
@@ -27,7 +28,7 @@ export function deriveRegionalTexture1991() {
         }
         // US legacy bundles jitter at module load. Derive its texture only
         // from explicit 1991 preset cells, so codegen never freezes random noise.
-        if (cc === "US") {
+        if (countryHasFeature("usLib", cc)) {
           const authored = getRegionMetricPresets(cc, String(metrics._id), "1991-default");
           for (const path of Object.keys(flat)) delete flat[path];
           Object.assign(flat, authored);

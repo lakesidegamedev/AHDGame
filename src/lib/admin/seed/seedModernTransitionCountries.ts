@@ -3,7 +3,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateMetrics,
   StateMetricValue,
@@ -16,6 +15,16 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 export type ModernTransitionCountryId = "PL" | "RO" | "RU" | "BG";
 
@@ -36,68 +45,16 @@ function isModernTransitionPreset(preset: string): boolean {
   return preset === "2027-default";
 }
 
-interface TransitionCountryConfig {
-  categoryId: string;
-  categoryName: string;
-}
-
-const TRANSITION_COUNTRIES: Record<ModernTransitionCountryId, TransitionCountryConfig> = {
-  PL: { categoryId: "pl_voterGroups", categoryName: "Poland Voter Groups" },
-  RO: { categoryId: "ro_voterGroups", categoryName: "Romania Voter Groups" },
-  RU: { categoryId: "ru_voterGroups", categoryName: "Russia Voter Groups" },
-  BG: { categoryId: "bg_voterGroups", categoryName: "Bulgaria Voter Groups" },
-};
-
-/** Display names + turnout for the modern Layer-1 groups (leans come from the model). */
-const GROUP_META: Record<
-  ModernTransitionCountryId,
-  Record<string, { name: string; turnout: number }>
-> = {
-  PL: {
-    rural_conservative: { name: "Rural Conservative", turnout: 76 },
-    urban_civic: { name: "Urban Civic", turnout: 76 },
-    agrarian_centre: { name: "Agrarian Centre", turnout: 74 },
-    progressive_left: { name: "Progressive Left", turnout: 68 },
-    libertarian_nationalist: { name: "Libertarian Nationalist", turnout: 66 },
-    silesian_minority: { name: "Silesian Minority", turnout: 58 },
-  },
-  RO: {
-    social_rural: { name: "Social Rural", turnout: 54 },
-    urban_reformist: { name: "Urban Reformist", turnout: 56 },
-    nationalist_populist: { name: "Nationalist Populist", turnout: 54 },
-    liberal_centre: { name: "Liberal Centre", turnout: 52 },
-    hungarian_minority: { name: "Hungarian Minority", turnout: 58 },
-    green_youth: { name: "Green Youth", turnout: 46 },
-  },
-  RU: {
-    urban_18_34: { name: "Urban 18-34", turnout: 55 },
-    urban_35_49: { name: "Urban 35-49", turnout: 55 },
-    urban_50_64: { name: "Urban 50-64", turnout: 55 },
-    urban_65_plus: { name: "Urban 65+", turnout: 55 },
-    rural_18_34: { name: "Rural 18-34", turnout: 55 },
-    rural_35_49: { name: "Rural 35-49", turnout: 55 },
-    rural_50_64: { name: "Rural 50-64", turnout: 55 },
-    rural_65_plus: { name: "Rural 65+", turnout: 55 },
-  },
-  BG: {
-    social_conservative: { name: "Social Conservative", turnout: 48 },
-    urban_reformist: { name: "Urban Reformist", turnout: 46 },
-    centre_right: { name: "Centre Right", turnout: 44 },
-    turkish_minority: { name: "Turkish Minority", turnout: 46 },
-    nationalist: { name: "Nationalist", turnout: 40 },
-  },
-};
-
 async function loadRegionBundle(countryId: ModernTransitionCountryId): Promise<State[]> {
-  if (countryId === "PL") {
+  if (countryHasFeature("plAdmin", countryId)) {
     const { plRegions2027 } = await import("@/lib/countries/pl/data/plRegions2027");
     return [...plRegions2027];
   }
-  if (countryId === "RU") {
+  if (countryHasFeature("ruAdmin", countryId)) {
     const { ruRegions2027 } = await import("@/lib/countries/ru/data/ruRegions2027");
     return [...ruRegions2027];
   }
-  if (countryId === "BG") {
+  if (countryHasFeature("bgAdmin", countryId)) {
     const { bgRegions2027 } = await import("@/lib/countries/bg/data/bgRegions2027");
     return [...bgRegions2027];
   }
@@ -106,15 +63,15 @@ async function loadRegionBundle(countryId: ModernTransitionCountryId): Promise<S
 }
 
 async function loadPartySeeds(countryId: ModernTransitionCountryId): Promise<PartySeed[]> {
-  if (countryId === "PL") {
+  if (countryHasFeature("plAdmin", countryId)) {
     const { plParties } = await import("@/lib/countries/pl/data/plParties");
     return [...plParties];
   }
-  if (countryId === "RU") {
+  if (countryHasFeature("ruAdmin", countryId)) {
     const { ruParties } = await import("@/lib/countries/ru/data/ruParties");
     return [...ruParties];
   }
-  if (countryId === "BG") {
+  if (countryHasFeature("bgAdmin", countryId)) {
     const { bgParties } = await import("@/lib/countries/bg/data/bgParties");
     return [...bgParties];
   }
@@ -134,15 +91,14 @@ export async function seedModernTransitionRegions(
     return;
   }
   if (reset) {
-    await db.collection("states").deleteMany({ countryId });
+    await statesCollection<Document>(db).deleteMany({ countryId });
   }
   const bundle = await loadRegionBundle(countryId);
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return { updateOne: { filter: { _id }, update: { $set: regionData }, upsert: true } };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} ${countryId} regions (${preset})`);
 }
 
@@ -172,13 +128,15 @@ export async function seedModernTransitionParties(
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     void _seedOrder;
     void _validForPresets;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
       const doc: PoliticalParty = {
@@ -190,7 +148,7 @@ export async function seedModernTransitionParties(
         createdAt: now,
         updatedAt: now,
       } as PoliticalParty;
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${filtered.length} ${countryId} parties (preset: ${activePreset})`);
@@ -207,47 +165,27 @@ export async function seedModernTransitionDemographics(
     log(`[${countryId}] skipping modern demographics (preset ${preset})`);
     return;
   }
-  const { categoryId, categoryName } = TRANSITION_COUNTRIES[countryId];
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: categoryId as never });
-    await db.collection("stateDemographics").deleteMany({ countryId });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId });
   }
   const { getCountryLayer1Model, buildModelRegionDemographics } =
     await import("@/lib/seeds/international");
-  const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-  const era = eraForPreset(preset);
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
+  const era = strictEraForPreset(preset);
   const model = getCountryLayer1Model(countryId, era);
   if (!model) {
     log(`[${countryId}] no Layer-1 model — skipping demographics`);
     return;
   }
-  // Modern voter-category model built from the Layer-1 roster: group leans are
-  // single-sourced from the model's defaultLeans (never the 1979 communist
-  // archetypes); only display names and turnout live here.
-  const meta = GROUP_META[countryId];
-  const category: DemographicCategory = {
-    _id: categoryId,
-    name: categoryName,
-    defaultWeight: 100,
-    groups: model.groupIds.map((gid) => ({
-      id: gid,
-      name: meta[gid]?.name ?? gid,
-      defaultEconomicLean: model.defaultLeans[gid]?.economicLean ?? 0,
-      defaultSocialLean: model.defaultLeans[gid]?.socialLean ?? 0,
-      defaultTurnout: meta[gid]?.turnout ?? 60,
-    })),
-  };
-  const { _id, ...catData } = category;
-  await db
-    .collection<DemographicCategory>("demographicCategories")
-    .updateOne({ _id }, { $set: catData }, { upsert: true });
   const regionDemographics = buildModelRegionDemographics(model);
   for (const raw of regionDemographics) {
-    const { _id: demoId, ...demoData } = raw;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id: demoId }, { $set: demoData }, { upsert: true });
+    const { _id: demoId, groups: _groups, ...demoData } = raw;
+    await stateDemographicsCollection(db).updateOne(
+      { _id: demoId },
+      { $set: demoData },
+      { upsert: true }
+    );
   }
   log(`[${countryId}] Seeded ${regionDemographics.length} region demographics (era ${era})`);
 }
@@ -367,21 +305,21 @@ async function loadMetricsBundle(
 ): Promise<StateMetrics[]> {
   const { getRegionMetricPresets, applyMetricPresetToMetrics } =
     await import("@/lib/seeds/metricPresets");
-  if (countryId === "RO") {
+  if (countryHasFeature("roAdmin", countryId)) {
     const { roStateMetrics2027 } = await import("@/lib/countries/ro/data/roStateMetrics2027");
     return roStateMetrics2027.map((metric) => {
       const overlay = getRegionMetricPresets("RO", String(metric._id), preset);
       return overlay ? applyMetricPresetToMetrics(metric, overlay) : metric;
     });
   }
-  if (countryId === "RU") {
+  if (countryHasFeature("ruAdmin", countryId)) {
     const { ruStateMetrics2027 } = await import("@/lib/countries/ru/data/ruStateMetrics2027");
     return ruStateMetrics2027.map((metric) => {
       const overlay = getRegionMetricPresets("RU", String(metric._id), preset);
       return overlay ? applyMetricPresetToMetrics(metric, overlay) : metric;
     });
   }
-  if (countryId === "BG") {
+  if (countryHasFeature("bgAdmin", countryId)) {
     const { bgStateMetrics2027 } = await import("@/lib/countries/bg/data/bgStateMetrics2027");
     return bgStateMetrics2027.map((metric) => {
       const overlay = getRegionMetricPresets("BG", String(metric._id), preset);
@@ -409,9 +347,9 @@ export async function seedModernTransitionStateMetrics(
   }
   const bundle = await loadMetricsBundle(countryId, preset);
   if (reset) {
-    await db
-      .collection("macroMetrics")
-      .deleteMany({ _id: { $in: bundle.map((m) => m._id) } as never });
+    await macroMetricsCollection<Document>(db).deleteMany({
+      _id: { $in: bundle.map((m) => m._id) } as never,
+    });
   }
   // SP5: split write — macro slice -> macroMetrics (all countries), political
   // remainder -> stateMetrics (non-playables). countryId stamped for routing.
@@ -473,18 +411,16 @@ export async function seedModernTransitionBaselines(
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
     await import("@/lib/seeds/metricPresets");
   if (reset) {
-    await db
-      .collection("stateBaselines")
-      .deleteMany({ _id: { $in: bundle.map((m) => String(m._id)) } as never });
+    await stateBaselinesCollection<Document>(db).deleteMany({
+      _id: { $in: bundle.map((m) => String(m._id)) } as never,
+    });
   }
   const derived = metricsToBaselines(bundle);
   for (const raw of derived) {
     const overlay = getRegionMetricPresets(countryId, String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(raw, overlay) : raw;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${derived.length} ${countryId} baselines (preset: ${preset})`);
 }
@@ -509,11 +445,10 @@ export async function seedModernTransitionStatePartyOrg(
     return;
   }
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId });
   }
   const bundle = await loadRegionBundle(countryId);
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId, isDefault: true })
     .toArray();
   const now = new Date();
@@ -538,13 +473,11 @@ export async function seedModernTransitionStatePartyOrg(
         consecutiveLosses: 0,
       };
       const { _id, ...orgData } = row;
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
       total++;
     }
   }
@@ -559,10 +492,10 @@ export async function seedModernTransitionGovernmentFormation(
   countryId: ModernTransitionCountryId
 ) {
   if (!isModernTransitionPreset(preset)) return;
-  if (countryId === "RU") return; // Presidential formation is seeded by seedRUGovernmentFormation.
-  if (countryId === "BG") return; // The 240-seat formation is seeded by seedBG2027.
+  if (countryHasFeature("ruAdmin", countryId)) return; // Presidential formation is seeded by seedRUGovernmentFormation.
+  if (countryHasFeature("bgAdmin", countryId)) return; // The 240-seat formation is seeded by seedBG2027.
   const now = new Date();
-  const totalSeats = countryId === "PL" ? 460 : 331;
+  const totalSeats = countryHasFeature("plAdmin", countryId) ? 460 : 331;
   const majorityThreshold = Math.floor(totalSeats / 2) + 1;
   const formation: Omit<GovernmentFormation, "createdAt" | "updatedAt"> = {
     _id: countryId,
@@ -586,13 +519,11 @@ export async function seedModernTransitionGovernmentFormation(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .updateOne(
-      { _id: countryId },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: countryId },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   log(`Seeded ${countryId} government formation document (pending, ${totalSeats} seats)`);
 }
 

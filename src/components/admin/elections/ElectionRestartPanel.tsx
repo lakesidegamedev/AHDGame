@@ -3,23 +3,64 @@
 import { useState } from "react";
 import { apiErrorText } from "@/lib/errors/catalog";
 
+const BUTTON_CLASS =
+  "rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors";
+
+const SPAWN_BUTTONS = [
+  {
+    key: "president",
+    path: "us",
+    label: "Spawn president election",
+    help: "Creates a presidential election if none is currently active.",
+  },
+  {
+    key: "uk",
+    path: "uk",
+    label: "Spawn UK elections",
+    help: "Spawn any missing UK Commons, Regional Council, and Governor elections. Safe after seeding UK data.",
+  },
+  {
+    key: "jp",
+    path: "jp",
+    label: "Spawn JP elections",
+    help: "Spawn any missing JP Shugiin, Sangiin, and Governor elections. Safe after seeding JP data.",
+  },
+  {
+    key: "de",
+    path: "de",
+    label: "Spawn DE elections",
+    help: "Spawn any missing DE Bundestag elections. Safe after seeding DE data.",
+  },
+  {
+    key: "cn",
+    path: "cn",
+    label: "Spawn CN elections",
+    help: "Spawn any missing CN NPC Delegate, Provincial Congress, and Governor elections. Safe after seeding CN data.",
+  },
+  {
+    key: "br",
+    path: "br",
+    label: "Spawn BR elections",
+    help: "Spawn any missing BR elections. Safe after seeding BR data.",
+  },
+  {
+    key: "ie",
+    path: "ie",
+    label: "Spawn IE elections",
+    help: "Spawn any missing IE elections. Safe after seeding IE data.",
+  },
+] as const;
+
 export function ElectionRestartPanel() {
-  const [loading, setLoading] = useState(false);
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [presidentLoading, setPresidentLoading] = useState(false);
-  const [spawnUKLoading, setSpawnUKLoading] = useState(false);
-  const [spawnJPLoading, setSpawnJPLoading] = useState(false);
-  const [spawnDELoading, setSpawnDELoading] = useState(false);
-  const [spawnCNLoading, setSpawnCNLoading] = useState(false);
-  const [spawnBRLoading, setSpawnBRLoading] = useState(false);
-  const [spawnIELoading, setSpawnIELoading] = useState(false);
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const anyBusy = Object.values(busy).some(Boolean);
 
-  async function handleSpawnPresident() {
-    setPresidentLoading(true);
+  async function post(key: string, url: string) {
+    setBusy((b) => ({ ...b, [key]: true }));
     setResult(null);
     try {
-      const res = await fetch("/api/admin/elections/spawn/us", { method: "POST" });
+      const res = await fetch(url, { method: "POST" });
       const data = await res.json();
       setResult({
         ok: res.ok && data.success,
@@ -28,126 +69,7 @@ export function ElectionRestartPanel() {
     } catch {
       setResult({ ok: false, message: "Network error" });
     } finally {
-      setPresidentLoading(false);
-    }
-  }
-
-  async function handleRestart() {
-    setLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/restart", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSpawnUK() {
-    setSpawnUKLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/spawn/uk", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setSpawnUKLoading(false);
-    }
-  }
-
-  async function handleSpawnJP() {
-    setSpawnJPLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/spawn/jp", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setSpawnJPLoading(false);
-    }
-  }
-
-  async function handleSpawnDE() {
-    setSpawnDELoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/spawn/de", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setSpawnDELoading(false);
-    }
-  }
-
-  async function handleSpawnCN() {
-    setSpawnCNLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/spawn/cn", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setSpawnCNLoading(false);
-    }
-  }
-
-  async function handleSpawnBR() {
-    setSpawnBRLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/spawn/br", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setSpawnBRLoading(false);
-    }
-  }
-
-  async function handleSpawnIE() {
-    setSpawnIELoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/spawn/ie", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setSpawnIELoading(false);
+      setBusy((b) => ({ ...b, [key]: false }));
     }
   }
 
@@ -171,20 +93,7 @@ export function ElectionRestartPanel() {
     ) {
       return;
     }
-    setSyncLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/sync-date", { method: "POST" });
-      const data = await res.json();
-      setResult({
-        ok: res.ok && data.success,
-        message: data.message ?? apiErrorText(data, "Unknown response"),
-      });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setSyncLoading(false);
-    }
+    await post("sync", "/api/admin/elections/sync-date");
   }
 
   return (
@@ -193,21 +102,11 @@ export function ElectionRestartPanel() {
       <div className="flex flex-wrap gap-6 mb-6">
         <div>
           <button
-            onClick={handleRestart}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
+            onClick={() => post("restart", "/api/admin/elections/restart")}
+            disabled={anyBusy}
+            className={BUTTON_CLASS}
           >
-            {loading ? "Checking…" : "Spawn missing elections"}
+            {busy.restart ? "Checking…" : "Spawn missing elections"}
           </button>
           <p className="text-xs text-muted mt-1.5 max-w-xs">
             Scans all states and fills any elections that should exist but aren&apos;t running. Safe
@@ -215,169 +114,18 @@ export function ElectionRestartPanel() {
           </p>
         </div>
 
-        <div>
-          <button
-            onClick={handleSpawnPresident}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
-          >
-            {presidentLoading ? "…" : "Spawn president election"}
-          </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
-            Creates a presidential election if none is currently active.
-          </p>
-        </div>
-
-        <div>
-          <button
-            onClick={handleSpawnUK}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
-          >
-            {spawnUKLoading ? "…" : "Spawn UK elections"}
-          </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
-            Spawn any missing UK Commons, Regional Council, and Governor elections. Safe after
-            seeding UK data.
-          </p>
-        </div>
-
-        <div>
-          <button
-            onClick={handleSpawnJP}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
-          >
-            {spawnJPLoading ? "…" : "Spawn JP elections"}
-          </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
-            Spawn any missing JP Shugiin, Sangiin, and Governor elections. Safe after seeding JP
-            data.
-          </p>
-        </div>
-
-        <div>
-          <button
-            onClick={handleSpawnDE}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
-          >
-            {spawnDELoading ? "…" : "Spawn DE elections"}
-          </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
-            Spawn any missing DE Bundestag elections. Safe after seeding DE data.
-          </p>
-        </div>
-
-        <div>
-          <button
-            onClick={handleSpawnCN}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
-          >
-            {spawnCNLoading ? "…" : "Spawn CN elections"}
-          </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
-            Spawn any missing CN NPC Delegate, Provincial Congress, and Governor elections. Safe
-            after seeding CN data.
-          </p>
-        </div>
-
-        <div>
-          <button
-            onClick={handleSpawnBR}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
-          >
-            {spawnBRLoading ? "…" : "Spawn BR elections"}
-          </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
-            Spawn any missing BR elections. Safe after seeding BR data.
-          </p>
-        </div>
-
-        <div>
-          <button
-            onClick={handleSpawnIE}
-            disabled={
-              loading ||
-              syncLoading ||
-              presidentLoading ||
-              spawnUKLoading ||
-              spawnJPLoading ||
-              spawnDELoading ||
-              spawnCNLoading ||
-              spawnBRLoading ||
-              spawnIELoading
-            }
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors"
-          >
-            {spawnIELoading ? "…" : "Spawn IE elections"}
-          </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
-            Spawn any missing IE elections. Safe after seeding IE data.
-          </p>
-        </div>
+        {SPAWN_BUTTONS.map(({ key, path, label, help }) => (
+          <div key={key}>
+            <button
+              onClick={() => post(key, `/api/admin/elections/spawn/${path}`)}
+              disabled={anyBusy}
+              className={BUTTON_CLASS}
+            >
+              {busy[key] ? "…" : label}
+            </button>
+            <p className="text-xs text-muted mt-1.5 max-w-xs">{help}</p>
+          </div>
+        ))}
       </div>
 
       <hr className="border-card-border my-2" />
@@ -423,10 +171,10 @@ export function ElectionRestartPanel() {
         </div>
         <button
           onClick={handleSyncDate}
-          disabled={loading || syncLoading}
+          disabled={busy.restart || busy.sync}
           className="rounded-lg border border-amber-500/50 bg-amber-500/20 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/30 disabled:opacity-50 transition-colors"
         >
-          {syncLoading ? "Resetting…" : "Reset and reinitialize all elections"}
+          {busy.sync ? "Resetting…" : "Reset and reinitialize all elections"}
         </button>
       </div>
 

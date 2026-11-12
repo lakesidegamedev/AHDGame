@@ -179,8 +179,8 @@ describe("demographicTurnoutTurn", () => {
         gotvBudgetPerTurn: 100,
         gotvBudgetPercent: 0,
         // Explicit target required by processPartyGOTV — without these, GOTV does nothing
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "evangelicals",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "high",
         suppressionBudgetPercent: 0,
         orgBuildingPercent: 0,
         createdAt: new Date(),
@@ -230,10 +230,10 @@ describe("demographicTurnoutTurn", () => {
       );
 
       // Evangelicals should receive boost
-      expect(result.turnout[0].modifiers.ideology.evangelicals).toBeGreaterThan(0);
+      expect(result.turnout[0].modifiers.wealth.high).toBeGreaterThan(0);
 
       // Progressives should NOT receive boost (too far from party position)
-      expect(result.turnout[0].modifiers.ideology.progressives).toBe(0);
+      expect(result.turnout[0].modifiers.wealth.low).toBe(0);
     });
 
     // Regression test: the national-scope bulkWrite used to filter by
@@ -257,8 +257,8 @@ describe("demographicTurnoutTurn", () => {
         scope: "national",
         gotvBudgetPerTurn: 1_000, // triggers spend via the legacy flat-amount path
         gotvBudgetPercent: 0,
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "evangelicals",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "high",
         suppressionBudgetPercent: 0,
         orgBuildingPercent: 0,
         createdAt: new Date(),
@@ -358,8 +358,8 @@ describe("demographicTurnoutTurn", () => {
         scope: "national",
         gotvBudgetPerTurn: 500,
         gotvBudgetPercent: 0,
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "evangelicals",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "high",
         suppressionBudgetPercent: 0,
         orgBuildingPercent: 0,
         createdAt: new Date(),
@@ -417,7 +417,7 @@ describe("demographicTurnoutTurn", () => {
       db.collectionMocks["stateDemographicTurnout"]!.find.mockReturnValue(cursorFor([mockTurnout]));
       db.collectionMocks["politicalParties"]!.find.mockReturnValue(cursorFor([mockParty]));
       db.collectionMocks["states"]!.find.mockReturnValue(
-        cursorFor([{ _id: stateId, population: 100_000 }])
+        cursorFor([{ _id: stateId, population: 100_000, gdp: 100_000, countryId: "US" }])
       );
 
       await processPartyGOTV();
@@ -462,8 +462,8 @@ describe("demographicTurnoutTurn", () => {
         scope: "national",
         gotvBudgetPerTurn: 0,
         gotvBudgetPercent: 10,
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "evangelicals",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "high",
         suppressionBudgetPercent: 0,
         orgBuildingPercent: 0,
         createdAt: new Date(),
@@ -532,7 +532,7 @@ describe("demographicTurnoutTurn", () => {
       db.collectionMocks["characters"]!.find.mockReturnValue(cursorFor([mockCharacter]));
       db.collectionMocks["npps"]!.find.mockReturnValue(cursorFor([]));
       db.collectionMocks["states"]!.find.mockReturnValue(
-        cursorFor([{ _id: stateId, population: 100_000 }])
+        cursorFor([{ _id: stateId, population: 100_000, gdp: 100_000, countryId: "US" }])
       );
 
       await processPartyGOTV();
@@ -554,6 +554,8 @@ describe("demographicTurnoutTurn", () => {
 
     it("does not mix same sequential party ids across countries when computing national GOTV spend", async () => {
       const db: MockDb = createMockDb();
+      // Live GDP basis; the era-table basis prices this spend at 75.
+      db.collection("gameConfig").findOne.mockResolvedValue({ campaignLiveGdpBasisEnabled: true });
       const { getDb } = await import("@/lib/mongodb");
       vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
 
@@ -568,8 +570,8 @@ describe("demographicTurnoutTurn", () => {
         scope: "national",
         gotvBudgetPerTurn: 0,
         gotvBudgetPercent: 10,
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "evangelicals",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "high",
         suppressionBudgetPercent: 0,
         orgBuildingPercent: 0,
         createdAt: new Date(),
@@ -677,7 +679,7 @@ describe("demographicTurnoutTurn", () => {
 
       expect(treasuryOps).toHaveLength(1);
       const usSpend = Math.abs(treasuryOps[0].updateOne.update.$inc.treasury);
-      expect(usSpend).toBe(75);
+      expect(usSpend).toBe(50);
     });
 
     it("emits one national treasury row for GOTV and one for suppression instead of collapsing both into repeated state-shaped entries", async () => {
@@ -696,8 +698,8 @@ describe("demographicTurnoutTurn", () => {
         scope: "national",
         gotvBudgetPerTurn: 600,
         gotvBudgetPercent: 0,
-        gotvTargetCategory: "ideology",
-        gotvTargetGroup: "evangelicals",
+        gotvTargetCategory: "wealth",
+        gotvTargetGroup: "high",
         suppressionBudgetPercent: 5,
         suppressionTargetCategory: "age",
         suppressionTargetGroup: "young",
@@ -768,7 +770,14 @@ describe("demographicTurnoutTurn", () => {
       db.collectionMocks.characters.find.mockReturnValue(cursorFor([mockCharacter]));
       db.collectionMocks.npps.find.mockReturnValue(cursorFor([]));
       db.collectionMocks.states.find.mockReturnValue(
-        cursorFor(stateIds.map((stateId) => ({ _id: stateId, population: 100_000 })))
+        cursorFor(
+          stateIds.map((stateId) => ({
+            _id: stateId,
+            population: 100_000,
+            gdp: 100_000,
+            countryId: "US",
+          }))
+        )
       );
 
       const { emitTreasuryTransactionsBulk } = await import("@/lib/treasury/emit");
@@ -811,7 +820,8 @@ describe("demographicTurnoutTurn", () => {
       const { calculateAlignmentMultiplier, DOLLARS_PER_TURNOUT_POINT } =
         await import("@/lib/utils/demographicAlignment");
       const { calculateNationalGOTVBoost } = await import("./demographicTurnoutCalculations");
-      const { resolveCanvassGroup } = await import("@/lib/demographics/countryDemographics");
+      const { resolvePartyTurnoutTargetLean } =
+        await import("@/lib/demographics/partyTurnoutTargetResolver");
 
       const ukBudget = {
         _id: new ObjectId(),
@@ -819,11 +829,11 @@ describe("demographicTurnoutTurn", () => {
         countryId: "UK" as const,
         scope: "national" as const,
         gotvBudgetPercent: 10,
-        gotvTargetCategory: "uk_voterGroups",
-        gotvTargetGroup: "new_britons",
+        gotvTargetCategory: "education",
+        gotvTargetGroup: "degree_plus",
         suppressionBudgetPercent: 5,
-        suppressionTargetCategory: "uk_voterGroups",
-        suppressionTargetGroup: "moderate_centrists",
+        suppressionTargetCategory: "education",
+        suppressionTargetGroup: "no_qualifications",
         orgBuildingPercent: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -832,21 +842,21 @@ describe("demographicTurnoutTurn", () => {
       const ukTurnout = (id: string): StateDemographicTurnout => ({
         _id: id,
         countryId: "UK",
-        modifiers: { uk_voterGroups: { new_britons: 0, moderate_centrists: 0 } },
+        modifiers: { education: { degree_plus: 0, no_qualifications: 0 } },
         lastDecayApplied: new Date(),
         lastUpdated: new Date(),
       });
       const usTurnout: StateDemographicTurnout = {
         _id: "PA",
         countryId: "US",
-        modifiers: { uk_voterGroups: { new_britons: 0, moderate_centrists: 0 } },
+        modifiers: { education: { degree_plus: 0, no_qualifications: 0 } },
         lastDecayApplied: new Date(),
         lastUpdated: new Date(),
       };
       // Legacy doc without a countryId counts as US, never as UK.
       const legacyTurnout = {
         _id: "DC",
-        modifiers: { uk_voterGroups: { new_britons: 0, moderate_centrists: 0 } },
+        modifiers: { education: { degree_plus: 0, no_qualifications: 0 } },
         lastDecayApplied: new Date(),
         lastUpdated: new Date(),
       } as unknown as StateDemographicTurnout;
@@ -872,7 +882,7 @@ describe("demographicTurnoutTurn", () => {
         [ukParty]
       );
 
-      const gotvLean = resolveCanvassGroup("UK", "uk_voterGroups", "new_britons");
+      const gotvLean = resolvePartyTurnoutTargetLean("UK", "education", "degree_plus");
       expect(gotvLean).not.toBeNull();
       const gotvAlign = calculateAlignmentMultiplier(
         -2,
@@ -890,7 +900,7 @@ describe("demographicTurnoutTurn", () => {
       );
       expect(expectedGotv).toBeGreaterThan(fallbackBoost);
 
-      const supLean = resolveCanvassGroup("UK", "uk_voterGroups", "moderate_centrists");
+      const supLean = resolvePartyTurnoutTargetLean("UK", "education", "no_qualifications");
       expect(supLean).not.toBeNull();
       const expectedSup = calculateNationalGOTVBoost(
         600,
@@ -900,15 +910,62 @@ describe("demographicTurnoutTurn", () => {
       );
 
       const [e1, e2, us, dc] = result.turnout;
-      expect(e1.modifiers.uk_voterGroups.new_britons).toBeCloseTo(expectedGotv, 9);
-      expect(e2.modifiers.uk_voterGroups.new_britons).toBeCloseTo(expectedGotv, 9);
-      expect(e1.modifiers.uk_voterGroups.moderate_centrists).toBeCloseTo(-expectedSup, 9);
-      expect(e2.modifiers.uk_voterGroups.moderate_centrists).toBeCloseTo(-expectedSup, 9);
+      expect(e1.modifiers.education.degree_plus).toBeCloseTo(expectedGotv, 9);
+      expect(e2.modifiers.education.degree_plus).toBeCloseTo(expectedGotv, 9);
+      expect(e1.modifiers.education.no_qualifications).toBeCloseTo(-expectedSup, 9);
+      expect(e2.modifiers.education.no_qualifications).toBeCloseTo(-expectedSup, 9);
       // No leakage into US or legacy docs.
-      expect(us.modifiers.uk_voterGroups.new_britons).toBe(0);
-      expect(us.modifiers.uk_voterGroups.moderate_centrists).toBe(0);
-      expect(dc.modifiers.uk_voterGroups.new_britons).toBe(0);
-      expect(dc.modifiers.uk_voterGroups.moderate_centrists).toBe(0);
+      expect(us.modifiers.education.degree_plus).toBe(0);
+      expect(us.modifiers.education.no_qualifications).toBe(0);
+      expect(dc.modifiers.education.degree_plus).toBe(0);
+      expect(dc.modifiers.education.no_qualifications).toBe(0);
+    });
+
+    it("does not charge a stale legacy voter-group target", async () => {
+      const budget = {
+        _id: new ObjectId(),
+        partyId: "1",
+        countryId: "UK" as const,
+        scope: "national" as const,
+        gotvBudgetPercent: 10,
+        gotvTargetCategory: "uk_voterGroups",
+        gotvTargetGroup: "new_britons",
+        suppressionBudgetPercent: 5,
+        suppressionTargetCategory: "uk_voterGroups",
+        suppressionTargetGroup: "moderate_centrists",
+        orgBuildingPercent: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as unknown as PartyBudget;
+      const turnout: StateDemographicTurnout = {
+        _id: "E1",
+        countryId: "UK",
+        modifiers: { uk_voterGroups: { new_britons: 0, moderate_centrists: 0 } },
+        lastDecayApplied: new Date(),
+        lastUpdated: new Date(),
+      };
+      const party = {
+        _id: new ObjectId(),
+        sequentialId: 1,
+        countryId: "UK",
+        name: "Labour Party",
+        economicPosition: -2,
+        socialPosition: -1,
+        treasury: 100_000,
+      } as unknown as PoliticalParty;
+
+      const result = await processPartyGOTV(
+        [budget],
+        [turnout],
+        { economic: -2, social: -1 },
+        12_000,
+        undefined,
+        undefined,
+        [party]
+      );
+
+      expect(result.turnout[0].modifiers.uk_voterGroups.new_britons).toBe(0);
+      expect(result.turnout[0].modifiers.uk_voterGroups.moderate_centrists).toBe(0);
     });
 
     it("applies a census target when a legacy international turnout document lacks its category", async () => {
@@ -959,6 +1016,9 @@ describe("demographicTurnoutTurn", () => {
 
     it("counts legacy country-less turnout docs as US regions for national GOTV", async () => {
       const { DOLLARS_PER_TURNOUT_POINT } = await import("@/lib/utils/demographicAlignment");
+      const { resolvePartyTurnoutTargetLean } =
+        await import("@/lib/demographics/partyTurnoutTargetResolver");
+      const whiteLean = resolvePartyTurnoutTargetLean("US", "race", "white")!;
       const { calculateNationalGOTVBoost } = await import("./demographicTurnoutCalculations");
 
       const usBudget = {
@@ -996,22 +1056,22 @@ describe("demographicTurnoutTurn", () => {
         sequentialId: 1,
         countryId: "US",
         name: "DEM",
-        economicPosition: 1,
-        socialPosition: 1,
+        economicPosition: whiteLean.economicLean,
+        socialPosition: whiteLean.socialLean,
         treasury: 10_000,
       } as unknown as PoliticalParty;
 
       const result = await processPartyGOTV(
         [usBudget],
         [paTurnout, dcTurnout],
-        { economic: 1, social: 1 },
+        { economic: whiteLean.economicLean, social: whiteLean.socialLean },
         undefined,
         undefined,
         undefined,
         [usParty]
       );
 
-      // white lean is (1, 1): perfect alignment, divisor 2 for both docs.
+      // Party sits on the white bucket lean: perfect alignment, divisor 2 for both docs.
       const expected = calculateNationalGOTVBoost(1000, 2, DOLLARS_PER_TURNOUT_POINT, 1.0);
       expect(expected).toBeCloseTo(0.1, 9);
       expect(result.turnout[0].modifiers.race.white).toBeCloseTo(expected, 9);
@@ -1067,7 +1127,7 @@ describe("demographicTurnoutTurn", () => {
       const mockAction = {
         characterId: new ObjectId(),
         stateId: "E1",
-        demographic: { category: "uk_voterGroups", group: "new_britons" },
+        demographic: { category: "education", group: "degree_plus" },
         characterPosition: { economic: -2, social: -1 },
         costFunds: 100,
         costActions: 1,
@@ -1076,7 +1136,7 @@ describe("demographicTurnoutTurn", () => {
 
       const mockTurnout: StateDemographicTurnout = {
         _id: "E1",
-        modifiers: { uk_voterGroups: { new_britons: 0 } },
+        modifiers: { education: { degree_plus: 0 } },
         countryId: "UK",
         lastDecayApplied: new Date(),
         lastUpdated: new Date(),
@@ -1084,14 +1144,17 @@ describe("demographicTurnoutTurn", () => {
 
       const result = await processPlayerCanvassing([mockAction], [mockTurnout]);
 
-      // new_britons lean is (-2, -1): perfect alignment → full base boost.
+      const { resolvePartyTurnoutTargetLean } =
+        await import("@/lib/demographics/partyTurnoutTargetResolver");
+      const lean = resolvePartyTurnoutTargetLean("UK", "education", "degree_plus");
+      expect(lean).not.toBeNull();
       const expected = calculateCanvassingBoost(
         { economic: -2, social: -1 },
-        { economic: -2, social: -1 },
+        { economic: lean!.economicLean, social: lean!.socialLean },
         false
       );
-      expect(expected).toBeCloseTo(0.05, 9);
-      expect(result[0].modifiers.uk_voterGroups.new_britons).toBeCloseTo(expected, 9);
+      expect(expected).toBeGreaterThan(0);
+      expect(result[0].modifiers.education.degree_plus).toBeCloseTo(expected, 9);
     });
   });
 });

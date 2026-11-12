@@ -7,6 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { PATREON_BORDER_OPTIONS, type ProfileBorderKey, type User } from "@/lib/db/types";
 import { isPatreonActive, isPlusOrBetter } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const borderKeys = PATREON_BORDER_OPTIONS.map((option) => option.key) as [
   ProfileBorderKey,
@@ -44,7 +45,7 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
     const userId = new ObjectId(auth.user.userId);
-    const user = await db.collection<User>("users").findOne({ _id: userId });
+    const user = await usersCollection(db).findOne({ _id: userId });
     // Admins bypass Patreon requirements — full access to all cosmetic features
     const isAdmin = user?.role === "admin" || user?.isAdmin;
     if (
@@ -103,7 +104,7 @@ export async function PATCH(request: Request) {
       }
     }
 
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: userId },
       {
         $set: update,

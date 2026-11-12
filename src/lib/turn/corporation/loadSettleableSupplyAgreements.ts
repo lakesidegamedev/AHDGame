@@ -20,6 +20,10 @@ import {
 } from "@/lib/market/commodityMarketScope";
 import { migrateStateScopedSupplyAgreements } from "./migrateStateScopedSupplyAgreements";
 import type { SettleableSupplyAgreement } from "./settleSupplyAgreements";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import type { Document } from "mongodb";
+import { corporationExitsCollection } from "@/lib/db/repositories/corporationExits";
 
 /**
  * Keys a located sector's output is credited under for contract settlement:
@@ -61,8 +65,7 @@ async function notifyExpiredAgreements(
 ): Promise<void> {
   try {
     const corpIds = [...new Set(expired.flatMap((a) => [a.supplierCorpId, a.buyerCorpId]))];
-    const corps = await db
-      .collection<Pick<Corporation, "_id" | "userId">>("corporations")
+    const corps = await corporationsCollection<Pick<Corporation, "_id" | "userId">>(db)
       .find({ _id: { $in: corpIds } }, { projection: { userId: 1 } })
       .toArray();
     const byId = new Map(corps.map((c) => [c._id.toString(), c]));
@@ -114,13 +117,12 @@ export async function loadSettleableSupplyAgreements(args: {
     status: { $in: ["active", "cancelling"] as SupplyAgreement["status"][] },
     expiresAtTurn: { $lte: turn },
   };
-  const expiring = await db
-    .collection<SupplyAgreement>("supplyAgreements")
+  const expiring = await supplyAgreementsCollection(db)
     .find(expiringFilter, {
       projection: { supplierCorpId: 1, buyerCorpId: 1, commodity: 1, status: 1 },
     })
     .toArray();
-  await db.collection<SupplyAgreement>("supplyAgreements").updateMany(expiringFilter, {
+  await supplyAgreementsCollection(db).updateMany(expiringFilter, {
     $set: { status: "cancelled", updatedAt: now },
     $unset: { cancelEffectiveTurn: "" },
   });
@@ -131,7 +133,7 @@ export async function loadSettleableSupplyAgreements(args: {
   // everything still live. Ordering matters, a contract that expires this
   // turn must not settle again.
   const agreementMigration = await migrateStateScopedSupplyAgreements({
-    agreements: db.collection<SupplyAgreement>("supplyAgreements"),
+    agreements: supplyAgreementsCollection(db),
     turn,
     now,
   });
@@ -142,9 +144,8 @@ export async function loadSettleableSupplyAgreements(args: {
         `${agreementMigration.pendingCancelled} pending withdrawn`
     );
   }
-  const docs = (await db
-    .collection("supplyAgreements")
-    .find(
+  const docs = await supplyAgreementsCollection<Document>(db)
+    .find<LiveAgreementDoc>(
       { status: { $in: ["active", "cancelling"] } },
       {
         projection: {
@@ -165,7 +166,7 @@ export async function loadSettleableSupplyAgreements(args: {
         },
       }
     )
-    .toArray()) as unknown as LiveAgreementDoc[];
+    .toArray();
 
   let legacyStateLocalAgreementLive = false;
   const agreements: SettleableSupplyAgreement[] = [];
@@ -179,15 +180,13 @@ export async function loadSettleableSupplyAgreements(args: {
   }
   const exits =
     counterparties.size > 0
-      ? await db
-          .collection<CorporationExit>("corporationExits")
+      ? await corporationExitsCollection(db)
           .find({ _id: { $in: [...counterparties.values()] } }, { projection: { _id: 1 } })
           .toArray()
       : [];
   const restored =
     exits.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: exits.map((exit) => exit._id) } }, { projection: { _id: 1 } })
           .toArray()
       : [];
@@ -200,7 +199,7 @@ export async function loadSettleableSupplyAgreements(args: {
       departedIds.has(agreement.buyerCorpId.toString())
   );
   if (obsolete.length > 0) {
-    await db.collection<SupplyAgreement>("supplyAgreements").updateMany(
+    await supplyAgreementsCollection(db).updateMany(
       {
         _id: { $in: obsolete.map((agreement) => agreement._id) },
         status: { $in: ["active", "cancelling"] },

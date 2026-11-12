@@ -6,9 +6,15 @@ import { spendingProvider } from "@/lib/metricEngine/spendingProvider";
 import { loadActiveAgencyNudgesByCountry } from "@/lib/internationalOrganizations/agency";
 import {
   advanceClimateExposure,
+  climateProfileForStartingYear,
   effectiveEmissions,
   populationWeightedEmissions,
 } from "./rules/climateFeedback";
+import { loadTransitionPolicies } from "@/lib/energyTransition/policies";
+import { NO_TRANSITION_POLICY, policyEmissionsCut } from "@/lib/energyTransition/rules";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
+import { climateFeedbackStateCollection } from "@/lib/db/repositories/climateFeedbackState";
 
 export interface ClimateFeedbackState {
   _id: "world";
@@ -30,15 +36,20 @@ interface EmissionsRow {
 }
 
 /** One global atmosphere; live mitigation effort changes the annual sample for everyone. */
-export async function processClimateFeedbackTurn(db: Db, turn: number): Promise<number> {
-  const collection = db.collection<ClimateFeedbackState>("climateFeedbackState");
+export async function processClimateFeedbackTurn(
+  db: Db,
+  turn: number,
+  opts?: { startingYear?: number }
+): Promise<number> {
+  const profile = climateProfileForStartingYear(opts?.startingYear);
+  const collection = climateFeedbackStateCollection<ClimateFeedbackState>(db);
   const prior = await collection.findOne({ _id: "world" });
-  const oldPressure = prior?.pressure ?? 0;
+  // A world that opts in opens on its seeded pressure until the first sample.
+  const oldPressure = prior?.pressure ?? profile.startingPressure;
   if (turn % TURNS_PER_YEAR !== 0 || (prior && prior.lastMeasuredTurn >= turn)) return oldPressure;
 
-  const [regions, metrics, spending, agencies] = await Promise.all([
-    db
-      .collection<PopulationRow>("states")
+  const [regions, metrics, spending, agencies, transitionPolicies] = await Promise.all([
+    statesCollection<PopulationRow>(db)
       .find(
         { regionType: { $nin: ["nation", "constituency"] } },
         {
@@ -46,12 +57,14 @@ export async function processClimateFeedbackTurn(db: Db, turn: number): Promise<
         }
       )
       .toArray(),
-    db
-      .collection<EmissionsRow>("stateMetrics")
+    stateMetricsCollection<EmissionsRow>(db)
       .find({}, { projection: { _id: 1, "environment.carbonEmissions.value": 1 } })
       .toArray(),
     spendingProvider(db),
     loadActiveAgencyNudgesByCountry(db, turn),
+    // Opted-in worlds: carbon pricing, coal phase-out and clean power laws cut
+    // what each country's regions emit.
+    profile.broaderEffects ? loadTransitionPolicies(db) : null,
   ]);
   const regionById = new Map(
     regions
@@ -65,6 +78,10 @@ export async function processClimateFeedbackTurn(db: Db, turn: number): Promise<
       const agencyNudge = region?.countryId
         ? (agencies.get(region.countryId)?.get("carbonEmissions") ?? 0)
         : 0;
+      const policyCut =
+        transitionPolicies && region?.countryId
+          ? policyEmissionsCut(transitionPolicies.get(region.countryId) ?? NO_TRANSITION_POLICY)
+          : 0;
       return {
         population: region?.population ?? 0,
         tonsPerCapita:
@@ -73,7 +90,8 @@ export async function processClimateFeedbackTurn(db: Db, turn: number): Promise<
                 seedEmissions,
                 spending.perCapitaByRegion.get(metric._id)?.environment ?? 0,
                 agencyNudge
-              )
+              ) *
+              (1 - policyCut)
             : Number.NaN,
       };
     })
@@ -86,7 +104,7 @@ export async function processClimateFeedbackTurn(db: Db, turn: number): Promise<
     : turn === TURNS_PER_YEAR
       ? 1
       : 0;
-  const next = advanceClimateExposure(oldPressure, measured, years);
+  const next = advanceClimateExposure(oldPressure, measured, years, profile);
   await collection.updateOne(
     { _id: "world" },
     {

@@ -143,10 +143,10 @@ export function BillProvisionCard({
         <NationalizationProvisionDetailCard detail={view.nationalizationDetail} />
       )}
       {(view.policyDomain ||
-        (view.archetypeApprovals && Object.keys(view.archetypeApprovals).length > 0)) && (
+        (view.bucketApprovals && Object.keys(view.bucketApprovals).length > 0)) && (
         <PolicyEffectIndicators
           effectDirection={view.effectDirection ?? 0}
-          archetypeApprovals={view.archetypeApprovals}
+          bucketApprovals={view.bucketApprovals}
           policyDomain={view.policyDomain}
           currentPolicyIndex={view.currentPolicyIndex ?? 3}
           proposedPolicyIndex={view.proposedPolicyIndex}

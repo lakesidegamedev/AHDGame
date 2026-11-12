@@ -3,18 +3,15 @@ import type { CountryEraOverride } from "../../contract";
 /**
  * BLR, 1991.
  *
- * ⚠ GENERATED from `__snapshots__/blr.pre-move.json`. Regenerate with:
+ * GENERATED from `__snapshots__/blr.pre-move.json`. Regenerate with:
  *
  *     npx tsx scripts/countries/gen-country-eras.ts BLR --force
  *
- * ⚠ DIFFERENCES ONLY. Everything not named here comes from the base modules.
+ * DIFFERENCES ONLY: unlisted fields come from base modules.
  *
- * No config override: this era uses BLR's base configuration. The field
- * is ABSENT rather than an empty object, because `getCountryConfig` merges
- * shallowly and `config: {}` reads as an override that supplies nothing.
- *
- * No per-era orders of battle: this era falls back to the base set rather
- * than inventing an empty one.
+ * No `config` override: the field is ABSENT, not `{}`, because
+ * `getCountryConfig` merges shallowly and `{}` reads as an override supplying
+ * nothing.
  */
 export const BLR_1991: CountryEraOverride = {
   preset: "1991-default",

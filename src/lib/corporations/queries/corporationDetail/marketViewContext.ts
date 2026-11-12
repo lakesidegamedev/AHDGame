@@ -6,8 +6,11 @@ import type { GameState } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { buildMarketShareBySectorId } from "@/lib/corporations/marketShare";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface MarketViewContext {
   marketShareBySectorId: Map<string, number>;
@@ -32,7 +35,7 @@ export interface MarketViewInputs {
 }
 
 /**
- * Market-share + commodity-balance context for the corporation detail view (#587).
+ * Market-share + commodity-balance context for the corporation detail view.
  *
  * Builds the per-sector market-share lookup for this corp's buckets (so the
  * dominance margin penalty the turn loop charges on growth-cost math also
@@ -109,16 +112,15 @@ export async function loadMarketViewContext(
 
   const [siblingSectors, unownedSectors] = bucketFilter
     ? await Promise.all([
-        db.collection<CorporateSector>("corporateSectors").find(bucketFilter).toArray(),
-        db.collection<UnownedSector>("unownedSectors").find(bucketFilter).toArray(),
+        corporateSectorsCollection(db).find(bucketFilter).toArray(),
+        unownedSectorsCollection(db).find(bucketFilter).toArray(),
       ])
     : [[] as CorporateSector[], [] as UnownedSector[]];
 
   const siblingCorpIds = [...new Set(siblingSectors.map((s) => s.corporationId.toString()))];
   const siblingCorps =
     siblingCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: siblingSectors.map((s) => s.corporationId) } })
           .project<Pick<Corporation, "_id" | "liquidCurrencyCode" | "countryId">>({
             _id: 1,
@@ -149,7 +151,7 @@ export async function loadMarketViewContext(
     unownedSectors,
     exchangeRatesByCurrency: fxByCurrency,
     // Era-correct GDP→₳ normalization for the GDP-derived market fallback
-    // (refs #3778). `gameState` is already projected with `preset` above.
+    //. `gameState` is already projected with `preset` above.
     preset: resolvePresetIdFromGameState(gameState),
   });
 

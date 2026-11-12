@@ -5,9 +5,10 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { DemographicConfigOverride } from "@/lib/db/types/demographicConfigOverride";
-import type { EraId } from "@/lib/seeds/presetSelector";
+import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
+import { demographicConfigOverridesCollection } from "@/lib/db/repositories/demographicConfigOverrides";
 
-const ERAS = ["1979", "1991", "1999", "2007", "2019", "2023"] as const;
+const ERAS = SEED_ERA_IDS;
 const COUNTRIES = ["US", "UK", "DE", "JP", "IE", "BR", "CN"] as const;
 const positionSchema = z.object({
   economicLean: z.number().min(-5).max(5),
@@ -44,9 +45,9 @@ export async function POST(request: Request) {
       updatedBy: auth.admin.username,
     };
     // Replace the whole doc so clearing turnout on re-apply unsets it.
-    await db
-      .collection<DemographicConfigOverride>("demographicConfigOverrides")
-      .replaceOne({ _id: doc._id }, doc, { upsert: true });
+    await demographicConfigOverridesCollection(db).replaceOne({ _id: doc._id }, doc, {
+      upsert: true,
+    });
 
     return NextResponse.json({
       success: true,

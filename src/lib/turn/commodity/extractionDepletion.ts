@@ -5,31 +5,21 @@ import type { ExtractionSectorInput } from "@/lib/turn/extraction/extractionCapa
 import { buildDepletionInc } from "@/lib/extraction/depletion";
 
 /**
- * P3b — book this turn's extraction against each state's deposits (plants only).
+ * Book this turn's extraction against each state's deposits (plants only).
  *
- * Produced units per (state, resource) are the rationed output the multipliers
- * just resolved, summed over the state's sectors, so the ground gives up
- * precisely what the world receives.
+ * The ground gives up exactly what the world receives: units are the rationed
+ * output the multipliers resolved, summed over the state's sectors.
  *
- * ACCURACY: `revenueBasedOutput` derives from `sector.revenue`, which under
- * plants is the CAPACITY NAMEPLATE, not realized output — booking against it
- * omits `plantsExtractionHardMin`'s ramp lambda, the throughput factor and the
- * revenue multiplier, so during the ramp the ground was debited for more ore
- * than was actually mined. When the sector has a persisted `producedUnits`
- * (written only under plants) we scale the per-resource nameplate split by
- * realized ÷ nameplate instead: the resource MIX still comes from the nameplate
- * split (producedUnits is a single scalar across the sector's whole mix), but
- * the LEVEL is the realized one. Below plants `producedUnits` is never written,
- * so the fallback keeps the old derivation byte-identical.
+ * ACCURACY: `revenueBasedOutput` uses `sector.revenue`, which under plants is
+ * the CAPACITY NAMEPLATE, not realized output, so booking against it ignores
+ * ramp lambda, throughput and revenue multiplier. When `producedUnits` exists
+ * (written only under plants) scale the nameplate split by realized/nameplate:
+ * mix from the nameplate split, level from realized. Below plants there is no
+ * `producedUnits`, so the fallback stays byte-identical.
  *
- * One `$inc` per state, on the monotonic `extractedUnits` counter — no read-
- * modify-write, so concurrent turn phases cannot lose extraction.
- *
- * Matched on `stateId` alone, deliberately consistent with the read side
- * (`capacityDocs` is fetched by stateId and
- * `computeExtractionCapacityMultipliers` keys by stateId): the rationing this
- * books against already resolves a cross-country state-id collision to one
- * doc, and the write must land on the same one it rationed with.
+ * One `$inc` on the monotonic counter, so concurrent phases cannot lose
+ * extraction. Matched on `stateId` alone, consistent with the read side, so the
+ * write lands on the same doc the rationing resolved.
  */
 export async function bookExtractionDepletion(
   db: Db,

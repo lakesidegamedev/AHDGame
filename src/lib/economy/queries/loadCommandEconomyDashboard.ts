@@ -17,8 +17,6 @@ import {
   scheduledMarketizationLevel,
   NPP_DEFAULT_INTERNAL_REPRESSION,
 } from "@/lib/constants/commandEconomy";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { GameConfig, GameState } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { resolveCommandEconomyRoles, canSetRepression } from "@/lib/economy/commandEconomyAuth";
@@ -33,6 +31,12 @@ import {
   type CommandEconomyDashboard,
   type RawSoe,
 } from "@/lib/economy/commandEconomyDashboard";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function loadCommandEconomyDashboard(
   db: Db,
@@ -42,12 +46,14 @@ export async function loadCommandEconomyDashboard(
   if (!commandEconomyOffices(countryId)) return null;
 
   const [gameConfig, gameState] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1, currentTurn: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, currentTurn: 1 } }
+    ),
   ]);
   const enabled = gameConfig?.commandEconomyEnabled === true;
   if (!enabled) return null;
@@ -60,16 +66,15 @@ export async function loadCommandEconomyDashboard(
   const cabinet = getCabinetMembersCollection(db);
 
   const [budget, corps, gov, plannerSeat, bankSeat, viewerRolesRaw] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }),
-    db
-      .collection<Corporation>("corporations")
+    federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
+      _id: "federal";
+    }),
+    corporationsCollection(db)
       .find({ countryId, soe: { $exists: true } }, { projection: { _id: 1, name: 1, soe: 1 } })
       .toArray(),
-    db
-      .collection<GovernmentFormation>("governmentFormations")
-      .findOne({ _id: countryId } as { _id: string }, { projection: { commandStance: 1 } }),
+    governmentFormationsCollection(db).findOne({ _id: countryId } as { _id: string }, {
+      projection: { commandStance: 1 },
+    }),
     cabinet.findOne({ countryId, positionId: offices.plannerCabinetId }),
     cabinet.findOne({ countryId, positionId: offices.bankCabinetId }),
     viewerCharacterId
@@ -91,8 +96,7 @@ export async function loadCommandEconomyDashboard(
   const missingNameIds = corps.map((c) => c.soe?.directorId).filter((id): id is ObjectId => !!id);
   const nameById = new Map<string, string>();
   if (missingNameIds.length > 0) {
-    const chars = await db
-      .collection("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: missingNameIds } }, { projection: { name: 1 } })
       .toArray();
     for (const ch of chars)

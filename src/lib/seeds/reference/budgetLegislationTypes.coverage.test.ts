@@ -17,21 +17,17 @@
 import { describe, expect, it } from "vitest";
 
 import { legislationTypes } from "./legislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
-import { deLegislationTypes } from "@/lib/seeds/de/deLegislationTypes";
+import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
 import { ieLegislationTypes } from "@/lib/seeds/ie/ieLegislationTypes";
-import { cnLegislationTypes } from "@/lib/seeds/cn/cnLegislationTypes";
 
 import { getNationalBudgetSeedConfigsForPreset, generateDefaultEnactedLaws } from "./budgets";
 
-const allBudgetLegislationTypes = [
-  ...legislationTypes,
-  ...jpLegislationTypes,
-  ...deLegislationTypes,
-  ...ieLegislationTypes,
-  ...cnLegislationTypes,
-];
-const typesById = new Map(allBudgetLegislationTypes.map((lt) => [lt._id, lt] as const));
+const allBudgetLegislationTypes = [...legislationTypes, ...ieLegislationTypes];
+// US and UK open from the fiscal ladder table, not from legislation types.
+const typesById = new Map<string, unknown>([
+  ...allBudgetLegislationTypes.map((lt) => [lt._id, lt] as const),
+  ...[...SEED_FISCAL_LEVERS.keys()].map((id) => [id, true] as const),
+]);
 
 const PRESETS = ["2019-default", "1991-default"] as const;
 
@@ -40,7 +36,7 @@ const PRESETS = ["2019-default", "1991-default"] as const;
  * Excludes coming-soon countries that have preset references but no
  * corresponding `*LegislationTypes.ts` file yet (BR, NG).
  */
-const COVERED_COUNTRIES = new Set(["US", "UK", "JP", "DE", "IE", "CN"]);
+const COVERED_COUNTRIES = new Set(["US", "UK", "IE"]);
 
 describe("budgetLegislationTypes coverage", () => {
   for (const preset of PRESETS) {
@@ -112,18 +108,7 @@ const IE_SPENDING_CATEGORIES = new Set([
   "defense",
   "other",
 ]);
-const CN_SPENDING_CATEGORIES = new Set([
-  "socialSecurity",
-  "education",
-  "health",
-  "defense",
-  "infrastructure",
-  "agriculture",
-  "publicSafety",
-  "other",
-]);
-
-describe("IE/CN default spending laws", () => {
+describe("IE default spending laws", () => {
   for (const preset of PRESETS) {
     it(`IE emits categorised spending laws for ${preset}`, () => {
       const laws = generateDefaultEnactedLaws(preset).filter((l) => l.countryId === "IE");
@@ -134,17 +119,6 @@ describe("IE/CN default spending laws", () => {
       }
       // ≥5 distinct expenditure lines → the budget is populated from laws, not a
       // single-bucket baseline fallback.
-      const distinctCategories = new Set(spending.map((l) => l.budgetCategory));
-      expect(distinctCategories.size).toBeGreaterThanOrEqual(5);
-    });
-
-    it(`CN emits categorised spending laws for ${preset}`, () => {
-      const laws = generateDefaultEnactedLaws(preset).filter((l) => l.countryId === "CN");
-      const spending = laws.filter((l) => l.budgetCategory && l.budgetCategory !== "tax");
-      expect(spending.length).toBeGreaterThan(10);
-      for (const law of spending) {
-        expect(CN_SPENDING_CATEGORIES.has(law.budgetCategory)).toBe(true);
-      }
       const distinctCategories = new Set(spending.map((l) => l.budgetCategory));
       expect(distinctCategories.size).toBeGreaterThanOrEqual(5);
     });

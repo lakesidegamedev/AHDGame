@@ -1,7 +1,11 @@
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
-import type { Character, Corporation, PoliticalParty, WikiPage } from "@/lib/db/types";
+import type { PoliticalParty, WikiPage } from "@/lib/db/types";
 import { corporationWikiSlug, partyWikiSlug, playerWikiSlug } from "./playerPages";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 const OBJECT_ID_HEX_RE = /^[a-f0-9]{24}$/;
 const PLAYER_LEGACY_RE = /^player-([a-f0-9]{24})$/;
@@ -34,7 +38,7 @@ export async function syncPriorWikiSubmissions(
   db: Db,
   moderatorId: ObjectId
 ): Promise<SyncPriorSubmissionsResult> {
-  const wikiPages = db.collection<WikiPage>("wikiPages");
+  const wikiPages = wikiPagesCollection(db);
   const renamed: SyncPriorRenamed[] = [];
   const skipped: SyncPriorSkipped[] = [];
   const now = new Date();
@@ -77,9 +81,10 @@ export async function syncPriorWikiSubmissions(
 
     let newSlug: string | null = null;
     if (kind === "player") {
-      const character = await db
-        .collection<Character>("characters")
-        .findOne({ _id: entityId }, { projection: { sequentialId: 1 } });
+      const character = await charactersCollection(db).findOne(
+        { _id: entityId },
+        { projection: { sequentialId: 1 } }
+      );
       if (!character) {
         skipped.push({ oldSlug: page.slug, reason: "Character no longer exists" });
         continue;
@@ -90,9 +95,10 @@ export async function syncPriorWikiSubmissions(
       }
       newSlug = playerWikiSlug(character.sequentialId);
     } else if (kind === "corporation") {
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: entityId }, { projection: { sequentialId: 1 } });
+      const corp = await corporationsCollection(db).findOne(
+        { _id: entityId },
+        { projection: { sequentialId: 1 } }
+      );
       if (!corp) {
         skipped.push({ oldSlug: page.slug, reason: "Corporation no longer exists" });
         continue;
@@ -103,9 +109,10 @@ export async function syncPriorWikiSubmissions(
       }
       newSlug = corporationWikiSlug(corp.sequentialId);
     } else {
-      const party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: entityId }, { projection: { sequentialId: 1, countryId: 1 } });
+      const party = await politicalPartiesCollection(db).findOne(
+        { _id: entityId },
+        { projection: { sequentialId: 1, countryId: 1 } }
+      );
       if (!party) {
         skipped.push({ oldSlug: page.slug, reason: "Party no longer exists" });
         continue;

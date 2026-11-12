@@ -1,37 +1,20 @@
 /**
- * Era Checkpoint Turn — applies each active `EraCheckpoint`'s pull to the
+ * Era Checkpoint Turn, applies each active `EraCheckpoint`'s pull to the
  * targeted states' Layer-1 census buckets (see
- * `src/lib/demographics/eraCheckpoints.ts` for the full design writeup).
+ * `src/lib/demographics/eraCheckpoints.ts`).
  *
- * Every checkpoint target is a (`dim`, `bucket`) pair, so one substrate moves
- * per lean target: `demographicDefaults.layer1PositionOverrides[dim][bucket]
- * .<axis>`, a durable per-census-bucket position delta. This is the ONLY
- * channel the granular vote path reads a checkpoint's pull through. See the
- * module doc on `src/lib/demographics/granularElectorate.ts` for why an
- * archetype-level `groups[id].<axis>` write is invisible to it.
+ * Every checkpoint target is a (`dim`, `bucket`) pair. Lean pulls go through
+ * `layer1PositionOverrides[dim][bucket].<axis>`; turnout pulls go through
+ * `layer1TurnoutOverrides[dim][bucket]` and are applied BEFORE cell
+ * derivation via `applyDurableBucketTurnoutShift`. These are the only
+ * channels the granular vote path reads, archetype-level writes are
+ * invisible to it.
  *
- * `axis: "turnout"` targets (the Voting Rights Act checkpoint's channel:
- * enfranchisement, not lean) move a parallel substrate:
- * `demographicDefaults.layer1TurnoutOverrides[dim][bucket]`, a durable
- * turnout-rate delta consumed by `granularElectorate.ts`'s
- * `buildUsTurnoutRates`/`applyTurnoutRateOverlay` BEFORE cell derivation —
- * routed through `applyDurableBucketTurnoutShift` rather than the lean
- * function, since turnout is a bounded 0-100 percentage, not a signed lean
- * axis (see those functions' doc comments in `durableRealignment.ts`).
+ * Counter-pressure reads the bill shifts keyed on the same `dim:bucket`.
  *
- * Counter-pressure still reads legislation authored against ARCHETYPES: an
- * active bill's per-archetype shift is projected onto buckets through
- * `archetypeValuesToBuckets` before netting, so a player's legislation
- * contests a checkpoint with no new authoring convention needed.
- *
- * Ordering requirement: this MUST run strictly after `processAllStateDemographics`
- * (`src/lib/demographicEffects.ts`) within the same turn, never concurrently with
- * it: both write `demographicDefaults` for the same state, and running them in
- * the same `Promise.all` would race a lost update (the same class of bug
- * documented in `stateEffectsPhase.ts`'s S4 comment for
- * crisisTurn/ministerialOrders/policyEffects). `processEraCheckpointsTurn` reads
- * `demographicDefaults` fresh, so as long as it is awaited AFTER the
- * legislation/decay writer commits, there is no race.
+ * Ordering: MUST run strictly after `processAllStateDemographics` in the same
+ * turn, awaited, never in the same `Promise.all`, both write
+ * `demographicDefaults` for the same state and would race a lost update.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -40,7 +23,6 @@ import type { DocketCase } from "@/lib/db/types/scotus";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import { getActivePoliciesForState, type LegislationTypeMap } from "@/lib/policyEffects";
 import { calculateDemographicShiftsByTarget } from "@/lib/demographicEffects";
-import { archetypeValuesToBuckets } from "@/lib/demographics/archetypeBucketMap";
 import { calendarTurn, type CalendarClock } from "@/lib/utils/gameDate";
 import {
   applyDurableBucketShift,
@@ -55,9 +37,17 @@ import {
   isCheckpointActive,
   computeCheckpointRawDelta,
   applyCounterPressure,
+  checkpointRunsInWorld,
+  isCheckpointGateOpen,
   type EraCheckpoint,
   type DocketCaseLookupEntry,
 } from "@/lib/demographics/eraCheckpoints";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
 export interface EraCheckpointTurnResult {
   checkpointsActive: number;
@@ -71,9 +61,12 @@ async function resolveActiveCheckpoints(
   db: Db,
   countryId: CountryId,
   currentTurn: number,
-  clock: CalendarClock
+  clock: CalendarClock,
+  worldStartingYear: number
 ): Promise<Array<{ checkpoint: EraCheckpoint; startTurn: number }>> {
-  const checkpoints = ERA_CHECKPOINTS.filter((c) => c.countryId === countryId);
+  const checkpoints = ERA_CHECKPOINTS.filter(
+    (c) => c.countryId === countryId && checkpointRunsInWorld(c, worldStartingYear)
+  );
   if (checkpoints.length === 0) return [];
 
   const caseKeys = [
@@ -81,8 +74,7 @@ async function resolveActiveCheckpoints(
   ] as string[];
   const docketByKey = new Map<string, DocketCaseLookupEntry>();
   if (caseKeys.length > 0) {
-    const cases = await db
-      .collection<DocketCase>("docketCases")
+    const cases = await docketCasesCollection(db)
       .find({ countryId, caseKey: { $in: caseKeys } })
       .toArray();
     for (const c of cases) {
@@ -96,8 +88,8 @@ async function resolveActiveCheckpoints(
 
   // Everything below is in CALENDAR space: `resolveCheckpointStartTurn` maps a
   // trigger case's raw `decidedAtTurn` through the same clock, and every
-  // `fallbackStartTurn` is authored as `yearToTurn(...)`, already a calendar
-  // turn. `durationTurns` is a span, identical in either space (#1208).
+  // `fallbackStartTurn` is authored via `yearToTurn(...)`. `durationTurns` is
+  // a span, identical in either space.
   const calTurn = calendarTurn(currentTurn, clock);
   return checkpoints
     .map((checkpoint) => ({
@@ -123,30 +115,31 @@ export async function processEraCheckpointsTurn(
   currentTurn: number,
   countryId: CountryId = "US"
 ): Promise<EraCheckpointTurnResult> {
-  // Every checkpoint's start/fallback turn is an absolute turn computed
-  // against a 1953 starting year, and the checkpoints model 1950s-60s history
-  // (Civil Rights, Southern Realignment). In a 2019/1979 world the trigger
-  // dockets don't exist, so the fallback turns would fire the 1953 timeline
-  // against a modern electorate and permanently mutate demographicDefaults —
-  // gate on the world's starting year instead.
-  const gameStateDoc = await db
-    .collection<{
-      _id: string;
-      startingYear?: number;
-      preIterationTurns?: number;
-      preIteration?: { active?: boolean };
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { startingYear: 1, preIterationTurns: 1, preIteration: 1 } }
-    );
-  if ((gameStateDoc?.startingYear ?? 2019) !== 1953) return NO_RESULT;
+  // Each checkpoint names the world start it was authored against (the
+  // 1950s-60s history for 1953, the modern realignments for 2027); its start
+  // turns are absolute from that year, so it must not run in any other world.
+  const gameStateDoc = await gameStateCollection<{
+    _id: string;
+    startingYear?: number;
+    preIterationTurns?: number;
+    preIteration?: { active?: boolean };
+  }>(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preIterationTurns: 1, preIteration: 1 } }
+  );
+  const worldStartingYear = gameStateDoc?.startingYear ?? 2019;
 
   const clock: CalendarClock = {
     preIterationActive: gameStateDoc?.preIteration?.active,
     preIterationTurns: gameStateDoc?.preIterationTurns,
   };
-  const active = await resolveActiveCheckpoints(db, countryId, currentTurn, clock);
+  const active = await resolveActiveCheckpoints(
+    db,
+    countryId,
+    currentTurn,
+    clock,
+    worldStartingYear
+  );
   if (active.length === 0) return NO_RESULT;
 
   const stateIds = new Set<string>();
@@ -157,18 +150,28 @@ export async function processEraCheckpointsTurn(
   }
   if (stateIds.size === 0) return NO_RESULT;
 
-  const [legTypes, demographicsDocs, defaultsDocs] = await Promise.all([
+  const gateMetrics = [
+    ...new Set(active.map((a) => a.checkpoint.gate?.metric).filter(Boolean)),
+  ] as string[];
+  const [legTypes, demographicsDocs, defaultsDocs, metricsDocs] = await Promise.all([
     // full-read(legislationTypes): the era checkpoint re-applies every law through the policy-effects map
-    db.collection<LegislationType>("legislationTypes").find({}).toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    legislationTypesCollection(db).find({}).toArray(),
+    stateDemographicsCollection(db)
       .find({ _id: { $in: [...stateIds] } })
       .toArray(),
-    db
-      .collection<StateDemographics>("demographicDefaults")
+    demographicDefaultsCollection(db)
       .find({ _id: { $in: [...stateIds] } })
       .toArray(),
+    gateMetrics.length === 0
+      ? Promise.resolve([] as Array<{ _id: string }>)
+      : macroMetricsCollection<{ _id: string }>(db)
+          .find(
+            { _id: { $in: [...stateIds] } },
+            { projection: Object.fromEntries(gateMetrics.map((m) => [m, 1])) }
+          )
+          .toArray(),
   ]);
+  const metricsByState = new Map(metricsDocs.map((d) => [String(d._id), d]));
   const legTypeMap: LegislationTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));
   const demographicsByState = new Map(demographicsDocs.map((d) => [String(d._id), d]));
   const defaultsByState = new Map(defaultsDocs.map((d) => [String(d._id), d]));
@@ -189,22 +192,16 @@ export async function processEraCheckpointsTurn(
     const defaults = defaultsByState.get(stateId);
 
     for (const { checkpoint, startTurn: _startTurn } of active) {
+      if (!isCheckpointGateOpen(checkpoint.gate, metricsByState.get(stateId))) continue;
       for (const target of checkpoint.targets) {
         if (!target.stateIds.includes(stateId)) continue;
         const rawDelta = computeCheckpointRawDelta(target, checkpoint);
 
         if (target.dim && target.bucket) {
-          // BUCKET target — direct Layer-1 targeting, no archetype proxy.
-          // Granular-path only (there is no archetype to carry it on the
-          // legacy live doc). Counter-pressure projects EVERY active
-          // legislative archetype shift for this axis onto the SAME bucket
-          // via the shared map, so a player's legislation still nets against
-          // it even though it's authored against archetypes, not buckets.
-          const projectedCounterShifts = archetypeValuesToBuckets(
-            counterShifts[target.axis],
-            countryId
-          );
-          const counterShiftPerTurn = projectedCounterShifts[`${target.dim}:${target.bucket}`] ?? 0;
+          // Bucket target: direct Layer-1 targeting. Legislation shifts keyed
+          // on the same bucket net against the checkpoint pull.
+          const counterShiftPerTurn =
+            counterShifts[target.axis][`${target.dim}:${target.bucket}`] ?? 0;
           const netDelta = applyCounterPressure(rawDelta, counterShiftPerTurn);
 
           const axis = target.axis;
@@ -266,10 +263,10 @@ export async function processEraCheckpointsTurn(
   }
 
   if (liveOps.length > 0) {
-    await db.collection<StateDemographics>("stateDemographics").bulkWrite(liveOps);
+    await stateDemographicsCollection(db).bulkWrite(liveOps);
   }
   if (defaultOps.length > 0) {
-    await db.collection<StateDemographics>("demographicDefaults").bulkWrite(defaultOps);
+    await demographicDefaultsCollection(db).bulkWrite(defaultOps);
   }
 
   return { checkpointsActive: active.length, statesUpdated };

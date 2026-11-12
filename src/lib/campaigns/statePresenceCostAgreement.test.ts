@@ -13,15 +13,13 @@ import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { statePresenceNextCost } from "./statePresenceCost";
-import { stateOrgLevelCost } from "@/lib/electionEngine/constants";
-
-vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(true) }));
+import { stateOrgLevelCost } from "@/lib/elections/engine/constants";
 
 const CHARACTER_ID = new ObjectId();
 const RATE = 2;
 const LEVEL = 4;
 
-/** A db that reports the FX rate and one presence row at LEVEL. */
+/** A db that reports the frozen base rate and one presence row at LEVEL. */
 function stubDb(): Db {
   return {
     collection: (name: string) => ({
@@ -40,7 +38,9 @@ function stubDb(): Db {
           .mockResolvedValue(
             name === "characterStateOrg"
               ? [{ characterId: CHARACTER_ID, stateId: "IA", level: LEVEL, totalInvested: LEVEL }]
-              : []
+              : name === "exchangeRates"
+                ? [{ currencyCode: "USD", baseRate: RATE, rate: 9 }]
+                : []
           ),
         project: vi.fn().mockReturnThis(),
         sort: vi.fn().mockReturnThis(),
@@ -51,16 +51,14 @@ function stubDb(): Db {
 }
 
 describe("every presence screen quotes one price", () => {
-  it("resolves the same rate the build route charges at", async () => {
+  it("resolves the same frozen rate the build route charges at", async () => {
     const { loadCampaignFxRate } = await import("@/lib/currency/campaignFxRate");
     expect(await loadCampaignFxRate(stubDb(), { countryId: "US" })).toBe(RATE);
   });
 
-  it("falls back to 1 when forex is off, rather than dropping the price to zero", async () => {
-    const { isForexEnabled } = await import("@/lib/currency/featureFlag");
-    vi.mocked(isForexEnabled).mockResolvedValueOnce(false);
+  it("ignores live forex movement: price follows the frozen basis", async () => {
     const { loadCampaignFxRate } = await import("@/lib/currency/campaignFxRate");
-    expect(await loadCampaignFxRate(stubDb(), { countryId: "US" })).toBe(1);
+    expect(await loadCampaignFxRate(stubDb(), { countryId: "US" })).not.toBe(9);
   });
 
   it("prices a level the same however the screen reached it", () => {
@@ -75,7 +73,7 @@ describe("every presence screen quotes one price", () => {
   it("is not the flat base constant once a state has been built in", async () => {
     // The regression the per-state page shipped: a level-4 state quoted at the
     // level-0 price is short by more than two thirds.
-    const { STATE_ORG_COST_FUNDS } = await import("@/lib/electionEngine/constants");
+    const { STATE_ORG_COST_FUNDS } = await import("@/lib/elections/engine/constants");
     expect(statePresenceNextCost(LEVEL, 1)).not.toBe(STATE_ORG_COST_FUNDS);
   });
 });

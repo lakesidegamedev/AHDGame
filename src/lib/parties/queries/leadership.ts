@@ -7,16 +7,16 @@ import { getEligibleVoterSet } from "@/lib/parties/proposals";
 import {
   COMMITTEE_ELECTION_DURATION_TURNS,
   COMMITTEE_SIZE,
-} from "@/lib/nationalCommitteeElections";
-import { NATIONAL_ALL_POSITIONS } from "@/lib/nationalPartyElections";
+} from "@/lib/elections/party/nationalCommitteeElections";
+import { NATIONAL_ALL_POSITIONS } from "@/lib/elections/party/nationalPartyElections";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import {
   CANONICAL_VOTING_ELECTION_SORT,
   pickCanonicalVotingElectionPerKey,
 } from "@/lib/elections/canonicalVotingElection";
 import { getBannedCharacterIds } from "@/lib/utils/bannedCharacters";
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import type {
-  Character,
   NationalCommitteeCandidate,
   NationalCommitteeElection,
   NationalCommitteeVote,
@@ -31,6 +31,15 @@ import type {
   CommitteeElection,
   NationalElectionsState,
 } from "@/lib/parties/dto/partyView";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { nationalPartyVotesCollection } from "@/lib/db/repositories/nationalPartyVotes";
+import { nationalCommitteeVotesCollection } from "@/lib/db/repositories/nationalCommitteeVotes";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 async function getOptionalViewer(): Promise<AuthUserWithCharacter | null> {
   try {
@@ -49,8 +58,7 @@ export async function getNationalPartyElectionState(
   const partyCountryId = party.countryId ?? "US";
   const isMember =
     authUser?.character?.party === partyId && authUser?.character?.countryId === partyCountryId;
-  const activeElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const activeElections = await nationalPartyElectionsCollection(db)
     .find({
       partyId,
       countryId: partyCountryId,
@@ -63,19 +71,15 @@ export async function getNationalPartyElectionState(
   // enter/vote routes enforce the same waiver server-side.
   const hasFoundingElection = activeElections.some((election) => election.founding === true);
 
-  // `canRun` retains the membership gate but intentionally NOT the 24h
-  // new-character cooldown — that's surfaced via `runCooldownUntil` instead, so
-  // the panel can render a disabled Run button with a countdown rather than
-  // hide it silently. `canVote` keeps the cooldown gate to preserve the
-  // existing "no votes during cooldown" UX (the vote routes enforce the
-  // cooldown server-side too).
+  // `canRun` keeps the membership gate but not the 24h new-character
+  // cooldown, which is surfaced via `runCooldownUntil` so the panel can show
+  // a disabled Run button with a countdown. `canVote` keeps the cooldown gate
+  // to preserve "no votes during cooldown" UX (routes enforce it server-side).
   //
-  // The election method decides who VOTES, never who runs (ticket #1291). Each
-  // method is described to players purely as an electorate rule — "Only
-  // committee members and national leadership vote, one vote each" — and the
-  // enter route enforces no method restriction at all, so gating `canRun` on it
-  // here disagreed with both the copy and the server. Under the committee
-  // method any member may stand; only the committee casts ballots.
+  // The election method decides who VOTES, never who runs. Each method is
+  // described to players purely as an electorate rule, and the enter route
+  // enforces no method restriction, so gating `canRun` on it disagreed with
+  // both the copy and the server.
   let canRun = !!isMember;
   let canVote = !!isMember;
   let runCooldownUntil: string | null = null;
@@ -87,9 +91,10 @@ export async function getNationalPartyElectionState(
       }
     }
     if (canRun) {
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: new ObjectId(authUser.userId) },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: (userDoc?.createdAt as Date | undefined) ?? new Date(0),
         characterCreatedAt: authUser.character.createdAt,
@@ -119,6 +124,8 @@ export async function getNationalPartyElectionState(
     }
   }
 
+  // A banned account no longer holds its seat.
+  await vacateBannedOfficerSeats(db, party);
   const holderMap: Record<NationalPartyElectionPosition, string | null> = {
     chair: party.chairId?.toString() ?? null,
     viceChair: party.viceChairId?.toString() ?? null,
@@ -137,8 +144,7 @@ export async function getNationalPartyElectionState(
   const completedElections =
     missingPositions.length === 0
       ? []
-      : await db
-          .collection<NationalPartyElection>("nationalPartyElections")
+      : await nationalPartyElectionsCollection(db)
           .aggregate<NationalPartyElection>([
             {
               $match: {
@@ -187,16 +193,14 @@ export async function getNationalPartyElectionState(
   }
 
   const [allCandidatesRaw, allVoteCounts, allUserVotes] = await Promise.all([
-    db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
+    nationalPartyCandidatesCollection(db)
       // electionIds spans active (voting) AND most-recent completed elections for
       // missing positions. Resolved elections terminalize candidacies to
       // "completed", so include those (and "active") while excluding player
       // withdrawals — otherwise concluded-race results render with no candidates.
       .find({ electionId: { $in: electionIds }, status: { $ne: "withdrawn" } })
       .toArray(),
-    db
-      .collection<NationalPartyVote>("nationalPartyVotes")
+    nationalPartyVotesCollection(db)
       .aggregate<{
         electionId: ObjectId;
         candidateId: ObjectId;
@@ -223,8 +227,7 @@ export async function getNationalPartyElectionState(
       ])
       .toArray(),
     authUser?.character && activeElectionIds.length > 0
-      ? db
-          .collection<NationalPartyVote>("nationalPartyVotes")
+      ? nationalPartyVotesCollection(db)
           .find({ electionId: { $in: activeElectionIds }, voterId: authUser.character._id })
           .toArray()
       : Promise.resolve([] as NationalPartyVote[]),
@@ -239,8 +242,7 @@ export async function getNationalPartyElectionState(
   const candidateCharacters =
     candidateCharacterIds.length === 0
       ? []
-      : await db
-          .collection<Character>("characters")
+      : await charactersCollection(db)
           .find(
             { _id: { $in: candidateCharacterIds } },
             { projection: { _id: 1, sequentialId: 1 } }
@@ -384,9 +386,10 @@ export async function getNationalCommitteeState(
   // the cooldown gate in the committee/enter route.
   let runCooldownUntil: string | null = null;
   if (isMember && authUser?.character) {
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(authUser.userId) }, { projection: { createdAt: 1 } });
+    const userDoc = await usersCollection<Document>(db).findOne(
+      { _id: new ObjectId(authUser.userId) },
+      { projection: { createdAt: 1 } }
+    );
     const cooldown = isInNewCharacterCooldown({
       userCreatedAt: (userDoc?.createdAt as Date | undefined) ?? new Date(0),
       characterCreatedAt: authUser.character.createdAt,
@@ -402,8 +405,7 @@ export async function getNationalCommitteeState(
     committeeIds.length === 0
       ? []
       : (
-          await db
-            .collection<Character>("characters")
+          await charactersCollection(db)
             .find({ _id: { $in: committeeIds } })
             .toArray()
         )
@@ -420,26 +422,21 @@ export async function getNationalCommitteeState(
           }));
 
   const election =
-    (await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, status: "voting" },
-        { sort: CANONICAL_VOTING_ELECTION_SORT }
-      )) ??
-    (await db
-      .collection<NationalCommitteeElection>("nationalCommitteeElections")
-      .findOne(
-        { partyId, countryId: partyCountryId, status: { $in: ["completed", "cancelled"] } },
-        { sort: { endTime: -1 } }
-      ));
+    (await nationalCommitteeElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, status: "voting" },
+      { sort: CANONICAL_VOTING_ELECTION_SORT }
+    )) ??
+    (await nationalCommitteeElectionsCollection(db).findOne(
+      { partyId, countryId: partyCountryId, status: { $in: ["completed", "cancelled"] } },
+      { sort: { endTime: -1 } }
+    ));
 
   let electionDisplay: CommitteeElection | null = null;
   let userVotes: string[] = [];
   let isCandidate = false;
 
   if (election) {
-    const candidatesRaw = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
+    const candidatesRaw = await nationalCommitteeCandidatesCollection(db)
       // `election` may be the most-recent completed/cancelled one (display
       // fallback). Resolved elections terminalize candidacies to "completed",
       // so include those (and "active") while excluding player withdrawals.
@@ -452,8 +449,7 @@ export async function getNationalCommitteeState(
     const candidateCharacters =
       candidates.length === 0
         ? []
-        : await db
-            .collection<Character>("characters")
+        : await charactersCollection(db)
             .find(
               { _id: { $in: [...new Set(candidates.map((candidate) => candidate.characterId))] } },
               { projection: { _id: 1, sequentialId: 1 } }
@@ -463,8 +459,7 @@ export async function getNationalCommitteeState(
       candidateCharacters.map((character) => [character._id.toString(), character.sequentialId])
     );
 
-    const votesRaw = await db
-      .collection<NationalCommitteeVote>("nationalCommitteeVotes")
+    const votesRaw = await nationalCommitteeVotesCollection(db)
       .find({ electionId: election._id })
       .toArray();
     const votes = votesRaw.filter((vote) => !bannedCharacterIds.has(vote.voterId.toString()));
@@ -505,9 +500,10 @@ export async function getNationalCommitteeState(
     };
 
     if (authUser?.character && election.status === "voting") {
-      const userVote = await db
-        .collection<NationalCommitteeVote>("nationalCommitteeVotes")
-        .findOne({ electionId: election._id, voterId: authUser.character._id });
+      const userVote = await nationalCommitteeVotesCollection(db).findOne({
+        electionId: election._id,
+        voterId: authUser.character._id,
+      });
       if (userVote) {
         userVotes = userVote.candidateIds
           .map((candidateId) => candidateId.toString())
@@ -523,7 +519,8 @@ export async function getNationalCommitteeState(
     committeeMembers,
     committeeSize: COMMITTEE_SIZE,
     election: electionDisplay,
-    canVote: !!isMember,
+    // The vote route refuses during the new-character cooldown, like the enter route.
+    canVote: !!isMember && runCooldownUntil === null,
     canRun: !!isMember,
     runCooldownUntil,
     userVotes,

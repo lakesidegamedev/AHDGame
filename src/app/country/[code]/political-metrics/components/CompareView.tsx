@@ -33,12 +33,13 @@ export function CompareView({
   initialCategoryId?: string;
   onBack: () => void;
 }) {
-  const [selected, setSelected] = useState<Record<PoliticalMetricsCountryId, boolean>>({
-    US: true,
-    UK: true,
-    RU: true,
-    DD: true,
-  });
+  const [selected, setSelected] = useState<Record<PoliticalMetricsCountryId, boolean>>(
+    () =>
+      Object.fromEntries(POLITICAL_METRIC_COUNTRY_IDS.map((id) => [id, true])) as Record<
+        PoliticalMetricsCountryId,
+        boolean
+      >
+  );
   const [openCategory, setOpenCategory] = useState<string | null>(initialCategoryId ?? null);
   const [byCountry, setByCountry] = useState<
     Partial<Record<PoliticalMetricsCountryId, CountryPoliticalMetricsResponse | null>>

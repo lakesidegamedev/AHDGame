@@ -5,31 +5,31 @@
  */
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, PoliticianOverride } from "@/lib/db/types";
+import type { PoliticianOverride } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicianOverridesCollection } from "@/lib/db/repositories/politicianOverrides";
 
 export async function markCongressLeadershipHeld(
   db: Db,
   assignedId: string,
   now: Date
 ): Promise<void> {
-  const char = await db.collection<Character>("characters").findOne({
+  const char = await charactersCollection(db).findOne({
     _id: new ObjectId(assignedId),
   });
   if (!char) return;
 
-  const existing = await db.collection<PoliticianOverride>("politicianOverrides").findOne({
+  const existing = await politicianOverridesCollection(db).findOne({
     politicianId: assignedId,
   });
 
   if (existing) {
-    await db
-      .collection<PoliticianOverride>("politicianOverrides")
-      .updateOne(
-        { politicianId: assignedId },
-        { $set: { hasHeldCongressLeadership: true, updatedAt: now } }
-      );
+    await politicianOverridesCollection(db).updateOne(
+      { politicianId: assignedId },
+      { $set: { hasHeldCongressLeadership: true, updatedAt: now } }
+    );
   } else {
-    await db.collection<PoliticianOverride>("politicianOverrides").insertOne({
+    await politicianOverridesCollection(db).insertOne({
       politicianId: assignedId,
       hasHeldCongressLeadership: true,
       updatedAt: now,

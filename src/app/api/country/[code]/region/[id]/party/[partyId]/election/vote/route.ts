@@ -13,6 +13,10 @@ import type { StatePartyCandidate, StatePartyVote } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameTime } from "@/lib/time/gameTime";
 import { getLeadershipEligibility } from "@/lib/parties/leadershipTenure";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { statePartyVotesCollection } from "@/lib/db/repositories/statePartyVotes";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -61,9 +65,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Founding elections waive cooldown + tenure (see enter route).
     if (!election.founding) {
       // 24h new-character cooldown on state leadership actions.
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: character.userId }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: character.userId },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: character.createdAt,
@@ -80,9 +85,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const candidate = await db
-      .collection<StatePartyCandidate>("statePartyCandidates")
-      .findOne({ electionId: election._id, characterId: candidateObjectId, status: "active" });
+    const candidate = await statePartyCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: candidateObjectId,
+      status: "active",
+    });
 
     if (!candidate) {
       logRequest("POST", path, 400, Date.now() - start);
@@ -109,7 +116,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Upsert — voters can change their vote until the election closes
     try {
-      await db.collection<StatePartyVote>("statePartyVotes").updateOne(
+      await statePartyVotesCollection(db).updateOne(
         { electionId: election._id, voterId: character._id },
         {
           $set: { candidateId: candidateObjectId, votedAt: now },
@@ -120,12 +127,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     } catch (error) {
       if (!isStatePartyVoteDuplicateKey(error)) throw error;
 
-      await db
-        .collection<StatePartyVote>("statePartyVotes")
-        .updateOne(
-          { electionId: election._id, voterId: character._id },
-          { $set: { candidateId: candidateObjectId, votedAt: now } }
-        );
+      await statePartyVotesCollection(db).updateOne(
+        { electionId: election._id, voterId: character._id },
+        { $set: { candidateId: candidateObjectId, votedAt: now } }
+      );
     }
 
     logRequest("POST", path, 200, Date.now() - start);

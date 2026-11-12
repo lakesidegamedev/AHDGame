@@ -14,11 +14,12 @@ import { loadCountrySovereignSnapshot } from "@/lib/sovereignDefault/snapshotLoa
 import { computeMarketDemand } from "@/lib/sovereignDefault/marketDemand";
 import { computeDsa, type DsaResult } from "@/lib/sovereignDefault/debtSustainability";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 interface SovereignWatchRow {
   countryCode: CountryId;
@@ -39,9 +40,10 @@ export async function GET() {
   const codes: CountryId[] = COUNTRY_ORDER;
   // Hoisted out of the per-country fan-out: the year cannot change mid-request,
   // so this is one read for the whole route rather than one per country.
-  const gameStateForGrowth = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gameStateForGrowth = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
 
   // Parallel fan-out — small N (~8 countries) keeps this manageable. Each
   // country: snapshot load → demand calc → DSA calc + budget read for
@@ -51,7 +53,7 @@ export async function GET() {
       const cfg = COUNTRY_CONFIGS[code];
       const [snapshot, budget, liveGdpGrowth] = await Promise.all([
         loadCountrySovereignSnapshot(db, code, currentTurn),
-        db.collection<FederalBudget>("federalBudget").findOne({ _id: getNationalBudgetId(code) }),
+        federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(code) }),
         // Live national growth, not the frozen FY assumption in
         // `economicFactors.gdpGrowth`. See lib/country/nationalGdpGrowth.
         loadNationalGdpGrowth(db, code, gameStateForGrowth?.currentYear),

@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
@@ -24,6 +25,7 @@ import {
   LEADERSHIP_FREEZE_MESSAGE,
 } from "@/lib/parties/leadershipElectionFreeze";
 import { getGameTime } from "@/lib/time/gameTime";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -65,6 +67,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     const party = await findPartyBySequentialId(db, partyId, countryId);
+    await vacateBannedOfficerSeats(db, party);
     if (!party) {
       return errorResponse(404, "Party not found");
     }
@@ -85,7 +88,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify state exists and belongs to this country (prevents cross-country IDs).
-    const state = await db.collection<State>("states").findOne({
+    const state = await statesCollection(db).findOne({
       _id: upperStateId,
       countryId,
     });

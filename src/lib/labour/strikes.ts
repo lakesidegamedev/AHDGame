@@ -1,52 +1,31 @@
 /**
- * Phase 6, Strikes (`labourSystemMode >= "unions"`, same tier as Phase 5).
+ * Strikes (`labourSystemMode >= "unions"`).
  *
- * Two independent mechanisms, both gated on the same tier:
- *  1. `unionPremium` (unionization.ts), a standing labor-cost surcharge,
- *     always live once unionization > 0. No event, no state machine.
- *  2. Strikes (this file), a per-sector bounded-duration event: triggers
- *     when unionization is high AND real wages lag a slow-moving "worker
- *     expectation index" by more than a threshold; throttles revenue +
- *     margin while active; resolves via concession (CEO raises wageLevel,
- *     gap closes) or wait-it-out (duration expires, unionization bumps up).
- *     Union-busting (a third resolution path) is Phase 7, not built here.
+ * Two mechanisms gated on the same tier: a standing `unionPremium` surcharge
+ * (unionization.ts), and per-sector bounded strikes (this file): triggered when
+ * unionization is high AND real wages lag a slow worker expectation index past a
+ * threshold; throttles revenue and margin while active; resolves via concession
+ * (CEO raises wageLevel, gap closes) or wait-out (duration expires, unionization
+ * bumps up). Union-busting is a later phase, not built here.
  *
- * Degeneracy guard (no always-strike/never-strike equilibrium), per
- * docs/plans/2026-06-30-labour-system.md Phase 6:
- *  - The trigger gap threshold is strictly above the concession gap
- *    threshold (hysteresis), closing the gap partway doesn't immediately
- *    re-trigger a strike that just ended.
- *  - The worker expectation index moves at most WORKER_EXPECTATION_TREND_STEP
- *    per turn, far slower than wageLevel can move (an instant CEO slider
- *    change), so the gap can't be gamed by rapid wage oscillation.
- *  - A cooldown follows EVERY resolution (concession or waitout), not just
- *    one path, see `stepStrike`.
+ * Degeneracy guards (no always-strike/never-strike equilibrium):
+ *  - Trigger gap threshold is strictly above the concession threshold
+ *    (hysteresis), so closing the gap partway does not re-trigger a just-ended
+ *    strike.
+ *  - Worker expectation index moves at most WORKER_EXPECTATION_TREND_STEP per
+ *    turn, far slower than wageLevel can move, so the gap cannot be gamed by
+ *    rapid wage oscillation.
+ *  - A cooldown follows EVERY resolution (concession or waitout), see
+ *    `stepStrike`.
  *
  * STRIKE_UNIONIZATION_THRESHOLD is calibrated against the real ceiling of
- * `unionizationDriftTarget()` (unionization.ts), not picked in isolation.
+ * `unionizationDriftTarget()`, not picked in isolation.
  *
- * Represented shops now track the representing union's approval directly, so
- * a well-run union (approval ≥ 55) can cross the strike threshold on its
- * own shops with no economic distress. Unrepresented shops still need two
- * or more economic/law stress factors. That split is intended: once a union
- * actually holds a shop, membership density is a function of how the union
- * is run, not of a wage-unemployment blend that would walk a 30% drive back
- * down to ~6%.
-
-/**
- * v3 Phase 7b: weight applied to a country's union-law bias (-50..+50) when
- * computing the country-adjusted `unionizationThreshold` override passed
- * into `stepStrike`, positive (collective-bargaining) bias LOWERS the
- * threshold (easier to trigger), negative (right-to-work) RAISES it. Max
- * shift ±10 (bias 50 × 0.2). Deliberately does NOT bias
- * `expectationGapThreshold`: that would narrow the hysteresis gap between
- * the trigger and concession thresholds (currently a verified, tested
- * invariant: see the regression test in strikes.test.ts), risking the
- * flip-flop degeneracy the whole hysteresis design exists to prevent. The
- * unionization-level channel already has real headroom to work with, since
- * `unionizationDriftTarget()`'s own law term also raises the achievable
- * ceiling: that's enough teeth for the government's lever without
- * destabilizing the trigger/concession gap.
+ * Represented shops track their union's approval directly, so a well-run union
+ * (approval >= 55) can cross the strike threshold on its own shops without
+ * economic distress. Unrepresented shops still need two or more economic/law
+ * stress factors: once a union holds a shop, density follows how the union is
+ * run, not a wage-unemployment blend.
  */
 export const STRIKE_LAW_THRESHOLD_WEIGHT = 0.2;
 

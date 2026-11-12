@@ -1,28 +1,28 @@
 import type { Db } from "mongodb";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
+import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import type { StatePartyOrg } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   EASTERN_BLOC_STATE_PARTY_ORG,
   easternBlocOrgEra,
 } from "@/lib/seeds/shared/easternBlocStatePartyOrg";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
- * Regional party-organisation seeder for the six Warsaw-Pact satellites and the
- * three Soviet union republics that are modelled as their own countries
+ * Regional party-organisation seeder for the Warsaw-Pact satellites and the
+ * three Soviet union republics modelled as their own countries
  * (PL/HU/RO/BG/CS/YU + UKR/BLR/BAL).
  *
- * The USSR, the GDR and China each have a bespoke seeder because each runs a
- * different party structure — a single all-union party, a five-party National
- * Front, and an advisory-party system respectively. The satellites are the
- * simple case: one ruling communist party per country, so they share this one.
+ * The USSR, GDR and China each have bespoke seeders for their distinct party
+ * structures; the satellites share the simple one-ruling-party case.
  *
- * Without these rows the satellites' ruling parties had NO `statePartyOrg`
- * entries at all, which leaves `registration` unset and drops them to the
- * newcomer baseline in the swing-flow engine's §7.3.2 defense — the PZPR would
- * be ~20%-peelable in its own industrial heartland.
+ * Without these rows the satellites' ruling parties have no `statePartyOrg`
+ * entries, leaving `registration` unset and dropping them to the newcomer
+ * baseline in the swing-flow engine, making them far too peelable.
  *
- * Era-gated: these are Cold-War structures, so the seeder no-ops in 1991/2019
- * exactly like `seedEasternBlocCountry` (refs #3269).
+ * Era-gated: no-ops outside Cold-War presets, mirroring `seedEasternBlocCountry`.
  */
 export async function seedEasternBlocStatePartyOrg(
   db: Db,
@@ -30,8 +30,8 @@ export async function seedEasternBlocStatePartyOrg(
   log: (msg: string) => void,
   preset?: string
 ): Promise<void> {
-  const activePreset =
-    preset ?? (await db.collection("gameState").findOne({}))?.preset ?? "1953-default";
+  const activePreset = preset ?? (await getGameStatePreset(db));
+  if (activePreset == null) throw missingPresetEntry("(none)", "eastern-bloc-state-party-org");
 
   const { isEasternBlocEra } = await import("@/lib/seeds/presetSelector");
   if (!isEasternBlocEra(activePreset)) {
@@ -43,7 +43,7 @@ export async function seedEasternBlocStatePartyOrg(
   const countryIds = Object.keys(EASTERN_BLOC_STATE_PARTY_ORG) as CountryId[];
 
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: { $in: countryIds } });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: { $in: countryIds } });
   }
 
   const now = new Date();
@@ -73,13 +73,11 @@ export async function seedEasternBlocStatePartyOrg(
         consecutiveLosses: 0,
       };
       const { _id, ...orgData } = row;
-      const result = await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      const result = await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
       if (result.upsertedCount > 0) upserted++;
       total++;
     }

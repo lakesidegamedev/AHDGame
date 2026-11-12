@@ -2,6 +2,9 @@ import type { Db, ObjectId } from "mongodb";
 import type { Bill, Corporation, CorporateSector, PendingNationalization } from "@/lib/db/types";
 import type { BillStatus, NationalizeProvision } from "@/lib/db/types/legislation";
 import { inferCountryIdFromStateId } from "@/lib/congress/resolveBillCountryId";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 /**
  * Bill statuses that count as "still in process" — a nationalization bill in one
@@ -43,8 +46,7 @@ export async function matchActiveNationalizationBills(
   sectorIdStr: ReadonlySet<string>,
   typeToSectorIds: ReadonlyMap<string, ObjectId[]>
 ): Promise<MatchedNationalizationBill[]> {
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find({
       status: { $in: Array.from(ACTIVE_BILL_STATUSES) },
       provisions: { $elemMatch: { type: "nationalize" } },
@@ -103,8 +105,7 @@ export async function buildCorpNationalizationThreat(
   corp: Corporation,
   currentTurn: number
 ): Promise<CorpNationalizationThreat | null> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({ corporationId: corp._id }, { projection: { _id: 1, sectorType: 1 } })
     .toArray();
   const sectorIds = sectors.map((s) => s._id);
@@ -123,8 +124,7 @@ export async function buildCorpNationalizationThreat(
   let soonestDeadline: number | null = null;
 
   // ── Pending takings (post-passage notice window) ──
-  const pending = await db
-    .collection<PendingNationalization>("pendingNationalizations")
+  const pending = await pendingNationalizationsCollection(db)
     .find({
       status: "pending",
       $or: [

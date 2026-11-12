@@ -1,7 +1,6 @@
 import type { Db, Document, Filter, ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
-import type { Character } from "@/lib/db/types/character";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
 import {
@@ -12,6 +11,9 @@ import {
   type OfferSort,
   type OfferSortDir,
 } from "./offerOrdering";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { supplyListingsCollection } from "@/lib/db/repositories/supplyListings";
 
 export type PublisherFields = Pick<
   Corporation,
@@ -175,8 +177,7 @@ export async function loadOpenOffers(
   }
 ): Promise<OpenOffersPage> {
   const page = Math.max(1, args.page ?? 1);
-  const found = await db
-    .collection<SupplyListing>("supplyListings")
+  const found = await supplyListingsCollection(db)
     .aggregate<SupplyListing>(
       openOffersPipeline({ ...args, skip: (page - 1) * args.limit, limit: args.limit + 1 })
     )
@@ -184,8 +185,7 @@ export async function loadOpenOffers(
   const hasMore = found.length > args.limit;
   const rows = hasMore ? found.slice(0, args.limit) : found;
   if (rows.length === 0) return { offers: [], hasMore: false };
-  const publishers = await db
-    .collection<Corporation>("corporations")
+  const publishers = await corporationsCollection(db)
     .find({ _id: { $in: rows.map((r) => r.corporationId) } })
     .project<PublisherFields>(PUBLISHER_PROJECTION)
     .toArray();
@@ -196,8 +196,7 @@ export async function loadOpenOffers(
   const characters =
     ceoIds.length === 0
       ? []
-      : await db
-          .collection<Character>("characters")
+      : await charactersCollection(db)
           .find({ _id: { $in: ceoIds } })
           .project<{ _id: ObjectId; name: string; avatarUrl?: string }>({
             name: 1,

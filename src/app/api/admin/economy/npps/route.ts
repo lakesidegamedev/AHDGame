@@ -9,6 +9,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { NPP, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function GET() {
   try {
@@ -18,8 +20,7 @@ export async function GET() {
     const db = await getDb();
 
     const [npps, parties] = await Promise.all([
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find(
           { retiredAt: null },
           {
@@ -37,8 +38,7 @@ export async function GET() {
           }
         )
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({}, { projection: { name: 1, sequentialId: 1, countryId: 1 } })
         .toArray(),
     ]);

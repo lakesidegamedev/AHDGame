@@ -8,6 +8,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { WikiPage } from "@/lib/db/types";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 const CN_WIKI_PAGES: Array<
   Pick<WikiPage, "slug" | "title" | "description" | "content" | "tags" | "category">
@@ -199,7 +200,7 @@ In game terms, this is handled through the standard confidence-of-the-legislatur
 export async function seedCNWiki(db: Db) {
   // Bootstrap runs again after a reset. Existing community content belongs to
   // the preserved wiki, including edits, publication state and view counts.
-  const coll = db.collection<WikiPage>("wikiPages");
+  const coll = wikiPagesCollection(db);
   const now = new Date();
 
   for (const page of CN_WIKI_PAGES) {

@@ -42,7 +42,7 @@ export const STATE_METRIC_PER_METRIC_CAP = 0.75;
 export const STATE_METRIC_PER_CHANNEL_CAP = 2;
 export const STATE_METRIC_TOTAL_CAP = 8;
 
-export const SECTOR_METRIC_MARGIN_CHANNELS: readonly SectorMetricMarginChannel[] = [
+const SECTOR_METRIC_MARGIN_CHANNELS: readonly SectorMetricMarginChannel[] = [
   "laborCost",
   "laborQuality",
   "consumerDemand",
@@ -630,16 +630,13 @@ function valueForMetric(
 /**
  * The REALISTIC operating range a metric's quality is normalized over.
  *
- * THRESHOLDS encodes best/worst (the realistic span) — that is what a quality
- * signal wants. `minValue`/`maxValue` are clamp guards (S1 widened several to
- * headroom ceilings, e.g. educationSpending [0, 10M]), so using them here would
- * pin every realistic value to an extreme. Direction is NOT applied here; the
- * `isHigherBetter` flip happens at the caller, so best/worst are simply ordered
- * into [min, max].
+ * THRESHOLDS encodes best/worst (the realistic span). `minValue`/`maxValue` are
+ * clamp guards (some widened to headroom ceilings), so using them would pin
+ * realistic values to an extreme. Direction is not applied here; the caller
+ * applies `isHigherBetter`, so best/worst are ordered into [min, max].
  *
- * Exported because the INVERSE (legacyValueFromPoliticalScore) has to normalize
- * over the identical range or the round trip drifts. One definition, two
- * directions — never re-derive this span locally.
+ * Exported because `legacyValueFromPoliticalScore` normalizes over the identical
+ * range or the round trip drifts. Never re-derive this span locally.
  */
 export function metricQualityRange(
   definition: MetricDefinition,
@@ -1027,18 +1024,4 @@ export function getMetricStrategyCoverage(
     effect: false,
     rationale: `This strategy does not materially depend on ${Object.keys(signal.channels).join(", ")}.`,
   };
-}
-
-export function getNeutralMetricMappings(): Array<{
-  category: MetricCategoryId;
-  metricId: string;
-  rationale: string;
-}> {
-  return METRIC_MARGIN_SIGNALS.filter((signal) => Object.keys(signal.channels).length === 0).map(
-    (signal) => ({
-      category: signal.category,
-      metricId: signal.metricId,
-      rationale: signal.neutralRationale ?? signal.rationale,
-    })
-  );
 }

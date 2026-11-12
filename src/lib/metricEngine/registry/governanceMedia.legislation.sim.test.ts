@@ -11,7 +11,7 @@ import type { NodeId } from "../types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 
 /**
- * Legislative metric simulation — GOVERNANCE + MEDIA categories, 240 turns.
+ * Legislative metric simulation, GOVERNANCE + MEDIA categories, 240 turns.
  *
  * Unlike the spending tiers, governance/media laws act through the POLICY layer:
  * they tag their target metrics via `effectTargetsWeighted`, and the metric decays
@@ -19,9 +19,9 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
  * policy-controlled metrics (the harness root path) and assert each moves in the
  * law's direction over 240 turns, then converges within bounds.
  *
- *   • Governance — "Government Ethics & Transparency Act" (us_government_ethics, +1):
- *     governmentTransparency ↑, publicTrust ↑, newsTrust ↑.
- *   • Media — "Media & Communications Act" (us_media_communications, +1): pressFreedom ↑.
+ *   • Governance: Ireland's government ethics law (ie_government_ethics, +1):
+ *     governmentTransparency ↑, publicTrust ↑.
+ *   • Media: Ireland's media and press law (ie_media_press, +1): pressFreedom ↑.
  */
 const TURNS = 240;
 
@@ -54,28 +54,25 @@ function runLawOnRoots(lawId: string, roots: RootMetric[]) {
   return { law, reform, control, enacted };
 }
 
-describe("legislation sim — governance (Government Ethics & Transparency Act, 240 turns)", () => {
+describe("legislation sim: governance (government ethics, 240 turns)", () => {
   const roots = [
     root("governance.governmentTransparency", "governmentTransparency", "governance", 55),
     root("governance.publicTrust", "publicTrust", "governance", 50),
-    root("mediaInformation.newsTrust", "newsTrust", "mediaInformation", 50),
   ];
-  const { law, reform, control, enacted } = runLawOnRoots("us_government_ethics", roots);
+  const { law, reform, control, enacted } = runLawOnRoots("ie_government_ethics", roots);
   const ids = roots.map((r) => r.id);
 
   it("the seed law and its reform option exist", () => {
-    expect(law, "us_government_ethics present").toBeTruthy();
-    expect(reform, "a pro-ethics (+1) option exists").toBeTruthy();
+    expect(law, "ie_government_ethics present").toBeTruthy();
+    expect(reform, "a pro-transparency (+1) option exists").toBeTruthy();
   });
 
   it("prints the 240-turn trajectory report", () => {
-    console.log(
-      reportTrajectory("Governance — Government Ethics & Transparency Act", ids, control, enacted)
-    );
+    console.log(reportTrajectory("Governance: government ethics", ids, control, enacted));
     expect(true).toBe(true);
   });
 
-  it("transparency, public trust, and news trust all rise above the no-law control", () => {
+  it("transparency and public trust rise above the no-law control", () => {
     for (const id of ids) {
       expect(
         enacted.final[id],
@@ -96,19 +93,19 @@ describe("legislation sim — governance (Government Ethics & Transparency Act, 
   });
 });
 
-describe("legislation sim — media (Media & Communications Act, 240 turns)", () => {
+describe("legislation sim: media (media and press law, 240 turns)", () => {
   const roots = [root("mediaInformation.pressFreedom", "pressFreedom", "mediaInformation", 69)];
-  const { law, reform, control, enacted } = runLawOnRoots("us_media_communications", roots);
+  const { law, reform, control, enacted } = runLawOnRoots("ie_media_press", roots);
 
   it("the seed law and its reform option exist", () => {
-    expect(law, "us_media_communications present").toBeTruthy();
+    expect(law, "ie_media_press present").toBeTruthy();
     expect(reform, "a pro-press-freedom (+1) option exists").toBeTruthy();
   });
 
   it("prints the 240-turn trajectory report", () => {
     console.log(
       reportTrajectory(
-        "Media — Media & Communications Act",
+        "Media: media and press law",
         ["mediaInformation.pressFreedom"],
         control,
         enacted

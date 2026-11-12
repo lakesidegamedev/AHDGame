@@ -31,11 +31,17 @@ import {
   usesCampaignRules,
   type CampaignTarget,
 } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 type Actor = AuthUserWithCharacter & { hasCharacter: true; character: Character };
 
 export async function loadTargetedAdContext(db: Db, campaignId: ObjectId, user: Actor) {
-  const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignId });
+  const campaign = await campaignsCollection(db).findOne({ _id: campaignId });
   if (!campaign) throw notFound("Campaign not found");
   if (
     !isCampaignManagerUser(campaign, user.userId) &&
@@ -43,8 +49,8 @@ export async function loadTargetedAdContext(db: Db, campaignId: ObjectId, user: 
   )
     throw forbidden("Not authorized");
   const [election, candidate, time] = await Promise.all([
-    db.collection<Election>("elections").findOne({ _id: campaign.electionId }),
-    db.collection<ElectionCandidate>("electionCandidates").findOne({
+    electionsCollection(db).findOne({ _id: campaign.electionId }),
+    electionCandidatesCollection(db).findOne({
       electionId: campaign.electionId,
       characterId: campaign.candidateId,
       status: "active",
@@ -73,9 +79,7 @@ export async function quoteTargetedAds(
 ) {
   const { election, candidate, time } = context;
   if (!candidate.isNPP) {
-    const owner = await db
-      .collection<Character>("characters")
-      .findOne({ _id: candidate.characterId });
+    const owner = await charactersCollection(db).findOne({ _id: candidate.characterId });
     if (!owner) throw notFound("Candidate not found");
     return quoteStandingAds(db, owner, stateId, count);
   }
@@ -100,17 +104,19 @@ export async function quoteTargetedAds(
     throw forbidden("That region is outside this election");
   const owner =
     candidate.isNPP && candidate.nppId
-      ? await db
-          .collection<NPP>("npps")
-          .findOne(
-            { _id: candidate.nppId },
-            { projection: { "policies.economic": 1, "policies.social": 1, homeState: 1 } }
-          )
-      : await db
-          .collection<Character>("characters")
-          .findOne({ _id: candidate.characterId }, { projection: { policies: 1, homeState: 1 } });
+      ? await nppsCollection(db).findOne(
+          { _id: candidate.nppId },
+          { projection: { "policies.economic": 1, "policies.social": 1, homeState: 1 } }
+        )
+      : await charactersCollection(db).findOne(
+          { _id: candidate.characterId },
+          { projection: { policies: 1, homeState: 1 } }
+        );
   if (!owner) throw notFound("Candidate not found");
-  if (!["president", "uachtaran"].includes(election.electionType) && stateId !== owner.homeState)
+  if (
+    !["president", "uachtaran", "special_president"].includes(election.electionType) &&
+    stateId !== owner.homeState
+  )
     throw forbidden("Target the candidate’s home state. Other states require a presidential race.");
   return quoteAdAudience(
     db,
@@ -136,9 +142,7 @@ export async function purchaseTargetedAds(
 ) {
   const context = await loadTargetedAdContext(db, campaignId, user);
   if (!context.candidate.isNPP) {
-    const owner = await db
-      .collection<Character>("characters")
-      .findOne({ _id: context.candidate.characterId });
+    const owner = await charactersCollection(db).findOne({ _id: context.candidate.characterId });
     if (!owner) throw notFound("Candidate not found");
     return purchaseStandingAds(db, owner, user.character, request);
   }
@@ -166,9 +170,10 @@ export async function purchaseTargetedAds(
     throw conflict("The ad quote changed. Refresh before buying.");
   const actions = AD_ACTION_COST * request.count;
   const fundsField = quote.forex ? "currencyBalances.campaign" : "funds";
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { politicalMediaMarketEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { politicalMediaMarketEnabled: 1 } }
+  );
   if (config?.politicalMediaMarketEnabled === true) {
     const orderId = randomUUID();
     const funding = await fundPoliticalMediaOrder(db, {
@@ -220,23 +225,19 @@ export async function purchaseTargetedAds(
     targetedAdsRevision: context.candidate.targetedAdsRevision ?? { $exists: false },
   };
   const debit = async (session?: ClientSession) => {
-    const result = await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: user.character._id, actions: { $gte: actions }, [fundsField]: { $gte: funds } },
-        { $inc: { actions: -actions, [fundsField]: -funds } },
-        { session }
-      );
+    const result = await charactersCollection(db).updateOne(
+      { _id: user.character._id, actions: { $gte: actions }, [fundsField]: { $gte: funds } },
+      { $inc: { actions: -actions, [fundsField]: -funds } },
+      { session }
+    );
     if (!result.modifiedCount) throw conflict("Insufficient personal actions or campaign funds");
   };
   const write = async (session?: ClientSession) => {
-    const result = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .updateOne(
-        candidateFilter,
-        { $set: { targetedAds: ads }, $inc: { targetedAdsRevision: 1 } },
-        { session }
-      );
+    const result = await electionCandidatesCollection(db).updateOne(
+      candidateFilter,
+      { $set: { targetedAds: ads }, $inc: { targetedAdsRevision: 1 } },
+      { session }
+    );
     if (!result.modifiedCount) throw conflict("Campaign changed. Refresh before buying ads");
   };
   await runWithOptionalTransaction(
@@ -249,9 +250,10 @@ export async function purchaseTargetedAds(
       try {
         await write();
       } catch (error) {
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: user.character._id }, { $inc: { actions, [fundsField]: funds } });
+        await charactersCollection(db).updateOne(
+          { _id: user.character._id },
+          { $inc: { actions, [fundsField]: funds } }
+        );
         throw error;
       }
     }

@@ -1,4 +1,4 @@
-import { liveSingleTierChamber } from "./rules/liveChamber";
+import { formationChamberSeats, liveSingleTierChamber } from "./rules/liveChamber";
 /**
  * Live lower-chamber size = the sum of the country's region `houseDistricts`.
  *
@@ -8,8 +8,8 @@ import { liveSingleTierChamber } from "./rules/liveChamber";
  * region transfer — e.g. NI joining Ireland grows the Dáil). Parliamentary
  * majority math reads the live total so the threshold tracks the real chamber.
  *
- * Usually reported as `max(config base, region sum)`. UK territorial departures
- * instead use the surviving regional total. Other chambers retain their
+ * Usually reported as `max(config base, region sum)`. A country a region can
+ * secede from (the UK, Canada) instead uses the surviving regional total. Other chambers retain their
  * config base (so a region's seat-data discrepancy can't shrink an untransferred
  * chamber — e.g. UK regions summing to 648 still report the 650-seat Commons), and
  * grows above the base when a region is added (NI joining → 160 + 71). Bulgaria's
@@ -29,6 +29,10 @@ import {
   RO_1992_SENATE_SEATS,
 } from "@/lib/countries/ro/rules/parliament1992";
 import { japanShugiinCurrentChamberCapacity } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /** Active world preset, when present — drives era-conditional chamber sizes. */
 async function readActivePreset(db: Db): Promise<string | undefined> {
@@ -48,29 +52,29 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
   // Hungary's 1991-world config is deliberately frozen at its 386-seat start.
   // Once the 2014 reform stamps the world, the re-apportioned region documents
   // carry the live 199-seat chamber and override that initial config size.
-  if (countryId === "HU") {
-    const reform = await db
-      .collection<{ _id: string; huAssemblyReformedAtYear?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { huAssemblyReformedAtYear: 1 } });
+  if (countryHasFeature("huLib", countryId)) {
+    const reform = await gameStateCollection<{ _id: string; huAssemblyReformedAtYear?: number }>(
+      db
+    ).findOne({ _id: "current" }, { projection: { huAssemblyReformedAtYear: 1 } });
     if (reform?.huAssemblyReformedAtYear) {
-      const regions = await db
-        .collection<State>("states")
+      const regions = await statesCollection(db)
         .find({ countryId }, { projection: { houseDistricts: 1 } })
         .toArray();
       const seats = regions.reduce((sum, region) => sum + (region.houseDistricts ?? 0), 0);
       if (seats > 0) return seats;
     }
   }
-  if (countryId === "BG" && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
-      .findOne({ _id: "BG" }, { projection: { bgOrdinaryAssemblySinceTurn: 1 } });
+  if (countryHasFeature("bgLib", countryId) && preset === "1991-default") {
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "BG" },
+      { projection: { bgOrdinaryAssemblySinceTurn: 1 } }
+    );
     if (countryState?.bgOrdinaryAssemblySinceTurn != null) {
       return BG_ORDINARY_ASSEMBLY_TOTAL_SEATS;
     }
   }
   if (countryId === COUNTRY_CONFIGS.JP.id && preset === "1991-default") {
-    const countryState = await db.collection<CountryGameState>("countryGameStates").findOne(
+    const countryState = await countryGameStatesCollection(db).findOne(
       { _id: COUNTRY_CONFIGS.JP.id },
       {
         projection: {
@@ -83,13 +87,13 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
       return japanShugiinCurrentChamberCapacity(countryState.jpShugiinResolvedRegionalRules);
     }
   }
-  if (countryId === "RO" && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
-      .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
+  if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "RO" },
+      { projection: { roParliament1992SinceTurn: 1 } }
+    );
     if (countryState?.roParliament1992SinceTurn != null) {
-      const regions = await db
-        .collection<State>("states")
+      const regions = await statesCollection(db)
         .find({ countryId })
         .project<{ houseDistricts?: number }>({ houseDistricts: 1 })
         .toArray();
@@ -97,8 +101,8 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
       return seats > 0 ? seats : RO_1992_DEPUTY_SEATS;
     }
   }
-  if (countryId === "RU" && preset === "1991-default") {
-    const countryState = await db.collection<CountryGameState>("countryGameStates").findOne(
+  if (countryHasFeature("ruLib", countryId) && preset === "1991-default") {
+    const countryState = await countryGameStatesCollection(db).findOne(
       { _id: "RU" },
       {
         projection: {
@@ -126,13 +130,33 @@ export async function getLiveLowerChamberSeats(db: Db, countryId: CountryId): Pr
   if (isListTierMethod(config.electionSystems.lowerChamber)) {
     return config.legislature.lowerChamber.seats;
   }
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId })
     .project<{ houseDistricts?: number }>({ houseDistricts: 1 })
     .toArray();
   const sum = regions.reduce((acc, r) => acc + (r.houseDistricts ?? 0), 0);
   return liveSingleTierChamber(countryId, sum, config.legislature.lowerChamber.seats);
+}
+
+/**
+ * Lower-chamber size for government formation majority math: the live chamber,
+ * or the seated total when a list-tier chamber is seated short of it (see
+ * {@link formationChamberSeats}).
+ */
+export async function getFormationChamberSeats(
+  db: Db,
+  countryId: CountryId,
+  seatsByParty: Record<string, number>,
+  preset?: string
+): Promise<number> {
+  const liveSeats = await getLiveLowerChamberSeats(db, countryId);
+  const config = getCountryConfig(countryId, preset ?? (await readActivePreset(db)));
+  const seated = Object.values(seatsByParty).reduce((sum, seats) => sum + seats, 0);
+  return formationChamberSeats(
+    liveSeats,
+    seated,
+    isListTierMethod(config.electionSystems.lowerChamber)
+  );
 }
 
 /** Simple-majority threshold for a chamber of `totalSeats`. */
@@ -141,42 +165,39 @@ export function lowerChamberMajorityThreshold(totalSeats: number): number {
 }
 
 /**
- * Countries whose UPPER chamber is apportioned across regions via
- * `state.stateSenateSeats` (so it grows/shrinks with a region transfer — IE's
- * Seanad is split across the NUTS-III regions, summing to its 60 seats; SE's
- * 1953 First Chamber uses the same field across län groups). For everyone else
- * `stateSenateSeats` is a DIFFERENT chamber (UK's is the regional council, not
- * the Lords; SE 1979+ is nominal county-council weight, not the abolished
- * First Chamber), so the upper size stays the static config.
- *
- * SE is listed here but only applied under the 1953-default preset — see
- * {@link getLiveUpperChamberSeats}.
+ * Countries whose upper chamber is apportioned by region `stateSenateSeats`,
+ * so it changes when a region joins or leaves: IE's Seanad, SE's 1953 First
+ * Chamber (that preset only) and Canada's Senate. Elsewhere the field is a
+ * different chamber (UK regional council), so the config size stands.
  */
-const UPPER_CHAMBER_REGION_APPORTIONED: ReadonlySet<CountryId> = new Set<CountryId>(["IE", "SE"]);
+const UPPER_CHAMBER_REGION_APPORTIONED: ReadonlySet<CountryId> = new Set<CountryId>([
+  "IE",
+  "SE",
+  "CA",
+]);
 
 function isUpperChamberRegionApportioned(countryId: CountryId, preset?: string): boolean {
   if (!UPPER_CHAMBER_REGION_APPORTIONED.has(countryId)) return false;
   // SE: only the bicameral-era First Chamber is region-apportioned. 1979+
   // regions still carry stateSenateSeats as county-council weight; summing
   // those must not inflate the abolished upperChamber metadata (151 seats).
-  if (countryId === "SE") return preset === "1953-default";
+  if (countryHasFeature("seLib", countryId)) return preset === "1953-default";
   return true;
 }
 
 /**
- * Live upper-chamber size. For a region-apportioned upper chamber it's the live
- * `max(config base, Σ region stateSenateSeats)` (NI joining grows the Seanad
- * 60 → 84); otherwise the static config size.
+ * Live upper-chamber size: the region sum for a region-apportioned chamber,
+ * sized like a single-tier lower chamber; otherwise the static config size.
  */
 export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Promise<number> {
   const preset = await readActivePreset(db);
-  if (countryId === "RO" && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
-      .findOne({ _id: "RO" }, { projection: { roParliament1992SinceTurn: 1 } });
+  if (countryHasFeature("roLib", countryId) && preset === "1991-default") {
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "RO" },
+      { projection: { roParliament1992SinceTurn: 1 } }
+    );
     if (countryState?.roParliament1992SinceTurn != null) {
-      const regions = await db
-        .collection<State>("states")
+      const regions = await statesCollection(db)
         .find({ countryId })
         .project<{ stateSenateSeats?: number }>({ stateSenateSeats: 1 })
         .toArray();
@@ -184,21 +205,21 @@ export async function getLiveUpperChamberSeats(db: Db, countryId: CountryId): Pr
       return seats > 0 ? seats : RO_1992_SENATE_SEATS;
     }
   }
-  if (countryId === "RU" && preset === "1991-default") {
-    const countryState = await db
-      .collection<CountryGameState>("countryGameStates")
-      .findOne({ _id: "RU" }, { projection: { ruFederalAssemblySinceTurn: 1 } });
+  if (countryHasFeature("ruLib", countryId) && preset === "1991-default") {
+    const countryState = await countryGameStatesCollection(db).findOne(
+      { _id: "RU" },
+      { projection: { ruFederalAssemblySinceTurn: 1 } }
+    );
     return countryState?.ruFederalAssemblySinceTurn != null ? 178 : 0;
   }
   const config = getCountryConfig(countryId, preset);
   const upper = config.legislature.upperChamber;
   if (!upper) return 0;
   if (!isUpperChamberRegionApportioned(countryId, preset)) return upper.seats;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId })
     .project<{ stateSenateSeats?: number }>({ stateSenateSeats: 1 })
     .toArray();
   const sum = regions.reduce((acc, r) => acc + (r.stateSenateSeats ?? 0), 0);
-  return Math.max(sum, upper.seats);
+  return liveSingleTierChamber(countryId, sum, upper.seats);
 }

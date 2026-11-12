@@ -1,0 +1,428 @@
+/**
+ * Fetches and enriches candidate data for vote calculations.
+ */
+import { clampPercentStatOr as clampPercentStat } from "@/lib/numeric/rules";
+import { combinedAds } from "@/lib/campaignTargeting/rules";
+
+import { ObjectId, type Db } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import type { Character, ElectionCandidate, NPP, PoliticalParty } from "@/lib/db/types";
+import type { CountryState } from "@/lib/db/types/countryState";
+import { type CountryId, type CountryConfig } from "@/lib/constants/countries";
+import { resolveRegimeMultiplier } from "@/lib/turn/onePartyConstraints";
+import { isBlocListCountry } from "@/lib/constants/blocList";
+import { getCountryState } from "@/lib/countryState";
+import type { NPPEndorsement } from "@/lib/db/types/nppInfluence";
+import type { EnrichedCandidate } from "./types";
+import {
+  buildActiveVisibleNppEndorsementFilter,
+  NPP_ENDORSEMENT_DIRECT_FAVORABILITY_CAP,
+  NPP_ENDORSEMENT_DIRECT_FAVORABILITY_PER_ENDORSEMENT,
+} from "@/lib/nppEndorsements";
+import { buildPartyChairMaps, resolvePartyChairPrimaryRole } from "@/lib/primaryScore";
+import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import type { Document } from "mongodb";
+
+// ─── Fetch & enrich candidate stats ──────────────────────────────────────────
+
+/**
+ * Fetch candidates with position/favorability/influence data required by the
+ * election engine. When `includePartyPositions` is set, party econ/social
+ * positions are attached per-candidate.
+ *
+ * `countryId` scopes the party lookup. Party `sequentialId` is unique only
+ * within a country, so a global lookup keyed solely by sequentialId returns
+ * whichever country's party was inserted last. Always pass `countryId` for
+ * country-specific contexts. If omitted, the caller opts into the legacy
+ * global-collision behavior.
+ */
+/** The party fields enrichment reads; the shape `loadEnrichmentParties` returns. */
+export interface EnrichmentParty {
+  _id: unknown;
+  sequentialId: number;
+  countryId?: string;
+  abbreviation?: string;
+  economicPosition: number;
+  socialPosition: number;
+  chairId?: ObjectId | null;
+  regimeStatus?: PoliticalParty["regimeStatus"];
+}
+
+export interface CandidateEnrichmentPreload {
+  charactersById: Map<string, Character>;
+  nppsById: Map<string, NPP>;
+  statePartyChairRows: Pick<StatePartyOrg, "chairId" | "stateId">[];
+  endorsementCountByKey: Map<string, number>;
+}
+
+export type EnrichmentCountryConfig = Pick<CountryConfig, "governmentType" | "opsVoteMultipliers">;
+
+export function resolveEnrichmentCountryConfig(
+  runtime: CountryState,
+  countryId: CountryId,
+  applyHonestOverride = true
+): EnrichmentCountryConfig {
+  let effectiveMultipliers = runtime.opsVoteMultipliers ?? undefined;
+  if (runtime.governmentType === "onePartyState" && isBlocListCountry(countryId)) {
+    effectiveMultipliers = { ruling: 1, approved: 1, independent: 1, banned: 0 };
+  }
+  if (applyHonestOverride && runtime.pendingHonestByElection) {
+    const multiplier = runtime.pendingHonestByElection.atMultiplier;
+    effectiveMultipliers = {
+      ruling: multiplier,
+      approved: multiplier,
+      independent: multiplier,
+      banned: multiplier,
+    };
+  }
+  return {
+    governmentType: runtime.governmentType,
+    opsVoteMultipliers: effectiveMultipliers,
+  };
+}
+
+/** Load every actor and endorsement row used by enrichment in four bounded reads. */
+export async function loadCandidateEnrichmentPreload(
+  db: Db,
+  candidates: readonly ElectionCandidate[],
+  electionIds: readonly ObjectId[],
+  preloadedStatePartyChairRows?: Pick<StatePartyOrg, "chairId" | "stateId">[]
+): Promise<CandidateEnrichmentPreload> {
+  const characterIds = [
+    ...new Map(
+      candidates
+        .filter((candidate) => !candidate.isNPP && candidate.characterId)
+        .map((candidate) => [candidate.characterId.toString(), candidate.characterId])
+    ).values(),
+  ];
+  const nppIds = [
+    ...new Map(
+      candidates
+        .filter((candidate) => candidate.isNPP && candidate.nppId)
+        .map((candidate) => [candidate.nppId!.toString(), candidate.nppId!])
+    ).values(),
+  ];
+  const candidateTargetIds = [
+    ...new Map(
+      candidates
+        .filter((candidate) => candidate.characterId)
+        .map((candidate) => [candidate.characterId.toString(), candidate.characterId])
+    ).values(),
+  ];
+  const [characters, npps, statePartyChairRows, endorsements] = await Promise.all([
+    characterIds.length
+      ? charactersCollection(db)
+          .find({ _id: { $in: characterIds } })
+          .toArray()
+      : Promise.resolve([]),
+    nppIds.length
+      ? nppsCollection(db)
+          .find({ _id: { $in: nppIds } }, { projection: { "policies.domainPositions": 0 } })
+          .toArray()
+      : Promise.resolve([]),
+    preloadedStatePartyChairRows
+      ? Promise.resolve(preloadedStatePartyChairRows)
+      : characterIds.length
+        ? statePartyOrgCollection(db)
+            .find({ chairId: { $in: characterIds } }, { projection: { chairId: 1, stateId: 1 } })
+            .toArray()
+        : Promise.resolve([] as Pick<StatePartyOrg, "chairId" | "stateId">[]),
+    electionIds.length && candidateTargetIds.length
+      ? nppEndorsementsCollection(db)
+          .find(
+            buildActiveVisibleNppEndorsementFilter({
+              electionId: { $in: electionIds },
+              candidateId: { $in: candidateTargetIds },
+            })
+          )
+          .toArray()
+      : Promise.resolve([]),
+  ]);
+  const endorsementCountByKey = new Map<string, number>();
+  for (const endorsement of endorsements) {
+    const key = `${endorsement.electionId.toString()}:${endorsement.candidateId.toString()}`;
+    endorsementCountByKey.set(key, (endorsementCountByKey.get(key) ?? 0) + 1);
+  }
+  return {
+    charactersById: new Map(characters.map((character) => [character._id.toString(), character])),
+    nppsById: new Map(npps.map((npp) => [npp._id.toString(), npp])),
+    statePartyChairRows,
+    endorsementCountByKey,
+  };
+}
+
+/**
+ * The party table enrichment needs, for one country (or every party when the
+ * country is unknown, preserving the legacy behaviour documented above). A
+ * turn's vote accumulation calls enrichment once per election, so callers
+ * that loop over elections load this once per country and pass it in.
+ */
+async function loadEnrichmentParties(db: Db, countryId?: CountryId): Promise<EnrichmentParty[]> {
+  return politicalPartiesCollection<EnrichmentParty>(db)
+    .find(countryId ? { countryId } : {})
+    .toArray();
+}
+
+async function loadPartiesViaCache(
+  db: Db,
+  options?: { countryId?: CountryId; partiesCache?: Map<string, Promise<EnrichmentParty[]>> }
+): Promise<EnrichmentParty[]> {
+  const cache = options?.partiesCache;
+  if (!cache) return loadEnrichmentParties(db, options?.countryId);
+  const key = options?.countryId ?? "";
+  let pending = cache.get(key);
+  if (!pending) {
+    pending = loadEnrichmentParties(db, options?.countryId);
+    cache.set(key, pending);
+  }
+  return pending;
+}
+
+export async function fetchEnrichedCandidates(
+  candidates: ElectionCandidate[],
+  options?: {
+    includePartyPositions?: boolean;
+    countryId?: CountryId;
+    /** Preloaded `loadEnrichmentParties(db, countryId)`; skips the per-call read. */
+    parties?: EnrichmentParty[];
+    /**
+     * Per-turn memo keyed by country (`""` when unscoped). A vote turn enriches
+     * ~180 elections; the party table is read once per country instead.
+     */
+    partiesCache?: Map<string, Promise<EnrichmentParty[]>>;
+    /** Sweep-level actor and endorsement rows shared by every election. */
+    preload?: CandidateEnrichmentPreload;
+    /** Sweep-resolved runtime election config; keeps enrichment read-only. */
+    countryConfig?: EnrichmentCountryConfig;
+    /**
+     * Caller's Db handle. Sharing one handle across a phase lets the
+     * per-Db country-state cache hit; `getDb()` returns a new handle per call.
+     */
+    db?: Db;
+  }
+): Promise<EnrichedCandidate[]> {
+  if (candidates.length === 0) {
+    return [];
+  }
+
+  const db = options?.db ?? (await getDb());
+
+  const characterIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
+  const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
+
+  const parties = options?.parties ?? (await loadPartiesViaCache(db, options));
+
+  // Candidates store party as String(sequentialId). When scoping by countryId we
+  // can safely key the map by sequentialId alone (all entries belong to the same
+  // country). Without countryId the query returned every party — later entries
+  // overwrite earlier ones, which is the legacy (buggy) behavior preserved for
+  // in-flight elections; see doc comment above.
+  const partyAbbrById = new Map(
+    parties
+      .filter((p) => typeof p.abbreviation === "string" && p.abbreviation.length > 0)
+      .map((p) => [String(p.sequentialId), p.abbreviation as string])
+  );
+
+  const partyPositions = options?.includePartyPositions
+    ? new Map(
+        parties.map((p) => [
+          String(p.sequentialId),
+          { econ: p.economicPosition, social: p.socialPosition },
+        ])
+      )
+    : new Map<string, { econ: number; social: number }>();
+
+  // OPS regime weighting: fetch each candidate's party regimeStatus so the
+  // engine can apply the per-regime multiplier in vote distribution. The
+  // lookup short-circuits cheaply for non-OPS countries. Reads runtime
+  // governmentType + opsVoteMultipliers from countryState so a
+  // post-Stage-4 conversion stops applying the OPS-specific weighting
+  // immediately and reform-action vote-multiplier changes flow through.
+  const electionCountry = options?.countryId;
+  let electionConfig: EnrichmentCountryConfig | null = options?.countryConfig ?? null;
+  if (electionCountry) {
+    electionConfig ??= resolveEnrichmentCountryConfig(
+      await getCountryState(db, electionCountry),
+      electionCountry
+    );
+  }
+  const isOps = electionConfig?.governmentType === "onePartyState";
+
+  const partyRegimes = new Map<string, "ruling" | "approved" | "banned" | null>();
+  if (isOps && electionCountry) {
+    for (const party of parties) {
+      partyRegimes.set(String(party.sequentialId), party.regimeStatus ?? null);
+    }
+  }
+
+  const [characters, npps, statePartyChairRows] = await Promise.all([
+    options?.preload
+      ? Promise.resolve(
+          characterIds.flatMap((id) => {
+            const row = options.preload?.charactersById.get(id.toString());
+            return row ? [row] : [];
+          })
+        )
+      : characterIds.length > 0
+        ? charactersCollection(db)
+            .find({ _id: { $in: characterIds } })
+            .toArray()
+        : Promise.resolve([] as Character[]),
+    options?.preload
+      ? Promise.resolve(
+          nppIds.flatMap((id) => {
+            const row = options.preload?.nppsById.get(id.toString());
+            return row ? [row] : [];
+          })
+        )
+      : nppIds.length > 0
+        ? nppsCollection(db)
+            // Enrichment reads the ideology pair, never the 30KB stance map.
+            .find({ _id: { $in: nppIds } }, { projection: { "policies.domainPositions": 0 } })
+            .toArray()
+        : Promise.resolve([] as NPP[]),
+    options?.preload
+      ? Promise.resolve(options.preload.statePartyChairRows)
+      : characterIds.length > 0
+        ? statePartyOrgCollection(db)
+            .find({ chairId: { $in: characterIds } }, { projection: { chairId: 1, stateId: 1 } })
+            .toArray()
+        : Promise.resolve([] as Pick<StatePartyOrg, "chairId" | "stateId">[]),
+  ]);
+
+  const partyChairMaps = buildPartyChairMaps(parties, statePartyChairRows);
+
+  const electionIds = [
+    ...new Set(candidates.map((candidate) => candidate.electionId.toString())),
+  ].map((id) => new ObjectId(id));
+  const candidateTargetIds = [
+    ...new Set(candidates.map((candidate) => candidate.characterId.toString())),
+  ].map((id) => new ObjectId(id));
+  const endorsementCollection = nppEndorsementsCollection<Document>(db) as {
+    find?: (filter: Record<string, unknown>) => { toArray: () => Promise<NPPEndorsement[]> };
+  };
+  const endorsementCounts = options?.preload
+    ? []
+    : electionIds.length > 0 &&
+        candidateTargetIds.length > 0 &&
+        typeof endorsementCollection.find === "function"
+      ? await endorsementCollection
+          .find(
+            buildActiveVisibleNppEndorsementFilter({
+              electionId: { $in: electionIds },
+              candidateId: { $in: candidateTargetIds },
+            })
+          )
+          .toArray()
+      : [];
+
+  const charMap = new Map(characters.map((c) => [c._id.toString(), c]));
+  const nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
+  const endorsementCountByKey =
+    options?.preload?.endorsementCountByKey ?? new Map<string, number>();
+  for (const endorsement of endorsementCounts) {
+    const key = `${endorsement.electionId.toString()}:${endorsement.candidateId.toString()}`;
+    endorsementCountByKey.set(key, (endorsementCountByKey.get(key) ?? 0) + 1);
+  }
+
+  return candidates.map((c) => {
+    let charEP = 0,
+      charSP = 0,
+      favorability = 50,
+      politicalInfluence = 10,
+      nationalInfluence = 0,
+      partyInfluence = 0,
+      bucketApprovals: Record<string, number> | undefined,
+      candidateInfamy: number | undefined;
+
+    if (c.isNPP && c.nppId) {
+      const npp = nppMap.get(c.nppId.toString());
+      if (npp) {
+        charEP = npp.policies.economic;
+        charSP = npp.policies.social;
+        favorability = npp.favorability;
+        politicalInfluence = npp.politicalInfluence;
+        nationalInfluence = npp.politicalInfluence; // NPPs use politicalInfluence as proxy for national
+        bucketApprovals = npp.bucketApprovals;
+        // NPPs have no partyInfluence — leave 0
+      }
+    } else {
+      const char = charMap.get(c.characterId.toString());
+      if (char) {
+        charEP = char.policies.economic;
+        charSP = char.policies.social;
+        favorability = char.favorability;
+        politicalInfluence = char.politicalInfluence;
+        nationalInfluence = char.nationalInfluence ?? 0;
+        partyInfluence = char.partyInfluence ?? 0;
+        bucketApprovals = char.bucketApprovals;
+        candidateInfamy = char.infamy;
+      }
+    }
+
+    const clampedFavorability = clampPercentStat(favorability, 50);
+    const endorsementBoost = Math.min(
+      NPP_ENDORSEMENT_DIRECT_FAVORABILITY_CAP,
+      (endorsementCountByKey.get(`${c.electionId.toString()}:${c.characterId.toString()}`) ?? 0) *
+        NPP_ENDORSEMENT_DIRECT_FAVORABILITY_PER_ENDORSEMENT
+    );
+    const clampedPoliticalInfluence = clampPercentStat(politicalInfluence, 10);
+    const hasResolvedNpp = Boolean(c.isNPP && c.nppId && nppMap.has(c.nppId.toString()));
+    const resolvedNationalInfluence = hasResolvedNpp
+      ? clampedPoliticalInfluence
+      : Math.max(0, nationalInfluence);
+    const partyPos = partyPositions.get(c.party);
+
+    // OPS regime weighting: pluck the regime status (if any) and resolve a
+    // per-candidate multiplier. Non-OPS resolves to 1.0; independents (no
+    // party doc) resolve to the configured `independent` multiplier (0 by
+    // default — same as banned).
+    const regimeStatus = isOps ? (partyRegimes.get(c.party) ?? null) : undefined;
+    const regimeMult = electionConfig
+      ? resolveRegimeMultiplier(
+          electionConfig,
+          regimeStatus !== undefined ? { regimeStatus } : null
+        )
+      : 1.0;
+
+    const charIdStr = c.characterId.toString();
+    const partyChairRole = c.isNPP ? null : resolvePartyChairPrimaryRole(charIdStr, partyChairMaps);
+    const stateChairStateIds =
+      partyChairRole === "state"
+        ? (partyChairMaps.stateChairStatesByCharacterId.get(charIdStr) ?? [])
+        : undefined;
+
+    const standingAds = c.isNPP ? undefined : charMap.get(c.characterId.toString())?.targetedAds;
+    return {
+      candidateId: c._id.toString(),
+      targetedAds: standingAds?.length ? combinedAds(c.targetedAds, standingAds) : c.targetedAds,
+      characterId: charIdStr,
+      characterName: c.characterName,
+      party: c.party,
+      ...(partyAbbrById.get(c.party) ? { partyAbbr: partyAbbrById.get(c.party) } : {}),
+      isNPP: c.isNPP ?? false,
+      charEP,
+      charSP,
+      favorability: clampPercentStat(clampedFavorability + endorsementBoost, 50),
+      politicalInfluence: clampedPoliticalInfluence,
+      nationalInfluence: resolvedNationalInfluence,
+      partyInfluence: Math.max(0, partyInfluence),
+      partyChairRole,
+      ...(stateChairStateIds ? { stateChairStateIds } : {}),
+      infamy: candidateInfamy,
+      bucketApprovals,
+      regimeMult,
+      // Pass through `electionCandidates.support` so general-election
+      // vote distribution can consume it via supportMoodMultiplier. Missing
+      // values degrade to neutral 1.0x in the formula.
+      ...(typeof c.support === "number" ? { support: c.support } : {}),
+      ...(partyPos && { partyEcon: partyPos.econ, partySocial: partyPos.social }),
+      ...(regimeStatus !== undefined ? { regimeStatus } : {}),
+    };
+  });
+}

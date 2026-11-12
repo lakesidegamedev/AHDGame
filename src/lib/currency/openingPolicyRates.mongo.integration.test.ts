@@ -3,6 +3,7 @@ import { BSON, MongoClient, ObjectId } from "mongodb";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { updateCentralBanks } from "./migration";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { OPENING_POLICY_RATES_2027 } from "@/lib/centralBank/rules/openingPolicyRate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
 const uri = process.env.FEDERATION_TEST_MONGO_URI;
@@ -69,7 +70,7 @@ describe.skipIf(!uri)("Opening central-bank rates on isolated Mongo", () => {
       await db.dropDatabase();
     }
   });
-  it.each(["1953-default", "1979-default", "2027-default"])(
+  it.each(["1953-default", "1979-default"])(
     "preserves existing seeder defaults for %s",
     async (preset) => {
       const db = client.db(`ahd_test_opening_bank_${new ObjectId()}`);
@@ -89,4 +90,24 @@ describe.skipIf(!uri)("Opening central-bank rates on isolated Mongo", () => {
       }
     }
   );
+  it("seeds the authored January 2027 rates and defaults elsewhere", async () => {
+    const db = client.db(`ahd_test_opening_bank_${new ObjectId()}`);
+    try {
+      await updateCentralBanks(db, "2027-default");
+      for (const country of ["US", "UK", "JP", "DE", "IE"] as CountryId[]) {
+        expect(
+          (
+            await db
+              .collection<{ _id: string; primeRate: number }>("centralBanks")
+              .findOne({ _id: getBankId(country) })
+          )?.primeRate
+        ).toBe(
+          OPENING_POLICY_RATES_2027[country] ??
+            COUNTRY_CONFIGS[country].centralBank.defaultPrimeRate
+        );
+      }
+    } finally {
+      await db.dropDatabase();
+    }
+  });
 });

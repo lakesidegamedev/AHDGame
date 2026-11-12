@@ -142,6 +142,39 @@ describe("executeCorporationBondRefinance", () => {
     expect(db.collectionMocks["corporateSectors"]!.updateMany).not.toHaveBeenCalled();
   });
 
+  it("rolls fund and NPP holders into the new bond so their units are not erased", async () => {
+    const fundId = new ObjectId();
+    const nppId = new ObjectId();
+    const bond = defaultedBond({
+      holders: [
+        { characterId: charId, units: 4_000 },
+        { fundId, units: 3_000, avgCostPerUnit: 900 },
+        { nppId, units: 3_000 },
+      ],
+    });
+    db.collectionMocks["bonds"]!.find.mockImplementation(() => makeCursor([bond]));
+    db.collectionMocks["bonds"]!.insertOne.mockResolvedValue({ insertedId: new ObjectId() });
+
+    const { executeCorporationBondRefinance } = await import("./executeCorporationBondRefinance");
+    const result = await executeCorporationBondRefinance(db as unknown as Db, baseCorp() as never, {
+      now: new Date(),
+      currentTurn: 444,
+      maturityTurns: 96,
+    });
+    expect(result.ok).toBe(true);
+
+    const newDoc = db.collectionMocks["bonds"]!.insertOne.mock.calls[0]![0] as {
+      holders: { fundId?: ObjectId; nppId?: ObjectId; units: number; avgCostPerUnit?: number }[];
+      totalIssued: number;
+    };
+    expect(newDoc.holders.find((h) => h.fundId)).toMatchObject({
+      units: 3_000,
+      avgCostPerUnit: 900,
+    });
+    expect(newDoc.holders.find((h) => h.nppId)?.units).toBe(3_000);
+    expect(newDoc.totalIssued).toBe(10_000 * 1_000);
+  });
+
   it("returns {ok:false} for an over-leveraged corp (defaulted principal exceeds 2× equity)", async () => {
     const bond = defaultedBond();
     db.collectionMocks["bonds"]!.find.mockImplementation(() => makeCursor([bond]));

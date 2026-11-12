@@ -13,7 +13,6 @@ import type {
   Character,
   CommodityPrice,
   CommodityPriceHistory,
-  Corporation,
   CorporateSector,
 } from "@/lib/db/types";
 import type { CommodityType } from "@/lib/constants/commodities";
@@ -25,6 +24,11 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
 
 // The six commodity types shown in the PiP Corp view
 const PIP_COMMODITIES: CommodityType[] = [
@@ -45,9 +49,7 @@ export async function GET() {
 
     let character: Character | null = null;
     if (authUser) {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) });
+      character = await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) });
     }
 
     const isAdmin = authUser?.isAdmin === true;
@@ -58,17 +60,14 @@ export async function GET() {
 
     // Fetch commodity current prices + previous turn prices + top corps in parallel
     const [currentPrices, prevPrices, topCorpDocs] = await Promise.all([
-      db
-        .collection<CommodityPrice>("commodityPrices")
+      commodityPricesCollection(db)
         .find({ commodity: { $in: PIP_COMMODITIES } })
         .toArray(),
-      db
-        .collection<CommodityPriceHistory>("commodityPriceHistory")
+      commodityPriceHistoryCollection(db)
         .find({ commodity: { $in: PIP_COMMODITIES }, turn: currentTurn - 1 })
         .project({ commodity: 1, globalPrice: 1 })
         .toArray() as Promise<{ commodity: CommodityType; globalPrice: number }[]>,
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({
           ceoVacant: { $ne: true },
           ...(enabledCountries !== undefined && { countryId: { $in: enabledCountries } }),
@@ -80,8 +79,7 @@ export async function GET() {
     // corps with heterogeneous liquidCurrencyCode (v0.2.6), so sum in ₳.
     const topCorpIds = topCorpDocs.map((c) => c._id);
     const [allSectors, fxByCurrency] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ corporationId: { $in: topCorpIds } })
         .project<{ corporationId: ObjectId; revenue: number; realizedRevenue?: number }>({
           corporationId: 1,
@@ -136,13 +134,14 @@ export async function GET() {
     // Player corp (auth only)
     let playerCorp = null;
     if (character) {
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } });
+      const corp = await corporationsCollection(db).findOne({
+        ceoId: character._id,
+        ceoVacant: { $ne: true },
+        imfInstitution: { $ne: true },
+      });
 
       if (corp) {
-        const sectors = await db
-          .collection<CorporateSector>("corporateSectors")
+        const sectors = await corporateSectorsCollection(db)
           .find({ corporationId: corp._id })
           .project<Pick<CorporateSector, "revenue" | "realizedRevenue">>({
             revenue: 1,

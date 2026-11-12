@@ -30,9 +30,9 @@ import { getDb } from "@/lib/mongodb";
 import {
   accumulatePresidentVoteTurn,
   type PresidentVoteTurnDryRun,
-} from "@/lib/presidentialElectionEngine";
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
-import { resolvePresidentApproval } from "@/lib/electionEngine/presidentialCoattail";
+} from "@/lib/elections/presidential/presidentialElectionEngine";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
+import { resolvePresidentApproval } from "@/lib/elections/engine/presidentialCoattail";
 import type { CountryId } from "@/lib/constants/countries";
 
 const COUNTRY = (process.env.COUNTRY ?? "US") as CountryId;

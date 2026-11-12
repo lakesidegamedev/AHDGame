@@ -3,8 +3,8 @@
  * to destroy.
  *
  * These pin a constant rather than driving `runSeed` against a mock database:
- * the function reaches `getDb()` through `isLayer1PositionsEnabled` and
- * `loadEraFullOverride`, so it cannot run without a live connection. The
+ * the function reaches `getDb()` through `loadEraFullOverride`, so it cannot
+ * run without a live connection. The
  * constant is the whole contract, and it is the thing that regresses.
  */
 import fs from "fs";
@@ -334,12 +334,7 @@ describe("reset drop scoping", () => {
 
   it("leaves only genuinely global reference data unscoped", () => {
     const global = RESET_DROP_COLLECTIONS.filter((e) => e.scope === "global").map((e) => e.name);
-    expect(global.sort()).toEqual([
-      "demographicCategories",
-      "formulaGrants",
-      "legislationTypes",
-      "policies",
-    ]);
+    expect(global.sort()).toEqual(["formulaGrants", "legislationTypes", "policies"]);
   });
 
   it("explains every entry that is not scoped by countryId", () => {
@@ -417,7 +412,21 @@ describe("per-country seeder roster", () => {
     // a country may have regions and no authored budget.
     const src = bootstrapSrc();
     const budgets = countriesWith(/await\s+seed([A-Z][a-z])Budgets\(/g, src);
-    const regions = countriesWith(/await\s+seed([A-Z]{2})Regions\(/g, src);
+    // A one-era world seeder (seedCA2027) writes its country's regions itself;
+    // it counts only if its module really writes the states collection.
+    const worldSeeders = [...src.matchAll(/await\s+seed([A-Z]{2})(\d{4})\(/g)].filter(
+      ([, cc, year]) =>
+        fs
+          .readFileSync(
+            path.resolve(process.cwd(), `src/lib/admin/seed/seed${cc}${year}.ts`),
+            "utf8"
+          )
+          .includes("statesCollection")
+    );
+    const regions = [
+      ...countriesWith(/await\s+seed([A-Z]{2})Regions\(/g, src),
+      ...worldSeeders.map(([, cc]) => cc),
+    ];
     for (const c of budgets) {
       expect(regions, `${c} has a budget seeder but no region seeder`).toContain(c);
     }

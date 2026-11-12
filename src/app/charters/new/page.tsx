@@ -7,6 +7,7 @@ import { isSoloCharterTestingEnabled } from "@/lib/deploymentIdentity";
 import { getDb } from "@/lib/mongodb";
 import type { State } from "@/lib/db/types";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +31,7 @@ export default async function NewCharterPage() {
   const db = await getDb();
   const [{ name: countryName }, states] = await Promise.all([
     resolveCountryIdentity(db, countryCode as CountryId),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId: countryCode }, { projection: { _id: 1, name: 1 } })
       .toArray(),
   ]);

@@ -6,6 +6,8 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { findCaucusBySlug, listCaucusMemberships } from "@/lib/db/caucusLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Character, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type MemberFilter = "all" | "players" | "npps";
 
@@ -53,8 +55,7 @@ export async function GET(
 
     const [characters, npps] = await Promise.all([
       characterIds.length
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: characterIds } },
               {
@@ -72,8 +73,7 @@ export async function GET(
             .toArray()
         : Promise.resolve([] as Character[]),
       nppIds.length
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find(
               // Exclude retired NPPs from caucus rosters — they no longer hold office or vote.
               { _id: { $in: nppIds }, retiredAt: null },

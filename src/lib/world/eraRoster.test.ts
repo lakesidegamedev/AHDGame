@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import {
+  backgroundCountriesFor,
   countriesByTier,
   ERA_ROSTER,
+  isBackgroundInPreset,
   isRegisteredTier,
   SHIPPING_PRESETS,
   tierFor,
@@ -11,14 +13,53 @@ import {
 const ALL = Object.keys(COUNTRY_CONFIGS) as CountryId[];
 
 describe("S1 — era roster totality", () => {
-  it("keeps the five modern successor countries in the 2027 world without player access", () => {
-    for (const countryId of ["RU", "PL", "HU", "RO", "BG"] as const) {
-      expect(tierFor("2027-default", countryId), countryId).toBe("npp");
+  it("runs the 2027 world as two player, four NPP-run and sixteen background countries", () => {
+    expect(countriesByTier("2027-default", "player")).toEqual(["US", "CA"]);
+    expect([...countriesByTier("2027-default", "npp")].sort()).toEqual(["CN", "DE", "JP", "UK"]);
+    expect(countriesByTier("2027-default", "econ")).toEqual([]);
+    expect([...countriesByTier("2027-default", "background")].sort()).toEqual(
+      [
+        "IE",
+        "BR",
+        "NG",
+        "RU",
+        "PL",
+        "HU",
+        "RO",
+        "BG",
+        "FR",
+        "IT",
+        "ES",
+        "SE",
+        "TR",
+        "AT",
+        "FI",
+        "GR",
+      ].sort()
+    );
+    expect(isRegisteredTier("background")).toBe(true);
+    expect(isBackgroundInPreset("2027-default", "FR")).toBe(true);
+    expect(isBackgroundInPreset("2027-default", "UK")).toBe(false);
+    expect(backgroundCountriesFor("2027-default")).toHaveLength(16);
+  });
+
+  it("leaves every other preset without background countries", () => {
+    // 2019 is the reference: its tiers are unchanged by the 2027 background tier.
+    expect(countriesByTier("2019-default", "player")).toEqual(["US", "UK", "JP"]);
+    expect(tierFor("2019-default", "FR")).toBe("npp");
+    expect(tierFor("2019-default", "IE")).toBe("econ");
+    for (const preset of SHIPPING_PRESETS) {
+      if (preset === "2027-default") continue;
+      expect(countriesByTier(preset, "background"), preset).toEqual([]);
+      expect(backgroundCountriesFor(preset), preset).toEqual([]);
     }
+    expect(isBackgroundInPreset("2019-default", "FR")).toBe(false);
+    expect(isBackgroundInPreset("empty", "FR")).toBe(false);
+    expect(isBackgroundInPreset(undefined, "FR")).toBe(false);
   });
 
   it("covers every CountryId across every shipping preset", () => {
-    expect(ALL).toHaveLength(29);
+    expect(ALL).toHaveLength(31);
     // Deliberate tripwires, not incidental. Adding a preset or a country should
     // fail here first, so whoever adds one is made to check that the roster
     // covers it rather than letting `tierFor` quietly answer "absent" forever.
@@ -26,7 +67,9 @@ describe("S1 — era roster totality", () => {
     expect(SHIPPING_PRESETS).toHaveLength(8);
     for (const preset of SHIPPING_PRESETS) {
       for (const country of ALL) {
-        expect(["player", "econ", "npp", "latent", "absent"]).toContain(tierFor(preset, country));
+        expect(["player", "econ", "npp", "background", "latent", "absent"]).toContain(
+          tierFor(preset, country)
+        );
       }
     }
   });
@@ -136,6 +179,10 @@ describe("S1 — era roster totality", () => {
       expect(tierFor(preset, "WAL"), preset).toBe("absent");
     }
   });
+
+  it("QC is absent everywhere: latent until a Quebec referendum actuates", () => {
+    for (const preset of SHIPPING_PRESETS) expect(tierFor(preset, "QC"), preset).toBe("absent");
+  });
 });
 
 /**
@@ -186,7 +233,7 @@ describe("roster is a faithful replacement for the manifest", () => {
             ? "player"
             : tier === "econ"
               ? "economy-preview"
-              : tier === "npp"
+              : tier === "npp" || tier === "background"
                 ? "hidden"
                 : null;
         if (expected !== entry.legacyAccess && !INTENDED.has(`${preset}/${country}`)) {

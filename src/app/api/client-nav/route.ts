@@ -1,4 +1,5 @@
 import { desktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { resolveStaffRole } from "@/lib/staff/rules";
 import { mobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
 import { widgetWatchlist } from "@/lib/sidebarWidgets/watchlist";
@@ -25,6 +26,7 @@ import {
   type JusticeOfficeNavEntry,
 } from "@/lib/navigation/justiceOfficeNavEntry";
 import { resolveMySubsidiaryGroupNav } from "@/lib/navigation/resolveMySubsidiaryGroupNav";
+import { countViewerCrisisActions } from "@/lib/crises/queries/crisisBoard";
 import { resolveMyUnionNav } from "@/lib/navigation/resolveMyUnionNav";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import type { CountryId } from "@/lib/constants/countries";
@@ -45,8 +47,26 @@ import type {
   User,
 } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
-import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
 import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { settlementCrisesCollection } from "@/lib/db/repositories/settlementCrises";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -67,8 +87,7 @@ async function computeCanSeeCampaignManager(args: {
   if (presidentElectionIds.length === 0) return false;
 
   const userOid = new ObjectId(userId);
-  const ownedChars = await db
-    .collection<Character>("characters")
+  const ownedChars = await charactersCollection(db)
     .find({ userId: userOid })
     .project({ _id: 1 })
     .toArray();
@@ -77,7 +96,7 @@ async function computeCanSeeCampaignManager(args: {
   const userCampaignClauses: Filter<Campaign>[] = [{ managerId: userOid }];
   if (ownedIds.length > 0) userCampaignClauses.push({ candidateId: { $in: ownedIds } });
 
-  const directCampaignMatch = await db.collection<Campaign>("campaigns").findOne(
+  const directCampaignMatch = await campaignsCollection(db).findOne(
     {
       electionId: { $in: presidentElectionIds },
       $or: userCampaignClauses,
@@ -88,15 +107,15 @@ async function computeCanSeeCampaignManager(args: {
 
   if (ownedIds.length === 0 || !characterCountryId) return false;
 
-  const campaignPartyIds = await db
-    .collection<Campaign>("campaigns")
-    .distinct("party", { electionId: { $in: presidentElectionIds } });
+  const campaignPartyIds = await campaignsCollection(db).distinct("party", {
+    electionId: { $in: presidentElectionIds },
+  });
   const partySeqIds = [
     ...new Set(campaignPartyIds.map((party) => Number(party)).filter(Number.isFinite)),
   ];
   if (partySeqIds.length === 0) return false;
 
-  const officerMatch = await db.collection<PoliticalParty>("politicalParties").findOne(
+  const officerMatch = await politicalPartiesCollection(db).findOne(
     {
       sequentialId: { $in: partySeqIds },
       countryId: characterCountryId,
@@ -122,24 +141,20 @@ export async function GET() {
     const rawToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
     // Start president election + game-state queries immediately — both needed regardless of auth state
-    const presidentElectionPromise = db
-      .collection<Election>("elections")
-      .findOne(
-        { electionType: "president", state: "US", status: { $in: ["active", "upcoming"] } },
-        { projection: { _id: 1, seatId: 1 } }
-      );
+    const presidentElectionPromise = electionsCollection(db).findOne(
+      { electionType: "president", state: "US", status: { $in: ["active", "upcoming"] } },
+      { projection: { _id: 1, seatId: 1 } }
+    );
     /**
-     * Is there a settlement crisis to LOOK at — the subsystem flag AND a live
-     * crisis? The German Question is admin-started and can be closed again, so
-     * the flag alone would leave the nav link standing over an empty board.
-     * Short-circuited on the flag, so a world with the feature off pays nothing
-     * and every other world pays one indexed lookup over a handful of rows.
+     * Is there a settlement crisis to LOOK at? The German Question is
+     * admin-started and can be closed again, so the nav link only stands over a
+     * live board. One indexed lookup over a handful of rows.
      */
-    const isSettlementCrisisLive = async (enabled: boolean | undefined) =>
-      enabled === true &&
-      (await db
-        .collection("settlementCrises")
-        .findOne({ status: { $in: ["open", "frozen"] } }, { projection: { _id: 1 } })) != null;
+    const isSettlementCrisisLive = async () =>
+      (await settlementCrisesCollection<Document>(db).findOne(
+        { status: { $in: ["open", "frozen"] } },
+        { projection: { _id: 1 } }
+      )) != null;
 
     const gameStatePromise = getGameStateCollection(db).then((col) =>
       col.findOne(
@@ -147,12 +162,7 @@ export async function GET() {
         {
           projection: {
             wikiDisabled: 1,
-            subsidiaryCorporationsEnabled: 1,
             singleplayerConfig: 1,
-            rpgStatsEnabled: 1,
-            conflictsEnabled: 1,
-            settlementCrisisEnabled: 1,
-            seasonRecapEnabled: 1,
           },
         }
       )
@@ -191,8 +201,7 @@ export async function GET() {
           imperialCharacter: null,
           isImperialMode: false,
           wikiDisabled: !!gameState?.wikiDisabled,
-          conflictsEnabled: !!gameState?.conflictsEnabled,
-          settlementCrisisLive: await isSettlementCrisisLive(gameState?.settlementCrisisEnabled),
+          settlementCrisisLive: await isSettlementCrisisLive(),
           unionsEnabled: false,
           pendingCharterCount: 0,
           pendingSeasonRecapId: null,
@@ -205,7 +214,7 @@ export async function GET() {
     const userOid = new ObjectId(userId);
 
     const [user, presidentElection, gameState, forexEnabled, unionsEnabled] = await Promise.all([
-      db.collection<User>("users").findOne(
+      usersCollection(db).findOne(
         { _id: userOid },
         {
           projection: {
@@ -245,15 +254,14 @@ export async function GET() {
     ]);
     const sandboxTesterAccessEnabled = user?.sandboxAccessGrantedAt
       ? (
-          await db
-            .collection<GameConfig>("gameConfig")
-            .findOne({ _id: "default" }, { projection: { sandboxTesterAccessEnabled: 1 } })
+          await gameConfigCollection(db).findOne(
+            { _id: "default" },
+            { projection: { sandboxTesterAccessEnabled: 1 } }
+          )
         )?.sandboxTesterAccessEnabled === true
       : false;
     const wikiDisabled = !!gameState?.wikiDisabled;
-    const rpgStatsEnabled = !!gameState?.rpgStatsEnabled;
-    const conflictsEnabled = !!gameState?.conflictsEnabled;
-    const settlementCrisisLive = await isSettlementCrisisLive(gameState?.settlementCrisisEnabled);
+    const settlementCrisisLive = await isSettlementCrisisLive();
 
     if (!user) {
       if (rawToken) {
@@ -283,7 +291,6 @@ export async function GET() {
           imperialCharacter: null,
           isImperialMode: false,
           wikiDisabled,
-          conflictsEnabled,
           settlementCrisisLive,
           unionsEnabled,
           pendingCharterCount: 0,
@@ -299,7 +306,7 @@ export async function GET() {
     const characterQuery = user.activeCharacterId
       ? { _id: user.activeCharacterId, userId: userOid }
       : { userId: userOid };
-    const character = await db.collection<Character>("characters").findOne(characterQuery, {
+    const character = await charactersCollection(db).findOne(characterQuery, {
       projection: {
         _id: 1,
         actions: 1,
@@ -319,7 +326,7 @@ export async function GET() {
     });
 
     // Fire-and-forget last activity update
-    db.collection("users")
+    usersCollection<Document>(db)
       .updateOne({ _id: userOid }, { $set: { lastActivity: new Date() } })
       .catch(() => {});
 
@@ -361,61 +368,52 @@ export async function GET() {
         myCorporation,
       ] = await Promise.all([
         character.homeState
-          ? db
-              .collection<State>("states")
-              .findOne({ _id: character.homeState }, { projection: { name: 1 } })
+          ? statesCollection(db).findOne({ _id: character.homeState }, { projection: { name: 1 } })
           : null,
         character.party && Number.isFinite(Number(character.party))
-          ? db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne(
-                { sequentialId: Number(character.party), countryId: character.countryId },
-                { projection: { name: 1, sequentialId: 1, countryId: 1 } }
-              )
+          ? politicalPartiesCollection(db).findOne(
+              { sequentialId: Number(character.party), countryId: character.countryId },
+              { projection: { name: 1, sequentialId: 1, countryId: 1 } }
+            )
           : null,
-        db.collection<Notification>("notifications").countDocuments({
+        notificationsCollection(db).countDocuments({
           userId: userOid,
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
         }),
-        db.collection("playerMail").countDocuments({
+        playerMailCollection<Document>(db).countDocuments({
           toUserId: userOid,
           read: false,
           deletedByRecipient: false,
           blockedByRecipient: { $ne: true },
         }),
-        db
-          .collection<ElectionCandidate>("electionCandidates")
-          .findOne(
-            { characterId: character._id, status: "active" },
-            { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
-          ),
+        electionCandidatesCollection(db).findOne(
+          { characterId: character._id, status: "active" },
+          { sort: { enteredAt: -1 }, projection: { electionId: 1 } }
+        ),
         // Unified cabinetMembers covers every country's cabinet (US Senate-
         // confirmed and parliamentary/OPS direct-appointment alike).
-        db
-          .collection<{ positionId: string; countryId: string }>("cabinetMembers")
-          .findOne({ characterId: character._id }, { projection: { positionId: 1, countryId: 1 } }),
-        db
-          .collection<{ countryId: string; seatNumber: number }>("supremeCourtSeats")
-          .findOne(
-            { justiceCharacterId: character._id },
-            { projection: { countryId: 1, seatNumber: 1 } }
-          ),
+        cabinetMembersCollection<{ positionId: string; countryId: string }>(db).findOne(
+          { characterId: character._id },
+          { projection: { positionId: 1, countryId: 1 } }
+        ),
+        supremeCourtSeatsCollection<{ countryId: string; seatNumber: number }>(db).findOne(
+          { justiceCharacterId: character._id },
+          { projection: { countryId: 1, seatNumber: 1 } }
+        ),
         !isImperialMode
-          ? db
-              .collection<{
-                sequentialId?: number;
-                type?: string;
-                countryId?: string;
-              }>("corporations")
-              .findOne(
-                {
-                  ceoId: character._id,
-                  ceoVacant: { $ne: true },
-                  imfInstitution: { $ne: true },
-                },
-                { projection: { sequentialId: 1, type: 1, countryId: 1 } }
-              )
+          ? corporationsCollection<{
+              sequentialId?: number;
+              type?: string;
+              countryId?: string;
+            }>(db).findOne(
+              {
+                ceoId: character._id,
+                ceoVacant: { $ne: true },
+                imfInstitution: { $ne: true },
+              },
+              { projection: { sequentialId: 1, type: 1, countryId: 1 } }
+            )
           : Promise.resolve(null),
       ]);
 
@@ -453,7 +451,7 @@ export async function GET() {
       // Governor / Minister-President office lookup (strictly office-holder).
       if (character.countryId) {
         const { getRegionalExecutiveOfficeKey } = await import("@/lib/constants/countries");
-        const officeRow = await db.collection<{ state: string }>("electedOfficials").findOne(
+        const officeRow = await electedOfficialsCollection<{ state: string }>(db).findOne(
           {
             officeType: getRegionalExecutiveOfficeKey(character.countryId),
             characterId: character._id,
@@ -462,9 +460,10 @@ export async function GET() {
           { projection: { state: 1 } }
         );
         if (officeRow) {
-          const officeState = await db
-            .collection<State>("states")
-            .findOne({ _id: officeRow.state }, { projection: { name: 1 } });
+          const officeState = await statesCollection(db).findOne(
+            { _id: officeRow.state },
+            { projection: { name: 1 } }
+          );
           if (officeState) {
             governorOffice = {
               stateId: officeRow.state,
@@ -496,7 +495,7 @@ export async function GET() {
 
       if (myCandidate) {
         // Fetch the election doc for the link label — lightweight findOne, no vote tallies
-        const election = await db.collection<Election>("elections").findOne(
+        const election = await electionsCollection(db).findOne(
           {
             _id: myCandidate.electionId,
             status: { $in: ["upcoming", "active", "completed"] },
@@ -525,9 +524,12 @@ export async function GET() {
                   (election.countryId ?? character.countryId) as CountryId
                 );
 
-          const isNational = ["president", "primeMinister", "uachtaran"].includes(
-            election.electionType
-          );
+          const isNational = [
+            "president",
+            "special_president",
+            "primeMinister",
+            "uachtaran",
+          ].includes(election.electionType);
           activeElection = {
             id: election._id.toString(),
             seatId: election.seatId ?? undefined,
@@ -539,7 +541,7 @@ export async function GET() {
 
     if (isImperialMode && user.activeImperialCharacterId) {
       const [activeImperialCharacterDoc, imperialCorporation] = await Promise.all([
-        db.collection<ImperialCharacter>("imperialCharacters").findOne(
+        imperialCharactersCollection(db).findOne(
           { _id: user.activeImperialCharacterId, userId: userOid },
           {
             projection: {
@@ -554,7 +556,7 @@ export async function GET() {
             },
           }
         ),
-        db.collection<{ sequentialId?: number }>("corporations").findOne(
+        corporationsCollection<{ sequentialId?: number }>(db).findOne(
           {
             ceoId: user.activeImperialCharacterId,
             ceoType: "imperial",
@@ -583,8 +585,7 @@ export async function GET() {
 
     const myCorporationHasGroup = await resolveMySubsidiaryGroupNav(
       db,
-      myCorporationId != null ? myCorporationObjectId : null,
-      gameState?.subsidiaryCorporationsEnabled === true
+      myCorporationId != null ? myCorporationObjectId : null
     );
 
     // Admin: character switcher + imperial mode
@@ -597,13 +598,12 @@ export async function GET() {
     } | null = null;
     if (user.isAdmin) {
       const [allChars, imperialChar] = await Promise.all([
-        db
-          .collection("characters")
+        charactersCollection(db)
           .find({ userId: userOid })
           .project({ _id: 1, name: 1, countryId: 1, party: 1 })
           .toArray(),
         user.activeImperialCharacterId
-          ? db.collection<ImperialCharacter>("imperialCharacters").findOne(
+          ? imperialCharactersCollection(db).findOne(
               { _id: user.activeImperialCharacterId },
               {
                 projection: {
@@ -629,9 +629,10 @@ export async function GET() {
 
       // Override homeState with imperial character's home state when in imperial mode
       if (isImperialMode && imperialChar?.homeState) {
-        const imperialStateDoc = await db
-          .collection<State>("states")
-          .findOne({ _id: imperialChar.homeState }, { projection: { name: 1 } });
+        const imperialStateDoc = await statesCollection(db).findOne(
+          { _id: imperialChar.homeState },
+          { projection: { name: 1 } }
+        );
         if (imperialStateDoc) {
           homeState = {
             id: imperialChar.homeState,
@@ -692,13 +693,12 @@ export async function GET() {
     // act on; ratified / migrated / migrated-incomplete charters live
     // behind the party page itself rather than the charter list.
     let pendingCharterCount = 0;
-    const ownedCharacters = await db
-      .collection<Character>("characters")
+    const ownedCharacters = await charactersCollection(db)
       .find({ userId: userOid })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();
     if (ownedCharacters.length > 0) {
-      pendingCharterCount = await db.collection("partyCharters").countDocuments({
+      pendingCharterCount = await partyChartersCollection<Document>(db).countDocuments({
         foundersCharacterIds: { $in: ownedCharacters.map((c) => c._id) },
         status: { $in: ["pending-signatures", "founder-replacement"] },
       });
@@ -706,19 +706,23 @@ export async function GET() {
 
     // Post-reset / post-retirement Season Recap ("Wrapped"): surface the newest
     // unviewed recap for character-less sessions (the state right after a reset
-    // or a retirement). Gated on the flag AND only queried when the viewer has
-    // no active character, keeping this hot path cheap for the ~99% who do.
+    // or a retirement). Only queried when the viewer has no active character,
+    // keeping this hot path cheap for the ~99% who do.
     // Re-viewing older recaps happens in character history, not here.
     let pendingSeasonRecapId: string | null = null;
-    if (isSeasonRecapEnabled(gameState) && !character) {
-      const pendingRecap = await db
-        .collection<RetiredCharacter>("retiredCharacters")
-        .findOne(
-          { userId: userOid, recap: { $exists: true }, recapViewedAt: { $exists: false } },
-          { sort: { retiredAt: -1 }, projection: { _id: 1 } }
-        );
+    if (!character) {
+      const pendingRecap = await retiredCharactersCollection(db).findOne(
+        { userId: userOid, recap: { $exists: true }, recapViewedAt: { $exists: false } },
+        { sort: { retiredAt: -1 }, projection: { _id: 1 } }
+      );
       pendingSeasonRecapId = pendingRecap?._id.toString() ?? null;
     }
+
+    // Best effort: a failed count must never take the navbar down with it.
+    const crisisActionCount =
+      character && !isImperialMode
+        ? await countViewerCrisisActions(db, character._id).catch(() => 0)
+        : 0;
 
     const response = NextResponse.json(
       {
@@ -733,8 +737,9 @@ export async function GET() {
           isAdmin: authUser.isAdmin ?? false,
           isModerator:
             (authUser.isAdmin ?? false) || user.role === "moderator" || user.role === "admin",
+          isJuniorDev: authUser.isJuniorDev === true,
+          staffRole: resolveStaffRole(user),
           forexEnabled,
-          rpgStatsEnabled,
           canSeeCampaignManager,
           patreonAdPreference:
             user.patreonAdPreference ?? (user.adsDisabled ? "ad-free" : "all-ads"),
@@ -768,8 +773,7 @@ export async function GET() {
                 displayCurrencyPreference:
                   character.displayCurrencyPreference ?? (forexEnabled ? "local" : "internal"),
                 // Grandfather flag: drives the blocking stat-allocation modal.
-                // Gated behind the RPG-stats feature flag.
-                needsStatAllocation: rpgStatsEnabled && !character.statsAllocated,
+                needsStatAllocation: !character.statsAllocated,
                 // One-time wealth background re-pick after an economy reset.
                 needsWealthTierRepick: character.wealthTierRepickPending === true,
               }
@@ -803,13 +807,14 @@ export async function GET() {
         imperialCharacter: adminImperialCharacter,
         isImperialMode,
         wikiDisabled,
-        conflictsEnabled,
         settlementCrisisLive,
         unionsEnabled,
         pendingCharterCount,
         pendingSeasonRecapId,
+        crisisActionCount,
       },
-      { headers: { "Cache-Control": "private, max-age=5, no-transform" } }
+      // Per-user and changes the moment a crisis moves: never stored anywhere.
+      { headers: { "Cache-Control": "private, no-store, no-transform" } }
     );
     // Mirror the opt-in onto the cookie the root template reads. Running here,
     // on every app load, is what carries a toggle made on another device to

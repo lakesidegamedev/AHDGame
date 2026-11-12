@@ -1,13 +1,12 @@
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
+import type { CountryId } from "@/lib/constants/countries";
 import type { Db } from "mongodb";
-import type {
-  Character,
-  NPP,
-  PartyHistorySnapshot,
-  PoliticalParty,
-  StatePartyOrg,
-} from "@/lib/db/types";
-import { COUNTRY_ORDER, COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import type { PartyHistorySnapshot, StatePartyOrg } from "@/lib/db/types";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyHistoryCollection } from "@/lib/db/repositories/partyHistory";
 
 const HISTORY_CAP = 48;
 
@@ -19,22 +18,20 @@ type OrgRow = { _id: { countryId: string; partyId: string }; organization: numbe
  * Used by the parties page trend chart.
  */
 export async function snapshotPartyHistory(db: Db, turn: number): Promise<number> {
-  const activeCountries = (await getRegisteredCountryIds(db)).filter(
-    (id) => COUNTRY_CONFIGS[id].status === "active" || !COUNTRY_ORDER.includes(id)
-  );
+  // Full-simulation countries only: a background country (#5702) has no
+  // politicians, government or legislature for this phase to run.
+  const activeCountries = await getFullSimulationCountryIds(db);
   if (activeCountries.length === 0) return 0;
 
   const countryFilter = { countryId: { $in: activeCountries } };
   const partyIds = activeCountries.map((id) => id);
 
   const [parties, orgRows, playerRows, nppRows] = await Promise.all([
-    db
-      .collection<PoliticalParty>("politicalParties")
+    (await getPoliticalPartiesCollection(db))
       .find(countryFilter)
       .project({ sequentialId: 1, countryId: 1 })
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .aggregate<OrgRow>([
         { $match: { countryId: { $in: partyIds } } },
         {
@@ -45,8 +42,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
         },
       ])
       .toArray(),
-    db
-      .collection<Character>("characters")
+    (await getCharactersCollection(db))
       .aggregate<CountRow>([
         { $match: { countryId: { $in: partyIds } } },
         {
@@ -60,8 +56,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
         },
       ])
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    (await getNppsCollection(db))
       .aggregate<CountRow>([
         { $match: { countryId: { $in: partyIds }, retiredAt: null } },
         {
@@ -87,7 +82,7 @@ export async function snapshotPartyHistory(db: Db, turn: number): Promise<number
     nppRows.map((row) => [`${row._id.countryId}:${row._id.party}`, row.count])
   );
 
-  const snapshotCol = db.collection<PartyHistorySnapshot>("partyHistory");
+  const snapshotCol = partyHistoryCollection(db);
   const now = new Date();
 
   const snapshots = parties.map((party) => {

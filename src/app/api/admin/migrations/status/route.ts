@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { migrationsCollection } from "@/lib/db/repositories/migrations";
 
 interface MigrationRecord {
   _id: string;
@@ -19,7 +20,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const migrations = await db.collection<MigrationRecord>("migrations").find({}).toArray();
+    const migrations = await migrationsCollection<MigrationRecord>(db).find({}).toArray();
 
     return NextResponse.json({
       migrations: migrations.map((m) => ({
@@ -49,7 +50,7 @@ export async function DELETE(request: Request) {
     }
 
     const db = await getDb();
-    const result = await db.collection<MigrationRecord>("migrations").deleteOne({ _id: id });
+    const result = await migrationsCollection<MigrationRecord>(db).deleteOne({ _id: id });
 
     if (result.deletedCount === 0) {
       return errorResponse(404, "Migration record not found");

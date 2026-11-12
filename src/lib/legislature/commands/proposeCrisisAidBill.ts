@@ -4,11 +4,14 @@ import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameState } from "@/lib/gameState";
 import type { Bill, BillChamber } from "@/lib/db/types";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
 
 export interface ProposeCrisisAidBillInput {
+  /** Pre-allocated id, so a commitment can name the bill before it exists. */
+  billId?: ObjectId;
   countryId: CountryId;
   crisisAidId: ObjectId;
   sponsorId: ObjectId;
@@ -62,6 +65,7 @@ export async function proposeCrisisAidBill(
     updatedAt: now,
   };
 
-  const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
-  return result.insertedId;
+  const _id = input.billId ?? new ObjectId();
+  await billsCollection(db).insertOne({ _id, ...bill });
+  return _id;
 }

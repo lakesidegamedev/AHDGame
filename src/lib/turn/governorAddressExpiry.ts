@@ -2,28 +2,21 @@ import type { Db } from "mongodb";
 import type { GovernorAddress } from "@/lib/db/types";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
 import { readTurnoutModifier, turnoutModifierPath } from "@/lib/demographics/turnoutTarget";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
 
 /**
  * Turn phase: expire address effects whose `expiresAtTurn` has passed.
  *
- * Approval bump expires read-side (callers filter by
- * `approvalEffect.expiresAtTurn > currentTurn`); this phase just flips the
- * `expired` flag so the row stops being picked up by historical queries.
- *
- * Demographic turnout boost is applied write-side at delivery (added to
- * `stateDemographicTurnout.modifiers.voterGroups[group]`) so at expiry we
- * subtract the snapshotted `turnoutDelta` back out. Modifier is left clamped
- * to 0 minimum so concurrent canvassing decay can't push it below floor.
- *
- * Agenda effect is purely read-side (consumed in stateBillVoting cross-pressure),
- * so expiry is just a flag flip — no compensating action needed.
+ * Approval and agenda effects are read-side, so expiry just flips `expired`.
+ * Demographic turnout boost is applied write-side, so expiry subtracts the
+ * snapshotted `turnoutDelta`, clamped to 0 so concurrent decay stays above floor.
  */
 export async function processGovernorAddressExpiry(
   db: Db,
   currentTurn: number
 ): Promise<{ approvalExpired: number; demographicExpired: number; turnoutReverted: number }> {
-  const candidates = await db
-    .collection<GovernorAddress>("governorAddresses")
+  const candidates = await governorAddressesCollection(db)
     .find({
       $or: [
         {
@@ -60,8 +53,7 @@ export async function processGovernorAddressExpiry(
       const deltasByState = a.demographicEffect.turnoutDeltasByState;
       if (groupId && deltasByState && Object.keys(deltasByState).length > 0) {
         const stateIds = Object.keys(deltasByState);
-        const turnoutDocs = await db
-          .collection<StateDemographicTurnout>("stateDemographicTurnout")
+        const turnoutDocs = await stateDemographicTurnoutCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray();
         const currentByState = new Map(
@@ -91,18 +83,18 @@ export async function processGovernorAddressExpiry(
           });
         }
         if (ops.length > 0) {
-          await db.collection<StateDemographicTurnout>("stateDemographicTurnout").bulkWrite(ops);
+          await stateDemographicTurnoutCollection(db).bulkWrite(ops);
           turnoutReverted += ops.length;
         }
       } else {
         const delta = a.demographicEffect.turnoutDelta ?? 0;
         if (delta > 0 && groupId) {
-          const turnoutDoc = await db
-            .collection<StateDemographicTurnout>("stateDemographicTurnout")
-            .findOne({ _id: a.stateId });
+          const turnoutDoc = await stateDemographicTurnoutCollection(db).findOne({
+            _id: a.stateId,
+          });
           const currentModifier = readTurnoutModifier(turnoutDoc?.modifiers, groupId);
           const newModifier = Math.max(-20, Math.min(20, currentModifier - delta));
-          await db.collection<StateDemographicTurnout>("stateDemographicTurnout").updateOne(
+          await stateDemographicTurnoutCollection(db).updateOne(
             { _id: a.stateId },
             {
               $set: {
@@ -116,9 +108,7 @@ export async function processGovernorAddressExpiry(
       }
     }
     if (Object.keys(setOps).length > 0) {
-      await db
-        .collection<GovernorAddress>("governorAddresses")
-        .updateOne({ _id: a._id }, { $set: setOps });
+      await governorAddressesCollection(db).updateOne({ _id: a._id }, { $set: setOps });
     }
   }
   return { approvalExpired, demographicExpired, turnoutReverted };

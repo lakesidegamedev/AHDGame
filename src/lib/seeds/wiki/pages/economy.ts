@@ -26,6 +26,7 @@ import { indexFundsContent } from "../content/indexFunds";
 import { lineOfCreditContent } from "../content/lineOfCredit";
 import { savingsInterestContent } from "../content/savingsInterest";
 import { sovereignDefaultContent } from "../content/sovereignDefault";
+import { automationLevyContent } from "../content/automationLevy";
 import { imfContent } from "../content/imf";
 import { corporateMergersContent } from "../content/corporateMergers";
 import { subsidiaryCorporationsContent } from "../content/subsidiaryCorporations";
@@ -491,5 +492,18 @@ export const economyPages: readonly WikiSeedPage[] = [
     difficulty: "advanced",
     contentType: "guide",
     estimatedReadTime: 6,
+  },
+  {
+    slug: "automation-levy",
+    lastUpdated: "2026-11-10",
+    title: "Automation Levy",
+    description:
+      "The automation tax and pension levy: which production methods pay, the rates by law level, the 10% ceiling, and how the money reaches the national treasury.",
+    content: automationLevyContent,
+    category: "economy",
+    extraTags: ["automation", "tax", "treasury"],
+    difficulty: "intermediate",
+    contentType: "mechanics",
+    estimatedReadTime: 4,
   },
 ];

@@ -9,7 +9,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { createFakeCommonsDb } from "@/lib/uk/elections/commonsTestDb";
+import { createFakeCommonsDb } from "@/lib/countries/uk/elections/commonsTestDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));

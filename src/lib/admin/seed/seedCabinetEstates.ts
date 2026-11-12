@@ -9,6 +9,8 @@ import {
 } from "@/lib/constants/cabinetEstates";
 import { getCabinetEstatesCollection } from "@/lib/db/collections/cabinetEstates";
 import type { CabinetEstate } from "@/lib/db/types/cabinetEstate";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -107,7 +109,10 @@ export async function seedCabinetEstates(db: Db): Promise<void> {
   for (const countryId of allCountryIds) {
     const seats = ESTATE_PORTFOLIO_BY_COUNTRY[countryId];
     if (!seats) continue;
-    const regions = await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray();
+    const regions = await statesCollection<Document>(db)
+      .find({ countryId })
+      .project({ _id: 1 })
+      .toArray();
     const regionIds = regions.map((s) => String(s._id));
     const otherCountryIds = allCountryIds.filter(
       (c) => c !== countryId && ESTATE_PORTFOLIO_BY_COUNTRY[c]

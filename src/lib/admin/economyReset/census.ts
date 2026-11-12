@@ -15,18 +15,36 @@ import type { CountryId } from "@/lib/constants/countries";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { collectBalances } from "@/lib/ledger/balanceSnapshot";
-import { SOVEREIGN_COUPON_CLAIMS_COLLECTION } from "@/lib/banking/fundedSovereignCoupons";
-import { NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION } from "@/lib/db/nonAtomicMoneyFlow";
 import type { GameState } from "@/lib/db/types/gameState";
 import {
   economyResetFullWipeCollections,
   type EconomyResetFullWipeCollection,
 } from "./collections";
+import { loadOldCatalogueEvidence } from "@/lib/admin/resetContract/residueScan";
 import { economyResetPlanDigest } from "./digest";
 import { PRIVATE_HOLDER_COLLECTIONS, type MaturityClaimSource } from "./rules/bonds";
 import type { PartialMoneyMoveSource } from "./rules/moneyMoves";
 import { buildEconomyResetPlan, type EconomyResetSource } from "./rules/plan";
 import type { EconomyResetPlan } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { nonAtomicMoneyFlowReceiptsCollection } from "@/lib/db/repositories/nonAtomicMoneyFlowReceipts";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
@@ -191,7 +209,7 @@ async function loadSource(
   fence: Fence,
   options: EconomyResetCensusOptions
 ): Promise<EconomyResetSource> {
-  const config = await db.collection<Document>("gameConfig").findOne(
+  const config = await gameConfigCollection<Document>(db).findOne(
     { _id: "default" as never },
     {
       projection: {
@@ -239,13 +257,11 @@ async function loadSource(
         db.collection(name).countDocuments({})
       )
     ),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
     loadCampaignCurrencyRates(db),
-    db
-      .collection<Document>("characters")
+    charactersCollection<Document>(db)
       .find(
         {},
         {
@@ -262,12 +278,10 @@ async function loadSource(
         }
       )
       .toArray(),
-    db
-      .collection<Document>("imperialCharacters")
+    imperialCharactersCollection<Document>(db)
       .find({}, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection<Document>("npps")
+    nppsCollection<Document>(db)
       .find(
         {
           $or: [
@@ -280,8 +294,7 @@ async function loadSource(
         { projection: { "currencyBalances.savings": 1, lineOfCredit: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("bonds")
+    bondsCollection<Document>(db)
       .find(
         {},
         {
@@ -306,12 +319,10 @@ async function loadSource(
         }
       )
       .toArray(),
-    db
-      .collection<Document>(SOVEREIGN_COUPON_CLAIMS_COLLECTION)
+    sovereignCouponClaimsCollection<Document>(db)
       .find({ settledTurn: { $exists: false } })
       .toArray(),
-    db
-      .collection<Document>("federalBudget")
+    federalBudgetCollection<Document>(db)
       .find(
         {},
         {
@@ -324,38 +335,31 @@ async function loadSource(
         }
       )
       .toArray(),
-    db
-      .collection<Document>("centralBanks")
+    centralBanksCollection<Document>(db)
       .find({}, { projection: { reserveBalance: 1, pendingLocReserveCredit: 1 } })
       .toArray(),
-    db
-      .collection<Document>("producerEconomyAccounts")
+    producerEconomyAccountsCollection<Document>(db)
       .find(
         { kind: "publicBuyer", worldEpoch: fence.worldEpochId },
         { projection: { countryId: 1, currency: 1, cash: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("defenceContracts")
+    defenceContractsCollection<Document>(db)
       .find(
         { status: { $in: ["pending", "active"] } },
         { projection: { countryId: 1, encumberedAmount: 1 } }
       )
       .toArray(),
-    db
-      .collection<Document>("pensionSchemes")
+    pensionSchemesCollection(db)
       .find({}, { projection: { assetsAnchor: 1, investedValueAnchor: 1 } })
       .toArray(),
-    db.collection("playerIncomeTaxAssessments").countDocuments(VOIDED_INCOME_TAX_FILTER),
-    db.collection("playerIncomeTaxAssessments").countDocuments({ status: "collected" }),
-    db
-      .collection(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION)
-      .countDocuments({ status: "in_progress" }),
-    db
-      .collection<Document>("bankMoneyMoves")
+    playerIncomeTaxAssessmentsCollection<Document>(db).countDocuments(VOIDED_INCOME_TAX_FILTER),
+    playerIncomeTaxAssessmentsCollection<Document>(db).countDocuments({ status: "collected" }),
+    nonAtomicMoneyFlowReceiptsCollection<Document>(db).countDocuments({ status: "in_progress" }),
+    bankMoneyMovesCollection(db)
       .find({ status: "partial" }, { projection: { kind: 1, turn: 1, legs: 1 } })
       .toArray(),
-    db.collection("bankLoans").countDocuments({}),
+    bankLoansCollection<Document>(db).countDocuments({}),
     collectBalances(db, { treasuryCashLedgerEnabled }),
     Promise.resolve(fence.worldEpochId!),
     Promise.all(
@@ -378,8 +382,7 @@ async function loadSource(
   const userIds = [...new Set(characters.map((c) => c.userId).filter(Boolean))];
   const referredUsers = new Set(
     (
-      await db
-        .collection<Document>("users")
+      await usersCollection<Document>(db)
         .find(
           { _id: { $in: userIds }, referredBy: { $exists: true, $ne: null } },
           { projection: { _id: 1 } }
@@ -394,7 +397,7 @@ async function loadSource(
   const corporateBondHistory =
     corporateIds.length === 0
       ? 0
-      : await db.collection("bondHistory").countDocuments({ bondId: { $in: corporateIds } });
+      : await bondHistoryCollection<Document>(db).countDocuments({ bondId: { $in: corporateIds } });
 
   const nationalBudgets = budgets.filter(
     (budget) =>
@@ -428,6 +431,7 @@ async function loadSource(
       bondHistory: corporateBondHistory,
       playerIncomeTaxAssessments: openIncomeTax,
     },
+    retiredLawEvidence: await loadOldCatalogueEvidence(db, true),
     reseedCounts: Object.fromEntries(
       ECONOMY_RESET_RESEED_COLLECTIONS.map((name, i) => [name, reseedCounts[i]])
     ),
@@ -575,9 +579,10 @@ export async function captureEconomyResetPlan(
   options: EconomyResetCensusOptions
 ): Promise<EconomyResetCensus> {
   const readFence = () =>
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: FENCE_PROJECTION }) as Promise<Fence | null>;
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: FENCE_PROJECTION }
+    ) as Promise<Fence | null>;
   const before = await readFence();
   if (!fenceOk(before, options))
     throw new Error("The expected world is not at an idle turn fence for the economy reset");

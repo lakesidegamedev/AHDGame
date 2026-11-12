@@ -22,6 +22,9 @@ import {
   loadRussianDuma1995Decisions,
   openRussianDuma1995Proposal,
 } from "@/lib/countries/ru/dumaElectoralProposals1995";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 const bodySchema = z
   .object({
     kind: z.enum([
@@ -36,7 +39,7 @@ const bodySchema = z
 type RouteContext = { params: Promise<{ code: string }> };
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
-    if ((await params).code.toUpperCase() !== "RU")
+    if (!countryHasFeature("ruApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Russian constitutional decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -59,7 +62,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
 }
 export async function POST(request: Request, { params }: RouteContext) {
   try {
-    if ((await params).code.toUpperCase() !== "RU")
+    if (!countryHasFeature("ruApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Russian constitutional decision here");
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -74,7 +77,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     const offices = await loadRuntimeCountryOffices(db, "RU", game.preset);
     const character = await getCharacterByUserId(db, auth.user.userId);
     const official = character
-      ? await db.collection("electedOfficials").findOne(
+      ? await electedOfficialsCollection<Document>(db).findOne(
           {
             characterId: character._id,
             countryId: "RU",

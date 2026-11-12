@@ -206,7 +206,7 @@ describe("1991-default seed bundles — coverage", () => {
     expect(usBudget?.gdp).toBeLessThan(10_000_000_000_000); // 1991 GDP < $10T
   });
 
-  it("selectPresetBundle returns the requested bundle and falls back to 2019", () => {
+  it("selectPresetBundle returns the requested bundle and never falls back to 2019", () => {
     const b = selectPresetBundle(
       "1991-default",
       {
@@ -216,14 +216,9 @@ describe("1991-default seed bundles — coverage", () => {
       "test"
     );
     expect(b).toBe("old");
-    const fallback = selectPresetBundle(
-      "unknown",
-      {
-        "2019-default": "current",
-      },
-      "test"
+    expect(() => selectPresetBundle("unknown", { "2019-default": "current" }, "test")).toThrow(
+      /no authored entry/
     );
-    expect(fallback).toBe("current");
   });
 
   it("1991 sector weights skew manufacturing-heavy vs 2019 tech-heavy", () => {
@@ -363,7 +358,7 @@ describe("runCoreSeed wires preset into stateMetrics (Gap #1)", () => {
 describe("basePolicies — preset-aware (Gap #4)", () => {
   it("getBasePolicies('2019-default') is the canonical basePolicies minus post-2019 windows", async () => {
     // The era policy vacuum (Spec A) drops default policies for domains that open
-    // after the preset year — for 2019 that is just cn_common_prosperity (2021).
+    // after the preset year — for 2019 that is just the 2027 era laws.
     const { getBasePolicies, basePolicies } = await import("./basePolicies");
     const { LEGISLATION_ERA } = await import("@/lib/era/legislationCatalog");
     const out = await getBasePolicies("2019-default");
@@ -374,58 +369,7 @@ describe("basePolicies — preset-aware (Gap #4)", () => {
     expect(out.map((p) => p.legislationTypeId).sort()).toEqual(
       expected.map((p) => p.legislationTypeId).sort()
     );
-    expect(out.some((p) => p.legislationTypeId === "cn_common_prosperity")).toBe(false);
-  });
-
-  it("getBasePolicies('1991-default') aligns US income-tax rate but keeps corporate tax era-specific", async () => {
-    const { getBasePolicies } = await import("./basePolicies");
-    const policies1991 = await getBasePolicies("1991-default");
-    const policies2019 = await getBasePolicies("2019-default");
-    const findFed = (policies: typeof policies1991, typeId: string) =>
-      policies.find((p) => p.legislationTypeId === typeId && p.scope === "national");
-
-    // Income tax: the flat rate is a revenue-calibration knob, not the statutory
-    // rate. US individual income tax was ~7.4% of GDP in 1991 and ~8% in 2019,
-    // so both eras sit at index 4 (20%); the era difference is carried by the
-    // taxableIncome base ratio, not the rate.
-    expect(findFed(policies1991, "us_federal_income_tax_rate")?.policyOptionIndex).toBe(4);
-    expect(findFed(policies2019, "us_federal_income_tax_rate")?.policyOptionIndex).toBe(4);
-
-    // Corporate tax IS era-specific: 1991 pre-TCJA 34% (index 8) vs 2019 21% (index 5).
-    const corp1991 = findFed(
-      policies1991,
-      "us_federal_domestic_corporate_tax_rate"
-    )?.policyOptionIndex;
-    const corp2019 = findFed(
-      policies2019,
-      "us_federal_domestic_corporate_tax_rate"
-    )?.policyOptionIndex;
-    expect(corp1991).toBe(8);
-    expect(corp2019).toBe(5);
-    expect(corp1991).not.toBe(corp2019);
-  });
-
-  it("getBasePolicies('1991-default') uses era-correct UK tax indexes", async () => {
-    const { getBasePolicies } = await import("./basePolicies");
-    const policies1991 = await getBasePolicies("1991-default");
-    const ukVat = policies1991.find(
-      (p) => p.legislationTypeId === "uk_vat" && p.scope === "national"
-    );
-    const ukIncome = policies1991.find(
-      (p) => p.legislationTypeId === "uk_income_tax_rate" && p.scope === "national"
-    );
-    expect(ukVat?.policyOptionIndex).toBe(4); // 17.5% in 1991 (vs 20% in 2020)
-    expect(ukIncome?.policyOptionIndex).toBe(6); // 25% basic in 1991 (vs 20% in 2020)
-  });
-
-  it("getBasePolicies('1991-default') zeroes JP consumption tax to era index", async () => {
-    const { getBasePolicies } = await import("./basePolicies");
-    const policies1991 = await getBasePolicies("1991-default");
-    const jpVat = policies1991.find(
-      (p) => p.legislationTypeId === "jp_consumption_tax" && p.scope === "national"
-    );
-    // JP consumption tax was 3% in 1991 (introduced Apr 1989), raised to 10% by 2020.
-    expect(jpVat?.policyOptionIndex).toBe(1);
+    expect(out.some((p) => p.legislationTypeId === "ie_ai_liability_act")).toBe(false);
   });
 
   it("getBasePolicies('1991-default') generates sub-national records for IE 1991 regions", async () => {

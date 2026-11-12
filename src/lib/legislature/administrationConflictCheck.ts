@@ -7,6 +7,8 @@ import {
   resolveAdministrationConflicts,
   type AdministrationConflict,
 } from "./administrationConflicts";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * Database shell for the pure conflict rule. The shared country query retains
@@ -18,8 +20,7 @@ export async function findAdministrationConflict(
   proposed: Array<Pick<LegislationType, "_id" | "administration">>
 ): Promise<AdministrationConflict | undefined> {
   if (proposed.length === 0) return undefined;
-  const activeLaws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const activeLaws = await enactedLawsCollection(db)
     .find(
       {
         scope: "national",
@@ -33,8 +34,7 @@ export async function findAdministrationConflict(
   const activeTypes =
     activeTypeIds.length === 0
       ? []
-      : await db
-          .collection<LegislationType>("legislationTypes")
+      : await legislationTypesCollection(db)
           .find({ _id: { $in: activeTypeIds } }, { projection: { _id: 1, administration: 1 } })
           .toArray();
   return resolveAdministrationConflicts({ proposed, existing: activeTypes }).conflicts[0];

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { STATE_FLAGS } from "@/lib/constants";
+import { STATE_FLAGS } from "@/lib/constants/flags";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
@@ -45,11 +45,9 @@ export default function HeroCard({
   corpHref,
   stateHref,
 }: HeroCardProps) {
-  // When a money stat is absent because it was withheld (not because it is
-  // genuinely zero), render a labelled "Hidden" marker with the reason instead
-  // of a bare dash that reads as a real $0. hidden === false (owner/admin) and
-  // pre-label responses both fall through to the ordinary dash placeholder the
-  // rest of the app uses for absent stats.
+  // When a money stat is absent because it was withheld (not zero), render
+  // a labelled "Hidden" marker with the reason instead of a bare dash that
+  // reads as a real $0. Otherwise fall through to the ordinary dash.
   const hiddenCopy =
     financialVisibility?.hidden === true
       ? financialVisibilityCopy(financialVisibility.reason)

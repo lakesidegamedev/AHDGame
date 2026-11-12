@@ -1,38 +1,16 @@
 /**
- * Divergence algorithm (#3598, spec #3581, ahd-scotus-adr-majority-headcount-divergence).
+ * Divergence: at case decision time, count seated justices (vacancies excluded)
+ * on each side of the case's tagged axis. If the majority side matches the
+ * authored historical-majority direction the case affirms history; otherwise it
+ * diverges. Majority is a straight headcount, NOT an average of lean scores, so
+ * outlier justices cannot drag the mean across the line.
  *
- * At case decision time, count seated justices (vacant seats excluded from the
- * denominator) on each side of the case's tagged axis (economic or social). If
- * the current majority's side matches the case's authored historical-majority
- * direction, the case affirms history (no-op). If it differs, the case
- * diverges. Majority is a straight headcount — NOT an average of lean scores,
- * so outlier justices can't drag a court-wide mean across the line the way a
- * real 9-member panel never would.
- *
- * Pure function, no DB dependency — unit-tested in isolation per #3598's
- * testing section.
- *
- * RACE/EQUALITY CASES ARE DELIBERATELY EXEMPT FROM THIS ALGORITHM
- * -----------------------------------------------------------------
- * This is a settled product decision, not an inconsistency to be tidied up:
- * Brown v. Board and the other racial-equal-protection cases in the catalogue
- * (Loving v. Virginia, Griggs v. Duke Power, Bakke v. Regents, Shelby County
- * v. Holder — see `historicalOutcomeLocked` on `DocketCase` and the file
- * header of `src/lib/scotus/presetData/1953.ts`) always resolve to their real
- * historical outcome, regardless of the sitting Court's composition. There is
- * no "what if segregation were upheld" branch, and none should be added —
- * composition-driven headcount divergence for these specific cases is out of
- * scope, permanently, not merely unimplemented. The demographic CONSEQUENCES
- * of these rulings (Southern white defection, Black voter consolidation and
- * turnout gains) are still modeled in full via `src/lib/demographics/
- * eraCheckpoints.ts` — what is fixed is the ruling, not its downstream
- * politics.
- *
- * Every OTHER case in the catalogue — the reapportionment trio (Baker v.
- * Carr/Reynolds v. Sims/Wesberry v. Sanders), Engel v. Vitale, Griswold v.
- * Connecticut, Watkins v. United States, Mapp v. Ohio, Miranda v. Arizona, NYT
- * v. Sullivan, and the rest — is genuine alternate-history territory and
- * continues to use the composition-driven headcount below unmodified.
+ * RACE/EQUALITY CASES ARE DELIBERATELY EXEMPT: Brown v. Board and the other
+ * racial-equal-protection cases (see `historicalOutcomeLocked` on `DocketCase`)
+ * always resolve to their real historical outcome regardless of court
+ * composition. There is no alternate-history branch for these and none should
+ * be added; only their downstream demographic consequences are modeled. Every
+ * other case uses the composition-driven headcount below.
  */
 
 export type CaseAxis = "economic" | "social";
@@ -106,12 +84,9 @@ export function decideCaseOutcome(
   const majoritySide: MajorityDirection | 0 =
     positiveCount > negativeCount ? 1 : negativeCount > positiveCount ? -1 : 0;
 
-  // A court with no clear majority cannot hand down a ruling (ticket 1187): a
-  // tied headcount (e.g. 4-4) has to affirm — uphold the existing/lower
-  // result — the same as an empty bench, which also cannot overrule history.
-  // Without this guard, `majoritySide` 0 never equals the authored ±1
-  // direction, so a tied court would fire as a "divergence" no player or NPP
-  // actually caused.
+  // A tied or empty bench cannot overrule: majoritySide 0 must affirm.
+  // Otherwise it never equals the authored ±1 direction and fires as a
+  // divergence no player or NPP caused.
   const outcome: CaseOutcome =
     options?.historicalOutcomeLocked || majoritySide === 0
       ? "affirmed"

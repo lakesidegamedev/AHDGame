@@ -4,7 +4,6 @@ import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import Link from "next/link";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import type { GameState } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import type { CharacterRecap } from "@/lib/recap/types";
 import { getAuthUser } from "@/lib/auth";
@@ -12,7 +11,7 @@ import { getCachedMaintenanceStatus } from "@/lib/maintenanceStatus";
 import { publicPageMetadata } from "@/lib/siteMetadata";
 import { MaintenanceCountdown } from "./MaintenanceCountdown";
 import { MaintenanceRecapLauncher } from "./MaintenanceRecapLauncher";
-import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 export const dynamic = "force-dynamic";
 
@@ -51,21 +50,17 @@ export default async function MaintenancePage() {
   let newAccount = false;
   try {
     if (authUser) {
-      const [gs, retired, anyRetired] = await Promise.all([
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { seasonRecapEnabled: 1 } }),
-        db
-          .collection<RetiredCharacter>("retiredCharacters")
-          .findOne(
-            { userId: new ObjectId(authUser.userId), recap: { $exists: true } },
-            { sort: { retiredAt: -1 }, projection: { recap: 1 } }
-          ),
-        db
-          .collection<RetiredCharacter>("retiredCharacters")
-          .countDocuments({ userId: new ObjectId(authUser.userId) }, { limit: 1 }),
+      const [retired, anyRetired] = await Promise.all([
+        retiredCharactersCollection(db).findOne(
+          { userId: new ObjectId(authUser.userId), recap: { $exists: true } },
+          { sort: { retiredAt: -1 }, projection: { recap: 1 } }
+        ),
+        retiredCharactersCollection(db).countDocuments(
+          { userId: new ObjectId(authUser.userId) },
+          { limit: 1 }
+        ),
       ]);
-      if (isSeasonRecapEnabled(gs) && retired?.recap) recap = retired.recap;
+      if (retired?.recap) recap = retired.recap;
       newAccount = anyRetired === 0 && !authUser.isAdmin;
     }
   } catch {

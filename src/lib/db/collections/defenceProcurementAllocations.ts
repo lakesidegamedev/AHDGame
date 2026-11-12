@@ -58,7 +58,7 @@ export async function getDefenceContractAvailability(
     currentTurn: number;
     defenseLine: number;
     pricePerLot: number;
-    /** National Corporations skip the private anti-dumping cap (ticket #1134). */
+    /** National Corporations skip the private anti-dumping cap. */
     stateOwned?: boolean;
     /**
      * Already-loaded allocation document. The cabinet briefing quotes every

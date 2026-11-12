@@ -8,9 +8,8 @@ import {
   TRADE_EMBARGO_MAX_ACTIVE_PER_MEMBER,
   TRADE_EMBARGO_TARGET_COOLDOWN_TURNS,
 } from "@/lib/trade/constants";
-
-const COLLECTION = "tradeEmbargoes";
-const COOLDOWN_COLLECTION = "embargoCooldowns";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
+import { embargoCooldownsCollection } from "@/lib/db/repositories/embargoCooldowns";
 
 /** MongoDB duplicate-key error (E11000) — used to detect the cooldown-gate race. */
 function isDuplicateKeyError(err: unknown): boolean {
@@ -38,15 +37,11 @@ function isIndexConflictError(err: unknown): boolean {
 }
 
 // The cooldown gate relies on a unique index over (sourceCountry,targetCountry).
-// Seeding creates it, but ensure it once per process too so the atomic gate is
-// correct even on a DB that predates the seed change. createIndex is idempotent
-// when the name matches the seed's, but an equivalent pair index left under a
-// different name (e.g. the auto-named sourceCountry_1_targetCountry_1 from a
-// build that created it without a name) makes createIndex throw
-// IndexOptionsConflict instead of no-oping — which surfaced as a 500 "Internal
-// server error" on every embargo impose (ticket #1213). Any unique index over
-// the same full key pattern satisfies the atomic gate, so accept such an index
-// rather than failing the player's action.
+// Seeding creates it, but ensure it once per process too, so the atomic gate is
+// correct on a DB that predates the seed change. An equivalent pair index under
+// a different name makes createIndex throw IndexOptionsConflict; any unique
+// index over the same full key pattern satisfies the gate, so accept it rather
+// than failing the player's action.
 let cooldownIndexEnsured = false;
 async function ensureCooldownIndex(col: Collection<TradeEmbargoCooldown>): Promise<void> {
   if (cooldownIndexEnsured) return;
@@ -114,7 +109,7 @@ export async function imposeEmbargo(
     };
   }
 
-  const col = db.collection<TradeEmbargo>(COLLECTION);
+  const col = tradeEmbargoesCollection<TradeEmbargo>(db);
   const activeFilter = [
     { expiresTurn: { $exists: false } },
     { expiresTurn: { $gte: input.currentTurn } },
@@ -154,7 +149,7 @@ export async function imposeEmbargo(
   // already exists. This makes two concurrent imposes on the same target
   // race-free: exactly one wins. Survives lift/expiry by design (it outlives the
   // embargo), so a minister can't lift-and-re-impose to dodge it.
-  const cooldownCol = db.collection<TradeEmbargoCooldown>(COOLDOWN_COLLECTION);
+  const cooldownCol = embargoCooldownsCollection<TradeEmbargoCooldown>(db);
   await ensureCooldownIndex(cooldownCol);
   try {
     await cooldownCol.findOneAndUpdate(
@@ -227,7 +222,7 @@ export async function liftEmbargo(
   embargoId: ObjectId,
   sourceCountry: CountryId
 ): Promise<EmbargoCommandResult> {
-  const col = db.collection<TradeEmbargo>(COLLECTION);
+  const col = tradeEmbargoesCollection<TradeEmbargo>(db);
   const embargo = await col.findOne({ _id: embargoId });
   if (!embargo) return { ok: false, error: "Embargo not found." };
   if (embargo.sourceCountry !== sourceCountry) {

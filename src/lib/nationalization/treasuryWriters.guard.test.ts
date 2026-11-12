@@ -61,8 +61,12 @@ const REGISTRY: Record<string, Registered> = {
       },
     ],
   },
+  "src/lib/nationalization/clawbackCompensation.ts": {
+    writers: ["creditTreasuryProceedsFromAnchor", "creditTreasuryProceedsPaired"],
+    witness: [{ kind: "flow", flows: ["nationalization_compensation"] }],
+  },
   "src/lib/corporations/groups/applyGroupRelief.ts": {
-    writers: ["debitTreasury"],
+    writers: ["debitTreasuryCompensation"],
     witness: [{ kind: "flow", flows: ["group_loss_relief"] }],
   },
   "src/lib/corporations/groups/applyTransferPricingAudit.ts": {
@@ -81,7 +85,7 @@ const REGISTRY: Record<string, Registered> = {
     writers: ["creditTreasuryProceedsPaired"],
     witness: [{ kind: "own-row", txTypes: ["gov_tax_revenue"] }],
   },
-  "src/app/api/corporations/route.ts": {
+  "src/lib/corporations/commands/founding/foundCorporation.ts": {
     writers: ["creditTreasuryProceedsPaired"],
     witness: [{ kind: "own-row", txTypes: ["corp_capital_seed"] }],
   },
@@ -105,15 +109,23 @@ const REGISTRY: Record<string, Registered> = {
  */
 const SPEND_REGISTRY: Record<string, Registered> = {
   "src/lib/crises/aidPledge.ts": {
-    writers: ["spendFromTreasury"],
+    writers: ["refundTreasurySpend", "spendFromTreasury"],
     witness: [{ kind: "flow", flows: ["crisis_aid"] }],
   },
   "src/lib/crises/aidFinalize.ts": {
-    writers: ["creditTreasury"],
+    writers: ["refundTreasurySpend"],
     witness: [{ kind: "flow", flows: ["crisis_aid"] }],
   },
   "src/lib/crises/interactionEngine.ts": {
     writers: ["spendFromTreasury"],
+    witness: [{ kind: "flow", flows: ["crisis_response"] }],
+  },
+  "src/lib/frontierRaces/service.ts": {
+    writers: ["spendFromTreasury"],
+    witness: [{ kind: "flow", flows: ["frontier_programme"] }],
+  },
+  "src/lib/crises/levers/leverCommand.ts": {
+    writers: ["refundTreasurySpend", "spendFromTreasury"],
     witness: [{ kind: "flow", flows: ["crisis_response"] }],
   },
   "src/lib/crises/optionActions.ts": {
@@ -167,7 +179,7 @@ const TREASURY_WRITER = writerPattern([
   "remitToTreasury",
 ]);
 const IMPORTS_TREASURY = /from\s+["'](?:@\/lib\/nationalization\/treasury|\.{1,2}\/treasury)["']/;
-const SPEND_WRITER = writerPattern(["spendFromTreasury", "creditTreasury"]);
+const SPEND_WRITER = writerPattern(["spendFromTreasury", "creditTreasury", "refundTreasurySpend"]);
 const IMPORTS_SPEND = /from\s+["']@\/lib\/budget\/treasurySpend["']/;
 
 function sourceFiles(dir: string): string[] {

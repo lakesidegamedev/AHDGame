@@ -5,22 +5,25 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { settleBgFoundingMandates } from "./rules/foundingMandates1990";
 import { BG_1990_REGION_CAPACITY } from "./data/foundingDistricts1990";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
+import { bgFoundingAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/bgFoundingAssemblyOfficeArchives";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export const BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION = "bgFoundingAssemblyOfficeArchives";
 interface BgFoundingAssemblyArchive {
@@ -51,18 +54,18 @@ async function materializeBgFoundingAssemblySeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Bulgarian handover needs an active transaction, cycle, turn and time");
-  const journal = db.collection<BgFoundingAssemblyRecord>(BG_FOUNDING_COUNTS_COLLECTION);
+  const journal = bgFoundingAssemblyCountsCollection<BgFoundingAssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `BG:founding1990:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "certified") return false;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") throw new Error("No native Bulgarian mandate in this world");
   const ids = [...receipt.electionIds, ...(receipt.runoffElectionIds ?? [])].map(
     (id) => new ObjectId(id)
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         _id: { $in: ids },
@@ -83,8 +86,7 @@ async function materializeBgFoundingAssemblySeating(input: {
     ).size !== 5
   )
     throw new Error("Bulgarian certified cohort is incomplete or changed");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -118,8 +120,7 @@ async function materializeBgFoundingAssemblySeating(input: {
     .filter((row) => !row.isNpc)
     .map((row) => new ObjectId(row.ownerId));
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npcIds }, countryId: "BG", retiredAt: null, isTechnocrat: { $ne: true } },
           {
@@ -130,8 +131,7 @@ async function materializeBgFoundingAssemblySeating(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -207,25 +207,22 @@ async function materializeBgFoundingAssemblySeating(input: {
       rootCandidateId: row.candidateId,
     },
   }));
-  const incumbents = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const incumbents = await electedOfficialsCollection(db)
     .find({ countryId: "BG", officeType: { $in: ["assemblyDeputy"] } }, { session })
     .toArray();
   if (incumbents.length)
-    await db
-      .collection<BgFoundingAssemblyArchive>(BG_FOUNDING_OFFICE_ARCHIVES_COLLECTION)
-      .insertMany(
-        incumbents.map((official) => ({
-          _id: `${receipt._id}:${official._id.toHexString()}`,
-          countryId: "BG" as const,
-          receiptId: receipt._id,
-          turn,
-          official,
-        })),
-        { session }
-      );
+    await bgFoundingAssemblyOfficeArchivesCollection<BgFoundingAssemblyArchive>(db).insertMany(
+      incumbents.map((official) => ({
+        _id: `${receipt._id}:${official._id.toHexString()}`,
+        countryId: "BG" as const,
+        receiptId: receipt._id,
+        turn,
+        official,
+      })),
+      { session }
+    );
   for (const isNpc of [false, true]) {
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.updateMany(
       { countryId: "BG", "currentOffice.type": { $in: ["assemblyDeputy"] } },
       {
@@ -235,11 +232,11 @@ async function materializeBgFoundingAssemblySeating(input: {
       { session }
     );
   }
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany({ countryId: "BG", officeType: { $in: ["assemblyDeputy"] } }, { session });
-  if (officials.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  await electedOfficialsCollection(db).deleteMany(
+    { countryId: "BG", officeType: { $in: ["assemblyDeputy"] } },
+    { session }
+  );
+  if (officials.length) await electedOfficialsCollection(db).insertMany(officials, { session });
   const owners = new Map<
     string,
     { ownerId: string; isNpc: boolean; state: string; party: string; seats: number }
@@ -258,7 +255,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   for (const isNpc of [false, true]) {
     const selected = [...owners.values()].filter((row) => row.isNpc === isNpc);
     if (!selected.length) continue;
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.bulkWrite(
       selected.map((row) => {
         const originalOffice = (isNpc ? npcMap : playerMap).get(row.ownerId)?.currentOffice;
@@ -302,7 +299,7 @@ async function materializeBgFoundingAssemblySeating(input: {
       { session }
     );
   }
-  const finalizedTallies = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalizedTallies = await electionVoteTalliesCollection(db).bulkWrite(
     elections.map((election) => ({
       updateOne: {
         filter: {
@@ -350,14 +347,14 @@ async function materializeBgFoundingAssemblySeating(input: {
   );
   if (finalizedTallies.matchedCount !== ids.length)
     throw new Error("Bulgarian handover lost tally custody");
-  await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  await electionCandidatesCollection(db).updateMany(
     { electionId: { $in: ids }, status: "active" },
     {
       $set: { status: "withdrawn", withdrawnAt: now },
     },
     { session }
   );
-  const finalizedElections = await db.collection<Election>("elections").bulkWrite(
+  const finalizedElections = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, status: { $in: ["completed", "resolved"] } },
@@ -375,7 +372,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   );
   if (finalizedElections.matchedCount !== ids.length)
     throw new Error("Bulgarian handover lost election custody");
-  const resized = await db.collection<State>("states").bulkWrite(
+  const resized = await statesCollection(db).bulkWrite(
     Object.entries(BG_1990_REGION_CAPACITY).map(([id, seats]) => ({
       updateOne: {
         filter: { _id: id, countryId: "BG" },
@@ -385,7 +382,7 @@ async function materializeBgFoundingAssemblySeating(input: {
     { session }
   );
   if (resized.matchedCount !== 5) throw new Error("Bulgarian handover requires all five regions");
-  const formation = await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  const formation = await governmentFormationsCollection(db).updateOne(
     { _id: "BG" },
     {
       $set: { totalSeats: 400, majorityThreshold: 201, updatedAt: now },
@@ -395,7 +392,7 @@ async function materializeBgFoundingAssemblySeating(input: {
   if (formation.matchedCount !== 1) throw new Error("Bulgarian government formation is missing");
   const notices = players.filter((player) => owners.has(`player:${player._id.toHexString()}`));
   if (notices.length)
-    await db.collection("notifications").insertMany(
+    await notificationsCollection<Document>(db).insertMany(
       notices.map((player) => ({
         _id: stableId(`${receipt._id}:notice:${player._id.toHexString()}`),
         userId: player.userId,

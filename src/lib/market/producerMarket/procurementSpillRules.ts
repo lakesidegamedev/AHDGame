@@ -1,21 +1,9 @@
 /**
- * Procurement spill to households (funded-market cutover). A public buyer is
- * funded every turn with the plant share of an outlay the treasury already
- * destroyed. The goods it buys (healthcare, ordnance, network services) are
- * capacity bound, so most of that funding goes unfilled and used to be burned
- * at close: the state's spending never became demand anywhere.
- *
- * Here a share of what is left in a country's public wallet after the line
- * carry, transition support and decommission grants is paid to the households
- * of the same country, weighted by the wages each household wallet is paid.
- * Households then spend it next turn on whatever has supply.
- *
- * Nothing is minted: the money is the same funding, moved instead of burned,
- * and it never leaves its country. The funding joins (healthcare against the
- * health outlay, defense against the treasury mandatory payment) are both
- * inside the household transfer join (health, labor and treasury outlays).
- *
- * Pure: pools and wallets in, payments out. Amounts are anchor units.
+ * Procurement spill to households. After line carry, transition support and
+ * decommission grants, a share of each country's public wallet is paid to that
+ * country's households, weighted by wage bill. This moves funding that would
+ * otherwise be burned at close, so nothing is minted and no money crosses
+ * borders. Pure: pools and wallets in, payments out. Amounts in anchor.
  */
 import { POOL_FLOAT_MARGIN } from "./transitionRules";
 

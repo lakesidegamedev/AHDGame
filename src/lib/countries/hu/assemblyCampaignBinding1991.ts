@@ -12,8 +12,16 @@ import type {
   StateRegistrationPool,
 } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import type { Document } from "mongodb";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export async function materializeHu1991CampaignBinding(input: {
   db: Db;
@@ -29,12 +37,12 @@ export async function materializeHu1991CampaignBinding(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian campaign binding needs an active transaction, cycle and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return false;
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -84,25 +92,24 @@ export async function materializeHu1991CampaignBinding(input: {
       throw new Error("Hungarian frozen campaign cohort is incomplete or changed");
     return false;
   }
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "HU" }, { session, projection: { huElectoralLaw1994SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { huElectoralLaw1994SinceTurn: 1 } }
+  );
   const electoralLaw =
     country?.huElectoralLaw1994SinceTurn != null
       ? ("mixed-1994-v1" as const)
       : ("mixed-1989-v1" as const);
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find(
       { countryId: "HU" },
       {
         session,
-        projection: { _id: 1, population: 1, votingEligiblePopulation: 1 },
+        projection: STATE_POPULATION_FIELDS,
       }
     )
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find(
       { countryId: "HU" },
       {
@@ -130,7 +137,7 @@ export async function materializeHu1991CampaignBinding(input: {
       return [String(row._id), voters];
     })
   );
-  const result = await db.collection<Election>("elections").bulkWrite(
+  const result = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, hungarianAssemblyRound: { $exists: false } },
@@ -153,7 +160,7 @@ export async function materializeHu1991CampaignBinding(input: {
   );
   if (result.modifiedCount !== 6)
     throw new Error("Hungarian campaign binding changed concurrently");
-  await db.collection("electionVoteTallies").updateMany(
+  await electionVoteTalliesCollection<Document>(db).updateMany(
     { electionId: { $in: elections.map((row) => row._id) }, finalized: { $ne: true } },
     {
       $set: { hungarianAssemblyBallot: true },
@@ -170,12 +177,12 @@ export async function bindHu1991Campaigns(
   now: Date,
   cycles?: readonly number[]
 ): Promise<number> {
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return 0;
-  const unbound = await db
-    .collection<Election>("elections")
+  const unbound = await electionsCollection(db)
     .find(
       {
         countryId: "HU",

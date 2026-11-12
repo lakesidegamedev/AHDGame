@@ -252,7 +252,6 @@ describe("issue #2168 summary projections", () => {
     expect(calls[0][1]?.projection).toMatchObject({
       preset: 1,
       currentYear: 1,
-      redistrictingEnabled: 1,
     });
   });
 

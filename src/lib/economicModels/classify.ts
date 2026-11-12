@@ -20,9 +20,9 @@ export interface ModelSignals {
 }
 
 /**
- * Sector signal — GRADED weighted-share (decision 2026-06-14). Normalizes by the
- * MAX achievable weighted sum (`PRIMARY_WEIGHT · totalRevenue`) so the signal
- * stays resolved across [0,1] instead of pegging at 1 for any clear primary.
+ * Sector signal: GRADED weighted-share. Normalizes by the MAX achievable
+ * weighted sum (`PRIMARY_WEIGHT * totalRevenue`) so the signal stays resolved
+ * across [0,1] instead of pegging at 1 for any clear primary.
  */
 export function sectorSignal(
   a: EconomicModelArchetype,

@@ -1,12 +1,14 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Campaign, ElectionCandidate } from "@/lib/db/types";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export type CampaignArchiveReason = NonNullable<Campaign["archivedReason"]>;
 
 /**
  * Minimal candidate identity needed to locate their campaign docs.
  * Player campaigns key `candidateId` by character; NPP campaigns may key by
- * the NPP id instead, so both are matched (see ticket #1310 follow-ups).
+ * the NPP id instead, so both are matched.
  */
 export interface WithdrawnCandidateKeys {
   electionId: ObjectId;
@@ -16,10 +18,9 @@ export interface WithdrawnCandidateKeys {
 }
 
 /**
- * Archive (never delete) the campaigns of withdrawn candidates so they stop
- * appearing on active surfaces such as Campaign Operations (ticket #1313).
- * A re-entry reactivates the campaign with its funds/levels intact via
- * `ensureCampaignForCandidate` / `createInitialCampaign`.
+ * Archive (never delete) campaigns of withdrawn candidates so they stop
+ * appearing on active surfaces. Re-entry reactivates the campaign with funds
+ * and levels intact via `ensureCampaignForCandidate` / `createInitialCampaign`.
  *
  * Returns the number of campaigns archived.
  */
@@ -59,8 +60,7 @@ export async function archiveCampaignsForCandidates({
     // withdrawn row alone would pull a live campaign out from under a candidate
     // who is still running (and lock them out of their own campaign actions).
     // Callers mark rows withdrawn before calling this, so the read is current.
-    const stillStanding = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const stillStanding = await electionCandidatesCollection(db)
       .find({
         electionId,
         status: "active",
@@ -81,7 +81,7 @@ export async function archiveCampaignsForCandidates({
     const archivableIds = candidateIds.filter((id) => !standingIds.has(id.toString()));
     if (archivableIds.length === 0) continue;
 
-    const result = await db.collection<Campaign>("campaigns").updateMany(
+    const result = await campaignsCollection(db).updateMany(
       {
         electionId,
         candidateId: { $in: archivableIds },

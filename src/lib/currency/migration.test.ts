@@ -234,6 +234,24 @@ describe("migrateCharacterBalances", () => {
     expect(set.funds).toBe(10000);
   });
 
+  it("migrates 2027 TR characters into TRY at the 2027 table rate", async () => {
+    const { ObjectId } = await import("mongodb");
+    const { getInitialRates } = await import("@/lib/constants/currencies");
+    const tryRate = getInitialRates("2027-default").TR!;
+    const cursor = mockCursor([
+      { _id: new ObjectId(), countryId: "TR", funds: 10000, cashOnHand: 50000 },
+    ]);
+    db.collection("characters").find.mockReturnValue(cursor);
+    db.collection("characters").bulkWrite.mockResolvedValue({ modifiedCount: 1 });
+
+    const { migrateCharacterBalances } = await import("./migration");
+    await migrateCharacterBalances(db as unknown as Db, "2027-default");
+
+    const set = db.collection("characters").bulkWrite.mock.calls[0][0][0].updateOne.update.$set;
+    expect(set["currencyBalances.personal"]).toEqual({ TRY: 50000 * tryRate });
+    expect(set["currencyBalances.campaign"]).toBe(10000 * tryRate);
+  });
+
   it("keeps 1991 RU characters on SUR at the modern-table rate", async () => {
     const { ObjectId } = await import("mongodb");
     const { INITIAL_RATES } = await import("@/lib/constants/currencies");
@@ -359,6 +377,35 @@ describe("seedExchangeRates", () => {
     });
   });
 
+  it("seeds 2027 rows for every roster country and none for absent DD", async () => {
+    const { seedExchangeRates } = await import("./migration");
+    await seedExchangeRates(db as unknown as Db, "2027-default");
+
+    const ops = db.collection("exchangeRates").bulkWrite.mock.calls[0][0] as Array<{
+      updateOne: { filter: { _id: string }; update: { $setOnInsert: Record<string, unknown> } };
+    }>;
+    const row = (id: string) => ops.find((op) => op.updateOne.filter._id === id);
+    expect(row("DD")).toBeUndefined();
+    const expected: Record<string, [string, number]> = {
+      HU: ["HUF", 353.2],
+      PL: ["PLN", 3.9812],
+      RO: ["RON", 4.5984],
+      TR: ["TRY", 32.806],
+      SE: ["SEK", 10.568],
+      JP: ["JPY", 151.37],
+      UK: ["GBP", 0.7824],
+      BR: ["BRL", 5.389],
+    };
+    for (const [id, [currencyCode, rate]] of Object.entries(expected)) {
+      expect(row(id)?.updateOne.update.$setOnInsert).toMatchObject({
+        countryId: id,
+        currencyCode,
+        rate,
+        baseRate: rate,
+      });
+    }
+  });
+
   it("uses upsert to be idempotent", async () => {
     db.collection("exchangeRates").bulkWrite.mockResolvedValue({ upsertedCount: 0 });
 
@@ -381,6 +428,19 @@ describe("updateCentralBanks", () => {
     }>;
     expect(ops.some((op) => op.updateOne.filter._id === "ECB")).toBe(true);
     expect(ops.some((op) => op.updateOne.filter._id === "BG")).toBe(false);
+  });
+
+  it("gives 2027 HU a forint bank and leaves unbudgeted PL and RO without one", async () => {
+    const { updateCentralBanks } = await import("./migration");
+    await updateCentralBanks(db as unknown as Db, "2027-default");
+    const ops = db.collection("centralBanks").bulkWrite.mock.calls[0][0] as Array<{
+      updateOne: { filter: { _id: string } };
+    }>;
+    const ids = ops.map((op) => op.updateOne.filter._id);
+    expect(ids).toContain("HU");
+    expect(ids).not.toContain("PL");
+    expect(ids).not.toContain("RO");
+    expect(ids).not.toContain("DD");
   });
 
   it("upserts only countries with authored fiscal coverage while retaining currency support", async () => {
@@ -421,7 +481,13 @@ describe("updateCentralBanks", () => {
     expect(ops.map(({ updateOne }) => updateOne.filter._id)).toEqual(
       expect.arrayContaining(["RU", "DD"])
     );
-    expect(db.collection("centralBanks").deleteMany).not.toHaveBeenCalled();
+    // Only a bank outside the era's roster (Canada before 2027) is removed.
+    const deleted = db
+      .collection("centralBanks")
+      .deleteMany.mock.calls.flatMap(
+        (call: unknown[]) => (call[0] as { _id: { $in: string[] } })._id.$in
+      );
+    expect(deleted).toEqual(["CA"]);
   });
 });
 

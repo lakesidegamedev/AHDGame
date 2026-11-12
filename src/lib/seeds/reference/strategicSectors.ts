@@ -8,6 +8,8 @@ import { CN_ECONOMY } from "@/lib/countries/cn/economy";
 import { IE_ECONOMY } from "@/lib/countries/ie/economy";
 import { NG_ECONOMY } from "@/lib/countries/ng/economy";
 import { BR_ECONOMY } from "@/lib/countries/br/economy";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 
 /**
  * Per-country default strategic sectors (spec §6.3). Designating a sector type
@@ -21,6 +23,8 @@ export const DEFAULT_STRATEGIC_SECTORS: Partial<Record<CountryId, OperatingSecto
   JP: JP_ECONOMY.strategicSectors,
   CN: CN_ECONOMY.strategicSectors,
   IE: IE_ECONOMY.strategicSectors,
+  CA: CA_ECONOMY.strategicSectors,
+  QC: QC_ECONOMY.strategicSectors,
   BR: BR_ECONOMY.strategicSectors,
   NG: NG_ECONOMY.strategicSectors,
 };

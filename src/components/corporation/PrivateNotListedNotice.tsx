@@ -13,10 +13,9 @@ function dismissKey(corporationId: string): string {
 }
 
 /**
- * One-line explainer for the CEO of a private corp: it is deliberately
- * excluded from every exchange snapshot, so its absence from the stock market
- * is not a listing that failed (#1153). Dismissable per corporation — once the
- * owner knows, it never nags again.
+ * Explains to a private corp CEO why their corp is not on the stock market:
+ * private corps are deliberately excluded from exchange snapshots, so absence
+ * is not a failed listing. Dismissable per corporation.
  */
 export default function PrivateNotListedNotice({
   corporationId,

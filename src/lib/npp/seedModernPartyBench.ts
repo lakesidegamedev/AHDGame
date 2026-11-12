@@ -8,6 +8,13 @@ import type { Counter, GameState, NPP, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { generateNPP, type NPPGenerationContext } from "./generator";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /** Supply an unseated candidate bench for required modern default parties. */
 export async function seedModernPartyBench(
@@ -17,13 +24,13 @@ export async function seedModernPartyBench(
 ): Promise<number> {
   if (preset !== "1991-default" && preset !== "2019-default") return 0;
   const access = await getAllCountryAccess(db);
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { startingPartiesMode: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingPartiesMode: 1 } }
+  );
   const noParties = state?.startingPartiesMode === "none";
   const parties = (
-    await db
-      .collection<PoliticalParty>("politicalParties")
+    await politicalPartiesCollection(db)
       .find(
         { isDefault: true, memberCount: 0 },
         {
@@ -39,8 +46,7 @@ export async function seedModernPartyBench(
     .sort((a, b) => a.countryId.localeCompare(b.countryId) || a.sequentialId - b.sequentialId);
   // One projected population read supplies both membership and unique names.
   // Keep the bootstrap usable by the production and in-memory adapters.
-  const liveNpps = await db
-    .collection<NPP>("npps")
+  const liveNpps = await nppsCollection(db)
     .find(
       { retiredAt: null },
       {
@@ -60,8 +66,7 @@ export async function seedModernPartyBench(
     return !(noParties && ["US", "UK", "JP"].includes(party.countryId));
   });
   if (required.length === 0) return 0;
-  const regions = await db
-    .collection<{ _id: string; countryId: CountryId }>("states")
+  const regions = await statesCollection<{ _id: string; countryId: CountryId }>(db)
     .find(
       { countryId: { $in: [...new Set(required.map((p) => p.countryId))] } },
       {
@@ -82,8 +87,7 @@ export async function seedModernPartyBench(
       );
     }
   }
-  const orgs = await db
-    .collection("statePartyOrg")
+  const orgs = await statePartyOrgCollection<Document>(db)
     .find(
       {
         countryId: { $in: [...new Set(required.map((party) => party.countryId))] },
@@ -118,18 +122,16 @@ export async function seedModernPartyBench(
       )
     );
   }
-  const counter = await db
-    .collection<Counter>("counters")
-    .findOneAndUpdate(
-      { _id: "npp" },
-      { $inc: { seq: actors.length } },
-      { upsert: true, returnDocument: "after" }
-    );
+  const counter = await countersCollection(db).findOneAndUpdate(
+    { _id: "npp" },
+    { $inc: { seq: actors.length } },
+    { upsert: true, returnDocument: "after" }
+  );
   if (!counter) throw new Error("Failed to reserve modern party bench IDs");
   actors.forEach((actor, index) => {
     actor.sequentialId = counter.seq - actors.length + index + 1;
   });
-  await db.collection<NPP>("npps").insertMany(actors);
+  await nppsCollection(db).insertMany(actors);
   log(`Seeded ${actors.length} synthetic, unseated modern party bench actors`);
   return actors.length;
 }

@@ -15,6 +15,7 @@ import type {
   ActionAuditInput,
   ActionAuditRecord,
 } from "@/lib/db/types/actionAuditLog";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 /**
  * Fire-and-forget writer for the unified action-audit spine (`actionAuditLog`
@@ -46,7 +47,7 @@ const MAX_DELTA_ENTRIES = 8;
  * Read once per process: this is a debugging escape hatch, not a per-row knob.
  * See `moneyMirrorPolicy.ts` for why the money mirror is narrowed at all.
  */
-const FULL_SYSTEM_MONEY_MIRROR = process.env.AUDIT_MIRROR_SYSTEM_MONEY === "1";
+const FULL_SYSTEM_MONEY_MIRROR = runtimeConfig.auditMirrorSystemMoney();
 
 /**
  * Drop the routine system money rows no detector reads. This lives at enqueue

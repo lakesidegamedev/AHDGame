@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { PartyAgenda } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { partyAgendasCollection } from "@/lib/db/repositories/partyAgendas";
 
 /**
  * Read the active National Agenda for a party. Active = no `expiresAtTurn`
@@ -17,7 +18,7 @@ export async function getCurrentAgenda(
   iterationId: string,
   currentTurn: number
 ): Promise<PartyAgenda | null> {
-  const agenda = await db.collection<PartyAgenda>("partyAgendas").findOne(
+  const agenda = await partyAgendasCollection(db).findOne(
     {
       countryId,
       partyId,

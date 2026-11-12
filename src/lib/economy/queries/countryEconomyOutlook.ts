@@ -13,14 +13,12 @@ import { readNationalMetricRollup } from "@/lib/resetMetrics/readNationalRollup"
 
 import type { Db } from "mongodb";
 import type {
-  CentralBank,
   GameConfig,
   State,
   StockExchangeSnapshot,
   ExchangeRate,
   TurnSnapshot,
 } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
@@ -47,6 +45,13 @@ import {
   householdPriceAdjustedValue,
   HOUSEHOLD_PRICE_INDEX_BASELINE,
 } from "@/lib/economy/householdPriceIndex";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 interface HistoryPoint {
   turn: number;
@@ -155,12 +160,11 @@ export async function buildCountryEconomyOutlook(
 
   const [bank, budget, states, gameState, exchangeRate, snapshot, sectorMix, gameConfig] =
     await Promise.all([
-      db.collection<CentralBank>("centralBanks").findOne({ _id: bankId }),
-      db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }),
-      db
-        .collection<State>("states")
+      centralBanksCollection(db).findOne({ _id: bankId }),
+      federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(countryId) } as {
+        _id: "federal";
+      }),
+      statesCollection(db)
         .find({ countryId })
         .project<Pick<State, "_id" | "name" | "gdp" | "population">>({
           name: 1,
@@ -169,20 +173,18 @@ export async function buildCountryEconomyOutlook(
         })
         .toArray(),
       getGameState(db),
-      db.collection<ExchangeRate>("exchangeRates").findOne({ _id: countryId }),
+      exchangeRatesCollection(db).findOne({ _id: countryId }),
       exchangeApiKey
-        ? db
-            .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-            .findOne({ _id: exchangeApiKey })
+        ? stockExchangeSnapshotsCollection(db).findOne({ _id: exchangeApiKey })
         : Promise.resolve(null),
       aggregateCountrySectorMix(db, countryId),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      ),
     ]);
 
-  const stateMetrics = await db
-    .collection<StateMetrics>("macroMetrics")
+  const stateMetrics = await macroMetricsCollection(db)
     .find({ _id: { $in: states.map((s) => s._id) } })
     .project<{
       _id: string;

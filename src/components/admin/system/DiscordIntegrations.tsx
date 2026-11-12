@@ -129,8 +129,7 @@ export function DiscordIntegrations() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   /**
    * Set when the save was refused because another deployment owns these
-   * webhooks (#1208). Holds the offer to take them, so the admin can resolve it
-   * here instead of reaching for curl.
+   * webhooks. Holds the offer to take them, so the admin can resolve it here.
    */
   const [ownershipConflict, setOwnershipConflict] = useState(false);
 

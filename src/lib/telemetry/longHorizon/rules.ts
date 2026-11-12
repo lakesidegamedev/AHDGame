@@ -1,17 +1,13 @@
 /**
- * Portable rules core for durable long-horizon telemetry (issues #2099, #2100).
+ * Portable rules core for durable long-horizon telemetry.
  *
  * Pure data in, plain data out: no database, no wall clock, no randomness, no
- * environment, no network. The turn phase (shell) loads the game clock, the
- * run manifest and the scored values, calls these builders, and writes the
- * results back. Time arrives as an explicit in-game year, never as `new Date`.
+ * environment, no network. Time arrives as an explicit in-game year, never as
+ * `new Date`.
  *
- * Why this exists: the operational histories are bounded projections for fast
- * game-page reads (`governmentApprovals` / `stateApprovalHistory` keep 20
- * turns, `macroMetricsHistory` keeps 96). A 480-turn sandbox therefore loses
- * 95.8% of its approval samples and 80% of its macro samples. The durable
- * series defined here keeps every turn under the explicit `world-raw-full`
- * retention policy below, so reports can consume full campaigns.
+ * Bounded operational histories (20-turn approvals, 96-turn macro) lose most
+ * samples over a 480-turn sandbox. These builders persist every turn under the
+ * `world-raw-full` retention policy so reports see full campaigns.
  */
 /** Shape version of the telemetry point documents. Bump on field changes. */
 export const LONG_HORIZON_TELEMETRY_SCHEMA_VERSION = 1;
@@ -163,7 +159,7 @@ interface TelemetryPointBase {
   retentionVersion: number;
 }
 
-/** One durable national or regional approval sample (#2099). */
+/** One durable national or regional approval sample. */
 export interface ApprovalTelemetryPoint extends TelemetryPointBase {
   approval: number;
   netApproval: number;
@@ -174,7 +170,7 @@ export interface ApprovalTelemetryPoint extends TelemetryPointBase {
   governingNpp?: string;
 }
 
-/** One durable GDP/population sample (#2100). */
+/** One durable GDP/population sample. */
 export interface MacroTelemetryPoint extends TelemetryPointBase {
   metric: string;
   value: number;

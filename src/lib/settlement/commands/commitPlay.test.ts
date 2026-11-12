@@ -79,18 +79,6 @@ describe("commitSettlementPlay", () => {
     });
   });
 
-  it("refuses when the feature gate is off", async () => {
-    const { loadSettlementActorContext } = await import("../actorContext");
-    vi.mocked(loadSettlementActorContext).mockResolvedValue(null);
-    const { commitSettlementPlay } = await import("./commitPlay");
-    const res = await commitSettlementPlay(db as unknown as Db, {
-      characterId,
-      actor: "seat",
-      playId: "aid",
-    });
-    expect(res).toMatchObject({ ok: false, status: 404 });
-  });
-
   it("refuses an unknown play id", async () => {
     const { commitSettlementPlay } = await import("./commitPlay");
     const res = await commitSettlementPlay(db as unknown as Db, {

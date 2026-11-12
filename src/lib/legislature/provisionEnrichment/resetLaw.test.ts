@@ -41,7 +41,7 @@ describe("resolveResetLawProvision", () => {
   } as ResetLawProvision;
 
   it("uses the enacted rules for the displayed demographic reaction", () => {
-    expect(resolveResetLawProvision(provision).archetypeApprovals).toEqual(
+    expect(resolveResetLawProvision(provision).bucketApprovals).toEqual(
       v2EnactmentApproval([provision], provision.reviewedOption.country)
     );
   });

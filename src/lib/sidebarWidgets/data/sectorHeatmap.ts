@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { StockExchangeSnapshot } from "@/lib/db/types/stockExchangeSnapshot";
 import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 export interface SectorTile {
   type: string;
@@ -83,7 +84,7 @@ export async function loadSectorHeatmap(
   exchange: string
 ): Promise<SectorHeatmapWidgetData | null> {
   if (!EXCHANGE_API_KEYS.has(exchange)) return null;
-  const snapshot = await db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne(
+  const snapshot = await stockExchangeSnapshotsCollection(db).findOne(
     { _id: exchange },
     {
       projection: {

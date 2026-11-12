@@ -252,7 +252,7 @@ function FilterChip({
         small ? "px-2 py-0.5" : "px-2.5 py-1"
       } ${
         active
-          ? "bg-primary/20 text-primary border border-primary/30"
+          ? "bg-primary/20 text-red-300 border border-primary/30"
           : "text-muted hover:text-foreground hover:bg-card-elevated border border-transparent"
       }`}
     >

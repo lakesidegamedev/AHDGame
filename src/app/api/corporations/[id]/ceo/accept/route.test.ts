@@ -138,3 +138,29 @@ describe("POST ceo/accept — seat type reset", () => {
     expect(update.$unset).toHaveProperty("caretakerCeo");
   });
 });
+
+describe("POST ceo/accept — offer claim", () => {
+  beforeEach(async () => {
+    const { holdsAnyBondsInCorp } = await import("@/lib/bonds/ceoBondConflict");
+    vi.mocked(holdsAnyBondsInCorp).mockResolvedValue({ holds: false, units: 0 });
+  });
+
+  it("seats only while the offer still names the accepting character", async () => {
+    const { POST } = await import("./route");
+    await POST(req(), { params: Promise.resolve({ id: corpId.toString() }) });
+    const [filter] = db.collectionMocks["corporations"]!.updateOne.mock.calls[0];
+    expect(filter).toEqual({ _id: corpId, pendingCeoCharacterId: charId });
+  });
+
+  it("returns 409 and opens no tenure when the offer was withdrawn or already taken", async () => {
+    db.collectionMocks["corporations"]!.updateOne.mockResolvedValueOnce({
+      matchedCount: 0,
+      modifiedCount: 0,
+    });
+    const { POST } = await import("./route");
+    const res = await POST(req(), { params: Promise.resolve({ id: corpId.toString() }) });
+    expect(res.status).toBe(409);
+    const { openCeoTenure } = await import("@/lib/corporations/ceoHistory");
+    expect(openCeoTenure).not.toHaveBeenCalled();
+  });
+});

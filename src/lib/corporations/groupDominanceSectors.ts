@@ -5,7 +5,7 @@
  * `gameConfig.groupSizeCostsStage` reaches the group toll stage.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   GROUP_DOMINANCE_TOLL_STAGE,
   FIRM_SECTOR_PROJECTION,
@@ -14,22 +14,24 @@ import {
 } from "@/lib/corporations/commodityDominanceContext";
 import type { CommodityDominanceSector } from "@/lib/corporations/rules/commodityDominance";
 import { controlGroupRootByCorpId } from "@/lib/corporations/groups/controlGroups";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function loadGroupDominanceSectorResolver(
   db: Db,
   turn: number
 ): Promise<((corporationId: string) => CommodityDominanceSector[]) | null> {
-  const cfg = await db
-    .collection<{ groupSizeCostsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
+  const cfg = await gameConfigCollection<{ groupSizeCostsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { groupSizeCostsStage: 1 } }
+  );
   if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_DOMINANCE_TOLL_STAGE) return null;
   const [corps, sectors] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({}, { projection: { ...FIRM_SECTOR_PROJECTION, corporationId: 1 } })
       .toArray(),
   ]);

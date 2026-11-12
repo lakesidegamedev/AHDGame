@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="Arctic Agreement emblem">
+  <title>Arctic Agreement</title>
+  <rect width="240" height="160" fill="#24506B"/>
+  <g transform="translate(120 80)">
+    <circle r="52" fill="#3D7EA6"/>
+    <path d="M 0 -38 L 0 38 M -33 -19 L 33 19 M -33 19 L 33 -19" stroke="#F2F8FC" stroke-width="5" stroke-linecap="round"/>
+    <circle r="8" fill="#F2F8FC"/>
+  </g>
+</svg>
