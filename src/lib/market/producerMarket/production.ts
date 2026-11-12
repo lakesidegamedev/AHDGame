@@ -633,6 +633,7 @@ export function advanceProducerEconomy(
     planning.passes = pass + 1;
     clock.lap("planningOtherMs");
     listStageTiming(timings, "planningPassMs", performance.now() - passStarted);
+    listStageTiming(timings, "planningPassChangedSites", planning.siteChanges.length);
     const elapsedMs = execution?.elapsedMs() ?? 0;
     if (!Number.isFinite(elapsedMs) || elapsedMs < 0)
       throw new Error("Invalid planning elapsed time");

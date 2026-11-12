@@ -24,6 +24,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import type { CorpSnapshot } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { applyJournaledOps, type JournalContext } from "./resume/journal";
 
 interface DevelopmentCashRow {
   _id: ObjectId;
@@ -50,6 +51,8 @@ export interface ManufacturingDevelopmentCashSettlementArgs {
   /** Feature gate; disabled turns do not read or settle title advertising obligations. */
   mediaProductSlatesEnabled?: boolean;
   productLinesV2Enabled?: boolean;
+  /** Turn resume journal; absent or below stage 2 writes directly. */
+  journal?: JournalContext;
 }
 
 export interface OperatingThenDevelopmentCashArgs extends ManufacturingDevelopmentCashSettlementArgs {
@@ -101,9 +104,17 @@ export async function settleManufacturingDevelopmentCash(
   if (uniqueIds.length === 0) return { paidReceipts: 0, paidAmountAnchor: 0 };
 
   if (args.operations.length > 0) {
-    await corporationsCollection(args.db).bulkWrite(args.operations, {
-      ordered: false,
-    });
+    // Each op already carries its own paid-turn and receipt guard, so the journal
+    // stores the plan without adding a stamp.
+    const write = (ops: AnyBulkWriteOperation<Corporation>[]) =>
+      corporationsCollection(args.db)
+        .bulkWrite(ops, { ordered: false })
+        .then(() => undefined);
+    if (args.journal)
+      await applyJournaledOps(args.journal, "developmentCash", args.operations, write, {
+        stamp: false,
+      });
+    else await write(args.operations);
   }
 
   const rows = (await corporationsCollection(args.db)

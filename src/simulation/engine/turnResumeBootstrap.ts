@@ -57,7 +57,9 @@ export interface ValidatedTurnResume {
  */
 export function validateLockedResume(
   locked: RecoveryFields,
-  preLockTargetTurn: number | null
+  preLockTargetTurn: number | null,
+  /** Interrupted phases the caller proved safe to rerun; they are neither refused nor carried. */
+  rerunInterrupted: ReadonlySet<string> = new Set()
 ): ValidatedTurnResume | null {
   const target = locked.processingTargetTurn;
   if (typeof preLockTargetTurn !== "number" || target !== preLockTargetTurn) return null;
@@ -67,6 +69,7 @@ export function validateLockedResume(
     locked.processingPhaseStatuses,
     locked.processingPhaseResults
   );
+  for (const phase of rerunInterrupted) phaseState.interrupted.delete(phase);
   const blocking = [...phaseState.interrupted].filter(phaseBlocksResumeWhenInterrupted);
   if (blocking.length > 0) {
     throw new TurnResumeRefusedError(

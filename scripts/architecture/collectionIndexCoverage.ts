@@ -15,6 +15,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
     "Write-once archive keyed by source collection and _id; game logic never reads it.",
   producerMarketShadows:
     "Telemetry: one summary per turn, upserted by its turn _id; game logic never reads it.",
+  corporationTurnJournal:
+    "Turn resume journal: a header per turn and plan chunks read by exact _id; only the last few turns are kept, so the prune scan is bounded.",
   producerPathClaims: "One claim per world and turn, inserted and read by its _id.",
   producerMarketOutcomes: "One document per world and turn, written and read by its _id.",
   producerHouseholdSource: "One document per world, written once and read by its _id.",

@@ -1,3 +1,5 @@
+import { corporationTurnRerunSet, startFreshJournal } from "@/simulation/engine/corporationResume";
+import { resilienceStageOf } from "@/lib/turn/corporation/resume/rules";
 import { drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import {
   executeTurnAdapters,
@@ -63,6 +65,7 @@ import {
   turnLockFenceActive,
   turnLockFenceFilter,
 } from "@/lib/turn/turnLockHolder";
+import { armTurnFault, describeTurnError, parseTurnFaultSpec } from "@/lib/turn/faultInjection";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
@@ -365,6 +368,9 @@ async function processTurnImpl(
         simSandbox: turnConfig?.simSandbox === true,
         envStage: workerConfig.turnResilienceStage(),
       });
+      armTurnFault(
+        turnConfig?.simSandbox === true ? parseTurnFaultSpec(workerConfig.turnFaultInject()) : null
+      );
       const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
       if (residueRefusal) {
         console.error(`[Turn System] Refused turn: ${residueRefusal}`);
@@ -534,7 +540,11 @@ async function processTurnImpl(
     // dependent explicitly rather than rerunning or assuming zero. The race
     // guard (target === currentTurn+1 against the freshly locked state) prevents
     // a spurious resume when a concurrent completion races the lock.
-    const crashedTurnRecovery = validateLockedResume(gameState, preLockRecoveryTarget);
+    const crashedTurnRecovery = validateLockedResume(
+      gameState,
+      preLockRecoveryTarget,
+      await corporationTurnRerunSet(db, gameState)
+    );
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
       const message =
@@ -576,6 +586,13 @@ async function processTurnImpl(
     // One read of the selector per turn, before any phase runs. A resume pins the
     // engine recorded by the holder that died, so config can only choose the engine
     // for the NEXT turn — never for a turn that is already in progress.
+    if (!resumedFromCrash)
+      await startFreshJournal(
+        db,
+        resilienceStageOf(config),
+        gameState.currentTurn + 1,
+        gameState.worldEpochId
+      );
     const engineResolution = selectEngineForAttempt({
       configured: config?.turnEngineVersion,
       inFlightEngine: gameState.processingEngine,
@@ -942,12 +959,13 @@ async function processTurnImpl(
     };
   } catch (error) {
     console.error("[Turn System] Critical error processing turn:", error);
-    Sentry.captureException(error, { tags: { component: "turnSystem" } });
+    Sentry.captureException(error, { level: "fatal", tags: { component: "turnSystem" } });
     const failureTime = new Date();
     // Another process owns the turn now: write nothing about it, retry nothing.
     const lockLost = error instanceof TurnLockLostError;
     const failureMessage =
       error instanceof Error ? error.message : "Unknown error during turn processing";
+    const failureDetail = describeTurnError(error);
 
     if (!warnings.some((warning) => warning === `turnSystem: ${failureMessage}`)) {
       warnings.push(`turnSystem: ${failureMessage}`);
@@ -979,6 +997,11 @@ async function processTurnImpl(
       // Only overwrite evidence with values this attempt actually has. A failure
       // before setup (no statuses, no target yet) must not null out what the
       // previous holder left, or the next attempt would rerun applied phases.
+      const failureRecord = {
+        turn: failedTarget,
+        message: failureDetail,
+        at: failureTime,
+      };
       const evidence = {
         ...(holdForRepair
           ? committedPhase
@@ -1002,6 +1025,7 @@ async function processTurnImpl(
                 processingHeartbeatAt: failureTime,
                 processingAbandonedAt: failureTime,
                 ...evidence,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               }
             : {
@@ -1009,6 +1033,7 @@ async function processTurnImpl(
                 processingKind: null,
                 processingHeartbeatAt: failureTime,
                 ...evidence,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               },
         }
@@ -1059,6 +1084,7 @@ async function processTurnImpl(
           realTime: failureTime,
           durationMs: Date.now() - startTime,
           success: false,
+          error: failureDetail,
           memory: readMemoryPeak(),
           warnings: [...warnings],
           health: lastHealth,

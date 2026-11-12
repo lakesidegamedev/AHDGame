@@ -168,6 +168,12 @@ export interface GameConfig {
    */
   managementOverheadPpPerDoubling?: number;
   /**
+   * Turn resilience. 0 or absent = today's behaviour. >= 2 lets an interrupted
+   * corporation turn resume from its journal when the journal proves the partial
+   * state is known.
+   */
+  turnResilienceStage?: number;
+  /**
    * Funded producer market: >= 1 plans each plant's output from expected sales
    * minus held stock, so inputs and staffing follow the plan. 0 or absent = off.
    */
