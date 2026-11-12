@@ -1,4 +1,5 @@
 import * as cron from "node-cron";
+import { logger } from "@/lib/observability/logger";
 import { dispatchNativePush } from "@/lib/nativePush/dispatcher";
 import * as Sentry from "@sentry/nextjs";
 import { trackCheckpoint } from "@/lib/turn/subhour/checkpointTelemetry";
@@ -495,7 +496,7 @@ export async function initializeCronJobs() {
         });
         if (stage < 1) return;
         if (!(await tryFastStaleLockTakeover(db, stage))) return;
-        console.warn("[Cron] Stale-lock watchdog took over a turn lock; resuming the turn.");
+        logger.warn("Cron", "Stale-lock watchdog took over a turn lock; resuming the turn");
         try {
           Sentry.captureMessage("Stale turn lock taken over by watchdog", {
             level: "warning",
@@ -505,10 +506,9 @@ export async function initializeCronJobs() {
           // Telemetry must not gate recovery.
         }
         const result = await runTurnWithHeapDiagnostics("staleLockWatchdog");
-        console.log("[Cron] Stale-lock watchdog result:", result);
+        logger.info("Cron", "Stale-lock watchdog result", { success: result.success });
       } catch (error) {
-        console.error("[Cron] Error in stale-lock watchdog:", error);
-        Sentry.captureException(error, { tags: { component: "cron", job: "staleLockWatchdog" } });
+        logger.error("Cron", "Error in stale-lock watchdog", error, { job: "staleLockWatchdog" });
       } finally {
         staleLockWatchdogRunning = false;
       }

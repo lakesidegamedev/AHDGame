@@ -3,11 +3,12 @@ import { hostname } from "os";
 import type { Db } from "mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shouldFastTakeOverStaleLock } from "@/lib/turn/rules/staleLock";
+import { workerConfig } from "@/lib/config/worker";
 
 const BOOT_ID = randomUUID();
 
 /** Worker instance, pid and boot id: unique per process lifetime. */
-export const TURN_HOLDER_ID = `${process.env.RAILWAY_REPLICA_ID ?? hostname()}:${process.pid}:${BOOT_ID}`;
+export const TURN_HOLDER_ID = `${workerConfig.replicaId() ?? hostname()}:${process.pid}:${BOOT_ID}`;
 
 let fencedHolderId: string | null = null;
 

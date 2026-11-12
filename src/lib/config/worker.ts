@@ -11,5 +11,6 @@ export const workerConfig = {
   roundTripProfile: () => process.env.AHD_TURN_ROUNDTRIP_PROFILE === "1",
   roundTripMonitor: () => process.env.AHD_TURN_ROUNDTRIP_MONITOR === "1",
   roundTripTop: () => process.env.AHD_TURN_ROUNDTRIP_TOP,
+  replicaId: () => process.env.RAILWAY_REPLICA_ID,
   turnResilienceStage: () => process.env.AHD_TURN_RESILIENCE_STAGE,
 } as const;

@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { logger } from "@/lib/observability/logger";
 import {
   TURN_RETRY_DELAYS_MS,
   decideTurnRetry,
@@ -50,7 +51,7 @@ export function createTurnRetryController(deps: {
     try {
       await deps.record(entry);
     } catch (err) {
-      console.warn("[Turn Retry] Failed to record retry entry", err);
+      logger.warn("Turn Retry", "Failed to record retry entry", { error: String(err) });
     }
   };
 
@@ -77,7 +78,7 @@ export function createTurnRetryController(deps: {
           decision.reason === "exhausted"
             ? `Turn ${target ?? "?"} still failing after ${decision.attempts} automatic retries; stopped with evidence kept.`
             : `Turn ${target ?? "?"} cannot be retried safely (step ${result.failure?.phase ?? "?"}); stopped with evidence kept.`;
-        console.error(`[Turn Retry] ${message}`);
+        logger.warn("Turn Retry", message);
         alert(message, { turn: target, phase: result.failure?.phase ?? null });
         await safeRecord({
           turn: target,
@@ -96,8 +97,9 @@ export function createTurnRetryController(deps: {
       afterPhase: result.failure?.phase ?? null,
     };
     pending = true;
-    console.warn(
-      `[Turn Retry] Turn ${target ?? "?"} stopped at ${attempt.afterPhase ?? "setup"}; attempt ${attempt.attempt} of ${attempt.of} in ${Math.round(decision.delayMs / 1000)}s.`
+    logger.warn(
+      "Turn Retry",
+      `Turn ${target ?? "?"} stopped at ${attempt.afterPhase ?? "setup"}; attempt ${attempt.attempt} of ${attempt.of} in ${Math.round(decision.delayMs / 1000)}s.`
     );
     await safeRecord({
       turn: target,
@@ -116,7 +118,7 @@ export function createTurnRetryController(deps: {
           onResult({
             success: false,
             failure: { phase: attempt.afterPhase, target, retryable: true },
-          }).finally(() => console.error("[Turn Retry] Attempt threw", err))
+          }).finally(() => logger.error("Turn Retry", "Attempt threw", err))
         );
     }, decision.delayMs);
   }
