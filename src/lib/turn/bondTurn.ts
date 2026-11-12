@@ -63,6 +63,7 @@ import { processBondMarketPoolTurn } from "@/lib/bonds/marketPoolTurn";
 import { placeUnsoldBondUnits, settlePlacementProceeds } from "@/lib/bonds/primaryMarket";
 import { sovereignIssuanceFlowsByCountry } from "@/lib/resetFinance/rules/sovereignProceeds";
 import { payNppBondReturns, type NppBondReturns } from "./nppBondCash";
+import type { Db } from "mongodb";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import type { BondTurnResult, SovereignMaturityPlan } from "./bondTurnTypes";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
@@ -80,6 +81,33 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
+
+async function readCapturedSovereignIssuance(
+  db: Db,
+  turn: number,
+  funded: boolean,
+  legacy: Parameters<typeof sovereignIssuanceFlowsByCountry>[0]
+) {
+  if (!funded) return sovereignIssuanceFlowsByCountry(legacy);
+  // Refunding issues can be created during maturity settlement, after the
+  // turn-open issue snapshot. Durable cash receipts include those sales and
+  // survive a same-turn retry; an in-kind rollover has no invented proceeds.
+  const receipts = await db
+    .collection<{ countryId: string; amount: number; meta: { face: number } }>("financialTxLog")
+    .find(
+      { turn, type: "gov_bond_issuance", "meta.ledgerOwnedBySettlement": true },
+      { projection: { countryId: 1, amount: 1, "meta.face": 1 } }
+    )
+    .toArray();
+  return sovereignIssuanceFlowsByCountry({
+    atParIssues: [],
+    placements: receipts.map((row) => ({
+      countryId: row.countryId,
+      face: row.meta.face,
+      cashPaid: row.amount,
+    })),
+  });
+}
 
 export type { BondTurnResult } from "./bondTurnTypes";
 
@@ -183,7 +211,10 @@ export async function processBondTurn(
 
   if (activeBonds.length === 0) {
     const flows = captureSovereignCashProceeds
-      ? sovereignIssuanceFlowsByCountry({ atParIssues, placements: [] })
+      ? await readCapturedSovereignIssuance(db, turn, config?.treasuryCashLedgerEnabled === true, {
+          atParIssues,
+          placements: [],
+        })
       : null;
     return {
       bondsProcessed: 0,
@@ -976,7 +1007,7 @@ export async function processBondTurn(
     ? { bondsAutoRestructured: 0, bondsAutoRefinanced: 0 }
     : await autoResolveLingeringDefaults({ db, turn, now });
   const sovereignFlows = captureSovereignCashProceeds
-    ? sovereignIssuanceFlowsByCountry({
+    ? await readCapturedSovereignIssuance(db, turn, config?.treasuryCashLedgerEnabled === true, {
         atParIssues,
         placements: [...placement.sovereignFaceByCountry].map(([countryId, row]) => ({
           countryId,

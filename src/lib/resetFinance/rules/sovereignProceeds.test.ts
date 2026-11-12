@@ -1,7 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { sovereignIssuanceFlowsByCountry } from "./sovereignProceeds";
+import {
+  sovereignIssuanceFlowsByCountry,
+  reconcileSovereignDebtFaceFlows,
+} from "./sovereignProceeds";
 
 describe("sovereign cash proceeds", () => {
+  it.each([
+    { openingDebt: 100, closingDebt: 100, issuedFace: 30, issued: 30, retired: 30 },
+    { openingDebt: 100, closingDebt: 100, issuedFace: 0, issued: 0, retired: 0 },
+    { openingDebt: 100, closingDebt: 70, issuedFace: 0, issued: 0, retired: 30 },
+    { openingDebt: 100, closingDebt: 120, issuedFace: 10, issued: 20, retired: 0 },
+  ])(
+    "reconciles cash refinancing and in-kind exchanges to bond-owned principal",
+    ({ issued, retired, ...input }) => {
+      expect(reconcileSovereignDebtFaceFlows(input)).toEqual({
+        issuedFace: issued,
+        retiredFace: retired,
+      });
+    }
+  );
+  it("rejects invalid canonical principal", () => {
+    expect(() =>
+      reconcileSovereignDebtFaceFlows({ openingDebt: 100, closingDebt: NaN, issuedFace: 0 })
+    ).toThrow();
+  });
   it("adds at-par issues and actual old/new placement consideration once", () => {
     expect(
       sovereignIssuanceFlowsByCountry({

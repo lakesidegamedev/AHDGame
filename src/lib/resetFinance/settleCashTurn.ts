@@ -13,6 +13,7 @@ import {
   type ResetV2Readiness,
 } from "@/lib/resetVersions/rules";
 import { settleResetCashTurn } from "./rules/cashTurn";
+import { reconcileSovereignDebtFaceFlows } from "./rules/sovereignProceeds";
 import { buildResetAuthorityClaims } from "./rules/authorityClaims";
 import type { ResetNationalTreasurySnapshot } from "./rules/treasurySnapshot";
 import type {
@@ -62,7 +63,7 @@ export async function settleResetTreasuryCashTurn(input: {
       .find(
         { countryId: { $in: countries } },
         {
-          projection: { countryId: 1, "revenue.total": 1, "debt.ceiling": 1 },
+          projection: { countryId: 1, "revenue.total": 1, "debt.ceiling": 1, "debt.principal": 1 },
         }
       )
       .toArray(),
@@ -130,6 +131,11 @@ export async function settleResetTreasuryCashTurn(input: {
       if (!values) throw new Error("V2 cash needs actual bond flow capture");
       return values[country] ?? 0;
     };
+    const faceFlows = reconcileSovereignDebtFaceFlows({
+      openingDebt: opening.debt,
+      closingDebt: budget.debt.principal,
+      issuedFace: flow(bondFlows.sovereignDebtFaceIssuedByCountry),
+    });
     const next =
       opening.settledThroughTurn === turn
         ? opening
@@ -142,9 +148,9 @@ export async function settleResetTreasuryCashTurn(input: {
               annualInterestRate: 0,
               periodsPerYear: 48,
               bondProceeds: flow(bondFlows.sovereignCashProceedsByCountry),
-              bondFaceIssued: flow(bondFlows.sovereignDebtFaceIssuedByCountry),
+              bondFaceIssued: faceFlows.issuedFace,
               bondMaturityCashPaid: flow(bondFlows.sovereignMaturityCashPaidByCountry),
-              bondFaceRetired: flow(bondFlows.sovereignDebtFaceRetiredByCountry),
+              bondFaceRetired: faceFlows.retiredFace,
               bondCouponCashPaid: flow(bondFlows.sovereignCouponPaidByCountry),
             },
           });

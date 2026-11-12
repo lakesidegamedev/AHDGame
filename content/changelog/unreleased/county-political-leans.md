@@ -52,3 +52,8 @@ areas: [engine]
   from annual surplus and label formula-based grant program estimates.
 - Scores metric summaries and democratic health against the active world year,
   preserving historical preset calendars and the 2027 opening after reset.
+- Seeds Hungary's 2027 settlement quote and complete modeled political boards
+  with matching approval calibration. Aid skips recipients without a treasury.
+- Captures funded sovereign maturity payments and completed refinancing receipts
+  in the v2 treasury flow, keeping principal aligned with settled bond stock.
+- Aligns the US 2027 campaign income baseline with reconciled regional GDP.
