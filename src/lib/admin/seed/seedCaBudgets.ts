@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import { seedCountryBudgets } from "./seedCountryBudgets";
+import { withCaProvincialServices } from "@/lib/countries/ca/rules/provincialServices";
 
 /**
  * Seeds Canada's national budget, default enacted laws, provincial budgets and
@@ -16,5 +17,6 @@ export async function seedCaBudgets(
     countryId: "CA",
     fiscalYearFallback: 2027,
     skipWithoutNationalBudget: true,
+    prepareRegionalBudget: withCaProvincialServices,
   });
 }

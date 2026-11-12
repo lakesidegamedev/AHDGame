@@ -21,3 +21,46 @@ export function provincialCycle1EndTurn(
     (ctx.preIterationTurns ?? 0)
   );
 }
+
+export function caProvincialElectionYearForWorld(
+  region: string,
+  electionType: string,
+  cycle: number,
+  country: string,
+  preset: string | undefined
+): number | undefined {
+  if (country !== "CA" || electionType !== "provincialLegislature" || preset !== "2027-default")
+    return undefined;
+  const legislature = CA_PROVINCIAL_LEGISLATURES[region];
+  return legislature
+    ? legislature.nextElectionYear + ((cycle - 1) * CA_PROVINCIAL_PERIOD_HOURS) / TURNS_PER_YEAR
+    : undefined;
+}
+
+/** The first turn host opens races on turn two, leaving 22 primary turns. */
+export function caOpeningProvincialPrimaryFloor(input: {
+  countryId?: string;
+  electionType: string;
+  preset?: string;
+  cycle: number;
+  currentTurn: number;
+  endTurn: number;
+  primaryEndTurn: number;
+  preIterationTurns?: number;
+  minPrimaryHours: number;
+}): number | undefined {
+  const offset = input.preIterationTurns ?? 0;
+  const openingTurn = input.currentTurn - offset;
+  if (
+    input.countryId !== "CA" ||
+    input.electionType !== "provincialLegislature" ||
+    input.preset !== "2027-default" ||
+    input.cycle !== 1 ||
+    input.endTurn - offset !== TURNS_PER_YEAR ||
+    input.primaryEndTurn - offset !== TURNS_PER_YEAR / 2 ||
+    openingTurn < 1 ||
+    openingTurn > 2
+  )
+    return undefined;
+  return Math.min(input.minPrimaryHours, input.primaryEndTurn - input.currentTurn);
+}

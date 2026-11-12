@@ -1,4 +1,6 @@
 import { financialAusteritySpending } from "@/lib/livingConflict/rules/financialFiscal";
+import { caProvincialServiceClaims } from "@/lib/countries/ca/rules/provincialServices";
+import type { RegionalProgramClaim } from "@/lib/governmentFinance/rules/regionalSettlement";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
   FederalBudget,
@@ -158,7 +160,7 @@ export async function processFiscalYear(
     .find(
       {
         $or: [
-          { countryScope: { $in: ["us", "uk", "jp"] } },
+          { countryScope: { $in: ["us", "uk", "jp", "ca"] } },
           // Legacy records without a countryScope are US laws throughout
           // the existing policy pipeline and receive administration
           // metadata from the same compatibility rule.
@@ -725,7 +727,8 @@ export async function processFiscalYear(
         countryId === COUNTRY_CONFIGS.US.id,
         regionalLegislationTypeMap,
         countryId === COUNTRY_CONFIGS.US.id ? (usResetProgramsByRegion.get(stateId) ?? []) : [],
-        countryId === COUNTRY_CONFIGS.US.id ? openingServicesByRegion.get(stateId) : undefined
+        countryId === COUNTRY_CONFIGS.US.id ? openingServicesByRegion.get(stateId) : undefined,
+        caProvincialServiceClaims(countryId, financeState?.preset, stateId)
       );
     }
 
@@ -819,7 +822,8 @@ async function processStateFiscalYear(
   regionalFinanceEnabled = false,
   legislationTypeMap: ReadonlyMap<string, LegislationType> = new Map(),
   resetPrograms: readonly ResetLawProgramDocument[] = [],
-  openingServices?: ResetRegionalOpeningBoard
+  openingServices?: ResetRegionalOpeningBoard,
+  standingServices: readonly (RegionalProgramClaim & { category: string })[] = []
 ): Promise<void> {
   const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
@@ -883,7 +887,10 @@ async function processStateFiscalYear(
     revenue,
     stateGdp: newStateGdp,
   });
-  const serviceClaims = openingServices ? regionalOpeningServiceClaims(openingServices) : [];
+  const serviceClaims = [
+    ...(openingServices ? regionalOpeningServiceClaims(openingServices) : []),
+    ...standingServices,
+  ];
   const previousIds = new Set(Object.keys(stateBudget.regionalProgramSettlements ?? {}));
   const result = resolveRegionalSpending({
     baseSpending: spendingDetail.spending,

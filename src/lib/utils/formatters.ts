@@ -16,6 +16,7 @@ import {
 } from "@/lib/elections/cycleAnchorContext";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { usRegionalElectionYearForWorld } from "@/lib/countries/us/rules/regionalElectionCalendar";
+import { caProvincialElectionYearForWorld } from "@/lib/countries/ca/rules/provincialLegislature";
 
 export * from "./formattersCore";
 
@@ -74,7 +75,8 @@ export function electionToLarpYear(
   if (cycle === 0) return ctx.startingYear;
   const regional =
     countryId && state
-      ? usRegionalElectionYearForWorld(state, electionType, cycle, countryId, ctx.preset)
+      ? (usRegionalElectionYearForWorld(state, electionType, cycle, countryId, ctx.preset) ??
+        caProvincialElectionYearForWorld(state, electionType, cycle, countryId, ctx.preset))
       : undefined;
   if (regional !== undefined) return regional;
   const years =

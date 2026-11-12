@@ -1,3 +1,4 @@
+import { caOpeningProvincialPrimaryFloor } from "@/lib/countries/ca/rules/provincialLegislature";
 /**
  * Canonical LARP-cycle math for perpetual elections, shared between
  * cron spawn paths, the admin recalibrate flow, and one-shot
@@ -753,14 +754,26 @@ export function pickNextCanonicalCycle(
     const primaryHoursLeft = primaryEndTurn - effectivePrimaryStart;
     const generalHoursLeft = endTurn - Math.max(primaryEndTurn, currentTurn);
 
-    // A start-year US race has only 23 primary turns before its 24-turn general.
+    // Opening calendars can clip the first primary; later cycles keep their minima.
+    const provincialFloor = caOpeningProvincialPrimaryFloor({
+      countryId: params.countryId,
+      electionType: params.electionType,
+      preset: params.ctx?.preset,
+      cycle,
+      currentTurn,
+      endTurn,
+      primaryEndTurn,
+      preIterationTurns: params.ctx?.preIterationTurns,
+      minPrimaryHours,
+    });
     const primaryFloor =
-      countryHasFeature("usElections", params.countryId) &&
+      provincialFloor ??
+      (countryHasFeature("usElections", params.countryId) &&
       params.ctx?.preset === "2027-default" &&
       cycle === 1 &&
       endTurn - (params.ctx.preIterationTurns ?? 0) === 48
         ? Math.min(minPrimaryHours, 23)
-        : minPrimaryHours;
+        : minPrimaryHours);
     if (primaryHoursLeft >= primaryFloor && generalHoursLeft >= minGeneralHours) {
       return { cycle, startTurn, primaryEndTurn, endTurn };
     }

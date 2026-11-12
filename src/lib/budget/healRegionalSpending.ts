@@ -1,4 +1,5 @@
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { caProvincialServiceClaims } from "@/lib/countries/ca/rules/provincialServices";
 import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { StateBudget } from "@/lib/db/types/budget";
@@ -30,24 +31,31 @@ export async function loadRegionalHealContext(db: Db) {
   const enabled =
     world?.preset === "2027-default" &&
     resetSystemVersionsForCountry(world, RESET_V2_READY, "US").legislation === "v2";
-  const [boards, programs, types] = enabled
-    ? await Promise.all([
-        resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db)
+  const [boards, programs, types] = await Promise.all([
+    enabled
+      ? resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db)
           .find({ countryId: "US", worldId: world!.resetWorldId })
-          .toArray(),
-        resetLawProgramsCollection<ResetLawProgramDocument>(db)
+          .toArray()
+      : [],
+    enabled
+      ? resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find({ country: "US", scope: "regional", worldId: world!.resetWorldId })
-          .toArray(),
-        legislationTypesCollection<LegislationType>(db)
+          .toArray()
+      : [],
+    enabled || world?.preset === "2027-default"
+      ? legislationTypesCollection<LegislationType>(db)
           .find(
-            { $or: [{ countryScope: "us" }, { countryScope: { $exists: false } }] },
+            {
+              $or: [{ countryScope: { $in: ["us", "ca"] } }, { countryScope: { $exists: false } }],
+            },
             { projection: { _id: 1, name: 1, administration: 1, policyOptions: 1 } }
           )
-          .toArray(),
-      ])
-    : [[], [], []];
+          .toArray()
+      : [],
+  ]);
   for (const board of boards) regionalOpeningServiceClaims(board);
   return {
+    preset: world?.preset,
     enabled,
     boards: new Map(boards.map((b) => [b.regionId, b])),
     programs,
@@ -64,7 +72,13 @@ export async function regionalSpendingForHeal(
   const countryId = budget.countryId;
   if (!countryId) throw new Error("Regional budget has no owning country");
   const detail = await calculateStateSpendingDetail(db, budget.stateId, countryId, budget);
-  if (!context.enabled || !countryHasFeature("usLib", budget.countryId))
+  const services = caProvincialServiceClaims(countryId, context.preset, budget.stateId);
+  if (context.enabled && countryHasFeature("usLib", budget.countryId)) {
+    const board = context.boards.get(budget.stateId);
+    if (!board) throw new Error(`Missing US opening service baseline for ${budget.stateId}`);
+    services.push(...regionalOpeningServiceClaims(board));
+  }
+  if (!services.length)
     return detail.spending.total > 0
       ? detail.spending
       : {
@@ -73,12 +87,10 @@ export async function regionalSpendingForHeal(
             Object.values(budget.spending.byCategory).reduce((sum, n) => sum + n, 0) +
             (budget.spending.resourceProspecting ?? 0),
         };
-  const board = context.boards.get(budget.stateId);
-  if (!board) throw new Error(`Missing US opening service baseline for ${budget.stateId}`);
   const previous = new Set(Object.keys(budget.regionalProgramSettlements ?? {}));
   return resolveRegionalSpending({
     baseSpending: detail.spending,
-    services: regionalOpeningServiceClaims(board),
+    services,
     laws: regionalLawClaims(detail.lawCosts, context.types, previous),
     programs: buildResetRegionalProgramClaims({
       programs: context.programs.filter((p) => p.regionId === budget.stateId),

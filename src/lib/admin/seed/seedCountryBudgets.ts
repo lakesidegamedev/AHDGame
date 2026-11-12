@@ -25,6 +25,7 @@ interface CountryBudgetSeedOptions {
   afterNationalBudget?: () => Promise<void>;
   seedCorporations?: (states: Parameters<typeof generateStateBudgets>[0]) => Promise<void>;
   corporationLabel?: string;
+  prepareRegionalBudget?: (budget: StateBudget, preset: string) => StateBudget;
 }
 
 export async function seedCountryBudgets(
@@ -41,6 +42,7 @@ export async function seedCountryBudgets(
     afterNationalBudget,
     seedCorporations,
     corporationLabel = "sovereign issuer",
+    prepareRegionalBudget,
   }: CountryBudgetSeedOptions
 ): Promise<void> {
   if (reset) {
@@ -125,7 +127,9 @@ export async function seedCountryBudgets(
     gdp: state.gdp,
     countryId: state.countryId,
   }));
-  const stateBudgets = generateStateBudgets(statesForBudgets, fiscalYear);
+  const stateBudgets = generateStateBudgets(statesForBudgets, fiscalYear).map(
+    (budget) => prepareRegionalBudget?.(budget, preset) ?? budget
+  );
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
     await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });

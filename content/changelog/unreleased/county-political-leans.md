@@ -70,3 +70,7 @@ areas: [engine]
 - Lets post-turn contest writes finish before reset rehearsal connections close.
 - Uses national approval for national metric views, avoiding missing-census
   errors for synthetic US and Canadian national region IDs.
+- Preserves Canada's modeled provincial services through budget healing and fiscal
+  rollover, with shortfalls shown as unfunded services rather than surplus.
+- Keeps Canadian opening-year provincial elections on their authored dates and
+  labels every provincial cycle with its own election year.
