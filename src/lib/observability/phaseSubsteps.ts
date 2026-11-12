@@ -61,6 +61,22 @@ export function substepMarker(now: () => number = () => performance.now()): Subs
   };
 }
 
+/**
+ * Add an already measured duration to a named step of the current phase. For
+ * breakdowns of time that a surrounding `mark` also covers, so the pieces are
+ * named as parts of that step and not summed with it.
+ */
+export function recordPhaseSubstep(name: string, ms: number, calls = 1): void {
+  const phase = currentTurnPhase();
+  if (!phase || !Number.isFinite(ms) || ms < 0) return;
+  const steps = store().get(phase) ?? {};
+  const step = steps[name] ?? { ms: 0, calls: 0 };
+  step.ms += ms;
+  step.calls += calls;
+  steps[name] = step;
+  store().set(phase, steps);
+}
+
 /** Recorded steps for a phase, rounded for storage, without clearing them. */
 export function peekPhaseSubsteps(phase: string): PhaseSubsteps | undefined {
   const steps = store().get(phase);
