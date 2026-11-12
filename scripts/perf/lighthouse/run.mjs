@@ -16,7 +16,13 @@ import process from "node:process";
 import lighthouse from "lighthouse";
 import * as chromeLauncher from "chrome-launcher";
 import { TOP_PAGES } from "./pages.mjs";
-import { METRIC_BUDGETS, METRIC_IDS, PAGE_BUDGET_OVERRIDES, SCORE_BUDGETS } from "./budgets.mjs";
+import {
+  METRIC_BUDGETS,
+  METRIC_IDS,
+  MOBILE_PAGE_BUDGET_OVERRIDES,
+  PAGE_BUDGET_OVERRIDES,
+  SCORE_BUDGETS,
+} from "./budgets.mjs";
 
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
 
@@ -121,12 +127,14 @@ function ms(value) {
 
 function evaluateBudget(page, scores, metrics, seoExcluded) {
   const limits = SCORE_BUDGETS[strategy];
-  const override = PAGE_BUDGET_OVERRIDES[page.path] ?? {};
+  const mobileOverride =
+    strategy === "mobile" ? (MOBILE_PAGE_BUDGET_OVERRIDES[page.path] ?? {}) : {};
+  const override = { ...(PAGE_BUDGET_OVERRIDES[page.path] ?? {}), ...mobileOverride };
   const breaches = [];
   const metricWarnings = [];
 
   for (const id of METRIC_IDS) {
-    const ceiling = METRIC_BUDGETS[strategy][id];
+    const ceiling = override.metrics?.[id] ?? METRIC_BUDGETS[strategy][id];
     const value = metrics[id];
     if (ceiling === undefined || value === null) continue;
     if (value > ceiling) {
