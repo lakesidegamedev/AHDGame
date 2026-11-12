@@ -222,9 +222,12 @@ export async function runJournaledStep(
   ctx: JournalContext,
   name: string,
   onStarted: StartedPolicy,
-  fn: () => Promise<void>
+  fn: () => Promise<unknown>
 ): Promise<void> {
-  if (ctx.stage < 2) return fn();
+  if (ctx.stage < 2) {
+    await fn();
+    return;
+  }
   const existing = await readJournal(ctx);
   const action = stepAction(existing?.phases?.[name], onStarted);
   if (action === "skip") return;
