@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { ERA_PRICE_LEVEL } from "@/lib/campaigns/rules/priceLevel";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -252,7 +253,7 @@ describe("campaign list budget preview", () => {
       electionType: "president",
       officeAnchor: 6_000,
       preset: "2027-default",
-      priceLevel: 1.28579,
+      priceLevel: ERA_PRICE_LEVEL["2027"],
       rate: 0.82,
       currency: "EUR",
       count: 2,
