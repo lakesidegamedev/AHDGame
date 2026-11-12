@@ -1,3 +1,4 @@
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { NextResponse } from "next/server";
 import { clearAuthCookie } from "@/lib/auth";
 import { z } from "zod";
@@ -89,8 +90,8 @@ export async function POST(request: Request) {
       return errorResponse(parsed.status, parsed.error);
     }
     const body = parsed.data;
-    if (body.startingParties === "none" && preset !== "1991-default") {
-      return errorResponse(400, "No starting parties is available for the 1991 preset");
+    if (body.startingParties === "none" && !supportsNoStartingParties(preset)) {
+      return errorResponse(400, "No starting parties is not available for this preset");
     }
     const bootstrap = body.bootstrap === true || bootstrapFromQuery;
     const mode: BootstrapMode = body.mode === "vacant" ? "vacant" : "historical";
@@ -177,9 +178,9 @@ async function handleStreamingReset(
     );
   }
 
-  if (body.startingParties === "none" && preset !== "1991-default") {
+  if (body.startingParties === "none" && !supportsNoStartingParties(preset)) {
     return new Response(
-      `data: ${JSON.stringify({ type: "error", message: "No starting parties is available for the 1991 preset" })}\n\n`,
+      `data: ${JSON.stringify({ type: "error", message: "No starting parties is not available for this preset" })}\n\n`,
       { status: 400, headers: { "Content-Type": "text/event-stream" } }
     );
   }

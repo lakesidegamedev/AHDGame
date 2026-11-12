@@ -1,4 +1,5 @@
 import { getValidatedEnv, type Env } from "@/lib/config/validatedEnv";
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import type { ResetAndBootstrapOptions } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
 import type { Db } from "mongodb";
@@ -54,8 +55,8 @@ export async function runResetAndBootstrapCli(
   const mode = getMode(args);
   const preset = getPreset(args);
   const startingParties = hasFlag(args, "--no-starting-parties") ? "none" : undefined;
-  if (startingParties === "none" && preset !== "1991-default") {
-    throw new Error("--no-starting-parties requires --preset=1991-default");
+  if (startingParties === "none" && !supportsNoStartingParties(preset)) {
+    throw new Error(`--no-starting-parties is not supported for --preset=${preset}`);
   }
   const skipRegionalCouncil = hasFlag(args, "--skip-regional-council");
   const resetReference = !hasFlag(args, "--preserve-reference");

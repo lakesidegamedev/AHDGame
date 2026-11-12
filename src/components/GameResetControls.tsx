@@ -1,5 +1,6 @@
 "use client";
 
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ResetSeedReadiness } from "@/lib/admin/resetAndBootstrapGameWorld";
@@ -202,7 +203,8 @@ export function GameResetControls() {
   }, []);
 
   const handleReset = async (type: ResetType) => {
-    const noStartingParties = selectedPreset === "1991-default" && startingParties === "none";
+    const noStartingParties =
+      supportsNoStartingParties(selectedPreset) && startingParties === "none";
     const config =
       noStartingParties && type === "resetAndBootstrap"
         ? {
@@ -216,7 +218,7 @@ export function GameResetControls() {
           }
         : RESET_CONFIG[type];
     const presetName = noStartingParties
-      ? "1991 Start Date - No starting parties"
+      ? `${presets.find((p) => p.id === selectedPreset)?.name ?? selectedPreset} - No starting parties`
       : (presets.find((p) => p.id === selectedPreset)?.name ?? selectedPreset);
     const firstConfirm = [
       `${config.title}`,
@@ -259,7 +261,7 @@ export function GameResetControls() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...config.body,
-          ...(selectedPreset === "1991-default" ? { startingParties } : {}),
+          ...(supportsNoStartingParties(selectedPreset) ? { startingParties } : {}),
           iteration,
           startDate: { year: startYear, week: startWeek },
         }),
@@ -345,21 +347,22 @@ export function GameResetControls() {
   // exists for the selected year with that variant suffix.
   const variants = [...new Set(sortedPresets.map(presetVariant))];
   const selectedYear = selectedPresetData ? presetStartYear(selectedPresetData) : null;
-  const noStartingParties = selectedPreset === "1991-default" && startingParties === "none";
+  const noStartingParties = supportsNoStartingParties(selectedPreset) && startingParties === "none";
   const selectedVariant = noStartingParties
     ? "No Parties"
     : selectedPresetData
       ? presetVariant(selectedPresetData)
       : null;
   const findPreset = (year: number, variant: string) =>
-    year === 1991 && variant === "No Parties"
-      ? sortedPresets.find((p) => p.id === "1991-default")
+    variant === "No Parties" &&
+    sortedPresets.some((p) => presetStartYear(p) === year && supportsNoStartingParties(p.id))
+      ? sortedPresets.find((p) => presetStartYear(p) === year && supportsNoStartingParties(p.id))
       : sortedPresets.find((p) => presetStartYear(p) === year && presetVariant(p) === variant);
 
   const selectConditions = (preset: ResetPreset, variant: string | null) => {
     setSelectedPreset(preset.id);
     setStartingParties(
-      preset.id === "1991-default" && variant === "No Parties" ? "none" : "default"
+      supportsNoStartingParties(preset.id) && variant === "No Parties" ? "none" : "default"
     );
   };
 
@@ -565,7 +568,7 @@ export function GameResetControls() {
         {selectedPresetData && (
           <p className="mt-3 text-xs text-muted">
             {noStartingParties
-              ? "1991 world data with no starting parties in player countries. Their political offices start vacant for player-created parties and elections. Background countries keep their modeled parties and governments."
+              ? "This world's data with no starting parties in player countries. Their political offices start vacant for player-created parties and elections. Background countries keep their modeled parties and governments."
               : selectedPresetData.description}
           </p>
         )}
@@ -721,7 +724,7 @@ export function GameResetControls() {
             </p>
             <p className="mt-1 text-sm text-muted">
               {noStartingParties
-                ? "Rebuilds the 1991 world with vacant political offices and no starting parties in player countries."
+                ? "Rebuilds the world with vacant political offices and no starting parties in player countries."
                 : RESET_CONFIG.resetAndBootstrap.description}
             </p>
           </div>
