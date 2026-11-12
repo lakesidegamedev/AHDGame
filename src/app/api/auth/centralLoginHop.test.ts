@@ -211,7 +211,8 @@ describe("session hop on password login", () => {
     configure("central");
     const { json, hop } = await loginAndHop({ returnTo: null });
     expect(json.message).toBe("Login successful");
-    expect(hop?.origin + hop?.pathname).toBe(`${ISSUER}/protocol/openid-connect/auth`);
+    expect(hop).toBeDefined();
+    expect(hop!.origin + hop!.pathname).toBe(`${ISSUER}/protocol/openid-connect/auth`);
     expect(Object.fromEntries(hop!.searchParams)).toMatchObject({
       client_id: "ahd-web",
       scope: "openid",
