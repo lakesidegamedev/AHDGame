@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Env } from "@/lib/config/validatedEnv";
 import type { Db } from "mongodb";
+import { settingsFingerprint } from "@/lib/admin/resetRehearsal/gate";
 import { runResetAndBootstrapCli } from "./resetAndBootstrapCli";
 
 beforeEach(() => vi.stubEnv("MONGODB_DB", "fixture-world"));
@@ -80,6 +81,7 @@ describe("reset and bootstrap CLI preflight", () => {
             "--expect-db=fixture-world",
             "--preset=1991-default",
             "--no-starting-parties",
+            "--skip-rehearsal-gate=fixture world",
             ...foundingArgs,
           ],
           {
@@ -167,5 +169,105 @@ describe("getIteration", () => {
     const { getIteration } = await import("./resetAndBootstrapCli");
     expect(() => getIteration(["--iteration=Gamma:1"])).toThrow("--iteration must look like");
     expect(() => getIteration(["--iteration=Iteration:0"])).toThrow("--iteration must look like");
+  });
+});
+
+describe("rehearsal gate", () => {
+  const settings = settingsFingerprint({
+    preset: "2027-default",
+    mode: "historical",
+    startingParties: "default",
+    foundingPhase: false,
+  });
+  const NOW = Date.parse("2026-11-12T12:00:00Z");
+  const record = {
+    passed: true,
+    timestamp: new Date(NOW - 1000).toISOString(),
+    settingsFingerprint: settings,
+    treeHash: "tree-a",
+  };
+  const baseArgs = ["--expect-db=fixture-world", "--preset=2027-default"];
+
+  function run(args: string[], rec: unknown = record, env: Env = validEnv) {
+    const reset = vi.fn(async () => ({}));
+    const connectDb = vi.fn(async (name: string) => ({ databaseName: name }) as unknown as Db);
+    const promise = runResetAndBootstrapCli(args, {
+      validateEnvironment: () => env,
+      connectDb,
+      closeDb: vi.fn(async () => {}),
+      reset,
+      readRecord: () => rec as never,
+      treeHash: () => "tree-a",
+      now: () => NOW,
+    });
+    return { promise, reset, connectDb };
+  }
+
+  it("refuses a real database with no record argument", async () => {
+    const { promise, reset, connectDb } = run(baseArgs);
+    await expect(promise).rejects.toThrow("--rehearsal-record");
+    expect(connectDb).not.toHaveBeenCalled();
+    expect(reset).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing", null],
+    ["failed", { ...record, passed: false }],
+    ["stale", { ...record, timestamp: new Date(NOW - 25 * 3600_000).toISOString() }],
+    ["tree-differs", { ...record, treeHash: "tree-b" }],
+    ["settings-differ", { ...record, settingsFingerprint: "{}" }],
+  ])("refuses a %s record", async (reason, rec) => {
+    const { promise, reset } = run([...baseArgs, "--rehearsal-record=r.json"], rec);
+    await expect(promise).rejects.toThrow(reason);
+    expect(reset).not.toHaveBeenCalled();
+  });
+
+  it("resets when the record matches", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const { promise, reset } = run([...baseArgs, "--rehearsal-record=r.json"]);
+      await promise;
+      expect(reset).toHaveBeenCalledTimes(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("does not gate a rehearsal database or a target check", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      vi.stubEnv("MONGODB_DB", "rehearsal-x");
+      const rehearsalEnv = {
+        ...validEnv,
+        MONGODB_URI: "mongodb://127.0.0.1/rehearsal-x",
+        MONGODB_DB: "rehearsal-x",
+      };
+      const rehearsal = run(
+        ["--expect-db=rehearsal-x", "--preset=2027-default"],
+        null,
+        rehearsalEnv
+      );
+      await rehearsal.promise;
+      expect(rehearsal.reset).toHaveBeenCalledTimes(1);
+      vi.stubEnv("MONGODB_DB", "fixture-world");
+      await run([...baseArgs, "--check-target"]).promise;
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("skips only with a stated reason and warns loudly", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await expect(run([...baseArgs, "--skip-rehearsal-gate="]).promise).rejects.toThrow("reason");
+      const { promise, reset } = run([...baseArgs, "--skip-rehearsal-gate=owner approved"]);
+      await promise;
+      expect(reset).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]?.[0])).toContain("owner approved");
+    } finally {
+      log.mockRestore();
+      warn.mockRestore();
+    }
   });
 });
