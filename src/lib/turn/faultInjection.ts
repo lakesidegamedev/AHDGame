@@ -2,12 +2,22 @@
  * Rehearsal-only fault injection for turn phases. Armed by the turn system only
  * when the world is a sandbox (gameConfig.simSandbox), never in production.
  *
- * Spec: `<phase>[:<substep>][:once]`. Without a substep the fault throws as the
+ * Spec: `<phase>[:<substep>][:once][:stop]`. Without a substep the fault throws as the
  * phase starts; with one it throws when that substep is marked. `once` fires a
- * single time per process, so a retry of the same turn gets past it.
+ * single time per process, so a retry of the same turn gets past it. `stop`
+ * makes the failure stop the turn (as a must-succeed step would) instead of
+ * being recorded as a failed step while the turn carries on.
  */
 
-export type TurnFaultSpec = { phase: string; substep: string | null; once: boolean };
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+
+export type TurnFaultSpec = {
+  phase: string;
+  substep: string | null;
+  once: boolean;
+  /** Throw as a step that must stop the turn, so the retry loop is exercised. */
+  stop: boolean;
+};
 
 export function parseTurnFaultSpec(raw: string | undefined | null): TurnFaultSpec | null {
   const parts = (raw ?? "")
@@ -15,10 +25,17 @@ export function parseTurnFaultSpec(raw: string | undefined | null): TurnFaultSpe
     .map((p) => p.trim())
     .filter(Boolean);
   if (parts.length === 0) return null;
-  const once = parts[parts.length - 1] === "once";
-  const rest = once ? parts.slice(0, -1) : parts;
-  if (rest.length === 0 || rest.length > 2) return null;
-  return { phase: rest[0], substep: rest[1] ?? null, once };
+  let once = false;
+  let stop = false;
+  while (parts.length > 1) {
+    const tail = parts[parts.length - 1];
+    if (tail === "once") once = true;
+    else if (tail === "stop") stop = true;
+    else break;
+    parts.pop();
+  }
+  if (parts.length === 0 || parts.length > 2) return null;
+  return { phase: parts[0], substep: parts[1] ?? null, once, stop };
 }
 
 declare global {
@@ -40,9 +57,10 @@ export function maybeInjectTurnFault(phase: string, substep: string | null): voi
   if (!armed || armed.spec.phase !== phase || armed.spec.substep !== substep) return;
   if (armed.spec.once && armed.fired) return;
   armed.fired = true;
-  throw new Error(
+  const error = new Error(
     `Injected fault in ${phase}${substep ? `:${substep}` : ""} (AHD_TURN_FAULT_INJECT)`
   );
+  throw armed.spec.stop ? new TurnMustStopError(phase, error) : error;
 }
 
 /** Message plus the first stack frames, bounded for storage on a turn log. */

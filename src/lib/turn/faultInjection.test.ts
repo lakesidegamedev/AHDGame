@@ -14,16 +14,25 @@ describe("parseTurnFaultSpec", () => {
       phase: "bondTurn",
       substep: null,
       once: false,
+      stop: false,
     });
     expect(parseTurnFaultSpec("bondTurn:once")).toEqual({
       phase: "bondTurn",
       substep: null,
       once: true,
+      stop: false,
     });
     expect(parseTurnFaultSpec("corporationTurn:payroll:once")).toEqual({
       phase: "corporationTurn",
       substep: "payroll",
       once: true,
+      stop: false,
+    });
+    expect(parseTurnFaultSpec("bondTurn:stop:once")).toMatchObject({
+      phase: "bondTurn",
+      substep: null,
+      once: true,
+      stop: true,
     });
   });
   it("rejects empty and malformed specs", () => {
