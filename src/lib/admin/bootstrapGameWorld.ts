@@ -1,3 +1,4 @@
+import { reanchorBackgroundRegionalMacro2027 } from "./seed/reanchorBackgroundRegionalMacro2027";
 import {
   clearStartingPolitics,
   loadStartingPartiesMode,
@@ -825,11 +826,9 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   await seedNGWiki(db);
   await seedIeBudgets(db, resetReference, log, preset);
   await seedNgBudgets(db, resetReference, log, preset);
-  await guarded("reanchorBackgroundRegionalMacro2027", async () => {
-    const { reanchorBackgroundRegionalMacro2027 } =
-      await import("@/lib/admin/seed/reanchorBackgroundRegionalMacro2027");
-    await reanchorBackgroundRegionalMacro2027(db, preset, log);
-  });
+  await guarded("reanchorBackgroundRegionalMacro2027", () =>
+    reanchorBackgroundRegionalMacro2027(db, preset, log)
+  );
   // Materialize scalar debt.principal into tradeable sovereign bond series.
   // Must run after every national-budget + NatCorp seeder so surplus countries
   // open with a bond float matching their debt rather than orphaned principal.

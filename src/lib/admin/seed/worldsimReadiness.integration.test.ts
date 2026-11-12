@@ -47,8 +47,7 @@ describe("2027 worldsim readiness", () => {
       expect(entry?.status, countryId).not.toBe("dissolved");
     }
     // These three have 2027 country political seed paths. Keep their persisted
-    // political substrate tied to the manifest while BG/RU and the fiscal
-    // substrate for all five remain open (#2289).
+    // political substrate tied to the manifest.
     for (const countryId of ["PL", "HU", "RO"]) {
       for (const collection of ["states", "politicalParties", "statePartyOrg"]) {
         expect(
@@ -57,9 +56,12 @@ describe("2027 worldsim readiness", () => {
         ).toBeGreaterThan(0);
       }
     }
-    expect(await db.collection("federalBudget").countDocuments({ countryId: "HU" })).toBe(1);
-    for (const countryId of ["PL", "RO"]) {
-      expect(await db.collection("federalBudget").countDocuments({ countryId })).toBe(0);
+    // Every successor country opens with its own national fiscal book.
+    for (const countryId of ["RU", "PL", "HU", "RO", "BG"]) {
+      expect(
+        await db.collection("federalBudget").countDocuments({ countryId }),
+        `federalBudget.${countryId}`
+      ).toBe(1);
     }
   });
 
