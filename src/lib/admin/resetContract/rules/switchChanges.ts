@@ -1,10 +1,9 @@
 /**
  * Which admin switches a world reset changed.
  *
- * A reset writes the fresh-world flag preset over the outgoing values, so a
- * switch an admin flipped after the previous reset is reverted. Which switches
- * survive is an owner decision; this rule only makes every reverted one
- * visible so the operator can restore it deliberately.
+ * A reset writes the fresh-world flag preset over the outgoing values, so an
+ * admin-set switch can be reverted. Which switches survive is an owner call;
+ * this only makes each change visible so it can be restored on purpose.
  */
 
 export type SwitchSource = "gameState" | "gameConfig";
