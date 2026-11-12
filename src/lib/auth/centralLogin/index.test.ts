@@ -156,17 +156,19 @@ describe("summarizeShadowEvents", () => {
       { _id: { match: false, central: "timeout", fallback: false }, count: 4 },
       { _id: { match: false, central: "n/a", fallback: false }, count: 7 },
       { _id: { match: false, central: "n/a", fallback: false, reason: "long_password" }, count: 6 },
+      { _id: { match: false, central: "unknown", fallback: false, reason: "unknown_heal" }, count: 2 },
     ];
     const now = new Date("2026-01-02T00:00:00Z");
     const summary = await summarizeShadowEvents(3600_000, now);
     expect(summary).toMatchObject({
-      total: 28,
+      total: 30,
       match: 5,
       mismatch: 3,
       error: 3,
       timeout: 4,
       fallback: 3,
       longPassword: 6,
+      unknownHeal: 2,
     });
     expect(summary.windowStart).toEqual(new Date("2026-01-01T23:00:00Z"));
     expect(JSON.stringify(state.pipeline)).toContain("$match");

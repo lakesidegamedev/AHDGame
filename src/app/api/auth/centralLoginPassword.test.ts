@@ -74,7 +74,10 @@ function stubFetch() {
       }
       const path = url.replace("https://bridge.example.invalid/", "");
       state.bridgeCalls.push({ path, body: JSON.parse(String(init.body)) });
-      const answer = state.bridgeAnswer();
+      const answer =
+        path === "account-upsert"
+          ? { status: 200, body: { result: "created", userId: "synthetic" } }
+          : state.bridgeAnswer();
       if (answer.throwName) throw Object.assign(new Error("x"), { name: answer.throwName });
       return new Response(JSON.stringify(answer.body ?? {}), { status: answer.status });
     })
@@ -207,7 +210,38 @@ describe("password login, central mode", () => {
     expect(state.events).toEqual([]);
   });
 
-  it.each(["wrong", "disabled", "unknown"] as const)(
+  it("unknown: correct local password signs in and recreates the central account", async () => {
+    setMode("central");
+    setBridge("unknown");
+    expect((await login(loginRequest("right-password"))).status).toBe(200);
+    await vi.waitFor(() => expect(state.events).toHaveLength(1));
+    const upsert = state.bridgeCalls.find((c) => c.path === "account-upsert");
+    expect(upsert?.body).toMatchObject({
+      ahdUserId: userId.toString(),
+      passwordHash: localHash,
+      enabled: true,
+    });
+    expect(state.events[0]).toMatchObject({
+      kind: "password",
+      local: "ok",
+      central: "unknown",
+      match: false,
+      reason: "unknown_heal",
+      healed: true,
+    });
+    expect(state.events[0]).not.toHaveProperty("fallback");
+  });
+
+  it("unknown: wrong local password is refused and nothing is recreated", async () => {
+    setMode("central");
+    setBridge("unknown");
+    expect((await login(loginRequest("wrong-password"))).status).toBe(401);
+    await vi.waitFor(() => expect(state.events).toHaveLength(1));
+    expect(state.bridgeCalls.some((c) => c.path === "account-upsert")).toBe(false);
+    expect(state.events[0]).toMatchObject({ local: "wrong", reason: "unknown_heal" });
+  });
+
+  it.each(["wrong", "disabled"] as const)(
     "rejects on %s and never falls back, even with a matching local password",
     async (central) => {
       setMode("central");

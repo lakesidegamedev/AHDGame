@@ -5,7 +5,11 @@ import { shadowMatches, type LocalPasswordResult, type PasswordCheckOutcome } fr
 export type ShadowEventKind = "password" | "apple" | "google" | "discord" | "write";
 export type ShadowCentralResult = PasswordCheckOutcome | "n/a";
 
-export type ShadowEventReason = "long_password" | "restore" | "restore_unavailable";
+export type ShadowEventReason =
+  | "long_password"
+  | "restore"
+  | "restore_unavailable"
+  | "unknown_heal";
 
 export interface ShadowEvent {
   userId: string;
@@ -17,6 +21,8 @@ export interface ShadowEvent {
   fallback?: boolean;
   /** Why a comparison was skipped or what a write was for. */
   reason?: ShadowEventReason;
+  /** unknown_heal events: whether the central account was recreated. */
+  healed?: boolean;
   /** Bridge operation for `write` events. */
   op?: "password-set" | "account-upsert" | "account-delete";
   at: Date;
@@ -60,6 +66,8 @@ export interface ShadowSummary {
   fallback: number;
   /** Logins skipped because the password is too long to check centrally. */
   longPassword: number;
+  /** Central did not know the account; the local copy decided and the account was recreated. */
+  unknownHeal: number;
 }
 
 /** Counts for a later admin view. Mismatch excludes failures and skipped (n/a) events. */
@@ -99,11 +107,13 @@ export async function summarizeShadowEvents(
     timeout: 0,
     fallback: 0,
     longPassword: 0,
+    unknownHeal: 0,
   };
   for (const { _id, count } of rows) {
     summary.total += count;
     if (_id.fallback) summary.fallback += count;
     if (_id.reason === "long_password") summary.longPassword += count;
+    else if (_id.reason === "unknown_heal") summary.unknownHeal += count;
     else if (_id.central === "error") summary.error += count;
     else if (_id.central === "timeout") summary.timeout += count;
     else if (_id.match) summary.match += count;

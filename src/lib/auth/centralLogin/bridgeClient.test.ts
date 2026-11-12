@@ -4,6 +4,8 @@ import {
   bridgeAccountUpsert,
   bridgePasswordCheck,
   bridgePasswordSet,
+  isBridgeConfigured,
+  isSafeBridgeAddress,
   resetBridgeTokenCache,
 } from "./bridgeClient";
 
@@ -115,5 +117,31 @@ describe("bridge client", () => {
     expect(await bridgePasswordSet("u1", "pw")).toEqual({ ok: false, kind: "error" });
     route(() => json({ result: "ok" }));
     expect(await bridgeAccountDelete("u1")).toEqual({ ok: true, data: null });
+  });
+});
+
+describe("bridge address safety", () => {
+  it.each([
+    ["https://bridge.example.invalid/", true],
+    ["http://127.0.0.1:8080/realms/x/", true],
+    ["http://localhost:8080/", true],
+    ["http://[::1]:8080/", true],
+    ["http://bridge.example.invalid/", false],
+    ["http://10.0.0.5/", false],
+    ["ftp://bridge.example.invalid/", false],
+    ["https://user:pass@bridge.example.invalid/", false],
+    ["not a url", false],
+    ["", false],
+  ])("%s safe=%s", (url, safe) => {
+    expect(isSafeBridgeAddress(url)).toBe(safe);
+  });
+
+  it("reads as not configured when either address is plain http to a remote host", () => {
+    expect(isBridgeConfigured()).toBe(true);
+    vi.stubEnv("LAKESIDE_ACCOUNT_BRIDGE_URL", "http://bridge.example.invalid/");
+    expect(isBridgeConfigured()).toBe(false);
+    vi.stubEnv("LAKESIDE_ACCOUNT_BRIDGE_URL", "https://bridge.example.invalid/");
+    vi.stubEnv("LAKESIDE_ACCOUNT_BRIDGE_TOKEN_URL", "http://token.example.invalid/token");
+    expect(isBridgeConfigured()).toBe(false);
   });
 });

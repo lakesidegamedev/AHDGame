@@ -188,6 +188,36 @@ export function recordLoginFallback(
   void recordShadowEvent(passwordShadowEvent(userId, local, central, true));
 }
 
+/**
+ * Central mode: the central system did not know this account, so the local
+ * copy decided. On a correct password the account is recreated centrally
+ * (enabled, with the current local hash) so the next sign-in is central.
+ * Recorded with its own reason, never as an outage fallback. Best effort.
+ */
+export async function centralHealUnknownAccount(
+  user: AccountSource & { password?: unknown },
+  local: LocalPasswordResult
+): Promise<void> {
+  const userId = user._id.toHexString();
+  let healed = false;
+  if (local === "ok" && typeof user.password === "string" && user.password) {
+    const result = await bridgeAccountUpsert(
+      bridgeAccountFromUser(user, { passwordHash: user.password, enabled: true })
+    );
+    healed = result.ok;
+  }
+  await recordShadowEvent({
+    userId,
+    kind: "password",
+    local,
+    central: "unknown",
+    match: false,
+    reason: "unknown_heal",
+    ...(local === "ok" ? { healed } : {}),
+    at: new Date(),
+  });
+}
+
 /** Shadow mode: provider logins are recorded without a central comparison. */
 export function shadowRecordProviderLogin(
   userId: string,

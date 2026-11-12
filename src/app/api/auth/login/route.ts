@@ -31,6 +31,7 @@ import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
 import { authConfig } from "@/lib/config/auth";
 import {
   centralCheckPassword,
+  centralHealUnknownAccount,
   decideCentralLogin,
   getCentralLoginMode,
   isLongPasswordForCentral,
@@ -179,6 +180,9 @@ export async function POST(request: Request) {
       if (decision.action === "fallback-local") {
         isValidPassword = await bcrypt.compare(password, user.password);
         recordLoginFallback(userKey, isValidPassword ? "ok" : "wrong", central);
+      } else if (decision.action === "heal-local") {
+        isValidPassword = await bcrypt.compare(password, user.password);
+        void centralHealUnknownAccount(user, isValidPassword ? "ok" : "wrong");
       } else {
         isValidPassword = decision.action === "accept";
       }

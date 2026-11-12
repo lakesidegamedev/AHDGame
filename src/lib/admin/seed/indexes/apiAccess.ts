@@ -81,6 +81,15 @@ export async function seedApiAccessIndexes(db: Db, log: (msg: string) => void) {
 
   await ensureIndex(db, "centralLoginShadowEvents", { at: -1 }, { name: "clse_at" }, log);
 
+  // Shadow rows are only needed for the comparison window; keep 30 days.
+  await ensureIndex(
+    db,
+    "centralLoginShadowEvents",
+    { at: 1 },
+    { name: "clse_at_ttl", expireAfterSeconds: 30 * 24 * 60 * 60 },
+    log
+  );
+
   await ensureIndex(
     db,
     "centralLoginShadowEvents",

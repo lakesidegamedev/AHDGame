@@ -42,10 +42,29 @@ export function bridgeTimeoutMs(): number {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : DEFAULT_TIMEOUT_MS;
 }
 
+/**
+ * The bridge receives plaintext passwords, so only https or a loopback
+ * address is acceptable. Anything else reads as not configured (mode off).
+ */
+export function isSafeBridgeAddress(raw: string | undefined | null): boolean {
+  if (!raw) return false;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (url.username || url.password) return false;
+  if (url.protocol === "https:") return true;
+  if (url.protocol !== "http:") return false;
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  return host === "localhost" || host === "::1" || /^127(?:\.\d{1,3}){3}$/.test(host);
+}
+
 export function isBridgeConfigured(): boolean {
   return Boolean(
-    authConfig.accountBridgeUrl() &&
-    authConfig.accountBridgeTokenUrl() &&
+    isSafeBridgeAddress(authConfig.accountBridgeUrl()) &&
+    isSafeBridgeAddress(authConfig.accountBridgeTokenUrl()) &&
     authConfig.accountBridgeClientId() &&
     authConfig.accountBridgeClientSecret()
   );

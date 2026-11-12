@@ -16,9 +16,12 @@ describe("decideCentralLogin", () => {
     expect(decideCentralLogin("ok")).toEqual({ action: "accept" });
   });
   it("rejects definite negative answers without fallback", () => {
-    for (const outcome of ["wrong", "disabled", "unknown"] as const) {
+    for (const outcome of ["wrong", "disabled"] as const) {
       expect(decideCentralLogin(outcome)).toEqual({ action: "reject" });
     }
+  });
+  it("checks locally and heals when the central system does not know the account", () => {
+    expect(decideCentralLogin("unknown")).toEqual({ action: "heal-local" });
   });
   it("falls back to the local check on error or timeout only", () => {
     expect(decideCentralLogin("error")).toEqual({ action: "fallback-local" });

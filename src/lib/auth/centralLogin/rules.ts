@@ -5,7 +5,10 @@ export type PasswordCheckOutcome = "ok" | "wrong" | "disabled" | "unknown" | "er
 export type LocalPasswordResult = "ok" | "wrong";
 
 export type CentralLoginDecision =
-  { action: "accept" } | { action: "reject" } | { action: "fallback-local" };
+  | { action: "accept" }
+  | { action: "reject" }
+  | { action: "fallback-local" }
+  | { action: "heal-local" };
 
 /** Anything other than the two switch-on values is off, so a typo never enables the bridge. */
 export function parseCentralLoginMode(raw: string | undefined): CentralLoginMode {
@@ -15,13 +18,16 @@ export function parseCentralLoginMode(raw: string | undefined): CentralLoginMode
 }
 
 /**
- * Central mode: only an infrastructure failure may fall back to the local
- * check. A definite answer from the central system, including wrong, disabled
- * and unknown, is final.
+ * Central mode: an infrastructure failure falls back to the local check. An
+ * account the central system does not know (an import gap or a failed mirror)
+ * also checks locally and, on success, is recreated centrally so it heals;
+ * that is recorded separately from outage fallbacks. Wrong and disabled are
+ * final and never retried locally.
  */
 export function decideCentralLogin(outcome: PasswordCheckOutcome): CentralLoginDecision {
   if (outcome === "ok") return { action: "accept" };
   if (outcome === "error" || outcome === "timeout") return { action: "fallback-local" };
+  if (outcome === "unknown") return { action: "heal-local" };
   return { action: "reject" };
 }
 
