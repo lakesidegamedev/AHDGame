@@ -7,7 +7,7 @@ summary: >-
   from their country and industry.
 tags: [economy, corporations]
 badges: [minor]
-areas: [economy, frontend]
+areas: [fullstack]
 ---
 
 ## What changed
