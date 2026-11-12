@@ -226,7 +226,7 @@ export function IdentitySection({ character, onCharacterUpdate }: Props) {
               ? t("identity.discordRequirementFailed")
               : discordRequired === null
                 ? t("identity.discordRequirementLoading")
-                : discordRequired
+                : discordRequired && !character.appleId?.trim()
                   ? t("identity.discordUnlinkRequired")
                   : undefined
           }

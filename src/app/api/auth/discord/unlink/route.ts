@@ -26,7 +26,8 @@ export const POST = withNoStore(async function POST() {
         discordAvatar: "",
         discordLinkedAt: "",
       },
-      beforeWrite: async (db) => {
+      beforeWrite: async (db, user) => {
+        if (typeof user?.appleId === "string" && user.appleId.trim()) return null;
         const config = await gameConfigCollection(db).findOne(
           { _id: "default" },
           { projection: { discordLinkRequiredForCharacter: 1 } }

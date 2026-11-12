@@ -19,7 +19,7 @@ export interface ProviderUnlinkSpec {
   /** Provider fields cleared from the user document. */
   unset: NonNullable<UpdateFilter<User>["$unset"]>;
   /** Provider-specific refusal, checked after the last-sign-in-method guard. */
-  beforeWrite?: (db: Db) => Promise<Response | null>;
+  beforeWrite?: (db: Db, account: { appleId?: unknown }) => Promise<Response | null>;
 }
 
 /** Shared unlink flow for the OAuth provider routes; the caller owns auth. */
@@ -64,7 +64,7 @@ export async function unlinkProviderCredential(
     );
   }
 
-  const refusal = await beforeWrite?.(db);
+  const refusal = await beforeWrite?.(db, account);
   if (refusal) return refusal;
 
   // Evict before the write so parallel requests re-read the pre-unlink record.
