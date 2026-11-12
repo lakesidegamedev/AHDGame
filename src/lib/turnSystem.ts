@@ -55,12 +55,16 @@ import {
   totalRoundTrips,
   withPhaseProfiling,
 } from "@/lib/observability/mongoRoundTrips";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import type { TurnFailureInfo } from "@/lib/turn/rules/retryPolicy";
 import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
 import { TURN_HOLDER_ID, setTurnLockFence, turnLockFenceFilter } from "@/lib/turn/turnLockHolder";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
   TurnResumeRefusedError,
+  TurnResumeResultUnavailableError,
+  phaseBlocksResumeWhenInterrupted,
 } from "@/simulation/engine/turnPhaseResumeResults";
 import {
   bootstrapPhaseRecord,
@@ -265,6 +269,10 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
   }
 }
 
+function phasesStarted(phase: string | null): boolean {
+  return phase != null && phase !== TURN_BOOTSTRAP_PHASE;
+}
+
 /** What a crashed previous holder left behind, for a resumed turn. */
 type CrashedTurnRecovery = ValidatedTurnResume;
 
@@ -292,19 +300,31 @@ export function processTurn(
   });
 }
 
-async function processTurnImpl(
-  options: {
-    /** Sandbox tooling hook. Production callers omit it. */
-    onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
-  } = {}
-): Promise<{
+export type TurnProcessResult = {
   success: boolean;
   turn: number;
   message: string;
   warnings: string[];
   health: GameHealthSummary | null;
-}> {
+  /** Present when the turn stopped on an error; drives automatic retry. */
+  failure?: TurnFailureInfo;
+};
+
+async function processTurnImpl(
+  options: {
+    /** Sandbox tooling hook. Production callers omit it. */
+    onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
+    /** Set by the automatic retry loop so the turn log tells the story. */
+    retryAttempt?: { attempt: number; of: number; afterPhase: string | null };
+  } = {}
+): Promise<TurnProcessResult> {
   const warnings: string[] = [];
+  if (options.retryAttempt) {
+    const r = options.retryAttempt;
+    warnings.push(
+      `turnRetry: automatic attempt ${r.attempt} of ${r.of} after ${r.afterPhase ?? "setup"} stopped the turn`
+    );
+  }
   const startTime = Date.now();
   let activeTurn = 0;
   let activeGameNow: Date | null = null;
@@ -1097,6 +1117,25 @@ async function processTurnImpl(
       message: `Failed to process turn: ${error instanceof Error ? error.message : "Unknown error"}`,
       warnings,
       health: lastHealth,
+      failure: {
+        phase:
+          currentPhaseRef.current && currentPhaseRef.current !== TURN_BOOTSTRAP_PHASE
+            ? currentPhaseRef.current
+            : null,
+        target: resumedFromCrash?.targetTurn ?? (activeTurn > 0 ? activeTurn : null),
+        retryable:
+          resilienceStage >= 1 &&
+          !(
+            currentPhaseRef.current != null &&
+            phaseBlocksResumeWhenInterrupted(currentPhaseRef.current) &&
+            !(error instanceof TurnMustStopError)
+          ) &&
+          (phasesStarted(currentPhaseRef.current) ||
+            !(
+              error instanceof TurnResumeRefusedError ||
+              error instanceof TurnResumeResultUnavailableError
+            )),
+      },
     };
   } finally {
     setTurnLockFence(null);

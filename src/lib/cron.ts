@@ -12,6 +12,8 @@ import { getProcessingLockState, TURN_LOCK_STALE_MS } from "./turn/processingLoc
 import { recordTurnHeapDelta } from "@/lib/observability/heapWatchdog";
 import { getDb } from "@/lib/mongodb";
 import { workerConfig } from "@/lib/config/worker";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { createTurnRetryController, type TurnRetryAttempt } from "@/lib/turn/turnRetry";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
 import { tryFastStaleLockTakeover } from "@/lib/turn/turnLockHolder";
@@ -63,11 +65,12 @@ const TURN_CRON_MONITOR_CONFIG = {
  * so trip events include the recent per-turn growth pattern.
  */
 async function runTurnWithHeapDiagnostics(
-  source: "primary" | "backup" | "stuckLockSweep" | "staleLockWatchdog"
-): Promise<ReturnType<typeof processTurn>> {
+  source: "primary" | "backup" | "stuckLockSweep" | "staleLockWatchdog" | "retry",
+  retryAttempt?: TurnRetryAttempt
+): Promise<Awaited<ReturnType<typeof processTurn>>> {
   const before = process.memoryUsage();
   const t0 = Date.now();
-  const result = await processTurn();
+  const result = await processTurn(retryAttempt ? { retryAttempt } : {});
   const after = process.memoryUsage();
   const durationMs = Date.now() - t0;
   const deltaBytes = after.heapUsed - before.heapUsed;
@@ -80,8 +83,18 @@ async function runTurnWithHeapDiagnostics(
   console.log(
     `[Heap] turn ${result.turn} (${source}): heapUsed ${(before.heapUsed / 1_000_000).toFixed(0)}MB → ${(after.heapUsed / 1_000_000).toFixed(0)}MB (delta=${deltaBytes >= 0 ? "+" : ""}${(deltaBytes / 1_000_000).toFixed(1)}MB) rss=${(after.rss / 1_000_000).toFixed(0)}MB dur=${durationMs}ms`
   );
+  // A retry attempt reports to the controller that scheduled it.
+  if (source !== "retry") void turnRetryController.onResult(result);
   return result;
 }
+
+const turnRetryController = createTurnRetryController({
+  run: (attempt) => runTurnWithHeapDiagnostics("retry", attempt),
+  record: async (entry) => {
+    const db = await getDb();
+    await gameStateCollection(db).updateOne({ _id: "current" }, { $set: { lastTurnRetry: entry } });
+  },
+});
 
 let nativePushCron: ReturnType<typeof cron.schedule> | null = null;
 let pushDispatchRunning = false;

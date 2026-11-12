@@ -393,6 +393,15 @@ export interface GameState {
   processingAbandonedAt?: Date | null;
   /** Worker instance, pid and boot id of the process that holds the turn lock. */
   processingHolderId?: string | null;
+  /** Latest automatic retry of a stopped turn: attempt, step it stopped at, outcome. */
+  lastTurnRetry?: {
+    turn: number | null;
+    attempt: number;
+    afterPhase: string | null;
+    outcome: "scheduled" | "succeeded" | "failed" | "stopped" | "exhausted";
+    at: Date;
+    note?: string;
+  } | null;
   /** Last phase name to refresh the processing heartbeat; helps debug stuck turns */
   processingPhase?: string | null;
   /** Per-phase lifecycle state for the active turn; used to debug skips, failures, and stalls */
