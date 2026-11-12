@@ -249,7 +249,7 @@ export async function bridgeAccountDelete(ahdUserId: string): Promise<BridgeResu
   return { ok: true, data: null };
 }
 
-/** A single-use ticket that lets the central login page sign this user in. */
+/** A single-use code that lets the central login page sign this user in. */
 export async function bridgeLoginTicket(ahdUserId: string): Promise<BridgeResult<string>> {
   const result = await post("login-ticket", { ahdUserId });
   if (!result.ok) return result;
