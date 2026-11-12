@@ -5,18 +5,18 @@ import { openingRegionalGrantBudget } from "@/lib/budget/rules/formulaGrants";
 
 /** Reconcile fresh regional receipts before snapshots and v2 opening claims are built. */
 export async function seedUS2027Grants(db: Db): Promise<void> {
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ countryId: "US" });
+  const budget = await federalBudgetCollection<FederalBudget>(db).findOne({ countryId: "US" });
   if (!budget) throw new Error("US grant opening needs its national budget");
   const [distribution, regions] = await Promise.all([
     processFormulaGrants(db, budget.revenue.total, "US"),
-    db.collection<StateBudget>("stateBudgets").find({ countryId: "US" }).toArray(),
+    stateBudgetsCollection<StateBudget>(db).find({ countryId: "US" }).toArray(),
   ]);
   const total = Object.values(distribution).reduce((sum, n) => sum + n, 0);
   if (Math.abs(total - budget.spending.stateGrants) >= 1)
     throw new Error("US opening grant receipts do not match federal spending");
   if (regions.length !== Object.keys(distribution).length)
     throw new Error("US opening grants need every regional budget");
-  await db.collection<StateBudget>("stateBudgets").bulkWrite(
+  await stateBudgetsCollection<StateBudget>(db).bulkWrite(
     regions.map((region) => {
       const grant = distribution[region.stateId];
       if (grant === undefined) throw new Error(`No opening grant for ${region.stateId}`);
@@ -43,3 +43,7 @@ export async function seedUS2027Grants(db: Db): Promise<void> {
     })
   );
 }
+
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";

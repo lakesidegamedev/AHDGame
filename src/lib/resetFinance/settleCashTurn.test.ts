@@ -182,6 +182,28 @@ function fixture() {
 
 describe("v2 treasury and paid Cabinet turn integration", () => {
   beforeEach(() => vi.clearAllMocks());
+  it("does not duplicate a funded bond service liability or create spendable cash", async () => {
+    const { treasuries, accounts, run } = fixture();
+    await run({
+      bondFlows: {
+        ...flow,
+        sovereignServiceAlreadyFunded: true,
+        sovereignCouponPaidByCountry: { US: 13 },
+      },
+    });
+    expect(treasuries[0]!.emergencyAdvance).toBe(0);
+    expect(treasuries[0]!.cash).toBe(0);
+    expect(accounts[0]!.lastAuthorityPaid).toBe(10);
+    const settled = structuredClone(treasuries);
+    await run({
+      bondFlows: {
+        ...flow,
+        sovereignServiceAlreadyFunded: true,
+        sovereignCouponPaidByCountry: { US: 13 },
+      },
+    });
+    expect(treasuries).toEqual(settled);
+  });
   it("keeps principal aligned through cash refunding and in-kind rollover", async () => {
     const { treasuries, budgets, run } = fixture();
     // Thirty redeemed and replaced in cash, plus a net twenty of new debt.

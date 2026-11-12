@@ -197,7 +197,7 @@ export interface GameState {
    * election years per era. Defaults to `"2019-default"` when undefined.
    */
   preset?: string;
-  /** Reset choice (#2679). Missing means default; overwritten on every reset. */
+  /** Starting parties mode; missing means default. */
   startingPartiesMode?: "default" | "none" | "no-npps";
   /**
    * On for fresh worlds (`DEFAULT_GAME_STATE_FLAGS`) since the state GDP unit fix.

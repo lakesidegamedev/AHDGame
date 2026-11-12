@@ -57,7 +57,7 @@ describe("v2 metric board read", () => {
     });
     db.collection("resetMetricSnapshots").findOne.mockResolvedValue({ ...board, regionId: null });
     const normalized = await readResetMetricBoard(db as unknown as Db, "US", undefined, ready);
-    expect(normalized).toEqual({ status: "ready", board });
+    expect(normalized).toEqual({ status: "ready", board, year: 2019 });
     if (normalized.status === "ready") expect(normalized.board).not.toHaveProperty("regionId");
     db.collection("gameState").findOne.mockResolvedValue({
       metricsSystemVersion: "v2",

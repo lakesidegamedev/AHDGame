@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Federal / state spending projections derived from enacted laws.
  *
@@ -324,7 +325,7 @@ export async function calculateFederalSpending(
 
   // The 2027 US opening uses the same standing formula pool as annual rollover.
   // Keep it booked through ordinary revenue/law refreshes, not only on January's turn.
-  if (budgetCountryId === "US" && preset === "2027-default")
+  if (countryHasFeature("usLib", budgetCountryId) && preset === "2027-default")
     stateGrants = formulaGrantPool(budget.revenue.total, formulaGrants);
 
   // The 1991 Russian law catalog covers only a portion of the observed

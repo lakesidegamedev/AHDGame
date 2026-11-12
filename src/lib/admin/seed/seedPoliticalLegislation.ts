@@ -343,7 +343,7 @@ async function calibratePlayerOpeningPrograms(
     }
     const { items: initialItems, activeLaws } = await calculateFederalLawAnnualCosts(db, budget);
     let items = initialItems;
-    if (year === 2027 && countryId === "US") {
+    if (year === 2027 && countryHasFeature("usSeeds", countryId)) {
       // Reconstruct catalog expense models before fitting. Replays must retain
       // absolute scales for future bills, not overwrite them with a factor of 1.
       const rawModels: AnyBulkWriteOperation<EnactedLaw>[] = activeLaws.flatMap((law) => {
@@ -360,7 +360,7 @@ async function calibratePlayerOpeningPrograms(
       ({ items } = await calculateFederalLawAnnualCosts(db, budget));
     }
     const modeledBudget =
-      year === 2027 && countryId === "US"
+      year === 2027 && countryHasFeature("usSeeds", countryId)
         ? (await import("@/lib/seeds/reference/budgets"))
             .getInitialNationalBudgetsForPreset("2027-default")
             .find((b) => b.countryId === countryId)

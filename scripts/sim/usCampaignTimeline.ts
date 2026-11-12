@@ -6,7 +6,7 @@ import {
   allocatePrototypeBallots,
   PROTOTYPE_VERSION,
   type PrototypeSpot,
-} from "../../src/lib/redistricting/rules/usGeographicPrototype";
+} from "../../src/lib/countries/us/rules/geographicPrototype";
 import {
   runCampaignTimeline,
   type CampaignTimelineInput,
@@ -396,7 +396,7 @@ const report = {
   sourceFiles: [
     "scripts/sim/usCampaignTimeline.ts",
     "src/lib/redistricting/rules/campaignTimelinePrototype.ts",
-    "src/lib/redistricting/rules/usGeographicPrototype.ts",
+    "src/lib/countries/us/rules/geographicPrototype.ts",
     "src/lib/politicalStrength/strengthConstants.ts",
     "src/lib/constants/electionDurations.ts",
   ].map((file) => ({ file, sha256: hash(readFileSync(file)) })),

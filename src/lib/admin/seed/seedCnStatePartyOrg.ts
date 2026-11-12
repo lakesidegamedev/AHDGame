@@ -51,8 +51,7 @@ export async function seedCnStatePartyOrg(
   preset?: string
 ): Promise<void> {
   const activePreset = preset ?? (await getGameStatePresetOrDefault(db));
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection<PoliticalParty>(db)
     .find({ countryId: "CN" }, { projection: { sequentialId: 1, abbreviation: 1 } })
     .toArray();
   const ids = new Map(parties.map((p) => [p.abbreviation, String(p.sequentialId)]));
@@ -112,3 +111,5 @@ export async function seedCnStatePartyOrg(
     `Seeded ${orgs.length} CN state party org entries (${upserted} new, ${orgs.length - upserted} updated) [preset: ${activePreset}]`
   );
 }
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

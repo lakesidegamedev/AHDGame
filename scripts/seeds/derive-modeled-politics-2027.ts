@@ -5,8 +5,8 @@ import { resolve } from "node:path";
 import type { CountryGeography } from "@/lib/countries/contract";
 import type { CountryId } from "@/lib/constants/countries";
 import type { State, StateMetrics } from "@/lib/db/types";
-import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
-import { NON_PLAYABLE_BOARDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { POLITICAL_METRIC_COUNTRY_IDS, type PoliticalMetricId } from "@/lib/politicalMetrics/types";
+import { getNonPlayableBoards } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
 import { loadSeededStateMetrics } from "@/lib/states/conditions/seedMetricsLoader";
 import { deriveCountryBoard } from "@/lib/politicalMetrics/derive/deriveFamilies";
 import { countryLeanFromParties } from "@/lib/politicalMetrics/derive/countryLean";
@@ -40,7 +40,8 @@ async function main() {
     neutrals: {} as Record<string, number>,
     populations: {} as Record<string, Record<string, number>>,
   };
-  for (const country of Object.keys(NON_PLAYABLE_BOARDS["2019-default"]) as CountryId[]) {
+  for (const country of Object.keys(getNonPlayableBoards()["2019-default"]) as CountryId[]) {
+    if ((POLITICAL_METRIC_COUNTRY_IDS as readonly string[]).includes(country)) continue;
     const countryModule = seedRequire(
       resolve(`src/lib/countries/${country.toLowerCase()}/geography.ts`)
     ) as Record<string, CountryGeography>;

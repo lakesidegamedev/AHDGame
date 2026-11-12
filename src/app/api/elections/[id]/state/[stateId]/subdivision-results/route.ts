@@ -66,12 +66,10 @@ export async function GET(
           400,
           "Turn replay is only available for a concluded presidential race"
         );
-      const tally = await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
-        .findOne(
-          { electionId: election._id },
-          { projection: { houseDistrictResult: 1, candidateNames: 1, candidateParties: 1 } }
-        );
+      const tally = await electionVoteTalliesCollection<ElectionVoteTally>(db).findOne(
+        { electionId: election._id },
+        { projection: { houseDistrictResult: 1, candidateNames: 1, candidateParties: 1 } }
+      );
       const result = tally?.houseDistrictResult;
       const supported =
         result?.version === 1 &&

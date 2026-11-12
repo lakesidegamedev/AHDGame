@@ -152,6 +152,7 @@ export async function settleResetTreasuryCashTurn(input: {
               bondMaturityCashPaid: flow(bondFlows.sovereignMaturityCashPaidByCountry),
               bondFaceRetired: faceFlows.retiredFace,
               bondCouponCashPaid: flow(bondFlows.sovereignCouponPaidByCountry),
+              bondServiceAlreadyFunded: bondFlows.sovereignServiceAlreadyFunded === true,
             },
           });
     if (!next.lastPaidByClaim) throw new Error("V2 cash replay is missing its payment receipt");

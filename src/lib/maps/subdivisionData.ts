@@ -6,7 +6,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { SubdivisionInput } from "@/lib/utils/subdivisionResults";
 import { loadCountyLeans } from "./countyLeans";
-import { usCongressionalGeometryDirectory } from "./usCongressionalGeometry";
+import { usCongressionalGeometryDirectory } from "@/lib/countries/us/congressionalGeometry";
 
 export interface SubdivisionFile {
   viewBox: string;

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 /** Seed modeled v2 openings from the selected world's authored inputs and seeded stocks. */
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
@@ -20,7 +21,7 @@ import { persistCabinetOpening } from "@/lib/resetFinance/seedOpeningDepartments
 import { RESET_V2_OPENING_COUNTRIES, type ResetSystem } from "./rules";
 import { buildModeledMetricOpening } from "./rules/modeledMetrics";
 import { buildModeledFiscalOpening } from "./rules/modeledFinance";
-import { modeledSeedMetrics, metricNumbers } from "./modeledSeedInputs";
+import { modeledSeedMetrics, metricNumbers, modeledCensusGaps } from "./modeledSeedInputs";
 import { getNationalBudgetSeedProvenance } from "@/lib/seeds/reference/budgets";
 import { getLaw } from "@/lib/politicalLegislation/catalog";
 import { modeledLawFamily } from "./rules/modeledLawFamily";
@@ -32,32 +33,40 @@ export async function loadModeledOpening(
   turn: number,
   date?: ResetStartDate
 ) {
-  const countries = RESET_V2_OPENING_COUNTRIES;
+  const unsupportedCountries = RESET_V2_OPENING_COUNTRIES.flatMap((country) => {
+    const regions = modeledCensusGaps(preset, country);
+    return regions.length
+      ? [
+          {
+            country,
+            regions,
+            reason: `No authored ${preset} cohort census; v2 opening unsupported, legacy systems retained`,
+          },
+        ]
+      : [];
+  });
+  const countries = RESET_V2_OPENING_COUNTRIES.filter(
+    (country) => !unsupportedCountries.some((row) => row.country === country)
+  );
   const filter = { countryId: { $in: [...countries] } };
   const [states, budgets, regionalBudgets, macro, demographics, laws, units] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection<State>(db)
       .find(filter, { projection: { _id: 1, countryId: 1, population: 1, gdp: 1 } })
       .toArray(),
-    db.collection<FederalBudget>("federalBudget").find(filter).toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    federalBudgetCollection<FederalBudget>(db).find(filter).toArray(),
+    stateBudgetsCollection<StateBudget>(db)
       .find(filter, { projection: { stateId: 1, countryId: 1, spending: 1 } })
       .toArray(),
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find(filter, { projection: { _id: 1, countryId: 1, economic: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<RegionDemographics>("regionDemographics")
+    regionDemographicsCollection<RegionDemographics>(db)
       .find(filter, { projection: { _id: 1, countryId: 1, ages: 1 } })
       .toArray(),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection<EnactedLaw>(db)
       .find({ ...filter, repealedAt: { $exists: false }, scope: "national" })
       .toArray(),
-    db
-      .collection<MilitaryUnit>("militaryUnits")
+    militaryUnitsCollection<MilitaryUnit>(db)
       .find(filter, {
         projection: {
           countryId: 1,
@@ -207,7 +216,7 @@ export async function loadModeledOpening(
   const books = Object.fromEntries(
     budgets.map((b) => [b.countryId, { debt: b.debt.principal, debtCeiling: b.debt.ceiling }])
   );
-  return { countries, metrics, fiscal, partition, books };
+  return { countries, unsupportedCountries, metrics, fiscal, partition, books };
 }
 
 export async function seedModeledOpening(
@@ -219,6 +228,8 @@ export async function seedModeledOpening(
   date?: ResetStartDate
 ) {
   const opening = await loadModeledOpening(db, preset, worldId, turn, date);
+  for (const row of opening.unsupportedCountries)
+    logger.warn("modeled-opening", row.reason, { country: row.country });
   if (system === "metrics")
     return persistMetricOpening(db, worldId, turn, opening.countries, opening.metrics);
   if (system === "legislation")
@@ -242,3 +253,17 @@ export async function seedModeledOpening(
     );
   throw new Error("Demographics openings use their seeded live vectors");
 }
+
+import { statesCollection } from "@/lib/db/repositories/states";
+
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
+
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";

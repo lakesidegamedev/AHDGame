@@ -449,11 +449,7 @@ export async function finalizeResetGameWorld(
     logCollector(`IMF Corp already present (sequentialId=${imfResult.sequentialId ?? "?"}).`);
   }
 
-  // The audit row is OPENED by the orchestrator at the seal and CLOSED with
-  // this string. It used to be inserted right here, which is precisely why a
-  // reset that died in teardown or build left no trace at all — this code never
-  // ran. The message text is unchanged, and it is no longer gated on
-  // `adminUsername`: that gate meant a script-driven reset was never audited.
+  // Final cleanup also covers politicians created during bootstrap.
   if (startingParties !== "default") {
     await clearStartingPolitics(db, preset, startingParties === "no-npps");
     log("Final political cleanup complete; economic ownership preserved");

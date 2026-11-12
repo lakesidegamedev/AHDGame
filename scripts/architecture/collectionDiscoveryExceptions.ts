@@ -140,10 +140,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seed/runCoreSeed.ts",
     owner: "runSeed",
     argument: "entry.name",
-    scopeHash: "3ed1d622abca8727756c295096eab5014833787cc9c1a63be15642bf61d3a910",
+    scopeHash: "98bd29dbb249fd0d555985717c1dcfc2d07da2588071fa3fe759e208e2446ccb",
     count: 1,
     reason:
-      "Reviewed county reseed compatibility: only the literal states update now preserves live population, and the US census lean seeding no longer stores group rows. The reset filter no longer special-cases the retired voter-group category collection. The existing reset entry.name selector, registry, filters and dynamic call count are unchanged; no new dynamic collection scope is permitted.",
+      "Reviewed county reseed compatibility: only the literal states update now preserves live population, and the US census lean seeding no longer stores group rows. The reset filter no longer special-cases the retired voter-group category collection. Reviewed rebase: preset forwarding changed; the existing reset entry.name selector, registry, filters and dynamic call count are unchanged; no new dynamic collection scope is permitted.",
   },
   {
     file: "src/lib/admin/seed/seedRegionMetrics.ts",
@@ -157,10 +157,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seedDiagnostic/conformance.ts",
     owner: "checkEmptyPoliticalStart",
     argument: "collection",
-    scopeHash: "f7d0c2e84cf175be4639194d465234dc0180f5b0734997133d9b94e69b99b6da",
+    scopeHash: "b6a33f66e758d6f6d3d7fbb2bc1684b6cd647c77b6a6fb32b702b21059e35f25",
     count: 1,
     reason:
-      "Reviewed read-only counterpart of 2027 starting cleanup. The existing political collection registry and country filters remain unchanged; No NPPs skips the shared retained-party set. No new dynamic collection scope is permitted.",
+      "Reviewed rebase of the read-only 2027 starting cleanup: upstream repository getters replace literal reads. The existing political collection registry and country filters remain unchanged; No NPPs skips the shared retained-party set. No new dynamic collection scope is permitted.",
   },
   {
     file: "src/lib/admin/seedDiagnostic/conformance.ts",
@@ -182,10 +182,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/startingParties.ts",
     owner: "clearStartingPolitics",
     argument: "collection",
-    scopeHash: "e54c108b4190f1c038ffe7a6a4c86c029a37df6e7400ea7cad5f90d4dd1d2c1e",
+    scopeHash: "5c0d45eff13bdccb41e7886c712e71becd64922909898e5e2a98723accbf2b49",
     count: 1,
     reason:
-      "Reviewed 2027 starting conditions: the existing reset-only political registry and country filters are unchanged. No NPPs skips the four named party collections, preserving their reference lifecycle. New district-holder and party-officer clears use literal collections; no new dynamic target is permitted.",
+      "Reviewed rebased 2027 starting conditions and repository getter migration: the existing reset-only political registry and country filters are unchanged. No NPPs skips the four named party collections, preserving their reference lifecycle. New district-holder and party-officer clears use literal collections; no new dynamic target is permitted.",
   },
   {
     file: "src/lib/admin/startingParties.ts",

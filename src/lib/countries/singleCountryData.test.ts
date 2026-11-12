@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { ACKNOWLEDGED_OUTSIDE, CONVERTED } from "./singleCountryData";
 import { singleCountryFiles } from "../../../scripts/countries/classifySingleCountryFiles";
 
 describe("single-country data lives in that country's folder", () => {
+  let classified: ReturnType<typeof singleCountryFiles>;
+  beforeAll(() => {
+    classified = singleCountryFiles();
+  }, 60_000);
   /**
    * ⚠ THE ASSERTION THE COVERAGE ROSTER COULD NOT MAKE. It asked whether a file
    * was classified as needing to move. This asks whether it moved.
@@ -13,7 +17,7 @@ describe("single-country data lives in that country's folder", () => {
       ACKNOWLEDGED_OUTSIDE.filter((e) => e.country === country).map((e) => e.file)
     );
 
-    const stranded = singleCountryFiles()
+    const stranded = classified
       .filter((f) => f.country === country)
       .filter((f) => !f.file.startsWith(folder))
       .filter((f) => !excused.has(f.file));
@@ -41,7 +45,7 @@ describe("single-country data lives in that country's folder", () => {
    * the next real one.
    */
   it("acknowledges no file that has stopped holding that country's data", () => {
-    const owned = new Map(singleCountryFiles().map((f) => [f.file, f.country]));
+    const owned = new Map(classified.map((f) => [f.file, f.country]));
     const stale = ACKNOWLEDGED_OUTSIDE.filter((e) => owned.get(e.file) !== e.country);
     expect(
       stale.map((e) => `${e.file} (listed as ${e.country})`),
@@ -67,7 +71,7 @@ describe("single-country data lives in that country's folder", () => {
    */
   it("reports the backlog for countries not yet converted", () => {
     const byCountry = new Map<string, { files: number; lines: number }>();
-    for (const f of singleCountryFiles()) {
+    for (const f of classified) {
       if ((CONVERTED as readonly string[]).includes(f.country)) continue;
       // Already in its own folder: relocated, not outstanding.
       if (f.file.startsWith(`src/lib/countries/${f.country.toLowerCase()}/`)) continue;

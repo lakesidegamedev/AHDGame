@@ -9,7 +9,7 @@ import {
   transferPrototype,
   prototypeTransferTargets,
   type PrototypeSpot,
-} from "./usGeographicPrototype";
+} from "@/lib/countries/us/rules/geographicPrototype";
 
 export interface TimelineAction {
   id: string;

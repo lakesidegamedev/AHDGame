@@ -6,7 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { buildDistrictSquareViews } from "@/lib/redistricting/districtSquareResponse";
 import type { CongressionalDistrict, Character, NPP, PoliticalParty } from "@/lib/db/types";
-import { usCongressionalGeometryDirectory } from "@/lib/maps/usCongressionalGeometry";
+import { usCongressionalGeometryDirectory } from "@/lib/countries/us/congressionalGeometry";
 
 /**
  * Returns the static congressional-district geometry for a single US

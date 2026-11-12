@@ -10,13 +10,21 @@ import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
 import { RESET_V2_OPENING_COUNTRIES } from "./rules";
 import { loadModeledOpening } from "./seedModeledOpening";
-import { modeledSeedMetrics, modeledSeedRegions, metricNumbers } from "./modeledSeedInputs";
+import {
+  modeledSeedMetrics,
+  modeledSeedRegions,
+  metricNumbers,
+  modeledCensusGaps,
+} from "./modeledSeedInputs";
 import { buildResetAuthorityClaims } from "@/lib/resetFinance/rules/authorityClaims";
 
 function fixture(preset: string) {
   const db = createMockDb();
-  const states = RESET_V2_OPENING_COUNTRIES.flatMap((c) => modeledSeedRegions(preset, c));
-  const metrics = RESET_V2_OPENING_COUNTRIES.flatMap((c) =>
+  const countries = RESET_V2_OPENING_COUNTRIES.filter(
+    (c) => modeledCensusGaps(preset, c).length === 0
+  );
+  const states = countries.flatMap((c) => modeledSeedRegions(preset, c));
+  const metrics = countries.flatMap((c) =>
     modeledSeedMetrics(preset, c).map((r) => ({ ...r, countryId: c }))
   );
   const demographics = states.map((s) => {
@@ -41,7 +49,7 @@ function fixture(preset: string) {
     };
   });
   const budgets = getInitialNationalBudgetsForPreset(preset).filter((b) =>
-    RESET_V2_OPENING_COUNTRIES.includes(b.countryId as "US")
+    countries.includes(b.countryId as "US")
   );
   const regional = generateStateBudgets(
     states.map((s) => ({
@@ -68,7 +76,7 @@ function fixture(preset: string) {
 
 describe("modeled preset v2 openings", () => {
   it("binds an off-anchor opening and its cohort inputs to the requested date", async () => {
-    const { db } = fixture("2027-default");
+    const { db, budgets } = fixture("2027-default");
     const opening = await loadModeledOpening(db, "2027-default", "off-anchor", 12, {
       year: 2027,
       week: 12,
@@ -82,7 +90,7 @@ describe("modeled preset v2 openings", () => {
     }
     expect(
       opening.metrics.find((b) => b.countryId === "UK")?.modeledOpening?.sourceFiscalYear
-    ).toBe(2020);
+    ).toBe(budgets.find((b) => b.countryId === "UK")?.fiscalYear);
   });
   it.each([
     "1953-default",
@@ -98,7 +106,7 @@ describe("modeled preset v2 openings", () => {
     const { db, budgets, states } = fixture(preset);
     const opening = await loadModeledOpening(db, preset, "isolated-test", 1);
     expect(opening.metrics.filter((b) => b.scope === "regional")).toHaveLength(states.length);
-    expect(opening.fiscal.laws).toHaveLength(states.length + 4);
+    expect(opening.fiscal.laws).toHaveLength(states.length + opening.countries.length);
     for (const board of opening.metrics) {
       expect(board.modeledOpening?.preset).toBe(preset);
       expect(Object.values(board.observations).every((o) => Number.isFinite(o.value))).toBe(true);

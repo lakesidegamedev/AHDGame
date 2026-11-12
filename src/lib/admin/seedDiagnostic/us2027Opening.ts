@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /** Qualify the modeled US 2027 opening beyond simple record presence. */
 import type { Db } from "mongodb";
 import type {
@@ -51,19 +52,16 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
     lawBoards,
     serviceBoards,
   ] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection<State>(db)
       .find(
         { countryId: "US" },
         { projection: { _id: 1, population: 1, gdp: 1, stateSenateSeats: 1 } }
       )
       .toArray(),
-    db
-      .collection<RegionDemographics>("regionDemographics")
+    regionDemographicsCollection<RegionDemographics>(db)
       .find({ countryId: "US" }, { projection: { _id: 1, ages: 1 } })
       .toArray(),
-    db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    congressionalDistrictsCollection<CongressionalDistrict>(db)
       .find(
         { countryId: "US" },
         {
@@ -78,26 +76,23 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
         }
       )
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection<ElectedOfficial>(db)
       .find(
         { countryId: "US" },
         { projection: { _id: 1, officeType: 1, seatsHeld: 1, senateClass: 1, nppId: 1, state: 1 } }
       )
       .toArray(),
-    db.collection<FederalBudget>("federalBudget").findOne({ countryId: "US" }),
-    db
-      .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+    federalBudgetCollection<FederalBudget>(db).findOne({ countryId: "US" }),
+    resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
       .find({ countryId: "US" })
       .toArray(),
-    db
-      .collection("elections")
+    electionsCollection(db)
       .find(
         { countryId: "US", electionType: { $in: ["governor", "stateSenate"] } },
         { projection: { state: 1, electionType: 1, cycle: 1, electionYear: 1, endTurn: 1 } }
       )
       .toArray(),
-    db.collection("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" as never },
       {
         projection: {
@@ -109,39 +104,30 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
         },
       }
     ),
-    db
-      .collection("npps")
+    nppsCollection(db)
       .find(
         { countryId: "US", "currentOffice.type": "senate" },
         { projection: { _id: 1, currentOffice: 1 } }
       )
       .toArray(),
-    db
-      .collection("stateDemographics")
-      .find({ countryId: "US" }, { projection: { _id: 1, groups: 1 } })
+    stateDemographicsCollection(db)
+      .find({ countryId: "US" }, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection<Bond>(db)
       .find(
         { countryId: "US", issuerType: "sovereign", matured: false, defaulted: false },
         { projection: { totalIssued: 1, couponRate: 1 } }
       )
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection<StateBudget>(db)
       .find({ countryId: "US" }, { projection: { stateId: 1, "revenue.federalGrants": 1 } })
       .toArray(),
-    db
-      .collection<MacroMetricsDoc>("macroMetrics")
+    macroMetricsCollection<MacroMetricsDoc>(db)
       .find({ countryId: "US" }, { projection: { _id: 1, "economic.povertyRate.value": 1 } })
       .toArray(),
-    db.collection("resetDepartmentContinuity").findOne({ countryId: "US" }),
-    db
-      .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
-      .find({ countryId: "US" })
-      .toArray(),
-    db
-      .collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards")
+    resetDepartmentContinuityCollection(db).findOne({ countryId: "US" }),
+    resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).find({ countryId: "US" }).toArray(),
+    resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db)
       .find({ countryId: "US" })
       .toArray(),
   ]);
@@ -261,26 +247,32 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
     .filter((o) => o.officeType === "senate" && o.nppId)
     .filter((o) => {
       const office = senateById.get(String(o.nppId));
-      return !office || office.state !== o.state || office.senateClass !== o.senateClass;
+      return (
+        office?.type !== "senate" ||
+        !("senateClass" in office) ||
+        office.state !== o.state ||
+        office.senateClass !== o.senateClass
+      );
     }).length;
   assert("senate-incumbent-classes", wrongClasses === 0, wrongClasses, 0);
-  const wrongShares = shares.filter(
-    (d) =>
-      Math.abs(
-        Object.values(d.groups as Record<string, { population: number }>).reduce(
-          (sum, g) => sum + g.population,
-          0
-        ) - 100
-      ) > 1e-8
-  ).length;
+  const electorates = electorateUnitsByRegion(shares, new Map(), {
+    preset,
+    year: 2027,
+    startingYear: 2027,
+  });
+  const wrongShares = shares.filter((d) => {
+    const groups = electorates.get(`US:${d._id}`);
+    return (
+      !groups || Math.abs(groups.reduce((sum, group) => sum + group.population, 0) - 100) > 1e-8
+    );
+  }).length;
   assert("demographic-share-conservation", wrongShares === 0, wrongShares, 0);
   if (districts.some((d) => d.holderParty === "DEM" || d.holderParty === "REP")) {
-    const expectedParties = new Map(
-      snapshot.house.map((d) => [
-        d.district,
-        d.party === "D" ? "DEM" : d.party === "R" ? "REP" : "IND",
-      ])
-    );
+    const expectedParties = openingHouseParties2027({
+      districts: snapshot.house,
+      delegations: US_HOUSE_2027_RESULT,
+      uncalled: US_CONGRESS_RESULT_2027.house.uncalledSeats,
+    });
     const wrongParties = districts.filter(
       (d) =>
         d.holderParty !==
@@ -328,7 +320,9 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       stateSenate,
       1973
     );
-  const authored = getInitialNationalBudgetsForPreset(preset).find((b) => b.countryId === "US")!;
+  const authored = getInitialNationalBudgetsForPreset(preset).find((b) =>
+    countryHasFeature("usSeeds", b.countryId)
+  )!;
   if (budget) {
     const expectedTotal = Object.values(authored.spending.byCategory).reduce(
       (sum, n) => sum + n,
@@ -389,3 +383,43 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
   );
   return checks;
 }
+
+import { openingHouseParties2027 } from "@/lib/countries/us/rules/openingHouseParties2027";
+import {
+  US_HOUSE_2027_RESULT,
+  US_CONGRESS_RESULT_2027,
+} from "@/lib/countries/us/data/usCongressResult2027";
+
+import { statesCollection } from "@/lib/db/repositories/states";
+
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
+
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+
+import { electionsCollection } from "@/lib/db/repositories/elections";
+
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+
+import { nppsCollection } from "@/lib/db/repositories/npps";
+
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+
+import { resetDepartmentContinuityCollection } from "@/lib/db/repositories/resetDepartmentContinuity";
+
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
+
+import { resetRegionalOpeningBoardsCollection } from "@/lib/db/repositories/resetRegionalOpeningBoards";
+
+import { electorateUnitsByRegion } from "@/lib/demographics/electorateWeights";

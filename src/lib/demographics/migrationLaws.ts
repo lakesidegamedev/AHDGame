@@ -57,8 +57,7 @@ export async function loadMigrationLawPositions(
     // Raw crosswalk only: the opening choice needs statuses and option
     // indexes, not the fitted 1991 costs openingLaw computes on import.
     import("@/lib/resetLegislation/openingLawReferences.json"),
-    db
-      .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
+    resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db)
       .find(
         { worldId, scope: "national", countryId: { $in: [...countries] } },
         { projection: { countryId: 1, "references.L49": 1, "references.L52": 1 } }
@@ -91,3 +90,5 @@ export async function loadMigrationLawPositions(
     ])
   );
 }
+
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";

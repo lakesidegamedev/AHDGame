@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { usCongressionalGeometryDirectory } from "./usCongressionalGeometry";
+import { usCongressionalGeometryDirectory } from "@/lib/countries/us/congressionalGeometry";
 import { loadCookPvi } from "@/lib/redistricting/loadCookPvi";
 import { states2027 } from "@/lib/seeds/reference/states2027";
 

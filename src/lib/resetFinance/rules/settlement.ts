@@ -39,6 +39,8 @@ export interface NationalTurnInput {
   bondFaceRetired: number;
   /** Actual coupon paid by the bond shell. Omit only for forecast runs. */
   bondCouponCashPaid?: number;
+  /** Completed payments debited the canonical funded Treasury ledger already. */
+  bondServiceAlreadyFunded?: boolean;
   /**
    * Enacted operating appropriations are backed by the signed national budget
    * balance. When true, a cash shortfall is deficit financing there rather
@@ -54,6 +56,8 @@ export interface NationalTurnSettlement {
   interestDue: number;
   maturityOutlay: number;
   emergencyAdvanceDrawn: number;
+  /** Funding already applied by the bond shell, never a second loan or free cash. */
+  externallyFundedBondCash: number;
   appropriationFinancing: number;
   externalOutlay: number;
   grantTransfer: number;
@@ -136,10 +140,14 @@ export function settleNationalTreasury(
   const liquidAfterIssuance = liquidBeforeBonds + input.bondProceeds;
   const prepaidCoupon = input.bondCouponCashPaid ?? 0;
   const prepaidBonds = input.bondMaturityCashPaid + prepaidCoupon;
-  // The bond shell already paid holders. A cash shortfall becomes an explicit
-  // emergency bridge and crisis exposure, never fictional Cabinet funding.
-  const emergencyAdvanceDrawn = Math.max(0, prepaidBonds - liquidAfterIssuance);
-  let available = liquidAfterIssuance + emergencyAdvanceDrawn - prepaidBonds;
+  // Completed funded settlements already own their financing in the canonical
+  // ledger. Cover only this projection's servicing gap, without another loan
+  // or spendable surplus. Unfunded hosts still expose a real emergency bridge.
+  const servicingGap = Math.max(0, prepaidBonds - liquidAfterIssuance);
+  const externallyFundedBondCash = input.bondServiceAlreadyFunded ? servicingGap : 0;
+  const emergencyAdvanceDrawn = servicingGap - externallyFundedBondCash;
+  let available =
+    liquidAfterIssuance + externallyFundedBondCash + emergencyAdvanceDrawn - prepaidBonds;
   const paid = emptyClaims();
   const arrears = emptyClaims();
   let appropriationFinancing = 0;
@@ -171,6 +179,7 @@ export function settleNationalTreasury(
     interestDue,
     maturityOutlay: input.bondMaturityCashPaid,
     emergencyAdvanceDrawn,
+    externallyFundedBondCash,
     appropriationFinancing,
     externalOutlay: totalPaid - paid.grants + input.bondMaturityCashPaid,
     grantTransfer: paid.grants,
@@ -183,6 +192,7 @@ export function settleNationalTreasury(
     accountingResidual:
       liquidBeforeBonds +
       input.bondProceeds +
+      externallyFundedBondCash +
       emergencyAdvanceDrawn -
       input.bondMaturityCashPaid +
       appropriationFinancing -

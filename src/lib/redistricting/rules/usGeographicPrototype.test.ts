@@ -10,9 +10,9 @@ import {
   selectPrototype,
   transferPrototype,
   type PrototypeBinding,
-} from "./usGeographicPrototype";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
-import { countPrStv } from "@/lib/turn/election/rules/prStv";
+} from "@/lib/countries/us/rules/geographicPrototype";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
+import { countPrStv } from "@/lib/elections/rules/prStv";
 import { countJapanMixedShugiin } from "@/lib/countries/jp/rules/mixedShugiinCount";
 import { JP_SHUGIIN_1994_CONSTITUENCIES } from "@/lib/countries/jp/data/jpShugiinConstituencies1994";
 import { JP_SHUGIIN_1994_LIST_SEATS } from "@/lib/countries/jp/rules/shugiinElectoralLaw";

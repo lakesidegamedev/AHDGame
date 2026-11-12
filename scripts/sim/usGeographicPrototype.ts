@@ -10,7 +10,7 @@ import {
   PROTOTYPE_VERSION,
   transferPrototype,
   type PrototypeSpot,
-} from "../../src/lib/redistricting/rules/usGeographicPrototype";
+} from "../../src/lib/countries/us/rules/geographicPrototype";
 
 const SOURCES = {
   "presidential-totals.csv":
@@ -340,7 +340,7 @@ const report = {
   runtime: { node: process.version, platform: process.platform, arch: process.arch },
   implementationHashes: [
     "scripts/sim/usGeographicPrototype.ts",
-    "src/lib/redistricting/rules/usGeographicPrototype.ts",
+    "src/lib/countries/us/rules/geographicPrototype.ts",
   ].map((file) => ({
     file,
     sha256: createHash("sha256").update(readFileSync(file)).digest("hex"),

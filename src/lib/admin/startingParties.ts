@@ -277,11 +277,11 @@ export async function clearStartingPolitics(
   await governorOfficeStateCollection<Document>(db).updateMany(countryFilter, {
     $set: { characterId: null, characterName: "Vacant" },
   });
-  await db.collection("congressionalDistricts").updateMany(countryFilter, {
+  await congressionalDistrictsCollection(db).updateMany(countryFilter, {
     $set: { holderCharacterId: null, holderNppId: null, holderParty: null },
   });
   if (keepParties) {
-    await db.collection("politicalParties").updateMany(countryFilter, {
+    await politicalPartiesCollection(db).updateMany(countryFilter, {
       $set: {
         chairId: null,
         viceChairId: null,
@@ -326,3 +326,7 @@ export async function loadStartingPartiesMode(
     state?.preset === preset ? state.startingPartiesMode : "default"
   );
 }
+
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

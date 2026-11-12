@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
@@ -127,7 +128,7 @@ export async function reconcileStateGdpWithNationalSeeds(
   const configs = getNationalBudgetSeedConfigsForPreset(preset).filter(
     (c) =>
       (!countryIds || countryIds.includes(c.countryId as CountryId)) &&
-      (eraForPreset(preset) !== "2027" || c.countryId === "US")
+      (eraForPreset(preset) !== "2027" || countryHasFeature("usSeeds", c.countryId))
   );
   if (configs.length === 0) return [];
 

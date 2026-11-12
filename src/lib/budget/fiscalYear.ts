@@ -203,8 +203,7 @@ export async function processFiscalYear(
   // One world-scoped preload, never a lookup per region. Other presets retain their rules.
   const openingServices =
     usResetLegislationV2 && financeState?.preset === "2027-default"
-      ? await db
-          .collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards")
+      ? await resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db)
           .find(
             { countryId: "US", worldId: financeState.resetWorldId },
             {
@@ -230,7 +229,9 @@ export async function processFiscalYear(
   if (
     usResetLegislationV2 &&
     financeState?.preset === "2027-default" &&
-    states.some((s) => s.countryId === "US" && !openingServicesByRegion.has(String(s._id)))
+    states.some(
+      (s) => countryHasFeature("usLib", s.countryId) && !openingServicesByRegion.has(String(s._id))
+    )
   )
     throw new Error("US 2027 rollover requires current-world regional service baselines");
   for (const program of usResetRegionalPrograms) {
@@ -1079,3 +1080,5 @@ export async function saveFiscalYearSnapshot(
 
   console.log(`[FiscalYear] Snapshot saved: ${snapshot._id}`);
 }
+
+import { resetRegionalOpeningBoardsCollection } from "@/lib/db/repositories/resetRegionalOpeningBoards";

@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /** Price established opening debt independently of the rate on new borrowing. */
 export function openingStockCoupon(input: {
   countryId: string;
@@ -7,7 +8,7 @@ export function openingStockCoupon(input: {
   uncoveredPrincipal: number;
   coveredCoupons: number;
 }): number | null {
-  if (input.countryId === "US" && input.fiscalYear === 2027) {
+  if (countryHasFeature("usLib", input.countryId) && input.fiscalYear === 2027) {
     const remainingInterest = (input.annualInterest ?? NaN) - input.coveredCoupons;
     if (
       !Number.isFinite(remainingInterest) ||

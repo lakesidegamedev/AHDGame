@@ -57,3 +57,7 @@ areas: [engine]
 - Captures funded sovereign maturity payments and completed refinancing receipts
   in the v2 treasury flow, keeping principal aligned with settled bond stock.
 - Aligns the US 2027 campaign income baseline with reconciled regional GDP.
+- Prevents a second emergency loan when sovereign debt servicing has already
+  been funded, preserving cash conservation and genuinely unfunded advances.
+- Integrates the current development seed and census architecture, preserves
+  called US House races, and labels unsupported modeled openings explicitly.

@@ -755,7 +755,7 @@ export function pickNextCanonicalCycle(
 
     // A start-year US race has only 23 primary turns before its 24-turn general.
     const primaryFloor =
-      params.countryId === "US" &&
+      countryHasFeature("usElections", params.countryId) &&
       params.ctx?.preset === "2027-default" &&
       cycle === 1 &&
       endTurn - (params.ctx.preIterationTurns ?? 0) === 48

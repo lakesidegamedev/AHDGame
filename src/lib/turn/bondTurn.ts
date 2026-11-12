@@ -92,8 +92,11 @@ async function readCapturedSovereignIssuance(
   // Refunding issues can be created during maturity settlement, after the
   // turn-open issue snapshot. Durable cash receipts include those sales and
   // survive a same-turn retry; an in-kind rollover has no invented proceeds.
-  const receipts = await db
-    .collection<{ countryId: string; amount: number; meta: { face: number } }>("financialTxLog")
+  const receipts = await financialTxLogCollection<{
+    countryId: string;
+    amount: number;
+    meta: { face: number };
+  }>(db)
     .find(
       { turn, type: "gov_bond_issuance", "meta.ledgerOwnedBySettlement": true },
       { projection: { countryId: 1, amount: 1, "meta.face": 1 } }
@@ -234,6 +237,7 @@ export async function processBondTurn(
               Object.entries(flows).map(([countryId, flow]) => [countryId, flow.face])
             ),
             sovereignCouponPaidByCountry: {},
+            sovereignServiceAlreadyFunded: config?.treasuryCashLedgerEnabled === true,
             sovereignMaturityCashPaidByCountry: {},
             sovereignDebtFaceRetiredByCountry: {},
           }
@@ -1038,6 +1042,7 @@ export async function processBondTurn(
           sovereignCouponPaidByCountry: Object.fromEntries(
             [...govCouponByCountry].map(([countryId, row]) => [countryId, row.total])
           ),
+          sovereignServiceAlreadyFunded: config?.treasuryCashLedgerEnabled === true,
           sovereignMaturityCashPaidByCountry: Object.fromEntries(
             sovereignMaturityCashPaidByCountry
           ),
@@ -1046,3 +1051,5 @@ export async function processBondTurn(
       : {}),
   };
 }
+
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";

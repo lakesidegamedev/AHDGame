@@ -22,8 +22,7 @@ export async function seedOpeningHouseHolders(
 ): Promise<number> {
   const activePreset = preset ?? (await getGameStatePresetOrDefault(db));
   const [districts, officials, parties] = await Promise.all([
-    db
-      .collection<CongressionalDistrict>("congressionalDistricts")
+    congressionalDistrictsCollection<CongressionalDistrict>(db)
       .find(
         { countryId: "US" },
         {
@@ -39,8 +38,7 @@ export async function seedOpeningHouseHolders(
         }
       )
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection<ElectedOfficial>(db)
       .find(
         { countryId: "US", officeType: "house" },
         {
@@ -56,8 +54,7 @@ export async function seedOpeningHouseHolders(
         }
       )
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection<PoliticalParty>(db)
       .find(
         { countryId: "US" },
         { projection: { _id: 1, sequentialId: 1, abbreviation: 1, economicPosition: 1 } }
@@ -78,12 +75,11 @@ export async function seedOpeningHouseHolders(
     activePreset === "2027-default" &&
     parties.some((p) => p.abbreviation === "DEM") &&
     parties.some((p) => p.abbreviation === "REP");
-  const openingParties = new Map(
-    snapshot.house.map((row) => [
-      row.district,
-      row.party === "D" ? "DEM" : row.party === "R" ? "REP" : "IND",
-    ])
-  );
+  const openingParties = openingHouseParties2027({
+    districts: snapshot.house,
+    delegations: US_HOUSE_2027_RESULT,
+    uncalled: US_CONGRESS_RESULT_2027.house.uncalledSeats,
+  });
   const sourceSeats = (seatGroupsFor(activePreset).US ?? []).filter(
     (seat) => seat.officeType === "house"
   );
@@ -139,7 +135,7 @@ export async function seedOpeningHouseHolders(
   for (const unsupported of plan.unsupportedStates) log(unsupported.reason);
   const updates = plan.assignments;
   if (updates.length)
-    await db.collection<CongressionalDistrict>("congressionalDistricts").bulkWrite(
+    await congressionalDistrictsCollection<CongressionalDistrict>(db).bulkWrite(
       updates.map((u) => {
         const official = officialById.get(u.officialId)!;
         return {
@@ -163,3 +159,15 @@ export async function seedOpeningHouseHolders(
     );
   return updates.length;
 }
+
+import { openingHouseParties2027 } from "@/lib/countries/us/rules/openingHouseParties2027";
+import {
+  US_HOUSE_2027_RESULT,
+  US_CONGRESS_RESULT_2027,
+} from "@/lib/countries/us/data/usCongressResult2027";
+
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

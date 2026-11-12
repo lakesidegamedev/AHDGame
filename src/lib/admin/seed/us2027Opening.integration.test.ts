@@ -29,12 +29,12 @@ describe("real US 2027 opening pipeline", () => {
       await db
         .collection("congressionalDistricts")
         .countDocuments({ countryId: "US", holderParty: "DEM" })
-    ).toBe(261);
+    ).toBe(256);
     expect(
       await db
         .collection("congressionalDistricts")
         .countDocuments({ countryId: "US", holderParty: "REP" })
-    ).toBe(174);
+    ).toBe(179);
   });
   it("passes population, fiscal composition, holder and calendar qualification", async () => {
     const checks = await checkUS2027Opening(db, "2027-default");

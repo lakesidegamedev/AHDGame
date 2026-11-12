@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { StateBudget } from "@/lib/db/types/budget";
@@ -14,7 +15,7 @@ import { resolveRegionalSpending } from "./rules/regionalSpending";
 import { regionalLawClaims } from "./rules/regionalLawClaims";
 
 export async function loadRegionalHealContext(db: Db) {
-  const world = await db.collection<GameState>("gameState").findOne(
+  const world = await gameStateCollection<GameState>(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -31,16 +32,13 @@ export async function loadRegionalHealContext(db: Db) {
     resetSystemVersionsForCountry(world, RESET_V2_READY, "US").legislation === "v2";
   const [boards, programs, types] = enabled
     ? await Promise.all([
-        db
-          .collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards")
+        resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db)
           .find({ countryId: "US", worldId: world!.resetWorldId })
           .toArray(),
-        db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+        resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find({ country: "US", scope: "regional", worldId: world!.resetWorldId })
           .toArray(),
-        db
-          .collection<LegislationType>("legislationTypes")
+        legislationTypesCollection<LegislationType>(db)
           .find(
             { $or: [{ countryScope: "us" }, { countryScope: { $exists: false } }] },
             { projection: { _id: 1, name: 1, administration: 1, policyOptions: 1 } }
@@ -66,7 +64,7 @@ export async function regionalSpendingForHeal(
   const countryId = budget.countryId;
   if (!countryId) throw new Error("Regional budget has no owning country");
   const detail = await calculateStateSpendingDetail(db, budget.stateId, countryId, budget);
-  if (!context.enabled || budget.countryId !== "US")
+  if (!context.enabled || !countryHasFeature("usLib", budget.countryId))
     return detail.spending.total > 0
       ? detail.spending
       : {
@@ -91,3 +89,11 @@ export async function regionalSpendingForHeal(
     settle: true,
   }).spending;
 }
+
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+
+import { resetRegionalOpeningBoardsCollection } from "@/lib/db/repositories/resetRegionalOpeningBoards";
+
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";

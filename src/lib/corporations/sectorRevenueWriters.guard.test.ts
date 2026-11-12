@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "fs";
 import { join, sep } from "path";
 
@@ -439,8 +439,12 @@ function findRevenueWriters(): string[] {
 }
 
 describe("corporateSectors.revenue writer registry", () => {
+  let writers: string[];
+  beforeAll(() => {
+    writers = findRevenueWriters();
+  }, 60_000);
   it("has no unregistered writer", () => {
-    const unregistered = findRevenueWriters().filter((f) => !(f in ALLOWED_WRITERS));
+    const unregistered = writers.filter((f) => !(f in ALLOWED_WRITERS));
     expect(
       unregistered,
       "New write site(s) to corporateSectors.revenue.\n" +
@@ -453,7 +457,7 @@ describe("corporateSectors.revenue writer registry", () => {
   });
 
   it("has no stale registry entry", () => {
-    const actual = new Set(findRevenueWriters());
+    const actual = new Set(writers);
     const stale = Object.keys(ALLOWED_WRITERS).filter((f) => !actual.has(f));
     expect(
       stale,

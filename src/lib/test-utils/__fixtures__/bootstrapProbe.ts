@@ -55,12 +55,20 @@ export interface BootstrapProbeResult {
  * swallowed failures would report a healthy world that never built.
  */
 export async function probeBootstrap(preset: string): Promise<BootstrapProbeResult> {
-  const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
+  const { bootstrapGameWorld, stampInitialGameClock } =
+    await import("@/lib/admin/bootstrapGameWorld");
 
   const memory = createInMemoryDb();
   const db = memory as unknown as Db;
   probeDb = db;
   const log: string[] = [];
+
+  // Match the fresh-world CLI contract: reference seeders read the clock before
+  // bootstrap's later idempotent initialization. A missing clock prices 2027
+  // laws and grants as an unspecified era.
+  const { initializeGameState } = await import("@/lib/turnSystem");
+  await initializeGameState();
+  await stampInitialGameClock(db, preset);
 
   const started = Date.now();
   await bootstrapGameWorld({ db, preset, log: (msg: string) => log.push(msg) });

@@ -238,6 +238,6 @@ export async function districtedHouseResolution(
     });
   }
   if (holderUpdates.length)
-    await db.collection<CongressionalDistrict>("congressionalDistricts").bulkWrite(holderUpdates);
+    await congressionalDistrictsCollection<CongressionalDistrict>(db).bulkWrite(holderUpdates);
   return projection.result;
 }

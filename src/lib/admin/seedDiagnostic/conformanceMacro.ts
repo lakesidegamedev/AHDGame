@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { EUROZONE_2027_MEMBERS } from "@/lib/currency/rules/euroAdoption";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -97,7 +98,7 @@ export async function checkNationalBudgets(
       nationalGdpByCountry
     );
     for (const s of scalars.filter(
-      (row) => expect.preset !== "2027-default" || row.countryId === "US"
+      (row) => expect.preset !== "2027-default" || countryHasFeature("usSeeds", row.countryId)
     )) {
       const within = s.deviation <= STATE_GDP_RECONCILE_TOLERANCE;
       checks.push(

@@ -1,10 +1,11 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /** Legacy-shaped seed observations used before the macro/political storage split. */
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { US_GEOGRAPHY } from "@/lib/countries/us/geography";
 import { UK_GEOGRAPHY } from "@/lib/countries/uk/geography";
 import { JP_GEOGRAPHY } from "@/lib/countries/jp/geography";
 import { IE_GEOGRAPHY } from "@/lib/countries/ie/geography";
-import { selectPresetBundle } from "@/lib/seeds/presetSelector";
+import { selectPresetBundle, selectPresetBundleOptional } from "@/lib/seeds/presetSelector";
 import { applyMetricPresetToMetrics, getRegionMetricPresets } from "@/lib/seeds/metricPresets";
 import { applyEra1953Adjustments } from "@/lib/seeds/reference/stateMetricsEra1953";
 import { stateMetrics1953 } from "@/lib/seeds/reference/stateMetrics1953";
@@ -16,6 +17,24 @@ import { stateMetrics2023 } from "@/lib/seeds/reference/stateMetrics2023";
 import { stateMetrics2027 } from "@/lib/seeds/reference/stateMetrics2027";
 import type { OpeningCountry } from "@/lib/resetMetrics/rules/provisionalOpening";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
+import { cohortAgeShares1991 } from "@/lib/seeds/rules/cohortAgeShares1991";
+
+/** Match the cohort seeder's authored input requirement, without era substitution. */
+export function modeledCensusGaps(preset: string, country: OpeningCountry): string[] {
+  const geography = { US: US_GEOGRAPHY, UK: UK_GEOGRAPHY, JP: JP_GEOGRAPHY, IE: IE_GEOGRAPHY }[
+    country
+  ];
+  const regions = selectPresetBundleOptional(preset, geography.regionBundles);
+  if (!regions) return ["no-authored-region-roster"];
+  return regions
+    .filter(
+      (region) =>
+        !cohortAgeShares1991(country, String(region._id), preset) &&
+        !getRegionCensusData(country, String(region._id), preset)?.age
+    )
+    .map((region) => String(region._id));
+}
 
 export function modeledSeedMetrics(preset: string, country: OpeningCountry): StateMetrics[] {
   const geography = { US: US_GEOGRAPHY, UK: UK_GEOGRAPHY, JP: JP_GEOGRAPHY, IE: IE_GEOGRAPHY }[
@@ -40,7 +59,7 @@ export function modeledSeedMetrics(preset: string, country: OpeningCountry): Sta
       : geography.rawMetrics.map((r) =>
           preset === "1991-default"
             ? applyEra1991Adjustments(r)
-            : preset === "1953-default" && country !== "IE"
+            : preset === "1953-default" && !countryHasFeature("ieSeeds", country)
               ? applyEra1953Adjustments(r)
               : r
         );

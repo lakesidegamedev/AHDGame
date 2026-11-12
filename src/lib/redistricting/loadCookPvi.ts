@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { usCongressionalGeometryDirectory } from "@/lib/maps/usCongressionalGeometry";
+import { usCongressionalGeometryDirectory } from "@/lib/countries/us/congressionalGeometry";
 
 interface CdFile {
   viewBox: string;

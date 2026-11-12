@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
 import {
   buildResetLawOpeningBoard,
@@ -169,7 +170,9 @@ export function buildModeledFiscalOpening(input: {
         annualSpending: region.spending,
         familyOwned: 0,
         otherExistingServices: region.spending,
-        ...(input.preset === "2027-default" && country.country === "US" && region.spendingByCategory
+        ...(input.preset === "2027-default" &&
+        countryHasFeature("usLib", country.country) &&
+        region.spendingByCategory
           ? { existingServicesByCategory: { ...region.spendingByCategory } }
           : {}),
         allocatedClaims: [],
