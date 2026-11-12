@@ -7,6 +7,12 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const presets = [
   {
+    id: "2027-default",
+    name: "2027 Start Date - Default Parties",
+    description: "2027 data",
+    countries: ["US", "UK", "JP", "DE", "CN"],
+  },
+  {
     id: "1991-default",
     name: "1991 Start date - Default parties",
     description: "1991 data",
@@ -62,6 +68,25 @@ describe("1991 no starting parties picker", () => {
     render(<GameResetControls />);
     fireEvent.click(await screen.findByRole("button", { name: "1991" }));
   }
+  it.each([
+    ["Default Parties", "default", "Reset + historical"],
+    ["No NPPs", "no-npps", "Reset + no NPPs"],
+    ["No Parties", "none", "Reset + no parties"],
+  ])("supports the 2027 %s condition without changing eras", async (label, choice, action) => {
+    render(<GameResetControls />);
+    fireEvent.click(await screen.findByRole("button", { name: "2027" }));
+    const button = screen.getByRole("button", { name: label });
+    expect(button).toHaveProperty("disabled", false);
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: action }));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].url).toContain("preset=2027-default");
+    expect(requests[0].body).toMatchObject({
+      startingParties: choice,
+      startDate: { year: 2027, week: 1 },
+    });
+  });
 
   it("enables No Parties for 1991 and sends the explicit choice without changing the data preset", async () => {
     await pick1991();

@@ -407,7 +407,8 @@ export async function resetAndBootstrapGameWorld(
       }
     }
 
-    if (startingParties === "none") await clearStartingPolitics(db, preset);
+    if (startingParties !== "default")
+      await clearStartingPolitics(db, preset, startingParties === "no-npps");
 
     // The v2 board is separate from all v1 working metric collections. A
     // receipt is written only after the whole board has been persisted and

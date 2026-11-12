@@ -33,3 +33,7 @@ areas: [engine]
   clearly labeled unavailable. Current holders have a separate live view.
 - Carries unavailable district PVI through to map tooltips and labels missing
   district vote margins. Batches holder writes once per state.
+- Enables Default Parties, No NPPs and No Parties for the 2027 reset while
+  retaining 2027 world data. Empty starts apply to player countries, preserving
+  economic actors and background governments. Recreated China parties now
+  restore regional organization under their actual party IDs.

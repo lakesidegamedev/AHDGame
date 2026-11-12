@@ -159,7 +159,8 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     argument: "collection",
     scopeHash: "f7d0c2e84cf175be4639194d465234dc0180f5b0734997133d9b94e69b99b6da",
     count: 1,
-    reason: "Repository-owned seed and index registries select the collection.",
+    reason:
+      "Reviewed read-only counterpart of 2027 starting cleanup. The existing political collection registry and country filters remain unchanged; No NPPs skips the shared retained-party set. No new dynamic collection scope is permitted.",
   },
   {
     file: "src/lib/admin/seedDiagnostic/conformance.ts",
@@ -184,7 +185,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     scopeHash: "e54c108b4190f1c038ffe7a6a4c86c029a37df6e7400ea7cad5f90d4dd1d2c1e",
     count: 1,
     reason:
-      "The named persistence operation receives its collection from a repository-owned caller.",
+      "Reviewed 2027 starting conditions: the existing reset-only political registry and country filters are unchanged. No NPPs skips the four named party collections, preserving their reference lifecycle. New district-holder and party-officer clears use literal collections; no new dynamic target is permitted.",
   },
   {
     file: "src/lib/admin/startingParties.ts",

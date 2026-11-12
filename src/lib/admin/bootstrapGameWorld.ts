@@ -913,8 +913,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     const { applyEraCurrencyTopology } = await import("@/lib/admin/seed/applyEraCurrencyTopology");
     await applyEraCurrencyTopology(db, preset, log);
   });
-  if (noStartingParties && seedOnly) {
-    await clearStartingPolitics(db, preset);
+  if (startingParties !== "default" && seedOnly) {
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
     log("Cleared starting politics; economic NPP ownership retained with independent affiliation");
   }
 
@@ -1156,7 +1156,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // Seed governorOfficeState rows for every regional executive seat so the
   // office AP system and Devolution Policy defaults are in place before the
   // first action. Idempotent — safe to run alongside vacant/historical seeds.
-  if (noStartingParties) await clearStartingPolitics(db, preset);
+  if (startingParties !== "default")
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
 
   const officeStateResult = await seedOfficeStates(db, gameState.currentTurn, preset);
   log(
@@ -1405,7 +1406,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     );
   }
 
-  if (noStartingParties) await clearStartingPolitics(db, preset);
+  if (startingParties !== "default")
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
 
   // Only a genuinely fresh historical world receives this candidate bench.
   // Reference refreshes and existing live worlds retain their actor population.

@@ -140,8 +140,8 @@ export async function finalizeResetGameWorld(
   options: FinalizeResetOptions
 ): Promise<FinalizeResetResult> {
   const { preset, teardown, deleteProfiles } = options;
-  const noStartingParties =
-    (await loadStartingPartiesMode(db, preset, options.startingParties)) === "none";
+  const startingParties = await loadStartingPartiesMode(db, preset, options.startingParties);
+  const noStartingParties = startingParties === "none";
   const now = new Date();
   const sink = options.log;
   const finalizeLog: string[] = [];
@@ -449,12 +449,14 @@ export async function finalizeResetGameWorld(
     logCollector(`IMF Corp already present (sequentialId=${imfResult.sequentialId ?? "?"}).`);
   }
 
-  // The audit row is opened by the orchestrator at the seal and closed with
-  // this string, so a reset dying in teardown or build still leaves a trace.
-  // Not gated on adminUsername so script-driven resets are audited too.
-  if (noStartingParties) {
-    await clearStartingPolitics(db, preset);
-    log("Starting parties: none; final political cleanup complete, economic ownership preserved");
+  // The audit row is OPENED by the orchestrator at the seal and CLOSED with
+  // this string. It used to be inserted right here, which is precisely why a
+  // reset that died in teardown or build left no trace at all — this code never
+  // ran. The message text is unchanged, and it is no longer gated on
+  // `adminUsername`: that gate meant a script-driven reset was never audited.
+  if (startingParties !== "default") {
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
+    log("Final political cleanup complete; economic ownership preserved");
   }
 
   const adminDetails = deleteProfiles

@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { StatePartyOrg } from "@/lib/db/types";
+import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { getCnRegionOrg, getCnPartyTreasury } from "@/lib/seeds/cn/cnStatePartyOrgCalculations";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
@@ -13,10 +13,8 @@ import type { Document } from "mongodb";
  * macro-regions. Minor parties (CDL, CNDCA) hold advisory roles within the CPPCC
  * framework and do NOT create a normal government alternation path.
  *
- * Party sequentialIds (based on seedOrder in cnParties.ts):
- *   CCP:   "1"  (governing)
- *   CDL:   "2"  (advisory)
- *   CNDCA: "3"  (advisory)
+ * Resolve party identities from the current CN roster. Recreating parties after
+ * a partyless opening can allocate different sequential IDs.
  *
  * Per-region Reg / Org values: CCP is overwhelmingly dominant, both near 95 in
  * every region, slightly higher in capital and politically central regions.
@@ -36,15 +34,14 @@ import type { Document } from "mongodb";
 const CN_REGION_IDS = ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"];
 
 interface CNPartyConfig {
-  seqId: string;
   slug: "ccp" | "cdl" | "cndca";
   stateTaxRate: number;
 }
 
 const CN_PARTY_CONFIGS: CNPartyConfig[] = [
-  { seqId: "1", slug: "ccp", stateTaxRate: 5 },
-  { seqId: "2", slug: "cdl", stateTaxRate: 2 },
-  { seqId: "3", slug: "cndca", stateTaxRate: 2 },
+  { slug: "ccp", stateTaxRate: 5 },
+  { slug: "cdl", stateTaxRate: 2 },
+  { slug: "cndca", stateTaxRate: 2 },
 ];
 
 export async function seedCnStatePartyOrg(
@@ -54,6 +51,11 @@ export async function seedCnStatePartyOrg(
   preset?: string
 ): Promise<void> {
   const activePreset = preset ?? (await getGameStatePresetOrDefault(db));
+  const parties = await db
+    .collection<PoliticalParty>("politicalParties")
+    .find({ countryId: "CN" }, { projection: { sequentialId: 1, abbreviation: 1 } })
+    .toArray();
+  const ids = new Map(parties.map((p) => [p.abbreviation, String(p.sequentialId)]));
 
   if (reset) {
     await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "CN" });
@@ -71,14 +73,16 @@ export async function seedCnStatePartyOrg(
     }
 
     for (const party of CN_PARTY_CONFIGS) {
+      const partyId = ids.get(party.slug.toUpperCase());
+      if (!partyId) throw new Error(`CN seed: missing party ${party.slug}`);
       const orgValue =
         party.slug === "ccp" ? orgRow.ccp : party.slug === "cdl" ? orgRow.cdl : orgRow.cndca;
       const partyTreasury = treasury[party.slug];
       orgs.push({
-        _id: `${regionId}_${party.seqId}`,
+        _id: `${regionId}_${partyId}`,
         countryId: "CN",
         stateId: regionId,
-        partyId: party.seqId,
+        partyId,
         organization: orgValue,
         registration: orgValue,
         chairId: null,
