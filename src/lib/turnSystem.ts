@@ -55,6 +55,7 @@ import {
   totalRoundTrips,
   withPhaseProfiling,
 } from "@/lib/observability/mongoRoundTrips";
+import { armTurnFault, describeTurnError, parseTurnFaultSpec } from "@/lib/turn/faultInjection";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
@@ -100,6 +101,7 @@ import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
 import { serverEnv } from "@/lib/config/read";
+import { workerConfig } from "@/lib/config/worker";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
@@ -350,6 +352,9 @@ async function processTurnImpl(
         ? null
         : await gameConfigCollection(db).findOne({ _id: "default" });
       const simSandbox = localSingleplayer || turnConfig?.simSandbox === true;
+      armTurnFault(
+        turnConfig?.simSandbox === true ? parseTurnFaultSpec(workerConfig.turnFaultInject()) : null
+      );
       const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
       if (residueRefusal) {
         console.error(`[Turn System] Refused turn: ${residueRefusal}`);
@@ -921,10 +926,11 @@ async function processTurnImpl(
     };
   } catch (error) {
     console.error("[Turn System] Critical error processing turn:", error);
-    Sentry.captureException(error, { tags: { component: "turnSystem" } });
+    Sentry.captureException(error, { level: "fatal", tags: { component: "turnSystem" } });
     const failureTime = new Date();
     const failureMessage =
       error instanceof Error ? error.message : "Unknown error during turn processing";
+    const failureDetail = describeTurnError(error);
 
     if (!warnings.some((warning) => warning === `turnSystem: ${failureMessage}`)) {
       warnings.push(`turnSystem: ${failureMessage}`);
@@ -956,6 +962,11 @@ async function processTurnImpl(
       // Only overwrite evidence with values this attempt actually has. A failure
       // before setup (no statuses, no target yet) must not null out what the
       // previous holder left, or the next attempt would rerun applied phases.
+      const failureRecord = {
+        turn: failedTarget,
+        message: failureDetail,
+        at: failureTime,
+      };
       const evidence = {
         ...(holdForRepair
           ? committedPhase
@@ -979,6 +990,7 @@ async function processTurnImpl(
                 processingHeartbeatAt: failureTime,
                 processingAbandonedAt: failureTime,
                 ...evidence,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               }
             : {
@@ -986,6 +998,7 @@ async function processTurnImpl(
                 processingKind: null,
                 processingHeartbeatAt: failureTime,
                 ...evidence,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               },
         }
@@ -1034,6 +1047,7 @@ async function processTurnImpl(
           realTime: failureTime,
           durationMs: Date.now() - startTime,
           success: false,
+          error: failureDetail,
           memory: readMemoryPeak(),
           warnings: [...warnings],
           health: lastHealth,
