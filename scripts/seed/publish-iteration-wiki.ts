@@ -1,16 +1,17 @@
 /**
- * Publish the Iteration 1 chronicle and add its navigation link to Beta 1 and
- * Beta 2. This command targets MONGODB_URI_LIVE only and is a dry run unless
- * --apply is passed.
+ * Publish the iteration chronicles (Beta 1, Beta 2, Iteration 1, Iteration 2)
+ * together, so a new chronicle and the navigation links on the older pages land
+ * in one pass. This command targets MONGODB_URI_LIVE only and is a dry run
+ * unless --apply is passed.
  *
  * Usage:
- *   npm run seed:wiki:iteration1
- *   npm run seed:wiki:iteration1 -- --apply
+ *   npm run seed:wiki:iterations
+ *   npm run seed:wiki:iterations -- --apply
  *
  * If a target page has human edits, the preflight blocks the write. Review the
  * live page first, then pass --force only when replacing those edits is
  * intentional:
- *   npm run seed:wiki:iteration1 -- --apply --force
+ *   npm run seed:wiki:iterations -- --apply --force
  *
  * A nonstandard environment file can be supplied with --env-file=<path>.
  */
@@ -20,7 +21,7 @@ import dotenv from "dotenv";
 import { MongoClient, ObjectId } from "mongodb";
 import { seedWikiPages, WIKI_SEED_PAGES } from "../../src/lib/seeds/wiki";
 
-const TARGET_SLUGS = ["beta-1", "beta-2", "iteration-1"] as const;
+const TARGET_SLUGS = ["beta-1", "beta-2", "iteration-1", "iteration-2"] as const;
 const CLI_SEED_USER_ID = new ObjectId("000000000000000000000000");
 
 function getValueArg(name: string): string | undefined {
@@ -69,7 +70,7 @@ async function main(): Promise<void> {
 
   try {
     const db = client.db("a-house-divided");
-    console.log(`Iteration 1 wiki publication: ${apply ? "APPLY" : "DRY RUN"}`);
+    console.log(`Iteration wiki publication: ${apply ? "APPLY" : "DRY RUN"}`);
     console.log(`Human-edit overwrite: ${force ? "enabled" : "disabled"}`);
 
     const preview = await seedWikiPages(db, CLI_SEED_USER_ID, {
@@ -105,7 +106,7 @@ async function main(): Promise<void> {
 
     printPlan("Inserted", result.inserted);
     printPlan("Updated", result.updated);
-    console.log("Iteration 1 wiki publication complete.");
+    console.log("Iteration wiki publication complete.");
   } finally {
     await client.close();
   }

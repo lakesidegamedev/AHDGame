@@ -2,6 +2,7 @@ import type { WikiSeedPage } from "../types";
 import { beta1Content } from "../content/beta1";
 import { beta2Content } from "../content/beta2";
 import { iteration1Content } from "../content/iteration1";
+import { iteration2Content } from "../content/iteration2";
 
 export const iterationsPages: readonly WikiSeedPage[] = [
   {
@@ -34,14 +35,28 @@ export const iterationsPages: readonly WikiSeedPage[] = [
     slug: "iteration-1",
     title: "Iteration 1",
     description:
-      "The current 1953-start world: German reunification by war, seven American presidents, a fractured Cold War, and private fortunes larger than public exchanges.",
+      "The concluded 1953-start world: German reunification by war, seven American presidents, a fractured Cold War, and private fortunes larger than public exchanges.",
     content: iteration1Content,
     category: "iterations",
-    extraTags: ["history", "iteration", "cold-war", "live-world"],
+    extraTags: ["history", "iteration", "cold-war"],
     featured: false,
     difficulty: "beginner",
     contentType: "reference",
     estimatedReadTime: 27,
     lastUpdated: "2026-10-02",
+  },
+  {
+    slug: "iteration-2",
+    title: "Iteration 2",
+    description:
+      "The concluded 1991-start world: The Mafia's four presidential wins, a nationalist government that broke up the United Kingdom, and a United States-Japan war left unfinished.",
+    content: iteration2Content,
+    category: "iterations",
+    extraTags: ["history", "iteration", "post-cold-war"],
+    featured: false,
+    difficulty: "beginner",
+    contentType: "reference",
+    estimatedReadTime: 20,
+    lastUpdated: "2026-11-12",
   },
 ];
