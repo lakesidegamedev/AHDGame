@@ -13,6 +13,9 @@ import { z } from "zod";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { getClientIp } from "@/lib/utils/network";
 import { createHash } from "crypto";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const schema = z.object({
   characterId: schemas.objectId,
@@ -55,7 +58,7 @@ async function handleGET(request: Request) {
     const clientIp = await getClientIp();
     const net = { ipMasked: maskIp(clientIp), ipHash: hashIp(clientIp) };
 
-    const character = await db.collection("characters").findOne({ _id: characterId, userId });
+    const character = await charactersCollection(db).findOne({ _id: characterId, userId });
     if (!character) {
       recordAudit({
         source: "api",
@@ -70,9 +73,10 @@ async function handleGET(request: Request) {
       return errorResponse(404, "Character not found");
     }
 
-    await db
-      .collection("users")
-      .updateOne({ _id: userId }, { $set: { activeCharacterId: characterId } });
+    await usersCollection<Document>(db).updateOne(
+      { _id: userId },
+      { $set: { activeCharacterId: characterId } }
+    );
 
     recordAudit({
       source: "api",
@@ -119,7 +123,7 @@ export async function PATCH(request: Request) {
     const net = { ipMasked: maskIp(clientIp), ipHash: hashIp(clientIp) };
 
     // Verify the character belongs to this admin
-    const character = await db.collection("characters").findOne({ _id: characterId, userId });
+    const character = await charactersCollection(db).findOne({ _id: characterId, userId });
     if (!character) {
       recordAudit({
         source: "api",
@@ -134,9 +138,10 @@ export async function PATCH(request: Request) {
       return errorResponse(404, "Character not found");
     }
 
-    await db
-      .collection("users")
-      .updateOne({ _id: userId }, { $set: { activeCharacterId: characterId } });
+    await usersCollection<Document>(db).updateOne(
+      { _id: userId },
+      { $set: { activeCharacterId: characterId } }
+    );
 
     recordAudit({
       source: "api",

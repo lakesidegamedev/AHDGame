@@ -2,20 +2,15 @@
  * Chooses between the allocation a resolved election actually seated and the
  * live projection recomputed from the current tally.
  *
- * Ticket #1277: the detail page recomputed the allocation on every load, so a
- * FINISHED election rendered a different result whenever an input to the
- * allocator drifted underneath it — a player held 7 seats while the results
- * page showed 16. `generalResolution` already persists the authoritative
- * allocation to the tally's root `seatsEstimate` alongside `finalized: true`,
- * so once that flag is set the persisted value is the only honest answer.
+ * `generalResolution` persists the authoritative allocation to the tally's
+ * root `seatsEstimate` alongside `finalized: true`, so once that flag is set
+ * the persisted value is the only honest answer; otherwise the page recomputes
+ * and shows a result that drifts with the allocator's inputs.
  *
- * ⚠️ `finalized` is the gate, NOT "is the race past its end time".
- * `accumulateVoteTurn` rewrites the SAME root `seatsEstimate` field every turn
- * of the count (`tallyManagement.ts`, the tally `$set` beside the snapshot
- * push), so before resolution that field holds a mid-count projection. A race
- * that has passed `endTime` but has not yet been resolved by the turn processor
- * must keep projecting, or it would present one turn's in-flight estimate as
- * the final result.
+ * `finalized` is the gate, NOT "is the race past its end time".
+ * `accumulateVoteTurn` rewrites the same root `seatsEstimate` every turn of
+ * the count, so before resolution it holds a mid-count projection. A race past
+ * `endTime` but not yet resolved must keep projecting.
  */
 
 /** The two tally fields this decision reads. */

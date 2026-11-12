@@ -4,7 +4,7 @@ import type { StateDemographicTurnout } from "@/lib/db/types";
  * Nigeria geo-political zone demographic turnout modifier seeds.
  *
  * All modifiers start at 0 — no GOTV, canvassing, or suppression effects
- * applied yet. Keys match the NG voter group IDs from ngDemographicCategories.ts.
+ * applied yet. Keys match the NG voter group IDs from the country Layer-1 model.
  *
  * The category key is "ng_voterGroups" to align with the NG demographic
  * profile and avoid collision with BR/DE/US/UK/JP/CN documents in the same

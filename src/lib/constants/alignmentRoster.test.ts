@@ -15,13 +15,13 @@ import {
 const rostered = (entityId: string) => ROSTER_BY_KEY[entityId as AlignmentCountryKey];
 
 // 197 from the ops report, plus UKR/BLR/BAL (Soviet union republics the report
-// omits, now promoted to countries in their own right) and SCO/WAL
-// (secession-gated CountryIds) = 200.
+// omits, now promoted to countries in their own right) and SCO/WAL/QC
+// (secession-gated CountryIds) = 201.
 describe("ALIGNMENT_ROSTER", () => {
-  it("carries all 200 entities with unique keys", () => {
-    expect(ALIGNMENT_ROSTER).toHaveLength(200);
+  it("carries all 201 entities with unique keys", () => {
+    expect(ALIGNMENT_ROSTER).toHaveLength(201);
     const keys = ALIGNMENT_ROSTER.map((r) => r.key);
-    expect(new Set(keys).size).toBe(200);
+    expect(new Set(keys).size).toBe(201);
   });
 
   it("covers every implemented CountryId", () => {
@@ -73,7 +73,7 @@ describe("ALIGNMENT_ROSTER", () => {
     // out of historical-presence and Ukraine added new.
     expect(byTier["full-autonomous"]).toBe(26);
     expect(byTier["sphere-macro"]).toBe(38);
-    expect(byTier["historical-presence"]).toBe(136);
+    expect(byTier["historical-presence"]).toBe(137);
   });
 });
 
@@ -105,13 +105,13 @@ describe("existsAt", () => {
 
   it("counts the measured presence per start", () => {
     const count = (y: number) => ALIGNMENT_ROSTER.filter((r) => existsAt(r.key, y)).length;
-    expect(count(1953)).toBe(192);
-    expect(count(1979)).toBe(176);
+    expect(count(1953)).toBe(193);
+    expect(count(1979)).toBe(177);
     // 173 less the two colonial rows (Southern Rhodesia, British Honduras) that
     // end before 1991 because Zimbabwe and Belize are modelled under their own ids.
-    expect(count(1991)).toBe(171);
-    expect(count(2019)).toBe(171);
-    expect(count(2023)).toBe(171);
+    expect(count(1991)).toBe(172);
+    expect(count(2019)).toBe(172);
+    expect(count(2023)).toBe(172);
   });
 });
 
@@ -129,12 +129,12 @@ describe("statusAt", () => {
     const deps = (y: number) =>
       ALIGNMENT_ROSTER.filter((r) => existsAt(r.key, y) && statusAt(r.key, y) === "dependent")
         .length;
-    expect(deps(1953)).toBe(100);
-    expect(deps(1979)).toBe(27);
+    expect(deps(1953)).toBe(101);
+    expect(deps(1979)).toBe(28);
     // 20 before the union republics got independence years. Byelorussia and the
     // Baltics were reading as dependent in 2019, which was simply wrong: they
     // are sovereign from 1991, and Ukraine now says so too.
-    expect(deps(2019)).toBe(18);
+    expect(deps(2019)).toBe(19);
   });
 });
 
@@ -156,15 +156,15 @@ describe("roster provenance", () => {
     expect(missing, "roster is missing manifest entities").toEqual([]);
   });
 
-  it("adds exactly the two CountryIds the manifest omits", async () => {
+  it("adds exactly the three CountryIds the manifest omits", async () => {
     const { getWorldEntityPresetManifest } = await import("@/lib/world/worldEntityManifest");
     const manifest = getWorldEntityPresetManifest("1953-default");
     const manifestIds = new Set(manifest.entries.map((e) => e.entityId));
     const extras = ALIGNMENT_ROSTER.map((r) => r.key).filter((k) => !manifestIds.has(k));
-    // SCO/WAL are secession-gated CountryIds and stay outside the manifest.
+    // SCO/WAL/QC are secession-gated CountryIds and stay outside the manifest.
     // UKR/BLR/BAL used to sit here too, as union republics the manifest did not
     // model separately; they are now first-class entries in it.
-    expect([...extras].sort()).toEqual(["SCO", "WAL"]);
+    expect([...extras].sort()).toEqual(["QC", "SCO", "WAL"]);
   });
 
   it("agrees with the manifest on tier and status for every shared entity", async () => {

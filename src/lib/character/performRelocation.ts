@@ -1,15 +1,7 @@
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
 import type { Db, ObjectId } from "mongodb";
-import type {
-  Character,
-  State,
-  Corporation,
-  CentralBank,
-  PoliticalParty,
-  StatePartyOrg,
-  CareerEvent,
-} from "@/lib/db/types";
+import type { Character, State, PoliticalParty, StatePartyOrg, CareerEvent } from "@/lib/db/types";
 import {
   withdrawAllActiveCandidacies,
   cleanupPartyPositionsOnSwitch,
@@ -20,6 +12,17 @@ import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { officeResignsOnRelocation } from "@/lib/character/officeResignsOnRelocation";
 import { severFromChainOfCommand } from "@/lib/military/severFromChainOfCommand";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface RelocationOutcome {
   resignedFromOffice: string | null;
@@ -47,23 +50,13 @@ export interface PerformRelocationOptions {
 }
 
 /**
- * Apply the full relocation pipeline to a character. Assumes caller has
- * already validated:
- *   - the target state exists
- *   - the character is not already in the target state
- *   - any cooldown/permission checks the caller cares about
+ * Apply the full relocation pipeline to a character. Assumes the caller has
+ * validated: target state exists, character is not already there, and any
+ * cooldown/permission checks.
  *
- * Called by:
- *   - POST /api/character/relocate (player flow, cooldown enforced upstream)
- *   - POST /api/character/relocate-with-corp (combined char+corp move)
- *   - PATCH /api/admin/characters/update-country
- *   - PATCH /api/admin/characters/update-state
- *   - PATCH /api/moderator/characters/update-country
- *   - PATCH /api/moderator/characters/update-state
- *
- * When `options.skipCeoResignForCorpId` is supplied, the CEO auto-resign
- * step is skipped if the matching corp is the one the character currently
- * leads — used by the combined character+corp relocation flow.
+ * When options.skipCeoResignForCorpId is supplied, the CEO auto-resign step is
+ * skipped if that corp is the one the character leads. Used by the combined
+ * character+corp relocation flow.
  */
 export async function performRelocation(
   db: Db,
@@ -86,9 +79,8 @@ export async function performRelocation(
   const lastRelocatedAt = gameTime.effectiveNow;
   const lastRelocatedTurn = gameTime.currentTurn;
 
-  // 1. Auto-resign from office when residency breaks.
-  //    State/region-bound seats always resign. Country-scoped seats (VP, President,
-  //    cabinet, …) only resign on a country change — ticket #1057.
+  // Auto-resign from office when residency breaks: state seats always resign;
+  // country-scoped seats only on a country change.
   let resignedFromOffice: string | null = null;
   if (
     character.currentOffice &&
@@ -96,7 +88,7 @@ export async function performRelocation(
   ) {
     const officeType = character.currentOffice.type;
     const officeState = "state" in character.currentOffice ? character.currentOffice.state : null;
-    await db.collection("electedOfficials").updateOne(
+    await electedOfficialsCollection<Document>(db).updateOne(
       { characterId },
       {
         $set: {
@@ -117,7 +109,7 @@ export async function performRelocation(
   // 3. Auto-resign CEO of any corporation, unless the caller has asked us to
   //    keep them in place for the matching corp (combined char+corp move).
   let ceoResignedFrom: string | null = null;
-  const ceoCorp = await db.collection<Corporation>("corporations").findOne({
+  const ceoCorp = await corporationsCollection(db).findOne({
     ceoId: characterId,
     ceoVacant: { $ne: true },
   });
@@ -131,7 +123,7 @@ export async function performRelocation(
       (isStateOwned(ceoCorp) && ceoCorp.countryId === newCountryId))
   );
   if (ceoCorp && !keepCeo) {
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: ceoCorp._id },
       {
         $set: { ceoVacant: true, updatedAt: now },
@@ -148,11 +140,9 @@ export async function performRelocation(
   // 4. Central bank chair: only when changing country.
   let chairResignedFrom: string | null = null;
   if (countryChanged) {
-    const chairBank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne({ chairCharacterId: characterId });
+    const chairBank = await centralBanksCollection(db).findOne({ chairCharacterId: characterId });
     if (chairBank) {
-      await db.collection<CentralBank>("centralBanks").updateOne(
+      await centralBanksCollection(db).updateOne(
         { _id: chairBank._id },
         {
           $set: {
@@ -173,18 +163,14 @@ export async function performRelocation(
   // These were the defense-in-depth gap behind "relocated chair acts on
   // foreign entity" — clearing them here closes the loop at the source.
   if (countryChanged) {
-    await db
-      .collection("campaigns")
-      .updateMany(
-        { managerCharacterId: characterId },
-        { $set: { managerId: null, managerCharacterId: null, updatedAt: now } }
-      );
+    await campaignsCollection<Document>(db).updateMany(
+      { managerCharacterId: characterId },
+      { $set: { managerId: null, managerCharacterId: null, updatedAt: now } }
+    );
     // Caucus participation: closes memberships, withdraws chair candidacies,
     // clears chair/vice-chair seats, AND clears the denormalized
-    // character.factionId pointer. The inline cleanup that used to live here
-    // missed factionId, so relocated players stayed visibly "in" their old
-    // caucus and were blocked from founding or joining caucuses in the new
-    // country (bug #0552).
+    // character.factionId pointer. Missing factionId cleanup leaves relocated
+    // players visibly in their old caucus and blocked from caucuses elsewhere.
     await cleanupCaucusParticipationForCharacters(db, [characterId], {
       removeMembership: true,
       membershipStatus: "left",
@@ -192,7 +178,7 @@ export async function performRelocation(
     });
     // GovernmentFormation pmCharacterId — auth helper grants PM-only powers
     // based on this field, so a relocated PM must lose the title.
-    await db.collection("governmentFormations").updateMany(
+    await governmentFormationsCollection<Document>(db).updateMany(
       { pmCharacterId: characterId },
       {
         $set: {
@@ -202,7 +188,7 @@ export async function performRelocation(
         },
       }
     );
-    await db.collection("parliamentaryGovernments").updateMany(
+    await parliamentaryGovernmentsCollection<Document>(db).updateMany(
       { pmCharacterId: characterId },
       {
         $set: {
@@ -215,7 +201,7 @@ export async function performRelocation(
     // Cabinet member records. Cabinet-bill voting and cabinet-position routes
     // filter by characterId+countryId, so a stale record in another country
     // would still grant voting rights.
-    await db.collection("cabinetMembers").deleteMany({ characterId });
+    await cabinetMembersCollection<Document>(db).deleteMany({ characterId });
   }
 
   // 4c. Cross-country: leave the old country's chain of command. Same reasoning as
@@ -238,7 +224,7 @@ export async function performRelocation(
   //    (always — a player can't chair the CA state party if they live in TX).
   const clearedStateLeadership: string[] = [];
   if (character.party && character.party !== "independent") {
-    const oldStateOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const oldStateOrg = await statePartyOrgCollection(db).findOne({
       partyId: character.party,
       stateId: oldStateId,
       $or: [{ chairId: characterId }, { viceChairId: characterId }, { treasurerId: characterId }],
@@ -260,9 +246,7 @@ export async function performRelocation(
         positions.push("treasurer");
       }
       if (positions.length > 0) {
-        await db
-          .collection<StatePartyOrg>("statePartyOrg")
-          .updateOne({ _id: oldStateOrg._id }, { $set: updates });
+        await statePartyOrgCollection(db).updateOne({ _id: oldStateOrg._id }, { $set: updates });
         clearedStateLeadership.push(`${oldStateId}: ${positions.join(", ")}`);
       }
     }
@@ -277,9 +261,10 @@ export async function performRelocation(
   let leftPartyName: string | null = null;
   if (leaveParty && character.party && character.party !== "independent") {
     const oldPartyId = character.party;
-    const oldParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(oldPartyId, 10), countryId: oldCountryId });
+    const oldParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(oldPartyId, 10),
+      countryId: oldCountryId,
+    });
 
     if (oldParty) {
       leftPartyName = oldParty.name;
@@ -292,9 +277,10 @@ export async function performRelocation(
     await cleanupPartyPositionsOnSwitch(characterId, oldPartyId, "independent", oldCountryId);
 
     if (oldParty) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: oldParty._id }, { $inc: { memberCount: -1 }, $set: { updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: oldParty._id },
+        { $inc: { memberCount: -1 }, $set: { updatedAt: now } }
+      );
     }
     if (!countryChanged) {
       await cleanupCaucusParticipationForCharacters(db, [characterId], {
@@ -303,9 +289,10 @@ export async function performRelocation(
         now,
       });
       // A national office may survive a domestic move, but its party label must not.
-      await db
-        .collection("electedOfficials")
-        .updateMany({ characterId }, { $set: { party: "independent", updatedAt: now } });
+      await electedOfficialsCollection<Document>(db).updateMany(
+        { characterId },
+        { $set: { party: "independent", updatedAt: now } }
+      );
     }
   }
 
@@ -360,7 +347,7 @@ export async function performRelocation(
   // re-add into the founded party revive the leadership tenure exemption
   // (see lib/parties/leadershipTenure.ts). Moves retaining the party leave
   // these fields untouched. Existing lastPartySwitchAt is never rearmed.
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: characterId },
     {
       $set: update,

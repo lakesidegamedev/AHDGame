@@ -41,9 +41,9 @@ describe("SingleplayerHome new-game rules", () => {
     fireEvent.change(screen.getByLabelText("Difficulty"), { target: { value: "hard" } });
     fireEvent.change(screen.getByLabelText("Autonomous politicians"), { target: { value: "v5" } });
     fireEvent.click(screen.getByText("Advanced feature flags"));
-    const autoSector = screen.getByLabelText("Automatic sector seeding");
-    expect((autoSector as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(autoSector);
+    const techTrees = screen.getByLabelText("Sector technology trees");
+    expect((techTrees as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(techTrees);
     fireEvent.click(screen.getByRole("button", { name: "Start" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
@@ -53,7 +53,7 @@ describe("SingleplayerHome new-game rules", () => {
       mode: "head-of-state",
       difficulty: "hard",
       autonomyLevel: "v5",
-      featureFlags: { ...DEFAULT_SINGLEPLAYER_FEATURE_FLAGS, autoSectorSeedEnabled: false },
+      featureFlags: { ...DEFAULT_SINGLEPLAYER_FEATURE_FLAGS, sectorTechTreesEnabled: false },
     });
   });
 

@@ -3,8 +3,7 @@
  *
  * Settlement is a contract-for-difference layered on top of ordinary P&L, so
  * `realizedIncome` never includes it. Financials has to name this number or a
- * CEO watching healthy income and flat liquid capital cannot diagnose the
- * debit (ticket 1326 / issue #2019).
+ * CEO watching healthy income and flat liquid capital cannot diagnose the debit.
  */
 
 export type SupplyAgreementCashRow = {

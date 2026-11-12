@@ -10,11 +10,13 @@ import {
   submitCrisisDecision,
   resolveCharacterRoles,
   getCrisisInteraction,
+  decisionAnsweredByLever,
 } from "@/lib/crises/interactionEngine";
-import { isCrisisInteractionEnabled, isCrisisAidBillsEnabled } from "@/lib/crises/featureFlag";
 import { submitCrisisAidPledge } from "@/lib/crises/aidPledge";
 import type { CountryId } from "@/lib/constants/countries";
+import type { Crisis } from "@/lib/db/types/crisis";
 import { ObjectId } from "mongodb";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const interactSchema = z.object({
   optionId: z.string().optional(),
@@ -28,12 +30,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
     const user = auth.user;
-
-    // Feature gate: reject if crisis interaction system is disabled
-    const enabled = await isCrisisInteractionEnabled();
-    if (!enabled) {
-      return errorResponse(403, "Crisis interactions are not enabled");
-    }
 
     if (!ObjectId.isValid(id)) {
       return errorResponse(400, "Invalid crisis interaction ID");
@@ -66,9 +62,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       (n) => n.nodeId === interaction.currentNodeId
     );
     if (currentNode?.type === "aid") {
-      if (!(await isCrisisAidBillsEnabled())) {
-        return errorResponse(403, "Aid bills are not enabled");
-      }
       // Decline: advance via the normal engine path using the provided optionId.
       if (decline === true) {
         if (!optionId) {
@@ -98,6 +91,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       }
       // Pledge: route to the aid-pledge command (schema already enforces a
       // positive finite number).
+      const crisis = await crisesCollection(db).findOne({ _id: interaction.crisisId });
+      if (crisis && decisionAnsweredByLever(crisis, interaction.decisionTree, currentNode)) {
+        return errorResponse(409, "This crisis is answered through its levers");
+      }
       const pctGdp = parsed.data.pctGdp;
       if (pctGdp == null) {
         return errorResponse(400, "pctGdp required for aid pledge");

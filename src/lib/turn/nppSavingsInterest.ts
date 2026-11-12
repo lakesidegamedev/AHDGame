@@ -14,7 +14,6 @@
  */
 
 import type { Db } from "mongodb";
-import type { NPP } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
 import {
@@ -22,6 +21,9 @@ import {
   interestEligibleBalance,
   SAVINGS_CREDIT_INTERVAL_TURNS,
 } from "@/lib/currency/savingsInterest";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
 
 export async function processNppSavingsInterest(
   db: Db,
@@ -38,8 +40,9 @@ export async function processNppSavingsInterest(
       [`currencyBalances.savings.${c}`]: { $gt: 0 },
     })),
   };
-  const accrualNpps = await db
-    .collection<NPP>("npps")
+  const accrualNpps = await (
+    await getNppsCollection(db)
+  )
     .find(accrualFilter)
     .project({ _id: 1, currencyBalances: 1 })
     .toArray();
@@ -69,7 +72,7 @@ export async function processNppSavingsInterest(
     }
   }
   if (accrualOps.length > 0) {
-    await db.collection("npps").bulkWrite(accrualOps);
+    await nppsCollection<Document>(db).bulkWrite(accrualOps);
   }
 
   // Phase 2 (quarterly): flush pending → savings balance + lifetime interestEarned,
@@ -82,8 +85,9 @@ export async function processNppSavingsInterest(
         [`currencyBalances.pendingSavingsInterest.${c}`]: { $gt: 0 },
       })),
     };
-    const creditNpps = await db
-      .collection<NPP>("npps")
+    const creditNpps = await (
+      await getNppsCollection(db)
+    )
       .find(creditFilter)
       .project({ _id: 1, currencyBalances: 1 })
       .toArray();
@@ -109,7 +113,7 @@ export async function processNppSavingsInterest(
       }
     }
     if (creditOps.length > 0) {
-      await db.collection("npps").bulkWrite(creditOps);
+      await nppsCollection<Document>(db).bulkWrite(creditOps);
     }
   }
 

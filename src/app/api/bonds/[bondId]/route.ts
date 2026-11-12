@@ -7,7 +7,6 @@ import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth"; // Optional auth with current account state.
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Bond, Corporation, BondHistory, IndexFund, NPP, User } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
@@ -28,6 +27,14 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { isBankPropTradingEnabled } from "@/lib/banking/featureFlag";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -58,7 +65,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
 
     let bond: Bond | null = null;
     if (ObjectId.isValid(bondId)) {
-      bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
+      bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
     }
     if (!bond) {
       return errorResponse(404, "Bond not found");
@@ -67,7 +74,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const [gameState, corporation, user] = await Promise.all([
       getGameState(),
       isCorporateBond(bond)
-        ? db.collection<Corporation>("corporations").findOne({
+        ? corporationsCollection(db).findOne({
             _id: bond.corporationId,
           })
         : Promise.resolve(null),
@@ -106,7 +113,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
       const [forexEnabled, bankPropTradingEnabled, userDoc] = await Promise.all([
         isForexEnabled(),
         isBankPropTradingEnabled(),
-        db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) }),
+        usersCollection(db).findOne({ _id: new ObjectId(user.userId) }),
       ]);
       // Load exchange rates so multi-currency wealth converts correctly. Without
       // these, getTotalPersonalWealth falls back to home-currency only and a
@@ -119,9 +126,10 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
 
       if (isImperialMode) {
         // Imperial character path
-        const imperial = await db
-          .collection<ImperialCharacter>("imperialCharacters")
-          .findOne({ _id: userDoc!.activeImperialCharacterId!, userId: new ObjectId(user.userId) });
+        const imperial = await imperialCharactersCollection(db).findOne({
+          _id: userDoc!.activeImperialCharacterId!,
+          userId: new ObjectId(user.userId),
+        });
         if (imperial) {
           myCharacterId = imperial._id.toString();
           myCashOnHand = getTotalPersonalLiquidWealth(imperial, forexEnabled, exchangeRates);
@@ -136,7 +144,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
           myBondUnits = myHolding?.units ?? 0;
 
           // Find corporation where imperial character is CEO
-          const myCorp = await db.collection<Corporation>("corporations").findOne({
+          const myCorp = await corporationsCollection(db).findOne({
             ceoId: imperial._id,
             ceoType: "imperial",
             ceoVacant: { $ne: true },
@@ -182,7 +190,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
         const characterQuery = userDoc?.activeCharacterId
           ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
           : { userId: new ObjectId(user.userId) };
-        const character = await db.collection<Character>("characters").findOne(characterQuery);
+        const character = await charactersCollection(db).findOne(characterQuery);
         if (character) {
           myCharacterId = character._id.toString();
           myCashOnHand = getTotalPersonalLiquidWealth(character, forexEnabled, exchangeRates);
@@ -197,7 +205,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
           myBondUnits = myHolding?.units ?? 0;
 
           // Find corporation where user is CEO (for corporate bond purchases)
-          const myCorp = await db.collection<Corporation>("corporations").findOne({
+          const myCorp = await corporationsCollection(db).findOne({
             ceoId: character._id,
             ceoVacant: { $ne: true },
           });
@@ -252,8 +260,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const [charMap, imperialChars, holderCorps, holderFunds, holderNpps] = await Promise.all([
       bulkFetchCharacterNames(db, characterIds, { includeAvatar: true }),
       imperialIds.length > 0
-        ? db
-            .collection<ImperialCharacter>("imperialCharacters")
+        ? imperialCharactersCollection(db)
             .find({ _id: { $in: imperialIds } })
             .project<Pick<ImperialCharacter, "_id" | "name" | "avatarUrl" | "sequentialId">>({
               _id: 1,
@@ -264,8 +271,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
             .toArray()
         : [],
       corporationIds.length > 0
-        ? db
-            .collection<Corporation>("corporations")
+        ? corporationsCollection(db)
             .find({ _id: { $in: corporationIds } })
             .project<
               Pick<Corporation, "_id" | "name"> & { logoUrl?: string; sequentialId?: number }
@@ -278,8 +284,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
             .toArray()
         : [],
       fundIds.length > 0
-        ? db
-            .collection<IndexFund>("indexFunds")
+        ? indexFundsCollection(db)
             .find({ _id: { $in: fundIds } })
             .project<Pick<IndexFund, "_id" | "name" | "slug" | "scope" | "countryId">>({
               _id: 1,
@@ -291,8 +296,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
             .toArray()
         : [],
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppIds } })
             .project<Pick<NPP, "_id" | "name" | "avatarUrl" | "sequentialId">>({
               _id: 1,
@@ -409,8 +413,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     validHolders.sort((a, b) => b.units - a.units);
 
     // Get price history
-    const priceHistory = await db
-      .collection<BondHistory>("bondHistory")
+    const priceHistory = await bondHistoryCollection(db)
       .find({ bondId: bond._id })
       .sort({ turn: 1 })
       .project({ _id: 0, turn: 1, marketPrice: 1, totalInterestPaid: 1 })

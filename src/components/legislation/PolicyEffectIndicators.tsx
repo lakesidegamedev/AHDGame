@@ -1,7 +1,7 @@
 "use client";
 
 import { describeApprovalEffects } from "@/lib/demographics/effectAudience";
-import { calculateShiftImpacts } from "@/lib/archetypeAffinities";
+import { calculateShiftImpacts } from "@/lib/policyShiftImpacts";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import { isMetricActive } from "@/lib/era/metricCatalog";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
@@ -241,8 +241,8 @@ export function computeMetricEffects({
   // directions aren't resolvable, currentDir falls back to 0 (center), so this
   // degrades to the proposed option's absolute direction.
   if (effectTargetsWeighted?.length) {
-    // Graded option intensity (Bug #0962): a same-side change of intensity
-    // (Moderate → Maximum) now yields a non-zero delta, so the chip is shown.
+    // Graded option intensity: a same-side change of intensity
+    // (Moderate -> Maximum) yields a non-zero delta, so the chip is shown.
     // Falls back to the effectDirection sign when options/indices are unavailable.
     const proposedIntensity =
       proposedPolicyIndex !== undefined && policyOptions?.length
@@ -286,11 +286,9 @@ export function computeMetricEffects({
 interface PolicyEffectIndicatorsProps {
   effectTargetsWeighted?: EffectTargetWeighted[];
   effectDirection: number; // -1, 0, or 1
-  /** @deprecated Use archetypeApprovals or shift-based props instead */
-  groupApprovals?: Record<string, number>;
-  /** Per-archetype approval impacts (-100 to +100) - static values */
-  archetypeApprovals?: Record<string, number>;
-  /** Policy domain for shift-based archetype calculation (e.g., "education") */
+  /** Per-bucket approval impacts (-100 to +100), keyed "dim:bucket" - static values */
+  bucketApprovals?: Record<string, number>;
+  /** Policy domain for shift-based bucket calculation (e.g., "education") */
   policyDomain?: string;
   /** Current policy index (0-6) for shift-based calculation */
   currentPolicyIndex?: number;
@@ -303,7 +301,7 @@ interface PolicyEffectIndicatorsProps {
    * some CN/DE/JP types). When omitted, derived from `policyOptions` if those carry scores.
    */
   policyOptionScores?: number[];
-  /** Country whose archetype affinity table to use (UK, JP). Omit for US (default). */
+  /** Country whose bucket affinity table to use (UK, JP). Omit for US (default). */
   billCountry?: string;
   /**
    * Full ordered list of the legislation type's options. When provided alongside
@@ -319,8 +317,7 @@ interface PolicyEffectIndicatorsProps {
 export function PolicyEffectIndicators({
   effectTargetsWeighted,
   effectDirection,
-  groupApprovals,
-  archetypeApprovals,
+  bucketApprovals,
   policyDomain,
   currentPolicyIndex,
   proposedPolicyIndex,
@@ -329,9 +326,9 @@ export function PolicyEffectIndicators({
   policyOptionScores,
 }: PolicyEffectIndicatorsProps) {
   // Era flags — read before any early return (rules of hooks).
-  const { eraSystemEnabled, currentYear } = useWorldFlags();
+  const { currentYear } = useWorldFlags();
   // Calculate shift-based approvals if we have the necessary data
-  // This takes priority over static archetypeApprovals
+  // This takes priority over static bucketApprovals
   let approvals: Record<string, number> | undefined;
 
   if (policyDomain && currentPolicyIndex !== undefined && proposedPolicyIndex !== undefined) {
@@ -350,8 +347,8 @@ export function PolicyEffectIndicators({
       optionScores
     );
   } else {
-    // Fall back to static approvals (or deprecated groupApprovals)
-    approvals = archetypeApprovals ?? groupApprovals;
+    // Fall back to the authored static approvals
+    approvals = bucketApprovals;
   }
 
   const hasApprovals = approvals && Object.keys(approvals).length > 0;
@@ -367,7 +364,7 @@ export function PolicyEffectIndicators({
     proposedPolicyIndex,
     policyOptions,
     countryId: billCountry,
-    year: eraSystemEnabled ? currentYear : null,
+    year: currentYear,
   });
 
   // Compute per-bucket approval effects
@@ -427,11 +424,11 @@ export function PolicyEffectIndicators({
         </div>
       )}
 
-      {/* Archetype Approvals */}
+      {/* Voter group approvals */}
       {approvalEffects.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           <span className="text-body-sm font-medium text-muted w-full mb-0.5">
-            Archetype approvals
+            Voter group approvals
           </span>
           {approvalEffects.map(({ name, direction, isGood, isMajor }) => (
             <span

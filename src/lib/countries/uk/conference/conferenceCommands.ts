@@ -13,9 +13,12 @@ import {
   getUKPartyConferencesCollection,
   getUKPartyPlatformsCollection,
 } from "@/lib/db/collections/ukPartyConferences";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
-import { selectNppPledges } from "@/lib/uk/manifesto/nppManifesto";
-import { validateRulesetAmendment, type RulesetAmendmentPatch } from "@/lib/uk/leadership/rules";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
+import { selectNppPledges } from "@/lib/countries/uk/manifesto/nppManifesto";
+import {
+  validateRulesetAmendment,
+  type RulesetAmendmentPatch,
+} from "@/lib/countries/uk/leadership/rules";
 import {
   CONFERENCE_MOTION_QUORUM_FLOOR,
   CONFERENCE_PLATFORM_QUORUM_FLOOR,
@@ -24,15 +27,15 @@ import {
   conferenceYearForTurn,
   conferenceYearStartTurn,
   quorumFor,
-} from "@/lib/uk/conference/rules";
+} from "@/lib/countries/uk/conference/rules";
 import {
   conferenceHistoryEntry,
   getConference,
   getOrSeedConference,
   pushConferenceHistory,
-} from "@/lib/uk/conference/conferenceStore";
-import type { ConferenceRulesMotion, UKPartyConference } from "@/lib/uk/conference/types";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+} from "@/lib/countries/uk/conference/conferenceStore";
+import type { ConferenceRulesMotion, UKPartyConference } from "@/lib/countries/uk/conference/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   partySeqIdOf,
@@ -45,28 +48,21 @@ import {
   reconcileConferenceEffects,
   type ConferenceResolution,
 } from "./conferenceResolution";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export * from "./conferenceResolution";
 
 export * from "./conferencePayoff";
 
 /**
- * UK party conferences — shell commands (epic #856, ticket #862).
- *
- * Annual per-party lifecycle stacked on the #861 committee model:
- *  - the conference RATIFIES the standing platform (pledge catalog ids in
- *    manifesto shape) between elections; the leader finalises the election
- *    manifesto FROM it at dissolution (see manifestoLifecycle handoff);
- *  - committee business runs as rules-amendment motions under the #861
- *    authority model (committee proposes/votes; safe bounds + cooldown
- *    enforced on apply, so a passed motion can still void);
- *  - a ratified conference pays a bounded approval/cohesion payoff once,
- *    through the vote engine's partyGroupFavorability rows (approval) and
- *    the party PS reserve (cohesion).
- *
- * Ratifying a platform never touches the manifestos collection; locking an
- * election manifesto never touches the platform row. That split IS the
- * conference/manifesto distinction.
+ * UK party conferences, shell commands.
+ * Annual per-party lifecycle: the conference RATIFIES the standing platform between
+ * elections, and the leader finalises the manifesto FROM it at dissolution.
+ * Committee business runs as rules-amendment motions under the committee authority
+ * model (propose/vote; bounds and cooldown on apply, so a passed motion can still void).
+ * A ratified conference pays a one-time bounded approval/cohesion payoff.
+ * Ratifying never touches manifestos; locking a manifesto never touches the platform.
+ * That split IS the conference/manifesto distinction.
  */
 
 export interface ConferenceActor {
@@ -104,9 +100,10 @@ async function requirePartyMemberCharacter(
   party: PoliticalParty,
   voter: ConferenceActor
 ): Promise<void> {
-  const member = await db
-    .collection<Character>("characters")
-    .findOne({ _id: voter._id, userId: { $exists: true } }, { projection: { party: 1 } });
+  const member = await charactersCollection(db).findOne(
+    { _id: voter._id, userId: { $exists: true } },
+    { projection: { party: 1 } }
+  );
   if (!member || member.party !== partySeqIdOf(party)) {
     throw forbidden("Only party members vote at conference");
   }
@@ -451,9 +448,8 @@ export async function voteOnPlatform(
 }
 
 /**
- * Propose a leadership-ruleset amendment as conference committee business.
- * Committee only; the patch must pass the #861 safe-bounds validation now.
- * Cooldown is enforced at resolve time (a passed motion can still void).
+ * Propose a leadership-ruleset amendment as committee business.
+ * Patch must pass safe-bounds validation; cooldown is enforced at resolve time.
  */
 export async function proposeRulesMotion(
   db: Db,
@@ -557,27 +553,14 @@ export async function voteOnMotion(
     throw badRequest("No such motion is open for voting");
   }
   // Atomic per-motion tally: the $map pipeline reads the stored vote at write
-  // time, so concurrent votes on the same motion converge (new vote applies,
-  // repeat vote is a tally no-op, changed vote moves the tally) instead of
-  // clobbering each other like the old whole-array read/modify/write. The
-  // status + votingClosesTurn guard in the filter makes the write conditional:
-  // a vote racing the window close or the resolution claim matches zero
-  // documents and reports closed instead of writing into a decided row.
+  // time, so concurrent votes converge instead of clobbering each other. The
+  // status + votingClosesTurn filter makes the write conditional: a vote racing
+  // the window close or resolution claim matches zero docs and reports closed.
   //
-  // Member-roll drift is closed by the frozen committee roll: eligibility is
-  // pre-checked from the live party row (so removals are rejected on their
-  // next vote and ballots already cast stand), and the write additionally
-  // requires a roll seat, so a join or removal landing between the read and
-  // the write cannot seat a ballot the frozen electorate does not hold. A
-  // deferred write from a ballot cast while eligible still lands, because the
-  // roll is immutable.
-  //
-  // Leadership-cooldown serialization lives in applyPassedMotion, not here:
-  // the cooldown travels with the leadership write (compare-and-swap on the
-  // observed lastAmendedTurn), so concurrent applies of distinct motions
-  // elect exactly one winner and every loser voids on re-read instead of
-  // landing a second patch inside the window. Voting needs no cooldown gate:
-  // a passed motion can still void at apply time.
+  // The write requires a frozen roll seat, so joins or removals between read
+  // and write cannot seat a ballot the electorate does not hold; deferred
+  // writes still land because the roll is immutable. Leadership cooldown
+  // serialization lives in applyPassedMotion, not here.
   const roll = await ensureEligibleRoll(db, party, doc, now);
   const voteKey = voter._id.toString();
   if (roll.persisted && !roll.committeeIds.includes(voteKey)) {

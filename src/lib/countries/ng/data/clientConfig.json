@@ -1,0 +1,141 @@
+{
+  "config": {
+    "id": "NG",
+    "name": "Nigeria",
+    "code": "NG",
+    "status": "coming-soon",
+    "flagEmoji": "🇳🇬",
+    "regionLabel": "Zone",
+    "regionLabelPlural": "Zones",
+    "executiveTitle": "President",
+    "executiveRealmPhrase": "Nigeria",
+    "executiveLabel": "Aso Rock",
+    "executivePath": "/country/ng/executive",
+    "governmentType": "presidential",
+    "governmentTypeLabel": "Presidential Republic",
+    "descriptor": "A federal presidential republic where a directly elected President governs alongside a bicameral National Assembly — a 109-seat Senate and a 360-seat House of Representatives — across six geopolitical zones spanning the Nigerian federation.",
+    "heroImage": "https://flagcdn.com/w640/ng.png",
+    "overviewPath": "/country/ng",
+    "mapPath": "/country/ng/map",
+    "currencyCode": "NGN",
+    "centralGovernmentLabel": "Federal Allocations",
+    "exchangeName": "NGX",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["apc", "pdp"],
+    "partyCreationNPPs": { "statesRequired": 3, "lockHomeState": true, "nppsPerState": 2 },
+    "executiveTermLimit": {
+      "officeKey": "president",
+      "maxTermsPerCharacter": 2,
+      "blocksRunningMateSelection": true
+    },
+    "legislature": {
+      "name": "National Assembly",
+      "path": "/country/ng/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "house",
+        "name": "House of Representatives",
+        "shortName": "House",
+        "seats": 360,
+        "description": "360 representatives elected from single-member constituencies across the Nigerian federation."
+      },
+      "upperChamber": {
+        "key": "senate",
+        "name": "Senate",
+        "shortName": "Senate",
+        "seats": 109,
+        "description": "109 senators elected from constituencies across the Nigerian federation for four-year terms.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "vicePresident",
+        "label": "Vice President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Vice Presidents"
+      },
+      {
+        "key": "senate",
+        "label": "Senator",
+        "chamberKey": "senate",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Senators"
+      },
+      {
+        "key": "house",
+        "label": "Representative",
+        "chamberKey": "house",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Representatives"
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Assembly Member",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Assembly Members"
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Governors"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the CBN",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the CBN"
+      }
+    ],
+    "electionSystems": { "lowerChamber": "fptp", "upperChamber": "fptp", "headOfState": "fptp" },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "upperElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Central Bank of Nigeria",
+      "abbreviation": "CBN",
+      "heroImage": "/api/images/hero/central-bank-of-nigeria",
+      "defaultPrimeRate": 12
+    },
+    "usdExchangeRate": 0.00064
+  },
+  "eraOverrides": {
+    "1991-default": { "usdExchangeRate": 0.10101010101010101 },
+    "1953-default": {
+      "legislature": {
+        "name": "National Assembly",
+        "path": "/country/ng/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "house",
+          "name": "House of Representatives",
+          "shortName": "House",
+          "seats": 136,
+          "description": "136 representatives of the Federal House under the Lyttelton Constitution (1954)."
+        },
+        "upperChamber": {
+          "key": "senate",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 109,
+          "description": "Senators elected from constituencies across the Nigerian federation.",
+          "elected": true
+        }
+      },
+      "usdExchangeRate": 1
+    }
+  }
+}

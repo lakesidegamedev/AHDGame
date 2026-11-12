@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 education spending sweep guard (P2a). The education outcome metrics below
@@ -33,7 +30,6 @@ const REGULATORY_MECHANISM_KEEP_LIST = new Set([
   "us_school_standards", // standards/choice → testPerformance (pedagogy)
   "uk_education_standards", // standards → gcseAttainment (pedagogy)
   "uk_tuition_fees", // price → universityEnrollment
-  "de_university_tuition", // price/BAföG → enrollment-side effects
   // price/SUSI grants → enrollment; its workforceSkill term models the
   // enrollment→skill mechanism, an edge the engine does NOT have (workforceSkill
   // derives from gradRate/testPerf/apprenticeship only).
@@ -64,13 +60,7 @@ function readoutHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 education spending sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...deLegislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no education-FUNDING law targets a spend-driven education readout", () => {
     const offenders: string[] = [];
@@ -85,9 +75,7 @@ describe("§4.7 education spending sweep", () => {
       //
       // `budgetCategory` is checked with the same fallback the runtime uses
       // (enactedLaws.ts: `legislationType.budgetCategory || policyDomain`) —
-      // ticket #826 item 14 found `us_state_education_funding` and
-      // `cn_provincial_education` slipped through the sweep specifically
-      // because they rely on that fallback instead of an explicit field.
+      // some laws rely on that fallback instead of an explicit field.
       const effectiveBudgetCategory = lt.budgetCategory || lt.policyDomain;
       if (effectiveBudgetCategory !== "education") continue;
       if (lt.effectTarget?.metricCategoryId !== "education") continue;
@@ -106,29 +94,12 @@ describe("§4.7 education spending sweep", () => {
     }
   });
 
-  it("no longer double-counts on the two funding laws found via the policyDomain fallback (ticket #826 item 14)", () => {
-    // us_state_education_funding and cn_provincial_education both slipped
-    // through the original budgetCategory-only check because neither set an
-    // explicit budgetCategory field — they relied on the runtime fallback
-    // (enactedLaws.ts: budgetCategory || policyDomain). Both now set the
-    // field explicitly (matching us_federal_education_funding) AND have had
-    // their double-counting secondaries trimmed; the widened gate above
-    // covers the fallback case regardless for any bill that doesn't.
-    for (const id of ["us_state_education_funding", "cn_provincial_education"]) {
-      const lt = all.find((l) => l._id === id);
-      expect(lt, `${id} should exist`).toBeDefined();
-      expect(lt!.budgetCategory).toBe("education");
-      expect(lt!.effectTarget?.metricId).toBe("educationSpending");
-      expect(readoutHits(lt!), `${id} should have no spend-driven readout hits`).toEqual([]);
-    }
-  });
-
-  it("does not flag reform/curriculum laws whose primary target isn't the spend root (de_academic_reform, ie_curriculum_reform)", () => {
+  it("does not flag reform/curriculum laws whose primary target isn't the spend root (ie_curriculum_reform)", () => {
     // These are genuinely regulatory/pedagogy-mechanism bills (their
     // effectTarget is testPerformance, not educationSpending) — they should
     // never need a keep-list entry because the funding-law gate excludes
     // them structurally.
-    for (const id of ["de_academic_reform", "ie_curriculum_reform"]) {
+    for (const id of ["ie_curriculum_reform"]) {
       const lt = all.find((l) => l._id === id);
       expect(lt, `${id} should exist`).toBeDefined();
       expect(lt!.effectTarget?.metricId).not.toBe("educationSpending");

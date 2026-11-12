@@ -5,26 +5,16 @@
  * getUkModel combines them with each region's census and turnout composition.
  */
 
-/**
- * NatCen, British Social Attitudes 35, Gender, Table 1, printed p63:
+/*
+ * NatCen British Social Attitudes 35, Table 1 (p63):
  * https://natcen.ac.uk/sites/default/files/2023-08/bsa35_full-report.pdf
- *
- * The 1991 column measures disagreement with the male-breadwinner model.
- * Proxy coordinate: 5 * (1 - 2 * disagreement / 100), with lower values
- * representing more liberal attitudes. Non-disagreement includes neutral and
- * unknown answers, so this is not a net agreement score or a full social index.
- *
- * Age crosswalk: 18-29 uses the published 18-34 value (67%). For 30-44,
- * blend 18-34 (67%) and 35-44 (54%) by band widths 5:10. For 45-64, average
- * 45-54 (44%) and 55-64 (25%). For 65+, average 65-74 (16%) and 75+ (11%).
- * The width/older-band averages are explicit approximations, not sample weights.
- *
- * Education uses the four published categories (31%, 46%, 54%, 67%).
- * Income is a relative-tier proxy: bottom group (23%), mean middle groups
- * (30%, 50%), top group (53%). No modern nominal pound thresholds are imported.
- * This Great Britain source does not measure Northern Ireland's separate
- * attitudes. NIR retains its census mix; no religious or constitutional lean
- * is inferred from its ethnicity or the GB survey.
+ * 1991 column: disagreement with male-breadwinner model, mapped by
+ * 5 * (1 - 2 * disagreement / 100); lower is more liberal. Non-disagreement
+ * includes neutral and unknown, so not a net agreement score.
+ * Age: 18-29 uses published 18-34; 30-44 blends 18-34 and 35-44 (5:10); 45-64
+ * averages 45-54 and 55-64; 65+ averages 65-74 and 75+ (explicit approximations).
+ * Income is a relative-tier proxy, not nominal pound thresholds.
+ * GB source does not cover Northern Ireland; NIR keeps its census mix.
  */
 export const UK_SOCIAL_ATTITUDES_1991 = {
   age: { young: -1.7, mid: -0.83, mature: 1.55, senior: 3.65 },

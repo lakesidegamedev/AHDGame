@@ -1,26 +1,20 @@
 /**
- * The governance inputs to the dynamic SOE efficiency penalty (spec §11.3),
- * loaded from the political board.
+ * Governance inputs to the dynamic SOE efficiency penalty (spec §11.3),
+ * synthesized from the political board.
  *
- * `computeSoeEfficiencyPenalty` and `computeSoeEfficiencyBreakdown` read
- * `governance.corruptionIndex` and `governance.governmentTransparency` — both
- * POLITICAL paths, so a board region has no legacy doc to read them from. They
- * came back null and the penalty silently vanished until each caller learned to
- * synthesize them through the `politicalSoeInputs` adapter.
+ * `computeSoeEfficiencyPenalty` reads `governance.corruptionIndex` and
+ * `governance.governmentTransparency` from POLITICAL paths, which have no
+ * legacy doc; callers must synthesize them via `politicalSoeInputs`.
  *
- * ONE loader, because three surfaces must agree to the number: the budget
- * revenue line (`publicEnterpriseRevenue`), the per-turn remittance
- * (`soeRemittance`), and the Holdings drill-down (`nationalCorporationView`).
- * They previously each carried their own copy of the synthesis, which is how
- * two views of "the same corp's income" start disagreeing.
- *
- * The legacy-doc-first ordering those copies shared is gone with the store it
- * preferred. It would now only ever shadow the board with a stale value.
+ * Single loader because three surfaces must agree on the number: the budget
+ * revenue line, per-turn remittance, and the Holdings drill-down. Divergent
+ * copies make two views of the same corp's income disagree.
  */
 import type { Db } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /**
  * `stateId →` a minimal legacy-shaped doc carrying just the two governance
@@ -33,8 +27,7 @@ export async function loadSoeGovernanceInputs(
 ): Promise<Map<string, StateMetrics>> {
   const byId = new Map<string, StateMetrics>();
   if (stateIds.length === 0) return byId;
-  const boards = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const boards = await politicalMetricsCollection(db)
     .find({ _id: { $in: stateIds } })
     .toArray();
   for (const doc of boards) {

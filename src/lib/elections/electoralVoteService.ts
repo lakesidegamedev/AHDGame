@@ -3,6 +3,7 @@ import type { ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants";
 import { getPartyHex } from "@/lib/utils/politics";
 import type { ElectoralVoteUnit } from "@/lib/constants/states";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ElectoralMapState {
   color: string;
@@ -114,8 +115,7 @@ export async function computeElectoralVotes(
   let stateVoteData: Record<string, StateVoteData> | undefined;
 
   if (hasUnitVotes || electoralVotesByCandidate) {
-    const states = await db
-      .collection<{ _id: string; name?: string }>("states")
+    const states = await statesCollection<{ _id: string; name?: string }>(db)
       .find({}, { projection: { _id: 1, name: 1 } })
       .toArray();
     const stateNameMap = new Map(states.map((s) => [s._id, s.name ?? s._id]));

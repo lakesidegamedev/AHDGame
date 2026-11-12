@@ -3,13 +3,14 @@ import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
 import { isTurnProcessingNow } from "@/lib/turn/processingLock";
 import { errorResponse } from "@/lib/api/errors";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Reject a player mutation while a live turn lock is processing snapshots of
  * the same economy. Stale locks do not block play.
  */
 export async function rejectDuringTurn(db: Db): Promise<NextResponse | null> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {

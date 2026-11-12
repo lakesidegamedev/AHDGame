@@ -9,10 +9,11 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { createAdminLog } from "@/lib/adminLog";
 import { FOREX_ACTIVE_COUNTRIES, COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type { CentralBank } from "@/lib/db/types";
 import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
 import type { CountryId } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /** Flat fallback reserves when the country has insufficient trade/LOC history to derive an estimate.
  *  Values are in home-currency face units — same unit as reserveBalance. */
@@ -41,7 +42,7 @@ export async function POST() {
       // getBankId: DE's bank doc is the shared "ECB" — a raw countryId lookup
       // returned null and silently skipped seeding the EUR reserve entirely.
       const bankId = getBankId(countryId);
-      const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+      const bank = await centralBanksCollection(db).findOne({ _id: bankId });
       if (!bank) continue;
       if ((bank.reserveBalance ?? 0) > 0) {
         skipped.push(countryId);
@@ -51,8 +52,7 @@ export async function POST() {
       // Seed = 6 × avg_turn_spread + 12 × projected_LOC_interest (recent 48 turns).
       // Fallback to FALLBACK_RESERVE_SEED when trade history is sparse.
       const currencyCode = COUNTRY_CURRENCY_MAP[countryId];
-      const recentTrades = await db
-        .collection<TradeHistoryEntry>("tradeHistory")
+      const recentTrades = await tradeHistoryCollection(db)
         .find({
           $or: [{ fromCurrency: currencyCode }, { toCurrency: currencyCode }],
         })
@@ -72,9 +72,10 @@ export async function POST() {
         seedAmount = derived < fallback * 0.5 ? fallback : derived;
       }
 
-      await db
-        .collection<CentralBank>("centralBanks")
-        .updateOne({ _id: bankId }, { $set: { reserveBalance: seedAmount, updatedAt: now } });
+      await centralBanksCollection(db).updateOne(
+        { _id: bankId },
+        { $set: { reserveBalance: seedAmount, updatedAt: now } }
+      );
       seeded[countryId] = seedAmount;
     }
 

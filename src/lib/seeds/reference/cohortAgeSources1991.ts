@@ -1,20 +1,18 @@
 /**
- * Dated age-only adult shapes for 1991 cohort stocks in countries that have no
- * supported 1991 census bundle (#3369).
+ * Dated age-only adult shapes for 1991 cohort stocks in countries without a
+ * supported 1991 census bundle.
  *
- * Two source families, both national (or successor-state) totals:
+ * Both source families are national (or successor-state) totals:
  * - eurostat: demo_pjan, 1 January 1991, total sex, single-year counts.
  *   Bands 18-29, 30-44, 45-64, 65+ where 65+ adds the open age group.
- * - wdi: World Bank WDI (source 2) 1991 midyear, built from the UN World
- *   Population Prospects estimates of five-year age shares by sex times the
- *   male and female totals. 18-29 takes 40% of the 15-19 band (ages 18 and 19)
- *   under a uniform-within-band assumption. These are model estimates, not
- *   census observations.
+ * - wdi: World Bank WDI (source 2) 1991 midyear, from UN World Population
+ *   Prospects five-year age shares by sex times male and female totals.
+ *   18-29 takes 40% of the 15-19 band under a uniform-within-band assumption.
+ *   These are model estimates, not census observations.
  *
- * Each shape is applied to existing aggregate regions as an explicit proxy.
- * It is not a regional observation, the source totals never replace the
- * independently seeded regional populations, and no ethnicity, education,
- * income or urbanization profile is inferred.
+ * Applied to existing aggregate regions as an explicit proxy: not a regional
+ * observation, source totals never replace seeded regional populations, and
+ * no ethnicity, education, income or urbanization profile is inferred.
  */
 export type CohortAdultCounts = { young: number; mid: number; mature: number; senior: number };
 
@@ -107,6 +105,11 @@ export const COHORT_AGE_SOURCES_1991: Record<string, CohortAgeSource1991> = {
     { young: 1821053, mid: 2077035, mature: 2528845, senior: 1415353 },
     10272691
   ),
+  EUROSTAT_SE: eurostat(
+    "SE",
+    { young: 1447692, mid: 1817139, mature: 1919287, senior: 1526196 },
+    8590630
+  ),
   EUROSTAT_SI: eurostat(
     "SI",
     { young: 362166, mid: 470084, mature: 451669, senior: 216343 },
@@ -155,6 +158,7 @@ export const COHORT_NATIONAL_SOURCE_1991: Record<string, string> = {
   AT: "EUROSTAT_AT",
   FI: "EUROSTAT_FI",
   GR: "EUROSTAT_EL",
+  SE: "EUROSTAT_SE",
 };
 
 /**

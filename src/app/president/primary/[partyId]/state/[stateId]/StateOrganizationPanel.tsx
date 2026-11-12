@@ -10,7 +10,7 @@ import {
   MAX_STATE_ORG_BONUS_PRIMARY,
   STATE_ORG_COST_ACTIONS,
   STATE_ORG_MAX_LEVEL,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { formatStatePresenceCost } from "@/lib/campaigns/statePresenceCost";
 
 interface CandidateRow {
@@ -21,9 +21,7 @@ interface CandidateRow {
 
 export function StateOrganizationPanel({ stateId }: { stateId: string }) {
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
-  // Priced by the route for THIS viewer at THIS state's level. The flat base
-  // constant that used to sit here is only correct for a state at level 0, and
-  // the ladder escalates 1.35x per level.
+  // Priced by the route for this viewer at this state's level; the ladder escalates 1.35x per level.
   const [nextCost, setNextCost] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);

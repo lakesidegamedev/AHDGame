@@ -6,6 +6,10 @@ import type { Election, ElectionCandidate, NPP, GameState } from "@/lib/db/types
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { getRacePriority, isNPPAvailable } from "@/lib/turn/nppEntryLogic";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 /**
  * Debug endpoint to diagnose why NPPs aren't entering primaries.
@@ -22,7 +26,7 @@ export async function GET() {
     const db = await getDb();
 
     // Get game time (same calculation as processTurn)
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const lastProcessed = gameState?.lastTurnProcessed
       ? new Date(gameState.lastTurnProcessed)
       : new Date();
@@ -31,8 +35,7 @@ export async function GET() {
     const currentTurn = gameState?.currentTurn ?? 1;
 
     // 1. Open primaries query (same as nppBehavior.ts) — turn-first w/ Date fallback
-    const openPrimaries = await db
-      .collection<Election>("elections")
+    const openPrimaries = await electionsCollection(db)
       .find({
         status: "active",
         ...primaryOpenFilter(currentTurn, gameNow),
@@ -40,20 +43,16 @@ export async function GET() {
       .toArray();
 
     // 2. All active elections (for comparison)
-    const allActiveElections = await db
-      .collection<Election>("elections")
-      .find({ status: "active" })
-      .toArray();
+    const allActiveElections = await electionsCollection(db).find({ status: "active" }).toArray();
 
     // 3. Non-retired NPPs
-    const allNPPs = await db.collection<NPP>("npps").find({ retiredAt: null }).toArray();
+    const allNPPs = await nppsCollection(db).find({ retiredAt: null }).toArray();
 
     // 4. Load candidates for open primaries
     const primaryIds = openPrimaries.map((e) => e._id);
     const allCandidates =
       primaryIds.length > 0
-        ? await db
-            .collection<ElectionCandidate>("electionCandidates")
+        ? await electionCandidatesCollection(db)
             .find({ electionId: { $in: primaryIds }, status: "active" })
             .toArray()
         : [];

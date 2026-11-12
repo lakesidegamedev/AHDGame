@@ -19,6 +19,7 @@ import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
 import { getGameState } from "@/lib/gameState";
 import type { CountryId } from "@/lib/constants/countries";
 import type { EventEffect } from "@/lib/db/types/events";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -93,9 +94,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       ? instance.scope === "country"
       : hasFundedTreasuryAlternative
         ? (
-            await db
-              .collection<{ _id: string; treasuryCashLedgerEnabled?: boolean }>("gameConfig")
-              .findOne({ _id: "default" }, { projection: { treasuryCashLedgerEnabled: 1 } })
+            await gameConfigCollection<{ _id: string; treasuryCashLedgerEnabled?: boolean }>(
+              db
+            ).findOne({ _id: "default" }, { projection: { treasuryCashLedgerEnabled: 1 } })
           )?.treasuryCashLedgerEnabled === true
         : false;
 

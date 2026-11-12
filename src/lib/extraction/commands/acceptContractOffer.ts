@@ -21,6 +21,9 @@ import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export type AcceptContractResult =
   | { ok: true; status: 200; activatedTurn: number; expiresTurn: number; signingFeeLocal: number }
@@ -58,12 +61,10 @@ export async function acceptContractOffer(
   const possibleFundedFee = treasuryCashLedgerEnabled && feeAnchor > 0;
   const stateTreasuryFallback =
     possibleFundedFee && contract.grantedByLevel === "state"
-      ? !(await db
-          .collection<StateBudget>("stateBudgets")
-          .findOne(
-            { _id: contract.stateId, countryId: contract.countryId },
-            { projection: { _id: 1 } }
-          ))
+      ? !(await stateBudgetsCollection(db).findOne(
+          { _id: contract.stateId, countryId: contract.countryId },
+          { projection: { _id: 1 } }
+        ))
       : false;
   const fundedTreasuryFee =
     possibleFundedFee &&
@@ -141,12 +142,10 @@ export async function acceptContractOffer(
 
   if (fundedTreasuryFee && existingAttempt) {
     const key = `extraction-signing-fee:${existingAttempt}`;
-    const prior = await db
-      .collection<{
-        _id: string;
-        event?: { amount?: number };
-      }>("bankMoneyMoves")
-      .findOne({ _id: key }, { projection: { _id: 1, event: 1 } });
+    const prior = await bankMoneyMovesCollection<{
+      _id: string;
+      event?: { amount?: number };
+    }>(db).findOne({ _id: key }, { projection: { _id: 1, event: 1 } });
     if (prior) {
       const resumed = await resumeSettlement(db, key);
       if ((resumed.status === "applied" || resumed.status === "replayed") && !resumed.error) {
@@ -277,12 +276,10 @@ export async function acceptContractOffer(
           throw new Error(settled.error ?? "Funded signing fee is incomplete");
         debited = true;
       } else {
-        const debit = await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id, liquidCapital: { $gte: signingFeeLocal } },
-            { $inc: { liquidCapital: -signingFeeLocal }, $set: { updatedAt: now } }
-          );
+        const debit = await corporationsCollection(db).updateOne(
+          { _id: corporation._id, liquidCapital: { $gte: signingFeeLocal } },
+          { $inc: { liquidCapital: -signingFeeLocal }, $set: { updatedAt: now } }
+        );
         if (debit.modifiedCount === 0) {
           await revertClaim();
           return {
@@ -311,7 +308,7 @@ export async function acceptContractOffer(
         if (!fundedTreasuryFee) await creditTreasury(db, countryId, feeIssuerLocal);
         creditedNationalTreasury = true;
       } else {
-        const stateCredit = await db.collection<StateBudget>("stateBudgets").updateOne(
+        const stateCredit = await stateBudgetsCollection(db).updateOne(
           { _id: contract.stateId, countryId },
           {
             $inc: { "revenue.resourceRoyalties": feeIssuerLocal, "revenue.total": feeIssuerLocal },
@@ -374,12 +371,10 @@ export async function acceptContractOffer(
       // the claim. The refund is additive ($inc), so it needs no affordability
       // guard; the claim revert is guarded on our activatedTurn stamp.
       if (debited) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id },
-            { $inc: { liquidCapital: signingFeeLocal }, $set: { updatedAt: now } }
-          );
+        await corporationsCollection(db).updateOne(
+          { _id: corporation._id },
+          { $inc: { liquidCapital: signingFeeLocal }, $set: { updatedAt: now } }
+        );
       }
       await revertClaim();
       throw error;

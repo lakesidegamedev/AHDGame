@@ -1,19 +1,14 @@
 /**
  * Corporate labor-demand and labor-market tightness rules.
  *
- * The corporate engine has always sized a sector's headcount from its revenue
- * (`calculateWorkers`) and never once checked that headcount against the number
- * of people who actually live in the state. Corporate desired headcount is now
- * compared with civilian labor force; the corporation turn writes demand, and
- * the metric engine combines it with the labor force it computes that turn.
- *
- * The result is measurable and large. On the live world a single Arizona
- * extraction sector carried 47,996,752 workers against a state labour force of
- * 314,613, and state unemployment sat unmoved at 15% the whole time.
+ * Corporate desired headcount is compared against civilian labor force:
+ * the corporation turn writes demand, and the metric engine combines it
+ * with the labor force it computes that turn. Without this check a sector
+ * can carry far more workers than the state's labor force, with
+ * unemployment unmoved.
  *
  * The tightness reading is used by unemployment and corporate staffing. The
- * corporation turn consumes the prior reading for staffing; after that turn's
- * demand and current labor force are both available, the metric engine writes
+ * corporation turn consumes the prior reading; the metric engine then writes
  * a same-turn reading for unemployment and the next corporate turn.
  */
 
@@ -51,19 +46,13 @@ export function accumulateLabourDemand(
 
 /**
  * Labour market tightness: desired corporate headcount over available civilian
- * labour force.
+ * labour force. 1.0 means demand exactly matches supply; above 1 is
+ * oversubscribed. Below 1 measures partial corporate coverage, not whole-
+ * economy slack (regional unemployment uses the background-employment ledger).
  *
- * 1.0 means the corporate sector wants exactly as many workers as the state has.
- * Below 1 measures partial corporate coverage, not whole-economy slack.
- * Regional unemployment uses the background-employment ledger instead.
- * Above 1 it is oversubscribed, and the excess is
- * headcount that could never be staffed by real people.
- *
- * Returns `undefined` rather than a number when supply is missing or not
- * positive. A state with no `economic.laborForce` reading (cold start, a country
- * the metric engine does not cover yet) has an UNKNOWN tightness, not an
- * infinite one, and writing Infinity or a sentinel 0 would poison the very
- * distribution phase 1 exists to measure. Callers skip the write instead.
+ * Returns `undefined` when supply is missing or not positive: a state with no
+ * labourForce reading has UNKNOWN tightness, not infinite. Writing Infinity or
+ * a sentinel 0 would poison the distribution. Callers skip the write instead.
  */
 export function computeLabourTightness(
   demandWorkers: number,
@@ -89,7 +78,7 @@ export function roundTightness(tightness: number): number {
 }
 
 /**
- * Unemployment pressure per log-unit of labour market tightness (#791).
+ * Unemployment pressure per log-unit of labour market tightness.
  *
  * pp of unemployment target per 1.0 of ln(tightness). 0.5 is deliberately
  * small next to the Okun coefficients (0.2-0.25 per pp of output gap): the
@@ -100,17 +89,15 @@ export function roundTightness(tightness: number): number {
 export const LABOUR_UNEMPLOYMENT_TIGHTNESS_K = 0.5;
 
 /**
- * Per-turn cap on the tightness channel's target shift (#791). The observed
- * distribution has states reading 200 (ln 200 = 5.3, uncapped -2.65pp), so an
- * uncapped log term would let one turn's telemetry whipsaw the target. The cap
- * matches the wage/automation siblings' 1.5pp family at a third of their size,
- * because this is a LEVEL term (present every turn the market stays tight)
- * while theirs are one-time DELTA bumps.
+ * Per-turn cap on the tightness channel's target shift. An uncapped log term
+ * would let one turn's telemetry whipsaw the target. The cap is a third the
+ * size of the wage/automation siblings' because this is a LEVEL term (present
+ * every turn the market stays tight) while theirs are one-time DELTA bumps.
  */
 export const LABOUR_UNEMPLOYMENT_TIGHTNESS_CAP_PP = 0.5;
 
 /**
- * One-turn unemployment-target pressure from the measured labor market (#791).
+ * One-turn unemployment-target pressure from the measured labor market.
  *
  * Tight market (tightness > 1, firms want more workers than exist) pushes the
  * target DOWN; slack (tightness < 1) pushes it UP. Log form so a doubling and
@@ -128,18 +115,15 @@ export function labourUnemploymentTightnessPressure(tightness: number | undefine
 }
 
 /**
- * Slope of the measured-tightness bargaining score (#791): 25 score points per
- * log-unit centers tightness 1.0 (balanced) at 50, reads a doubling as 67 and
- * a halving as 33, and saturates at e^2 (7.4x oversubscribed) and e^-2, so the
- * observed 200x readings all score 100 rather than stretching the scale.
+ * Slope for the tightness bargaining score: 25 points per log-unit.
+ * Tightness 1.0 scores 50; saturates at e^2 and e^-2 so extreme readings cap at 0/100.
  */
 const LABOUR_TIGHTNESS_SCORE_K = 25;
 
 /**
- * Map a measured tightness ratio onto the 0-100 bargaining score (#791).
- * Tightness 1.0 (demand equals supply) scores 50; tighter scores higher.
- * Non-finite or non-positive input returns 50 (neutral), never 0, so a corrupt
- * reading cannot read as maximum slack.
+ * Map tightness ratio onto the 0-100 bargaining score. 1.0 scores 50.
+ * Non-finite or non-positive input returns 50 (neutral), never 0, so corrupt
+ * readings cannot read as maximum slack.
  */
 export function labourTightnessScoreFromTightness(tightness: number): number {
   if (typeof tightness !== "number" || !Number.isFinite(tightness) || tightness <= 0) return 50;
@@ -155,18 +139,17 @@ export interface StateTightnessReading {
 }
 
 /**
- * Worker-weighted national tightness from per-state readings (#791).
+ * Worker-weighted national tightness from per-state readings.
  *
  * Weight is each state's labour force, so a tiny state cannot swing the
- * national number the way a flat mean would let it. States missing tightness
- * or a usable weight are skipped; when none qualify the result is undefined
- * and the caller falls back (bargaining: the unemployment-derived score, so a
- * world that never measured tightness behaves exactly as before).
+ * national number the way a flat mean would. States missing tightness or a
+ * usable weight are skipped; when none qualify the result is undefined and
+ * the caller falls back (bargaining: the unemployment-derived score).
  *
- * Note the weighted mean equals the aggregate national ratio: weighting each
+ * The weighted mean equals the aggregate national ratio: weighting each
  * state's demand/supply by its supply sums to total demand over total supply.
- * Either reading of the formula gives the same number; the mean form is used
- * because the state's persisted tightness is what the corp turn wrote.
+ * The mean form is used because the state's persisted tightness is what the
+ * corp turn wrote.
  */
 export function nationalTightnessWorkerWeighted(
   readings: readonly StateTightnessReading[]
@@ -185,21 +168,11 @@ export function nationalTightnessWorkerWeighted(
 }
 
 /**
- * Staffing fill rate implied by a state's labour market tightness (phase 2).
+ * Staffing fill rate implied by state labour market tightness.
  *
- * When a state's corporate sectors collectively want more workers than the
- * state has, every sector fills the same PRO RATA share of what it asked for.
- * Tightness 2.0 means each sector staffs half its desired headcount; tightness
- * 200 means each staffs one two-hundredth.
- *
- * Slack markets return exactly 1. So does an unknown tightness, so a state the
- * metric engine has no labour force reading for behaves exactly as it does
- * today rather than being silently throttled on missing data.
- *
- * Allocation is order-independent. The base share is available workers over
- * desired workers, then each sector's wage relative to the desired-worker-
- * weighted state bid changes its share. If every employer raises pay together,
- * the relative bids and allocations stay unchanged.
+ * All sectors fill the same pro rata share: tightness N means each
+ * staffs 1/N of desired headcount. Slack markets and unknown tightness
+ * return 1 (missing data must not throttle staffing).
  */
 export function staffingFactorFromTightness(
   tightness: number | undefined | null,
@@ -296,7 +269,7 @@ export const LABOUR_STAFFING_MAX_TURN_MOVE = 0.1;
  * Hiring into posted openings where jobseekers exist is fast; losing a
  * workforce to a newly tight market is the slow side, and stays at
  * {@link LABOUR_STAFFING_MAX_TURN_MOVE}. At 0.1 a turn up as well, plants built
- * after the 2026-10-29 economy reset sat at 60% to 70% staffed in states with
+ * after an economy reset sat at 60% to 70% staffed in states with
  * high unemployment while their build orders added jobs faster than the ramp
  * filled them.
  */
@@ -330,11 +303,10 @@ export function staffingRiseForBid(relativeBid: number | undefined | null = 1): 
  * two at a strong premium. Both sides stop exactly on target, so neither can
  * overshoot or make a sector flip between full and throttled output.
  *
- * A sector with no previous factor (new, or the first turn after this shipped)
- * starts from 1. That makes the ramp automatic for the whole world rather than
- * needing a migration, and it errs toward paying a sector for output it may not
- * be able to staff, which is the right way round for a constraint arriving
- * without warning.
+ * A sector with no previous factor starts from 1. That makes the ramp automatic
+ * for the whole world rather than needing a migration, and it errs toward
+ * paying a sector for output it may not be able to staff, which is the right
+ * way round for a constraint arriving without warning.
  */
 export function glideStaffingFactor(
   target: number,

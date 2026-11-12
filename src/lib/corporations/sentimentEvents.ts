@@ -1,10 +1,10 @@
 import type { Db } from "mongodb";
 import type { SentimentPulse } from "@/lib/db/types/sentimentPulse";
-
-const COLLECTION = "sentimentPulses";
+import { sentimentPulsesCollection } from "@/lib/db/repositories/sentimentPulses";
+import type { Document } from "mongodb";
 
 async function insertPulse(db: Db, pulse: Omit<SentimentPulse, "_id">): Promise<void> {
-  await db.collection(COLLECTION).insertOne(pulse as SentimentPulse);
+  await sentimentPulsesCollection<Document>(db).insertOne(pulse as SentimentPulse);
 }
 
 /** Bond default: corp-scoped, −15%, fast decay */
@@ -179,29 +179,5 @@ export async function fireUnionBustingBackfirePulse(
     decayRate: 0.8,
     createdAt: new Date(),
     eventType: "union_busting_backfire",
-  });
-}
-
-/**
- * Legislation with sector margin effects: sector-scoped pulse.
- * `marginalImpact` is the bill's signed margin modifier (e.g., +0.03 = +3pp margin).
- * Scales to a sentiment pulse: 1pp margin ≈ +2.5% sentiment.
- */
-export async function fireLegislationPulse(
-  db: Db,
-  sectorType: string,
-  countryId: string,
-  marginalImpact: number // signed decimal from bill provision (e.g. 0.03)
-): Promise<void> {
-  const sentiment = Math.max(-0.2, Math.min(0.2, marginalImpact * 2.5));
-  if (Math.abs(sentiment) < 0.005) return; // too small to bother
-  await insertPulse(db, {
-    scope: "sector",
-    sectorType,
-    countryId,
-    initialImpact: sentiment,
-    decayRate: 0.8,
-    createdAt: new Date(),
-    eventType: "legislation",
   });
 }

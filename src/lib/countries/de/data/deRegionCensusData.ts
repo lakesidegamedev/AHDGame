@@ -1,18 +1,10 @@
 /**
- * Germany Region Census Profiles — Layer 1 demographic breakdown per Bundesland.
+ * Germany Region Census Profiles, Layer 1 demographics per Bundesland.
  *
- * Mirrors the structure of ukRegionCensusData and jpRegionCensusData, adapted
- * for German census categories (Destatis Zensus 2022, Mikrozensus, BAMF).
+ * Values are approximate 2022-2023 estimates (% of adult population).
  *
- * All values are approximate 2022–2023 estimates (% of adult population).
- *
- * Fields:
- *   ethnicity    — Destatis / BAMF Migrationshintergrund groupings
- *   age          — Adult (18+) population distribution
- *   education    — Highest qualification attained (Bildungsabschluss)
- *   income       — Household income bands (EUR/year)
- *   urbanization — Großstadt (urban ≥100k) / Kleinstadt (suburban 20k–100k) /
- *                  Ländlich (rural <20k) split per Destatis classification
+ * urbanization splits per Destatis: urban >=100k, suburban 20k-100k,
+ * rural <20k.
  */
 
 export interface DERegionLayer1 {

@@ -28,24 +28,19 @@ export function treatyEntryOrganizationName(
 }
 
 /**
- * Tell the countries a treaty just took to war, put it on the World News wire, and log
- * it on the alliance.
+ * Tell the countries a treaty just took to war, put it on the World News wire, and
+ * log it on the alliance.
  *
- * Shared by every path that writes a treaty entry (declaration-time enrolment and
- * the per-turn mutual-defence reconciliation) so a country pulled in on a later
- * turn hears about it exactly as one pulled in at the declaration does.
+ * Shared by every path that writes a treaty entry, so a country pulled in on a
+ * later turn hears about it exactly as one pulled in at declaration.
  *
- * Notifications are addressed to USERS, not countries: `NotificationInput` carries a
- * `userId` and there is no country-addressed notice anywhere in this codebase. So a
- * country's notice goes to the two seats that can act on it: the head of government and
- * the defence minister, the same pair the declare-war route authorises to take a country
- * to war in the first place.
+ * Notifications are addressed to USERS, not countries. A country's notice goes to
+ * the two seats that can act on it: the head of government and the defence
+ * minister, the same pair the declare-war route authorises.
  *
- * A war must never fail over a notification. `createNotifications` swallows its own
- * errors, but the seat lookups either side of it do not, and this runs AFTER the
- * conflict has been written. An unguarded throw here would abandon the rest of the
- * caller's work over a side effect, reporting a failure for a war entry that was in
- * fact made correctly. Hence the blanket catch.
+ * A war must never fail over a notification. Seat lookups can throw, and this runs
+ * AFTER the conflict is written, so an unguarded throw would abandon the caller's
+ * work over a side effect. Hence the blanket catch.
  */
 export async function announceTreatyEntries(
   db: Db,

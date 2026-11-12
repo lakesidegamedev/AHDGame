@@ -1,6 +1,6 @@
 import { controllerTransferBarrierError } from "@/lib/corporations/commands/acquisitions/controllerTransferBarrier";
 /**
- * Advertising agreement command shell (issue #2235 slice).
+ * Advertising agreement command shell.
  *
  * Thin route handlers: auth guard, CEO check, feature flag, Zod parse (done
  * by the caller via parseJsonBody), then into
@@ -17,17 +17,13 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { CorporateSector } from "@/lib/db/types";
 import { effectiveMediaOperatingModelId } from "@/lib/mediaOperatingModels/catalog";
 import { isAdvertisingAgreementsEnabled } from "@/lib/advertising/featureFlag";
 import {
   advertisingAgreementProposalSchema,
   advertisingAgreementUpdateSchema,
 } from "@/lib/api/schemas/advertisingAgreements";
-import {
-  ADVERTISING_AGREEMENTS_COLLECTION,
-  type AdvertisingAgreement,
-} from "@/lib/advertising/types";
+import { type AdvertisingAgreement } from "@/lib/advertising/types";
 import {
   getAdvertisingAgreementsForCorp,
   getBuyerCommittedShareBps,
@@ -35,6 +31,9 @@ import {
   updateAdvertisingAgreementPersistent,
 } from "@/lib/advertising/persistence";
 import { countAdvertisingMediaSectorModels } from "@/lib/advertising/suppliers";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { advertisingAgreementsCollection } from "@/lib/db/repositories/advertisingAgreements";
 
 function serializeAdvertisingAgreement(agreement: AdvertisingAgreement) {
   return {
@@ -106,8 +105,7 @@ export async function listAdvertisingAgreements(corpId: string) {
     ].filter((id) => ObjectId.isValid(id));
     const counterparties =
       counterpartyHex.length > 0
-        ? await db
-            .collection("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: counterpartyHex.map((id) => new ObjectId(id)) } })
             .project<{ _id: ObjectId; name: string; ticker?: string | null }>({
               name: 1,
@@ -182,8 +180,7 @@ export async function proposeAdvertisingAgreement(request: Request, initiatingCo
     const initiatorHex = initiator._id.toString();
     const counterpartyHex = counterparty._id.toString();
     const supplier = isSupplierInitiated ? initiator : counterparty;
-    const supplierSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const supplierSectors = await corporateSectorsCollection(db)
       .find({ corporationId: supplier._id, sectorType: "media" })
       .project<{ strategyId?: string | null }>({ strategyId: 1 })
       .toArray();
@@ -258,9 +255,9 @@ export async function updateAdvertisingAgreement(
       return errorResponse(403, "Advertising agreements are not enabled in this world");
     }
 
-    const agreement = await db
-      .collection<AdvertisingAgreement>(ADVERTISING_AGREEMENTS_COLLECTION)
-      .findOne({ _id: agreementId } as never);
+    const agreement = await advertisingAgreementsCollection<AdvertisingAgreement>(db).findOne({
+      _id: agreementId,
+    } as never);
     if (!agreement) {
       return errorResponse(404, "Agreement not found");
     }

@@ -10,35 +10,31 @@ export type IterationType = "Alpha" | "Beta" | "Iteration";
 
 /**
  * Smarter-NPP autonomy tier. The level says WHICH activities autonomous
- * politicians may perform — never how competently they perform them. How
- * competently is `SingleplayerConfig.difficulty` (local worlds only), which is
- * a separate axis and never unlocks or removes an activity.
+ * politicians may perform, never how competently. Competence is
+ * `SingleplayerConfig.difficulty` (local worlds only), a separate axis that
+ * never unlocks or removes an activity.
  *
  *   - off: no autonomy anywhere.
- *   - v0:  currently-shipped behavior (chair, stalled-PM, bill sponsorship/voting,
+ *   - v0:  shipped baseline (chair, stalled-PM, bill sponsorship/voting,
  *          intl-org votes) in non-player countries.
- *   - v1:  v0 + the governing brain (agenda → executive → cabinet → ministerial
- *          action → fiscal → opposition) in non-player countries.
+ *   - v1:  v0 + governing brain (agenda -> executive -> cabinet -> ministerial
+ *          action -> fiscal -> opposition) in non-player countries.
  *   - v2:  v1 + comingling with player-enabled countries / player corps.
- *   - v3:  v2 + full player-parity agency (career/economic action loop: NPPs
- *          campaign, fundraise, run for & win office, legislate, and manage
- *          personal finance like players). Acts in player-enabled countries
- *          like v2.
- *   - v4:  v3 applied globally (player-enabled countries included), with the
+ *   - v3:  v2 + full player-parity agency (career/economic loop: campaign,
+ *          fundraise, run for and win office, legislate, manage personal
+ *          finance). Acts in player-enabled countries like v2.
+ *   - v4:  v3 applied globally (player-enabled countries included), with
  *          tighter player-country sponsorship throttles.
- *   - v5:  v4 + persistent governing goals. A government keeps a bounded set of
+ *   - v5:  v4 + persistent governing goals: a government keeps a bounded set of
  *          goal records across agenda recomputes, grades each one, feeds the
- *          verdicts into the next agenda, and holds its commitments instead of
- *          re-deciding every cycle. Adds no new lever: every V5 intent is
- *          executed through the same validation/execution paths v4 already
- *          uses. See featureFlagDefaults for per-mode defaults.
+ *          verdicts into the next agenda, and holds commitments instead of
+ *          re-deciding every cycle. Adds no new lever; every V5 intent runs
+ *          through the same validation/execution paths v4 uses.
  *   - v6:  v5 + NPP engine 6 behavior (see `nppAutonomy/engineVersion.ts` and
  *          content/changelog/npp/). Engine 6 changes how well NPPs pursue the
- *          v5 activities and what they cost to run, never what they are
- *          allowed to do or how many resources they get. Active on any world
- *          whose `nppAutonomyLevel` is set to v6; the running engine version
- *          is stamped on each turn log as `nppEngineVersion`.
- * See plans/2026-06-23-npp-autonomy-v1-v2-plan.md.
+ *          v5 activities and what they cost to run, never what they are allowed
+ *          to do or how many resources they get. The running engine version is
+ *          stamped on each turn log as `nppEngineVersion`.
  */
 export type NppAutonomyLevel = "off" | "v0" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
 export type NppForeignPolicyMode = "off" | "shadow" | "active";
@@ -167,9 +163,8 @@ export interface GameState {
   resetStartDate?: { year: number; week: number };
   /**
    * Calendar year of turn 1 for the active reset preset (1991, 2019, etc.).
-   * Set by `resetGameWorld` at bootstrap from the preset's mapping in
-   * `getStartingYearForPreset()`. When undefined (legacy rows pre-2026-05-20),
-   * readers fall back to the global `STARTING_YEAR` constant.
+   * When undefined (legacy rows), readers fall back to the global
+   * `STARTING_YEAR` constant.
    */
   startingYear?: number;
   /**
@@ -202,7 +197,7 @@ export interface GameState {
    * election years per era. Defaults to `"2019-default"` when undefined.
    */
   preset?: string;
-  /** Reset choice (#2679). Missing means default; overwritten on every reset. */
+  /** Reset choice. Missing means default; overwritten on every reset. */
   startingPartiesMode?: "default" | "none";
   /**
    * On for fresh worlds (`DEFAULT_GAME_STATE_FLAGS`) since the state GDP unit fix.
@@ -303,17 +298,6 @@ export interface GameState {
   playerRandomEventsEnabled?: boolean;
   playerRandomEventsEnabledBy?: string;
   playerRandomEventsEnabledAt?: string;
-  /**
-   * When true, country-scope World Events v1 offers new events (Phase 0: only
-   * manual admin-trigger produces them — no scheduler yet). Default false.
-   */
-  worldEventsEnabled?: boolean;
-  worldEventsEnabledBy?: string;
-  worldEventsEnabledAt?: string;
-  /** When true, the crisis interaction system (decision trees, collective contributions, input nodes) is active. */
-  crisisInteractionEnabled?: boolean;
-  crisisInteractionEnabledBy?: string;
-  crisisInteractionEnabledAt?: string;
   /** Master gate for the automatic crisis system (disasters + economic/political). */
   autoDisastersEnabled?: boolean;
   autoDisastersEnabledBy?: string;
@@ -340,6 +324,22 @@ export interface GameState {
   nppAutonomyEnabledBy?: string;
   nppAutonomyEnabledAt?: string;
   /**
+   * NPP turnover: seated NPPs die of old age and retire from 70, replaced by a
+   * younger NPP of the same party in the same office, whatever the autonomy
+   * level. Absent keeps the legacy behaviour (mortality only, at V5); false
+   * switches it off. Fresh worlds seed true.
+   */
+  nppTurnoverEnabled?: boolean;
+  /**
+   * NPP party renewal: in NPP-run countries a long-dominant or unpopular party
+   * can splinter, an empty stretch of the ideological map can found a new
+   * party, a party under 2% for two general elections folds into its nearest
+   * neighbour, the seat-share incumbency shield stops growing past half the
+   * seats, and a party may re-enter regions it held within two cycles.
+   * Absent or false keeps the legacy frozen roster. Fresh worlds seed true.
+   */
+  nppPartyRenewalEnabled?: boolean;
+  /**
    * Foreign-policy planner rollout. Absent defaults to shadow so autonomous
    * countries produce auditable intent without changing world state.
    */
@@ -350,73 +350,9 @@ export interface GameState {
   nppForeignPolicyStage?: NppForeignPolicyStage;
   nppForeignPolicyStageBy?: string;
   nppForeignPolicyStageAt?: string;
-  /**
-   * May an NPP belligerent declare an offensive of its own? When false the
-   * `conduct_war` choice is never offered, so the country spends its foreign-policy
-   * slot elsewhere instead of queueing a battle declaration. Default false.
-   * Toggled from Admin → World → Conflicts. Player governments are unaffected:
-   * they declare through the cabinet battle route either way.
-   *
-   * Governs the DECISION, not the queue. A declaration already filed still resolves
-   * on the following turn after this is switched off, because an offensive always
-   * resolves a turn after it is declared — that gap is the defender's window, and
-   * cancelling a filed order here would be a hole in it. Expect at most one more tick
-   * of NPP offensives after turning this off.
-   */
-  nppOffensiveInitiationEnabled?: boolean;
-  nppOffensiveInitiationEnabledBy?: string;
-  nppOffensiveInitiationEnabledAt?: string;
-  /**
-   * May an NPP belligerent join an ally's offensive at a front where it already has
-   * troops posted? When true it is treated as having a standing auto-join order on
-   * every front it is deployed to, without one being written to `theaterState`.
-   * Default false, which leaves NPP allies fighting defensively only. Player
-   * governments keep their own explicit `theaterState.autoJoin` orders either way.
-   */
-  nppOffensiveJoinEnabled?: boolean;
-  nppOffensiveJoinEnabledBy?: string;
-  nppOffensiveJoinEnabledAt?: string;
-  /**
-   * When true, NPP-run countries build intelligence networks and run operations
-   * of their own. Default false, which leaves them purely defensive.
-   *
-   * This gates INITIATIVE only. Counter-intelligence posture is derived for every
-   * NPP country each turn regardless of this switch, because defence needs no
-   * order: a country nobody is playing still resists being spied on.
-   */
-  /**
-   * When true, a successful military covert action actually degrades the
-   * target's front supply and formation readiness. Default false.
-   *
-   * Off because it is a BALANCE change and the balance report that CLAUDE.md
-   * requires could not be produced: the live world has no engaged front to
-   * measure against (see scripts/sim/reports/). The code ships reviewed and
-   * inert; turning it on is a deliberate act that should follow the report.
-   */
-  intelligenceMilitarySabotageEnabled?: boolean;
-  intelligenceMilitarySabotageEnabledBy?: string;
-  intelligenceMilitarySabotageEnabledAt?: string;
-  nppIntelligenceOperationsEnabled?: boolean;
-  nppIntelligenceOperationsEnabledBy?: string;
-  nppIntelligenceOperationsEnabledAt?: string;
-  /** When true, crisis international-aid nodes use the slider + legislature-bill flow. */
-  crisisAidBillsEnabled?: boolean;
-  crisisAidBillsEnabledBy?: string;
-  crisisAidBillsEnabledAt?: string;
   /** Temporary pause: the system stays enabled/configured but no new crises or
    *  disasters spawn while true. Existing crises continue to run. */
   autoCrisisPaused?: boolean;
-  /** When true, seed/reseed derives archetype econ/social from Layer-1 positions
-   *  (deriveGroupLeanFromLayer1) instead of the legacy ideology-net path. Default false. */
-  demographicsLayer1PositionsEnabled?: boolean;
-  demographicsLayer1PositionsEnabledBy?: string;
-  demographicsLayer1PositionsEnabledAt?: string;
-  /** When true, the Conflicts subsystem is live: the "Conflicts" link appears in
-   *  the World navbar and the public /world/conflicts page is surfaced. Default
-   *  false (hidden). Toggled from Admin → World → Conflicts → General. */
-  conflictsEnabled?: boolean;
-  conflictsEnabledBy?: string;
-  conflictsEnabledAt?: string;
   /** Living-conflict engine: generic phased conflicts/pandemics with per-role
    *  responses and an event broadcast bus. Default off; fail-closed at runtime. */
   livingConflictsEnabled?: boolean;
@@ -436,20 +372,6 @@ export interface GameState {
   coldWarEnabled?: boolean;
   coldWarEnabledBy?: string;
   coldWarEnabledAt?: string;
-  /** Master switch for the corporate M&A / deal-making subsystem (agreed
-   *  corp-to-corp acquisitions). Default false — the Deals tab and the
-   *  acquisition endpoints are inert until an admin enables it. */
-  corpDealsEnabled?: boolean;
-  corpDealsEnabledBy?: string;
-  corpDealsEnabledAt?: string;
-  /**
-   * When true, the RPG stat system is live: character creation allocates stats,
-   * grandfathered characters are prompted to allocate, stat efficacy/drift apply,
-   * and the election-debate subsystem can fire. Default false (system inert).
-   */
-  rpgStatsEnabled?: boolean;
-  rpgStatsEnabledBy?: string;
-  rpgStatsEnabledAt?: string;
   /** When true, turns run at 30-minute cycles instead of 60-minute cycles */
   fastMode?: boolean;
   /** Concurrency guard - true while a turn is being processed */
@@ -475,7 +397,7 @@ export interface GameState {
   processingPhaseStatuses?: TurnPhaseTelemetryMap | null;
   /**
    * Bounded results of completed phases a later phase consumes, written with the
-   * phase's completed status so a crash resume can restore them (#3429). Keys are
+   * phase's completed status so a crash resume can restore them. Keys are
    * limited to `turnPhaseResumeResults.ts`.
    */
   processingPhaseResults?: Record<string, Record<string, unknown>> | null;
@@ -490,20 +412,8 @@ export interface GameState {
   processingEngine?: "v1" | "v2" | null;
   /** Behaviour version of the in-flight turn's engine (e.g. "2.0.0"); stamped with `processingEngine`. */
   processingEngineVersion?: string | null;
-  /** Master gate for the automatic sector seeding system (fires every 48 turns). */
-  autoSectorSeedEnabled?: boolean;
-  autoSectorSeedEnabledBy?: string;
-  autoSectorSeedEnabledAt?: string;
   /** Turn on which the auto-sector seeding last fired. Guards the 48-turn interval. */
   lastAutoSeedTurn?: number;
-  /**
-   * Master gate for extraction auto strategy adoption (Phase 1a of the
-   * extraction-capacity remediation): nudges standard miners on shortage
-   * deposits onto the matching focused mining strategy. Default off.
-   */
-  extractionAutoStrategyEnabled?: boolean;
-  extractionAutoStrategyEnabledBy?: string;
-  extractionAutoStrategyEnabledAt?: string;
   /**
    * Safety rollout for the realized-viability check on autonomous NPP mine
    * founding. Absent resolves to observe so existing worlds collect evidence
@@ -513,7 +423,7 @@ export interface GameState {
   nppEntryViabilityModeBy?: string;
   nppEntryViabilityModeAt?: string;
   /**
-   * Capped frontier-entry experiment for state-sector coverage (issue #991).
+   * Capped frontier-entry experiment for state-sector coverage.
    * Absent resolves to false: the experiment is disabled by default and no
    * entry mechanics may activate without the controlled 48-turn trial plus
    * largest-supplier-failure stress evidence. The NPP entry funnel and
@@ -532,7 +442,6 @@ export interface GameState {
    * pause land in full.
    */
   buildDeliverySettledTurn?: number;
-  /** Master gate for the US House districted-redistricting system. Default off. */
   /**
    * NPP corporation strategy loop. DEFAULT ON: absent means enabled, so
    * existing worlds keep the behaviour they were promoted with. Only an
@@ -547,40 +456,10 @@ export interface GameState {
   nppCorpStrategyEnabled?: boolean;
   nppCorpStrategyEnabledBy?: string;
   nppCorpStrategyEnabledAt?: string;
-  redistrictingEnabled?: boolean;
-  redistrictingEnabledBy?: string;
-  redistrictingEnabledAt?: string;
   /** Master gate for the decade-gated sector tech trees. Default off. */
   sectorTechTreesEnabled?: boolean;
   sectorTechTreesEnabledBy?: string;
   sectorTechTreesEnabledAt?: string;
-  /** Master gate for subsidiary corporations (acquisition management + spin-off). Default off. */
-  subsidiaryCorporationsEnabled?: boolean;
-  subsidiaryCorporationsEnabledBy?: string;
-  subsidiaryCorporationsEnabledAt?: string;
-  /**
-   * Trade-exposure embargo model. When on, a total embargo strips only a
-   * foreign sector's cross-border (export-exposed) revenue instead of
-   * mothballing the whole sector, preserving domestic host sales. Default off
-   * (legacy total-mothball behaviour). See TRADE_EMBARGO_EXPORT_LOSS_SHARE.
-   */
-  embargoTradeExposureEnabled?: boolean;
-  embargoTradeExposureEnabledBy?: string;
-  embargoTradeExposureEnabledAt?: string;
-  /** Master gate for the live election results page (/elections/[id]/results). Default off. */
-  liveElectionResultsEnabled?: boolean;
-  liveElectionResultsEnabledBy?: string;
-  liveElectionResultsEnabledAt?: string;
-  /**
-   * Master gate for legislation demographic effects v2: lean/turnout
-   * DemographicEffect targets (economicLean/socialLean/turnout) plus their
-   * decay-toward-baseline. The legacy population channel is NOT gated. Absent
-   * reads as false (fail-closed); fresh worlds seed it true via
-   * DEFAULT_GAME_STATE_FLAGS.
-   */
-  legislationDemographicEffectsV2Enabled?: boolean;
-  legislationDemographicEffectsV2EnabledBy?: string;
-  legislationDemographicEffectsV2EnabledAt?: string;
   /** Reset-era metrics engine. Absent and invalid values run the live v1 path. */
   /** Changes on every world reset; an opening-seed receipt is valid only for this world. */
   resetWorldId?: string;
@@ -604,71 +483,6 @@ export interface GameState {
   demographicsSystemVersion?: "v1" | "v2";
   demographicsSystemVersionBy?: string;
   demographicsSystemVersionAt?: string;
-  /**
-   * Master gate for the new-player onboarding checklist (profile checklist
-   * card, page-visit step tracking, welcome mail, completion reward). When
-   * off, the profile shows the legacy NewPlayerBanner and no onboarding
-   * writes happen. Fresh worlds seed this on (featureFlagDefaults.ts).
-   */
-  onboardingChecklistEnabled?: boolean;
-  onboardingChecklistEnabledBy?: string;
-  onboardingChecklistEnabledAt?: string;
-  /**
-   * Master gate for the end-of-iteration Season Recap ("Wrapped"). When on,
-   * `resetGameWorld` builds each character's recap before the runtime wipe and
-   * stamps it onto their `retiredCharacters` doc, the post-reset gate surfaces
-   * it on next login, and it becomes re-viewable in character history. Voluntary
-   * and admin retirements also build a recap while on. Fail-closed: absent/false
-   * = system inert (no recaps written, gate returns nothing). Fresh worlds seed
-   * it on (DEFAULT_GAME_STATE_FLAGS).
-   */
-  seasonRecapEnabled?: boolean;
-  seasonRecapEnabledBy?: string;
-  seasonRecapEnabledAt?: string;
-  /**
-   * Master gate for IntOrg alignment. When false or absent the system is inert:
-   * the alignment turn phase writes nothing, no drift accrues, plays cannot be
-   * committed, and neither the Cold War Ledger nor the Influence tab renders.
-   * Seeding is the deliberate exception — opening values are written regardless
-   * so flipping this on a live world shows a populated map, not blank rows.
-   * Fail-closed: only an explicit `true` enables. Fresh worlds seed it on
-   * (DEFAULT_GAME_STATE_FLAGS).
-   */
-  intOrgAlignmentEnabled?: boolean;
-  intOrgAlignmentEnabledBy?: string;
-  intOrgAlignmentEnabledAt?: string;
-  /**
-   * Stage-1 proof gate for department-funded legislation. Only the US
-   * `public_health_opt_1` vertical slice reads it. Fail-closed and deliberately
-   * absent from default flags until Gate 1 is accepted.
-   */
-  departmentProgramSliceEnabled?: boolean;
-  departmentProgramSliceEnabledBy?: string;
-  departmentProgramSliceEnabledAt?: string;
-  /** Generalized national department accounts and program settlement. */
-  departmentFinanceEnabled?: boolean;
-  departmentFinanceEnabledBy?: string;
-  departmentFinanceEnabledAt?: string;
-  /** Jurisdiction selection, conflict rules, and delivered law outcomes. */
-  lawAdministrationEnabled?: boolean;
-  lawAdministrationEnabledBy?: string;
-  lawAdministrationEnabledAt?: string;
-  /** Regional discretion, underfunding settlement, and national grants. */
-  regionalLegislationFinanceEnabled?: boolean;
-  regionalLegislationFinanceEnabledBy?: string;
-  regionalLegislationFinanceEnabledAt?: string;
-  /** Canonical metric aliases and derived political readouts. */
-  canonicalPoliticalMetricsEnabled?: boolean;
-  canonicalPoliticalMetricsEnabledBy?: string;
-  canonicalPoliticalMetricsEnabledAt?: string;
-  /**
-   * Master gate for settlement crises (the German Question). Fail-closed: only
-   * an explicit `true` enables. Fresh worlds seed it on
-   * (DEFAULT_GAME_STATE_FLAGS).
-   */
-  settlementCrisisEnabled?: boolean;
-  settlementCrisisEnabledBy?: string;
-  settlementCrisisEnabledAt?: string;
   /**
    * Highest Bundestag cycle whose AMS list-seat reconciliation has completed.
    * Scopes `maybeReconcileBundestag` so each cycle reconciles exactly once and
@@ -731,31 +545,6 @@ export interface GameState {
   eraSystemEnabled?: boolean;
   eraSystemEnabledBy?: string;
   eraSystemEnabledAt?: string;
-  /**
-   * Macro-growth v1 (design 2026-07-09 §4): enables the Solow convergence term
-   * (O2) + sector-signal blend (O3) on potential growth. Staged rollout, OFF by
-   * default — flip only after reviewing scripts/debug/macro-growth-dryrun.mjs
-   * (per-country openness gate + convergence bonus). Independent of
-   * eraSystemEnabled; flag-off is byte-identical to legacy potential growth.
-   */
-  macroGrowthV1?: boolean;
-  macroGrowthV1By?: string;
-  macroGrowthV1At?: string;
-  /**
-   * Master gate for granular poll breakdowns: cross-product Layer-1 electorate
-   * cells (race × age × education × wealth) attached to poll results. Default
-   * false; US-only and purely additive to existing poll math.
-   */
-  granularPollEnabled?: boolean;
-  granularPollEnabledBy?: string;
-  granularPollEnabledAt?: string;
-  /**
-   * Granular-cell electorate engine: per-state vote-share/appeal computation
-   * in elections runs over IPF-raked Layer-1 demographic cells instead of the
-   * 12 voter archetypes (see `src/lib/demographics/granularElectorate.ts`).
-   * Fail-closed: false/absent = byte-identical legacy archetype behavior.
-   */
-  granularElectorateEnabled?: boolean;
   /**
    * Per-country GDP-per-capita baseline for the era income band (metric era
    * catalog). Self-healed by computeNationalMetrics on the first flag-on turn
@@ -937,47 +726,41 @@ export interface CountryGameState {
   /**
    * Turn this country ceased to exist through absorption or dissolution.
    *
-   * The registry could previously only ever ADD: `registeredBase` returns
-   * `[...COUNTRY_ORDER, ...activated]`, so a country compiled into the static
-   * base list could be hidden from players but never retired from the engine.
-   * A merge needs the opposite, and leaving an emptied country enumerated by
-   * every site that walks the country list is how you get elections with no
-   * regions and budgets over no states.
+   * Enumeration of the country list must exclude these, or you get elections with no
+   * regions and budgets over no states. A date field rather than a `CountryStatus`
+   * member on purpose: `status` is read at many sites and widening its union risks
+   * silent behaviour changes. This is additive, and the two enumeration chokepoints
+   * are the only readers.
    *
-   * A DATE-STAMPED FIELD rather than a new `CountryStatus` member on purpose:
-   * `status` is read at 90-odd sites and widening its union risks silently
-   * changing behaviour in code that switches on it. This is additive, and the
-   * two enumeration chokepoints are the only readers.
-   *
-   * Retirement is not deletion. The documents stay for history, the wiki, and
-   * any future restoration; the country simply stops being simulated. The
-   * 1992 SFRY dissolution uses this marker while its successor polities await
-   * their own migration.
+   * Retirement is not deletion. Documents stay for history, the wiki, and future
+   * restoration; the country simply stops being simulated.
    */
   dissolvedTurn?: number | null;
   /**
    * True when this country does not exist as a polity in the world's current
-   * preset era — East Germany in 1991, Czechoslovakia in 2019.
+   * preset era (e.g. East Germany in 1991, Czechoslovakia in 2019).
    *
    * DELIBERATELY NOT `dissolvedTurn`. That field means "absorbed into another
-   * and no longer exists", and it drives merge idempotency: `mergeCountry`
-   * returns `{ ok: true, retired: true }` for any row carrying it, and refuses
-   * it as a merge target. A country that simply is not part of this era was
-   * never absorbed, so stamping a dissolution would silently no-op a genuine
-   * later merge. `getDissolvedCountryIds` also has to keep "absorbed at turn N"
-   * distinct from "never existed in this era".
+   * country" and drives merge idempotency: `mergeCountry` treats any row
+   * carrying it as retired and refuses it as a merge target. A country absent
+   * from an era was never absorbed, so stamping a dissolution would silently
+   * no-op a genuine later merge.
    *
    * Written true OR false by `seedCountryGameStates` on every reset, never
-   * only-when-true, so a world moving 1991 -> 1953 brings East Germany back
-   * instead of stranding it.
-   *
-   * Additive and optional by design: rows written before this field existed
-   * read `undefined` -> falsy -> registered, which is exactly the prior
-   * behaviour, so it needs no backfill migration. (CLAUDE.md asks for a tracking
-   * issue on `src/lib/db/types` changes; filing was waived by the repo owner on
-   * 2026-09-08 — recorded here so this reads as a decision, not an oversight.)
+   * only-when-true, so a world moving 1991 -> 1953 brings the country back.
+   * Optional: absent reads falsy, matching prior behaviour, so no backfill.
    */
   absentInEra?: boolean;
+  /**
+   * True when the world's preset holds this country outside the full simulation
+   * (the `background` era-roster tier). The country stays registered, but every
+   * per-country turn phase skips it and bootstrap seeds no corporations,
+   * sectors, NPP politicians or full-engine elections for it.
+   *
+   * Optional and additive: undefined reads as full simulation, so no backfill is
+   * needed. Read through `@/lib/country/countryTier`, never directly.
+   */
+  backgroundCountry?: boolean;
   /**
    * When true, non-admin players can view economy-only pages (map, metrics,
    * stockmarket, central bank, budget, forex) even while `enabledForPlayers`
@@ -997,7 +780,7 @@ export interface CountryGameState {
    */
   foundingCycleResolved?: boolean;
   /**
-   * Last Tier-1 NPP strategic decision cycle claimed for this country (#3724).
+   * Last Tier-1 NPP strategic decision cycle claimed for this country.
    * Cycle index is `floor((turn - 1) / 6)`. Claim-before-act prevents a
    * restarted worker from double-firing the same six-hour bucket.
    */

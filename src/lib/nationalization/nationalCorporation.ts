@@ -7,6 +7,8 @@ import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/curre
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getNationalIdentity } from "@/lib/constants/nationalIdentity";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Canonical "is this a state-owned National Corporation" reader. */
 export function isStateOwned(
@@ -74,13 +76,13 @@ export function buildNationalCorporationDoc(
  * of the two the country means. The invariant is therefore enforced where it can
  * be broken: `mergeNationalCorporations` in `country/mergeCountry.ts` folds the
  * absorbed state's primary into the survivor's when one country absorbs another.
- * Ticket #1254 is what this looks like when it is not held.
+ * Violating it shows up as inconsistent ownership state.
  */
 export async function ensurePrimaryNationalCorporation(
   db: Db,
   countryId: CountryId
 ): Promise<Corporation> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   const primary = await corps
     .find({ countryOwnerId: countryId, isPrimaryNationalCorporation: true })
@@ -100,9 +102,10 @@ export async function ensurePrimaryNationalCorporation(
   // resolves through the era-blind map, byte-identical to before. The
   // preset is read inline (not via loadWorldPreset) to keep this
   // widely-imported module off the heavy readiness-contract import chain.
-  const gameState = await db
-    .collection<{ _id: string; preset?: string | null }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection<{ _id: string; preset?: string | null }>(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   const preset =
     gameState?.preset && gameState.preset.trim().length > 0
       ? gameState.preset
@@ -130,9 +133,10 @@ export async function resolveNationalCorporationForSector(
   mediaDiscriminator?: Corporation["mediaDiscriminator"]
 ): Promise<Corporation> {
   const operatingSectorType = getOperatingSectorType(sectorType, industryModel, mediaDiscriminator);
-  const secondary = await db
-    .collection<Corporation>("corporations")
-    .findOne({ countryOwnerId: countryId, assignedSectorTypes: operatingSectorType });
+  const secondary = await corporationsCollection(db).findOne({
+    countryOwnerId: countryId,
+    assignedSectorTypes: operatingSectorType,
+  });
   if (secondary) return secondary;
   return ensurePrimaryNationalCorporation(db, countryId);
 }

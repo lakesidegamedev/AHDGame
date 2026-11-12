@@ -13,6 +13,10 @@ import { totalVotingPower } from "@/lib/corporations/superShares";
 import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { resolvePrivatizationVote } from "@/lib/corporations/commands/privatization/resolvePrivatizationVote";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 type ReminderVote = CorporationVote | CorporationPrivatizationVote;
 
@@ -33,12 +37,10 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
   const reminderDeadline = currentTurn + 4;
 
   const [genericVotes, privVotes] = await Promise.all([
-    db
-      .collection<CorporationVote>("corporationVotes")
+    corporationVotesCollection(db)
       .find({ status: "open", deadlineAtTurn: reminderDeadline })
       .toArray(),
-    db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
+    corporationPrivatizationVotesCollection(db)
       .find({ status: "open", deadlineAtTurn: reminderDeadline })
       .toArray(),
   ]);
@@ -51,8 +53,9 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
       reminderVotes.map((vote) => [vote.corporationId.toString(), vote.corporationId])
     ).values(),
   ];
-  const corporations = await db
-    .collection<Pick<Corporation, "_id" | "name" | "shareholders">>("corporations")
+  const corporations = await corporationsCollection<
+    Pick<Corporation, "_id" | "name" | "shareholders">
+  >(db)
     .find({ _id: { $in: corporationIds } }, { projection: { name: 1, shareholders: 1 } })
     .toArray();
   const corporationById = new Map(corporations.map((corp) => [corp._id.toString(), corp]));
@@ -75,8 +78,7 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
   const characters =
     allCharacterIds.size === 0
       ? []
-      : await db
-          .collection<Pick<Character, "_id" | "userId">>("characters")
+      : await charactersCollection<Pick<Character, "_id" | "userId">>(db)
           .find({ _id: { $in: [...allCharacterIds.values()] } }, { projection: { userId: 1 } })
           .toArray();
   const userIdsForVote = (vote: ReminderVote): ObjectId[] => {
@@ -113,7 +115,7 @@ export async function processVoteReminders(db: Db, currentTurn: number): Promise
         db,
         corporationId: vote.corporationId,
         voteId: vote._id,
-        corpName: (corp as unknown as { name: string }).name,
+        corpName: corp.name,
         summary: "take the corporation private (buyout)",
         notificationType: "corp_vote_reminder",
         userIds,
@@ -142,11 +144,8 @@ export async function processVoteAutoResolve(
   stockTaxActive = false
 ): Promise<void> {
   const [genericVotes, privVotes] = await Promise.all([
-    db.collection<CorporationVote>("corporationVotes").find({ status: "open" }).toArray(),
-    db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-      .find({ status: "open" })
-      .toArray(),
+    corporationVotesCollection(db).find({ status: "open" }).toArray(),
+    corporationPrivatizationVotesCollection(db).find({ status: "open" }).toArray(),
   ]);
 
   // Pre-batch corporation lookups for generic votes
@@ -155,8 +154,7 @@ export async function processVoteAutoResolve(
   );
   const genericCorps =
     genericCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: genericCorpIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
           .toArray()
       : [];
@@ -164,36 +162,44 @@ export async function processVoteAutoResolve(
 
   await Promise.all(
     genericVotes.map(async (vote) => {
-      const corp = corpById.get(vote.corporationId.toString());
-      if (!corp) return;
-      const { outcome, claimed } = await resolveCorporationVoteIfReady({
-        db,
-        vote,
-        totalEligibleShares: totalVotingPower(corp),
-        nationId: corp.countryId,
-        currentTurn,
-      });
-      if (!claimed || outcome === "open") return;
-      const notificationType =
-        outcome === "passed" ? "corp_vote_passed" : ("corp_vote_failed" as const);
-      if (outcome === "passed") {
-        await applyPassedVoteEffects({ db, vote, corporation: corp, currentTurn });
+      try {
+        const corp = corpById.get(vote.corporationId.toString());
+        if (!corp) return;
+        const { outcome, claimed } = await resolveCorporationVoteIfReady({
+          db,
+          vote,
+          totalEligibleShares: totalVotingPower(corp),
+          nationId: corp.countryId,
+          currentTurn,
+        });
+        if (!claimed || outcome === "open") return;
+        const notificationType =
+          outcome === "passed" ? "corp_vote_passed" : ("corp_vote_failed" as const);
+        if (outcome === "passed") {
+          await applyPassedVoteEffects({ db, vote, corporation: corp, currentTurn });
+        }
+        await notifyVoteEvent({ db, vote, corpName: corp.name, notificationType });
+      } catch (error) {
+        console.error(`[voteAutoResolve] vote ${vote._id} resolution failed:`, error);
       }
-      await notifyVoteEvent({ db, vote, corpName: corp.name, notificationType });
     })
   );
 
   const stockFx = stockTaxActive && privVotes.length ? await loadFxRatesByCurrency(db) : undefined;
   await Promise.all(
     privVotes.map(async (vote) => {
-      await resolvePrivatizationVote({
-        db,
-        vote,
-        currentTurn,
-        forexEnabled,
-        stockTaxActive,
-        fxByCurrency: stockFx,
-      });
+      try {
+        await resolvePrivatizationVote({
+          db,
+          vote,
+          currentTurn,
+          forexEnabled,
+          stockTaxActive,
+          fxByCurrency: stockFx,
+        });
+      } catch (error) {
+        console.error(`[voteAutoResolve] privatization vote ${vote._id} failed:`, error);
+      }
     })
   );
 }

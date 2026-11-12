@@ -1,4 +1,6 @@
 import type { Db } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 /**
  * Singleplayer world-owner admin. A local world's first account owns the
@@ -18,7 +20,7 @@ export function shouldGrantOwnerAdminOnRegister(args: {
 export async function promoteSingleplayerOwnerIfNoAdmin(
   db: Db
 ): Promise<{ promoted: boolean; userId?: string }> {
-  const users = db.collection("users");
+  const users = usersCollection<Document>(db);
   const adminCount = await users.countDocuments({ isAdmin: true });
   if (adminCount > 0) return { promoted: false };
   const earliest = await users.findOne({}, { sort: { createdAt: 1 }, projection: { _id: 1 } });

@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { NewsPost } from "@/lib/db/types";
 import { withPublicNewsVisibility } from "@/lib/news/publicModeration";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
 
 export type PublicNewsPostView = {
   title: string | null;
@@ -21,7 +22,7 @@ export async function loadNewsPostPublic(id: string): Promise<PublicNewsPostView
   if (!ObjectId.isValid(id)) return null;
 
   const db = await getDb();
-  const post = await db.collection<NewsPost>("newsPosts").findOne(
+  const post = await newsPostsCollection(db).findOne(
     withPublicNewsVisibility({
       _id: new ObjectId(id),
       parentId: { $exists: false },

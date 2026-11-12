@@ -3,7 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import type { Election, NPP, ElectionCandidate, PoliticalParty, State } from "@/lib/db/types";
 import type { InfluenceType } from "@/lib/db/types";
 import type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { activeNppElectionCandidacyFilter } from "@/lib/elections/nppCandidacyQuery";
 import { describeNppRelocationCleanup, performNppRelocation } from "@/lib/npp/performNppRelocation";
 import {
@@ -13,6 +13,11 @@ import {
   upsertNppEndorsement,
 } from "@/lib/nppEndorsements";
 import { advertiseFavorabilityGain, campaignInfluenceGain } from "@/lib/actions";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 // Loyalty and stubbornness have no per-turn decay, so their boosts stay flat.
 // Influence and favorability DO decay every turn (see actionRefresh), so their
@@ -54,9 +59,10 @@ export async function applyPartyInfluenceEffects(
       // (favorability decays by (fav-60)*0.05/turn in actionRefresh).
       const change = round1(advertiseFavorabilityGain(npp.favorability ?? 0));
       const newValue = Math.min(100, (npp.favorability ?? 0) + change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { favorability: newValue, updatedAt: now } });
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { favorability: newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "boost_influence": {
@@ -64,37 +70,38 @@ export async function applyPartyInfluenceEffects(
       // chair boost cannot out-run the 0.75%/turn PI decay and pin an NPP at 100.
       const change = round1(campaignInfluenceGain(npp.politicalInfluence ?? 0));
       const newValue = Math.min(100, (npp.politicalInfluence ?? 0) + change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { politicalInfluence: newValue, updatedAt: now } });
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { politicalInfluence: newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "boost_loyalty": {
       const change = calculateStatChange("boost_loyalty");
       const newValue = Math.min(100, npp.personality.loyalty + change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: npp._id }, { $set: { "personality.loyalty": newValue, updatedAt: now } });
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { "personality.loyalty": newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "reduce_stubbornness": {
       const change = calculateStatChange("reduce_stubbornness");
       const newValue = Math.max(0, npp.personality.stubbornness - change);
-      await db
-        .collection<NPP>("npps")
-        .updateOne(
-          { _id: npp._id },
-          { $set: { "personality.stubbornness": newValue, updatedAt: now } }
-        );
+      await nppsCollection(db).updateOne(
+        { _id: npp._id },
+        { $set: { "personality.stubbornness": newValue, updatedAt: now } }
+      );
       return { statChange: change };
     }
     case "relocate_state": {
       const targetStateId = input.context.targetStateId;
       if (!targetStateId) return {};
 
-      const targetState = await db
-        .collection<State>("states")
-        .findOne({ _id: targetStateId, countryId: party.countryId });
+      const targetState = await statesCollection(db).findOne({
+        _id: targetStateId,
+        countryId: party.countryId,
+      });
       if (!targetState) {
         return {};
       }
@@ -111,25 +118,26 @@ export async function applyPartyInfluenceEffects(
     case "endorse_candidate": {
       if (!input.context.electionId || !input.context.candidateId) break;
 
-      const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const candidate = await electionCandidatesCollection(db).findOne({
         _id: new ObjectId(input.context.candidateId),
         status: "active",
       });
       if (candidate) {
         const [election, candidateCountAtDecision] = await Promise.all([
-          db.collection<Election>("elections").findOne({ _id: candidate.electionId }),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
-            .countDocuments({ electionId: candidate.electionId, status: "active" }),
+          electionsCollection(db).findOne({ _id: candidate.electionId }),
+          electionCandidatesCollection(db).countDocuments({
+            electionId: candidate.electionId,
+            status: "active",
+          }),
         ]);
         if (
           election &&
           !isSelfEndorsementCandidate(npp, candidate) &&
           nppCanPlausiblyEndorseElection(npp, election)
         ) {
-          const gameState = await db
-            .collection<{ _id: string; currentTurn?: number }>("gameState")
-            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+          const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(
+            db
+          ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
           await upsertNppEndorsement(db, {
             npp,
             candidate,
@@ -154,13 +162,11 @@ export async function applyPartyInfluenceEffects(
 
       const electionObjId = new ObjectId(input.context.electionId);
       const filter = activeNppElectionCandidacyFilter(electionObjId, npp._id);
-      const withdrawCandidate = await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .findOne(filter);
+      const withdrawCandidate = await electionCandidatesCollection(db).findOne(filter);
 
       if (!withdrawCandidate) return { withdrawApplied: false };
 
-      const updateResult = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+      const updateResult = await electionCandidatesCollection(db).updateOne(
         { _id: withdrawCandidate._id },
         {
           $set: {

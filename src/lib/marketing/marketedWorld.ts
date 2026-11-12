@@ -1,25 +1,15 @@
 /**
  * THE SINGLE SOURCE OF TRUTH for every public claim about what this game is.
  *
- * THE PROBLEM THIS SOLVES. "Which countries can you play?" and "what version
- * is live?" were answered independently by seven surfaces, and every one of
- * them was hand-maintained prose. On 2026-09-06 they disagreed four ways at
- * once: the FAQ said four nations, the about page said US/UK/Japan, the landing
- * promo pill advertised v1.0.0 while 1.6.0 was in production, and the studio
- * site said twenty-one playable countries next to a banner claiming the world
- * was paused. Each fix was a one-line edit somewhere, which is exactly why the
- * copy rotted again a fortnight later.
+ * No marketing surface may name a country or a version. They ask here, and this
+ * module answers from live game state:
  *
- * So no marketing surface is allowed to name a country or a version any more.
- * They ask here, and this module answers from live game state:
- *
- *   playable  = `countryGameStates.enabledForPlayers`, the same read the game
- *               itself uses to decide whether you may file for office. If a
- *               country opens or closes, the copy follows on the next request.
- *   economy   = the curated econ tier for the running era, minus anything that
- *               has since become playable.
- *   version   = `package.json`, which `npm run changelog:release` bumps as it
- *               mints a release. There is no second version string to forget.
+ *   playable  = `countryGameStates.enabledForPlayers`, the same read the game uses to
+ *               decide whether you may file for office. If a country opens or closes,
+ *               the copy follows on the next request.
+ *   economy   = the curated econ tier for the running era, minus anything since made
+ *               playable.
+ *   version   = `package.json`, bumped by `npm run changelog:release`.
  *
  * `publicCopy.test.ts` fails the build if a surface goes back to hardcoding.
  */

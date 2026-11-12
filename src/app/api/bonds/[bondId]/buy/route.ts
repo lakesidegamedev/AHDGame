@@ -9,7 +9,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { refundOrCapture } from "@/lib/observability/context";
-import type { Bond, Character, Corporation, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -45,6 +45,12 @@ import { reserveBondUnitsForHolder } from "@/lib/bonds/bondHolderOps";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote } from "@/lib/bonds/marketPool";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -81,15 +87,19 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (turnGuard) return turnGuard;
 
     const forexEnabled = await isForexEnabled();
+    if (!ObjectId.isValid(bondId)) {
+      return errorResponse(400, "Invalid bond ID");
+    }
 
-    const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
+    const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
     if (!bond) {
       return errorResponse(404, "Bond not found");
     }
 
-    const turnDoc = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const turnDoc = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const currentTurn = turnDoc?.currentTurn ?? 0;
 
     if (bond.matured) {
@@ -124,9 +134,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (buyAsCorp) {
       // Buying as corporation
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: new ObjectId(buyAsCorp) });
+      const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(buyAsCorp) });
       if (!corp) {
         return errorResponse(404, "Corporation not found");
       }
@@ -201,9 +209,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
         if (!reserved) {
           await refundCorpLiquidCapital(db, corp._id, costInCorpCapital);
-          const latestBond = await db
-            .collection<Bond>("bonds")
-            .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
+          const latestBond = await bondsCollection(db).findOne(
+            { _id: bond._id },
+            { projection: { publicFloat: 1 } }
+          );
           return errorResponse(409, `Only ${latestBond?.publicFloat ?? 0} units available`);
         }
 
@@ -247,9 +256,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         throw err;
       }
 
-      // Route the FX spread the corp already paid on a cross-currency bond buy
-      // into the CB system (reserve slice → bond-currency CB as a foreign reserve;
-      // forexRevenue → corp's CB). Previously this spread was simply destroyed.
+      // Route the FX spread already paid on a cross-currency bond buy into the CB system instead of destroying it.
       if (corpCurrency && corpCurrency !== bondCurrency) {
         await distributeConversionSpread(
           db,
@@ -276,15 +283,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     } else {
       // Buying as character (regular or imperial)
-      const userDoc = await db
-        .collection<User>("users")
-        .findOne({ _id: new ObjectId(user.userId) });
+      const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
       const isImperialMode =
         userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
       if (isImperialMode) {
         // ── Imperial character buy path ──────────────────────────────
-        const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+        const imperial = await imperialCharactersCollection(db).findOne({
           _id: userDoc!.activeImperialCharacterId!,
           userId: new ObjectId(user.userId),
         });
@@ -294,12 +299,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
         // Block imperial CEO / pending-CEO / recent-former-CEO from buying their
         // own corp's bonds (CEO ⊥ bondholder invariant).
-        const issuingCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { _id: bond.corporationId },
-            { projection: { ceoId: 1, ceoType: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
-          );
+        const issuingCorp = await corporationsCollection(db).findOne(
+          { _id: bond.corporationId },
+          { projection: { ceoId: 1, ceoType: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
+        );
         if (
           (issuingCorp?.ceoType === "imperial" &&
             issuingCorp?.ceoId?.toString() === imperial._id.toString()) ||
@@ -337,7 +340,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         // Currency conversion for imperial characters
         let imperialConversion: ExplicitPayConversion | undefined;
         if (forexEnabled) {
-          const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+          const gs = await gameStateCollection(db).findOne({ _id: "current" });
           if (payCurrency && payCurrency !== bondCurrency) {
             const convertResult = await convertForExplicitPay(db, {
               character: imperial,
@@ -398,9 +401,10 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (!reserved) {
             await refundImperialCash(db, imperial._id, bondCurrency, costLocal, forexEnabled);
             await reverseExplicitPayConversionOrCapture(db, imperialConversion, "bonds.buy");
-            const latestBond = await db
-              .collection<Bond>("bonds")
-              .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
+            const latestBond = await bondsCollection(db).findOne(
+              { _id: bond._id },
+              { projection: { publicFloat: 1 } }
+            );
             return errorResponse(409, `Only ${latestBond?.publicFloat ?? 0} units available`);
           }
 
@@ -455,7 +459,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
         : { userId: new ObjectId(user.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }
@@ -463,12 +467,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       // Block CEO / pending-CEO / recent-former-CEO from buying their own corp's
       // bonds (CEO ⊥ bondholder invariant). The former-CEO window closes the
       // "vacate CEO → buy own bonds → re-take CEO" loophole.
-      const issuingCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: bond.corporationId },
-          { projection: { ceoId: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
-        );
+      const issuingCorp = await corporationsCollection(db).findOne(
+        { _id: bond.corporationId },
+        { projection: { ceoId: 1, pendingCeoCharacterId: 1, ceoHistory: 1 } }
+      );
       if (
         issuingCorp?.ceoId?.toString() === character._id.toString() ||
         issuingCorp?.pendingCeoCharacterId?.toString() === character._id.toString()
@@ -496,7 +498,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       let playerSpreadCharged = 0;
       let playerConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
-        const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+        const gs = await gameStateCollection(db).findOne({ _id: "current" });
         if (payCurrency && payCurrency !== bondCurrency) {
           const convertResult = await convertForExplicitPay(db, {
             character,
@@ -559,9 +561,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (!reserved) {
           await refundCharacterCash(db, character._id, bondCurrency, costLocal, forexEnabled);
           await reverseExplicitPayConversionOrCapture(db, playerConversion, "bonds.buy");
-          const latestBond = await db
-            .collection<Bond>("bonds")
-            .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
+          const latestBond = await bondsCollection(db).findOne(
+            { _id: bond._id },
+            { projection: { publicFloat: 1 } }
+          );
           return errorResponse(409, `Only ${latestBond?.publicFloat ?? 0} units available`);
         }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deriveCountryBoard } from "./deriveFamilies";
 
-const EMPTY = { countryId: "JP", legacy: {}, macro: {} };
+const EMPTY = { countryId: "FR", legacy: {}, macro: {} };
 
 describe("deriveCountryBoard", () => {
   it("derives a tier-1 family from its ADAPTER_TIER1 legacy source", () => {
@@ -139,7 +139,7 @@ describe("deriveCountryBoard", () => {
 
     // An authored country resolves the same families at tier 4 instead.
     const authored = deriveCountryBoard({
-      countryId: "JP",
+      countryId: "FR",
       legacy: RICH_LEGACY,
       macro: RICH_MACRO,
     });
@@ -171,7 +171,7 @@ describe("deriveCountryBoard", () => {
         "population.birthRate": 55,
       },
     });
-    // JP is in the authored defense table, so a rich seed leaves nothing at all
+    // FR is in the authored defense table, so a rich seed leaves nothing at all
     // unresolved — every family lands on one of the four tiers.
     expect(rich.unauthored).toEqual([]);
     expect(Object.keys(rich.values)).toHaveLength(63);

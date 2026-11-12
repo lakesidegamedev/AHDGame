@@ -7,28 +7,16 @@
  */
 
 /**
- * 2019-era base policy positions per country, calibrated to Jan 2020 real-world
- * policy.
+ * 2019-era base policy positions per country, calibrated to Jan 2020
+ * real-world policy.
  *
- * These sixteen blocks used to live in `COUNTRY_POLICY_CONFIGS` in
- * `basePolicies.ts`, which `getBasePolicies` returned as the fall-through for
- * any preset without an era file. 2019 was the only era without one, so that
- * fall-through was ALSO 2019's own path, and it carried eleven blocks belonging
- * to other eras: the Soviet Union, East Germany, Czechoslovakia, Yugoslavia, the
- * Baltic republics, and the six Warsaw-Pact one-party states whose
- * `_political_system` lever is the Leading Role Statute. A 2019 reset seeded
- * Poland a communist-party monopoly.
+ * The roster mirrors `COUNTRY_POLICY_CONFIGS_1991`. The other-era blocks
+ * (Soviet Union, East Bloc, Baltic, Warsaw-Pact one-party states) live in
+ * `COUNTRY_POLICY_CONFIGS` because `budgets.ts` reads them for the 1979 and
+ * 1991 budget seeds; do not delete them here.
  *
- * The roster is the same sixteen `COUNTRY_POLICY_CONFIGS_1991` ships. The eleven
- * are NOT deleted: `budgets.ts` reads them for the 1979 and 1991 budget seeds,
- * so `COUNTRY_POLICY_CONFIGS` keeps them and now composes this file for the rest
- * rather than holding a second copy.
- *
- * Post-communist legislation for PL/HU/RO/BG stays out of scope:
- * `makeEasternBlocLegislation` returns one-party levers (Gosplan, the trade
- * monopoly, the Leading Role Statute), and a modern Poland does not set those
- * differently — it does not have them. When that legislation is authored, its
- * blocks belong in this file.
+ * Post-communist legislation for PL/HU/RO/BG is out of scope; when authored,
+ * its blocks belong in this file.
  */
 import type { CountryPolicyConfig } from "./basePolicies";
 import { states } from "./states";
@@ -50,17 +38,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
   us: {
     nationalStateId: "federal",
     defaults: {
-      // ── Education ──────────────────────────────────────────────────────────
-      us_federal_education_funding: { economic: 0, social: 0 }, // Jan 2020: DeVos proposed cuts blocked by Congress, actual spending flat
-      us_federal_science_funding: { economic: 0, social: 0 }, // Jan 2020: proposed NIH/NSF cuts blocked by Congress, actual spending flat
-      us_school_standards: { economic: 0, social: 0 },
-      // ── Healthcare ─────────────────────────────────────────────────────────
-      us_federal_healthcare_funding: { economic: 1, social: 0 }, // Jan 2020: ACA repeal attempts, Medicaid work requirements pushed
-      us_drug_pricing_medicare: { economic: 0, social: 0 }, // Jan 2020: no Medicare negotiation (Trump admin)
-      us_public_health: { economic: 0, social: 0 }, // Jan 2020: CDC neutral baseline
-      // ── Environment ────────────────────────────────────────────────────────
-      us_clean_energy: { economic: 1, social: 0 }, // Jan 2020: Trump withdrew from Paris Agreement, fossil fuel deregulation
-      us_conservation: { economic: 0, social: 0 },
       // ── Economy ────────────────────────────────────────────────────────────
       us_federal_income_tax_rate: { economic: 0, social: 0 }, // Jan 2020: TCJA rates in place
       us_federal_domestic_corporate_tax_rate: { economic: 0, social: 0 }, // Jan 2020: 21% corporate rate in place
@@ -68,35 +45,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: { economic: 0, social: 0 }, // Jan 2020: standard payroll tax schedule
       us_federal_tariff_rate: { economic: 0, social: 0 }, // Game baseline: tariffs start at 0% until lawmakers change them
       us_federal_sales_tax_rate: { economic: 0, social: 0 }, // Jan 2020: no federal sales tax
-      us_federal_spending_stimulus: { economic: 0, social: 0 },
-      us_transportation: { economic: 0, social: 0 },
-      us_broadband_energy: { economic: 0, social: 0 },
-      us_minimum_wage: { economic: 2, social: 0 }, // Jan 2020: $7.25 frozen since 2009, right-wing position
-      us_workforce_development: { economic: 1, social: 0 }, // Jan 2020: Trump workforce exec orders
-      us_housing: { economic: 0, social: 0 }, // Jan 2020: HUD relatively passive under Carson, no major new programs
-      us_food_nutrition: { economic: 1, social: 0 }, // Jan 2020: SNAP work requirements push
-      // ── Safety Net ─────────────────────────────────────────────────────────
-      us_social_security: { economic: 0, social: 0 }, // Jan 2020: no major changes
-      us_medicaid: { economic: 0, social: 0 }, // Jan 2020: work requirement push mostly blocked by courts, effective status quo
-      us_medicaid_expansion: { economic: 0, social: 0 },
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      us_law_enforcement_criminal_justice: { economic: 0, social: 0 },
-      us_prison_rehabilitation: { economic: 1, social: 1 }, // Jan 2020: First Step Act (bipartisan)
-      // ── Defense & Foreign ──────────────────────────────────────────────────
-      us_defense_spending: { economic: 1, social: 0 }, // Jan 2020: $738B defense budget
-      us_foreign_policy: { economic: 0, social: 0 }, // Jan 2020: America First, mixed
-      // ── Immigration ────────────────────────────────────────────────────────
-      us_border_security_enforcement: { economic: 2, social: 2 }, // Jan 2020: border wall, ICE, strict enforcement
-      us_legal_immigration_visas: { economic: 1, social: 1 }, // Jan 2020: reduced legal immigration, merit-based push
-      // ── Social ─────────────────────────────────────────────────────────────
-      us_reproductive_rights: { economic: 0, social: 1 }, // Jan 2020: Mexico City gag rule reinstated, Title X changes, but Roe still law
-      us_paid_family_leave: { economic: 1, social: 0 }, // Jan 2020: no federal paid leave (OECD outlier) — only unpaid FMLA; market-reliant = mild right
-      us_gun_control: { economic: 0, social: 0 },
-      // ── Governance ─────────────────────────────────────────────────────────
-      us_government_ethics: { economic: 0, social: 0 }, // Jan 2020: neutral baseline
-      us_civics_voting_rights: { economic: 0, social: 1 }, // Jan 2020: restrictive trend
-      us_media_communications: { economic: 1, social: 0 }, // Jan 2020: FCC deregulation
-      us_emergency_services: { economic: 0, social: 0 }, // Jan 2020: status quo state/local funding
     },
     optionIndexes: {
       us_federal_income_tax_rate: 4, // 20% — effective rate (~18% real); game uses flat rate × base, not marginal brackets
@@ -105,7 +53,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: 5, // 15% — real Jan 2020: 15.3% combined (12.4% SS + 2.9% Medicare)
       us_federal_tariff_rate: 0, // 0% — game baseline starts all tariffs at zero on reset
       us_federal_sales_tax_rate: 0, // 0% — no federal sales tax (unchanged)
-      us_social_security: 5,
     },
     regions: states,
   },
@@ -119,54 +66,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
     defaults: {
       // ── Healthcare ─────────────────────────────────────────────────────────────
       uk_nhs_funding: { economic: -1, social: 0 }, // Jan 2020: pledged £34B extra NHS funding
-      uk_social_care: { economic: 0, social: 0 }, // Jan 2020: promised reform but nothing concrete yet
-      uk_mental_health: { economic: 0, social: 0 }, // Jan 2020: modest pledges, no major shift
-      uk_public_health: { economic: 0, social: 0 }, // Jan 2020: pre-COVID status quo
-      // ── Education ──────────────────────────────────────────────────────────────
-      uk_tuition_fees: { economic: 1, social: 0 }, // Jan 2020: £9,250/year maintained (Tory-era regime)
-      uk_education_standards: { economic: 0, social: 0 }, // Jan 2020: academization continuing, no major shift
-      uk_education_funding: { economic: -1, social: 0 }, // Jan 2020: promised extra school funding in 2019 spending round
-      uk_research_science: { economic: -1, social: 0 }, // Jan 2020: pledged 2.4% GDP R&D target, Cummings' ARPA vision
-      // ── Economic ───────────────────────────────────────────────────────────────
-      uk_fiscal_spending: { economic: -1, social: 0 }, // Jan 2020: loosening austerity, spending review promised increases
-      uk_local_government_funding: { economic: 0, social: 0 }, // Jan 2020: austerity legacy slowly easing, ambiguous
-      // ── Infrastructure ─────────────────────────────────────────────────────────
-      uk_transport_rail: { economic: -1, social: 0 }, // Jan 2020: HS2 confirmed Feb 2020, levelling up infrastructure push
-      uk_energy_grid: { economic: 0, social: 0 }, // Jan 2020: mixed signals, green push early stages
-      // ── Environment ────────────────────────────────────────────────────────────
-      uk_climate_net_zero: { economic: -1, social: 0 }, // Jan 2020: net zero by 2050 legislated June 2019, COP26 host
-      uk_north_sea_energy: { economic: 1, social: 0 }, // Jan 2020: continued licensing, pro-extraction alongside green pledges
-      // ── Law & Justice ──────────────────────────────────────────────────────────
-      uk_policing_crime: { economic: -1, social: 1 }, // Jan 2020: 20k new police (investment=left-eco, tough-on-crime=right-soc)
-      uk_prison_rehabilitation: { economic: 0, social: 0 }, // Jan 2020: status quo
-      // ── Defence ────────────────────────────────────────────────────────────────
-      uk_defence_spending: { economic: 1, social: 0 }, // Jan 2020: NATO 2%+, Global Britain ambitions
-      uk_trident_defence: { economic: 0, social: 0 }, // Jan 2020: Trident renewal continuing, bipartisan consensus
-      // ── Foreign Policy ─────────────────────────────────────────────────────────
-      uk_foreign_policy: { economic: 0, social: 0 }, // Jan 2020: Global Britain rhetoric, early stages
-      // ── Welfare ────────────────────────────────────────────────────────────────
-      uk_universal_credit: { economic: 1, social: 0 }, // Jan 2020: continuing Cameron-era reform, below-inflation benefit rises
-      uk_state_pensions: { economic: -1, social: 0 }, // Jan 2020: triple lock maintained, above-inflation pension increases
-      uk_childcare: { economic: 0, social: 0 }, // Jan 2020: 15-30 free hours for working parents — moderate framework
-      // ── Immigration ────────────────────────────────────────────────────────────
-      uk_immigration_asylum: { economic: 1, social: 1 }, // Jan 2020: points-based system replacing EU free movement
-      uk_work_visas: { economic: 1, social: 0 }, // Jan 2020: points-based system, skilled-worker focus
-      // ── Labour ─────────────────────────────────────────────────────────────────
-      uk_workers_rights: { economic: 0, social: 0 }, // Jan 2020: promised high standards post-Brexit, no legislation
-      uk_workforce_development: { economic: 0, social: 0 }, // Jan 2020: apprenticeship levy continuing
-      // ── Housing ────────────────────────────────────────────────────────────────
-      uk_housing_planning: { economic: -1, social: 0 }, // Jan 2020: Help to Buy extended, levelling up housing promises
-      uk_leasehold_reform: { economic: -1, social: 0 }, // Jan 2020: promised leasehold reforms to help homeowners
-      // ── Governance ─────────────────────────────────────────────────────────────
-      uk_devolution_local_powers: { economic: -1, social: 0 }, // Jan 2020: levelling up agenda, promised more devolution deals
-      uk_government_ethics: { economic: 0, social: 0 }, // Jan 2020: status quo
-      uk_electoral_reform: { economic: 0, social: 0 }, // Jan 2020: FPTP status quo, voter ID proposed but not yet law
-      // ── Media ──────────────────────────────────────────────────────────────────
-      uk_bbc_public_media: { economic: 0, social: 0 }, // Jan 2020: licence fee review threatened but not yet actioned
-      uk_digital_broadband: { economic: 0, social: 0 }, // Jan 2020: promised full-fibre, early stages
-      // ── Civil Liberties ────────────────────────────────────────────────────────
-      uk_surveillance_privacy: { economic: 0, social: 1 }, // Jan 2020: Investigatory Powers Act 2016 in full effect
-      uk_drug_policy: { economic: 0, social: 0 }, // Jan 2020: status quo (conservative)
     },
     optionIndexes: {
       uk_income_tax_rate: 5, // 20% — real Jan 2020: 20% basic rate
@@ -176,9 +75,6 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       uk_domestic_corporation_tax: 4, // 20% — real Jan 2020: 19% (closest available option)
       uk_foreign_corporation_tax: 3, // 19% — closest to domestic 20% for day-one parity
       uk_nhs_funding: 3,
-      uk_tuition_fees: 3,
-      uk_state_pensions: 3,
-      uk_fiscal_spending: 3,
     },
     regions: ukRegions,
   },
@@ -273,11 +169,11 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       de_payroll_social_insurance: { economic: 0, social: 0 }, // 20% combined Beitragssatz
       de_customs_tariff_rate: { economic: 0, social: 0 }, // game-baseline 0%
       de_trade_tax: { economic: 0, social: 0 }, // 400% Hebesatz (regional)
-      // ── Existing non-tax (reshape in PR2-PR4) ───────────────────────────
+      // ── Existing non-tax (reshaped below) ───────────────────────────
       de_minimum_wage: { economic: 1, social: 0 }, // PR4: pre-Ampel level (€9), below statutory €12 baseline
       de_renewable_energy_target: { economic: 0, social: -1 },
       de_immigration_policy: { economic: 0, social: 0 },
-      // ── PR2 non-tax (Healthcare + Education + Social) ───────────────────
+      // ── non-tax (Healthcare + Education + Social) ───────────────────
       de_health_insurance: { economic: 0, social: 0 }, // Merkel IV: GKV stable under Spahn
       de_elder_care: { economic: 0, social: 0 }, // GroKo Pflegestärkungsgesetze
       de_mental_health: { economic: 0, social: 0 }, // GroKo: modest awareness
@@ -290,7 +186,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       de_family_policy: { economic: -1, social: 0 }, // Gute-Kita-Gesetz active
       de_unemployment_welfare: { economic: 1, social: 0 }, // Hartz IV in force at canonical game-start
       de_gender_equality: { economic: 0, social: -1 }, // FüPoG II + Entgelttransparenzgesetz active
-      // ── PR3 non-tax (Defense + Foreign + Tech + Public Safety) ──────────
+      // ── non-tax (Defense + Foreign + Tech + Public Safety) ──────────
       de_bundeswehr_funding: { economic: 1, social: 1 }, // Trendwende — slow expansion, NATO 2% not yet met
       de_defense_posture: { economic: 0, social: 0 }, // Statutory: NATO + UN peacekeeping
       de_cybersecurity: { economic: 0, social: 0 }, // IT-Sicherheitsgesetz 2.0, BSI operational
@@ -302,7 +198,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       de_policing_public_safety: { economic: 0, social: 0 },
       de_criminal_justice: { economic: 0, social: 0 },
       de_constitutional_protection: { economic: 0, social: 0 },
-      // ── PR4 non-tax (Economic + Infra + Env + Imm + Agri + Gov + Media) ─
+      // ── non-tax (Economic + Infra + Env + Imm + Agri + Gov + Media) ─
       de_fiscal_stimulus_act: { economic: 1, social: 0 }, // Schwarze-Null era, strict Schuldenbremse
       de_labor_reform: { economic: 0, social: 0 }, // Hartz IV in force; no major reform pending
       de_sme_mittelstand: { economic: 0, social: 0 },
@@ -322,7 +218,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       de_government_ethics: { economic: 0, social: 0 },
       de_public_broadcasting: { economic: 0, social: 0 }, // Rundfunkbeitrag ~€18/month/household
       de_press_freedom: { economic: 0, social: 0 },
-      // ── PR5 non-tax (Land-level, state-scope) ───────────────────────────
+      // ── non-tax (Land-level, state-scope) ───────────────────────────
       de_land_education: { economic: -1, social: 0 }, // largest Land budget line
       de_land_police: { economic: 0, social: 0 },
       de_land_culture: { economic: 0, social: 0 },
@@ -340,21 +236,21 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       de_payroll_social_insurance: 5, // 20% combined statutory
       de_customs_tariff_rate: 0, // 0% game baseline (all tariffs start at zero)
       de_trade_tax: 5, // 400% Hebesatz (bracket 5 of 200,240,280,320,360,400,440,480,520,560,600)
-      // Existing non-tax — KEEP PRE-PR1 INDEXES; PR4 reshapes these types and
+      // Existing non-tax, KEEP pre-existing INDEXES; later blocks reshape these types and
       // updates indexes alongside the new 7-option layout. Touching them now
       // would mis-resolve runtime lookups against the current 4-5 option arrays.
       de_minimum_wage: 2, // PR4 7-option layout: Pre-Reform Minimum Wage (€9, pre-Ampel) at index 2
       de_renewable_energy_target: 3, // PR4: statutory 65%-by-2030 at index 3
       de_immigration_policy: 3, // PR4: statutory Fachkräfteeinwanderungsgesetz at index 3
-      // ── PR2 optionIndex overrides ─────────────────────────────────────
+      // ── optionIndex overrides ─────────────────────────────────────
       de_gender_equality: 2, // Spec §14.7: optionIndex override 2 (Gender Equality Expansion Act)
-      // ── PR4 optionIndex overrides ─────────────────────────────────────
+      // ── optionIndex overrides ─────────────────────────────────────
       de_fiscal_stimulus_act: 4, // Schuldenbremse Compliance Act — Schwarze-Null era baseline
     },
     regions: deRegions,
   },
 
-  // ── Ireland — PR1 (taxation phase, 2026-05-27) ──────────────────────────────
+  // ── Ireland ──────────────────────────────
   ie: {
     nationalStateId: "ie_national",
     defaults: {
@@ -374,7 +270,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_housing_policy: { economic: 0, social: 0 },
       ie_minimum_wage: { economic: -1, social: 0 },
       ie_climate_policy: { economic: 0, social: 0 },
-      // PR2 — Health & Education (8 types, 1 rewrite + 7 new)
+      // Health & Education (8 types, 1 rewrite + 7 new)
       ie_healthcare_policy: { economic: 0, social: 0 },
       ie_public_health: { economic: 0, social: 0 },
       ie_mental_health: { economic: 0, social: 0 },
@@ -383,7 +279,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_higher_education: { economic: 0, social: 0 },
       ie_research_science: { economic: -1, social: 0 },
       ie_curriculum_reform: { economic: 0, social: 0 },
-      // PR3 — Welfare, Family, Social (7 new types)
+      // Welfare, Family, Social (7 new types)
       ie_state_pensions: { economic: 0, social: 0 },
       ie_unemployment_benefits: { economic: 0, social: 0 },
       ie_working_family_payment: { economic: 0, social: 0 },
@@ -391,7 +287,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_childcare_policy: { economic: 0, social: 0 },
       ie_gender_equality: { economic: 0, social: 0 },
       ie_drug_policy: { economic: 0, social: 0 },
-      // PR4 — Economy, Labour, Infra, Housing (7 new + 2 rewrites)
+      // Economy, Labour, Infra, Housing (7 new + 2 rewrites)
       ie_workers_rights: { economic: 0, social: 0 },
       ie_workforce_development: { economic: 0, social: 0 },
       ie_sme_support: { economic: 0, social: 0 },
@@ -399,13 +295,13 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_transport_rail: { economic: 0, social: 0 },
       ie_digital_infrastructure: { economic: 0, social: 0 },
       ie_regional_economic_development: { economic: 0, social: 0 },
-      // PR5 — Environment, Agriculture, Rural (5 new + 1 rewrite)
+      // Environment, Agriculture, Rural (5 new + 1 rewrite)
       ie_renewable_energy_target: { economic: 0, social: 0 },
       ie_agricultural_subsidies: { economic: 0, social: 0 },
       ie_food_security: { economic: 0, social: 0 },
       ie_rural_development: { economic: 0, social: 0 },
       ie_peat_bog_policy: { economic: 0, social: 0 },
-      // PR6 — Defence, Foreign Affairs, Justice, Governance (8 new types)
+      // Defence, Foreign Affairs, Justice, Governance (8 new types)
       ie_defence_spending: { economic: 0, social: 0 },
       ie_neutrality_posture: { economic: 0, social: 0 },
       ie_foreign_aid_diplomacy: { economic: 0, social: 0 },
@@ -414,11 +310,11 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_criminal_justice: { economic: 0, social: 0 },
       ie_government_ethics: { economic: 0, social: 0 },
       ie_electoral_reform: { economic: 0, social: 0 },
-      // PR7 — Immigration (3 new types)
+      // Immigration (3 new types)
       ie_immigration_asylum: { economic: 0, social: 0 },
       ie_work_visas: { economic: 0, social: 0 },
       ie_integration_programs: { economic: 0, social: 0 },
-      // PR8 — Regional NUTS-III (4 new state-scoped types)
+      // Regional NUTS-III (4 new state-scoped types)
       ie_regional_health: { economic: 0, social: 0 },
       ie_regional_housing: { economic: 0, social: 0 },
       ie_regional_transport: { economic: 0, social: 0 },
@@ -436,12 +332,12 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_stamp_duty: 3, // 2% averaged
       ie_capital_gains_tax: 6, // 33% statutory
       ie_excise_duty: 4, // 100 baseline multiplier
-      // PR4 rewrites pinned to 7-option center idx 3 (housing + minwage)
+      // rewrites pinned to 7-option center idx 3 (housing + minwage)
       ie_minimum_wage: 3,
       ie_housing_policy: 3,
-      // PR5 rewrite pinned to 7-option center idx 3 (climate)
+      // rewrite pinned to 7-option center idx 3 (climate)
       ie_climate_policy: 3,
-      // PR2 — Health & Education (8 types, 7-option arrays, center idx 3)
+      // Health & Education (8 types, 7-option arrays, center idx 3)
       ie_healthcare_policy: 3,
       ie_public_health: 3,
       ie_mental_health: 3,
@@ -450,7 +346,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_higher_education: 3,
       ie_research_science: 3,
       ie_curriculum_reform: 3,
-      // PR3 — Welfare, Family, Social (7 types, 7-option arrays, center idx 3)
+      // Welfare, Family, Social (7 types, 7-option arrays, center idx 3)
       ie_state_pensions: 3,
       ie_unemployment_benefits: 3,
       ie_working_family_payment: 3,
@@ -458,7 +354,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_childcare_policy: 3,
       ie_gender_equality: 3,
       ie_drug_policy: 3,
-      // PR4 — Economy, Labour, Infra (7 types, 7-option arrays, center idx 3)
+      // Economy, Labour, Infra (7 types, 7-option arrays, center idx 3)
       ie_workers_rights: 3,
       ie_workforce_development: 3,
       ie_sme_support: 3,
@@ -466,13 +362,13 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_transport_rail: 3,
       ie_digital_infrastructure: 3,
       ie_regional_economic_development: 3,
-      // PR5 — Environment, Agriculture, Rural (5 new; center idx 3)
+      // Environment, Agriculture, Rural (5 new; center idx 3)
       ie_renewable_energy_target: 3,
       ie_agricultural_subsidies: 3,
       ie_food_security: 3,
       ie_rural_development: 3,
       ie_peat_bog_policy: 3,
-      // PR6 — Defence, Foreign Affairs, Justice, Governance (8 new; center idx 3)
+      // Defence, Foreign Affairs, Justice, Governance (8 new; center idx 3)
       ie_defence_spending: 3,
       ie_neutrality_posture: 3,
       ie_foreign_aid_diplomacy: 3,
@@ -481,11 +377,11 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       ie_criminal_justice: 3,
       ie_government_ethics: 3,
       ie_electoral_reform: 3,
-      // PR7 — Immigration (3 new; center idx 3)
+      // Immigration (3 new; center idx 3)
       ie_immigration_asylum: 3,
       ie_work_visas: 3,
       ie_integration_programs: 3,
-      // PR8 — Regional NUTS-III (4 new state-scoped; center idx 3)
+      // Regional NUTS-III (4 new state-scoped; center idx 3)
       ie_regional_health: 3,
       ie_regional_housing: 3,
       ie_regional_transport: 3,
@@ -633,7 +529,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
     regions: [],
   },
 
-  // ── China — Xi-era 2020-2023 baseline (added 2026-05-27 with CN legislation overhaul) ─────
+  // ── China, Xi-era 2020-2023 baseline ─────
   cn: {
     nationalStateId: "cn_national",
     defaults: {
@@ -646,66 +542,66 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       cn_social_insurance_contribution: { economic: 0, social: 0 },
       cn_customs_tariff: { economic: 0, social: 0 },
       cn_provincial_resource_tax: { economic: 0, social: 0 },
-      // PR2 — Healthcare (§15)
+      // Healthcare (§15)
       cn_medical_insurance: { economic: 0, social: 0 },
       cn_elder_care: { economic: 0, social: 1 },
       cn_mental_health: { economic: 0, social: 1 },
       cn_public_health: { economic: 0, social: 1 },
-      // PR2 — Education (§16)
+      // Education (§16)
       cn_education_funding: { economic: -1, social: 0 },
       cn_gaokao_reform: { economic: 0, social: 1 },
       cn_academic_pressure_reform: { economic: 0, social: 1 },
       cn_research_science: { economic: -1, social: 0 },
-      // PR2 — Social Policy (§21)
+      // Social Policy (§21)
       cn_pension_system: { economic: -1, social: 1 },
       cn_family_policy: { economic: -1, social: 0 },
       cn_gender_equality: { economic: 0, social: 1 },
       cn_common_prosperity: { economic: -1, social: 1 },
-      // PR3 — Defense (§17)
+      // Defense (§17)
       cn_pla_modernization: { economic: -1, social: 1 },
       cn_taiwan_strait_doctrine: { economic: 0, social: 2 },
       cn_cybersecurity: { economic: 0, social: 2 },
-      // PR3 — Foreign Policy (§25)
+      // Foreign Policy (§25)
       cn_belt_and_road: { economic: -1, social: 1 },
       cn_us_china_relations: { economic: 0, social: 1 },
       cn_un_security_council_posture: { economic: 0, social: 1 },
-      // PR3 — Technology (§26)
+      // Technology (§26)
       cn_ai_strategy: { economic: -1, social: 1 },
       cn_semiconductor_strategy: { economic: -2, social: 1 },
-      // PR3 — Public Safety (§27)
+      // Public Safety (§27)
       cn_public_security: { economic: 0, social: 2 },
       cn_criminal_justice: { economic: 0, social: 1 },
       cn_internet_governance: { economic: 0, social: 2 },
-      // PR4 — Economic (§18)
+      // Economic (§18)
       cn_state_enterprises: { economic: -1, social: 1 },
       cn_industrial_strategy: { economic: -1, social: 0 },
       cn_minimum_wage: { economic: -1, social: 0 },
       cn_fiscal_stimulus: { economic: 0, social: 0 },
-      // PR4 — Infrastructure (§19)
+      // Infrastructure (§19)
       cn_rail_transport: { economic: -1, social: 0 },
       cn_digital_infrastructure: { economic: -1, social: 0 },
       cn_housing: { economic: -1, social: 1 },
-      // PR4 — Environment & Energy (§20)
+      // Environment & Energy (§20)
       cn_renewable_energy_target: { economic: -1, social: 0 },
       cn_nuclear_energy: { economic: -1, social: 0 },
       cn_emissions_trading_scheme: { economic: 0, social: 0 },
       cn_climate_targets: { economic: -1, social: 0 },
-      // PR4 — Immigration & Hukou (§22)
+      // Immigration & Hukou (§22)
       cn_hukou_reform: { economic: 1, social: -1 },
       cn_skilled_immigration: { economic: 0, social: 0 },
       cn_diaspora_engagement: { economic: 0, social: 1 },
-      // PR4 — Agriculture (§23)
+      // Agriculture (§23)
       cn_agricultural_subsidies: { economic: -1, social: 0 },
       cn_food_security: { economic: 0, social: 1 },
       cn_rural_revitalization: { economic: -1, social: 1 },
-      // PR4 — Governance (§24)
+      // Governance (§24)
       cn_anticorruption_campaign: { economic: 0, social: 2 },
       cn_npc_reform: { economic: 0, social: 1 },
       cn_hk_macao_affairs: { economic: 0, social: 2 },
-      // PR4 — Media (§28)
+      // Media (§28)
       cn_state_media_funding: { economic: -1, social: 1 },
       cn_press_freedom: { economic: 0, social: 2 },
-      // PR5 — Provincial (§29)
+      // Provincial (§29)
       cn_provincial_education: { economic: -1, social: 0 },
       cn_provincial_public_security: { economic: 0, social: 2 },
       cn_provincial_economic_development: { economic: -1, social: 0 },
@@ -724,66 +620,66 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       cn_social_insurance_contribution: 5, // 28% employer-side statutory combined
       cn_customs_tariff: 0, // 0% game baseline (tariffs start at zero)
       cn_provincial_resource_tax: 5, // 6% statutory ad-valorem
-      // PR2 — Healthcare (§15) — all sit at center option 3
+      // Healthcare (§15), all sit at center option 3
       cn_medical_insurance: 3,
       cn_elder_care: 3,
       cn_mental_health: 3,
       cn_public_health: 3,
-      // PR2 — Education (§16) — all sit at center option 3
+      // Education (§16), all sit at center option 3
       cn_education_funding: 3,
       cn_gaokao_reform: 3,
       cn_academic_pressure_reform: 3,
       cn_research_science: 3,
-      // PR2 — Social Policy (§21) — all sit at center option 3
+      // Social Policy (§21), all sit at center option 3
       cn_pension_system: 3,
       cn_family_policy: 3,
       cn_gender_equality: 3,
       cn_common_prosperity: 3,
-      // PR3 — Defense (§17) — all sit at center option 3
+      // Defense (§17), all sit at center option 3
       cn_pla_modernization: 3,
       cn_taiwan_strait_doctrine: 3,
       cn_cybersecurity: 3,
-      // PR3 — Foreign Policy (§25) — all sit at center option 3
+      // Foreign Policy (§25), all sit at center option 3
       cn_belt_and_road: 3,
       cn_us_china_relations: 3,
       cn_un_security_council_posture: 3,
-      // PR3 — Technology (§26) — all sit at center option 3
+      // Technology (§26), all sit at center option 3
       cn_ai_strategy: 3,
       cn_semiconductor_strategy: 3,
-      // PR3 — Public Safety (§27) — all sit at center option 3
+      // Public Safety (§27), all sit at center option 3
       cn_public_security: 3,
       cn_criminal_justice: 3,
       cn_internet_governance: 3,
-      // PR4 — Economic (§18) — all sit at center option 3
+      // Economic (§18), all sit at center option 3
       cn_state_enterprises: 3,
       cn_industrial_strategy: 3,
       cn_minimum_wage: 3,
       cn_fiscal_stimulus: 3,
-      // PR4 — Infrastructure (§19) — all sit at center option 3
+      // Infrastructure (§19), all sit at center option 3
       cn_rail_transport: 3,
       cn_digital_infrastructure: 3,
       cn_housing: 3,
-      // PR4 — Environment & Energy (§20) — all sit at center option 3
+      // Environment & Energy (§20), all sit at center option 3
       cn_renewable_energy_target: 3,
       cn_nuclear_energy: 3,
       cn_emissions_trading_scheme: 3,
       cn_climate_targets: 3,
-      // PR4 — Immigration & Hukou (§22) — all sit at center option 3
+      // Immigration & Hukou (§22), all sit at center option 3
       cn_hukou_reform: 3,
       cn_skilled_immigration: 3,
       cn_diaspora_engagement: 3,
-      // PR4 — Agriculture (§23) — all sit at center option 3
+      // Agriculture (§23), all sit at center option 3
       cn_agricultural_subsidies: 3,
       cn_food_security: 3,
       cn_rural_revitalization: 3,
-      // PR4 — Governance (§24) — all sit at center option 3
+      // Governance (§24), all sit at center option 3
       cn_anticorruption_campaign: 3,
       cn_npc_reform: 3,
       cn_hk_macao_affairs: 3,
-      // PR4 — Media (§28) — state media center, press freedom uses optionIndex 4 per spec inverted direction
+      // Media (§28), state media center, press freedom uses optionIndex 4 per spec inverted direction
       cn_state_media_funding: 3,
       cn_press_freedom: 4,
-      // PR5 — Provincial (§29) — all sit at center option 3
+      // Provincial (§29), all sit at center option 3
       cn_provincial_education: 3,
       cn_provincial_public_security: 3,
       cn_provincial_economic_development: 3,
@@ -820,9 +716,8 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       fr_labor_law: 2, // Code du Travail Statute
       fr_welfare_state: 2, // Sécurité Sociale Statute
       // Spending-category defaults (1979): nearest-fit index on the same cost
-      // ladder authored for 1953 (fiscal-scale audit follow-up, 2026-07-28) —
-      // not independently re-calibrated to the 1979 baseline to the same
-      // tolerance as 1953; see FR budgets1953.test.ts coverage for the tuned side.
+      // ladder authored for 1953, not independently re-calibrated to the 1979
+      // baseline; see FR budgets1953.test.ts for the tuned side.
       fr_health_insurance: 2,
       fr_education_funding: 1,
       fr_infrastructure_investment: 1,
@@ -856,7 +751,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       it_labor_law: 2, // Statuto dei Lavoratori Statute
       it_welfare_state: 2, // Stato Sociale Statute
       // Spending-category defaults (1979): nearest-fit index on the 1953 ladder
-      // (fiscal-scale audit follow-up, 2026-07-28) — see FR block above.
+      //, see FR block above.
       it_health_insurance: 3,
       it_education_funding: 2,
       it_infrastructure_investment: 2,
@@ -916,7 +811,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       se_labor_law: 2, // Medbestämmandelagen Statute
       se_welfare_state: 2, // Folkhemmet Statute
       // Spending-category defaults (1979): nearest-fit index on the 1953 ladder
-      // (fiscal-scale audit follow-up, 2026-07-28) — see FR block above.
+      //, see FR block above.
       se_health_insurance: 3,
       se_education_funding: 3,
       se_infrastructure_investment: 3,
@@ -950,7 +845,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       gr_labor_law: 2,
       gr_welfare_state: 2,
       // Spending-category defaults (1979): nearest-fit index on the 1953 ladder
-      // (fiscal-scale audit follow-up, 2026-07-28) — see FR block above.
+      //, see FR block above.
       gr_health_insurance: 3,
       gr_education_funding: 3,
       gr_infrastructure_investment: 2,
@@ -982,10 +877,9 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       at_state_enterprises: 2,
       at_labor_law: 2,
       at_welfare_state: 2,
-      // Spending-category defaults (1979): nearest-fit index on the 1953 ladder
-      // (fiscal-scale audit follow-up, 2026-07-28) — see FR block above. Even
-      // with the Bundesheer founded (1955), AT's authored 1979 defense share
-      // (1.2% GDP) is still nearest the ladder's minimum rung.
+      // Spending-category defaults (1979): nearest-fit index on the 1953 ladder,
+      // see FR block above. Even with the Bundesheer founded (1955), AT's authored
+      // 1979 defense share (1.2% GDP) is still nearest the ladder's minimum rung.
       at_health_insurance: 2,
       at_education_funding: 2,
       at_infrastructure_investment: 1,
@@ -1018,7 +912,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       fi_labor_law: 2,
       fi_welfare_state: 2,
       // Spending-category defaults (1979): nearest-fit index on the 1953 ladder
-      // (fiscal-scale audit follow-up, 2026-07-28) — see FR block above.
+      //, see FR block above.
       fi_health_insurance: 3,
       fi_education_funding: 3,
       fi_infrastructure_investment: 3,
@@ -1051,7 +945,7 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
       tr_labor_law: 2, // Labor Code Statute
       tr_welfare_state: 2, // Social Provision Statute
       // Spending-category defaults (1979): nearest-fit index on the 1953 ladder
-      // (fiscal-scale audit follow-up, 2026-07-28) — see FR block above.
+      //, see FR block above.
       tr_health_insurance: 1,
       tr_education_funding: 1,
       tr_infrastructure_investment: 0,
@@ -1061,6 +955,4 @@ export const COUNTRY_POLICY_CONFIGS_2019: Record<string, CountryPolicyConfig> = 
     },
     regions: trRegions,
   },
-
-  // ── East Germany (1979 GDR — SED planned economy; defaults on the state end) ─
 };

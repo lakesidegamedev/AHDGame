@@ -2,8 +2,8 @@
  * Historical transitions — conditional independence / UN lifecycle.
  *
  * Deep module: callers evaluate / apply / diagnose through this surface.
- * The Gold Coast → Ghana tracer (#3726) and the approved decolonization
- * roster (#3727) share one deterministic pressure-driven engine.
+ * The Gold Coast → Ghana tracer and the approved decolonization
+ * roster share one deterministic pressure-driven engine.
  */
 export {
   GOLD_COAST_ENTITY_ID,

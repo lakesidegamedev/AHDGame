@@ -10,7 +10,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
 import { getCabinetPositionById } from "@/lib/constants";
-import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // POST /api/whitehouse/cabinet/nominations/[id]/withdraw — President withdraws an active cabinet nomination and notifies the nominee.
 // Auth: requireBasicAuth
@@ -37,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const db = await getDb();
     const now = new Date();
 
-    const nomination = await db.collection<CabinetNomination>("cabinetNominations").findOne({
+    const nomination = await cabinetNominationsCollection(db).findOne({
       _id: nominationOid,
       status: { $in: ["active", "proposed"] },
     });
@@ -45,29 +48,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return errorResponse(404, "Nomination not found or already resolved");
     }
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
       return errorResponse(403, "Only the President can withdraw nominations");
     }
 
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateOne({ _id: nominationOid }, { $set: { status: "withdrawn", updatedAt: now } });
+    await cabinetNominationsCollection(db).updateOne(
+      { _id: nominationOid },
+      { $set: { status: "withdrawn", updatedAt: now } }
+    );
 
     const posName = getCabinetPositionById(nomination.positionId)?.name ?? nomination.positionId;
     const nomineeChar = nomination.nomineeCharacterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: nomination.nomineeCharacterId }, { projection: { userId: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: nomination.nomineeCharacterId },
+          { projection: { userId: 1 } }
+        )
       : null;
     if (nomineeChar?.userId) {
       await createNotification({

@@ -7,6 +7,7 @@ import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types";
 import { euroCurrencyRate, euroLedgerCrossRate, type EuroMonetaryUnion } from "./rules";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export type ConversionQuote = Pick<
   ExchangeRate,
@@ -22,8 +23,7 @@ export async function loadConversionQuoteContext(
   db: Db,
   union?: EuroMonetaryUnion
 ): Promise<ConversionQuoteContext> {
-  const quotes = await db
-    .collection<ConversionQuote>("exchangeRates")
+  const quotes = await exchangeRatesCollection<ConversionQuote>(db)
     .find(
       {},
       {
@@ -61,7 +61,7 @@ export async function resolveEuroConversionQuotes(
     existingAnchor ??
     (preloaded
       ? preloaded.get(union.anchorCurrency)
-      : await db.collection<ExchangeRate>("exchangeRates").findOne(
+      : await exchangeRatesCollection(db).findOne(
           { _id: union.anchorCountryId },
           {
             projection: {
@@ -90,8 +90,7 @@ export async function resolveEuroConversionQuotes(
 
 /** Purchase estimates resolve the source authority from these projected settings. */
 export async function loadForexSpreadStrengths(db: Db) {
-  const rows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rows = await exchangeRatesCollection(db)
     .find(
       {},
       {

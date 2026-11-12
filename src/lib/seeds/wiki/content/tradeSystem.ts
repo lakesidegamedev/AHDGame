@@ -64,6 +64,19 @@ The tariff that counts is the importer's total on that flow: its economy-wide ta
 
 See [Tariffs](/wiki/tariffs) for how tariff layers are enacted and what they do to corporations.
 
+### Treaty trade terms
+
+Two treaty organizations can change trade between their members while their **terms** are in force: the Critical Minerals Club and the Arctic Agreement (see [International Organizations](/wiki/international-organizations)). Members pass the terms as an organization directive, and they run for 240 turns (five game years) before they lapse. Passing them again before they lapse renews them without stacking. While terms are in force, trade between two members of that treaty, on the goods it names, gets two changes:
+
+| Treaty | Goods | Affinity | Landed cost of imports |
+| --- | --- | --- | --- |
+| Critical Minerals Club | Rare earths, iron, coal | x1.5 | 5% lower |
+| Arctic Agreement | Oil, natural gas, freight | x1.25 | 3% lower |
+
+Both countries must be members, and the goods must be on the treaty's list. The affinity change stacks on top of the free trade agreement and shared-organization bonuses above. The lower landed cost works like a tariff waiver for members. Trade with countries outside the treaty is not changed, so a buyer outside the club simply gets a smaller share of a member's surplus. When the terms lapse and are not renewed, trade goes back to normal.
+
+Sanctions still close trade the other way: an embargo between two countries sets their affinity to 0 for the goods it covers, treaty or not, and the exporter's surplus goes to other buyers.
+
 ### Embargoes
 
 An embargo is a deliberate break in trade. It can cover one commodity or all of them, exports, imports or both, and it can block the flow entirely or cap it at a fixed amount. Four things create one:
@@ -108,5 +121,5 @@ Tips:
 - Use embargoes for short, targeted pressure. They expire and then lock you out of re-imposing for 72 turns at least.
 - A corporation that sells almost entirely into one country is the one an embargo against that country hurts most.
 
-Applies in every world; the iron curtain, Yugoslavia's exemption and the Cold War pairs apply only in worlds that begin in the Cold War eras. Last checked 2026-10-29, version 1.18.0. Exact rules: there is no separate design page for the affinity calculation yet; the tariff layers it reads are on the [Tariffs (design)](https://docs.lakesidegames.net/design/tariffs.html) page.
+Applies in every world; the iron curtain, Yugoslavia's exemption and the Cold War pairs apply only in worlds that begin in the Cold War eras. Last checked 2026-11-10, version 1.20.0. Exact rules: there is no separate design page for the affinity calculation yet; the tariff layers it reads are on the [Tariffs (design)](https://docs.lakesidegames.net/design/tariffs.html) page.
 `;

@@ -38,15 +38,13 @@ export function PollResults({
         />
       )}
 
-      {/* Archetype-based panel, hidden when the granular electorate is active
-          (the granular panel + segment explorer supersede it). */}
-      {!poll.granular && <PollRecommendations poll={poll} pollData={pollData} />}
+      <PollRecommendations poll={poll} pollData={pollData} />
 
-      {selectedTier === "large" && poll.categories ? (
+      {selectedTier === "large" ? (
         <>
           {/* The granular electorate IS the poll: it is the substrate the vote
               engine counts, so it is the only per-group breakdown shown. */}
-          {poll.granular && <GranularPollPanel poll={poll} pollData={pollData} />}
+          <GranularPollPanel poll={poll} pollData={pollData} />
 
           {pollData.demographicTurnout && (
             <DemographicTurnoutPanel
@@ -56,13 +54,6 @@ export function PollResults({
             />
           )}
         </>
-      ) : selectedTier === "large" && !poll.categories ? (
-        <section className="text-body">
-          <h2 className="text-heading font-semibold">Full breakdown needs the Full Poll</h2>
-          <p className="mt-1 text-muted">
-            Commission the Full Poll above to unlock the per-group analysis.
-          </p>
-        </section>
       ) : null}
 
       <AppealLegend />

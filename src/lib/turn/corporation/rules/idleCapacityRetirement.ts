@@ -1,19 +1,11 @@
 /**
- * Retirement of capacity the market persistently will not buy (plants tier).
+ * Retires plant capacity the market persistently will not buy.
  *
- * ─── The problem ────────────────────────────────────────────────────────────
- *
- * The demand throttle holds a glutted plant at last turn's sales plus the probe
- * margin, so its output converges on what buyers take. Its CAPACITY never
- * does. Headcount is staffed for the whole active nameplate, idle units pay
- * IDLE_UPKEEP_FRACTION upkeep, and the only thing that ever shrinks owned stock
- * is CAPITAL_DEPRECIATION_PER_TURN (0.05% a turn, a half-life of over a
- * thousand turns). A plant built for a market ten times its real size pays
- * payroll and upkeep on the other nine tenths forever: on the live world a
- * media chain seeded at the same 204 sites in every state sold 13% of its run
- * in the small states and carried a labour bill several times its revenue.
- *
- * ─── The rule ───────────────────────────────────────────────────────────────
+ * The demand throttle holds a glutted plant's OUTPUT at last turn's sales plus a
+ * probe margin, but its CAPACITY never shrinks: headcount is staffed for the full
+ * nameplate, idle units pay IDLE_UPKEEP_FRACTION, and depreciation alone has a
+ * half-life over a thousand turns. A plant built for a market ten times its real
+ * size pays payroll and upkeep on the excess forever.
  *
  * Once a plant has been demand-limited into a glut for more than
  * IDLE_RETIRE_GRACE_TURNS consecutive turns, it retires a fixed share of the
@@ -22,38 +14,19 @@
  *     justified = capacity x throttle x (1 + IDLE_RETIRE_HEADROOM)
  *     retired   = IDLE_RETIRE_RATE x max(0, capacity - justified)
  *
- * `capacity x throttle` is the capacity that would make this turn's
- * demand-limited run at this turn's input, labour and policy rates, so a plant
- * that is ALSO input-starved keeps enough capacity to make its sales once
- * inputs recover; the throttle is computed after those legs. Retirement only
- * removes demand-idle units, never input-idle ones.
+ * capacity x throttle is the capacity that would make this turn's demand-limited
+ * run at this turn's input, labour, and policy rates, so an input-starved plant
+ * keeps enough capacity to serve sales once inputs recover. Retirement only
+ * removes demand-idle units, never input-idle ones. It converges exponentially,
+ * so it is gradual and slows as the plant approaches a size it can sell.
  *
- * It is exponential toward the justified size, so it is gradual by
- * construction (at most IDLE_RETIRE_RATE of a plant in one turn) and slows as
- * the plant approaches a size it can sell. At equilibrium the plant keeps
- * IDLE_RETIRE_HEADROOM above its demand-limited run, and the throttle's probe
- * margin can still climb into that room before anything retires again.
- *
- * ─── What does NOT retire ───────────────────────────────────────────────────
- *
- *  - A plant that sold out (fill at or above IDLE_RETIRE_GLUT_FILL). That is a
- *    plant ramping back into a recovering market; its throttle is below 1 only
- *    because it climbs by the probe margin, and the capacity it is climbing
- *    into is about to be used.
- *  - A plant whose throttle did not bind: its limit is inputs, labour, a
- *    disaster or the owner's policy, not demand.
- *  - Mothballed or partly parked plants. Cold storage is the owner's explicit
- *    choice to hold capacity, already billed at the cold upkeep rate.
- *  - Any plant before the streak passes the grace period, so a single bad
- *    clearing turn or a short demand shock retires nothing.
- *
- * NPP engine 6 adds one case for NPP-run corps only: a plant that sells out
- * but whose throttle stays under IDLE_RETIRE_STRUCTURAL_THROTTLE for
- * IDLE_RETIRE_STRUCTURAL_GRACE_TURNS is oversized, not recovering. It retires
+ * Does NOT retire: a plant that sold out (fill at or above
+ * IDLE_RETIRE_GLUT_FILL); a plant whose throttle did not bind (limited by inputs,
+ * labour, a disaster, or owner policy); mothballed or partly parked plants; and
+ * any plant still inside the grace period. For NPP corps only, a plant that sells
+ * out but stays under IDLE_RETIRE_STRUCTURAL_THROTTLE for
+ * IDLE_RETIRE_STRUCTURAL_GRACE_TURNS is oversized, not recovering, and retires
  * toward its run with IDLE_RETIRE_STRUCTURAL_HEADROOM of room to grow back.
- * On live turn 202, loss-making NPP sectors ran at 38-46% utilization under
- * the throttle while selling 92-100% of output, paying payroll and upkeep on
- * the idle rest. Player plants are unchanged.
  */
 
 /** Consecutive glutted turns a plant may run before any capacity retires. */

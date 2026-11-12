@@ -84,7 +84,6 @@ function apiPayload() {
     myCorporationId: 7,
     myCorporationHasGroup: true,
     myUnionId: "union",
-    conflictsEnabled: true,
     unionsEnabled: true,
     settlementCrisisLive: true,
     nationalDetailSections: buildNationalDetailsSections("US", {
@@ -133,7 +132,6 @@ function renderWebDock() {
         myCorporationHasGroup
         myUnionId="union"
         unionsEnabled
-        conflictsEnabled
         settlementCrisisLive
       />
     </NextIntlClientProvider>

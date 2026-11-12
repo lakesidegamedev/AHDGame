@@ -17,21 +17,27 @@ import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import { needsCharacterHint } from "@/lib/auth/characterGate";
 import { setCharacterGateCookie } from "@/lib/auth/characterGateCookie";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
-import type { Character, Notification, PoliticalParty, State, User } from "@/lib/db/types";
+import type { Notification, PoliticalParty, State, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isPatreonActive } from "@/lib/db/types";
 import { getImperialTitle } from "@/lib/imperial";
 import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
-import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { getNotificationBundleUserIds } from "@/lib/notifications/notificationBundle";
 import { getClientIp } from "@/lib/utils/network";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
+import { resolveStaffRole } from "@/lib/staff/rules";
 import { unifiedSessionIsCurrent } from "@/lib/auth/unifiedSession";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 function getPatreonAdPreference(
   user: User | null | undefined
@@ -66,7 +72,7 @@ export const GET = withNoStore(async () => {
     const username = payload.username;
 
     const db = await getDb();
-    let user = await db.collection<User>("users").findOne({ _id: new ObjectId(userId) });
+    let user = await usersCollection(db).findOne({ _id: new ObjectId(userId) });
     if (!user) {
       await clearAuthCookie("auth_me:user_not_found");
       return errorResponse(401, "Authentication required");
@@ -91,8 +97,7 @@ export const GET = withNoStore(async () => {
     // the first load of each UTC day. Fire-and-forget: never delays /me.
     const seenDay = startOfUtcDay(new Date());
     if (!(user.lastSeenAt instanceof Date) || user.lastSeenAt < seenDay) {
-      void db
-        .collection<User>("users")
+      void usersCollection(db)
         .updateOne(
           {
             _id: user._id,
@@ -108,6 +113,10 @@ export const GET = withNoStore(async () => {
     // authority: an old token from before a demotion must not re-grant here.
     const isAdmin = user?.isAdmin === true || user?.role === "admin";
     const isModerator = isAdmin || user?.role === "moderator";
+    // Read-only staff. Deliberately separate from isModerator so no
+    // moderator-gated gameplay bypass opens for it.
+    const staffRole = resolveStaffRole(user);
+    const isJuniorDev = staffRole === "junior_dev";
 
     // Clear expired Patreon benefits inline — avoids 2 extra DB reads from clearExpiredPatreonBenefits
     if (
@@ -115,7 +124,7 @@ export const GET = withNoStore(async () => {
       user.patreonTier &&
       !isPatreonActive(user.patreonTier, user.patreonExpiresAt ?? null)
     ) {
-      await db.collection<User>("users").updateOne(
+      await usersCollection(db).updateOne(
         { _id: user._id },
         {
           $set: {
@@ -125,7 +134,7 @@ export const GET = withNoStore(async () => {
           $unset: { patreonProfileBorder: "", patreonHighlightColor: "" },
         }
       );
-      user = await db.collection<User>("users").findOne({ _id: user._id });
+      user = await usersCollection(db).findOne({ _id: user._id });
     }
 
     // Resolve active character — check if user is in imperial mode
@@ -134,15 +143,16 @@ export const GET = withNoStore(async () => {
     let imperialCharacter: ImperialCharacter | null = null;
 
     if (isImperialMode && user?.activeImperialCharacterId) {
-      imperialCharacter = await db
-        .collection<ImperialCharacter>("imperialCharacters")
-        .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(userId) });
+      imperialCharacter = await imperialCharactersCollection(db).findOne({
+        _id: user.activeImperialCharacterId,
+        userId: new ObjectId(userId),
+      });
 
       // If the imperial character was deleted (e.g., by a game reset), clear the orphaned
       // reference and fall back to regular character mode.
       if (!imperialCharacter) {
         isImperialMode = false;
-        db.collection<User>("users")
+        usersCollection(db)
           .updateOne(
             { _id: new ObjectId(userId) },
             { $unset: { activeImperialCharacterId: "", activeCharacterType: "" } }
@@ -156,7 +166,7 @@ export const GET = withNoStore(async () => {
       const characterQuery = user?.activeCharacterId
         ? { _id: user.activeCharacterId, userId: new ObjectId(userId) }
         : { userId: new ObjectId(userId) };
-      character = await db.collection<Character>("characters").findOne(characterQuery);
+      character = await charactersCollection(db).findOne(characterQuery);
     }
 
     // Ensure persistent tracking cookie exists for anti-fraud duplicate detection
@@ -167,7 +177,7 @@ export const GET = withNoStore(async () => {
     }
 
     // Update last activity timestamp and tracking ID (fire-and-forget for performance)
-    db.collection("users")
+    usersCollection<Document>(db)
       // `trackingIdAt` matters most here: this is the ONLY trackingId writer
       // with no `lastLogin` alongside it, so without the stamp an active
       // player's cookie would be dated by a login months old and expire under
@@ -181,20 +191,15 @@ export const GET = withNoStore(async () => {
       });
 
     // Catch IP rotation that happens WITHOUT a re-login, which capture at the
-    // auth endpoints alone misses entirely. That is the evasion this exists to
-    // see: a player who changes network mid-session never re-authenticates, so
-    // `lastKnownIp` keeps reporting the address they logged in from.
+    // auth endpoints alone misses entirely: mid-session network changes never
+    // re-authenticate, so `lastKnownIp` keeps reporting the login address.
     //
-    // `getClientIp` reads `headers()`, so it is resolved inside the request
-    // scope rather than from a detached continuation, where it can throw once
-    // the response has been sent. But that puts it on the critical path of the
-    // endpoint EVERY authenticated page load hits, so the whole block is
-    // wrapped: identity history is evidence collection, and a failure to
-    // collect it must never turn into a 500 for the player.
+    // `getClientIp` reads `headers()`, so it must be resolved inside request
+    // scope, on the critical path of every authenticated page load. Wrapped
+    // so a capture failure never 500s the session response.
     //
-    // The equality check short-circuits before any I/O, so a player on a stable
-    // address costs nothing, and the writer's debounce collapses repeat
-    // sightings for one who is roaming.
+    // The equality check short-circuits before any I/O, and the writer
+    // debounces repeat sightings.
     try {
       const sessionIp = await getClientIp();
       if (sessionIp !== user?.lastKnownIp) {
@@ -225,8 +230,7 @@ export const GET = withNoStore(async () => {
         : [new ObjectId(userId)];
 
     if (bundleIds.length > 1) {
-      const labelDocs = await db
-        .collection<User>("users")
+      const labelDocs = await usersCollection(db)
         .find({ _id: { $in: bundleIds } })
         .project<{ _id: ObjectId; username: string; displayName: string }>({
           username: 1,
@@ -246,21 +250,19 @@ export const GET = withNoStore(async () => {
 
     if (character) {
       const [state, party, unread, unreadMail] = await Promise.all([
-        db
-          .collection<State>("states")
-          .findOne({ _id: character.homeState, countryId: character.countryId }),
+        statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
         character.party && Number.isFinite(Number(character.party))
-          ? db.collection<PoliticalParty>("politicalParties").findOne({
+          ? politicalPartiesCollection(db).findOne({
               sequentialId: Number(character.party),
               countryId: character.countryId,
             })
           : Promise.resolve(null),
-        db.collection<Notification>("notifications").countDocuments({
+        notificationsCollection(db).countDocuments({
           userId: { $in: bundleIds },
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
         }),
-        db.collection("playerMail").countDocuments({
+        playerMailCollection<Document>(db).countDocuments({
           toUserId: new ObjectId(userId),
           read: false,
           deletedByRecipient: false,
@@ -273,12 +275,12 @@ export const GET = withNoStore(async () => {
       unreadMailCount = unreadMail;
     } else {
       [unreadCount, unreadMailCount] = await Promise.all([
-        db.collection<Notification>("notifications").countDocuments({
+        notificationsCollection(db).countDocuments({
           userId: { $in: bundleIds },
           ...notificationTypeFilter(user?.notificationPreferences, new Date()),
           read: false,
         }),
-        db.collection("playerMail").countDocuments({
+        playerMailCollection<Document>(db).countDocuments({
           toUserId: new ObjectId(userId),
           read: false,
           deletedByRecipient: false,
@@ -289,8 +291,6 @@ export const GET = withNoStore(async () => {
 
     const forexEnabled = await isForexEnabled();
     const forexRates = forexEnabled ? await loadFxRatesRecord(db) : undefined;
-    const rpgStatsEnabled = await isRpgStatsEnabled();
-    const redistrictingEnabled = isRedistrictingEnabled(await getGameState(db));
 
     // Keep the character-creation hint cookie (read by middleware) in sync with
     // DB truth on every page load. This is the self-healer: a character lost to
@@ -319,8 +319,6 @@ export const GET = withNoStore(async () => {
           patreonSince: user?.patreonSince ?? null,
           patreonUserId: user?.patreonUserId ?? null,
           adsDisabled: user?.adsDisabled ?? false,
-          rpgStatsEnabled,
-          redistrictingEnabled,
           patreonAdPreference: getPatreonAdPreference(user),
           patreonHighlightColor: user?.patreonHighlightColor ?? null,
           patreonProfileBorder: user?.patreonProfileBorder ?? null,
@@ -328,6 +326,8 @@ export const GET = withNoStore(async () => {
             !!isAdmin || isPatreonActive(user?.patreonTier ?? null, user?.patreonExpiresAt ?? null),
           isAdmin: isAdmin || false,
           isModerator: isModerator || false,
+          isJuniorDev,
+          staffRole,
           role: user?.role ?? "player",
           theme: user?.theme ?? undefined,
           statusBarLayout: user?.statusBarLayout ?? undefined,
@@ -382,9 +382,7 @@ export const GET = withNoStore(async () => {
                 statsAllocated: character.statsAllocated ?? false,
                 statsReallocationUsed: character.statsReallocationUsed ?? false,
                 needsStatAllocation:
-                  rpgStatsEnabled &&
-                  !character.statsAllocated &&
-                  !character.statAllocationDismissed,
+                  !character.statsAllocated && !character.statAllocationDismissed,
                 needsWealthTierRepick: character.wealthTierRepickPending === true,
                 displayCurrencyPreference:
                   character.displayCurrencyPreference ?? (forexEnabled ? "local" : "internal"),

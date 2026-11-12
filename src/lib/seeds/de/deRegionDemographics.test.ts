@@ -1,11 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { deRegionDemographics } from "./deRegionDemographics";
 import { deRegions } from "./deRegions";
-import { deDemographicCategories } from "./deDemographicCategories";
+import { getCountryLayer1Model } from "@/lib/seeds/international";
 
-const EXPECTED_ARCHETYPE_KEYS = new Set(
-  deDemographicCategories.flatMap((category) => category.groups.map((group) => group.id))
-);
+const EXPECTED_ARCHETYPE_KEYS = new Set(getCountryLayer1Model("DE", "2019")!.groupIds);
 
 describe("deRegionDemographics", () => {
   it("has one document per Bundesland", () => {

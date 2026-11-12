@@ -25,6 +25,8 @@ import { getCountryState } from "@/lib/countryState";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
 import type { NationalEuropeanDecision } from "@/lib/internationalOrganizations/europeanIntegration/rules/nationalDecisions";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export async function proposeNppEuropeanBill(
   db: Db,
@@ -43,9 +45,10 @@ export async function proposeNppEuropeanBill(
     return false;
   const runtime = await getCountryState(db, countryId);
   if (runtime.governmentType === "onePartyState" && npp.party) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: Number(npp.party) });
+    const party = await politicalPartiesCollection(db).findOne({
+      countryId,
+      sequentialId: Number(npp.party),
+    });
     if (isBannedParty({ governmentType: runtime.governmentType }, party)) return false;
   }
   const provision: NonNullable<Bill["provisions"]>[number] =
@@ -59,7 +62,7 @@ export async function proposeNppEuropeanBill(
     countryId,
     NATIONAL_TERMINAL_STATUSES as BillStatus[]
   );
-  const existing = await db.collection<Bill>("bills").findOne(
+  const existing = await billsCollection(db).findOne(
     {
       "provisions.type": provision.type,
       $or: [activeScope, { countryId, proposedTurn: { $gte: currentTurn - 48 } }],
@@ -102,7 +105,7 @@ export async function proposeNppEuropeanBill(
     updatedAt: now,
   };
   try {
-    await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
   } catch (error) {
     if ((error as { code?: number }).code === 11000) return false;
     throw error;

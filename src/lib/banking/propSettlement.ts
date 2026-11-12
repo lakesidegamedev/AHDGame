@@ -13,6 +13,7 @@ import { emitBankingAuditEvent } from "./auditEvents";
 import type { PropForexFeeReceipt, PropForexVolume } from "./rules/propForexFees";
 import { settlePendingPropForexFee } from "./propForexFees";
 import { logWarning } from "@/lib/utils/errorLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export async function settlePropBookChange(
   db: Db,
@@ -69,9 +70,10 @@ export async function settlePropBookChange(
   if (input.cashDelta === 0) {
     // An unpriced/zero-value book cleanup moves no money. Preserve its existing
     // semantics while refusing to overwrite any intervening charter change.
-    const result = await db
-      .collection("corporations")
-      .updateOne({ _id: input.bankId, ...guard }, transition.projections[0].update!);
+    const result = await corporationsCollection(db).updateOne(
+      { _id: input.bankId, ...guard },
+      transition.projections[0].update!
+    );
     return { ok: result.matchedCount === 1, replayed: false, key };
   }
   const entry: TxInput = {

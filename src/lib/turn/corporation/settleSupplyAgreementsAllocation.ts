@@ -43,7 +43,7 @@ export interface SettleableSupplyAgreement {
   previousBuyerConsumptionUnits?: number;
   /**
    * Turn this agreement last notified its supplier's owner about damages.
-   * Read by the damages-notice cooldown; see NOTICE_COOLDOWN_TURNS.
+   * Used by the damages-notice cooldown.
    */
   lastDamagesNoticeTurn?: number;
 }
@@ -127,16 +127,10 @@ export interface SupplyAgreementDelivery {
   previousDeliveredUnits?: number;
   previousBuyerConsumptionUnits?: number;
   /**
-   * Ticket #1147: why the supplier was charged, persisted so the corporation
-   * UI can say it in words instead of the player watching cash vanish. A
-   * shortfall with no explanation is what made this bug unreadable: the
-   * reporter saw "120k profit became 119k" and had no way to connect it to a
-   * contract they signed turns earlier.
-   *
+   * Persisted so the UI can explain a supply-agreement charge in words.
    * `achievableUnits` is the involuntary-constraint ceiling used to clamp the
-   * obligation; when it sits below `contractedUnits` the contract is asking
-   * for more than the plants can currently make, which is the single most
-   * useful thing a supplier can be told.
+   * obligation; when below `contractedUnits` the contract demands more than
+   * the plants can make.
    */
   shortfallUnits?: number;
   achievableUnits?: number;
@@ -150,14 +144,13 @@ export interface SupplyAgreementDelivery {
 }
 
 /**
- * Ticket #1147: shortfall damages assessed on one agreement in one turn.
+ * Shortfall damages assessed on one agreement in one turn.
  *
- * Damages are a large, recurring, and previously INVISIBLE cash drain: the
- * penalty leg settles silently while the corp's income statement still shows
- * a healthy per-turn profit, so a CEO whose plants under-produce against a
- * signed volume sees cash stay flat forever with no explanation anywhere in
- * the UI. Reported alongside deliveries so the turn phase can notify the
- * paying corp's owner.
+ * Damages are a large, recurring, otherwise INVISIBLE cash drain: the penalty
+ * leg settles silently while the income statement still shows a healthy
+ * per-turn profit, so a CEO whose plants under-produce against a signed volume
+ * sees cash stay flat with no explanation in the UI. Surfaced here so the turn
+ * phase can notify the paying corp's owner.
  */
 export interface SupplyAgreementDamages {
   agreementId?: string;

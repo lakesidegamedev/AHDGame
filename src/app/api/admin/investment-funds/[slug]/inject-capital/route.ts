@@ -18,6 +18,8 @@ import {
   getOpenOrdersEscrowAnchor,
   getQueuedRedemptionUnits,
 } from "@/lib/indexFunds/fundValuation";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 const injectCapitalSchema = z.object({
   amount: z.number().finite().positive("Amount must be positive"),
@@ -71,7 +73,7 @@ export const POST = withAdminRoute(
     });
 
     const now = new Date();
-    const updateResult = await db.collection("indexFunds").updateOne(
+    const updateResult = await indexFundsCollection<Document>(db).updateOne(
       { _id: fund._id },
       {
         $inc: { cashAnchor: amount },

@@ -12,9 +12,14 @@ import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { activeExtractionContractFilter } from "@/lib/db/collections/extractionContracts";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { isProspectingEnabled, isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
+import { extractionContractsCollection } from "@/lib/db/repositories/extractionContracts";
+import { governmentTendersCollection } from "@/lib/db/repositories/governmentTenders";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,8 +33,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const stateSupplyKey = `stateSupply.${stateId}` as const;
 
     // Read tender reservations before contracts so an award cannot disappear between reads.
-    const reservations = await db
-      .collection<import("@/lib/governmentContracts/types").GovernmentTender>("governmentTenders")
+    const reservations = await governmentTendersCollection<
+      import("@/lib/governmentContracts/types").GovernmentTender
+    >(db)
       .find(
         {
           "terms.type": "extraction",
@@ -41,25 +47,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       )
       .toArray();
     const [capacityDoc, contracts, commodityPrices, config] = await Promise.all([
-      db.collection<StateResourceCapacity>("stateResourceCapacity").findOne(scope),
-      db
-        .collection<ExtractionContract>("extractionContracts")
+      stateResourceCapacityCollection(db).findOne(scope),
+      extractionContractsCollection(db)
         .find({ ...scope, ...activeExtractionContractFilter() })
         .toArray(),
-      db
-        .collection<CommodityPrice>("commodityPrices")
+      commodityPricesCollection(db)
         .find(
           { commodity: { $in: [...EXTRACTABLE_RESOURCES] }, [stateSupplyKey]: { $exists: true } },
           { projection: { commodity: 1, turn: 1, [stateSupplyKey]: 1 } }
         )
         .sort({ turn: -1 })
         .toArray(),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne(
-          { _id: "default" },
-          { projection: { prospectingEnabled: 1, contractIssuanceEnabled: 1 } }
-        ),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { prospectingEnabled: 1, contractIssuanceEnabled: 1 } }
+      ),
     ]);
 
     const capacity = capacityDoc?.resources ?? {};
@@ -102,8 +104,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const corpIds = [...new Set(contracts.map((c) => c.corporationId as ObjectId))];
     const corporations =
       corpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: corpIds } }, { projection: { name: 1 } })
             .toArray()
         : [];

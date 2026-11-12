@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getPresetSeats } from "@/lib/constants/historicalSeats";
+import { seatsForCountry } from "@/lib/constants/presetSeatGroups";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/countries/ie/data/ieLocalCouncilSeats";
 import {
   modeledBrMacroregionGovernors,
@@ -37,17 +39,28 @@ describe("modeled BR and IE aggregate opening offices", () => {
         ieCouncil.every((seat) => seat.party.startsWith("ie_") && (seat.seatsHeld ?? 0) > 0)
       ).toBe(true);
 
-      const roster = getPresetSeats(preset);
+      // Brazil and Ireland are background countries in 2027 (#5702): their
+      // authored offices stay in the seat table but are never seated.
+      const roster = isBackgroundInPreset(preset, "BR") ? seatsForCountry(preset, "BR") : null;
       expect(
-        roster.filter((seat) => seat.officeType === "governor" && seat.party.startsWith("br_"))
+        (roster ?? getPresetSeats(preset)).filter(
+          (seat) => seat.officeType === "governor" && seat.party.startsWith("br_")
+        )
       ).toEqual(brGovernors);
       expect(
-        roster.filter(
+        (isBackgroundInPreset(preset, "IE")
+          ? seatsForCountry(preset, "IE")
+          : getPresetSeats(preset)
+        ).filter(
           (seat) =>
             (seat.officeType === "governor" || seat.officeType === "localCouncil") &&
             seat.party.startsWith("ie_")
         )
       ).toEqual(ieOffices);
+      if (isBackgroundInPreset(preset, "BR")) {
+        expect(getPresetSeats(preset).some((seat) => seat.party.startsWith("br_"))).toBe(false);
+        expect(getPresetSeats(preset).some((seat) => seat.party.startsWith("ie_"))).toBe(false);
+      }
       expect(modeledBrMacroregionGovernors(preset)).toEqual(brGovernors);
       expect(modeledIeRegionalOffices(preset)).toEqual(ieOffices);
     });

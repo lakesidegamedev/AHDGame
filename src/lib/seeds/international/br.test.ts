@@ -21,51 +21,19 @@
  *
  * The test harness mirrors the real game pipeline:
  *   getBrModel(era) → deriveCountryGroupPopulations / deriveCountryGroupLean
- *   → StateDemographics → calculateStateLean → getDisplayLean
+ *   → turnout-weighted region lean → getDisplayLean
  */
 
 import { describe, it, expect } from "vitest";
 import { getBrModel, brLayer1Model, brGroupIds } from "./br";
-import {
-  deriveCountryGroupPopulations,
-  deriveCountryGroupLean,
-  deriveCountryGroupTurnout,
-} from "./derive";
-import { brDemographicCategories } from "@/lib/seeds/br/brDemographicCategories";
-import { calculateStateLean, getDisplayLean } from "@/lib/utils/demographics";
-import type { StateDemographics } from "@/lib/db/types";
+import { modelRegionLean } from "./modelRegionLean";
+import { getDisplayLean } from "@/lib/utils/demographics";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 
 function getRegionDisplayLean(region: string, era: EraId): number {
-  const model = getBrModel(era);
-  const censusConfig = model.census[region];
-  if (!censusConfig) throw new Error(`No census for region ${region} in era ${era}`);
-
-  const pops = deriveCountryGroupPopulations(model, censusConfig);
-
-  const groups: StateDemographics["groups"] = {};
-  for (const gid of brGroupIds) {
-    const lean = deriveCountryGroupLean(model, gid, censusConfig);
-    const turnout = deriveCountryGroupTurnout(model, gid);
-    groups[gid] = {
-      population: pops[gid] ?? 0,
-      economicLean: lean.economicLean,
-      socialLean: lean.socialLean,
-      turnout,
-    };
-  }
-
-  const demographics: StateDemographics = {
-    _id: region,
-    countryId: "BR",
-    categoryWeights: { br_voterGroups: 100 },
-    groups,
-    lastUpdated: new Date(),
-  };
-
-  const { economicLean, socialLean } = calculateStateLean(demographics, brDemographicCategories);
+  const { economicLean, socialLean } = modelRegionLean(getBrModel(era), region);
   return getDisplayLean(economicLean, socialLean);
 }
 
@@ -253,48 +221,8 @@ describe("1979 era — structural checks only (dictatorship era)", () => {
   it("1979 SUL is less social-conservative than 2019 (Bolsonaro era not yet)", () => {
     // Social lean of SUL should be lower (less right-conservative) in 1979 than 2019
     // because the Bolsonaro evangelical+authoritarian coalition didn't exist yet.
-    const model1979 = getBrModel("1979");
-    const model2019 = getBrModel("2019");
-    const config1979 = model1979.census["SUL"];
-    const config2019 = model2019.census["SUL"];
-
-    const groups1979: StateDemographics["groups"] = {};
-    const groups2019: StateDemographics["groups"] = {};
-
-    for (const gid of brGroupIds) {
-      const lean1979 = deriveCountryGroupLean(model1979, gid, config1979);
-      groups1979[gid] = {
-        population: 10,
-        economicLean: lean1979.economicLean,
-        socialLean: lean1979.socialLean,
-        turnout: 75,
-      };
-      const lean2019 = deriveCountryGroupLean(model2019, gid, config2019);
-      groups2019[gid] = {
-        population: 10,
-        economicLean: lean2019.economicLean,
-        socialLean: lean2019.socialLean,
-        turnout: 75,
-      };
-    }
-
-    const dem1979: StateDemographics = {
-      _id: "SUL",
-      countryId: "BR",
-      categoryWeights: { br_voterGroups: 100 },
-      groups: groups1979,
-      lastUpdated: new Date(),
-    };
-    const dem2019: StateDemographics = {
-      _id: "SUL",
-      countryId: "BR",
-      categoryWeights: { br_voterGroups: 100 },
-      groups: groups2019,
-      lastUpdated: new Date(),
-    };
-
-    const { socialLean: s1979 } = calculateStateLean(dem1979, brDemographicCategories);
-    const { socialLean: s2019 } = calculateStateLean(dem2019, brDemographicCategories);
+    const s1979 = modelRegionLean(getBrModel("1979"), "SUL").socialLean;
+    const s2019 = modelRegionLean(getBrModel("2019"), "SUL").socialLean;
 
     // SUL should be less socially conservative (lower social lean) in 1979 vs 2019
     expect(s1979).toBeLessThanOrEqual(s2019);

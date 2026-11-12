@@ -5,6 +5,7 @@ import { getIndexFundsMode } from "@/lib/indexFunds/featureFlag";
 import { getAllFundDefinitions } from "@/lib/indexFunds/fundDefinitions";
 import { filterFundsForExchange } from "@/lib/indexFunds/fundExchangeFilter";
 import { listFunds } from "@/lib/indexFunds/fundQueries";
+import { migrationsRunCollection } from "@/lib/db/repositories/migrationsRun";
 
 // GET /api/admin/investment-funds/diagnostics — Why specific funds are hidden from players.
 // Auth: requireAdmin
@@ -13,9 +14,10 @@ export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
   const mode = await getIndexFundsMode();
 
-  const migrationMarker = await db
-    .collection<{ _id: string }>("migrationsRun")
-    .findOne({ _id: "2026-06-01-index-fund-seed" }, { projection: { _id: 1 } });
+  const migrationMarker = await migrationsRunCollection<{ _id: string }>(db).findOne(
+    { _id: "2026-06-01-index-fund-seed" },
+    { projection: { _id: 1 } }
+  );
 
   const expectedDefinitions = getAllFundDefinitions();
   const actualFunds = await listFunds(db);

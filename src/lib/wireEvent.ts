@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import { formatFundsCompact } from "@/lib/utils/formatters";
+import { wireEventsCollection } from "@/lib/db/repositories/wireEvents";
 
 export type WireEventType =
   | "sector_attack"
@@ -24,6 +25,8 @@ export type WireEventType =
   | "crisis_aid_pledged"
   | "crisis_aid_passed"
   | "crisis_aid_failed"
+  | "frontier_race_won"
+  | "country_brief"
   // Per-race campaign wire. Unlike the economy events above, these carry an
   // `electionId` (and usually a `campaignId`) so the ticker on a race page can
   // ask for just that race's traffic. Headlines come from
@@ -306,7 +309,7 @@ export async function logWireEvent(
 ): Promise<void> {
   try {
     const db = await getDb();
-    const col = db.collection<WireEvent>("wireEvents");
+    const col = wireEventsCollection<WireEvent>(db);
 
     // Ensure indexes once per process lifetime
     if (!ttlIndexEnsured) {

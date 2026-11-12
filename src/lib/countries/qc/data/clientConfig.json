@@ -1,0 +1,106 @@
+{
+  "config": {
+    "id": "QC",
+    "name": "Quebec",
+    "code": "QC",
+    "status": "coming-soon",
+    "flagEmoji": "⚜️",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Premier",
+    "executiveRealmPhrase": "Quebec",
+    "executiveLabel": "Office of the Premier",
+    "executivePath": "/country/qc/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where the Premier governs through a majority of the 125-seat National Assembly, elected across Quebec's eight regions.",
+    "heroImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Flag_of_Quebec.svg/500px-Flag_of_Quebec.svg.png",
+    "overviewPath": "/country/qc",
+    "mapPath": "/country/qc/map",
+    "currencyCode": "CAD",
+    "centralGovernmentLabel": "Quebec Treasury",
+    "exchangeName": "Montreal Exchange",
+    "financeMinisterCabinetId": "financeSecretary",
+    "regionalBillAssentTitle": "Prefect",
+    "majorPartyIds": ["AL"],
+    "partyCreationNPPs": {
+      "statesRequired": 2,
+      "lockHomeState": false,
+      "nppsPerState": 1
+    },
+    "legislature": {
+      "name": "National Assembly",
+      "path": "/country/qc/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "qcAssembly",
+        "name": "National Assembly",
+        "shortName": "Assembly",
+        "seats": 125,
+        "description": "125 members elected across Quebec's regions, seats shared by each region's vote."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "Premier",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Premiers"
+      },
+      {
+        "key": "qcAssembly",
+        "label": "Member of the National Assembly",
+        "chamberKey": "qcAssembly",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of the National Assembly"
+      },
+      {
+        "key": "governor",
+        "label": "Prefect",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Prefects"
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Regional Councillors"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Canada",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Bank of Canada"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "subNationalChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": {
+      "snapElectionsAllowed": true
+    },
+    "centralBank": {
+      "name": "Bank of Canada",
+      "abbreviation": "BoC",
+      "heroImage": "/api/images/hero/bank-of-canada",
+      "defaultPrimeRate": 2.25,
+      "sharedBankId": "CA"
+    },
+    "usdExchangeRate": 1
+  }
+}

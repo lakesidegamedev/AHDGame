@@ -88,10 +88,7 @@ export function WorldBlocMap({
     injectedRef.current = true;
     paint();
 
-    // Live region-ownership overlay (best-effort): inject one blob per owner so
-    // the map geometry reflects territory transfers (a Land moved to an East power
-    // turns red), and hide the base country an overlay now draws. No splits → the
-    // static map is untouched.
+    // Best-effort live region-ownership overlay: inject one blob per owner so geometry reflects territory transfers, and hide the base country an overlay draws. No splits means the static map is untouched.
     let cancelled = false;
     (async () => {
       try {

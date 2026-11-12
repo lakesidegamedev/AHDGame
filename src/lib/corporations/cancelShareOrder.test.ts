@@ -271,7 +271,7 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
   it("cancels an orphaned corp-placed buy order when the placer corp is missing", async () => {
     // Repro: placer corp was dissolved while leaving an open buy order. Pre-fix
     // this hard-failed with "Buyer corporation not found", blocking reverse
-    // splits indefinitely (ticket #0461). New behavior mirrors the orphan-
+    // splits indefinitely. New behavior mirrors the orphan-
     // character branch: cancel the order without refund (escrow can't be
     // returned, but the orphan can't keep blocking the target corp either).
     const orderId = new ObjectId();

@@ -1,4 +1,4 @@
-import type { AnyBulkWriteOperation, Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db, UpdateFilter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { GameState, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import {
@@ -12,19 +12,18 @@ import {
   updateEarnedRegions,
 } from "@/lib/parties/partyTier";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
- * Party-tier turn phase (D5, 2026-06-18). Recomputes each party's Major/Minor
- * tier, earned-region set, demotion-warning countdown, and PS cap from its
- * current per-region Org, then clamps stored PS down to the resolved cap.
+ * Recomputes each party's Major/Minor tier, earned-region set, demotion-warning
+ * countdown, and PS cap from per-region Org, then clamps stored PS to the cap.
  *
- * Ordering: must run AFTER `partyOrgTurn` (Org settled) and BEFORE
- * `partyActionGeneration` (which generates PS up to the tier-derived cap). Pure
- * per-party computation lives in `@/lib/parties/partyTier`; this phase only does
- * the DB read → compute → bulk-write.
- *
- * Clamp behavior is intentionally destructive on a cap DECREASE (region lost or
- * demotion) per the locked design — a party over its new cap is reduced to it.
+ * Must run AFTER `partyOrgTurn` (Org settled) and BEFORE
+ * `partyActionGeneration` (which generates PS up to the tier-derived cap).
+ * On a cap DECREASE the clamp is intentionally destructive per locked design.
  */
 export interface PartyTierTurnResult {
   partiesScanned: number;
@@ -60,11 +59,12 @@ export async function processPartyTierTurn(
   };
 
   const [parties, orgRows, gameState] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
-    db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } }),
+    politicalPartiesCollection(db).find({}).toArray(),
+    statePartyOrgCollection(db).find({}).toArray(),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, startingYear: 1 } }
+    ),
   ]);
   // Preset drives the per-era seed tier for parties whose `tier` is still unset
   // (e.g. right after a deploy, before the heal runs) — so a regional default
@@ -84,12 +84,7 @@ export async function processPartyTierTurn(
     m.set(r.stateId, r.organization ?? 0);
   }
 
-  const ops: Array<{
-    updateOne: {
-      filter: { _id: PoliticalParty["_id"] };
-      update: { $set?: Record<string, unknown>; $unset?: Record<string, unknown> };
-    };
-  }> = [];
+  const ops: AnyBulkWriteOperation<PoliticalParty>[] = [];
 
   for (const party of parties) {
     result.partiesScanned++;
@@ -117,8 +112,9 @@ export async function processPartyTierTurn(
       currentTurn,
       // Three of the UK's twelve regions makes the threshold usable for
       // parties with a strong nation-wide base without changing other countries.
-      graduationRegionFraction:
-        party.countryId === "UK" ? UK_TIER_GRADUATION_REGION_FRACTION : undefined,
+      graduationRegionFraction: countryHasFeature("ukTurn", party.countryId)
+        ? UK_TIER_GRADUATION_REGION_FRACTION
+        : undefined,
       // One-party-state ruling parties are pinned Major (never demoted).
       exemptFromDemotion: party.regimeStatus === "ruling",
     });
@@ -165,7 +161,9 @@ export async function processPartyTierTurn(
       $set: set,
     };
     if (Object.keys(unset).length > 0) update.$unset = unset;
-    ops.push({ updateOne: { filter: { _id: party._id }, update } });
+    ops.push({
+      updateOne: { filter: { _id: party._id }, update: update as UpdateFilter<PoliticalParty> },
+    });
     result.partiesUpdated++;
     if (transition.reason === "graduated") result.promoted++;
     if (transition.reason === "demoted") result.demoted++;
@@ -174,9 +172,7 @@ export async function processPartyTierTurn(
   }
 
   if (ops.length > 0) {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .bulkWrite(ops as unknown as AnyBulkWriteOperation<PoliticalParty>[]);
+    await politicalPartiesCollection(db).bulkWrite(ops);
   }
   return result;
 }

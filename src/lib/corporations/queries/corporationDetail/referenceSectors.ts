@@ -6,6 +6,8 @@ import {
   tariffRulesNeedSectorPresenceKeys,
 } from "@/lib/tariffs/tariffEffects";
 import { buildFtaCoverageLookup, type FtaCoverage } from "@/lib/tariffs/ftaOverrides";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 type SectorMirrorRow = Pick<
   CorporateSector,
@@ -17,10 +19,8 @@ interface SectorMirror {
   corpByIdForTariffs: Map<string, Pick<Corporation, "_id" | "countryId">>;
 }
 
-// Every corporation page used to read every sector and the home country of
-// every owning corporation, about 14k rows, to build tariff and FTA exposure.
-// Those fields only move with the turn, so share one load per turn across
-// requests. The TTL bounds staleness for sectors founded between turns.
+// These fields only change with the turn, so share one load per turn
+// across requests. The TTL bounds staleness for sectors founded between turns.
 const MIRROR_TTL_MS = 5 * 60_000;
 const mirrorCache = new WeakMap<
   Db,
@@ -42,16 +42,14 @@ function getSectorMirror(db: Db, currentTurn: number): Promise<SectorMirror> {
 }
 
 async function loadSectorMirror(db: Db): Promise<SectorMirror> {
-  const rows = await db
-    .collection<CorporateSector>("corporateSectors")
+  const rows = await corporateSectorsCollection(db)
     .find({}, { projection: { corporationId: 1, countryId: 1, sectorType: 1, revenue: 1 } })
     .toArray();
   const allSectorsRaw = rows as SectorMirrorRow[] as CorporateSector[];
   const sectorLookupCorpIds = [...new Set(allSectorsRaw.map((s) => s.corporationId.toString()))];
   const sectorLookupCorps =
     sectorLookupCorpIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { _id: { $in: sectorLookupCorpIds.map((cid) => new ObjectId(cid)) } },
             { projection: { _id: 1, countryId: 1 } }
@@ -72,14 +70,13 @@ export interface ReferenceSectorsResult {
 }
 
 /**
- * Reference-data + sector loads for the corporation detail view (#587).
+ * Reference-data + sector loads for the corporation detail view.
  *
  * Awaits the already-initiated turn-reference promise alongside this corp's
- * own sectors and the all-sector tariff mirror, then builds the tariff
- * sector-presence inputs from the same raw rows the view always used.
- * `refDataPromise` is created by the caller before the share-invariant reads
- * so those round trips overlap, exactly as before. The all-sector mirror is
- * shared per turn (see getSectorMirror).
+ * sectors and the all-sector tariff mirror, then builds tariff
+ * sector-presence inputs. `refDataPromise` is started by the caller before the
+ * share-invariant reads so those round trips overlap. The mirror is shared
+ * per turn (see getSectorMirror).
  */
 export async function loadReferenceSectors(
   db: Db,
@@ -89,10 +86,7 @@ export async function loadReferenceSectors(
 ): Promise<ReferenceSectorsResult> {
   const [refData, sectors, { allSectorsRaw, corpByIdForTariffs }] = await Promise.all([
     refDataPromise,
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corporation._id })
-      .toArray(),
+    corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
     getSectorMirror(db, currentTurn),
   ]);
   const { allTariffs, activeFtaPairs } = refData;

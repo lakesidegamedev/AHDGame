@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { ToastProvider } from "@/contexts/ToastContext";
 import WhiteHouseClient, { deskDeadlineLabel } from "./WhiteHouseClient";
@@ -47,11 +47,6 @@ const ngChrome = {
   upperChamberShort: "Senate",
 };
 
-const conflictsSpy = vi.fn().mockReturnValue(true);
-vi.mock("@/contexts/AuthDataContext", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  useConflictsEnabled: () => conflictsSpy(),
-}));
 // The shell's gating is what is under test here, not the panels inside the tab.
 vi.mock("@/app/country/[code]/executive/components/ForeignAffairsTab", () => ({
   ForeignAffairsTab: ({ canAct }: { canAct: boolean }) => (
@@ -173,7 +168,6 @@ describe("WhiteHouseClient admin tab", () => {
 });
 
 describe("WhiteHouseClient foreign affairs tab", () => {
-  beforeEach(() => conflictsSpy.mockReturnValue(true));
   afterEach(() => vi.restoreAllMocks());
 
   /** Mount the White House with the given viewer flags. */
@@ -205,13 +199,6 @@ describe("WhiteHouseClient foreign affairs tab", () => {
 
   it("is hidden from a visitor", async () => {
     renderWith({ isPresident: false, isAdmin: false });
-    await waitFor(() => expect(screen.getByText("Jed Bartlet")).toBeTruthy());
-    expect(screen.queryByRole("button", { name: "Foreign affairs" })).toBeNull();
-  });
-
-  it("is hidden when the conflicts subsystem is off", async () => {
-    conflictsSpy.mockReturnValue(false);
-    renderWith({ isPresident: true, isAdmin: false });
     await waitFor(() => expect(screen.getByText("Jed Bartlet")).toBeTruthy());
     expect(screen.queryByRole("button", { name: "Foreign affairs" })).toBeNull();
   });

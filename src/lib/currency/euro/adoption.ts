@@ -14,13 +14,15 @@ import {
   type EuroAdoptionConditions,
 } from "./rules";
 import { reconcileEuroMonetaryUnion } from "./service";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export async function loadEuroAdoptionConditions(
   db: Db,
   countryId: CountryId
 ): Promise<EuroAdoptionConditions> {
   const [state, members] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -34,8 +36,7 @@ export async function loadEuroAdoptionConditions(
         },
       }
     ),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({ organizationId: "EU" }, { projection: { countryId: 1 } })
       .toArray(),
   ]);
@@ -59,7 +60,7 @@ export async function recordEuroAdoption(
   if (!conditions.consentedCountries.includes(countryId)) {
     const refusal = euroAuthorizationRefusal(conditions);
     if (refusal) throw new Error(refusal);
-    await db.collection<GameState>("gameState").updateOne(
+    await gameStateCollection(db).updateOne(
       { _id: "current", euroAdoptedCountries: { $ne: countryId } },
       {
         $addToSet: { euroAdoptedCountries: countryId },

@@ -6,6 +6,8 @@ import type { PortfolioHistory } from "@/lib/db/types/portfolioHistory";
 import { categoryOf, type InboxCategory } from "@/lib/inbox/categories";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 import { loadViewerCharacter, loadViewerUser } from "./viewerContext";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 export interface HoldingMove {
   kind: "stocks" | "bonds" | "funds";
@@ -68,8 +70,7 @@ export async function loadSinceAway(
 
   const [snapshots, unreadRows] = await Promise.all([
     character
-      ? db
-          .collection<PortfolioHistory>("portfolioHistory")
+      ? portfolioHistoryCollection(db)
           .find({ characterId: character._id })
           .sort({ turn: -1 })
           .limit(2)
@@ -86,8 +87,7 @@ export async function loadSinceAway(
           })
           .toArray()
       : Promise.resolve([] as Snapshot[]),
-    db
-      .collection<Notification>("notifications")
+    notificationsCollection(db)
       .aggregate<{ _id: Notification["type"]; count: number }>([
         {
           $match: {

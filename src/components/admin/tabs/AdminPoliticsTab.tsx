@@ -7,7 +7,6 @@ import { ElectionRestartPanel } from "@/components/admin/elections/ElectionResta
 import { ElectionLog } from "@/components/ElectionLog";
 import { PartyOrgManager } from "@/components/PartyOrgManager";
 import { SubTabBar } from "./SubTabBar";
-import { SubNavLayout } from "./SubNavLayout";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 
 const PartyElectionsPanel = dynamic(
@@ -39,19 +38,18 @@ export type PoliticsSubTab = "elections" | "parties" | "legislation" | "law-type
 
 interface AdminPoliticsTabProps {
   activeSub: PoliticsSubTab;
-  onSubChange: (sub: PoliticsSubTab) => void;
 }
 
-export function AdminPoliticsTab({ activeSub, onSubChange }: AdminPoliticsTabProps) {
+export function AdminPoliticsTab({ activeSub }: AdminPoliticsTabProps) {
   return (
-    <SubNavLayout tab="politics" active={activeSub} onChange={onSubChange}>
+    <>
       <div className="space-y-6">
         {activeSub === "elections" && <ElectionsSubContent />}
         {activeSub === "parties" && <PartiesSubContent />}
         {activeSub === "legislation" && <LegislationTab />}
         {activeSub === "law-types" && <LawTypesTab />}
       </div>
-    </SubNavLayout>
+    </>
   );
 }
 

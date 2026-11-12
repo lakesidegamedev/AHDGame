@@ -8,10 +8,16 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { loadReviewedLawCatalog } from "@/lib/resetLegislation/loadReviewedCatalog";
-import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
+import {
+  resetTaxBaseTypeIds,
+  resetTaxesFor,
+  resetTaxesForWorld,
+} from "@/lib/resetLegislation/taxCatalog";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { primaryMetrics } from "@/lib/resetMetrics/catalog";
 import { playerMetricDescription } from "@/lib/resetMetrics/presentation";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const querySchema = z
   .object({
@@ -38,7 +44,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
       return errorResponse(400, parsed.error.issues[0]?.message);
     }
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -46,7 +52,6 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
           metricsSystemVersion: 1,
           legislationSystemVersion: 1,
           resetVersionSeeds: 1,
@@ -70,6 +75,14 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
       ...(parsed.data.regionId ? { regionId: parsed.data.regionId } : {}),
     });
     const usedMetricIds = new Set(families.flatMap((family) => family.primaryMetricIds));
+    const catalogTaxes = resetTaxesFor(country as ResetCountry, scope);
+    const presentTaxTypes = await legislationTypesCollection(db)
+      .find({ _id: { $in: resetTaxBaseTypeIds(catalogTaxes) } }, { projection: { _id: 1 } })
+      .toArray();
+    const taxes = resetTaxesForWorld(
+      catalogTaxes,
+      new Set(presentTaxTypes.map((type) => String(type._id)))
+    );
     return NextResponse.json({
       country,
       scope,
@@ -85,7 +98,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
           name: metric.name,
           description: playerMetricDescription(metric),
         })),
-      taxes: resetTaxesFor(country as ResetCountry, scope),
+      taxes,
     });
   } catch (error) {
     return handleRouteError(error);

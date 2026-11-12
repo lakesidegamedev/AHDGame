@@ -469,4 +469,100 @@ export const RETAIL_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Automated Store Operations",
+      description: "Shelf robots and agent scheduling run stores with small teams.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.05 },
+        { kind: "inputCost", commodity: "energy", pct: 0.055 },
+      ],
+    },
+    {
+      name: "Default Agent Placement",
+      description: "Being the preferred store of shopping agents wins orders before people search.",
+      effects: [
+        { kind: "plantOutput", pct: 0.018 },
+        { kind: "marketingStrength", flat: 18 },
+      ],
+    },
+    {
+      name: "Fair Pricing Audits",
+      description: "Published pricing audits keep competition regulators away.",
+      effects: [{ kind: "dominanceShield", pct: 0.12 }],
+    },
+    {
+      name: "Autonomous Last Mile",
+      description: "Robot vans and sidewalk couriers deliver at a fraction of today's cost.",
+      effects: [
+        { kind: "inputCost", commodity: "freight", pct: 0.15 },
+        { kind: "logisticsStrength", flat: 36 },
+      ],
+    },
+    {
+      name: "Experience Flagships",
+      description: "Destination stores built around events sell at full price.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 34 },
+      ],
+    },
+    {
+      name: "Essential Supply Charter",
+      description:
+        "Agreements to keep essentials stocked in emergencies protect the firm in any crisis.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.15 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Lights-Out Stores",
+      description: "Robots stock, clean and secure stores with no staff on site.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.055 },
+        { kind: "inputCost", commodity: "energy", pct: 0.06 },
+      ],
+    },
+    {
+      name: "Household Agent Contracts",
+      description: "Standing deals with household agents win orders no one ever searches for.",
+      effects: [
+        { kind: "plantOutput", pct: 0.019 },
+        { kind: "marketingStrength", flat: 19 },
+      ],
+    },
+    {
+      name: "Open Pricing Ledgers",
+      description: "Every price change is public, so regulators find nothing to chase.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Drone Swarm Last Mile",
+      description: "Swarms and tube networks deliver at a sliver of today's cost.",
+      effects: [
+        { kind: "inputCost", commodity: "freight", pct: 0.15 },
+        { kind: "logisticsStrength", flat: 38 },
+      ],
+    },
+    {
+      name: "Holographic Flagships",
+      description: "Flagships that mix live and holographic events sell at full price.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 36 },
+      ],
+    },
+    {
+      name: "Planetary Essentials Charter",
+      description:
+        "Pledges to keep essentials flowing in any disaster protect the firm in every crisis.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.16 },
+      ],
+    },
+  ],
 };

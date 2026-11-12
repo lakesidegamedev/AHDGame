@@ -11,6 +11,9 @@ import { runDriftChecks } from "./drift";
 import type { RunSeedDiagnosticOptions, SeedDiagnosticCheck, SeedDiagnosticReport } from "./types";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
+import type { Document } from "mongodb";
 
 export type {
   RunSeedDiagnosticOptions,
@@ -26,7 +29,6 @@ export { calendarTurnFromGameState } from "./types";
 export { captureSeedBaseline, loadSeedBaseline } from "./baseline";
 export type { SeedDiagnosticBaseline } from "./baseline";
 
-const REPORT_COLLECTION = "seedDiagnostics";
 const MAX_REPORTS = 50;
 
 function summarize(checks: SeedDiagnosticCheck[]): SeedDiagnosticReport["summary"] {
@@ -46,9 +48,8 @@ function summarize(checks: SeedDiagnosticCheck[]): SeedDiagnosticReport["summary
  * {@link MAX_REPORTS}.
  */
 async function persistReport(db: Db, report: SeedDiagnosticReport): Promise<void> {
-  await db.collection(REPORT_COLLECTION).insertOne(report as never);
-  const keep = await db
-    .collection(REPORT_COLLECTION)
+  await seedDiagnosticsCollection<Document>(db).insertOne(report as never);
+  const keep = await seedDiagnosticsCollection<Document>(db)
     .find({})
     .sort({ ranAt: -1 })
     .project({ _id: 1 })
@@ -56,7 +57,7 @@ async function persistReport(db: Db, report: SeedDiagnosticReport): Promise<void
     .toArray();
   const keepIds = keep.map((d) => d._id);
   if (keepIds.length >= MAX_REPORTS) {
-    await db.collection(REPORT_COLLECTION).deleteMany({ _id: { $nin: keepIds } });
+    await seedDiagnosticsCollection<Document>(db).deleteMany({ _id: { $nin: keepIds } });
   }
 }
 
@@ -69,13 +70,11 @@ export async function runSeedDiagnostic(
 ): Promise<SeedDiagnosticReport> {
   const now = opts.now ?? new Date();
   const trigger = opts.trigger ?? "manual";
-  const gs = await db
-    .collection<{
-      preset?: string;
-      currentTurn?: number;
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    preset?: string;
+    currentTurn?: number;
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
   const preset =
     opts.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;
   const turn = typeof gs?.currentTurn === "number" ? gs.currentTurn : 1;
@@ -142,8 +141,8 @@ export function formatDiagnosticSummary(report: SeedDiagnosticReport): string {
 }
 
 /**
- * Build a critical diagnostic_error report when the diagnostic itself throws.
- * Never used to abort a reset — callers wrap runSeedDiagnostic in try/catch.
+ * Build a diagnostic_error report when the diagnostic itself throws.
+ * Callers wrap runSeedDiagnostic in try/catch; never used to abort a reset.
  */
 export function diagnosticErrorReport(
   message: string,

@@ -12,9 +12,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 
 export const MARKET_RECOVERY_STAGE = {
   /**
-   * Temporary relief: the #3551 payroll rise for four service industries sits
-   * halfway back (technology and healthcare 0.40 -> 0.35, financial 0.40 ->
-   * 0.325, real estate 0.32 -> 0.21) until the phase 1 cost recalibration.
+   * Temporary relief: several service industries sit halfway back toward full labour cost until the phase 1 cost recalibration.
    */
   SERVICE_LABOUR_RELIEF: 1,
   /**
@@ -90,12 +88,8 @@ export function marketRecoveryStageActive(
   return normalizeMarketRecoveryStage(stage) >= atLeast;
 }
 
-/**
- * Stage 1 (temporary service payroll relief) was superseded by the phase 1
- * recalibration of SECTOR_LABOR_INTENSITY on 2026-10-18, which sets those four
- * shares at or below the relieved values directly. The stage number stays so
- * live worlds keep their stage, and it no longer scales anything.
- */
+// Stage 1 no longer scales anything; the number stays so live worlds
+// keep their stage.
 const SERVICE_LABOUR_RELIEF_FACTOR: Partial<Record<OperatingSectorType, number>> = {};
 
 /** A sector's labour share after the stages active in this world. */

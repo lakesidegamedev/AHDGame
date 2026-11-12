@@ -6,9 +6,11 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import { ownedLegacyValues } from "./rules/ownedInputs";
 import { primaryMetrics } from "./catalog";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 export async function loadOwnedMetricInputs(db: Db, turn?: number) {
-  const game = await db.collection<GameState>("gameState").findOne(
+  const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -22,8 +24,7 @@ export async function loadOwnedMetricInputs(db: Db, turn?: number) {
     }
   );
   const rows = game?.resetWorldId
-    ? await db
-        .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+    ? await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
         .find(
           {
             worldId: game.resetWorldId,

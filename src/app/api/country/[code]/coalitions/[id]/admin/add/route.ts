@@ -9,6 +9,8 @@ import type { PoliticalParty } from "@/lib/db/types/party";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const addPartySchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -38,16 +40,18 @@ export async function POST(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: parseInt(id, 10), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: parseInt(id, 10),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
 
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: partySequentialId, countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: partySequentialId,
+      countryId,
+    });
     if (!party) {
       throw notFound("Party not found.");
     }
@@ -80,15 +84,14 @@ export async function POST(
     };
 
     await Promise.all([
-      db
-        .collection<Coalition>("coalitions")
-        .updateOne(
-          { _id: coalition._id },
-          { $push: { members: newMember }, $set: { updatedAt: now } }
-        ),
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { coalitionId: coalition._id, updatedAt: now } }),
+      coalitionsCollection(db).updateOne(
+        { _id: coalition._id },
+        { $push: { members: newMember }, $set: { updatedAt: now } }
+      ),
+      politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { coalitionId: coalition._id, updatedAt: now } }
+      ),
     ]);
 
     return NextResponse.json({ success: true });

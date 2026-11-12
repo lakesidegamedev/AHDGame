@@ -5,7 +5,6 @@ import { getNationalDoctrine } from "@/lib/db/collections/nationalDoctrine";
 import { getCharacterCommission } from "@/lib/db/collections/characterGenerals";
 import { getMilitaryCommands } from "@/lib/db/collections/militaryCommands";
 import { resolveGeneralEra } from "@/lib/military/currentGeneralEra";
-import { CUR_ERA_YEAR } from "@/lib/military/generalsTree";
 import { getDb } from "@/lib/mongodb";
 import { resolveGameYear } from "@/lib/era/era";
 import type { Filter } from "mongodb";
@@ -21,7 +20,6 @@ import type {
   PoliticalParty,
   StatePartyOrg,
 } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { isPatreonActive } from "@/lib/db/types";
 import {
   fetchPartyHistory,
@@ -35,6 +33,17 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getNationalNpiOrdinalRank } from "@/lib/character/nationalNpiOrdinalRank";
 import { resolveMemberSince } from "@/lib/character/memberSince";
 import { loadCharacterByUrlId } from "./characterLoaders";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 interface CandidateElection {
   election: Election;
@@ -141,7 +150,7 @@ export async function getCharacterById(characterId: string) {
       // Check if it's an NPP (only for ObjectId lookups)
       if (parsed.type === "objectId" && ObjectId.isValid(parsed.value)) {
         const db = await getDb();
-        const npp = await db.collection<NPP>("npps").findOne({ _id: new ObjectId(parsed.value) });
+        const npp = await nppsCollection(db).findOne({ _id: new ObjectId(parsed.value) });
         if (npp?.sequentialId) redirect(`/politicians/npp/${npp.sequentialId}`);
         if (npp) redirect(`/politicians/npp/${parsed.value}`);
       }
@@ -149,7 +158,7 @@ export async function getCharacterById(characterId: string) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: character.userId });
+    const user = await usersCollection(db).findOne({ _id: character.userId });
 
     const charCountryId: CountryId = character.countryId ?? "US";
 
@@ -159,16 +168,16 @@ export async function getCharacterById(characterId: string) {
     const partySeqId = parseInt(character.party, 10);
     const partyQuery =
       character.party && character.party !== "independent" && !isNaN(partySeqId)
-        ? db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: partySeqId, countryId: charCountryId })
+        ? politicalPartiesCollection(db).findOne({
+            sequentialId: partySeqId,
+            countryId: charCountryId,
+          })
         : Promise.resolve(null);
 
     const hasParty = character.party && character.party !== "independent";
     const statePartyKey = hasParty ? `${character.homeState}_${character.party}` : null;
 
-    const activeOrUpcomingCandidaciesPromise = db
-      .collection<ElectionCandidate>("electionCandidates")
+    const activeOrUpcomingCandidaciesPromise = electionCandidatesCollection(db)
       .find({
         characterId: character._id,
         status: "active",
@@ -196,19 +205,15 @@ export async function getCharacterById(characterId: string) {
       gameState,
       partyHistoryEvents,
     ] = await Promise.all([
-      db
-        .collection<State>("states")
-        .findOne({ _id: character.homeState, countryId: character.countryId }),
-      db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
-      db
-        .collection<Character>("characters")
+      statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
+      gameConfigCollection(db).findOne({ _id: "default" }),
+      charactersCollection(db)
         .find({ isBanned: { $ne: true }, ...npiCountryMatch })
         .sort({ nationalInfluence: -1 })
         .limit(1)
         .project({ nationalInfluence: 1 })
         .toArray(),
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ isBanned: { $ne: true } })
         .sort({ donorBaseLevel: -1 })
         .limit(1)
@@ -217,13 +222,12 @@ export async function getCharacterById(characterId: string) {
       partyQuery,
       activeOrUpcomingCandidaciesPromise,
       careerPartyIdsNumeric.length > 0
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find({ sequentialId: { $in: careerPartyIdsNumeric } })
             .project({ sequentialId: 1, name: 1, countryId: 1 })
             .toArray()
         : Promise.resolve([]),
-      db.collection<Corporation>("corporations").findOne(
+      corporationsCollection(db).findOne(
         {
           ceoId: character._id,
           ceoVacant: { $ne: true },
@@ -240,9 +244,9 @@ export async function getCharacterById(characterId: string) {
         }
       ),
       statePartyKey
-        ? db.collection<StatePartyOrg>("statePartyOrg").findOne({ _id: statePartyKey })
+        ? statePartyOrgCollection(db).findOne({ _id: statePartyKey })
         : Promise.resolve(null),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
       fetchPartyHistory(db, character._id),
     ]);
 
@@ -251,8 +255,7 @@ export async function getCharacterById(characterId: string) {
 
     const electionIds = activeOrUpcomingCandidacies.map((c) => c.electionId);
     const elections = electionIds.length
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find({
             _id: { $in: electionIds },
             status: { $in: ["active", "upcoming"] },
@@ -332,47 +335,33 @@ export async function getCharacterById(characterId: string) {
       ceoCorporation,
       statePartyOrg,
       nationalNpiOrdinalRank,
-      conflictsEnabled: !!gameState?.conflictsEnabled,
       // Conflict-path reads batched into one round; the posting load stays
       // gated on the commission (only a commissioned general has an order of
       // battle).
-      ...(gameState?.conflictsEnabled
-        ? await (async () => {
-            const [doctrine, commission, generalEra, commands] = await Promise.all([
-              getNationalDoctrine(db, character.countryId),
-              getCharacterCommission(db, character._id.toString()),
-              resolveGeneralEra(db),
-              getMilitaryCommands(db, character.countryId),
-            ]);
-            return {
-              doctrineAdopted: doctrine.adopted,
-              general: commission.general,
-              militaryService: {
-                commissioned: commission.commissioned,
-                commissionedTurn: commission.commissionedTurn,
-                dismissedTurn: commission.dismissedTurn,
-              },
-              generalPosting: commission.commissioned
-                ? await loadGeneralPosting(db, character._id.toString(), character.countryId)
-                : EMPTY_POSTING,
-              generalEra,
-              isCommandingGeneral: commands.some(
-                (c) => c.commandingGeneralId === character._id.toString()
-              ),
-            };
-          })()
-        : {
-            doctrineAdopted: {},
-            general: null,
-            militaryService: {
-              commissioned: false,
-              commissionedTurn: undefined,
-              dismissedTurn: undefined,
-            },
-            generalPosting: EMPTY_POSTING,
-            generalEra: CUR_ERA_YEAR,
-            isCommandingGeneral: false,
-          }),
+      ...(await (async () => {
+        const [doctrine, commission, generalEra, commands] = await Promise.all([
+          getNationalDoctrine(db, character.countryId),
+          getCharacterCommission(db, character._id.toString()),
+          resolveGeneralEra(db),
+          getMilitaryCommands(db, character.countryId),
+        ]);
+        return {
+          doctrineAdopted: doctrine.adopted,
+          general: commission.general,
+          militaryService: {
+            commissioned: commission.commissioned,
+            commissionedTurn: commission.commissionedTurn,
+            dismissedTurn: commission.dismissedTurn,
+          },
+          generalPosting: commission.commissioned
+            ? await loadGeneralPosting(db, character._id.toString(), character.countryId)
+            : EMPTY_POSTING,
+          generalEra,
+          isCommandingGeneral: commands.some(
+            (c) => c.commandingGeneralId === character._id.toString()
+          ),
+        };
+      })()),
       gameDateAnchor: gameState ? gameDateAnchorFromState(gameState) : undefined,
       gameYear: gameState ? resolveGameYear(gameState) : null,
       enabledCabinetSeats: gameState?.manuallyEnabledSeats,

@@ -6,15 +6,12 @@ import { X } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/types/crisis";
 // The one severity calculation, shared with the crises list and detail pages.
-// This card used to carry a private copy that summed only per-turn `tick`
-// magnitudes — precisely the calculation `severity.ts` was written to replace,
-// because it ignores one-off GDP and margin shocks entirely. The two surfaces
-// disagreed about 16 of the 32 crises running on the live world: both active
-// recessions read HIGH here and MEDIUM on /world/crises, and every Civil
-// Defense Fever read LOW here and MEDIUM there.
+// A private copy would drift and disagree across surfaces.
 import { crisisSeverity } from "@/lib/crises/severity";
 import { formatCrisisEffectValue } from "@/lib/crises/effectLabels";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
+import type { CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import { EventItem, type EventTone } from "./EventsPanel";
 
 interface ActiveCrisisData {
@@ -29,6 +26,8 @@ interface ActiveCrisisData {
    * detail page receives it. Null for crises that carry no such requirements.
    */
   optionAvailability?: Record<string, { eligible: boolean; reasons: string[] }> | null;
+  /** Stage, severity, forecast and the viewer's levers for Crisis v2 crises. */
+  v2?: CrisisV2Summary | null;
 }
 
 function formatTimeRemaining(minutes: number): string {
@@ -204,6 +203,7 @@ export default function CrisisActionCard() {
           timeRemainingMinutes,
           hasContributed,
           optionAvailability,
+          v2,
         } = data;
         const severity = crisisSeverity(crisis);
         const styles = SEVERITY_STYLES[severity];
@@ -283,6 +283,10 @@ export default function CrisisActionCard() {
                   </Link>
                 )}
               </div>
+            )}
+
+            {v2 && (
+              <CrisisV2Strip crisisId={crisis._id.toString()} v2={v2} onPulled={fetchCrises} />
             )}
 
             {/* Interaction Section — only when this character can act */}

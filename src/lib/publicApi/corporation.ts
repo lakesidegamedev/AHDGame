@@ -1,8 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
-import type { Corporation, Character } from "@/lib/db/types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
-import type { Bond } from "@/lib/db/types/bond";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import {
@@ -10,19 +8,23 @@ import {
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
 import { corpFinancials } from "./corpFinancials";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
 export async function queryCorporation(db: Db, params: { name?: string; id?: string }) {
   const { name, id } = params;
 
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      id
-        ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
-        : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    id
+      ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
+      : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
+  );
   if (!corp) return null;
 
   // Top 20 holders come from the embedded shareholders array (there is no
@@ -39,21 +41,17 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
 
   const [ceo, bonds, sectors, holderChars, holderCorps] = await Promise.all([
     corp.ceoId && !corp.ceoVacant
-      ? db
-          .collection<Character>("characters")
-          .findOne({ _id: corp.ceoId }, { projection: { name: 1 } })
+      ? charactersCollection(db).findOne({ _id: corp.ceoId }, { projection: { name: 1 } })
       : Promise.resolve(null),
-    db.collection<Bond>("bonds").find({ corporationId: corp._id }).toArray(),
-    db.collection<CorporateSector>("corporateSectors").find({ corporationId: corp._id }).toArray(),
+    bondsCollection(db).find({ corporationId: corp._id }).toArray(),
+    corporateSectorsCollection(db).find({ corporationId: corp._id }).toArray(),
     holderCharacterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: holderCharacterIds } }, { projection: { name: 1 } })
           .toArray()
       : Promise.resolve([]),
     holderCorporationIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: holderCorporationIds } }, { projection: { name: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -63,8 +61,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
   const sectorStateIds = [...new Set(sectors.map((s) => s.stateId).filter(Boolean))];
   const states =
     sectorStateIds.length > 0
-      ? await db
-          .collection<{ _id: string; name?: string }>("states")
+      ? await statesCollection<{ _id: string; name?: string }>(db)
           .find({ _id: { $in: sectorStateIds } }, { projection: { name: 1 } })
           .toArray()
       : [];
@@ -176,8 +173,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
 }
 
 export async function queryCorporationList(db: Db) {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({})
     .project<{
       _id: unknown;
@@ -217,20 +213,17 @@ export async function queryShareHistory(
   const page = Math.max(params.page ?? 1, 1);
   const pageSize = Math.min(Math.max(params.pageSize ?? 50, 1), 200);
 
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      id
-        ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
-        : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    id
+      ? ({ sequentialId: parseInt(id, 10) } as Record<string, unknown>)
+      : { name: { $regex: escapeRegex(name ?? ""), $options: "i" } }
+  );
   if (!corp) return null;
 
   const filter = { corporationId: corp._id };
   const [total, entries] = await Promise.all([
-    db.collection<ShareTradeHistory>("shareTradeHistory").countDocuments(filter),
-    db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    shareTradeHistoryCollection(db).countDocuments(filter),
+    shareTradeHistoryCollection(db)
       .find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .skip((page - 1) * pageSize)

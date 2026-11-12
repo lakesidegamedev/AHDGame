@@ -28,6 +28,20 @@ describe("getRegionalExecutive", () => {
     expect(mockDb.collection).not.toHaveBeenCalled();
   });
 
+  it("returns Premier for a Canadian province and Prefect for an independent Quebec", async () => {
+    mockFindOne.mockResolvedValueOnce({ party: "fup", officeType: "governor" });
+    const ca = await getRegionalExecutive(mockDb as never, "CA", "CA_ON");
+    expect(ca).toEqual({ partyId: "fup", sign: 1, label: "Premier" });
+    expect(mockFindOne).toHaveBeenNthCalledWith(
+      1,
+      { countryId: "CA", state: "CA_ON", officeType: "governor" },
+      { sort: { electedAt: -1 } }
+    );
+    mockFindOne.mockResolvedValueOnce({ party: "al", officeType: "governor" });
+    const qc = await getRegionalExecutive(mockDb as never, "QC", "QC_01");
+    expect(qc?.label).toBe("Prefect");
+  });
+
   it("returns First Minister for Scotland with a seated governor", async () => {
     mockFindOne.mockResolvedValueOnce({
       countryId: "UK",

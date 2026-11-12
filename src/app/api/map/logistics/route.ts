@@ -2,8 +2,8 @@
 // Per-state freight capacity + projected interstate haul load for the Logistics
 // map choropleth. Haul TEUs come from `sourcingNetworkLoad` (record-only
 // landed-price sourcing pass). Capacity comes from CommodityPrice.stateSupply
-// for freight — the TEU logistics sectors actually clear against. Haul alone
-// is not the market size (ticket #1039).
+// for freight - the TEU logistics sectors actually clear against. Haul alone
+// is not the market size.
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,6 +13,10 @@ import { ZOD_COUNTRY_ENUM, type CountryId } from "@/lib/constants/countries";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import type { FreightDemandEntry, FreightDemandResponse } from "@/lib/logistics/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 const countryIdSchema = z.enum(ZOD_COUNTRY_ENUM);
 
@@ -30,19 +34,16 @@ export async function GET(request: Request) {
 
     // Latest ledger turn, country's state ids, and freight capacity by state.
     const [latest, countryStates, freightPrice, openLogistics] = await Promise.all([
-      db
-        .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+      sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
         .find({})
         .sort({ turn: -1 })
         .limit(1)
         .toArray(),
-      db
-        .collection<{ _id: string }>("states")
+      statesCollection<{ _id: string }>(db)
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray(),
-      db.collection<CommodityPrice>("commodityPrices").findOne({ commodity: "freight" }),
-      db
-        .collection<{ stateId: string; revenue: number }>("unownedSectors")
+      commodityPricesCollection(db).findOne({ commodity: "freight" }),
+      unownedSectorsCollection<{ stateId: string; revenue: number }>(db)
         .aggregate<{ _id: string; revenue: number }>([
           { $match: { countryId, sectorType: "logistics" } },
           { $group: { _id: "$stateId", revenue: { $sum: "$revenue" } } },

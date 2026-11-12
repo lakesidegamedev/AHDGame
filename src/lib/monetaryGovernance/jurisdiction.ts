@@ -12,12 +12,12 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { FOMC_COMMITTEE_COUNTRY_IDS } from "@/lib/db/types/centralBank";
 import {
   getMonetaryPolicyScope,
   getConfiguredSharedBankMemberCountries,
 } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export interface JurisdictionResolution {
   /** The canonical centralBanks._id for the currency area. */
@@ -42,9 +42,10 @@ export async function resolveJurisdiction(
   const configured = getConfiguredSharedBankMemberCountries(bankId);
   const members = [...new Set<CountryId>([...scope.memberCountries, ...configured])];
 
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: bankId }, { projection: { countryId: 1 } });
+  const bank = await centralBanksCollection(db).findOne(
+    { _id: bankId },
+    { projection: { countryId: 1 } }
+  );
   const docCountry = bank?.countryId as CountryId | undefined;
   const anchorCountryId: CountryId =
     docCountry && members.includes(docCountry)

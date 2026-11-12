@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { SINGLEPLAYER_USER_ID } from "@/lib/singleplayer";
 import { loadOnboardingSignals } from "@/lib/onboarding/checklist";
 import {
@@ -7,6 +7,10 @@ import {
   type SingleplayerGuide,
   type SingleplayerGuideCharacter,
 } from "@/lib/singleplayerGuide";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 /**
  * Load the first-game guide for the local world. Cheap for the common case: a
@@ -14,9 +18,10 @@ import {
  * gameState read and no further queries.
  */
 export async function loadSingleplayerGuide(db: Db): Promise<SingleplayerGuide> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, singleplayerConfig: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, singleplayerConfig: 1 } }
+  );
   const config = state?.singleplayerConfig ?? null;
   if (config?.mode !== "normal" || !config.guide || config.guide.dismissedAt) {
     return deriveSingleplayerGuide({
@@ -28,7 +33,7 @@ export async function loadSingleplayerGuide(db: Db): Promise<SingleplayerGuide> 
     });
   }
 
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { userId: new ObjectId(SINGLEPLAYER_USER_ID), retiredAt: { $exists: false } },
     {
       projection: {
@@ -52,9 +57,10 @@ export async function loadSingleplayerGuide(db: Db): Promise<SingleplayerGuide> 
     const [signals, partyCount] = await Promise.all([
       loadOnboardingSignals(db, character._id),
       // The collection is "politicalParties", not "parties".
-      db
-        .collection("politicalParties")
-        .countDocuments({ countryId: character.countryId }, { limit: 1 }),
+      politicalPartiesCollection<Document>(db).countDocuments(
+        { countryId: character.countryId },
+        { limit: 1 }
+      ),
     ]);
     hasCampaignActed = signals.hasCampaignActed;
     partiesAvailable = partyCount > 0;

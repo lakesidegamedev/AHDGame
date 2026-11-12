@@ -4,7 +4,6 @@ import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StatePartyOrg,
@@ -17,6 +16,17 @@ import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 export async function seedJPRegions(
   db: Db,
@@ -25,37 +35,11 @@ export async function seedJPRegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "JP" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "JP" });
   }
-  const { jpRegions } = await import("@/lib/countries/jp/data/jpRegions");
-  const { jpRegions1953 } = await import("@/lib/countries/jp/data/jpRegions1953");
-  const { jpRegions1979 } = await import("@/lib/countries/jp/data/jpRegions1979");
-  const { jpRegions1991 } = await import("@/lib/countries/jp/data/jpRegions1991");
-  const { jpRegions1999 } = await import("@/lib/countries/jp/data/jpRegions1999");
-  const { jpRegions2007 } = await import("@/lib/countries/jp/data/jpRegions2007");
-  const { jpRegions2023 } = await import("@/lib/countries/jp/data/jpRegions2023");
-  const { jpRegions2027 } = await import("@/lib/countries/jp/data/jpRegions2027");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  // 2027-default is wired explicitly here so this country-local seeder does
-  // not depend on shared preset registry changes. `selectPresetBundle`
-  // has no 2027 entry for JP; without this branch a 2027 world would fall
-  // back to the 1953 bundle.
-  const bundle =
-    preset === "2027-default"
-      ? jpRegions2027
-      : selectPresetBundle(
-          preset,
-          {
-            "1953-default": jpRegions1953,
-            "2019-default": jpRegions,
-            "1979-default": jpRegions1979,
-            "1991-default": jpRegions1991,
-            "1999-default": jpRegions1999,
-            "2007-default": jpRegions2007,
-            "2023-default": jpRegions2023,
-          },
-          "seedJP:jpRegions1953"
-        );
+  const bundle = selectPresetBundle(preset, regionTableFor("JP"), "regions:JP");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return {
@@ -66,8 +50,7 @@ export async function seedJPRegions(
       },
     };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} JP regions (${preset})`);
 }
 
@@ -89,14 +72,16 @@ export async function seedJPParties(db: Db, log: (msg: string) => void, preset?:
   const now = new Date();
   for (const party of filtered) {
     const { seedOrder: _seedOrder, validForPresets: _vfp, ...partyData } = party;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
       const doc: PoliticalParty = {
@@ -108,7 +93,7 @@ export async function seedJPParties(db: Db, log: (msg: string) => void, preset?:
         createdAt: now,
         updatedAt: now,
       } as PoliticalParty;
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${filtered.length} JP parties (preset: ${activePreset})`);
@@ -121,18 +106,8 @@ export async function seedJPDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("demographicCategories").deleteMany({ _id: "jp_voterGroups" as never });
-    await db.collection("stateDemographics").deleteMany({ countryId: "JP" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "JP" });
-  }
-
-  const { jpDemographicCategories } =
-    await import("@/lib/countries/jp/data/jpDemographicCategories");
-  for (const cat of jpDemographicCategories) {
-    const { _id, ...catData } = cat;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: catData }, { upsert: true });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "JP" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "JP" });
   }
 
   const { jpRegionDemographics: jpRegionDemographicsStatic } =
@@ -142,47 +117,43 @@ export async function seedJPDemographics(
     ? await import("@/lib/seeds/reference/stateDemographics1991")
     : { applyEra1991DemographicAdjustments: <T>(x: T): T => x };
 
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const useLayer1 = await isLayer1PositionsEnabled();
   let jpRegionDemographics: typeof jpRegionDemographicsStatic = jpRegionDemographicsStatic;
-  if (useLayer1) {
-    const { getCountryLayer1Model, buildModelRegionDemographics } =
-      await import("@/lib/seeds/international");
-    const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-    const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const era = eraForPreset(preset);
-    const model = getCountryLayer1Model("JP", era);
-    if (model) {
-      const full = await loadFullOverride("JP", era);
-      if (full) log(`[JP] Applying model override for era ${era}`);
-      jpRegionDemographics = buildModelRegionDemographics(
-        model,
-        full?.positions ?? undefined,
-        full ? { turnout: full.turnout } : undefined
-      );
-      log(
-        `[JP] Using Layer-1-derived demographics (${jpRegionDemographics.length} regions, era ${era})`
-      );
-    }
+  const { getCountryLayer1Model, buildModelRegionDemographics } =
+    await import("@/lib/seeds/international");
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
+  const era = strictEraForPreset(preset);
+  const model = getCountryLayer1Model("JP", era);
+  if (model) {
+    const full = await loadFullOverride("JP", era);
+    if (full) log(`[JP] Applying model override for era ${era}`);
+    jpRegionDemographics = buildModelRegionDemographics(
+      model,
+      full?.positions ?? undefined,
+      full ? { turnout: full.turnout } : undefined
+    );
+    log(
+      `[JP] Using Layer-1-derived demographics (${jpRegionDemographics.length} regions, era ${era})`
+    );
   }
   for (const raw of jpRegionDemographics) {
     const demo = is1991 ? applyEra1991DemographicAdjustments(raw, "JP") : raw;
-    const { _id, ...demoData } = demo;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: demoData }, { upsert: true });
+    const { _id, groups: _groups, ...demoData } = demo;
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: demoData }, { upsert: true });
   }
 
   const { jpDemographicTurnout } = await import("@/lib/countries/jp/data/jpDemographicTurnout");
   for (const turnout of jpDemographicTurnout) {
     const { _id, ...turnoutData } = turnout;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
 
   log(
-    `Seeded JP demographics (preset: ${preset}, ${jpDemographicCategories.length} categories, ${jpRegionDemographics.length} regions, ${jpDemographicTurnout.length} turnout)`
+    `Seeded JP demographics (preset: ${preset}, ${jpRegionDemographics.length} regions, ${jpDemographicTurnout.length} turnout)`
   );
 }
 
@@ -193,7 +164,7 @@ export async function seedJPStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "JP" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "JP" });
   }
 
   // Resolve preset: explicit arg wins, otherwise read from gameState
@@ -209,9 +180,11 @@ export async function seedJPStatePartyOrg(
   const now = new Date();
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne({ _id }, { $set: { ...orgData, updatedAt: now } }, { upsert: true });
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} JP state party org records (preset: ${activePreset})`);
 }
@@ -238,8 +211,7 @@ export async function ensureMissingJPStatePartyOrgRows(
   const orgs = await calculateJPStatePartyOrgs(db, activePreset);
 
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -250,13 +222,11 @@ export async function ensureMissingJPStatePartyOrgRows(
   if (missing.length > 0) {
     for (const org of missing) {
       const { _id, ...orgData } = org;
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne(
-          { _id },
-          { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await statePartyOrgCollection(db).updateOne(
+        { _id },
+        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(`Inserted ${missing.length} missing JP state party org row(s) (preset: ${activePreset})`);
   }
@@ -269,7 +239,7 @@ export async function seedJPStateMetrics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("macroMetrics").deleteMany({
+    await macroMetricsCollection<Document>(db).deleteMany({
       _id: { $in: ["HOK", "TOH", "KAN", "CHU", "KNS", "CGK", "SHI", "KYU"] } as never,
     });
   }
@@ -315,7 +285,7 @@ export async function seedJPBaselines(
   // cleanup standardised on `stateBaselines` — see KNOWN_INCONSISTENCIES in
   // seedManifest.ts.
   if (reset) {
-    await db.collection("stateBaselines").deleteMany({
+    await stateBaselinesCollection<Document>(db).deleteMany({
       _id: { $in: ["HOK", "TOH", "KAN", "CHU", "KNS", "CGK", "SHI", "KYU"] } as never,
     });
   }
@@ -346,9 +316,7 @@ export async function seedJPBaselines(
     const overlay = getRegionMetricPresets("JP", String(raw._id), preset);
     const baseline = overlay ? applyMetricPresetToBaseline(adjusted, overlay) : adjusted;
     const { _id, ...baselineData } = baseline;
-    await db
-      .collection<StateMetricBaseline>("stateBaselines")
-      .updateOne({ _id }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection(db).updateOne({ _id }, { $set: baselineData }, { upsert: true });
   }
   log(`Seeded ${jpStateBaselines.length} JP baselines (preset: ${preset})`);
 }
@@ -357,13 +325,11 @@ export async function seedJPGovernmentFormation(db: Db, log: (msg: string) => vo
   const { jpGovernmentFormation } = await import("@/lib/countries/jp/data/jpGovernmentFormation");
   const now = new Date();
   const { _id, ...formationData } = jpGovernmentFormation;
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .updateOne(
-      { _id },
-      { $set: { ...formationData, createdAt: now, updatedAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id },
+    { $set: { ...formationData, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
   log("Seeded JP government formation document");
 }
 
@@ -372,7 +338,7 @@ export async function removeLegacyJPCeremonialIdentity(
   db: Db,
   log: (msg: string) => void
 ): Promise<void> {
-  const result = await db.collection("npps").deleteMany({
+  const result = await nppsCollection<Document>(db).deleteMany({
     countryId: "JP",
     name: "Emperor Naruhito",
     politicalInfluence: 0,
@@ -386,34 +352,25 @@ export async function removeLegacyJPCeremonialIdentity(
 
 /**
  * Admin-only destructive re-seed of JP regional governor NPP officials
- * for the 2020 preset.
- *
- * One seat per JP game-region (8 total, all LDP-aligned at game start).
- * Uses the `governor` officeType — see
- * `docs/design/uk-jp-devolved-executives.md`. Mirrors
- * `seedDEMinisterPresidents2020`.
- *
- * NOT called from `bootstrapGameWorld` — the bootstrap path seeds these
- * officials via the `JP_GOVERNORS_2020` historical-seat array embedded
- * in `getPresetSeats("2019-default")`. This function exists only as the
- * `/api/admin/seed` target `"jpGovernors2020"` for destructive re-seed
- * operations.
+ * for the 2020 preset. Not used by bootstrapGameWorld; bootstrap seeds
+ * via JP_GOVERNORS_2020 in getPresetSeats. Target: /api/admin/seed "jpGovernors2020".
  */
 export async function seedJPGovernors2020(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "JP", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "JP", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "JP",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "governor" },
         {
           $set: {
@@ -442,34 +399,25 @@ export async function seedJPGovernors2020(db: Db, reset: boolean, log: (msg: str
 
 /**
  * Admin-only destructive re-seed of JP regional governor NPP officials
- * for the 1991-default preset.
- *
- * Same shape as the 2020 variant. All 8 regions LDP-aligned at the 1990
- * historical anchor — matches `JP_GOVERNORS_1991` in `historicalSeats.ts`
- * (suffix renamed from `_1990` so it aligns with the `1991-default`
- * preset id; the underlying baseline composition is unchanged).
- *
- * NOT called from `bootstrapGameWorld` — the bootstrap path seeds these
- * officials via the `JP_GOVERNORS_1991` historical-seat array embedded
- * in `getPresetSeats("1991-default")`. This function exists only as the
- * `/api/admin/seed` target `"jpGovernors1991"` for destructive re-seed
- * operations.
+ * for the 1991-default preset. Not used by bootstrapGameWorld; bootstrap
+ * seeds via JP_GOVERNORS_1991. Target: /api/admin/seed "jpGovernors1991".
  */
 export async function seedJPGovernors1991(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "JP", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "JP", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "JP",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "governor" },
         {
           $set: {

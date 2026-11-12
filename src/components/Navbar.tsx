@@ -90,7 +90,6 @@ interface NavbarProps {
   imperialCharacter?: ImperialCharacterNav;
   isImperialMode?: boolean;
   wikiDisabled?: boolean;
-  conflictsEnabled?: boolean;
   unionsEnabled?: boolean;
   settlementCrisisLive?: boolean;
   initialPageCountry?: CountryId | null;
@@ -137,7 +136,6 @@ export const Navbar = React.memo(function Navbar({
   imperialCharacter,
   isImperialMode = false,
   wikiDisabled = false,
-  conflictsEnabled = false,
   unionsEnabled = false,
   settlementCrisisLive = false,
   initialPageCountry,
@@ -355,14 +353,18 @@ export const Navbar = React.memo(function Navbar({
         {/* Logo */}
         <Link
           href="/profile"
+          aria-label="A House Divided"
           className="flex items-center gap-2 transition-opacity hover:opacity-80 shrink-0"
           onClick={closeMobileMenu}
         >
+          {/* Decorative: the wordmark next to it names the link, and the link
+              carries the aria-label so the label survives below `sm`, where the
+              wordmark is hidden. */}
           <Image
             src={CDN_LOGO_URL}
             priority
             unoptimized
-            alt="A House Divided Logo"
+            alt=""
             width={36}
             height={36}
             className="object-contain shrink-0"
@@ -479,7 +481,6 @@ export const Navbar = React.memo(function Navbar({
                 myCorporationId={myCorporationId}
                 myCorporationHasGroup={myCorporationHasGroup}
                 myUnionId={myUnionId}
-                conflictsEnabled={conflictsEnabled}
                 unionsEnabled={unionsEnabled}
                 settlementCrisisLive={settlementCrisisLive}
               />
@@ -505,6 +506,7 @@ export const Navbar = React.memo(function Navbar({
             <StaffDropdown
               isAdmin={!!user?.isAdmin}
               isModerator={!!user?.isModerator}
+              isJuniorDev={!!user?.isJuniorDev}
               isSingleplayerOwner={viewerIsSingleplayerOwner(user)}
             />
 
@@ -699,7 +701,6 @@ export const Navbar = React.memo(function Navbar({
           onOpenFeedback={onOpenFeedback}
           feedbackCapturing={feedbackCapturing}
           wikiDisabled={wikiDisabled}
-          conflictsEnabled={conflictsEnabled}
           unionsEnabled={unionsEnabled}
           settlementCrisisLive={settlementCrisisLive}
           pageCountry={pageCountry}

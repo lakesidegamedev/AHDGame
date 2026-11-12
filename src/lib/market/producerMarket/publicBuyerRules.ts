@@ -1,9 +1,8 @@
 /**
- * Funded government purchases (owner decision 2026-10-18: nothing created from
- * nothing). The treasury already pays out each turn's slice of budget spending
- * (treasuryTurn); today that money vanishes and a separate demand leg books the
- * same goods as unfunded demand. Here the commodity share of that outlay is the
- * public buyer's funding: the same budgets, now with a destination.
+ * Funded government purchases: nothing created from nothing. The treasury
+ * already pays each turn's slice of budget spending (treasuryTurn); the
+ * commodity share of that outlay is the public buyer's funding, replacing the
+ * separate unfunded demand leg.
  *
  * Pure: budgets and weights in, per-country funding and purchase lines out.
  */

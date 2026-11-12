@@ -35,40 +35,26 @@ export const CAMPAIGN_STRENGTH_POINTS_PER_ACTION = 300;
 
 /**
  * Cost (anchor currency) of contributing `strengthAdded` points of campaign
- * strength to a campaign that currently sits at `currentStrength`.
+ * strength to a campaign at `currentStrength`.
  *
- * The old formula was `sqrt(currentStrength + strengthAdded)` — charged PER
- * CLICK and blind to how much that click bought. Because a click's yield is
- * `nationalInfluence * 0.75`, the price per point of CS scaled inversely with
- * influence: reaching the ~150k CS that saturates the vote bonus cost roughly
- * 12,900 CF at 4,000 NPI but 516,000 CF at 100 NPI, for the identical result.
- * The whole mechanic was also far too cheap in absolute terms.
- *
- * The replacement prices the QUANTITY bought, with a QUADRATIC saturation
- * surcharge keyed to CAMPAIGN_STRENGTH_TAU. The marginal price of a point of CS
- * is
+ * Prices the QUANTITY bought with a quadratic saturation surcharge keyed to
+ * CAMPAIGN_STRENGTH_TAU. The marginal price of a point is
  *
  *   dPrice/dCS = PRICE_PER_POINT * (1 + (CS / TAU)^2)
  *
- * so staying competitive is affordable but saturating the +100% bonus is not:
- * the per-point price is 1x at 0 CS, 2x at TAU, 5x at 2*TAU and 10x at 3*TAU.
- * That is deliberately harsher than a linear surcharge, because late CS does
- * the least marginal work on the vote curve while being the most decisive.
+ * so staying competitive is affordable but saturating the bonus is not: 1x at
+ * 0 CS, 2x at TAU, 5x at 2*TAU, 10x at 3*TAU. Late CS does the least
+ * marginal work on the vote curve while being most decisive.
  *
- * The cost of a purchase is the EXACT integral of that marginal price across
- * [current, current + added]:
+ * The cost is the EXACT integral across [current, current + added]:
  *
  *   price = PRICE_PER_POINT * (added + ((current + added)^3 - current^3)
  *                                      / (3 * TAU^2))
  *
- * Using the exact integral rather than sampling the curve at the purchase
- * midpoint matters here: for a quadratic the midpoint rule undercharges by
- * `added^3 / (12 * TAU^2)`, an error that grows with the step size and would
- * quietly hand large-step (high national influence) buyers a discount — the
- * very asymmetry this rewrite exists to remove. With the exact form the total
- * cost of reaching a given CS is `PRICE_PER_POINT * (S + S^3 / (3 * TAU^2))`
- * regardless of how it is split into clicks; at S = 150,000 that is ~49.8M CF
- * for every player, against a ~31M full upgrade tree.
+ * The exact integral matters: midpoint sampling would undercharge by
+ * `added^3 / (12 * TAU^2)`, growing with step size and quietly discounting
+ * large-step (high-influence) buyers. Exact form makes total cost to reach a
+ * given CS independent of how it is split into clicks.
  */
 export function campaignStrengthContributionCost(
   currentStrength: number | null | undefined,
@@ -191,24 +177,16 @@ export interface CampaignStrengthBatchQuote {
 
 /**
  * Quote `clicks` identical `strengthPerClick` contributions stacked on top of
- * `currentStrength`.
+ * `currentStrength`, priced as EXACTLY the run of single clicks it replaces
+ * on both axes:
  *
- * A batch is priced as EXACTLY the run of single clicks it replaces, on both
- * axes. That equivalence is the whole reason this helper exists rather than the
- * caller just scaling `strengthAdded`:
- *
- * - FUNDS are already additive for free. `campaignStrengthContributionCost` is
- *   the exact integral of the marginal price curve, and integrals over adjacent
- *   intervals sum, so one call spanning [current, current + clicks * step]
- *   equals the sum of the `clicks` separate calls. Nothing to compensate for.
- * - ACTIONS are not. `campaignStrengthContributionActions` is
- *   `ceil(added / POINTS_PER_ACTION)`, and ceilings do not add: at 100 national
- *   influence one click is `ceil(75 / 300) = 1` action, but the merged ×5 form
- *   is `ceil(375 / 300) = 2` rather than 5. Charging the merged form would sell
- *   low-influence players a 2.5x action discount for pressing ×5 instead of ×1
- *   five times, while a player whose single click already exceeds 300 points
- *   gets no discount at all: reinstating precisely the influence-scaled price
- *   asymmetry the funds formula above was rewritten to remove. So the action
+ * - FUNDS: `campaignStrengthContributionCost` is the integral of the marginal
+ *   price curve, and integrals over adjacent intervals sum, so a merged call
+ *   already equals the sum of separate calls.
+ * - ACTIONS: `ceil(added / POINTS_PER_ACTION)` does not add. Merging would
+ *   give low-influence players a bulk action discount while giving none to
+ *   players whose single click already exceeds 300 points, reinstating the
+ *   influence-scaled price asymmetry the funds formula removes. So the action
  *   cost is `clicks * singleClickActions`.
  */
 export function campaignStrengthBatchQuote(
@@ -228,19 +206,15 @@ export function campaignStrengthBatchQuote(
 }
 
 /**
- * Largest click count the contributor can actually pay for, for the "Max"
- * option on the Support control.
+ * Largest click count the contributor can pay for, for the "Max" option.
  *
  * Both cost axes are non-decreasing in `clicks`, so a binary search over the
- * quote is exact. Client and server call this same function against the same
- * inputs, so the preview a player confirms is the batch the server runs: but
- * the server still re-quotes and re-gates the resolved count, because the
- * campaign's strength (and therefore the funds cost) moves whenever any other
- * player contributes.
+ * quote is exact. Client and server run this against the same inputs, but the
+ * server re-quotes and re-gates the resolved count because the campaign's
+ * strength (and thus funds cost) moves whenever another player contributes.
  *
  * `availableFunds` is the LOCAL campaign-fund balance and `fundsRate` the
- * anchor→local rate the caller will charge at, so the search compares like with
- * like instead of gating a local balance against an anchor price.
+ * anchor→local rate, so the search compares like with like.
  */
 export function maxAffordableCampaignStrengthClicks(params: {
   currentStrength: number | null | undefined;

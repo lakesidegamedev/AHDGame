@@ -1,0 +1,161 @@
+{
+  "config": {
+    "id": "ES",
+    "name": "Spain",
+    "code": "ES",
+    "status": "coming-soon",
+    "flagEmoji": "🇪🇸",
+    "regionLabel": "Autonomous Community",
+    "regionLabelPlural": "Autonomous Communities",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "Spain",
+    "executiveLabel": "Moncloa",
+    "executivePath": "/country/es/executive",
+    "governmentType": "parliamentaryMonarchy",
+    "governmentTypeLabel": "Parliamentary Monarchy",
+    "descriptor": "A parliamentary monarchy under the 1978 Constitution: a Prime Minister governs at the confidence of a 350-seat Congress and a 208-seat Senate, as Spain devolves power to its new autonomous communities.",
+    "heroImage": "https://flagcdn.com/w640/es.png",
+    "overviewPath": "/country/es",
+    "mapPath": "/country/es/map",
+    "currencyCode": "ESP",
+    "centralGovernmentLabel": "State Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["es_ucd", "es_psoe"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Cortes Generales",
+      "path": "/country/es/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "congresoDiputados",
+        "name": "Congress of Deputies",
+        "shortName": "Congreso",
+        "seats": 350,
+        "description": "350 deputies elected by proportional representation (D'Hondt) in provincial constituencies for four-year terms."
+      },
+      "upperChamber": {
+        "key": "senado",
+        "name": "Senate",
+        "shortName": "Senado",
+        "seats": 208,
+        "description": "208 senators elected on a provincial basis (plus regional appointees) for four-year terms.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "monarch",
+        "label": "King",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Kings"
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "chamberKey": "congresoDiputados",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "senator",
+        "label": "Senator",
+        "chamberKey": "senado",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Senators"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Banco de España",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Banco de España"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Banco de España",
+      "abbreviation": "BdE",
+      "heroImage": "https://flagcdn.com/w640/es.png",
+      "defaultPrimeRate": 14
+    },
+    "usdExchangeRate": 0.0149
+  },
+  "eraOverrides": {
+    "2027-default": { "usdExchangeRate": 1.0851086956521736 },
+    "1991-default": { "usdExchangeRate": 0.009623566188883369 },
+    "1953-default": {
+      "regionLabel": "Province",
+      "regionLabelPlural": "Provinces",
+      "executiveTitle": "Caudillo",
+      "executiveLabel": "El Pardo",
+      "governmentType": "onePartyState",
+      "governmentTypeLabel": "One Party State",
+      "descriptor": "A one-party state where Franco governs as both Jefe del Estado and Caudillo through FET y de las JONS; the 350-seat Cortes Españolas is a corporatist appointed chamber, and Spain is organised into provinces rather than autonomous communities.",
+      "rulingPartyId": 1,
+      "majorPartyIds": ["es_fet"],
+      "legislature": {
+        "name": "Cortes Españolas",
+        "path": "/country/es/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "congresoDiputados",
+          "name": "Cortes Españolas",
+          "shortName": "Cortes",
+          "seats": 350,
+          "description": "350 procuradores of the Cortes Españolas — a corporatist chamber seated by 'organic democracy' (syndicates, municipalities, families, and direct Franco appointment), not by competitive election."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "caudillo",
+          "label": "Caudillo",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Caudillos"
+        },
+        {
+          "key": "procurador",
+          "label": "Procurador",
+          "chamberKey": "congresoDiputados",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Procuradores"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Banco de España",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the Banco de España"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": false },
+      "upperElectionSystem": null,
+      "usdExchangeRate": 0.025252525252525252
+    }
+  }
+}

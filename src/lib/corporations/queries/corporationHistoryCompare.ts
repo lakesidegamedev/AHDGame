@@ -1,10 +1,11 @@
 import type { Db } from "mongodb";
 import type { Corporation, CorporationHistory } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 /**
  * Read query + pure helpers backing the corporation "Snapshot" tab — a
- * turn-over-turn compare table (suggestion #97). Distinct from the Charts tab:
+ * turn-over-turn compare table. Distinct from the Charts tab:
  * Charts LINE-PLOTS a single metric across every turn; this loads the same
  * persisted `corporationHistory` rows but reduces them to five headline metrics
  * and computes the absolute + %Δ between TWO chosen turns (turn A vs turn B).
@@ -153,8 +154,7 @@ export async function loadCorporationHistoryComparePoints(args: {
 }): Promise<CorporationHistoryCompareData> {
   const { db, corporation, limit = SNAPSHOT_COMPARE_MAX_POINTS } = args;
 
-  const points = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const points = await corporationHistoryCollection(db)
     .aggregate<CorpHistoryComparePoint>([
       { $match: { corporationId: corporation._id } },
       // One row per turn — keep the last-written snapshot for that turn (mirrors

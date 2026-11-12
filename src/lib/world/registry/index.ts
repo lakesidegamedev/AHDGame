@@ -1,5 +1,5 @@
 /**
- * 1953 Tier-3 / world-coverage registry (#3728).
+ * 1953 Tier-3 / world-coverage registry.
  *
  * Deep module: callers get a complete historical-presence entry list plus
  * coverage diagnostics. Region files are implementation detail.

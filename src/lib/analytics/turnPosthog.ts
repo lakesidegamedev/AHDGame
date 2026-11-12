@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type {
-  FederalBudget,
   User,
   WealthListSnapshot,
   TurnPhaseTelemetryMap,
@@ -14,6 +13,13 @@ import { getCountryHistoryCollection } from "@/lib/db/collections/countryHistory
 import { captureWorldDepthPosthog } from "./worldDepthAnalytics";
 import { gameEventEnvelope } from "./gameEventEnvelope";
 import { flushServerPosthog, getServerPosthogClient } from "./serverPosthog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
+import { analyticsRecordsCollection } from "@/lib/db/repositories/analyticsRecords";
 
 type WorldEventType = "election" | "war" | "bill_passed" | "crisis" | "record_wealth";
 
@@ -33,12 +39,11 @@ export async function captureTurnPosthog(input: {
     const envelope = gameEventEnvelope(input.iteration, turn);
     const countryHistory = await getCountryHistoryCollection(db);
     const [playersActive, budgets, wealth, history, elections, wars, crises] = await Promise.all([
-      db.collection<User>("users").countDocuments({
+      usersCollection(db).countDocuments({
         lastActivity: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         isBanned: { $ne: true },
       }),
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find(
           {},
           {
@@ -57,27 +62,27 @@ export async function captureTurnPosthog(input: {
           }
         )
         .toArray(),
-      db
-        .collection<WealthListSnapshot>("wealthListSnapshots")
-        .findOne({ _id: "global", turn }, { projection: { entries: 1 } }),
+      wealthListSnapshotsCollection(db).findOne(
+        { _id: "global", turn },
+        { projection: { entries: 1 } }
+      ),
       countryHistory
         .find(
           { turn, eventType: "bill_enacted" },
           { projection: { eventType: 1, countryId: 1, billId: 1, billScope: 1 } }
         )
         .toArray(),
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .find(
           { endTurn: turn, status: { $in: ["completed", "resolved"] } },
           { projection: { countryId: 1 } }
         )
         .toArray(),
-      db.collection<ConflictDoc>("conflicts").countDocuments({
+      conflictsCollection(db).countDocuments({
         startTurn: turn,
         type: { $ne: "cold_war" },
       }),
-      db.collection<Crisis>("crises").countDocuments({ startTurn: turn }),
+      crisesCollection(db).countDocuments({ startTurn: turn }),
     ]);
 
     posthog.capture({
@@ -163,7 +168,7 @@ export async function captureTurnPosthog(input: {
       0
     );
     if (currentRecord > 0) {
-      const records = db.collection<{ _id: string; value: number }>("analyticsRecords");
+      const records = analyticsRecordsCollection<{ _id: string; value: number }>(db);
       const previous = await records.findOne({ _id: "player-wealth" });
       if (currentRecord > (previous?.value ?? 0)) {
         await records.updateOne(

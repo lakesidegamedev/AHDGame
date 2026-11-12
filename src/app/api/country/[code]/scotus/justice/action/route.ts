@@ -1,13 +1,13 @@
 // POST /api/country/[code]/scotus/justice/action
-// Auth: requireAuth — must be the seated (character-backed) Justice for the target seat (#3598)
+// Auth: requireAuth: must be the seated (character-backed) Justice for the target seat
 // Errors: 400, 401, 403, 404, 409
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import {
   initialJusticeActionFields,
@@ -15,6 +15,8 @@ import {
   JUSTICE_OPINION_NATIONAL_INFLUENCE_GAIN,
 } from "@/lib/constants/justiceActions";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 const actionSchema = z.object({
   seatNumber: z.number().int().min(1).max(9),
@@ -36,7 +38,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const { code } = await params;
     const countryId = code.toUpperCase() as CountryId;
-    if (!COUNTRY_CONFIGS[countryId] || countryId !== "US") {
+    if (!COUNTRY_CONFIGS[countryId] || !countryHasFeature("supremeCourtDocket", countryId)) {
       return errorResponse(400, "Invalid country");
     }
 
@@ -45,7 +47,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { seatNumber, actionId } = parsed.data;
 
     const db = await getDb();
-    const seatsCol = db.collection<SupremeCourtSeat>("supremeCourtSeats");
+    const seatsCol = supremeCourtSeatsCollection(db);
     const seat = await seatsCol.findOne({ countryId, seatNumber });
 
     const isSeatedJustice =
@@ -74,7 +76,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "No Justice actions remaining");
     }
 
-    const charactersCol = db.collection<Character>("characters");
+    const charactersCol = charactersCollection(db);
     try {
       const targetChar = await charactersCol.findOne({ _id: seat!.justiceCharacterId! });
       if (!targetChar) {

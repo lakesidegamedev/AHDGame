@@ -1,17 +1,16 @@
 /**
- * UK party leadership removal — portable rules core (epic #856, ticket #861).
+ * UK party leadership removal: portable rules core.
  *
- * Pure data in / plain data out. The shell (`leadershipCommands`, API routes,
- * the turn processor) loads documents, calls these helpers, and writes the
- * results back. No database, clock, randomness, environment, or network here.
+ * Pure data in, plain data out. The shell (`leadershipCommands`, API routes,
+ * the turn processor) loads documents, calls these helpers, and writes results
+ * back. No database, clock, randomness, environment, or network here.
  *
- * Covers the two NEW formulas this ticket adds on top of the `leadershipRemoval`
- * evaluator (which stays untouched):
+ * Covers two formulas layered on the `leadershipRemoval` evaluator:
  *  - safe bounds for committee amendments to a party's removal ruleset;
  *  - committee faction-control resolution from seat tags.
  */
 
-import type { LeadershipElectorate } from "@/lib/uk/leadership/leadershipRemoval";
+import type { LeadershipElectorate } from "@/lib/countries/uk/leadership/leadershipRemoval";
 
 /** Turn spacing between two committee amendments to the same party's ruleset. */
 export const LEADERSHIP_AMENDMENT_COOLDOWN_TURNS = 24;

@@ -2,14 +2,9 @@
  * GET /api/admin/debug/primary-projection?partyId=...
  *
  * Read-only diagnostic for the presidential primary projection pipeline. Returns
- * everything the per-state primary page and overview standings derive from a
- * single canonical source so admins can verify they agree:
- *
- *   - per-state vote source (actual / projected / none)
- *   - per-state vote totals + share + projected delegate allocation
- *   - national vote totals + share (sum across states)
- *   - national delegate totals + share
- *   - candidate roster + key stats used by the projection
+ * everything derived from a single canonical source so admins can verify the
+ * per-state page and overview standings agree: per-state vote source, totals,
+ * share, and delegate allocation; national totals; the candidate roster.
  *
  * Safe to call any time. Does not mutate state.
  */
@@ -29,11 +24,11 @@ import type {
   State,
   StateDemographics,
   StatePartyOrg,
-  DemographicCategory,
 } from "@/lib/db/types";
 import { projectPrimaryByState } from "@/lib/primaryProjection";
+import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import { summarizePrimaryProjection } from "@/lib/elections/presidentialPrimaryDisplay";
 import {
   resolvePartyFamily,
@@ -43,6 +38,16 @@ import {
   type PrimaryCalendarFamily,
 } from "@/lib/constants/primaryCalendar";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 const ALL_STATE_IDS = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
 
@@ -55,7 +60,7 @@ export async function GET(req: Request) {
     const partyIdParam = url.searchParams.get("partyId");
     const db = await getDb();
 
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       electionType: "president",
       countryId: "US",
       status: "active",
@@ -75,24 +80,26 @@ export async function GET(req: Request) {
     if (partyIdParam) {
       const seq = Number(partyIdParam);
       if (Number.isFinite(seq)) {
-        party = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: "US", sequentialId: seq });
+        party = await politicalPartiesCollection(db).findOne({
+          countryId: "US",
+          sequentialId: seq,
+        });
       }
       if (!party) {
-        party = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: "US", abbreviation: partyIdParam });
+        party = await politicalPartiesCollection(db).findOne({
+          countryId: "US",
+          abbreviation: partyIdParam,
+        });
       }
     }
 
     // List parties that actually have active candidates so the UI can populate
     // the dropdown without separately calling another endpoint.
-    const partyKeysWithCandidates = (await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .distinct("party", { electionId: election._id, status: "active" })) as string[];
-    const candidateParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyKeysWithCandidates = (await electionCandidatesCollection(db).distinct("party", {
+      electionId: election._id,
+      status: "active",
+    })) as string[];
+    const candidateParties = await politicalPartiesCollection(db)
       .find({ countryId: "US", sequentialId: { $in: partyKeysWithCandidates.map(Number) } })
       .project<{ sequentialId: number; abbreviation: string; name: string }>({
         sequentialId: 1,
@@ -126,11 +133,10 @@ export async function GET(req: Request) {
     });
 
     const [candidates, tally] = await Promise.all([
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: election._id, party: partyKey, status: "active" })
         .toArray(),
-      db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+      electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
     ]);
 
     if (candidates.length === 0) {
@@ -148,35 +154,26 @@ export async function GET(req: Request) {
     // sees the exact same projection inputs.
     const charIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
     const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
-    const [chars, npps, partyOrgs, categoriesDocs, statesDocs, demographicsDocs, enriched] =
-      await Promise.all([
-        charIds.length
-          ? db
-              .collection<Character>("characters")
-              .find({ _id: { $in: charIds } })
-              .toArray()
-          : Promise.resolve([] as Character[]),
-        nppIds.length
-          ? db
-              .collection<NPP>("npps")
-              .find({ _id: { $in: nppIds } })
-              .toArray()
-          : Promise.resolve([] as NPP[]),
-        db
-          .collection<StatePartyOrg>("statePartyOrg")
-          .find({ countryId: "US", partyId: partyKey })
-          .toArray(),
-        db.collection<DemographicCategory>("demographicCategories").find({}).toArray(),
-        db
-          .collection<State>("states")
-          .find({ _id: { $in: ALL_STATE_IDS } })
-          .toArray(),
-        db
-          .collection<StateDemographics>("stateDemographics")
-          .find({ _id: { $in: ALL_STATE_IDS } })
-          .toArray(),
-        fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId: "US" }),
-      ]);
+    const [chars, npps, partyOrgs, statesDocs, demographicsDocs, enriched] = await Promise.all([
+      charIds.length
+        ? charactersCollection(db)
+            .find({ _id: { $in: charIds } })
+            .toArray()
+        : Promise.resolve([] as Character[]),
+      nppIds.length
+        ? nppsCollection(db)
+            .find({ _id: { $in: nppIds } })
+            .toArray()
+        : Promise.resolve([] as NPP[]),
+      statePartyOrgCollection(db).find({ countryId: "US", partyId: partyKey }).toArray(),
+      statesCollection(db)
+        .find({ _id: { $in: ALL_STATE_IDS } })
+        .toArray(),
+      stateDemographicsCollection(db)
+        .find({ _id: { $in: ALL_STATE_IDS } })
+        .toArray(),
+      fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId: "US" }),
+    ]);
 
     const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
     const nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
@@ -228,7 +225,7 @@ export async function GET(req: Request) {
       stateIds: ALL_STATE_IDS,
       stateMap,
       demographicsMap,
-      categories: categoriesDocs,
+      campaignContext: await loadCampaignProjectionContext(db, ALL_STATE_IDS),
       statePartyOrgs: orgMap,
       partyPosition: {
         economicPosition: party.economicPosition,
@@ -240,9 +237,9 @@ export async function GET(req: Request) {
 
     const candidateIds = candidates.map((c) => c._id.toString());
     // Per-state delegate counts rescale by the active preset's EV apportionment.
-    const gsForDelegates = await db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" });
+    const gsForDelegates = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne({
+      _id: "current",
+    });
     const delegatePreset = gsForDelegates?.preset;
     const totalDelegates = getTotalDelegatesForFamily(family, delegatePreset);
     const summary = summarizePrimaryProjection({

@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import { gzipSync, gunzipSync } from "node:zlib";
 import type { Db } from "mongodb";
+import { producerEconomyTurnChunksCollection } from "@/lib/db/repositories/producerEconomyTurnChunks";
 
 interface ReceiptChunk {
   _id: string;
@@ -25,7 +26,7 @@ const DOCUMENT_LIMIT = 12 * 1024 * 1024;
 const ROOT_DECODE_LIMIT = 16 * 1024 * 1024;
 const CHUNK_DECODE_LIMIT = 2 * ARRAY_CHUNK_BYTES;
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
-const encode = (json: string) => gzipSync(json).toString("base64");
+const encode = (json: string) => gzipSync(json, { level: 3 }).toString("base64");
 const decode = (payload: string, limit: number) =>
   gunzipSync(Buffer.from(payload, "base64"), { maxOutputLength: limit });
 
@@ -97,15 +98,44 @@ export function encodeReceipt(value: unknown, checkBudget?: () => void): Encoded
       arrays.set(item, marker);
       return marker;
     }
-    if (Array.isArray(item)) return item.map(visit);
+    // Rows that hold no large array come back as the same reference, so the
+    // common case allocates nothing and stringifies the original.
+    if (Array.isArray(item)) {
+      let copy: unknown[] | undefined;
+      for (let i = 0; i < item.length; i++) {
+        const visited = visit(item[i]);
+        if (copy) copy[i] = visited;
+        else if (visited !== item[i]) {
+          copy = item.slice(0, i);
+          copy[i] = visited;
+        }
+      }
+      return copy ?? item;
+    }
     if (
       item &&
       typeof item === "object" &&
       ("$producerReceiptArray" in item || "$producerReceiptVersion" in item)
     )
       throw new Error("Reserved producer receipt field");
-    if (item && typeof item === "object")
-      return Object.fromEntries(Object.entries(item).map(([key, entry]) => [key, visit(entry)]));
+    if (item && typeof item === "object") {
+      const proto = Object.getPrototypeOf(item);
+      if (proto !== Object.prototype && proto !== null)
+        return Object.fromEntries(Object.entries(item).map(([key, entry]) => [key, visit(entry)]));
+      const keys = Object.keys(item);
+      let values: unknown[] | undefined;
+      for (let i = 0; i < keys.length; i++) {
+        const original = (item as Record<string, unknown>)[keys[i]];
+        const visited = visit(original);
+        if (values) values[i] = visited;
+        else if (visited !== original || keys[i] === "__proto__") {
+          values = keys.slice(0, i).map((key) => (item as Record<string, unknown>)[key]);
+          values[i] = visited;
+        }
+      }
+      if (!values) return item;
+      return Object.fromEntries(keys.map((key, i) => [key, values[i]]));
+    }
     return item;
   };
   const root = visit(value);
@@ -135,14 +165,13 @@ export async function stageReceiptChunks(
   if (!chunks.length) return;
   checkBudget?.();
   // Content hash is the primary key. Mongo's built-in unique _id index is sufficient.
-  await db.collection<ReceiptChunk>("producerEconomyTurnChunks").bulkWrite(
+  await producerEconomyTurnChunksCollection<ReceiptChunk>(db).bulkWrite(
     chunks.map((chunk) => ({
       updateOne: { filter: { _id: chunk._id }, update: { $setOnInsert: chunk }, upsert: true },
     }))
   );
   const expected = new Map(chunks.map((chunk) => [chunk._id, encodedChunks.get(chunk)]));
-  const stored = db
-    .collection<ReceiptChunk>("producerEconomyTurnChunks")
+  const stored = producerEconomyTurnChunksCollection<ReceiptChunk>(db)
     .find({ _id: { $in: chunks.map((chunk) => chunk._id) } })
     .batchSize(64);
   let count = 0;
@@ -198,8 +227,7 @@ export async function decodeReceipt(
   // content hash once, in bounded cursor batches, including nested references.
   const chunks = new Map<string, unknown[]>();
   if (required.size > 0) {
-    const stored = db
-      .collection<ReceiptChunk>("producerEconomyTurnChunks")
+    const stored = producerEconomyTurnChunksCollection<ReceiptChunk>(db)
       .find({ _id: { $in: [...required] } })
       .batchSize(64);
     for await (const chunk of stored) {

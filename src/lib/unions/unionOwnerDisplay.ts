@@ -6,9 +6,10 @@
  * for every NPP president even though the seat is filled.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types/npp";
 import type { Union } from "@/lib/db/types/union";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface UnionOwnerDisplay {
   id: string;
@@ -46,14 +47,12 @@ export async function resolveUnionOwners(
 
   const [characters, npps] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } }, { projection })
           .toArray()
       : Promise.resolve([]),
     nppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection })
           .toArray()
       : Promise.resolve([]),

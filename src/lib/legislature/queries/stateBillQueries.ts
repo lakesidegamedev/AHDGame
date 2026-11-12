@@ -14,7 +14,6 @@ import { resolveBillCardTally, scopeStateBillVotes } from "@/lib/legislature/sta
 import { snapshotWeightMap } from "@/lib/legislature/voteSnapshot";
 import type {
   AxisPositions,
-  Character,
   ElectedOfficial,
   LegislationType,
   NPP,
@@ -41,6 +40,14 @@ import {
   type ProvisionDisplay,
   type SnapshottedProvision,
 } from "@/lib/legislature/provisionEnrichment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 export interface StateLegislatureBillsPage {
   blockedProvisions: { legislationTypeId: string; policyOptionId: string }[];
@@ -67,13 +74,8 @@ export async function listStateLegislatureBills(
   }
 ): Promise<StateLegislatureBillsPage> {
   const [bills, parties] = await Promise.all([
-    db
-      .collection<StateBill>("stateBills")
-      .find({ stateId })
-      .sort({ proposedAt: -1 })
-      .limit(100)
-      .toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    stateBillsCollection(db).find({ stateId }).sort({ proposedAt: -1 }).limit(100).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
   const partyMap = new Map(parties.map((party) => [String(party.sequentialId), party]));
 
@@ -81,12 +83,11 @@ export async function listStateLegislatureBills(
   // its displayed tally to who actually sits now — same treatment the bill
   // detail page uses (scopeStateBillVotes). Without this, votes cast before a
   // sub-national election are added to votes cast after it and the card totals
-  // exceed the chamber size (bug #0836 / ticket #973: 48 votes shown in a
+  // exceed the chamber size (: 48 votes shown in a
   // 31-seat chamber). Detail/resolution already scope; only the list card did not.
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
   const chamberOfficials = subNationalOffice
-    ? await db
-        .collection<ElectedOfficial>("electedOfficials")
+    ? await electedOfficialsCollection(db)
         .find({
           state: stateId,
           officeType: subNationalOffice,
@@ -120,8 +121,7 @@ export async function listStateLegislatureBills(
   ] as string[];
   const legislationTypes =
     legislationTypeIds.length > 0
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: legislationTypeIds } })
           .toArray()
       : [];
@@ -130,9 +130,10 @@ export async function listStateLegislatureBills(
   let myCharacterId: string | null = null;
   let myPolicies: AxisPositions | undefined;
   if (authUser) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(authUser.userId) }, { projection: { _id: 1, policies: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { userId: new ObjectId(authUser.userId) },
+      { projection: { _id: 1, policies: 1 } }
+    );
     myCharacterId = character?._id.toString() ?? null;
     myPolicies = character?.policies;
   }
@@ -144,9 +145,7 @@ export async function listStateLegislatureBills(
   const countryConfig = getCountryConfig(countryId);
   let budget: StateLegislatureBillsPage["budget"] = null;
   if (countryConfig.subNationalChamber?.regionalModel) {
-    const budgetDoc = await db
-      .collection<RegionalBudget>("regionalBudgets")
-      .findOne({ _id: stateId });
+    const budgetDoc = await regionalBudgetsCollection(db).findOne({ _id: stateId });
     if (budgetDoc) {
       budget = {
         totalBudget: budgetDoc.totalBudget,
@@ -163,8 +162,7 @@ export async function listStateLegislatureBills(
   ];
   const sponsorChars =
     sponsorObjectIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: sponsorObjectIds } }, { projection: { _id: 1, sequentialId: 1 } })
           .toArray()
       : [];
@@ -297,7 +295,7 @@ export async function listStateLegislatureBills(
           effectDirection: provision.effectDirection,
           directionLabel: directionText,
           effectTargetsWeighted: legislationType?.effectTargetsWeighted ?? [],
-          ...(option?.groupApprovals ? { groupApprovals: option.groupApprovals } : {}),
+          ...(option?.bucketApprovals ? { bucketApprovals: option.bucketApprovals } : {}),
           annualCostPerCapita: option?.annualCostPerCapita ?? null,
           gdpPerCapitaMultiplier: option?.gdpPerCapitaMultiplier ?? null,
         };
@@ -321,7 +319,7 @@ export async function getStateLegislatureBillDetail(
     authUser: AuthUser | null;
   }
 ): Promise<StateBillDetail | null> {
-  const bill = await db.collection<StateBill>("stateBills").findOne({
+  const bill = await stateBillsCollection(db).findOne({
     _id: new ObjectId(billId),
     stateId,
   });
@@ -329,9 +327,10 @@ export async function getStateLegislatureBillDetail(
 
   // Chamber size for the vote-seating hero — same source the composition uses
   // (CN's elected People's Congress is sized separately from `stateSenateSeats`).
-  const stateDoc = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, countryId }, { projection: { stateSenateSeats: 1 } });
+  const stateDoc = await statesCollection(db).findOne(
+    { _id: stateId, countryId },
+    { projection: { stateSenateSeats: 1 } }
+  );
   const eligibleSeats = stateDoc
     ? subNationalChamberSeats(
         countryId,
@@ -340,10 +339,7 @@ export async function getStateLegislatureBillDetail(
       )
     : 0;
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
   const partyMap = new Map(parties.map((party) => [String(party.sequentialId), party]));
 
   const legislationTypeIds = bill.legislationTypeId ? [bill.legislationTypeId] : [];
@@ -357,8 +353,7 @@ export async function getStateLegislatureBillDetail(
   const allLegislationTypeIds = [...new Set([...legislationTypeIds, ...provisionTypeIds])];
   const legislationTypes =
     allLegislationTypeIds.length > 0
-      ? await db
-          .collection<LegislationType>("legislationTypes")
+      ? await legislationTypesCollection(db)
           .find({ _id: { $in: allLegislationTypeIds } })
           .toArray()
       : [];
@@ -367,9 +362,10 @@ export async function getStateLegislatureBillDetail(
   let myCharacterId: string | null = null;
   let myPolicies: AxisPositions | undefined;
   if (authUser) {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(authUser.userId) }, { projection: { _id: 1, policies: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { userId: new ObjectId(authUser.userId) },
+      { projection: { _id: 1, policies: 1 } }
+    );
     myCharacterId = character?._id.toString() ?? null;
     myPolicies = character?.policies;
   }
@@ -378,7 +374,7 @@ export async function getStateLegislatureBillDetail(
 
   let canVote = false;
   if (myCharacterId) {
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       officeType: subNationalOffice,
       state: stateId,
       characterId: new ObjectId(myCharacterId),
@@ -410,16 +406,14 @@ export async function getStateLegislatureBillDetail(
 
   const characters =
     characterIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: characterIds.map((id) => new ObjectId(id)) } })
           .project({ _id: 1, party: 1 })
           .toArray()
       : [];
   const npps =
     nppObjectIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: nppObjectIds } })
           .project<{ _id: ObjectId; party?: string }>({ _id: 1, party: 1 })
           .toArray()
@@ -437,11 +431,11 @@ export async function getStateLegislatureBillDetail(
   // each vote by their current seatsHeld — same treatment the national bill page
   // uses (buildScopedVoteInputs). Without this, votes cast before a sub-national
   // election are added to votes cast after it, so the totals can exceed the
-  // chamber size (bug #0836: 35 votes shown in a 31-seat chamber).
+  // chamber size (: 35 votes shown in a 31-seat chamber).
   // A concluded phase has a frozen snapshot — derive both the headline and the
   // per-party breakdown from it so a post-election chamber turnover cannot
-  // recompute (and collapse) the historical tally (#0982). Only an in-progress
-  // vote (no snapshot yet) live-scopes to the current chamber (#0836).
+  // recompute (and collapse) the historical tally. Only an in-progress
+  // vote (no snapshot yet) live-scopes to the current chamber.
   const originSnapshot = bill.voteSnapshot;
   const scopedVotes = originSnapshot
     ? null
@@ -466,8 +460,7 @@ export async function getStateLegislatureBillDetail(
     const overrideCharacterIds = overrideKeys.filter((key) => ObjectId.isValid(key));
     const overrideCharacters =
       overrideCharacterIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: overrideCharacterIds.map((id) => new ObjectId(id)) } })
             .project({ _id: 1, party: 1 })
             .toArray()
@@ -479,7 +472,7 @@ export async function getStateLegislatureBillDetail(
       ])
     );
     if (bill.overrideVoteSnapshot) {
-      // Frozen override result — same treatment as the origin vote (#0982).
+      // Frozen override result, same treatment as the origin vote.
       voteByPartyOverride = buildVotesByParty(
         bill.overrideVoteSnapshot.votes,
         overrideVoterPartyMap,
@@ -603,9 +596,10 @@ export async function getStateLegislatureBillDetail(
 
   let sponsorSequentialId: number | undefined;
   if (bill.sponsorId) {
-    const sponsorChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: bill.sponsorId }, { projection: { sequentialId: 1 } });
+    const sponsorChar = await charactersCollection(db).findOne(
+      { _id: bill.sponsorId },
+      { projection: { sequentialId: 1 } }
+    );
     sponsorSequentialId = sponsorChar?.sequentialId;
   }
 

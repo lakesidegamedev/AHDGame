@@ -1,5 +1,5 @@
 /**
- * Actor-coverage registry for worldsim balance runs (issue #1993).
+ * Actor-coverage registry for worldsim balance runs.
  *
  * Fresh preset worldsims contain no `characters` or `users`, while several
  * mechanics require a player character or player executive and offer no NPP
@@ -9,17 +9,15 @@
  *
  * This module is the single source of truth for which mechanics are
  * actor-gated and how each simulation actor mode (`pure-npp` vs `synthetic`)
- * covers them. It is deliberately pure: no database, no wall clock, no
- * randomness, no env, no network — so the manifest it builds is deterministic
- * and unit-testable, and the registry can run in any future host.
+ * covers them. It is deliberately pure: no database, wall clock, randomness,
+ * env or network, so the manifest is deterministic and unit-testable.
  *
- * Drift guard: every entry names the source seam(s) that gate on actors plus
- * a stable anchor string inside each seam. `actorCoverageSeams()` exposes
- * them and the test suite asserts each anchor is still present, so renaming
- * or removing a gate fails the build instead of silently drifting the
- * manifest. New actor-gated mechanics must add a registry entry; report and
- * probe call sites must resolve ids through `assertKnownActorMechanic`, which
- * throws on unregistered ids.
+ * Drift guard: every entry names source seam(s) that gate on actors plus a
+ * stable anchor string in each seam. `actorCoverageSeams()` exposes them and
+ * the test suite asserts each anchor is present, so renaming or removing a
+ * gate fails the build instead of silently drifting the manifest. New
+ * actor-gated mechanics must add an entry; report and probe call sites must
+ * resolve ids through `assertKnownActorMechanic`, which throws on unknown ids.
  */
 
 /** How a run provides (or fails to provide) player actors. */
@@ -88,7 +86,7 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
     requires: "player characters standing for a party presidential nomination",
     seams: [
       seam(
-        "src/lib/turn/election/conventionResolution.ts",
+        "src/lib/elections/resolution/conventionResolution.ts",
         "Resolve a single party's presidential nomination"
       ),
     ],
@@ -180,7 +178,9 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
     id: "state-party-leadership",
     label: "State-party leadership elections",
     requires: "player characters declaring candidacy for chair, vice chair, treasurer",
-    seams: [seam("src/lib/statePartyElections.ts", "no candidates — position unchanged")],
+    seams: [
+      seam("src/lib/elections/party/statePartyElections.ts", "no candidates — position unchanged"),
+    ],
     pureNpp: {
       status: "unreachable",
       reason:
@@ -229,7 +229,7 @@ export const ACTOR_GATED_MECHANICS: readonly ActorGatedMechanic[] = [
     requires: "a player choosing decision-tree options on a crisis interaction",
     seams: [
       seam("src/lib/crises/interactionEngine.ts", "resolutionPath"),
-      seam("src/lib/crises/featureFlag.ts", "decision trees, collective"),
+      seam("src/app/api/crises/[id]/interact/route.ts", "submitCrisisDecision"),
     ],
     pureNpp: {
       status: "partial",

@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { publicPageMetadata } from "@/lib/siteMetadata";
 import type { PatreonTier, User } from "@/lib/db/types";
 import { isPatreonActive } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Supporter wall | A House Divided",
@@ -39,8 +40,7 @@ const TIER_SECTIONS: { tier: Exclude<PatreonTier, null>; label: string; blurb: s
 
 async function loadWall(): Promise<Record<string, WallEntry[]>> {
   const db = await getDb();
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({
       supporterWallName: { $type: "string", $ne: "" },
       patreonTier: { $in: ["supporter", "supporter-plus", "supporter-plus-plus"] },

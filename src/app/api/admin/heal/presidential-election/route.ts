@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import type { Election, GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 
 /**
  * GET /api/admin/heal/presidential-election
@@ -18,11 +22,12 @@ export async function GET() {
 
     const db = await getDb();
 
-    const liveElection = await db
-      .collection<Election>("elections")
-      .findOne({ electionType: "president", status: { $in: ["active", "upcoming"] } });
+    const liveElection = await electionsCollection(db).findOne({
+      electionType: "president",
+      status: { $in: ["active", "upcoming"] },
+    });
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     if (!liveElection) {
       return NextResponse.json({
@@ -83,7 +88,7 @@ export async function POST() {
 
     const db = await getDb();
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     if (!gameState) {
       return errorResponse(500, "GameState not found");
@@ -93,9 +98,10 @@ export async function POST() {
     const correctDur = DEFAULT_DURATIONS.president.durationHours;
     const correctPrimary = DEFAULT_DURATIONS.president.primaryDurationHours;
 
-    const liveElection = await db
-      .collection<Election>("elections")
-      .findOne({ electionType: "president", status: { $in: ["active", "upcoming"] } });
+    const liveElection = await electionsCollection(db).findOne({
+      electionType: "president",
+      status: { $in: ["active", "upcoming"] },
+    });
 
     if (!liveElection) {
       return NextResponse.json({
@@ -109,7 +115,7 @@ export async function POST() {
     const newPrimaryEndTime = new Date(now.getTime() + correctPrimary * 3_600_000);
     const newEndTime = new Date(now.getTime() + correctDur * 3_600_000);
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: liveElection._id },
       {
         $set: {
@@ -130,16 +136,13 @@ export async function POST() {
     // Also withdraw any candidates from the old bugged election
     // (they can re-enter the healed primary; re-entry reactivates the
     // archived campaign with funds/levels intact)
-    const healedRows = await db
-      .collection("electionCandidates")
+    const healedRows = await electionCandidatesCollection<Document>(db)
       .find({ electionId: liveElection._id, status: "active" })
       .toArray();
-    const withdrawn = await db
-      .collection("electionCandidates")
-      .updateMany(
-        { electionId: liveElection._id, status: "active" },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const withdrawn = await electionCandidatesCollection<Document>(db).updateMany(
+      { electionId: liveElection._id, status: "active" },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     // Withdrawn candidates' campaigns must leave active surfaces (ticket #1313).
     await archiveCampaignsForCandidates({
       db,

@@ -7,15 +7,16 @@
 import { resolveCampaignPriceLevel } from "./rules/priceLevel";
 import type { Db } from "mongodb";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { CurrencyCode } from "@/lib/constants/currencies";
 
 export { campaignAnchorToLocal, campaignLocalRate, getCampaignCurrency } from "./rules/currency";
-import { getCampaignCurrency, type CampaignCurrencyRates } from "./rules/currency";
+import type { CampaignCurrencyRates } from "./rules/currency";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export type { CampaignCurrencyRates } from "./rules/currency";
 
 export async function loadCampaignCurrencyRates(db: Db): Promise<CampaignCurrencyRates> {
-  const rows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const rows = await exchangeRatesCollection(db)
     .find({}, { projection: { currencyCode: 1, baseRate: 1 } })
     .toArray();
   const rates: CampaignCurrencyRates = {};
@@ -31,35 +32,17 @@ export function anchorToLocal(anchor: number, rate: number): number {
   return Math.round(anchor * rate);
 }
 
-/**
- * Resolve a campaign country's local currency + FX rate. Falls back to rate 1.0
- * (anchor == local) when forex is disabled or no rate doc exists, so callers
- * never divide by an undefined rate.
- */
-export async function loadCampaignFxRate(
-  db: Db,
-  countryId: string,
-  preset?: string
-): Promise<{ rate: number; currencyCode: CurrencyCode }> {
-  const currencyCode = getCampaignCurrency(countryId, preset);
-  const rateDoc = await db
-    .collection<ExchangeRate>("exchangeRates")
-    .findOne({ currencyCode }, { projection: { rate: 1 } });
-  if (!rateDoc || !Number.isFinite(rateDoc.rate) || rateDoc.rate <= 0) {
-    return { rate: 1.0, currencyCode };
-  }
-  return { rate: rateDoc.rate, currencyCode };
-}
-
 /** Load the world's campaign price basis once at the shell boundary. */
 export async function loadCampaignPriceLevel(db: Db): Promise<number> {
   const [config, state] = await Promise.all([
-    db
-      .collection<{ _id: string; campaignEraPriceLevelEnabled?: boolean }>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { campaignEraPriceLevelEnabled: 1 } }),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameConfigCollection<{ _id: string; campaignEraPriceLevelEnabled?: boolean }>(db).findOne(
+      { _id: "default" },
+      { projection: { campaignEraPriceLevelEnabled: 1 } }
+    ),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    ),
   ]);
   return resolveCampaignPriceLevel(config?.campaignEraPriceLevelEnabled, state?.preset);
 }

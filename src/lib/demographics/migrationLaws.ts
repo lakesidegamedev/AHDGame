@@ -11,6 +11,7 @@ import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { openingChoice1991 } from "@/lib/resetLegislation/rules/reviewCatalog";
 import type { MigrationLawPosition } from "./flows/internationalMigration";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 const ENTRY_AND_RESIDENCE_FAMILY_ID = "L49";
 const LABOUR_MIGRATION_FAMILY_ID = "L52";
@@ -41,8 +42,7 @@ export async function loadMigrationLawPositions(
 ): Promise<Map<string, MigrationLawPositions>> {
   const familyIds = [ENTRY_AND_RESIDENCE_FAMILY_ID, LABOUR_MIGRATION_FAMILY_ID];
   const [programs, { default: references }] = await Promise.all([
-    db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
+    resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find(
         {
           worldId,

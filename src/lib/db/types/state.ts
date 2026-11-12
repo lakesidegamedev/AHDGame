@@ -74,17 +74,16 @@ export interface State {
   /** Start-of-hour GDP and output gap the :30 half tick overwrote (turn/subhour/stepBase.ts). */
   subhourBase?: { growth?: SubhourGrowthStateBase };
   /**
-   * P2/D7 (plants mode): Σ owned-sector realized revenue as of
-   * `sectorRealizedRevenueTurn`. The engine's cyclical sector signal reads this
-   * as the previous-turn baseline for the annualized realized-revenue delta that
-   * replaces the (vestigial under plants) `currentGrowthRate` average. Persisted
-   * next to `outputGap`/`capitalStock` — the same per-region prior-value pattern.
-   * Absent ⇒ no baseline ⇒ the signal falls back to the legacy weighted average.
+   * Σ owned-sector realized revenue as of `sectorRealizedRevenueTurn`, read by
+   * the cyclical sector signal as the previous-turn baseline for the annualized
+   * realized-revenue delta. Same per-region prior-value pattern as
+   * `outputGap`/`capitalStock`. Absent ⇒ signal falls back to the legacy
+   * weighted average.
    *
-   * Unit is `sectorRealizedRevenueUnit`. `"host"` = host-state currency (the
-   * unit sector fields are stored in). Missing unit = the legacy ₳-normalized
-   * snapshot; the engine uses that ₳ path for one more turn then rewrites as
-   * host so an FX move cannot annualize into phantom GDP growth (ticket #1084).
+   * Unit is `sectorRealizedRevenueUnit`. `"host"` = host-state currency.
+   * Missing unit = legacy ₳-normalized snapshot; the engine uses the ₳ path for
+   * one more turn then rewrites as host so an FX move cannot annualize into
+   * phantom GDP growth.
    */
   sectorRealizedRevenue?: number;
   sectorRealizedRevenueTurn?: number;
@@ -105,7 +104,7 @@ export interface State {
   sectorRevenueEma?: number;
   sectorRevenueSnapshots?: Array<{ turn: number; value: number }>;
   /**
-   * O1c (design §5, macroGrowthV1): the paid corporate growth cost (₳, per turn)
+   * O1c (design §5): the paid corporate growth cost (₳, per turn)
    * summed over this region's sectors, written by the corp turn. The metric
    * engine converts it to local-millions, caps it at 5% of region GDP/yr, and
    * feeds it to the capital stock — but ONLY when `corpGrowthInvestmentTurn`

@@ -12,6 +12,7 @@ import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition"
 import { materializeRussianDumaConvocationSeating } from "./dumaConvocationSeating";
 import { materializeRussianAssemblySeating } from "./assemblySeating";
 import { materializeRussianAssemblyVacancySeating } from "./assemblyVacancySeating";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export async function processRuLegislatureTransition(
   db: Db,
   gameState: Pick<GameState, "preset" | "preIteration" | "preIterationTurns">,
@@ -28,7 +29,7 @@ export async function processRuLegislatureTransition(
     ) !== "federalAssembly"
   )
     return "none";
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       projection: {

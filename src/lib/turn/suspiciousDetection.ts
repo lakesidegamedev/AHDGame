@@ -5,7 +5,6 @@
 // Wrapped in runPhase — errors log to Sentry but do not halt turn processing.
 
 import { ObjectId, type Db } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import { classifyDevice } from "@/lib/utils/userAgent";
 import type { StoredFingerprintComponents } from "@/lib/utils/fingerprint";
 import { isCloudflareEdgeIp } from "@/lib/utils/cloudflareIpRanges";
@@ -21,6 +20,14 @@ import type {
   ActivityLogAuth,
 } from "@/lib/db/types/activityLog";
 import { detectAutomationTiming } from "./automationDetection";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 
 export interface SuspiciousDetectionResult {
   flagged: number;
@@ -514,8 +521,7 @@ async function detectSharedAuthArtifacts(
   now: Date,
   characterIds: ObjectId[]
 ): Promise<Map<string, SuspiciousFlag[]>> {
-  const characters = await db
-    .collection<CharacterUserLink>("characters")
+  const characters = await charactersCollection<CharacterUserLink>(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 
@@ -535,8 +541,7 @@ async function detectSharedAuthArtifacts(
     lastFingerprintComponents: 1,
   } as const;
 
-  const users = await db
-    .collection<AuthUserSnapshot>("users")
+  const users = await usersCollection<AuthUserSnapshot>(db)
     .find({ _id: { $in: userIds } }, { projection })
     .toArray();
 
@@ -551,8 +556,7 @@ async function detectSharedAuthArtifacts(
   let pool = users;
   if (candidateFingerprints.size > 0) {
     const fpList = [...candidateFingerprints];
-    const extra = await db
-      .collection<AuthUserSnapshot>("users")
+    const extra = await usersCollection<AuthUserSnapshot>(db)
       .find(
         {
           $or: [
@@ -577,8 +581,7 @@ async function detectCoordinatedLogins(
   now: Date,
   characterIds: ObjectId[]
 ): Promise<Map<string, SuspiciousFlag>> {
-  const characters = await db
-    .collection<CharacterUserLink>("characters")
+  const characters = await charactersCollection<CharacterUserLink>(db)
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 
@@ -588,8 +591,7 @@ async function detectCoordinatedLogins(
     (userId) => new ObjectId(userId)
   );
   const since = new Date(now.getTime() - FOURTEEN_DAYS_MS);
-  const loginLogs = await db
-    .collection("activityLog")
+  const loginLogs = await activityLogCollection<Document>(db)
     .find<ActivityLogAuth>({
       type: "login",
       userId: { $in: userIds },
@@ -616,8 +618,7 @@ async function detectIpSharing(
   const results = new Map<string, SuspiciousFlag[]>();
 
   // Find all IPs used by the active characters
-  const loginLogs = await db
-    .collection("activityLog")
+  const loginLogs = await activityLogCollection<Document>(db)
     .find<ActivityLogAuth>({
       type: "login",
       timestamp: { $gte: since },
@@ -645,8 +646,9 @@ async function detectIpSharing(
   }
 
   // For each active character, check if their userId shares an IP with another userId
-  const charDocs = await db
-    .collection<Character>("characters")
+  const charDocs = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   const charToUser = new Map(charDocs.map((c) => [c._id.toString(), c.userId.toString()]));
@@ -667,8 +669,7 @@ async function detectIpSharing(
   // Check fund flows between IP-sharing user pairs
   const fundFlowPairs = new Set<string>();
   if (sharedIpUserPairs.size > 0) {
-    const fundEvents = await db
-      .collection("activityLog")
+    const fundEvents = await activityLogCollection<Document>(db)
       .find<ActivityLogFundEvent>({
         type: "fund_event",
         fundEventType: { $in: ["party_transfer", "party_donation"] },
@@ -751,8 +752,9 @@ async function detectCoordinatedFunding(
   const since = new Date(now.getTime() - FOURTEEN_DAYS_MS);
   const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   if (chars.length === 0) return results;
@@ -760,8 +762,7 @@ async function detectCoordinatedFunding(
   const charToUser = new Map(chars.map((c) => [c._id.toString(), c.userId.toString()]));
 
   // Build IP-sharing pairs from login history
-  const loginLogs = await db
-    .collection("activityLog")
+  const loginLogs = await activityLogCollection<Document>(db)
     .find<ActivityLogAuth>({
       type: "login",
       timestamp: { $gte: since },
@@ -792,8 +793,7 @@ async function detectCoordinatedFunding(
   if (sharedIpUserPairs.size === 0) return results;
 
   // Fund donations from candidate characters → parties
-  const donations = await db
-    .collection("activityLog")
+  const donations = await activityLogCollection<Document>(db)
     .find<ActivityLogFundEvent>({
       type: "fund_event",
       fundEventType: "party_donation",
@@ -804,8 +804,7 @@ async function detectCoordinatedFunding(
     .toArray();
 
   // Fund transfers from parties → candidate characters
-  const transfers = await db
-    .collection("activityLog")
+  const transfers = await activityLogCollection<Document>(db)
     .find<ActivityLogFundEvent>({
       type: "fund_event",
       fundEventType: "party_transfer",
@@ -897,8 +896,7 @@ async function detectCoordinatedFunding(
 
   // Resolve party names for display
   const involvedPartyIds = [...new Set([...charEvidence.values()].flat().map((e) => e.partyId))];
-  const parties = await db
-    .collection("politicalParties")
+  const parties = await politicalPartiesCollection<Document>(db)
     .find(
       { _id: { $in: involvedPartyIds.map((id) => new ObjectId(id)) } },
       { projection: { _id: 1, name: 1 } }
@@ -936,8 +934,7 @@ async function detectApDumpTargeting(
   const results = new Map<string, SuspiciousFlag>();
 
   // Fetch last 10 turn summaries for active characters
-  const summaries = await db
-    .collection("activityLog")
+  const summaries = await activityLogCollection<Document>(db)
     .find<ActivityLogTurnSummary>({
       type: "turn_summary",
       characterId: { $in: characterIds },
@@ -1034,8 +1031,9 @@ async function detectLoginTimeCluster(
   const MIN_SPAN_DAYS = 7;
   const since = new Date(now.getTime() - THIRTY_DAYS_MS);
 
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   if (chars.length === 0) return results;
@@ -1043,8 +1041,7 @@ async function detectLoginTimeCluster(
   const charToUser = new Map(chars.map((c) => [c._id.toString(), c.userId.toString()]));
   const userIds = [...new Set(chars.map((c) => c.userId.toString()))].map((id) => new ObjectId(id));
 
-  const logins = await db
-    .collection("activityLog")
+  const logins = await activityLogCollection<Document>(db)
     .find<ActivityLogAuth>({
       type: "login",
       userId: { $in: userIds },
@@ -1169,15 +1166,15 @@ async function detectLoginIpScatter(
   const since = new Date(now.getTime() - SEVEN_DAYS_MS);
 
   // Map character → userId
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find({ _id: { $in: characterIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   const charToUser = new Map(chars.map((c) => [c._id.toString(), c.userId.toString()]));
   const userIds = chars.map((c) => c.userId);
 
-  const logins = await db
-    .collection("activityLog")
+  const logins = await activityLogCollection<Document>(db)
     .find<ActivityLogAuth>({
       type: "login",
       userId: { $in: userIds },
@@ -1227,19 +1224,16 @@ export async function processSuspiciousDetection(
   // (a) already flagged, (b) appeared in this turn's activity log,
   // (c) belong to a user who logged in during the suspicious-detection window.
   const [existingFlagged, currentTurnSummaries, recentLogins] = await Promise.all([
-    db
-      .collection("suspiciousCharacters")
+    suspiciousCharactersCollection<Document>(db)
       .find<SuspiciousCharacter>({}, { projection: { characterId: 1 } })
       .toArray(),
-    db
-      .collection("activityLog")
+    activityLogCollection<Document>(db)
       .find<ActivityLogTurnSummary>(
         { type: "turn_summary", turnNumber: newTurn - 1 },
         { projection: { characterId: 1 } }
       )
       .toArray(),
-    db
-      .collection("activityLog")
+    activityLogCollection<Document>(db)
       .find<ActivityLogAuth>(
         { type: "login", timestamp: { $gte: new Date(now.getTime() - FOURTEEN_DAYS_MS) } },
         { projection: { userId: 1 } }
@@ -1258,8 +1252,9 @@ export async function processSuspiciousDetection(
     (userId) => new ObjectId(userId)
   );
   if (authActiveUserIds.length > 0) {
-    const authActiveCharacters = await db
-      .collection<Character>("characters")
+    const authActiveCharacters = await (
+      await getCharactersCollection(db)
+    )
       .find({ userId: { $in: authActiveUserIds } }, { projection: { _id: 1 } })
       .toArray();
     for (const character of authActiveCharacters) {
@@ -1269,12 +1264,13 @@ export async function processSuspiciousDetection(
 
   // Characters who took logged actions recently — catches automated actors that
   // never log in (headless scripts) and whose actions aren't in turn_summary.
-  const actionActiveUserIds = (await db.collection("actionLogs").distinct("userId", {
+  const actionActiveUserIds = (await actionLogsCollection<Document>(db).distinct("userId", {
     createdAt: { $gte: new Date(now.getTime() - FOURTEEN_DAYS_MS) },
   })) as ObjectId[];
   if (actionActiveUserIds.length > 0) {
-    const actionActiveCharacters = await db
-      .collection<Character>("characters")
+    const actionActiveCharacters = await (
+      await getCharactersCollection(db)
+    )
       .find({ userId: { $in: actionActiveUserIds } }, { projection: { _id: 1 } })
       .toArray();
     for (const character of actionActiveCharacters) {
@@ -1288,15 +1284,13 @@ export async function processSuspiciousDetection(
 
   // Look up existing SuspiciousCharacter docs for dismissal / suppression data.
   // Exclude resolved (banned) entries — they are permanently archived.
-  const existingDocs = await db
-    .collection("suspiciousCharacters")
+  const existingDocs = await suspiciousCharactersCollection<Document>(db)
     .find<SuspiciousCharacter>({ characterId: { $in: characterIds }, pool: { $ne: "resolved" } })
     .toArray();
   const existingMap = new Map(existingDocs.map((d) => [d.characterId.toString(), d]));
 
   // Also load resolved IDs so we can skip them in the candidate loop.
-  const resolvedDocs = await db
-    .collection("suspiciousCharacters")
+  const resolvedDocs = await suspiciousCharactersCollection<Document>(db)
     .find<{ characterId: ObjectId }>(
       { characterId: { $in: characterIds }, pool: "resolved" },
       { projection: { characterId: 1 } }
@@ -1326,16 +1320,16 @@ export async function processSuspiciousDetection(
   ]);
 
   // Fetch character info for any new flagged chars not yet in suspiciousCharacters
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await (
+    await getCharactersCollection(db)
+  )
     .find(
       { _id: { $in: characterIds } },
       { projection: { _id: 1, name: 1, userId: 1, countryId: 1 } }
     )
     .toArray();
   const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
-  const users = await db
-    .collection("users")
+  const users = await usersCollection<Document>(db)
     .find(
       { _id: { $in: chars.map((c) => c.userId) } },
       { projection: { _id: 1, username: 1, isBanned: 1 } }
@@ -1409,7 +1403,7 @@ export async function processSuspiciousDetection(
     // Move to resolved pool if clean and no active suppressions (instead of deleting)
     if (newFlags.length === 0 && activeSuppressed.length === 0) {
       if (existing && existing.pool !== "resolved") {
-        await db.collection("suspiciousCharacters").updateOne(
+        await suspiciousCharactersCollection<Document>(db).updateOne(
           { characterId: char._id },
           {
             $set: {
@@ -1455,9 +1449,9 @@ export async function processSuspiciousDetection(
       suppressedFlags: activeSuppressed.length > 0 ? activeSuppressed : undefined,
     };
 
-    await db
-      .collection("suspiciousCharacters")
-      .replaceOne({ characterId: char._id }, doc, { upsert: true });
+    await suspiciousCharactersCollection<Document>(db).replaceOne({ characterId: char._id }, doc, {
+      upsert: true,
+    });
 
     if (newFlags.length > 0) flagged++;
     else cleared++;

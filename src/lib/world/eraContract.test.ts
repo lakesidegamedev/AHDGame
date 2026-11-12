@@ -6,7 +6,7 @@ import {
   isPresidentialGovernmentType,
   type CountryId,
 } from "@/lib/constants/countries";
-import { getPresetSeats, RESET_PRESETS } from "@/lib/constants/historicalSeats";
+import { getPresetSeats, RESET_PRESETS, seatGroupsFor } from "@/lib/constants/historicalSeats";
 import { seatCountFor, seatsForCountry } from "@/lib/constants/presetSeatGroups";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
 import { regionBundleFor } from "@/lib/admin/seedDiagnostic/regionBundles";
@@ -39,6 +39,17 @@ const eraOf = (preset: ShippingPreset): EraId => preset.slice(0, 4) as EraId;
  * assertions are about the derivation staying wired, not about hand-kept copies
  * staying in sync.
  */
+
+/** Presets with an authored seat roster; the rest refuse to seat (seed contract). */
+const SEATED_PRESETS = SHIPPING_PRESETS.filter((preset) => {
+  try {
+    seatGroupsFor(preset);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
 describe("S6 — every roster consumer agrees with tierFor", () => {
   it("the world-entity manifest matches the roster for registered countries", () => {
     for (const preset of SHIPPING_PRESETS) {
@@ -85,7 +96,10 @@ describe("S6 — every roster consumer agrees with tierFor", () => {
     // would leave this free to drift in exactly the way S6 exists to prevent.
     for (const preset of SHIPPING_PRESETS) {
       for (const nation of ERA_CONFIGS[eraOf(preset)].nations) {
-        expect(nation.tier, `${preset}/${nation.id}`).toBe(tierFor(preset, nation.id as CountryId));
+        // The landing roster lists a background country the way it lists an
+        // NPP-run one: neither is joinable.
+        const tier = tierFor(preset, nation.id as CountryId);
+        expect(nation.tier, `${preset}/${nation.id}`).toBe(tier === "background" ? "npp" : tier);
       }
     }
   });
@@ -263,7 +277,9 @@ describe("S2 — live countries meet their tier's capability contract", () => {
       "BR (econ): fullAutonomousTier, partiesAuthored",
       "NG (econ): fullAutonomousTier, partiesAuthored",
     ],
-    "2027-default": ["BR (econ): fullAutonomousTier", "NG (econ): fullAutonomousTier"],
+    // Brazil and Nigeria left the econ tier for the background tier (#5702),
+    // which this contract does not assess, so 2027 carries no recorded gap.
+    "2027-default": [],
   };
 
   it.each(["1999-default", "2007-default", "2023-default", "2027-default"] as const)(
@@ -281,6 +297,8 @@ describe("S2 — live countries meet their tier's capability contract", () => {
  * someone marks a coming-soon country full-autonomous, or leaves a playable one
  * as historical presence.
  */
+const NPP_FULL_SIMULATION_PRESETS: ReadonlySet<ShippingPreset> = new Set(["2027-default"]);
+
 describe("S2b — roster tier and simulation tier agree", () => {
   it("every player country is a full-autonomous entity", () => {
     for (const preset of SHIPPING_PRESETS) {
@@ -295,6 +313,10 @@ describe("S2b — roster tier and simulation tier agree", () => {
 
   it("no coming-soon country is a full-autonomous entity", () => {
     for (const preset of SHIPPING_PRESETS) {
+      // 2027 runs its `npp` countries (UK, DE, JP, CN) at full simulation and
+      // keeps the coming-soon countries in the `background` tier instead
+      // (#5702), so there `npp` is not a coming-soon tier.
+      if (NPP_FULL_SIMULATION_PRESETS.has(preset)) continue;
       const manifest = getWorldEntityPresetManifest(preset);
       for (const country of COUNTRY_ORDER) {
         if (tierFor(preset, country) !== "npp") continue;
@@ -342,7 +364,7 @@ describe("S3a — absent countries carry no era data", () => {
   it("seats no chamber for a country the era does not contain", () => {
     // Seats key on officeType rather than countryId, so match through the
     // country's own configured chamber keys.
-    for (const preset of SHIPPING_PRESETS) {
+    for (const preset of SEATED_PRESETS) {
       const offices = new Set(getPresetSeats(preset).map((s) => String(s.officeType)));
       for (const country of countriesByTier(preset, "absent")) {
         const legislature = COUNTRY_CONFIGS[country]?.legislature;
@@ -451,7 +473,7 @@ describe("S5 — presidential player countries seed an executive", () => {
 
   it("every presidential player country has a president in every era", () => {
     const missing: string[] = [];
-    for (const preset of SHIPPING_PRESETS) {
+    for (const preset of SEATED_PRESETS) {
       for (const country of COUNTRY_ORDER) {
         if (tierFor(preset, country) !== "player") continue;
         if (!isPresidentialGovernmentType(getCountryConfig(country, preset).governmentType)) {
@@ -477,7 +499,7 @@ describe("S5 — presidential player countries seed an executive", () => {
     // the gap is named here instead of being papered over.
     const AUTHORED_WITHOUT_VP = new Set(["1953-default/BR"]);
     const missing: string[] = [];
-    for (const preset of SHIPPING_PRESETS) {
+    for (const preset of SEATED_PRESETS) {
       for (const country of COUNTRY_ORDER) {
         const seats = seatsForCountry(preset, country);
         if (!seats.some((s) => s.officeType === "president")) continue;
@@ -513,12 +535,18 @@ describe("S4 — player chambers agree with their era config", () => {
     US: ["house", "senate"],
     UK: ["commons"],
     JP: ["shugiin", "sangiin"],
+    CA: ["caCommons"],
   };
 
   function s4Failures(preset: ShippingPreset): string[] {
     const out: string[] = [];
     for (const country of COUNTRY_ORDER) {
-      if (tierFor(preset, country) !== "player") continue;
+      const tier = tierFor(preset, country);
+      // 2027's NPP countries are full simulations with seated chambers (#5702),
+      // so their chambers keep this check.
+      const seated =
+        tier === "player" || (tier === "npp" && NPP_FULL_SIMULATION_PRESETS.has(preset));
+      if (!seated) continue;
       for (const chamber of CHAMBERS[country] ?? []) {
         const seeded = seatCountFor(preset, country, chamber);
         if (isVacantChamber(preset, country, chamber)) {
@@ -571,7 +599,7 @@ describe("S4 — player chambers agree with their era config", () => {
     // chamber now agrees with its era config except the two above.
   };
 
-  it.each([...SHIPPING_PRESETS])("%s", (preset) => {
+  it.each([...SEATED_PRESETS])("%s", (preset) => {
     expect(s4Failures(preset)).toEqual(S4_KNOWN_GAPS[preset] ?? []);
   });
 

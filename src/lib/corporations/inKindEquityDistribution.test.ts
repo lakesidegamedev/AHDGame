@@ -53,6 +53,20 @@ describe("computeInKindEquityDistribution", () => {
     expect(sum(r.allocations) + r.publicFloatShares).toBe(100);
   });
 
+  it("includes NPP shareholders in the pro-rata split", () => {
+    const r = computeInKindEquityDistribution({
+      shareholders: [
+        { id: "char", kind: "character", shares: 5 },
+        { id: "npp", kind: "npp", shares: 5 },
+      ],
+      publicFloatShares: 0,
+      totalShares: 10,
+      blockShares: 100,
+    });
+    expect(r.allocations).toContainEqual({ id: "npp", kind: "npp", shares: 50 });
+    expect(sum(r.allocations) + r.publicFloatShares).toBe(100);
+  });
+
   it("routes the whole block to float when there are no shareholders", () => {
     const r = computeInKindEquityDistribution({
       shareholders: [],

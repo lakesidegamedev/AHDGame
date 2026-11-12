@@ -76,5 +76,3 @@ export const NG_CABINET_POSITIONS = [
     order: 16,
   },
 ] as const;
-
-export type NGCabinetPositionId = (typeof NG_CABINET_POSITIONS)[number]["id"];

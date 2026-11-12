@@ -3,6 +3,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { seedPreeEventDefinitions } from "@/lib/events/pree/seedDefinitions";
+import { eventDefinitionsCollection } from "@/lib/db/repositories/eventDefinitions";
+import type { Document } from "mongodb";
 
 export async function POST() {
   try {
@@ -12,9 +14,10 @@ export async function POST() {
     const db = await getDb();
     const { upserted } = await seedPreeEventDefinitions(db);
 
-    const result = await db
-      .collection("eventDefinitions")
-      .updateMany({ status: { $ne: "retired" } }, { $set: { status: "approved" } });
+    const result = await eventDefinitionsCollection<Document>(db).updateMany(
+      { status: { $ne: "retired" } },
+      { $set: { status: "approved" } }
+    );
 
     return NextResponse.json({
       success: true,

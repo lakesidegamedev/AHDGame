@@ -31,6 +31,7 @@ import {
   PRESIDENTIAL_EV_NEEDED,
   resolvePresidentialWinnerCandidateId,
 } from "@/lib/elections/presidentialResolutionDisplay";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ResultsBlendViewProps {
   data: ElectionResultsResponse;
@@ -303,7 +304,7 @@ export function ResultsBlendView({
   // Race replay: the concluded race week by week, from the payload's per-state
   // snapshots. Null while showing the final result.
   const replayTurnList = useMemo(() => (election ? replayTurns(election) : []), [election]);
-  const canReplay = data.election.countryId === "US" && replayTurnList.length > 1;
+  const canReplay = countryHasFeature("usUi", data.election.countryId) && replayTurnList.length > 1;
   const [replay, setReplay] = useState<{
     index: number;
     playing: boolean;
@@ -555,7 +556,7 @@ export function ResultsBlendView({
             />
           }
           strip={
-            data.election.countryId === "US" ? (
+            countryHasFeature("usUi", data.election.countryId) ? (
               <>
                 {replay && frame ? (
                   <ReplayControls

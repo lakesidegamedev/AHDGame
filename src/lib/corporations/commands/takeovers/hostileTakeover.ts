@@ -1,3 +1,4 @@
+import { assumeExtractionContracts } from "@/lib/extraction/assumeExtractionContracts";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { referenceValuation } from "../acquisitions/referenceValuation";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
@@ -25,14 +26,7 @@ import {
   resolveCorporation,
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
-import type {
-  Bond,
-  Character,
-  Corporation,
-  CorporateSector,
-  ImperialCharacter,
-  State,
-} from "@/lib/db/types";
+import type { CorporateSector, ImperialCharacter, State } from "@/lib/db/types";
 import type { ShareListing } from "@/lib/db/types/shareListings";
 import type { ShareOrder } from "@/lib/db/types/corporation";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -103,6 +97,19 @@ import {
 import { attachMergerRemedy } from "@/lib/corporations/mergerReview/lifecycle";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
+import { payNppSqueezeOut } from "@/lib/corporations/commands/takeovers/payNppSqueezeOut";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 type TakeoverTxInput = Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">;
 
@@ -176,9 +183,10 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     const db = await getDb();
     const turnGuard = await rejectDuringTurn(db);
     if (turnGuard) return turnGuard;
-    const stockTaxState = await db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
+    const stockTaxState = await gameStateCollection<{
+      _id: string;
+      stockHoldingTaxStartTurn?: number;
+    }>(db).findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
 
@@ -190,7 +198,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     if (!parentQuery) {
       return errorResponse(400, "Invalid parent corporation ID");
     }
-    const parent = await db.collection<Corporation>("corporations").findOne(parentQuery);
+    const parent = await corporationsCollection(db).findOne(parentQuery);
     if (!parent) {
       return errorResponse(404, "Parent corporation not found");
     }
@@ -281,12 +289,10 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     // the takeover proceeds.
 
     // The buyback escrow only ADDS to the transfer when it holds real collected
-    // cash (positive). A negative escrow is a phantom/tracked buyback debt that
-    // was never debited from liquidCapital (see shareEscrowSettlement money-
-    // printing fix) — folding it in would net the target's REAL liquidCapital
-    // down to a fraction and destroy value for the acquirer (the H&K/#787
-    // incident, issue #2942). Floor escrow at 0 so the acquirer always inherits
-    // the target's real liquid capital.
+    // cash (positive). A negative escrow is phantom debt never debited from
+    // liquidCapital; folding it in would net the target's real liquidCapital
+    // down and destroy value for the acquirer. Floor escrow at 0 so the
+    // acquirer always inherits the target's real liquid capital.
     const targetNetLiquidLocal =
       (target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0);
 
@@ -305,7 +311,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       targetFxPre
     );
 
-    // Bank-NAV floor (issue #1750): the quoted share price recognizes only a
+    // Bank-NAV floor: the quoted share price recognizes only a
     // haircut of a subsidiary bank's book equity, so a bank-heavy target can
     // otherwise be squeezed out for less than the realizable bank net assets
     // the acquirer inherits (ring-fenced cash plus loans plus the marked
@@ -412,14 +418,21 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       );
     }
 
-    // Serialize the whole squeeze-debit → cash-transfer sequence against other
-    // same-corp money ops on the parent (e.g. a bond issuance firing in the same
-    // instant, issue #2949) so a concurrent read-then-write can't clobber one of
-    // the parent's balance writes and silently lose money.
+    // Serialize the whole squeeze-debit to cash-transfer sequence against other
+    // same-corp money ops on the parent (e.g. concurrent bond issuance) so a
+    // read-then-write cannot clobber a balance write and lose money.
     return await withCorpLock(parent._id, async () => {
       const now = new Date();
-      const targetSectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      // The target was loaded before the lock; a retried request reaches this
+      // point after the first takeover already deleted it, and every payout
+      // below would run a second time off the stale snapshot.
+      const freshTarget = await (
+        await getCorporationsCollection(db)
+      ).findOne({ _id: target._id }, { projection: { _id: 1 } });
+      if (!freshTarget) {
+        return errorResponse(409, "The target corporation no longer exists.");
+      }
+      const targetSectors = await corporateSectorsCollection(db)
         .find({ corporationId: target._id })
         .toArray();
       const takeoverTurn = await getCurrentTurn(db);
@@ -461,7 +474,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       });
       if (!preparedTransfers.ok) return errorResponse(409, preparedTransfers.error);
       const constructionTransfers = preparedTransfers.plan;
-      const debitResult = await db.collection<Corporation>("corporations").updateOne(
+      const debitResult = await corporationsCollection(db).updateOne(
         {
           _id: parent._id,
           liquidCapital: { $gte: totalInParentCapital },
@@ -495,16 +508,12 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
       const parentLedgerCurrency = (resolveCorpLiquidCurrencyCode(parent) ?? "USD") as CurrencyCode;
 
       try {
-        // Banked subsidiary (ticket-1267): move the charter and re-key its loan
-        // book, interbank sides, savings accounts and depositor pointers to the
-        // parent BEFORE the shell is deleted below. Runs INSIDE this try, right
-        // after the debit and before any payout, so a mid-merge conflict (the
-        // parent chartered a bank between the pre-lock check and this write, or
-        // the target's charter changed under us) throws into the catch refund
-        // below instead of returning past it with the debit unrefunded. The
-        // transfer helper leaves no partial charter behind on its !ok paths
-        // (conflict returns before any write; a lost release race rolls the
-        // claim back), so refunding money here restores everything.
+        // Move the banked subsidiary's charter and re-key its loan book,
+        // interbank sides, savings and depositor pointers to the parent BEFORE the
+        // shell is deleted below. Runs INSIDE this try after the debit and before any
+        // payout, so a mid-merge conflict throws into the catch refund instead of
+        // returning past it with the debit unrefunded. The transfer helper leaves no
+        // partial charter on its !ok paths, so refunding restores everything.
         const bankTransfer = await transferBankCharterToAcquirer(db, target._id, parent._id, now);
         if (!bankTransfer.ok) {
           throw new BankCharterRaceError(bankTransfer.error);
@@ -517,9 +526,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
 
           let holderParty: ShareTradeParty | null = null;
           if (sh.characterId) {
-            const ch = await db
-              .collection<Character>("characters")
-              .findOne({ _id: sh.characterId });
+            const ch = await charactersCollection(db).findOne({ _id: sh.characterId });
             if (!ch) continue;
             const home =
               (withholdingContexts.get("characters:" + sh.characterId.toHexString())?.currency as
@@ -558,7 +565,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
                   withholdingContexts.get("characters:" + sh.characterId!.toHexString())
                 )
               : undefined;
-            await db.collection<Character>("characters").updateOne(
+            await charactersCollection(db).updateOne(
               { _id: sh.characterId },
               {
                 $inc: buildPersonalBalanceInc(
@@ -583,9 +590,9 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               )
             );
           } else if (sh.imperialCharacterId) {
-            const ich = await db
-              .collection<ImperialCharacter>("imperialCharacters")
-              .findOne({ _id: sh.imperialCharacterId });
+            const ich = await imperialCharactersCollection(db).findOne({
+              _id: sh.imperialCharacterId,
+            });
             if (!ich) continue;
             const home =
               (withholdingContexts.get("imperialCharacters:" + sh.imperialCharacterId.toHexString())
@@ -627,7 +634,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
                   )
                 )
               : undefined;
-            await db.collection<ImperialCharacter>("imperialCharacters").updateOne(
+            await imperialCharactersCollection(db).updateOne(
               { _id: sh.imperialCharacterId },
               {
                 $inc: buildPersonalBalanceInc(
@@ -653,18 +660,14 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
               )
             );
           } else if (sh.corporationId && !sh.corporationId.equals(parent._id)) {
-            const holder = await db
-              .collection<Corporation>("corporations")
-              .findOne({ _id: sh.corporationId });
+            const holder = await corporationsCollection(db).findOne({ _id: sh.corporationId });
             if (!holder) continue;
             const hFx = fxRateForCorpFromMap(holder, fxByCurrency);
             const payoutLocal = anchorToCorpLiquidCapital(payoutAnchor, holder, hFx);
-            await db
-              .collection<Corporation>("corporations")
-              .updateOne(
-                { _id: holder._id },
-                { $inc: { liquidCapital: payoutLocal }, $set: { updatedAt: now } }
-              );
+            await corporationsCollection(db).updateOne(
+              { _id: holder._id },
+              { $inc: { liquidCapital: payoutLocal }, $set: { updatedAt: now } }
+            );
             holderParty = { corporationId: sh.corporationId, name: holder.name };
             ledgerLegs.push(
               takeoverPayoutLeg(
@@ -677,6 +680,11 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
                 (resolveCorpLiquidCurrencyCode(holder) ?? "USD") as CurrencyCode
               )
             );
+          } else if (sh.nppId) {
+            // NPP shares are in the squeeze-out total the parent was debited
+            // for, so they must be paid or that slice leaves the parent and
+            // reaches no one.
+            await payNppSqueezeOut(db, sh.nppId, payoutAnchor, now);
           }
 
           if (holderParty) {
@@ -703,12 +711,10 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           if (fundPayout <= 0) continue;
 
           // Credit fund's cashAnchor with the takeover payout
-          await db
-            .collection("indexFunds")
-            .updateOne(
-              { _id: fundId },
-              { $inc: { cashAnchor: fundPayout }, $set: { updatedAt: now } }
-            );
+          await indexFundsCollection<Document>(db).updateOne(
+            { _id: fundId },
+            { $inc: { cashAnchor: fundPayout }, $set: { updatedAt: now } }
+          );
 
           // Debit the fund's shares from the target's cap table
           await debitSharesFromFund(db, target._id, fundId, fundShares, {
@@ -716,9 +722,9 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           });
 
           // Remove the target corp from the fund's holdings ledger
-          await db
-            .collection("indexFunds")
-            .updateOne({ _id: fundId, "holdings.corporationId": target._id }, [
+          await indexFundsCollection<Document>(db).updateOne(
+            { _id: fundId, "holdings.corporationId": target._id },
+            [
               {
                 $set: {
                   holdings: {
@@ -731,22 +737,19 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
                   updatedAt: now,
                 },
               },
-            ]);
+            ]
+          );
         }
 
-        await db
-          .collection<ShareOrder>("shareOrders")
-          .updateMany(
-            { corporationId: target._id, status: "open" },
-            { $set: { status: "cancelled", updatedAt: now } }
-          );
+        await shareOrdersCollection(db).updateMany(
+          { corporationId: target._id, status: "open" },
+          { $set: { status: "cancelled", updatedAt: now } }
+        );
 
-        await db
-          .collection<ShareListing>("shareListings")
-          .updateMany(
-            { corporationId: target._id, status: "open" },
-            { $set: { status: "cancelled" } }
-          );
+        await shareListingsCollection(db).updateMany(
+          { corporationId: target._id, status: "open" },
+          { $set: { status: "cancelled" } }
+        );
 
         const parentShareRow = (target.shareholders ?? []).find((s) =>
           s.corporationId?.equals(parent._id)
@@ -760,8 +763,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         const targetSectorRevenue = targetSectors.reduce((sum, s) => sum + (s.revenue ?? 0), 0);
         await applyBrandFacilityLoss(db, target._id, targetSectorRevenue);
 
-        const parentSectors = await db
-          .collection<CorporateSector>("corporateSectors")
+        const parentSectors = await corporateSectorsCollection(db)
           .find({ corporationId: parent._id })
           .toArray();
 
@@ -769,8 +771,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         const sectorStateIds = [
           ...new Set([...targetSectors, ...parentSectors].map((s) => s.stateId)),
         ];
-        const sectorStates = await db
-          .collection<State>("states")
+        const sectorStates = await statesCollection(db)
           .find({ _id: { $in: sectorStateIds } }, { projection: { _id: 1, countryId: 1 } })
           .toArray();
         const stateCountryByStateId = buildSectorStateCountryMap(sectorStates);
@@ -889,15 +890,13 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         }
 
         if (sectorMergeOps.length > 0) {
-          const merged = await db
-            .collection<CorporateSector>("corporateSectors")
-            .bulkWrite(sectorMergeOps);
+          const merged = await corporateSectorsCollection(db).bulkWrite(sectorMergeOps);
           if (merged.matchedCount !== sectorMergeOps.length) {
             throw new Error("A takeover destination became secured during the sector merge");
           }
         }
         if (sectorDeleteIds.length > 0) {
-          const removed = await db.collection<CorporateSector>("corporateSectors").deleteMany({
+          const removed = await corporateSectorsCollection(db).deleteMany({
             _id: { $in: sectorDeleteIds },
             ...unprotectedConstructionPropertyFilter(),
           });
@@ -906,16 +905,14 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           }
         }
         if (sectorReassignOps.length > 0) {
-          const reassigned = await db
-            .collection<CorporateSector>("corporateSectors")
-            .bulkWrite(sectorReassignOps);
+          const reassigned = await corporateSectorsCollection(db).bulkWrite(sectorReassignOps);
           if (reassigned.matchedCount !== sectorReassignOps.length) {
             throw new Error("A takeover source sector became secured before reassignment");
           }
         }
         await settleConstructionBorrowerTransfers(db, constructionTransfers);
 
-        await db.collection<Bond>("bonds").updateMany(
+        await bondsCollection(db).updateMany(
           {
             corporationId: target._id,
             $or: [{ issuerType: "corporation" }, { issuerType: { $exists: false } }],
@@ -929,7 +926,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           }
         );
 
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: parent._id },
           {
             $inc: { liquidCapital: cashToParentLocal },
@@ -942,8 +939,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         // corps' shareholders arrays removes shares that the share-invariant
         // expects to be accounted for. Fold those stripped shares into each
         // host corp's publicFloat so totalShares stays balanced.
-        const corpsHoldingTarget = await db
-          .collection<Corporation>("corporations")
+        const corpsHoldingTarget = await corporationsCollection(db)
           .find({ "shareholders.corporationId": target._id })
           .project<{ _id: ObjectId; shareholders: { corporationId?: ObjectId; shares: number }[] }>(
             {
@@ -974,7 +970,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         if (rebalanceOps.length > 0) {
           // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await db.collection<Corporation>("corporations").bulkWrite(rebalanceOps as any);
+          await corporationsCollection(db).bulkWrite(rebalanceOps as any);
         }
 
         // Return any corporate bonds the absorbed target HELD as a creditor to
@@ -989,6 +985,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           fromId: target._id,
           toId: parent._id,
         });
+        await assumeExtractionContracts(db, { fromId: target._id, toId: parent._id, now });
 
         // Stamp tx history before deleting the absorbed corp so any
         // financial-ledger rows referencing the merged target (corp_dividend
@@ -999,7 +996,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
           deletedAt: now,
         });
 
-        await db.collection<Corporation>("corporations").deleteOne({ _id: target._id });
+        await corporationsCollection(db).deleteOne({ _id: target._id });
         await recordCorporationExit(db, target, {
           reason: "hostile_takeover",
           successorId: parent._id,
@@ -1109,9 +1106,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         await settleConstructionBorrowerTransfers(db, constructionTransfers);
         if (
           assumedLoanIds.length > 0 &&
-          (await db
-            .collection<Corporation>("corporations")
-            .countDocuments({ _id: target._id }, { limit: 1 })) > 0
+          (await corporationsCollection(db).countDocuments({ _id: target._id }, { limit: 1 })) > 0
         )
           await restoreCorporateLoans(db, {
             ids: assumedLoanIds,
@@ -1121,7 +1116,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         try {
           await refundCorpLiquidCapital(db, parent._id, totalInParentCapital);
           if (cashTransferApplied && cashToParentLocal > 0) {
-            await db.collection<Corporation>("corporations").updateOne(
+            await corporationsCollection(db).updateOne(
               { _id: parent._id },
               {
                 $inc: { liquidCapital: -cashToParentLocal },

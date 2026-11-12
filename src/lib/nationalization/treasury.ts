@@ -19,7 +19,10 @@ import {
 } from "./treasuryLedger";
 import type { BankingTransition, TransitionProjection } from "@/lib/banking/rules/boundary";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
-import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Opt-in government-side witness for an event-driven caller whose own rows do
@@ -29,6 +32,8 @@ import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/mo
 export interface TreasuryWitness {
   flow: TreasuryCashFlow;
   key?: string;
+  /** Applies the credit at most once: a replay under the same key matches no treasury and moves nothing. */
+  onceKey?: string;
   site?: string;
   /** Internal marker set after the funded cash receipt has landed. */
   fundedTransitionLanded?: boolean;
@@ -126,7 +131,7 @@ function fundedTreasuryExpenseTransition(input: {
  *
  * Every nationalization/SOE/privatization cash flow funnels through here as a
  * cash-only `$inc` (concurrent-safe). `debt.principal` belongs to the bond
- * ledger (see bonds/sovereignPrincipal.ts) and is correctly left alone (#1975).
+ * ledger (see bonds/sovereignPrincipal.ts) and is correctly left alone.
  * Returns whether a treasury matched, so callers witness only cash that landed.
  */
 async function incTreasuryBalance(
@@ -162,9 +167,14 @@ async function incTreasuryBalance(
     }
     return result.status === "applied" || result.status === "replayed";
   }
-  const result = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ countryId }, { $inc: { treasuryBalance: delta }, $set: { updatedAt: now } });
+  const receipt = witness?.onceKey ? `appliedRecoveryCredits.${witness.onceKey}` : null;
+  const result = await federalBudgetCollection(db).updateOne(
+    receipt ? { countryId, [receipt]: { $exists: false } } : { countryId },
+    {
+      $inc: { treasuryBalance: delta },
+      $set: { updatedAt: now, ...(receipt ? { [receipt]: now } : {}) },
+    }
+  );
   return (result?.matchedCount ?? 0) > 0;
 }
 
@@ -173,18 +183,20 @@ async function loadTreasuryAccount(
   db: Db,
   countryId: CountryId
 ): Promise<{ _id: FederalBudget["_id"] }> {
-  const treasury = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { _id: 1 } });
+  const treasury = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { _id: 1 } }
+  );
   if (!treasury) throw new Error(`Treasury for ${countryId} is unavailable`);
   return treasury;
 }
 
 /** Resolve the denomination of the persisted treasury, including 2027 EUR budgets. */
 export async function loadTreasuryCurrency(db: Db, countryId: CountryId): Promise<CurrencyCode> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId },
+    { projection: { countryId: 1, currencyCode: 1 } }
+  );
   return resolveCountryCurrencyCode(budget ?? { countryId }) ?? "USD";
 }
 
@@ -241,14 +253,12 @@ export async function settleFundedTreasuryCompensation(
   newlySettled: boolean;
 }> {
   const settlementKey = `treasury-nationalization-compensation:${input.key}`;
-  const prior = await db
-    .collection<{
-      _id: string;
-      status?: string;
-      legs?: { kind: string; amount: number; collection?: string; path?: string }[];
-      event?: { meta?: { payoutAnchor?: number } };
-    }>("bankMoneyMoves")
-    .findOne({ _id: settlementKey }, { projection: { status: 1, legs: 1, event: 1 } });
+  const prior = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    legs?: { kind: string; amount: number; collection?: string; path?: string }[];
+    event?: { meta?: { payoutAnchor?: number } };
+  }>(db).findOne({ _id: settlementKey }, { projection: { status: 1, legs: 1, event: 1 } });
   if (prior) {
     const wasApplied = prior.status === "applied";
     const settled = await resumeSettlement(db, settlementKey);
@@ -317,9 +327,10 @@ export async function settleFundedTreasuryCompensation(
   );
   if (!(treasuryAmountLocal > 0) || !(donorAmountLocal > 0))
     throw new Error("Funded compensation rounded to a non-positive cash leg");
-  const budget = await db
-    .collection<{ countryId: string; currencyCode?: CurrencyCode | null }>("federalBudget")
-    .findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
+  const budget = await federalBudgetCollection<{
+    countryId: string;
+    currencyCode?: CurrencyCode | null;
+  }>(db).findOne({ countryId: input.countryId }, { projection: { countryId: 1, currencyCode: 1 } });
   if (!budget) throw new Error("Funded compensation Treasury account is missing");
   const budgetFilter: Record<string, unknown> = { countryId: budget.countryId };
   if (Object.prototype.hasOwnProperty.call(budget, "currencyCode"))
@@ -411,14 +422,12 @@ export async function settleFundedTreasuryCompensation(
     throw new Error(settled.error ?? "Funded compensation settlement is incomplete");
   }
   if (!newlySettled) {
-    const original = await db
-      .collection<{
-        _id: string;
-        status?: string;
-        legs?: { kind: string; amount: number; collection?: string; path?: string }[];
-        event?: { meta?: { payoutAnchor?: number } };
-      }>("bankMoneyMoves")
-      .findOne({ _id: transition.key }, { projection: { status: 1, legs: 1, event: 1 } });
+    const original = await bankMoneyMovesCollection<{
+      _id: string;
+      status?: string;
+      legs?: { kind: string; amount: number; collection?: string; path?: string }[];
+      event?: { meta?: { payoutAnchor?: number } };
+    }>(db).findOne({ _id: transition.key }, { projection: { status: 1, legs: 1, event: 1 } });
     const frozenDebit = original?.legs?.find(
       (leg) =>
         leg.kind === "debit" &&
@@ -502,7 +511,7 @@ export async function creditTreasuryProceeds(
  * corporation in the CORPORATION's currency; handing that same figure to
  * `creditTreasuryProceeds`, which expects country-local units, silently treats
  * (say) 50,000 GBP as 50,000 USD, so a cross-border payer over- or under-pays
- * the government by the whole exchange-rate difference (#808).
+ * the government by the whole exchange-rate difference.
  *
  * Returns the local amount credited.
  */
@@ -917,12 +926,10 @@ export async function drawFromTreasury(
   if (amount <= 0) return { ok: true, amount: 0 };
 
   const debited = await incTreasuryBalance(db, input.countryId, -amount, now);
-  const credited = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: input.corpId },
-      { $inc: { liquidCapital: amount }, $set: { updatedAt: now } }
-    );
+  const credited = await corporationsCollection(db).updateOne(
+    { _id: input.corpId },
+    { $inc: { liquidCapital: amount }, $set: { updatedAt: now } }
+  );
   await witnessTreasuryTransfer(db, ledger, "soe_treasury_draw", input, now, {
     treasury: debited ? -amount : 0,
     corporation: (credited?.matchedCount ?? 0) > 0 ? amount : 0,
@@ -1028,12 +1035,10 @@ export async function remitToTreasury(
   }
 
   if (amount <= 0) return 0;
-  const debited = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: input.corpId },
-      { $inc: { liquidCapital: -amount }, $set: { updatedAt: now } }
-    );
+  const debited = await corporationsCollection(db).updateOne(
+    { _id: input.corpId },
+    { $inc: { liquidCapital: -amount }, $set: { updatedAt: now } }
+  );
   const credited = await incTreasuryBalance(db, input.countryId, amount, now);
   await witnessTreasuryTransfer(db, options, "soe_remittance", input, now, {
     corporation: (debited?.matchedCount ?? 0) > 0 ? -amount : 0,
@@ -1070,8 +1075,7 @@ export async function loadSoeRemittanceReceipts(
   corpIds: readonly ObjectId[]
 ): Promise<Map<string, SoeRemittanceReceipt>> {
   if (corpIds.length === 0) return new Map();
-  const rows = await db
-    .collection<SoeRemittanceReceipt>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<SoeRemittanceReceipt>(db)
     .find(
       { _id: { $in: corpIds.map((id) => soeRemittanceKey(turn, id)) } },
       {
@@ -1180,11 +1184,11 @@ async function resumeSoeRemittanceReceipt(
  * the same key. Partial receipts and malformed transitions do not qualify.
  */
 async function refusedBeforeAnyCashMoved(db: Db, key: string): Promise<boolean> {
-  const receipt = await db
-    .collection<{ _id: string; status?: string; legs?: MoneyMoveRecordLeg[] }>(
-      MONEY_MOVE_COLLECTION
-    )
-    .findOne({ _id: key }, { projection: { status: 1, legs: 1 } });
+  const receipt = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    legs?: MoneyMoveRecordLeg[];
+  }>(db).findOne({ _id: key }, { projection: { status: 1, legs: 1 } });
   const legs = receipt?.legs ?? [];
   return (
     receipt?.status === "rejected" &&

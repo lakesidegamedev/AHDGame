@@ -19,6 +19,7 @@ import {
   type PrimaryUnderwritingFillInput,
 } from "@/lib/banking/underwritingSettlement";
 import type { ResolvedPrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * True when the corp has any non-CEO character or corporation shareholder
@@ -284,7 +285,7 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
       });
       updateRes = { matchedCount: 1 };
     } else if (!placement.poolActive) {
-      updateRes = await db.collection<Corporation>("corporations").updateOne(
+      updateRes = await corporationsCollection(db).updateOne(
         { _id: corporation._id, isPrivate: true },
         {
           $set: {
@@ -300,9 +301,9 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
         }
       );
     } else {
-      updateRes = await db
-        .collection<Corporation>("corporations")
-        .updateOne({ _id: corporation._id, isPrivate: true }, [
+      updateRes = await corporationsCollection(db).updateOne(
+        { _id: corporation._id, isPrivate: true },
+        [
           {
             $set: {
               isPrivate: false,
@@ -364,7 +365,8 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
               updatedAt: now,
             },
           },
-        ]);
+        ]
+      );
     }
   } catch (error) {
     if (!underwritten) await refundPreparedEquityPlacement(db, placement, now);
@@ -401,9 +403,9 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
     // Dual-class IPO: stamp the multiplier and designate the founder's pre-IPO
     // shares (their entire entry — the corp was 100% CEO-owned) as supershares.
     // The $exists guard keeps this idempotent against a concurrent adoption.
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corporation._id, superShareMultiplier: { $exists: false } }, [
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id, superShareMultiplier: { $exists: false } },
+      [
         {
           $set: {
             superShareMultiplier,
@@ -423,7 +425,8 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
             },
           },
         },
-      ]);
+      ]
+    );
   }
 
   recordAudit({

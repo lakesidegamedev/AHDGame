@@ -12,6 +12,10 @@ import {
   bgFoundingOpenNominationDistricts,
 } from "./rules/foundingRenewal1990";
 import { BG_1990_CONSTITUENCIES } from "./data/foundingDistricts1990";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 function stableId(key: string) {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
@@ -30,8 +34,7 @@ export async function planBgFoundingRenewedNpcSlates(input: {
   const regions = [
     ...new Set(BG_1990_CONSTITUENCIES.filter((row) => open.has(row.id)).map((row) => row.regionId)),
   ];
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { countryId: "BG", regimeStatus: { $ne: "banned" } },
       { session, projection: { sequentialId: 1 } }
@@ -42,8 +45,7 @@ export async function planBgFoundingRenewedNpcSlates(input: {
       .filter((row) => Number.isSafeInteger(row.sequentialId) && row.sequentialId > 0)
       .map((row) => String(row.sequentialId))
   );
-  const npcs = await db
-    .collection<NPP>("npps")
+  const npcs = await nppsCollection(db)
     .find(
       {
         countryId: "BG",
@@ -60,15 +62,13 @@ export async function planBgFoundingRenewedNpcSlates(input: {
     )
     .sort({ _id: 1 })
     .toArray();
-  const liveRaces = await db
-    .collection<Election>("elections")
+  const liveRaces = await electionsCollection(db)
     .find(
       { countryId: "BG", status: { $in: ["upcoming", "active", "completed"] } },
       { session, projection: { _id: 1 } }
     )
     .toArray();
-  const filed = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const filed = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: liveRaces.map((row) => row._id) }, isNPP: true, status: "active" },
       { session, projection: { nppId: 1 } }

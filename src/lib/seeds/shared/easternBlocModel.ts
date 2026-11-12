@@ -1,9 +1,8 @@
 import type { CountryLayer1Model } from "@/lib/seeds/international/types";
 import type { EraId } from "@/lib/seeds/presetSelector";
-import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * Shared Layer-1 model + demographic-category builders for the Warsaw-Pact
+ * Shared Layer-1 model builder for the Warsaw-Pact
  * one-party states. Six standard command-economy archetypes; the country's own
  * census (and titular-ethnicity keys) drive the per-region outcome. Leans run:
  *   economicLean -5 (plan/socialist) … +5 (market/reform)
@@ -23,15 +22,6 @@ export const EASTERN_BLOC_GROUP_IDS = [
   "religious_traditional",
   "youth",
 ] as const;
-
-const GROUP_NAMES: Record<string, string> = {
-  party_nomenklatura: "Party Nomenklatura",
-  industrial_worker: "Industrial Worker",
-  collective_farmer: "Collective Farmer",
-  intelligentsia: "Technical Intelligentsia",
-  religious_traditional: "Religious / Traditional",
-  youth: "Youth",
-};
 
 const DEFAULT_LEANS = {
   party_nomenklatura: { economicLean: -3, socialLean: 2 },
@@ -122,22 +112,10 @@ const URB_POS_1979: DimPositions = {
   rural: { economicLean: -0.5, socialLean: 1.5 },
 };
 
-// ── 1953: high Stalinism ────────────────────────────────────────────────────
-// Authored for the early bloc, not scaled from 1979. Three real differences:
-//  - Collectivisation is INCOMPLETE almost everywhere (Poland's private peasant
-//    farms survive to 1989; Hungary's first collectivisation drive collapses in
-//    1956; Yugoslavia abandons its in 1953). The countryside is therefore the
-//    most market-minded and most traditional bloc in the country, not a
-//    uniformly statist one — so `rural` carries a real positive economic lean
-//    where 1979 flattened all three urbanization buckets to -0.5.
-//  - The church is still a mass institution (the Polish primate Wyszyński is
-//    interned in September 1953), so the low-education / senior / rural milieux
-//    are markedly more traditional than their 1979 successors.
-//  - The intelligentsia is under active purge and the private artisan and
-//    professional remnant has not yet been expropriated, so the university and
-//    high-income buckets pull much harder toward reform/market.
-// Net effect: a wider spread on BOTH axes than 1979, which is what makes the
-// regions politically distinguishable in a 1953 world.
+// 1953 high Stalinism: authored for the early bloc, not scaled from 1979.
+// Rural areas are still market-minded (incomplete collectivisation), church
+// milieux are traditional, and the purged intelligentsia pulls toward reform.
+// Wider spread on both axes than 1979 keeps regions distinguishable.
 const AGE_POS_1953: DimPositions = {
   young: { economicLean: -1.8, socialLean: -1.4 }, // new communist youth leagues
   mid: { economicLean: -1.0, socialLean: 0.4 },
@@ -260,22 +238,4 @@ export function makeEasternBlocModel(
     defaultLeans: DEFAULT_LEANS as unknown as CountryLayer1Model["defaultLeans"],
     census,
   };
-}
-
-/** Build the matching demographic-category doc for the standard 6 archetypes. */
-export function makeEasternBlocCategories(categoryId: string, name: string): DemographicCategory[] {
-  return [
-    {
-      _id: categoryId,
-      name,
-      defaultWeight: 100,
-      groups: EASTERN_BLOC_GROUP_IDS.map((id) => ({
-        id,
-        name: GROUP_NAMES[id],
-        defaultEconomicLean: DEFAULT_LEANS[id].economicLean,
-        defaultSocialLean: DEFAULT_LEANS[id].socialLean,
-        defaultTurnout: 94,
-      })),
-    },
-  ];
 }

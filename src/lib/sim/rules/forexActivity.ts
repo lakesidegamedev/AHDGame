@@ -1,11 +1,11 @@
 /**
- * Forex activity evidence for qualification runs (issue #2293).
+ * Forex activity evidence for qualification runs.
  *
  * An enabled forex phase moves rates from macro drift, volume pressure and
- * central-bank intervention. Pure-NPP worlds have no character wallets, so the
- * order book stays empty and every rate move is macro-only. This rule turns raw
- * order, trade and intervention counts into one record that says so, so an
- * enabled but unexercised product is never read as a qualified market.
+ * central-bank intervention. Pure-NPP worlds have no wallets, so the order book
+ * stays empty and every rate move is macro-only. This rule turns raw order,
+ * trade and intervention counts into one record, so an enabled but unexercised
+ * product is never read as a qualified market.
  *
  * Pure: plain data in, plain data out.
  */

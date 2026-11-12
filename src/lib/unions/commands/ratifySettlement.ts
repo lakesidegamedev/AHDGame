@@ -9,7 +9,6 @@ import type {
   BargainingRatification,
   BargainingRatificationBallot,
   Character,
-  Corporation,
   Union,
 } from "@/lib/db/types";
 import { createNotification, createNotifications } from "@/lib/notifications";
@@ -32,13 +31,17 @@ import {
 } from "@/lib/unions/ratification";
 import { persistBargainingSettlement, restoreEscalationExpectations } from "./bargaining";
 import { rejectIfTurnProcessing, type UnionActionResult } from "./unionActions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { bargainingRatificationBallotsCollection } from "@/lib/db/repositories/bargainingRatificationBallots";
 
 export const RATIFICATION_BALLOTS = "bargainingRatificationBallots";
 
 /** Ballots cast on one campaign, newest write per organizer per offer. */
 async function loadBallots(db: Db, campaignId: ObjectId): Promise<BargainingRatificationBallot[]> {
-  return db
-    .collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS)
+  return bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db)
     .find({ campaignId })
     .toArray();
 }
@@ -79,7 +82,7 @@ export async function openSettlementRatification(
   });
   if (!ratification) return null;
 
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     {
       _id: campaign._id,
       status: campaign.status,
@@ -100,9 +103,10 @@ export async function openSettlementRatification(
   // Ballots from an earlier vote on an earlier offer are not part of this one.
   // They are filtered out by revision anyway; clearing them keeps the
   // collection from growing a tail of dead rows per campaign.
-  await db
-    .collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS)
-    .deleteMany({ campaignId: campaign._id, offerRevision: { $ne: ratification.offerRevision } });
+  await bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db).deleteMany({
+    campaignId: campaign._id,
+    offerRevision: { $ne: ratification.offerRevision },
+  });
   await notifyOrganizers(db, union, campaign, ratification);
 
   return {
@@ -122,8 +126,7 @@ async function notifyOrganizers(
   campaign: BargainingCampaign,
   ratification: BargainingRatification
 ): Promise<void> {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find(
       { _id: { $in: ratification.weights.map((weight) => weight.characterId) } },
       { projection: { userId: 1 } }
@@ -181,15 +184,16 @@ export async function castRatificationBallot(
   if (!ObjectId.isValid(campaignId) || !ObjectId.isValid(unionRouteId)) {
     return { ok: false, status: 400, error: "Invalid campaign ID." };
   }
-  const campaign = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ _id: new ObjectId(campaignId) });
+  const campaign = await bargainingCampaignsCollection(db).findOne({
+    _id: new ObjectId(campaignId),
+  });
   if (!campaign || !campaign.unionId.equals(new ObjectId(unionRouteId))) {
     return { ok: false, status: 404, error: "Bargaining campaign not found for this union." };
   }
-  const union = await db
-    .collection<Union>("unions")
-    .findOne({ _id: campaign.unionId }, { projection: { name: 1, countryId: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { _id: campaign.unionId },
+    { projection: { name: 1, countryId: 1 } }
+  );
   if (!union) return { ok: false, status: 404, error: "Union not found" };
   // Same country gate the leadership ballot applies, and the same ban freeze.
   if (!isSameCountry(character, { countryId: union.countryId })) {
@@ -230,7 +234,7 @@ export async function castRatificationBallot(
   }
 
   const now = new Date();
-  await db.collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS).updateOne(
+  await bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db).updateOne(
     {
       campaignId: campaign._id,
       offerRevision: ratification.offerRevision,
@@ -271,13 +275,10 @@ export interface CloseRatificationResult {
 /**
  * Decide one open vote and apply the consequence.
  *
- * A ratified vote settles the campaign exactly as accepting used to. A rejected
- * one leaves the campaign where it stands, with the employer's offer still on
- * the table: the union must move the package or live with the clocks. That is
- * the only rejection path that obeys the rule in the `lapsed` docblock, because
- * it invents no new state to be stuck in. The deadline still runs the campaign
- * into dispute and the dispute still lapses, so a membership that rejects
- * everything ends the campaign by the existing exit rather than freezing it.
+ * A ratified vote settles the campaign as accepting would. A rejected vote
+ * leaves the campaign intact with the employer's offer still on the table;
+ * no new state is introduced, so the deadline still routes through dispute
+ * and lapse as the existing exit.
  */
 export async function closeRatificationVote(
   db: Db,
@@ -290,7 +291,7 @@ export async function closeRatificationVote(
     return { outcome: null, campaignStatus: campaign.status };
   }
 
-  const campaigns = db.collection<BargainingCampaign>("bargainingCampaigns");
+  const campaigns = bargainingCampaignsCollection(db);
   const now = new Date();
   const ballotFilter = {
     _id: campaign._id,
@@ -322,9 +323,10 @@ export async function closeRatificationVote(
   // A settlement needs a counterparty. A dissolved employer cannot be bound by
   // an agreement, and leaving the campaign open would hold the union in a
   // campaign no answer can ever end.
-  const employer = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: campaign.employerCorporationId }, { projection: { _id: 1 } });
+  const employer = await corporationsCollection(db).findOne(
+    { _id: campaign.employerCorporationId },
+    { projection: { _id: 1 } }
+  );
   if (!employer) {
     await voidVote(campaign.status);
     await campaigns.updateOne(
@@ -411,15 +413,17 @@ async function notifyRatificationClosed(
   outcome: RatificationOutcome | "void",
   currentTurn: number
 ): Promise<void> {
-  const union = await db
-    .collection<Union>("unions")
-    .findOne({ _id: campaign.unionId }, { projection: { name: 1, ownerId: 1, ownerType: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { _id: campaign.unionId },
+    { projection: { name: 1, ownerId: 1, ownerType: 1 } }
+  );
   // An NPP-led union has no User behind its leader, and a vacant presidency has
   // nobody to tell. The vote still closed on schedule either way.
   if (!union?.ownerId || union.ownerType === "npp") return;
-  const leader = await db
-    .collection<Character>("characters")
-    .findOne({ _id: union.ownerId }, { projection: { userId: 1 } });
+  const leader = await charactersCollection(db).findOne(
+    { _id: union.ownerId },
+    { projection: { userId: 1 } }
+  );
   if (!leader?.userId) return;
   await createNotification({
     userId: leader.userId,
@@ -455,8 +459,7 @@ export async function closeDueRatificationVotes(
   currentTurn: number
 ): Promise<{ ratified: number; rejected: number; voided: number }> {
   const counts = { ratified: 0, rejected: 0, voided: 0 };
-  const due = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const due = await bargainingCampaignsCollection(db)
     .find({ "ratification.status": "open", "ratification.closesAtTurn": { $lte: currentTurn } })
     .toArray();
   for (const campaign of due) {

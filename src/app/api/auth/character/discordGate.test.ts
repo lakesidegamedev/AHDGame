@@ -7,7 +7,6 @@ vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: () => ({ ok: true }),
   rateLimitResponse: vi.fn(),
 }));
-vi.mock("@/lib/stats/featureFlag", () => ({ isRpgStatsEnabled: async () => false }));
 vi.mock("@/lib/db/collections/gameState", () => ({
   getGameStatePresetOrDefault: async () => "1991-default",
 }));

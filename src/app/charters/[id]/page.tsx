@@ -8,9 +8,12 @@ import { Badge } from "@/components/ui";
 import { PlatformSliders } from "@/components/charters/PlatformSliders";
 import { CharterActions } from "@/components/charters/CharterActions";
 import { FounderSlotReplace } from "@/components/charters/FounderSlotReplace";
-import type { Character, PartyCharter, PartyCharterStatus, PoliticalParty } from "@/lib/db/types";
+import type { PartyCharter, PartyCharterStatus, PoliticalParty } from "@/lib/db/types";
 
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 const STATUS_VARIANT: Record<PartyCharterStatus, "default" | "warning" | "success" | "error"> = {
   draft: "default",
@@ -37,9 +40,7 @@ export default async function CharterDetailPage({ params }: PageParams) {
   if (!user) redirect(`/login?returnUrl=/charters/${id}`);
 
   const db = await getDb();
-  const charter = await db
-    .collection<PartyCharter>("partyCharters")
-    .findOne({ _id: new ObjectId(id) });
+  const charter = await partyChartersCollection(db).findOne({ _id: new ObjectId(id) });
   if (!charter) notFound();
 
   const clock = await getGameClock();
@@ -48,8 +49,7 @@ export default async function CharterDetailPage({ params }: PageParams) {
   // the ratified-party lookup and the country identity resolve together
   // instead of in three consecutive round trips.
   const [founderCharacters, ratifiedParty, countryIdentity] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: charter.foundersCharacterIds } })
       .project<{ _id: ObjectId; name: string; userId: ObjectId | null | undefined }>({
         name: 1,
@@ -57,9 +57,10 @@ export default async function CharterDetailPage({ params }: PageParams) {
       })
       .toArray(),
     charter.status === "ratified" && charter.partyId
-      ? db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: charter.countryId, sequentialId: Number(charter.partyId) })
+      ? politicalPartiesCollection(db).findOne({
+          countryId: charter.countryId,
+          sequentialId: Number(charter.partyId),
+        })
       : Promise.resolve(null),
     resolveCountryIdentity(db, charter.countryId),
   ]);

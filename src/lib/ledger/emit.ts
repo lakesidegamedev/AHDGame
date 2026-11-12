@@ -3,6 +3,7 @@ import { ObjectId, type ClientSession, type Db } from "mongodb";
 import { isAnchorBalanced } from "@/lib/ledger/epsilon";
 import type { LedgerEntry, LedgerEntryInput } from "@/lib/ledger/types";
 import { resolveLedgerTurn } from "@/lib/ledger/ledgerTurn";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export const LEDGER_ENTRIES_COLLECTION = "ledgerEntries";
 
@@ -36,7 +37,7 @@ export async function emitLedgerEntries(
     const docs = inputs.map((input) =>
       finalizeLedgerEntry(turn === null ? input : { ...input, turn })
     );
-    await db.collection<LedgerEntry>(LEDGER_ENTRIES_COLLECTION).insertMany(docs, {
+    await ledgerEntriesCollection<LedgerEntry>(db).insertMany(docs, {
       ordered: false,
       ...(options?.session ? { session: options.session } : {}),
     });

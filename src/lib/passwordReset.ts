@@ -11,6 +11,7 @@
 import { createHash, randomBytes } from "crypto";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { passwordResetsCollection } from "@/lib/db/repositories/passwordResets";
 
 export const PASSWORD_RESETS_COLLECTION = "passwordResets";
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
@@ -48,7 +49,7 @@ export async function createPasswordReset(
   const rawToken = `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
   const now = new Date();
   const db = await getDb();
-  const collection = db.collection<PasswordResetDoc>(PASSWORD_RESETS_COLLECTION);
+  const collection = passwordResetsCollection<PasswordResetDoc>(db);
 
   await collection.updateMany({ userId, usedAt: null }, { $set: { usedAt: now } });
 
@@ -73,10 +74,8 @@ export async function createPasswordReset(
 export async function consumePasswordReset(rawToken: string): Promise<PasswordResetDoc | null> {
   if (!rawToken.startsWith(TOKEN_PREFIX)) return null;
   const db = await getDb();
-  return db
-    .collection<PasswordResetDoc>(PASSWORD_RESETS_COLLECTION)
-    .findOneAndUpdate(
-      { tokenHash: hashResetToken(rawToken), usedAt: null, expiresAt: { $gt: new Date() } },
-      { $set: { usedAt: new Date() } }
-    );
+  return passwordResetsCollection<PasswordResetDoc>(db).findOneAndUpdate(
+    { tokenHash: hashResetToken(rawToken), usedAt: null, expiresAt: { $gt: new Date() } },
+    { $set: { usedAt: new Date() } }
+  );
 }

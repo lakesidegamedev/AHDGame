@@ -17,6 +17,7 @@ import {
   spendMinisterialAction,
   type MinisterialSpendResult,
 } from "@/lib/cabinet/ministerialActionPool";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
 
 type V2GameState = Pick<
   GameState,
@@ -34,8 +35,6 @@ export function isCabinetV2(gameState: V2GameState | null | undefined, countryId
     resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).cabinet === "v2"
   );
 }
-
-const STATES = "resetCabinetActionStates";
 
 /**
  * Remaining / spend / refund for one office holder. v2 countries use the actor's charges
@@ -59,7 +58,7 @@ export function officeActionPool(
   const turn = gameState.currentTurn;
   // A seat with no player holder has no charges, matching the office header.
   const actorId = member.characterId?.toString();
-  const col = () => db.collection<ResetCabinetActionState>(STATES);
+  const col = () => resetCabinetActionStatesCollection<ResetCabinetActionState>(db);
   const path = `actorStates.${actorId}`;
 
   const read = async () => {

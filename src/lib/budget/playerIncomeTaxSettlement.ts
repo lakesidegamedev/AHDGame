@@ -15,6 +15,15 @@ import type {
   IncomeTaxBatchReceipt,
 } from "@/lib/db/types/incomeTax";
 import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { playerIncomeTaxBatchesCollection } from "@/lib/db/repositories/playerIncomeTaxBatches";
 
 interface Payer {
   ownerCollection: Assessment["ownerCollection"];
@@ -62,7 +71,7 @@ const receiptGuard = (turn: number) => ({
 
 /** All monetary writes are batched; a failed wallet guard cannot block another payer. */
 async function deliver(db: Db, original: Batch): Promise<void> {
-  const batches = db.collection<Batch>("playerIncomeTaxBatches");
+  const batches = playerIncomeTaxBatchesCollection<Batch>(db);
   let batch = original;
   if (batch.stage === "complete") return;
   const identity = { _id: batch._id, key: batch.key };
@@ -109,11 +118,10 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         });
     const regularOps = operations("characters"),
       imperialOps = operations("imperialCharacters");
-    if (regularOps.length) await db.collection("characters").bulkWrite(regularOps);
-    if (imperialOps.length) await db.collection("imperialCharacters").bulkWrite(imperialOps);
+    if (regularOps.length) await charactersCollection<Document>(db).bulkWrite(regularOps);
+    if (imperialOps.length) await imperialCharactersCollection<Document>(db).bulkWrite(imperialOps);
     const [regularProof, imperialProof] = await Promise.all([
-      db
-        .collection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>("characters")
+      charactersCollection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(db)
         .find(
           {
             _id: {
@@ -125,10 +133,10 @@ async function deliver(db: Db, original: Batch): Promise<void> {
           { projection: { incomeTaxBatchReceipt: 1 } }
         )
         .toArray(),
-      db
-        .collection<{ _id: ObjectId; incomeTaxBatchReceipt?: IncomeTaxBatchReceipt }>(
-          "imperialCharacters"
-        )
+      imperialCharactersCollection<{
+        _id: ObjectId;
+        incomeTaxBatchReceipt?: IncomeTaxBatchReceipt;
+      }>(db)
         .find(
           {
             _id: {
@@ -185,7 +193,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
     }));
   if (batch.stage === "debited") {
     if (batch.paidIds.length)
-      await db.collection<Assessment>("playerIncomeTaxAssessments").bulkWrite(
+      await playerIncomeTaxAssessmentsCollection<Assessment>(db).bulkWrite(
         assessments.map((assessment) => ({
           updateOne: {
             filter: {
@@ -255,16 +263,13 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         },
       },
     }));
-    if (nationalOps.length)
-      await db.collection<FederalBudget>("federalBudget").bulkWrite(nationalOps);
-    if (regionalOps.length) await db.collection<StateBudget>("stateBudgets").bulkWrite(regionalOps);
+    if (nationalOps.length) await federalBudgetCollection(db).bulkWrite(nationalOps);
+    if (regionalOps.length) await stateBudgetsCollection(db).bulkWrite(regionalOps);
     const [nationalProof, regionalProof] = await Promise.all([
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .find({ _id: { $in: [...national.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
         .toArray(),
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .find({ _id: { $in: [...regional.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
         .toArray(),
     ]);
@@ -367,7 +372,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         : []),
     ]);
     if (transactions.length)
-      await db.collection("financialTxLog").bulkWrite(
+      await financialTxLogCollection<Document>(db).bulkWrite(
         [...transactions, ...governmentReceipts].map((transaction) => ({
           updateOne: {
             filter: { _id: transaction._id },
@@ -481,7 +486,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
           },
         ];
       });
-      await db.collection("ledgerEntries").bulkWrite(
+      await ledgerEntriesCollection<Document>(db).bulkWrite(
         entries.map((entry) => ({
           updateOne: {
             filter: { _id: entry._id },
@@ -492,7 +497,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
       );
     }
     if (batch.paidIds.length)
-      await db.collection<Assessment>("playerIncomeTaxAssessments").updateMany(
+      await playerIncomeTaxAssessmentsCollection<Assessment>(db).updateMany(
         {
           _id: {
             $in: assessments.filter((a) => a.collection?.fullyPaid !== false).map((a) => a._id),
@@ -514,7 +519,7 @@ export async function settlePlayerIncomeTaxAssessments(
   turnLengthMinutes: number,
   forexEnabled = false
 ): Promise<void> {
-  const batches = db.collection<Batch>("playerIncomeTaxBatches");
+  const batches = playerIncomeTaxBatchesCollection<Batch>(db);
   let active = await batches.findOne({ _id: worldId });
   if (active && active.stage !== "complete") {
     await deliver(db, active);
@@ -525,8 +530,7 @@ export async function settlePlayerIncomeTaxAssessments(
   // the active BSON plan indefinitely or starving other taxpayers.
   const scanLimit = 1000;
   const scan = (limit: number, after?: string, through?: string) =>
-    db
-      .collection<Assessment>("playerIncomeTaxAssessments")
+    playerIncomeTaxAssessmentsCollection<Assessment>(db)
       .find({
         worldId,
         status: "unpaid",
@@ -542,8 +546,7 @@ export async function settlePlayerIncomeTaxAssessments(
   if (active?.scanAfter && candidates.length < scanLimit)
     candidates.push(...(await scan(scanLimit - candidates.length, undefined, active.scanAfter)));
   const [regularWallets, imperialWallets] = await Promise.all([
-    db
-      .collection<WalletDoc>("characters")
+    charactersCollection<WalletDoc>(db)
       .find(
         {
           _id: {
@@ -555,8 +558,7 @@ export async function settlePlayerIncomeTaxAssessments(
         { projection: { "currencyBalances.personal": 1, cashOnHand: 1 } }
       )
       .toArray(),
-    db
-      .collection<WalletDoc>("imperialCharacters")
+    imperialCharactersCollection<WalletDoc>(db)
       .find(
         {
           _id: {
@@ -577,7 +579,7 @@ export async function settlePlayerIncomeTaxAssessments(
   ]);
   const rates: Record<string, number> = {};
   if (forexEnabled) {
-    const quotes = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const quotes = await exchangeRatesCollection(db).find({}).toArray();
     for (const quote of quotes)
       if (Number.isFinite(quote.rate) && quote.rate > 0) rates[quote.currencyCode] = quote.rate;
   }

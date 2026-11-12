@@ -10,7 +10,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getPartyMap } from "@/lib/db/partyMap";
-import type { Bill, Character, NPP, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import type { Bill, NPP, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import { resolveBillCountryId } from "@/lib/congress/resolveBillCountryId";
 import { buildScopedVoteInputs, type ScopedVoteOfficial } from "@/lib/congress/billVoting";
 import { snapshotWeightMap } from "@/lib/legislature/voteSnapshot";
@@ -21,6 +21,11 @@ import {
   resolveOtherVoteChamberKey,
   resolvePrimaryVoteChamberKey,
 } from "@/lib/congress/billVoteChamberScope";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 interface IndividualVote {
   id: string;
@@ -69,7 +74,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const db = await getDb();
-    const bill = await db.collection<Bill>("bills").findOne({ _id: new ObjectId(id) });
+    const bill = await billsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!bill) return errorResponse(404, "Bill not found");
 
     // Pick the votes map for the requested chamber
@@ -101,8 +106,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     // Batch-fetch characters, NPPs, elected officials, and parties
     const [characters, npps, partyMap] = await Promise.all([
       uniqueCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({
               _id: { $in: uniqueCharIds.map((i) => new ObjectId(i)) },
             })
@@ -110,8 +114,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             .toArray()
         : Promise.resolve([]),
       uniqueNppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({
               _id: { $in: uniqueNppIds.map((i) => new ObjectId(i)) },
             })
@@ -122,8 +125,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     ]);
 
     // Build slug→sequentialId reverse map for NPP party slug resolution
-    const allParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const allParties = await politicalPartiesCollection(db)
       .find({ countryId: country })
       .project({ sequentialId: 1, slug: 1 })
       .toArray();
@@ -149,8 +151,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
     const officials =
       orClauses.length > 0
-        ? await db
-            .collection<ElectedOfficial>("electedOfficials")
+        ? await electedOfficialsCollection(db)
             .find({ $or: orClauses })
             .project<ScopedVoteOfficial>({
               characterId: 1,
@@ -167,9 +168,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       officials,
       voteOfficeType ? { countryId: country, officeType: voteOfficeType } : null
     );
-    // A concluded phase has a frozen snapshot — show the roster (and seat weights)
-    // as they were at close, so a later election cannot drop the voters who
-    // actually voted (#0982). Only an in-progress phase live-scopes.
+    // A concluded phase has a frozen snapshot: show the roster and seat
+    // weights as they were at close, so a later election cannot drop actual
+    // voters. Only an in-progress phase live-scopes.
     const phaseSnapshot = chamber === "other" ? bill.otherChamberVoteSnapshot : bill.voteSnapshot;
     const scopedVotesMap = phaseSnapshot ? phaseSnapshot.votes : (scopedVoteInputs.votes ?? {});
     const weightMap = phaseSnapshot ? snapshotWeightMap(phaseSnapshot) : scopedVoteInputs.weightMap;

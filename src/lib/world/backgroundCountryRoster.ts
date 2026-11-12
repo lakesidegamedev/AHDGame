@@ -1,5 +1,6 @@
 import { ALIGNMENT_ROSTER, existsAt, nameAt, statusAt } from "@/lib/constants/alignmentRoster";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
+import { isShippingPreset, tierFor } from "./eraRoster";
 import type {
   WorldEntityManifestEntry,
   WorldEntityPresetManifest,
@@ -262,6 +263,14 @@ function backgroundEntry(args: {
   };
 }
 
+function isAbsentRegisteredCountry(entry: WorldEntityManifestEntry, presetId: string): boolean {
+  return (
+    entry.countryId != null &&
+    isShippingPreset(presetId) &&
+    tierFor(presetId, entry.countryId) === "absent"
+  );
+}
+
 /** Promote every era-valid sovereign not already simulated at a higher tier. */
 export function expandManifestWithBackgroundCountries(
   manifest: WorldEntityPresetManifest
@@ -288,7 +297,11 @@ export function expandManifestWithBackgroundCountries(
     if (!existsAt(row.key, year) || statusAt(row.key, year) !== "sovereign") continue;
     const dissolved = DISSOLVED_FROM[row.key];
     if (dissolved != null && year >= dissolved) continue;
-    if (byId.has(row.key)) continue;
+    // A registered country the era's roster leaves out (Canada before 2027)
+    // is still a sovereign background economy in that era.
+    if (byId.has(row.key) && !isAbsentRegisteredCountry(byId.get(row.key)!, manifest.presetId)) {
+      continue;
+    }
     byId.set(
       row.key,
       backgroundEntry({

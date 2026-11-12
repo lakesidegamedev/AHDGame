@@ -1,10 +1,5 @@
 import { ObjectId, type Db, type UpdateFilter } from "mongodb";
-import type {
-  Corporation,
-  CorporateSector,
-  FederalBudget,
-  NationalizationAuction,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, NationalizationAuction } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import {
@@ -27,6 +22,12 @@ import type {
   TouchedDocs,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 export const DEFECT_ID = "AHD-command-economy-private-sector-ownership";
 
@@ -284,7 +285,7 @@ function dedupeTouched(rows: TouchedDocs[]): TouchedDocs[] {
 }
 
 async function findTargetCorporation(db: Db, row: KnownCase): Promise<Corporation | null> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
   return (
     (await corps.findOne({
       countryOwnerId: row.countryId,
@@ -303,22 +304,18 @@ async function survey(db: Db): Promise<Survey> {
     (id) => new ObjectId(id)
   );
   const [sectors, sourceCorps, fxByCurrency, budgets, gameState, openAuctions] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ _id: { $in: sectorIds } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: sourceCorpIds } })
       .toArray(),
     loadFxRatesByCurrency(db),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ countryId: { $in: ["RU", "UKR"] } })
       .toArray(),
-    db.collection<{ _id: string; currentTurn?: number }>("gameState").findOne({ _id: "current" }),
-    db
-      .collection<NationalizationAuction>("nationalizationAuctions")
+    gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({ _id: "current" }),
+    nationalizationAuctionsCollection(db)
       .find({ corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID), status: "open" })
       .toArray(),
   ]);
@@ -347,7 +344,7 @@ async function survey(db: Db): Promise<Survey> {
         throw new Error(`no state enterprise target for ${row.countryId}/${row.sectorType}`);
       invalidIds.push(row.sectorId);
       affectedKeys.add(row.sectorId);
-      const survivor = await db.collection<CorporateSector>("corporateSectors").findOne({
+      const survivor = await corporateSectorsCollection(db).findOne({
         corporationId: target._id,
         stateId: row.stateId,
         sectorType: row.sectorType,
@@ -368,7 +365,8 @@ async function survey(db: Db): Promise<Survey> {
     }
 
     if (row.compensation === "book") {
-      if (row.countryId === "DD") throw new Error("DD state-owned sectors cannot be compensated");
+      if (countryHasFeature("ddLib", row.countryId))
+        throw new Error("DD state-owned sectors cannot be compensated");
       if (!source) throw new Error(`compensation donor ${row.sourceCorporationId} is missing`);
       const budget = budgetByCountry.get(row.countryId);
       if (!budget) throw new Error(`federal budget for ${row.countryId} is missing`);
@@ -404,9 +402,9 @@ async function survey(db: Db): Promise<Survey> {
   }
 
   const ddSource = corpById.get(DD_SOURCE_CORPORATION_ID) ?? null;
-  const ddTarget = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: new ObjectId(DD_TARGET_CORPORATION_ID) });
+  const ddTarget = await corporationsCollection(db).findOne({
+    _id: new ObjectId(DD_TARGET_CORPORATION_ID),
+  });
   if (!ddTarget && (ddSource || openAuctions.length > 0)) {
     throw new Error("East German Financial Enterprise is missing");
   }
@@ -532,7 +530,7 @@ async function applyCompensation(db: Db, row: CompensationPlan, ctx: HealContext
     appliedAt: ctx.now,
   };
   let modified = 0;
-  const budget = await db.collection<FederalBudget>("federalBudget").updateOne(
+  const budget = await federalBudgetCollection(db).updateOne(
     { _id: row.budgetId, [markerPath]: { $exists: false } },
     {
       $inc: { treasuryBalance: -row.treasuryLocalAmount },
@@ -540,7 +538,7 @@ async function applyCompensation(db: Db, row: CompensationPlan, ctx: HealContext
     }
   );
   modified += budget.modifiedCount;
-  const donor = await db.collection<Corporation>("corporations").updateOne(
+  const donor = await corporationsCollection(db).updateOne(
     { _id: new ObjectId(row.donorCorporationId), [markerPath]: { $exists: false } },
     {
       $inc: { liquidCapital: row.donorLocalAmount },
@@ -557,7 +555,7 @@ async function applySectorMerge(
   ctx: HealContext
 ): Promise<{ updated: number; deleted: number }> {
   if (!ctx.runId) throw new Error("command-economy ownership heal requires a run id");
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const [source, survivor] = await Promise.all([
     sectors.findOne({
       _id: new ObjectId(row.sourceSectorId),
@@ -638,29 +636,27 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   for (const row of result.auctionRefunds) updated += await applyAuctionRefund(db, row, ctx);
   if (result.auctionId) {
-    const auction = await db
-      .collection<NationalizationAuction>("nationalizationAuctions")
-      .updateOne(
-        { _id: new ObjectId(result.auctionId), status: "open" },
-        {
-          $set: {
-            status: "cancelled",
-            resolvedAtTurn: result.currentTurn,
-            updatedAt: ctx.now,
-            [`remediation.${DEFECT_ID}`]: {
-              runId: ctx.runId,
-              reason: "invalid private shell reabsorbed by administrative ownership repair",
-              cancelledAt: ctx.now,
-            },
+    const auction = await nationalizationAuctionsCollection(db).updateOne(
+      { _id: new ObjectId(result.auctionId), status: "open" },
+      {
+        $set: {
+          status: "cancelled",
+          resolvedAtTurn: result.currentTurn,
+          updatedAt: ctx.now,
+          [`remediation.${DEFECT_ID}`]: {
+            runId: ctx.runId,
+            reason: "invalid private shell reabsorbed by administrative ownership repair",
+            cancelledAt: ctx.now,
           },
-        }
-      );
+        },
+      }
+    );
     updated += auction.modifiedCount;
   }
 
   if (result.ddSourceExists && result.ddCashTransfer > 0) {
     const markerPath = `remediation.${DEFECT_ID}.dd-shell-cash`;
-    const transfer = await db.collection<Corporation>("corporations").updateOne(
+    const transfer = await corporationsCollection(db).updateOne(
       { _id: new ObjectId(DD_TARGET_CORPORATION_ID), [markerPath]: { $exists: false } },
       {
         $inc: { liquidCapital: result.ddCashTransfer },
@@ -685,17 +681,18 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   if (result.ddSourceExists) {
-    const openAuctionCount = await db
-      .collection<NationalizationAuction>("nationalizationAuctions")
-      .countDocuments({ corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID), status: "open" });
+    const openAuctionCount = await nationalizationAuctionsCollection(db).countDocuments({
+      corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID),
+      status: "open",
+    });
     if (openAuctionCount !== 0) throw new Error("East German shell still has an open auction");
-    const remaining = await db.collection<CorporateSector>("corporateSectors").countDocuments({
+    const remaining = await corporateSectorsCollection(db).countDocuments({
       corporationId: new ObjectId(DD_SOURCE_CORPORATION_ID),
     });
     if (remaining !== 0) throw new Error(`East German shell still owns ${remaining} sector(s)`);
-    const removed = await db
-      .collection<Corporation>("corporations")
-      .deleteOne({ _id: new ObjectId(DD_SOURCE_CORPORATION_ID) });
+    const removed = await corporationsCollection(db).deleteOne({
+      _id: new ObjectId(DD_SOURCE_CORPORATION_ID),
+    });
     deleted += removed.deletedCount;
   }
 

@@ -17,6 +17,8 @@ import { AUTH_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLi
 import { withNoStore } from "@/lib/api/withNoStore";
 import { randomBytes } from "crypto";
 import { consentStateFor } from "@/lib/discordAppHandback";
+import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/auth/discord — Initiates the Discord OAuth flow for account linking by redirecting to Discord's authorization page.
 // Auth: public (redirects to /login if not authenticated)
@@ -34,7 +36,7 @@ export const GET = withNoStore(async function GET(request: Request) {
       return NextResponse.redirect(new URL("/login", baseUrl));
     }
 
-    const clientId = process.env.DISCORD_CLIENT_ID;
+    const clientId = authConfig.discordClientId();
     const redirectUri = discordRedirectUri();
 
     if (!clientId || !redirectUri) {
@@ -51,7 +53,7 @@ export const GET = withNoStore(async function GET(request: Request) {
     // Link start requires the fresh current account/session, not the cached
     // grant alone: the sealed link context below binds this binding.
     const db = await getDb();
-    const account = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const account = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const auth = await verifyAuth();
     if (!account || !auth || !credentialSessionIsCurrent(user.userId, account, auth)) {
       return NextResponse.redirect(new URL("/login", baseUrl));

@@ -50,7 +50,7 @@ describe("PeaceBanner: a won war", () => {
     // A dead link would be worse than a general one.
     show({ ...notice, conflictNumber: null });
     expect(screen.getByRole("link", { name: /Name your terms/ }).getAttribute("href")).toBe(
-      "/world/conflicts"
+      "/world/crises?view=conflicts"
     );
   });
 });

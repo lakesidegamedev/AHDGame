@@ -88,4 +88,25 @@ describe("POST .../economy/adjust-growth — the growth slider is dead under pla
     // Capital actually moved, which is what makes the plants case a regression.
     expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalled();
   });
+
+  it("charges nothing when a parallel click already moved the rate", async () => {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+      _id: "default",
+      marketSystemMode: "capital",
+    });
+    db.collectionMocks.centralBanks.findOne.mockResolvedValue({ _id: "US", primeRate: 5 });
+    db.collectionMocks.corporateSectors.updateOne.mockResolvedValueOnce({
+      matchedCount: 0,
+      modifiedCount: 0,
+    });
+
+    const { POST } = await import("./route");
+    const response = await POST(makeRequest(), ctx);
+
+    expect(response.status).toBe(409);
+    expect(db.collectionMocks.corporateSectors.updateOne.mock.calls[0][0]).toMatchObject({
+      targetGrowthRate: 0,
+    });
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+  });
 });

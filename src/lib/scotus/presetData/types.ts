@@ -5,10 +5,9 @@ import type {
 } from "@/lib/db/types/scotus";
 
 /**
- * Content-authoring shape for one preset's SCOTUS data (#3598 core mechanics;
- * actual content authored by #3599 [1953], #3600 [1979], #3601 [1991], #3602
- * [2019-default]). `seedScotus` (src/lib/scotus/seedScotus.ts) consumes this
- * shape directly to write `supremeCourtSeats`/`docketCases` rows.
+ * Content-authoring shape for one preset's SCOTUS data. `seedScotus`
+ * (src/lib/scotus/seedScotus.ts) consumes this shape directly to write
+ * `supremeCourtSeats`/`docketCases` rows.
  */
 
 /** One of the Court's 9 seats for a given preset's Original Roster. */

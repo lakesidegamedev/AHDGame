@@ -10,13 +10,12 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { SavingsHolder } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { DEPOSIT_INSURANCE_SPENDING_KEY } from "@/lib/banking/depositBookReturn";
@@ -27,7 +26,6 @@ import { getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
 import { getCashReserves } from "@/lib/banking/rules/balanceSheet";
 import { isBlockedDepositor } from "@/lib/banking/blacklist";
 import { applyProjection, settleTransition } from "@/lib/banking/settlementJournal";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { reviveObjectIds } from "@/lib/banking/settlementEncoding";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -56,6 +54,11 @@ function finite(value: unknown): number {
 }
 
 import { toAccountSnapshot } from "./snapshot";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * The account for an owner and currency, materialized from the legacy fields
@@ -67,23 +70,27 @@ export async function ensureSavingsAccount(
   currency: CurrencyCode,
   turn: number
 ): Promise<SavingsAccountSnapshot | null> {
-  const existing = await db
-    .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
-    .findOne({ ownerType: "character", ownerId, currency });
+  const existing = await savingsAccountsCollection<SavingsAccount>(db).findOne({
+    ownerType: "character",
+    ownerId,
+    currency,
+  });
   if (existing) return toAccountSnapshot(existing);
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: ownerId }, { projection: { currencyBalances: 1, savingsAccountsOpened: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: ownerId },
+    { projection: { currencyBalances: 1, savingsAccountsOpened: 1 } }
+  );
   if (!character) return null;
   const balances: Partial<NonNullable<Character["currencyBalances"]>> =
     character.currencyBalances ?? {};
   const holder = balances.savingsHolder?.[currency] ?? null;
   let effectiveHolder: SavingsHolder = holder ?? CENTRAL_BANK_HOLDER;
   if (isBankHolder(effectiveHolder)) {
-    const bank = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(effectiveHolder) }, { projection: { bankCharter: 1 } });
+    const bank = await corporationsCollection(db).findOne(
+      { _id: new ObjectId(effectiveHolder) },
+      { projection: { bankCharter: 1 } }
+    );
     const charter = bank?.bankCharter;
     if (!charter || charter.currency !== currency || !charterMay(charter, "acceptPlayerDeposits")) {
       effectiveHolder = CENTRAL_BANK_HOLDER;
@@ -113,9 +120,11 @@ export async function ensureSavingsAccount(
   insert.updatedAt = now;
   const settled = await settleTransition(db, transition);
   if (settled.status === "rejected" || settled.status === "partial") return null;
-  const created = await db
-    .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
-    .findOne({ ownerType: "character", ownerId, currency });
+  const created = await savingsAccountsCollection<SavingsAccount>(db).findOne({
+    ownerType: "character",
+    ownerId,
+    currency,
+  });
   if (created) return toAccountSnapshot(created);
   // The settlement key is deterministic, so an already-applied receipt replays
   // without inserting anything. When the receipt exists but its account record
@@ -135,11 +144,11 @@ async function rebuildAccountFromReceipt(
   ownerId: ObjectId,
   currency: CurrencyCode
 ): Promise<SavingsAccount | null> {
-  const receipt = await db
-    .collection<{ _id: string; status?: string; projections?: Array<{ projection?: unknown }> }>(
-      MONEY_MOVE_COLLECTION
-    )
-    .findOne({ _id: key });
+  const receipt = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    projections?: Array<{ projection?: unknown }>;
+  }>(db).findOne({ _id: key });
   if (!receipt || receipt.status !== "applied") return null;
   const stored = receipt.projections?.find(
     (record) =>
@@ -166,9 +175,11 @@ async function rebuildAccountFromReceipt(
     note: "the authoritative account, rebuilt from its migration receipt",
   } as TransitionProjection);
   if (!outcome.ok) return null;
-  return db
-    .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
-    .findOne({ ownerType: "character", ownerId, currency });
+  return savingsAccountsCollection<SavingsAccount>(db).findOne({
+    ownerType: "character",
+    ownerId,
+    currency,
+  });
 }
 
 /** What the rules need to know about a holder right now. */
@@ -182,12 +193,10 @@ async function loadHolderSnapshot(
     // Savings held at the central bank are paid out of its household pool, so
     // the rules need that figure to refuse an oversized withdrawal up front
     // instead of failing at the guarded debit (ticket 1364).
-    const centralBank = await db
-      .collection<CentralBank>("centralBanks")
-      .findOne(
-        { _id: getBankId(getCountryIdForCurrency(currency)) },
-        { projection: { externalBroadMoney: 1 } }
-      );
+    const centralBank = await centralBanksCollection(db).findOne(
+      { _id: getBankId(getCountryIdForCurrency(currency)) },
+      { projection: { externalBroadMoney: 1 } }
+    );
     const pool = centralBank?.externalBroadMoney;
     return {
       holder: CENTRAL_BANK_HOLDER,
@@ -200,9 +209,7 @@ async function loadHolderSnapshot(
   }
   if (!ObjectId.isValid(holder) || holder.length !== 24)
     return { error: "Invalid bank corporation id" };
-  const bank = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: new ObjectId(holder) });
+  const bank = await corporationsCollection(db).findOne({ _id: new ObjectId(holder) });
   if (!bank) return { error: "Bank corporation not found", code: "missing_bank" };
   const charter = bank.bankCharter;
   if (!charter || !charterMay(charter, "acceptPlayerDeposits")) {
@@ -278,9 +285,10 @@ export async function runSavingsCommand(
 
   let command: SavingsCommand;
   if (intent.type === "deposit") {
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: ownerId }, { projection: { [`currencyBalances.personal.${currency}`]: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: ownerId },
+      { projection: { [`currencyBalances.personal.${currency}`]: 1 } }
+    );
     let holder: HolderSnapshot = current;
     if (isBankHolder(account.holder)) {
       const withCeiling = await loadHolderSnapshot(db, account.holder, currency, {

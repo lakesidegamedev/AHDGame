@@ -20,6 +20,8 @@ import {
 import type { Suggestion, User } from "@/lib/db/types";
 import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { resolveSuggestionReporterIdentity } from "@/lib/suggestions/reporterIdentity";
+import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const DISCORD_SYNC_SPACING_MS = 400;
 
@@ -74,8 +76,7 @@ export async function PUT(request: Request) {
     const userIds = [...new Set(pending.map((s) => s.userId).filter(Boolean))] as ObjectId[];
     const users =
       userIds.length > 0
-        ? await db
-            .collection<User>("users")
+        ? await usersCollection(db)
             .find({ _id: { $in: userIds } })
             .project({ username: 1, discordUsername: 1 })
             .toArray()
@@ -230,13 +231,10 @@ export async function POST(request: Request) {
     const result = await coll.insertOne(doc as Suggestion);
 
     let githubIssueUrl: string | undefined;
-    if (process.env.GIT_TOKEN && process.env.GITHUB_REPO) {
+    if (servicesConfig.gitToken() && servicesConfig.githubRepo()) {
       const reporterUsername = userId
-        ? (
-            await db
-              .collection<User>("users")
-              .findOne({ _id: userId }, { projection: { username: 1 } })
-          )?.username
+        ? (await usersCollection(db).findOne({ _id: userId }, { projection: { username: 1 } }))
+            ?.username
         : null;
       const gh = await createPlayerSuggestionGitHubIssue({
         issueNumber,
@@ -267,11 +265,8 @@ export async function POST(request: Request) {
     let reporterDiscordUsername: string | null = null;
     if (userId) {
       reporterDiscordUsername =
-        (
-          await db
-            .collection<User>("users")
-            .findOne({ _id: userId }, { projection: { discordUsername: 1 } })
-        )?.discordUsername ?? null;
+        (await usersCollection(db).findOne({ _id: userId }, { projection: { discordUsername: 1 } }))
+          ?.discordUsername ?? null;
     }
     const { status: discordStatus, messageId: discordMsgId } = await notifyNewSuggestionDiscord({
       issueNumber,
@@ -303,8 +298,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const admins = await db
-        .collection<User>("users")
+      const admins = await usersCollection(db)
         .find({ $or: [{ role: "admin" }, { isAdmin: true }] })
         .project({ _id: 1 })
         .toArray();

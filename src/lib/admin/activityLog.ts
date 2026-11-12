@@ -2,6 +2,12 @@ import { ObjectId, type Db } from "mongodb";
 import type { ActionLog } from "@/lib/db/types/gameState";
 import type { ActivityLog, ActivityLogGameAction } from "@/lib/db/types/activityLog";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
 
 export interface IdentityLookup {
   characterName?: string;
@@ -113,8 +119,7 @@ export async function fetchActivityLog(
   // restriction (all entries).
   let idRestriction: Record<string, unknown> | undefined;
   if (params.flagSeverities && params.flagSeverities.length > 0) {
-    const flagged = await db
-      .collection("suspiciousCharacters")
+    const flagged = await suspiciousCharactersCollection<Document>(db)
       .find(
         { highestSeverity: { $in: params.flagSeverities } },
         { projection: { characterId: 1, userId: 1 } }
@@ -147,8 +152,7 @@ export async function fetchActivityLog(
     if (params.search?.trim()) filter.$text = { $search: params.search.trim() };
     if (idCursor) filter._id = idCursor;
     if (idRestriction) Object.assign(filter, idRestriction);
-    activityRows = (await db
-      .collection<ActivityLog>("activityLog")
+    activityRows = (await activityLogCollection(db)
       .find(filter)
       .sort({ _id: -1 })
       .limit(params.limit + 1)
@@ -174,13 +178,11 @@ export async function fetchActivityLog(
     if (params.search?.trim()) {
       const regex = new RegExp(escapeRegex(params.search.trim()), "i");
       const [matchedUsers, matchedCharacters] = await Promise.all([
-        db
-          .collection("users")
+        usersCollection<Document>(db)
           .find({ username: regex }, { projection: { _id: 1 } })
           .limit(50)
           .toArray(),
-        db
-          .collection("characters")
+        charactersCollection(db)
           .find({ name: regex }, { projection: { _id: 1, userId: 1 } })
           .limit(50)
           .toArray(),
@@ -204,8 +206,7 @@ export async function fetchActivityLog(
     } else if (andClauses.length > 1) {
       filter.$and = andClauses;
     }
-    const rows = (await db
-      .collection<ActionLog>("actionLogs")
+    const rows = (await actionLogsCollection(db)
       .find(filter)
       .sort({ _id: -1 })
       .limit(params.limit + 1)
@@ -215,8 +216,7 @@ export async function fetchActivityLog(
     const needLookup = rows.filter((r) => !r.characterName).map((r) => r.characterId);
     const lookup = new Map<string, IdentityLookup>();
     if (needLookup.length > 0) {
-      const chars = await db
-        .collection("characters")
+      const chars = await charactersCollection(db)
         .find({ _id: { $in: needLookup } }, { projection: { name: 1, countryId: 1 } })
         .toArray();
       for (const c of chars) {

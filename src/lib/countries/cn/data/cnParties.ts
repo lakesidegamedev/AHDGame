@@ -4,21 +4,10 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
  * China default political parties.
  *
  * Economic/social positions on -5 to +5 scale, calibrated to China's
- * one-party dominant political system:
- *   CCP:   Chinese Communist Party — dominant ruling party, economically left
- *          (state ownership, SOE dominance, central planning), socially
- *          authoritarian / nationalist (leans traditional).
- *   CDL:   China Democratic League — largest of the eight officially recognized
- *          minor parties; historically associated with intellectuals and
- *          educators. Holds seats in CPPCC.
- *   CNDCA: China National Democratic Construction Association — business-
- *          oriented democratic party, represents private entrepreneurs and
- *          industry. Holds seats in CPPCC.
+ * one-party dominant system. All parties operate within the CPPCC
+ * framework under CCP leadership.
  *
- * All parties operate within the Chinese People's Political Consultative
- * Conference (CPPCC) framework under CCP leadership.
- *
- * Seeded as `isDefault: true` — they always exist and cannot be deleted.
+ * Seeded as `isDefault: true`, so they always exist and cannot be deleted.
  * seedOrder determines sequentialId assignment within CN.
  */
 export const cnParties: PartySeed[] = [

@@ -5,17 +5,20 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisInteraction, GlobalResponseOutcome } from "@/lib/db/types/crisis";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { ensureDemographicWorldEpoch } from "@/lib/demographics/worldEpoch";
+import { completeCrisisPopulationOrders } from "./crisisPopulationOutbox";
 import {
   requestedConflictCivilianLoss,
   type ConflictCivilianLossOrder,
   type ConflictCivilianLossResult,
 } from "./rules/civilianLoss";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { conflictCivilianLossHistoryCollection } from "@/lib/db/repositories/conflictCivilianLossHistory";
 
-const CONFLICT_CIVILIAN_LOSS_HISTORY = "conflictCivilianLossHistory";
 interface CivilianLossHistory extends ConflictCivilianLossResult {
   batchId: string;
   createdAt: Date;
@@ -25,8 +28,7 @@ const indexReadiness = new WeakMap<Db, Promise<void>>();
 async function ensureCivilianLossIndexes(db: Db): Promise<void> {
   let ready = indexReadiness.get(db);
   if (!ready) {
-    ready = db
-      .collection<CrisisInteraction>("crisisInteractions")
+    ready = crisisInteractionsCollection(db)
       .createIndex(
         { civilianLossEpochId: 1, civilianLossPending: 1 },
         { name: "crisis_civilian_loss_pending" }
@@ -53,7 +55,7 @@ export async function prepareConflictCivilianLossOrder(
     throw new Error("Invalid authored civilian loss");
   requestedConflictCivilianLoss(spec, 0);
   const [world, states] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -61,20 +63,17 @@ export async function prepareConflictCivilianLossOrder(
           currentTurn: 1,
           isProcessing: 1,
           processingTargetTurn: 1,
-          livingConflictsEnabled: 1,
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId: spec.countryId as State["countryId"] },
         { projection: { _id: 1, population: 1 } }
       )
       .toArray(),
   ]);
-  if (world?.livingConflictsEnabled !== true) return undefined;
-  if (!Number.isSafeInteger(world.currentTurn) || world.currentTurn < 1)
+  if (!world || !Number.isSafeInteger(world.currentTurn) || world.currentTurn < 1)
     throw new Error("Civilian loss requires a valid game clock");
   const real = states.filter((state) => !NATIONAL_SCOPE_IDS.has(state._id));
   if (real.some((state) => !Number.isFinite(state.population) || state.population < 0))
@@ -103,13 +102,10 @@ export async function prepareConflictCivilianLossOrder(
 export async function loadPendingConflictCivilianLosses(
   db: Db,
   worldEpochId: string,
-  turn: number,
-  enabled: boolean
+  turn: number
 ): Promise<ConflictCivilianLossOrder[]> {
-  if (!enabled) return [];
   await ensureCivilianLossIndexes(db);
-  const interactions = await db
-    .collection<CrisisInteraction>("crisisInteractions")
+  const interactions = await crisisInteractionsCollection(db)
     .find(
       { civilianLossEpochId: worldEpochId, civilianLossPending: true },
       { projection: { "globalResponseOutcome.civilianLossOrder": 1 } }
@@ -135,7 +131,7 @@ export async function materializeConflictCivilianLossResults(
   createdAt: Date
 ): Promise<void> {
   if (!results.length) return;
-  await db.collection<CivilianLossHistory>(CONFLICT_CIVILIAN_LOSS_HISTORY).bulkWrite(
+  await conflictCivilianLossHistoryCollection<CivilianLossHistory>(db).bulkWrite(
     results.map((result) => ({
       updateOne: {
         filter: { _id: result._id, batchId },
@@ -145,8 +141,7 @@ export async function materializeConflictCivilianLossResults(
     })),
     { ordered: true }
   );
-  const recorded = await db
-    .collection<CivilianLossHistory>(CONFLICT_CIVILIAN_LOSS_HISTORY)
+  const recorded = await conflictCivilianLossHistoryCollection<CivilianLossHistory>(db)
     .find(
       { _id: { $in: results.map((result) => result._id) }, batchId },
       { projection: { _id: 1 } }
@@ -154,8 +149,12 @@ export async function materializeConflictCivilianLossResults(
     .toArray();
   if (recorded.length !== results.length)
     throw new Error("Civilian loss history was not confirmed");
-  const completed = await db.collection<CrisisInteraction>("crisisInteractions").bulkWrite(
-    results.map((result) => ({
+  const crisisResults = results.filter((result) => result.origin === "crisis");
+  await completeCrisisPopulationOrders(db, { civilianLoss: crisisResults, reception: [] });
+  const interactionResults = results.filter((result) => result.origin !== "crisis");
+  if (interactionResults.length === 0) return;
+  const completed = await crisisInteractionsCollection(db).bulkWrite(
+    interactionResults.map((result) => ({
       updateOne: {
         filter: {
           _id: new ObjectId(result.interactionId),
@@ -173,6 +172,6 @@ export async function materializeConflictCivilianLossResults(
     })),
     { ordered: true }
   );
-  if (completed.matchedCount !== results.length)
+  if (completed.matchedCount !== interactionResults.length)
     throw new Error("Civilian loss outcome completion was not confirmed");
 }

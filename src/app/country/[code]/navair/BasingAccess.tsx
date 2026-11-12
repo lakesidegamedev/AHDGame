@@ -10,13 +10,11 @@ export function BasingAccess({
   positionId,
   agreements,
   countries,
-  enabled,
 }: {
   country: string;
   positionId: string;
   agreements: BasingAgreement[];
   countries: Array<{ id: string; name: string }>;
-  enabled: boolean;
 }) {
   const router = useRouter();
   const [guest, setGuest] = useState(countries[0]?.id ?? "");
@@ -87,7 +85,7 @@ export function BasingAccess({
           </select>
         </label>
         <button
-          disabled={!enabled || busy || !guest}
+          disabled={busy || !guest}
           onClick={() => act(country, guest, domain, "offer")}
           className="rounded border p-1"
         >
@@ -107,7 +105,7 @@ export function BasingAccess({
               {name(a.host)} hosts {name(a.guest)}: {a.domain}, {a.status}.
               {a.status === "offered" && a.guest === country && (
                 <button
-                  disabled={!enabled || busy}
+                  disabled={busy}
                   onClick={() => act(a.host, a.guest, a.domain, "accept")}
                   className="ml-2 underline"
                 >
@@ -115,7 +113,7 @@ export function BasingAccess({
                 </button>
               )}
               <button
-                disabled={!enabled || busy}
+                disabled={busy}
                 onClick={() => act(a.host, a.guest, a.domain, "revoke")}
                 className="ml-2 underline"
               >

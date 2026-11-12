@@ -1,5 +1,4 @@
 import type { Db } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import {
@@ -11,6 +10,7 @@ import { isSeatActive, resolveSeatName } from "@/lib/cabinet/rosterEra";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { createSystemNewsPost } from "@/lib/news";
 import { sendNewsEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface CabinetYearCrossingResult {
   ran: boolean;
@@ -26,18 +26,15 @@ export interface CabinetYearCrossingResult {
 
 /**
  * Cabinet year crossing: when the live year advances, unlock newly-established
- * seats (news), rename era-banded seats (news), and retire seats past
- * `yearRetired` (auto-transfer the incumbent to `succeededBy`, else remove).
+ * seats, rename era-banded seats, and retire seats past `yearRetired`
+ * (auto-transfer the incumbent to `succeededBy`, else remove).
  *
- * State reconcile ALWAYS runs when year data exists — the roster resolver reads
+ * State reconcile ALWAYS runs when year data exists: the roster resolver reads
  * the live year directly, so leaving a member on a retired seat would desync UI
- * and DB. News posting is additionally gated on `eraSystemEnabled` (era-news
- * philosophy, mirrors eraCrossing). Guarded by
- * `gameState.lastCabinetYearProcessed`; the first run quietly self-heals
- * (reconciles retirements silently, stamps, posts nothing) so enabling
- * mid-game never bursts missed news. Seats filled AHEAD of their `yearEnabled`
- * (world year behind the seat) are deliberately untouched — that backward
- * direction belongs to scripts/debug/audit-cabinet-year-seats.mjs.
+ * and DB. Guarded by
+ * `gameState.lastCabinetYearProcessed`; the first run reconciles retirements
+ * silently and posts nothing, so enabling mid-game never bursts missed news.
+ * Seats filled AHEAD of their `yearEnabled` are untouched.
  *
  * News copy carries no literal years (LARP convention).
  */
@@ -51,12 +48,9 @@ export async function runCabinetYearCrossing(
     removed: [],
     posted: [],
   };
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, lastCabinetYearProcessed: 1, eraSystemEnabled: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" }, { projection: { currentYear: 1, lastCabinetYearProcessed: 1 } });
 
   if (!gameState) return result;
   // Prefer the turn context's authoritative year: the persisted
@@ -72,7 +66,7 @@ export async function runCabinetYearCrossing(
   }
   if (currentYear <= lastYear) return result;
 
-  const postNews = !!gameState.eraSystemEnabled;
+  const postNews = true;
 
   for (const countryId of getCabinetCountryIds()) {
     const countryName = COUNTRY_CONFIGS[countryId as CountryId]?.name ?? countryId;
@@ -193,12 +187,12 @@ async function reconcileRetirements(
 }
 
 async function stampGuard(db: Db, currentYear: number): Promise<void> {
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      { $set: { lastCabinetYearProcessed: currentYear, updatedAt: new Date() } }
-    );
+  await (
+    await getGameStateCollection(db)
+  ).updateOne(
+    { _id: "current" },
+    { $set: { lastCabinetYearProcessed: currentYear, updatedAt: new Date() } }
+  );
 }
 
 async function postCrossingNews(

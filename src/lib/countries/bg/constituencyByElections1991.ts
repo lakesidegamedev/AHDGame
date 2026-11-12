@@ -19,15 +19,12 @@ import type {
   ElectionVoteTally,
   GameState,
   NPP,
-  PoliticalParty,
-  State,
-  StateRegistrationPool,
 } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
-import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/electionEngine/tallyProjections";
-import { BG_FOUNDING_COUNTS_COLLECTION, type BgFoundingAssemblyRecord } from "./foundingCount1990";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
+import { TALLY_WITH_LATEST_SNAPSHOT_ONLY } from "@/lib/elections/engine/tallyProjections";
+import { type BgFoundingAssemblyRecord } from "./foundingCount1990";
 import { BG_1990_CONSTITUENCIES } from "./data/foundingDistricts1990";
 import {
   bgGrandAssemblyAllowsPartialElection,
@@ -38,6 +35,22 @@ import {
   countBgGrandPartialElection,
 } from "./rules/constituencyByElection1991";
 import type { BgFoundingMajorityBallot } from "./rules/foundingMajority1990";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { bgFoundingAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/bgFoundingAssemblyOfficeArchives";
+import { bgGrandConstituencyByElectionsCollection } from "@/lib/db/repositories/bgGrandConstituencyByElections";
+import { bgFoundingAssemblyCountsCollection } from "@/lib/db/repositories/bgFoundingAssemblyCounts";
 
 export const BG_GRAND_BY_ELECTIONS_COLLECTION = "bgGrandConstituencyByElections";
 export interface BgGrandByElectionRecord {
@@ -81,7 +94,7 @@ function stableId(key: string) {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
 async function context(db: Db, turn: number, session?: ClientSession, full = false) {
-  const country = await db.collection<Country>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection<Country>(db).findOne(
     { _id: "BG" },
     {
       session,
@@ -94,7 +107,7 @@ async function context(db: Db, turn: number, session?: ClientSession, full = fal
       },
     }
   );
-  const parent = await db.collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION).findOne(
+  const parent = await bgFoundingAssemblyCountsCollection<Parent>(db).findOne(
     { countryId: "BG", seatedAtTurn: { $exists: true }, settled: { $exists: true } },
     {
       session,
@@ -123,19 +136,20 @@ async function context(db: Db, turn: number, session?: ClientSession, full = fal
   };
 }
 async function lockChamber(db: Db, session: ClientSession, parent: Parent) {
-  const country = await db
-    .collection<Country>("countryGameStates")
-    .updateOne({ _id: "BG" }, { $inc: { bgGrandByElectionGeneration: 1 } }, { session });
-  const chamber = await db
-    .collection<{ _id: string; bg1991MandateGeneration?: number }>("governmentFormations")
-    .updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
-  const receipt = await db
-    .collection<Parent>(BG_FOUNDING_COUNTS_COLLECTION)
-    .updateOne(
-      { _id: parent._id, seatedAtTurn: parent.seatedAtTurn },
-      { $inc: { byElectionGeneration: 1 } },
-      { session }
-    );
+  const country = await countryGameStatesCollection<Country>(db).updateOne(
+    { _id: "BG" },
+    { $inc: { bgGrandByElectionGeneration: 1 } },
+    { session }
+  );
+  const chamber = await governmentFormationsCollection<{
+    _id: string;
+    bg1991MandateGeneration?: number;
+  }>(db).updateOne({ _id: "BG" }, { $inc: { bg1991MandateGeneration: 1 } }, { session });
+  const receipt = await bgFoundingAssemblyCountsCollection<Parent>(db).updateOne(
+    { _id: parent._id, seatedAtTurn: parent.seatedAtTurn },
+    { $inc: { byElectionGeneration: 1 } },
+    { session }
+  );
   if (country.matchedCount !== 1 || chamber.matchedCount !== 1 || receipt.matchedCount !== 1)
     throw new Error("Bulgarian partial election lost its chamber authority");
 }
@@ -148,27 +162,21 @@ async function cancelJobs(
 ) {
   if (!jobs.length) return;
   const ids = jobs.flatMap((row) => row.electionIds);
-  await db
-    .collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION)
-    .updateMany(
-      { _id: { $in: jobs.map((row) => row._id) }, status: "open" },
-      { $set: { status: "cancelled", completedAtTurn: turn } },
-      { session }
-    );
-  await db
-    .collection<Election>("elections")
-    .updateMany(
-      { _id: { $in: ids }, status: { $nin: ["resolved", "cancelled"] } },
-      { $set: { status: "cancelled", resolving: false, updatedAt: now } },
-      { session }
-    );
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { electionId: { $in: ids }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  await bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db).updateMany(
+    { _id: { $in: jobs.map((row) => row._id) }, status: "open" },
+    { $set: { status: "cancelled", completedAtTurn: turn } },
+    { session }
+  );
+  await electionsCollection(db).updateMany(
+    { _id: { $in: ids }, status: { $nin: ["resolved", "cancelled"] } },
+    { $set: { status: "cancelled", resolving: false, updatedAt: now } },
+    { session }
+  );
+  await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: ids }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
 }
 
 export async function openBgGrandConstituencyByElections(
@@ -181,8 +189,7 @@ export async function openBgGrandConstituencyByElections(
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))
     throw new Error("Invalid Bulgarian partial-election time");
   const ready = await context(db, turn);
-  const active = await db
-    .collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION)
+  const active = await bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db)
     .find({ status: "open" }, { projection: { parentReceiptId: 1, electionIds: 1 } })
     .toArray();
   const needsCancellation = active.some(
@@ -190,7 +197,7 @@ export async function openBgGrandConstituencyByElections(
   );
   if (!needsCancellation && (!ready.available || turn >= ready.endTurn! - 24)) return 0;
   if (!needsCancellation) {
-    const held = await db.collection<ElectedOfficial>("electedOfficials").countDocuments({
+    const held = await electedOfficialsCollection(db).countDocuments({
       countryId: "BG",
       officeType: "assemblyDeputy",
       "bulgarianFoundingMandate.receiptId": ready.parent!._id,
@@ -204,7 +211,7 @@ export async function openBgGrandConstituencyByElections(
   return runRequiredTransaction(
     async (session) => {
       const current = await context(db, turn, session, true);
-      const journal = db.collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION);
+      const journal = bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db);
       const jobs = await journal.find({ status: "open" }, { session }).toArray();
       const stale = jobs.filter(
         (row) => !current.available || row.parentReceiptId !== current.parent?._id
@@ -212,8 +219,7 @@ export async function openBgGrandConstituencyByElections(
       await cancelJobs(db, session, stale, turn, now);
       if (!current.available || turn >= current.endTurn! - 24) return 0;
       const parent = current.parent!;
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find(
           { countryId: "BG", officeType: "assemblyDeputy" },
           {
@@ -247,27 +253,23 @@ export async function openBgGrandConstituencyByElections(
         vacancyObservedTurn: turn,
         termEndTurn: current.endTurn!,
       })!;
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find(
           { countryId: "BG" },
           { session, projection: { population: 1, votingEligiblePopulation: 1 } }
         )
         .toArray();
-      const pools = await db
-        .collection<StateRegistrationPool>("stateRegistrationPool")
+      const pools = await stateRegistrationPoolCollection(db)
         .find({ countryId: "BG" }, { session, projection: { stateId: 1, unregistered: 1 } })
         .toArray();
-      const npcs = await db
-        .collection<NPP>("npps")
+      const npcs = await nppsCollection(db)
         .find(
           { countryId: "BG", retiredAt: null, isTechnocrat: { $ne: true } },
           { session, projection: { party: 1, name: 1, homeState: 1, currentOffice: 1 } }
         )
         .sort({ _id: 1 })
         .toArray();
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find(
           { countryId: "BG", regimeStatus: { $ne: "banned" } },
           { session, projection: { sequentialId: 1 } }
@@ -427,14 +429,10 @@ export async function openBgGrandConstituencyByElections(
         });
       }
       await journal.insertMany(records, { session });
-      await db.collection<Election>("elections").insertMany(polls, { session });
+      await electionsCollection(db).insertMany(polls, { session });
       if (candidates.length)
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .insertMany(candidates, { session });
-      await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
-        .insertMany(tallies, { session });
+        await electionCandidatesCollection(db).insertMany(candidates, { session });
+      await electionVoteTalliesCollection(db).insertMany(tallies, { session });
       return records.length;
     },
     { client: db.client }
@@ -454,7 +452,7 @@ export async function resolveBgGrandConstituencyByElections(
     throw new Error("Invalid Bulgarian partial count time");
   return runRequiredTransaction(
     async (session) => {
-      const journal = db.collection<BgGrandByElectionRecord>(BG_GRAND_BY_ELECTIONS_COLLECTION);
+      const journal = bgGrandConstituencyByElectionsCollection<BgGrandByElectionRecord>(db);
       const jobs = await journal
         .find(
           {
@@ -475,8 +473,7 @@ export async function resolveBgGrandConstituencyByElections(
       await cancelJobs(db, session, stale, turn, now);
       const usable = jobs.filter((row) => !stale.includes(row));
       if (!usable.length) return 0;
-      const polls = await db
-        .collection<Election>("elections")
+      const polls = await electionsCollection(db)
         .find(
           {
             _id: { $in: usable.map((row) => row.activeElectionId) },
@@ -490,19 +487,16 @@ export async function resolveBgGrandConstituencyByElections(
       const ready = usable.filter((row) =>
         polls.some((poll) => poll._id.equals(row.activeElectionId))
       );
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ electionId: { $in: ready.flatMap((row) => row.electionIds) } }, { session })
         .toArray();
-      const tallies = await db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      const tallies = await electionVoteTalliesCollection(db)
         .find(
           { electionId: { $in: polls.map((row) => row._id) } },
           { session, projection: TALLY_WITH_LATEST_SNAPSHOT_ONLY }
         )
         .toArray();
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find({ countryId: "BG", officeType: "assemblyDeputy" }, { session })
         .toArray();
       const held = officials.filter((row) => row.seatsHeld === 1 && (row.characterId || row.nppId));
@@ -529,8 +523,7 @@ export async function resolveBgGrandConstituencyByElections(
         ]),
       ].map((id) => new ObjectId(id));
       const npcs = npcIds.length
-        ? await db
-            .collection<NPP>("npps")
+        ? await nppsCollection(db)
             .find(
               {
                 _id: { $in: npcIds },
@@ -541,8 +534,7 @@ export async function resolveBgGrandConstituencyByElections(
             .toArray()
         : [];
       const players = playerIds.length
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find(
               {
                 _id: { $in: playerIds },
@@ -888,24 +880,25 @@ export async function resolveBgGrandConstituencyByElections(
       await cancelJobs(db, session, cancelledJobs, turn, now);
       const stubs = officials.filter((row) => additions.some((added) => added._id.equals(row._id)));
       if (stubs.length) {
-        await db
-          .collection<{ _id: string; official: ElectedOfficial; turn: number }>(
-            "bgFoundingAssemblyOfficeArchives"
-          )
-          .insertMany(
-            stubs.map((official) => ({
-              _id: `${current.parent!._id}:partial:${turn}:${official._id}:departed`,
-              official,
-              turn,
-            })),
-            { session }
-          );
-        await db
-          .collection<ElectedOfficial>("electedOfficials")
-          .deleteMany({ _id: { $in: stubs.map((row) => row._id) } }, { session });
+        await bgFoundingAssemblyOfficeArchivesCollection<{
+          _id: string;
+          official: ElectedOfficial;
+          turn: number;
+        }>(db).insertMany(
+          stubs.map((official) => ({
+            _id: `${current.parent!._id}:partial:${turn}:${official._id}:departed`,
+            official,
+            turn,
+          })),
+          { session }
+        );
+        await electedOfficialsCollection(db).deleteMany(
+          { _id: { $in: stubs.map((row) => row._id) } },
+          { session }
+        );
       }
       if (additions.length) {
-        await db.collection<ElectedOfficial>("electedOfficials").insertMany(additions, { session });
+        await electedOfficialsCollection(db).insertMany(additions, { session });
         const finalHeld = [...held, ...additions];
         for (const isNpc of [true, false]) {
           const ids = [
@@ -919,9 +912,7 @@ export async function resolveBgGrandConstituencyByElections(
             ]),
           ].filter((id) => owners.has(id));
           if (!ids.length) continue;
-          const collection = isNpc
-            ? db.collection<NPP>("npps")
-            : db.collection<Character>("characters");
+          const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
           await collection.bulkWrite(
             ids.map((id) => {
               const owner = owners.get(id)!,
@@ -991,48 +982,36 @@ export async function resolveBgGrandConstituencyByElections(
             read: false,
             createdAt: now,
           }));
-        if (notices.length) await db.collection("notifications").insertMany(notices, { session });
+        if (notices.length)
+          await notificationsCollection<Document>(db).insertMany(notices, { session });
       }
-      if (newPolls.length)
-        await db.collection<Election>("elections").insertMany(newPolls, { session });
+      if (newPolls.length) await electionsCollection(db).insertMany(newPolls, { session });
       if (newCandidates.length)
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .insertMany(newCandidates, { session });
+        await electionCandidatesCollection(db).insertMany(newCandidates, { session });
       if (newTallies.length)
-        await db
-          .collection<ElectionVoteTally>("electionVoteTallies")
-          .insertMany(newTallies, { session });
+        await electionVoteTalliesCollection(db).insertMany(newTallies, { session });
       if (renewedIds.length)
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .updateMany(
-            { _id: { $in: renewedIds } },
-            { $set: { status: "withdrawn", withdrawnAt: now } },
-            { session }
-          );
+        await electionCandidatesCollection(db).updateMany(
+          { _id: { $in: renewedIds } },
+          { $set: { status: "withdrawn", withdrawnAt: now } },
+          { session }
+        );
       if (campaignUpdates.length)
-        await db.collection("campaigns").bulkWrite(campaignUpdates, { session });
+        await campaignsCollection<Document>(db).bulkWrite(campaignUpdates, { session });
       if (completedIds.length) {
-        await db
-          .collection<Election>("elections")
-          .updateMany(
-            { _id: { $in: completedIds } },
-            { $set: { status: "resolved", resolving: false, updatedAt: now } },
-            { session }
-          );
-        await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .updateMany(
-            { electionId: { $in: completedIds }, status: "active" },
-            { $set: { status: "withdrawn", withdrawnAt: now } },
-            { session }
-          );
+        await electionsCollection(db).updateMany(
+          { _id: { $in: completedIds } },
+          { $set: { status: "resolved", resolving: false, updatedAt: now } },
+          { session }
+        );
+        await electionCandidatesCollection(db).updateMany(
+          { electionId: { $in: completedIds }, status: "active" },
+          { $set: { status: "withdrawn", withdrawnAt: now } },
+          { session }
+        );
       }
       if (tallyUpdates.length)
-        await db
-          .collection<ElectionVoteTally>("electionVoteTallies")
-          .bulkWrite(tallyUpdates, { session });
+        await electionVoteTalliesCollection(db).bulkWrite(tallyUpdates, { session });
       if (jobUpdates.length) await journal.bulkWrite(jobUpdates, { session });
       return resolved;
     },

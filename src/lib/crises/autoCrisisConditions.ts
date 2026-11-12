@@ -7,6 +7,11 @@ import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/political
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
 import type { TriggerClause, TriggerCondition, TriggerMetric } from "@/lib/db/types/crisis";
 import { loadLossShareSignal } from "./marketAdjustment/signals";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { macroMetricsHistoryCollection } from "@/lib/db/repositories/macroMetricsHistory";
 
 interface MetricPoint {
   turn: number;
@@ -54,34 +59,31 @@ export async function loadNationalSnapshot(
   // adapted from the national board below.
   const [metricsDoc, historyDoc, federalBudget, approval, exchangeRate] = await Promise.all([
     nationalDocId
-      ? db
-          .collection<MetricsDoc & { _id: string }>("macroMetrics")
-          .findOne({ _id: nationalDocId }, { projection: { economic: 1 } })
+      ? macroMetricsCollection<MetricsDoc & { _id: string }>(db).findOne(
+          { _id: nationalDocId },
+          { projection: { economic: 1 } }
+        )
       : null,
     // Only `economic.*` histories are consulted below, so the legacy
     // `stateMetricHistory` half of this read contributed nothing even before it
     // stopped being written.
     nationalDocId
-      ? db
-          .collection<HistoryDoc & { _id: string }>("macroMetricsHistory")
-          .findOne({ _id: nationalDocId })
+      ? macroMetricsHistoryCollection<HistoryDoc & { _id: string }>(db).findOne({
+          _id: nationalDocId,
+        })
       : null,
-    db
-      .collection<{
-        countryId: CountryId;
-        economicFactors?: { inflationRate?: number };
-      }>("federalBudget")
-      .findOne({ countryId }),
-    db
-      .collection<{ countryId: CountryId; approvalRating?: number }>("governmentApprovals")
-      .findOne({ countryId }),
-    db
-      .collection<{
-        countryId: CountryId;
-        rate?: number;
-        rateHistory?: { turn: number; rate: number }[];
-      }>("exchangeRates")
-      .findOne({ countryId }),
+    federalBudgetCollection<{
+      countryId: CountryId;
+      economicFactors?: { inflationRate?: number };
+    }>(db).findOne({ countryId }),
+    governmentApprovalsCollection<{ countryId: CountryId; approvalRating?: number }>(db).findOne({
+      countryId,
+    }),
+    exchangeRatesCollection<{
+      countryId: CountryId;
+      rate?: number;
+      rateHistory?: { turn: number; rate: number }[];
+    }>(db).findOne({ countryId }),
   ]);
 
   const current: Partial<Record<TriggerMetric, number>> = {};

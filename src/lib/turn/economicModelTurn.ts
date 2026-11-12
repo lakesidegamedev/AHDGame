@@ -1,7 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { Db } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
-import type { State } from "@/lib/db/types/state";
 import type { FederalBudget, EnactedLaw } from "@/lib/db/types/budget";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -17,6 +16,12 @@ import { transition } from "@/lib/economicModels/hysteresis";
 import { sectorRevenueTaxProvider } from "@/lib/metricEngine/providers";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /** Owned + unowned sector revenue rolled up by CorporationType for one region. */
 interface RegionRevenue {
@@ -101,20 +106,18 @@ export async function processEconomicModelTurn(
     corporations,
     corporateSectors,
   ] = await Promise.all([
-    db.collection<State>("states").find({}).toArray(),
+    (await getStatesCollection(db)).find({}).toArray(),
     // SP5: the model inputs (economic.*) live on macroMetrics now.
-    db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
+    macroMetricsCollection(db).find({}).toArray(),
     sectorRevenueTaxProvider(db),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find({ repealedAt: { $exists: false } })
       .project<Pick<EnactedLaw, "legislationTypeId" | "countryId">>({
         legislationTypeId: 1,
         countryId: 1,
       })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    (await getFederalBudgetCollection(db))
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "spending">>({
         countryId: 1,
@@ -122,16 +125,14 @@ export async function processEconomicModelTurn(
       })
       .toArray(),
     // §State-Capitalist lever: ownership = which corps are National Corporations.
-    db
-      .collection<Corporation>("corporations")
+    (await getCorporationsCollection(db))
       .find({})
       .project<Pick<Corporation, "_id" | "countryOwnerId" | "ownershipState">>({
         countryOwnerId: 1,
         ownershipState: 1,
       })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    (await getCorporateSectorsCollection(db))
       .find({})
       .project<Pick<CorporateSector, "_id" | "corporationId" | "countryId" | "stateId">>({
         corporationId: 1,
@@ -247,7 +248,7 @@ export async function processEconomicModelTurn(
 
   if (ops.length > 0) {
     // SP5: economicModel rides on the macroMetrics doc.
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(ops);
+    await macroMetricsCollection(db).bulkWrite(ops);
   }
   // regionsProcessed retained in the return shape for the phase logger; the model is
   // national-only now, so no regional docs are written.

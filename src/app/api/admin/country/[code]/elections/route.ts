@@ -17,11 +17,18 @@ import type { Election, SenateClass, State, GameState } from "@/lib/db/types";
 import { SENATE_CLASSES, STATE_SENATE_SEATS } from "@/lib/constants";
 import { isUsElectoralState } from "@/lib/constants/states";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { adjustElectionDurations } from "@/lib/elections/rules/timerAdjustment";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { electionToLarpYear } from "@/lib/utils/formatters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 // GET - List all elections
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -51,18 +58,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     if (state) query.state = state;
 
     const [elections, gameState] = await Promise.all([
-      db
-        .collection<Election>("elections")
+      electionsCollection(db)
         .find(query)
         .sort({ state: 1, electionType: 1, senateClass: 1, chamberClass: 1 })
         .toArray(),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 
     // Get candidate counts for each election
     const electionIds = elections.map((e) => e._id);
-    const candidateCounts = await db
-      .collection("electionCandidates")
+    const candidateCounts = await electionCandidatesCollection<Document>(db)
       .aggregate([
         { $match: { electionId: { $in: electionIds }, status: "active" } },
         { $group: { _id: "$electionId", count: { $sum: 1 } } },
@@ -111,7 +116,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     // Get all US electoral states. Federal districts like DC live in `states`
     // for economy/presidential electoral votes but elect no House/Senate/
     // Governor/state-legislature seats, so exclude them.
-    const states = (await db.collection<State>("states").find({}).toArray()).filter((s) =>
+    const states = (await statesCollection(db).find({}).toArray()).filter((s) =>
       isUsElectoralState(s._id)
     );
 
@@ -120,7 +125,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     // Check if elections for this cycle already exist
-    const existingCount = await db.collection("elections").countDocuments({ cycle });
+    const existingCount = await electionsCollection<Document>(db).countDocuments({ cycle });
     if (existingCount > 0) {
       return errorResponse(
         409,
@@ -130,7 +135,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     // Read the active preset so each spawned doc's electionYear anchors to
     // the right calendar regardless of preset (1991-default vs 2019-default).
-    const gameStateForCtx = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameStateForCtx = await gameStateCollection(db).findOne({ _id: "current" });
     const ctx = cycleAnchorContextFromGameState(gameStateForCtx);
 
     const electionsToInsert: Omit<Election, "_id">[] = [];
@@ -207,9 +212,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
     }
 
-    const result = await db
-      .collection("elections")
-      .insertMany(electionsToInsert.map(withCampaignRules));
+    const result = await electionsCollection<Document>(db).insertMany(
+      electionsToInsert.map(withCampaignRules)
+    );
 
     const senateCount = electionsToInsert.filter((e) => e.electionType === "senate").length;
     const houseCount = electionsToInsert.filter((e) => e.electionType === "house").length;
@@ -271,7 +276,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
     if (chamberClass) query.chamberClass = chamberClass;
     if (cycle) query.cycle = cycle;
 
-    const elections = await db.collection<Election>("elections").find(query).toArray();
+    const elections = await electionsCollection(db).find(query).toArray();
 
     if (elections.length === 0) {
       return errorResponse(404, "No elections found matching criteria");
@@ -279,7 +284,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
 
     // Use game time (lastTurnProcessed) instead of real wall-clock time
     // so election timers advance with turn processing
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const now = gameState?.lastTurnProcessed ? new Date(gameState.lastTurnProcessed) : new Date();
     // `now` == lastTurnProcessed, which corresponds to currentTurn — used to
     // stamp the turn-first deadline fields alongside the recalculated Dates.
@@ -331,7 +336,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ co
         updates.status = "active";
       }
 
-      await db.collection("elections").updateOne({ _id: election._id }, { $set: updates });
+      await electionsCollection<Document>(db).updateOne({ _id: election._id }, { $set: updates });
       updatedCount++;
     }
 
@@ -366,22 +371,19 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
     const cycleNum = parseInt(cycle, 10);
 
     // Get election IDs for this cycle
-    const elections = await db
-      .collection<Election>("elections")
-      .find({ cycle: cycleNum })
-      .toArray();
+    const elections = await electionsCollection(db).find({ cycle: cycleNum }).toArray();
 
     const electionIds = elections.map((e) => e._id);
 
     // Delete all election-linked data for this cycle
     const [candidatesResult, talliesResult, campaignsResult] = await Promise.all([
-      db.collection("electionCandidates").deleteMany({ electionId: { $in: electionIds } }),
-      db.collection("electionVoteTallies").deleteMany({ electionId: { $in: electionIds } }),
-      db.collection("campaigns").deleteMany({ electionId: { $in: electionIds } }),
+      electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
+      electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
+      campaignsCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
     ]);
 
     // Delete all elections for this cycle
-    const electionsResult = await db.collection("elections").deleteMany({ cycle: cycleNum });
+    const electionsResult = await electionsCollection<Document>(db).deleteMany({ cycle: cycleNum });
 
     return NextResponse.json({
       success: true,

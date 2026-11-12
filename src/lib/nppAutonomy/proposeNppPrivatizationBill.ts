@@ -15,7 +15,6 @@ import type {
   Bill,
   BillChamber,
   BillStatus,
-  Corporation,
   CorporateSector,
   ElectedOfficial,
   NPP,
@@ -49,6 +48,10 @@ import {
   type PrivatizationCandidateSector,
 } from "@/lib/turn/npp/rules/privatizationSponsorship";
 import { NPP_BILL_VOTING_DURATION_HOURS } from "./constants";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const PRIVATIZATION_BILL_CATEGORY = "state ownership";
 
@@ -121,8 +124,7 @@ export async function proposeNppPrivatizationBill(
   }
 
   // One read answers the one-active cap, the cadence and the reselect window.
-  const recentBills = await db
-    .collection<Bill>("bills")
+  const recentBills = await billsCollection(db)
     .find(
       {
         countryId,
@@ -161,8 +163,7 @@ export async function proposeNppPrivatizationBill(
   });
   if (!gate.ok) return { ok: false, reason: gate.reason };
 
-  const natCorps = await db
-    .collection<Corporation>("corporations")
+  const natCorps = await corporationsCollection(db)
     .find(
       { countryOwnerId: countryId },
       { projection: { _id: 1, name: 1, countryOwnerId: 1, ownershipState: 1, countryId: 1 } }
@@ -171,8 +172,7 @@ export async function proposeNppPrivatizationBill(
   if (natCorps.length === 0) return { ok: false, reason: "no National Corporation" };
 
   const [sectorRows, strategicTypes] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { corporationId: { $in: natCorps.map((c) => c._id) }, countryId },
         {
@@ -226,9 +226,10 @@ export async function proposeNppPrivatizationBill(
   // One-party-state banned-party guard, as for every other NPP bill.
   const runtime = await getCountryState(db, countryId);
   if (runtime.governmentType === "onePartyState" && npp.party) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: Number(npp.party) });
+    const party = await politicalPartiesCollection(db).findOne({
+      countryId,
+      sequentialId: Number(npp.party),
+    });
     if (isBannedParty({ governmentType: runtime.governmentType }, party)) {
       return { ok: false, reason: "banned party" };
     }
@@ -269,8 +270,7 @@ export async function proposeNppPrivatizationBill(
     (p) =>
       `${corpById.get(p.sourceCorporationId)?.name ?? countryId} ${CORPORATION_TYPE_LABELS[p.sectorType] ?? p.sectorType} Company`
   );
-  const takenDocs = await db
-    .collection<Corporation>("corporations")
+  const takenDocs = await corporationsCollection(db)
     .find(
       {
         name: {
@@ -344,7 +344,7 @@ export async function proposeNppPrivatizationBill(
     updatedAt: now,
   };
   try {
-    const result = await db.collection<Omit<Bill, "_id">>("bills").insertOne(bill);
+    const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     return { ok: true, billId: result.insertedId.toString(), sectors: sectorCount };
   } catch (error) {
     if ((error as { code?: number }).code === 11000)

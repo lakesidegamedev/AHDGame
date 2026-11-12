@@ -12,13 +12,16 @@ import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { GovernorOfficeState } from "@/lib/db/types/governorOfficeState";
 
 import { loadWestminsterGovernment } from "@/lib/governorOffice/devolution/westminsterGovernment";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 type Context = { params: Promise<{ code: string }> };
 
 // Only the sitting UK PM and admins can view this dashboard; only the PM can change stances.
 export async function GET(_request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "UK") return errorResponse(404, "UK-only feature.");
+    if (!countryHasFeature("ukApi", (await params).code.toUpperCase()))
+      return errorResponse(404, "UK-only feature.");
     const auth = await requireAuth();
     if (!auth.ok) return auth.response;
     const db = await getDb();
@@ -30,9 +33,10 @@ export async function GET(_request: Request, { params }: Context) {
     }
     const [regions, office, currentTurn, government] = await Promise.all([
       loadIndependenceDesireSnapshots(db),
-      db
-        .collection<GovernorOfficeState>("governorOfficeState")
-        .findOne({ countryId: "UK", stateId: getNationalStateId("UK") }),
+      governorOfficeStateCollection(db).findOne({
+        countryId: "UK",
+        stateId: getNationalStateId("UK"),
+      }),
       getCurrentTurn(db),
       loadWestminsterGovernment(db),
     ]);
@@ -54,7 +58,8 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function POST(request: Request, { params }: Context) {
   try {
-    if ((await params).code.toUpperCase() !== "UK") return errorResponse(404, "UK-only feature.");
+    if (!countryHasFeature("ukApi", (await params).code.toUpperCase()))
+      return errorResponse(404, "UK-only feature.");
     const auth = await requireHumanSessionWithCharacter(request);
     if (!auth.ok) return auth.response;
     const parsed = await parseJsonBody(

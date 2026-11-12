@@ -167,13 +167,10 @@ export function useActionsController({
     fetchCharacter();
   }, [fetchCharacter]);
 
-  // Keep the character snapshot — and therefore the affordability gate — in sync
-  // with the StatusBar, which refetches on the same triggers. The turn engine
-  // credits campaign-fund income server-side, so a page left open across a turn
-  // would otherwise gate actions against the stale page-load balance while the
-  // StatusBar shows the fresh (higher) figure. That divergence surfaces as a
-  // spurious "Insufficient funds" on actions the player can actually afford
-  // (bug #0885). Refetch on turn completion and when the player returns to the tab.
+  // Keep the character snapshot (and the affordability gate) in sync with the
+  // StatusBar. The turn engine credits campaign-fund income server-side, so a
+  // page left open across a turn would gate against a stale balance and show
+  // a spurious "Insufficient funds". Refetch on turn completion and tab refocus.
   useGameEvents(
     useCallback(() => {
       void fetchCharacter();
@@ -230,9 +227,7 @@ export function useActionsController({
         // currency (see makeFundsFormatter), so surface them as-is.
         report(type, data.message, true);
       } else {
-        // A refused action can still follow earlier spending (another tab, a
-        // turn), so reload the character: stale action points are what let a
-        // batch look affordable when it was not (ticket 1457).
+        // A refused action can follow earlier spending (another tab, a turn), so reload: stale action points make a batch look affordable when it is not.
         void fetchCharacter();
         report(type, apiErrorText(data, "Action failed."), false);
       }
@@ -351,9 +346,7 @@ export function useActionsController({
 
   const actionCosts = useMemo<ActionCosts | null>(() => {
     if (!character) return null;
-    // Face value in the campaign treasury's own currency, computed by the same
-    // helper the server credits with (ticket 1107). Never pass this through the
-    // live-forex formatter: campaign funds convert at the frozen base rate.
+    // Face value in the treasury's own currency, from the same helper the server credits with. Never pass through live-forex: campaign funds use the frozen base rate.
     const fundraiseAmount = fundraiseYieldLocal(
       character,
       !!character.currencyBalances,
@@ -369,6 +362,8 @@ export function useActionsController({
           // Same era baseline the server executes with (see executeAction):
           // without this a 1953-world card would quote modern-era costs.
           preset: worldFlags.preset,
+          // Live national figure the server prices against; absent until flags load.
+          nationalGdpPerCapita: worldFlags.nationalGdpPerCapita[character.countryId ?? "US"],
         }
       : undefined;
     // Same rules quotes the server executes. When a quote rejects (maxed stat,
@@ -423,12 +418,11 @@ export function useActionsController({
     campaignRates,
     worldFlags.preset,
     worldFlags.campaignPriceLevel,
+    worldFlags.nationalGdpPerCapita,
   ]);
 
   const forexEnabled = !!character?.currencyBalances;
-  // LOCAL home-currency balance — canonical source of truth. #885: when forex
-  // is on, NEVER fall back to the legacy anchor `funds` field; it is USD-scaled
-  // and reads as a tiny local balance in a high-denomination currency.
+  // LOCAL home-currency balance. When forex is on, never fall back to legacy `funds`: it is USD-scaled and reads as a tiny local balance.
   const displayCampaignFundsStored = forexEnabled
     ? (character?.currencyBalances?.campaign ?? 0)
     : (character?.funds ?? 0);

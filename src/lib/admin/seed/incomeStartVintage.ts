@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
 import { seededIncomeVintageId } from "@/lib/seeds/reference/income1991";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Countries whose 1991 metric seed writers can write a dated income vintage. */
 export const INCOME_VINTAGE_SEED_COUNTRIES = [
@@ -32,9 +33,10 @@ export async function stampSeededIncomeVintage(
 ): Promise<void> {
   const id = seededIncomeVintageId(countryId, preset);
   const field = `incomeStartVintages.${countryId}`;
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" }, id ? { $set: { [field]: id } } : { $unset: { [field]: "" } });
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    id ? { $set: { [field]: id } } : { $unset: { [field]: "" } }
+  );
 }
 
 /** Re-apply every writer's stamp after this bootstrap's country seed completed. */
@@ -46,7 +48,7 @@ export async function stampSeededIncomeVintages(db: Db, preset: string): Promise
     if (id) set[`incomeStartVintages.${countryId}`] = id;
     else unset[`incomeStartVintages.${countryId}`] = "";
   }
-  await db.collection<GameState>("gameState").updateOne(
+  await gameStateCollection(db).updateOne(
     { _id: "current" },
     {
       ...(Object.keys(set).length > 0 ? { $set: set } : {}),

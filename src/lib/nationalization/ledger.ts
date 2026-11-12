@@ -6,8 +6,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadFxRatesByCurrency, anchorToCorpCapital } from "@/lib/currency/corporationCapital";
 import { recordAudit } from "@/lib/audit/recordAudit";
-
-const COLLECTION = "nationalizationLedger";
+import { nationalizationLedgerCollection } from "@/lib/db/repositories/nationalizationLedger";
 
 /**
  * Append a nationalization audit row (spec §10/§12 — the acquisition + political
@@ -29,7 +28,7 @@ export async function recordNationalizationLedger(
     _id: new ObjectId(),
     createdAt: new Date(),
   };
-  await db.collection<NationalizationLedgerEntry>(COLLECTION).insertOne(doc);
+  await nationalizationLedgerCollection<NationalizationLedgerEntry>(db).insertOne(doc);
 
   recordAudit({
     source: "api",
@@ -88,7 +87,9 @@ export async function resolveActualPayoutLocal(
   } else {
     return undefined;
   }
-  const rows = await db.collection<NationalizationLedgerEntry>(COLLECTION).find(filter).toArray();
+  const rows = await nationalizationLedgerCollection<NationalizationLedgerEntry>(db)
+    .find(filter)
+    .toArray();
   if (rows.length === 0) return undefined;
   const totalAnchor = rows.reduce((sum, r) => sum + (r.compensationAnchor ?? 0), 0);
   const fx = await loadFxRatesByCurrency(db);
@@ -107,8 +108,7 @@ export async function getNationalizationLedger(
   db: Db,
   nationalCorporationId: ObjectId
 ): Promise<NationalizationLedgerEntry[]> {
-  return db
-    .collection<NationalizationLedgerEntry>(COLLECTION)
+  return nationalizationLedgerCollection<NationalizationLedgerEntry>(db)
     .find({
       nationalCorporationId,
       kind: { $in: ["nationalize_sector", "nationalize_whole"] },
@@ -127,8 +127,7 @@ export async function getCountryNationalizationLedger(
   db: Db,
   countryId: CountryId
 ): Promise<NationalizationLedgerEntry[]> {
-  return db
-    .collection<NationalizationLedgerEntry>(COLLECTION)
+  return nationalizationLedgerCollection<NationalizationLedgerEntry>(db)
     .find({ countryId })
     .sort({ turn: -1, createdAt: -1 })
     .toArray();

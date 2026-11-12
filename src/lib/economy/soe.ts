@@ -66,25 +66,13 @@ function capacityUtilisation(soe: Pick<SoeState, "output" | "capacity">): number
 }
 
 /**
- * Aggregate (mean) capacity utilisation across a country's SOEs. This is the
- * `soePerf` fed to the marketization drift formula.
+ * Aggregate (mean) capacity utilisation across a country's SOEs, the `soePerf`
+ * fed to marketization drift.
  *
- * WHY NOT PLAN FULFILLMENT. `planTarget` is a PLAYER-SET number: the Gosplan
- * chair writes it through `POST /command-economy/plan`, bounded only above (at
- * MAX_PLAN_TARGET_CAPACITY_MULTIPLE × capacity) and not at all below, because a
- * cautious plan is a legitimate choice. Feeding output/planTarget into
- * `marketizationDrift` therefore let the planner pick the denominator of their
- * own grade and steer a world scalar with it: set every target near zero and
- * fulfillment pins at MAX_PLAN_FULFILLMENT, contributing
- * weights.soePerformance × (1 − 2) = −0.18 level-points per turn and entrenching
- * the command economy against a shortage the enterprises are still producing.
- * Set them at the 3× ceiling and the dial runs the other way just as cheaply.
- *
- * Capacity is not writable by the planner. Under plants it is the sectors'
- * capital stock priced at the output mix, which only real investment moves. So
- * the dial now keys off what the enterprises PHYSICALLY did with the plant they
- * have, and the plan stays what it should be: the director's target, and the
- * thing they are judged against.
+ * Uses capacity, not plan fulfillment, because `planTarget` is PLAYER-SET: a
+ * planner could pick the denominator of their own grade and steer a world
+ * scalar. Capacity is not writable by the planner, so the dial keys off what
+ * the enterprises physically did with the plant they have.
  */
 export function aggregateCapacityUtilisation(
   soes: ReadonlyArray<Pick<SoeState, "output" | "capacity">>
@@ -116,29 +104,21 @@ export function makeSeedSoeState(sector: OperatingSectorType, planTarget: number
 }
 
 /**
- * Build the {@link SoeState} for an enterprise that is being brought under the
- * plan with sectors ALREADY RUNNING underneath it: the split-off path, and the
- * repair path for split-offs that were created before this overlay existed.
+ * Build the {@link SoeState} for an enterprise brought under the plan with
+ * sectors already running: the split-off path, and repair of split-offs made
+ * before this overlay existed.
  *
- * It differs from {@link makeSeedSoeState} only in where the numbers come from,
- * because a live sector already knows what it produced:
- *
- *  - `capacity` mirrors the plants-tier reading the command-economy turn will
- *    recompute anyway (Σ capitalStock × mixPrice, and `revenue` under plants IS
- *    capitalStock × mixPrice), so the overlay does not jump on the first turn
- *    after it is attached. With no capital stock anywhere it falls back to the
- *    seed's 10% headroom over the target.
+ *  - `capacity` mirrors the plants-tier reading the command-economy turn
+ *    recomputes (Σ capitalStock × mixPrice), so the overlay does not jump on
+ *    the first turn. With no capital stock it falls back to the seed's 10%
+ *    headroom over the target.
  *  - `output` is the realized figure, not the nameplate.
- *  - `planTarget` equals output, which is the seed convention ("a new
- *    enterprise starts on-plan") applied to a real production history. This
- *    matters: `planTarget` is sticky (the turn only ever recomputes it when it
- *    is zero) and it is the denominator the director is graded on, so seeding
- *    it from the NAMEPLATE would permanently brand an input-starved enterprise
- *    a failure for a shortfall it never had a chance to cover. The Gosplan
- *    chair sets the real quota from here.
+ *  - `planTarget` equals output. It is sticky and is the denominator the
+ *    director is graded on, so seeding from the nameplate would brand an
+ *    input-starved enterprise a failure for a shortfall it could not cover.
  *
- * Efficiency starts at baseline and losses at zero: the enterprise has no
- * record under the plan yet, and inventing one would be inventing a grade.
+ * Efficiency starts at baseline and losses at zero: no record under the plan
+ * yet, and inventing one would be inventing a grade.
  */
 export function makeAdoptedSoeState(
   sector: OperatingSectorType,
@@ -314,26 +294,13 @@ export function applyDirectedCreditToSoe(
   soe: SoeState,
   credit: number,
   /**
-   * P3b — plants tier. Below plants, directed credit was a pure BOOKKEEPING
-   * entry on the overlay: `capacity` rose 1:1 with the money and `output` rose
-   * by half of it THIS TURN, with no plant anywhere in the world having been
-   * built. Plan fulfillment could therefore be bought outright — the Gosbank
-   * flooded credit, the overlay reported the plan met, and no sector's
-   * `capitalStock` moved.
-   *
-   * Under plants the caller converts the credit into REAL capacity units at the
-   * era-priced `capacityPricePerUnit` and `$inc`s `capitalStock` on the SOE's
-   * sectors (see `commandEconomyTurn`). It then passes what that purchase is
-   * worth at mix prices here, so the overlay tracks the plants the money
-   * actually bought:
-   *
-   *   capacity += unitsAdded × mixPrice          (durable, real)
-   *   output    unchanged                        (capacity leads output)
-   *
-   * Output is deliberately NOT lifted: under plants output is produced by
-   * sectors from their capital stock and read back next turn by
-   * `loadSoeStates`. Crediting it here as well would double-count the same
-   * money — and would restore exactly the phantom the tier removes.
+   * Under plants, `capacityValueAdded` is passed here after the caller has
+   * already `$inc`d `capitalStock` on the SOE's sectors. Add it to the
+   * overlay's `capacity` so the overlay tracks real plants the money bought.
+   * Output is deliberately unchanged: it is produced from capital stock and
+   * read back next turn via `loadSoeStates`. Crediting it here would
+   * double-count the same money and restore the phantom capacity the plants
+   * tier removes.
    */
   plants?: { capacityValueAdded: number } | null
 ): SoeState {
@@ -375,29 +342,16 @@ export function directedCreditCapacityUnits(creditAnchor: number, unitPriceAncho
 // ── State capacity replacement (the SOE capex channel) ──────────────────────
 
 /**
- * REPLACEMENT COST of an enterprise's existing capacity for ONE turn, in ₳.
+ * REPLACEMENT COST of an enterprise's existing capacity for ONE turn, in ₳:
  *
  *     Σ_sectors capitalStock × δ × capacityPricePerUnit(sectorType, year)
  *
- * WHY THIS BOUND, AND ONLY THIS BOUND. A state enterprise funds capacity from
- * state channels, not by draining its own operating cash — but "the state pays"
- * must not become "the state pays for anything the enterprise asks for" (the
- * P3b exploit: an SOE queues an unbounded build and the treasury zeroes it out).
- *
- * Depreciation replacement is the one capex quantity that is BOUNDED BY THE
- * PLANT THAT ALREADY EXISTS and cannot grow it: buying back exactly the units
- * that wore out this turn leaves `capitalStock` flat. It is therefore the
- * largest grant that is provably not a growth subsidy, and it is what both
- * funding channels are floored/sized at:
- *
- *   • command economies — `commandEconomyTurn` floors the Gosbank's directed
- *     credit tranche here (the credit is still monetized and still feeds the
- *     monetary overhang, so the state pays visibly);
- *   • every other state-owned corp — `processSoeOperations` debits the owning
- *     treasury for exactly this and buys the units at the standing list price.
- *
- * An enterprise with no capital stock gets 0: there is nothing to replace, and
- * founding a plant from nothing is a POLICY decision, not maintenance.
+ * Depreciation replacement is the largest state grant provably not a growth
+ * subsidy: it is bounded by the plant that already exists and leaves
+ * `capitalStock` flat, so it cannot be exploited as an unbounded build request.
+ * Command economies floor the Gosbank directed credit tranche here; other
+ * state-owned corps debit the owning treasury for exactly this. No capital
+ * stock means 0: founding a plant is a policy decision, not maintenance.
  */
 export function soeCapacityReplacementCostAnchor(
   sectors: ReadonlyArray<{

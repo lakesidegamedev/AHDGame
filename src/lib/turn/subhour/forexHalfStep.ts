@@ -3,7 +3,7 @@ import {
   CYCLE_PRESSURE_BY_REGIME,
   INITIAL_RATES,
   getCountryIdForCurrency,
-  getInitialRates,
+  getRuntimeInitialRates,
   getSeedCurrencyCode,
   reserveCurrencyVolatilityMultiplier,
   type CurrencyCode,
@@ -30,24 +30,25 @@ import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope
 import { extractMacroInputs } from "@/lib/turn/forexTurn";
 import { yearOfTurn } from "@/lib/utils/gameDate";
 import { HALF_TICK_FRACTION, hasSubhourStep, subhourStepStamp } from "./stepFraction";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * :30 half step for forex, under the stepFraction.ts contract: each floating
  * currency takes HALF_TICK_FRACTION of the coming turn's rate step and is
- * stamped with subhourStep in the same update; the turn applies the rest.
+ * stamped with subhourStep; the turn applies the rest.
  *
- * Only the rate moves. Interventions, limit-order fills and expiry, the
- * 12-turn cycle regime roll, the rateHistory append, centralBanks writes and
- * the volume-window fields all stay on the hourly turn, so charts stay hourly
- * and orders still fill once an hour at the turn's rate.
+ * Only the rate moves. Interventions, order fills and expiry, the cycle
+ * regime roll, rateHistory, centralBanks writes and the volume window stay
+ * on the hourly turn.
  *
- * Mirrors processForexTurn for what each currency does: hard pegs and
- * command-economy pegs hold (no write), euro followers and union members copy
- * the anchor's new quote, and Bretton Woods band and drift come from the
- * stored regime. The macro target is recomputed from the current central-bank
- * inputs, so it can differ from the turn's if a prime rate or a macro series
- * moved in between; the turn's remainder then pulls toward the newer target,
- * which is intended (the rate follows the latest information).
+ * Pegs hold, euro followers and union members copy the anchor's new quote,
+ * Bretton Woods band and drift come from the stored regime. The macro target
+ * is recomputed from current central-bank inputs and may differ from the
+ * turn's; the turn's remainder pulls toward the newer target, which is
+ * intended.
  */
 
 export type ForexHalfStepRow = Pick<
@@ -110,7 +111,7 @@ function positive(value: unknown): value is number {
 /** Pure: what the :30 tick writes. Mirrors processForexTurn's per-country branches. */
 export function planForexHalfStep(input: ForexHalfStepInputs): ForexHalfStepPlan {
   const { turn, preset, euroUnion } = input;
-  const eraInitialRates = getInitialRates(preset);
+  const eraInitialRates = getRuntimeInitialRates(preset);
   const activeCountries = getPresetMonetaryScope(preset).forexCountries;
   const bankMap = new Map(input.banks.map((b) => [b.countryId, b]));
   const rateMap = new Map(input.rows.map((r) => [r._id, r]));
@@ -345,7 +346,7 @@ export async function runForexHalfStep(
   now: Date
 ): Promise<Record<string, unknown>> {
   const started = Date.now();
-  const state = await db.collection<GameState>("gameState").findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -372,14 +373,14 @@ export async function runForexHalfStep(
   const euroUnion = state.euroMonetaryUnion;
 
   const [rows, banks, gameConfig] = await Promise.all([
-    db
-      .collection<ExchangeRate>("exchangeRates")
-      .find({}, { projection: ROW_PROJECTION })
-      .toArray() as Promise<ForexHalfStepRow[]>,
-    db.collection<CentralBank>("centralBanks").find({}, { projection: BANK_PROJECTION }).toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+    exchangeRatesCollection(db).find({}, { projection: ROW_PROJECTION }).toArray() as Promise<
+      ForexHalfStepRow[]
+    >,
+    centralBanksCollection(db).find({}, { projection: BANK_PROJECTION }).toArray(),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
   ]);
   const volumes = await computeCurrencyVolumes(
     db,
@@ -400,7 +401,7 @@ export async function runForexHalfStep(
     euroUnion,
   });
 
-  const collection = db.collection<ExchangeRate>("exchangeRates");
+  const collection = exchangeRatesCollection(db);
   let written = 0;
   let casSkipped = 0;
 

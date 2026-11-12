@@ -16,10 +16,15 @@ import { getHouseComposition } from "@/lib/congress/houseComposition";
 import { getSenateComposition } from "@/lib/congress/senateComposition";
 import { getPartyHex } from "@/lib/utils/politics";
 import { LEADERSHIP_ROLES } from "@/lib/congress/leadershipRoles";
-import type { CongressLeader, Character, NPP } from "@/lib/db/types";
+import type { CongressLeader, NPP } from "@/lib/db/types";
 import type { LeadershipRole } from "@/lib/db/types";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 export interface LeaderDisplay {
   role: LeadershipRole;
@@ -62,13 +67,12 @@ export async function GET() {
       return NextResponse.json({ leaders: [], isAdmin } satisfies CongressLeadersResponse);
     }
 
-    const docs = await db.collection<CongressLeader>("congressLeaders").find({}).toArray();
+    const docs = await congressLeadersCollection(db).find({}).toArray();
     const byRole = new Map(docs.map((d) => [d.role, d]));
 
     const leaderIds = docs.filter((d) => d.characterId).map((d) => d.characterId!);
     const characters = leaderIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: leaderIds } })
           .project({ _id: 1, avatarUrl: 1, homeState: 1, sequentialId: 1, userId: 1 })
           .toArray()
@@ -90,8 +94,7 @@ export async function GET() {
       const charIds = new Set(characters.map((c) => c._id.toString()));
       const nppIds = leaderIds.filter((id) => !charIds.has(id.toString()));
       if (nppIds.length > 0) {
-        const npps = await db
-          .collection<NPP>("npps")
+        const npps = await nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .project({ _id: 1, homeState: 1, avatarUrl: 1, sequentialId: 1 })
           .toArray();
@@ -168,7 +171,7 @@ export async function POST(request: Request) {
     const now = new Date();
 
     if (!characterId || characterId.trim() === "") {
-      await db.collection<CongressLeader>("congressLeaders").updateOne(
+      await congressLeadersCollection(db).updateOne(
         { role: roleKey },
         {
           $set: {
@@ -186,15 +189,16 @@ export async function POST(request: Request) {
     if (!ObjectId.isValid(characterId)) {
       return errorResponse(400, "Invalid character ID");
     }
-    const char = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) }, { projection: { name: 1, party: 1 } });
+    const char = await charactersCollection(db).findOne(
+      { _id: new ObjectId(characterId) },
+      { projection: { name: 1, party: 1 } }
+    );
     if (!char) return errorResponse(404, "Character not found");
     if (!roleConfig) {
       return errorResponse(400, "Unknown leadership role");
     }
 
-    const holdsChamberSeat = await db.collection("electedOfficials").findOne({
+    const holdsChamberSeat = await electedOfficialsCollection<Document>(db).findOne({
       characterId: char._id,
       officeType: roleConfig.chamber,
     });
@@ -216,7 +220,7 @@ export async function POST(request: Request) {
       }
     }
 
-    await db.collection<CongressLeader>("congressLeaders").updateOne(
+    await congressLeadersCollection(db).updateOne(
       { role: roleKey },
       {
         $set: {

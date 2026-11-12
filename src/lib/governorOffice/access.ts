@@ -2,6 +2,8 @@ import type { Db, ObjectId } from "mongodb";
 import type { ElectedOfficial, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCurrentOfficeHolder } from "@/lib/governorOffice/queries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type OfficeActingRole =
   "holder" | "stateChair" | "stateViceChair" | "nationalChair" | "nationalViceChair";
@@ -68,9 +70,11 @@ export async function resolveOfficeAccess(
   const seq = Number(officeParty);
   if (!Number.isFinite(seq)) return base;
 
-  const stateOrg = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .findOne({ countryId, stateId, partyId: String(seq) });
+  const stateOrg = await statePartyOrgCollection(db).findOne({
+    countryId,
+    stateId,
+    partyId: String(seq),
+  });
 
   if (idEquals(stateOrg?.chairId ?? null, characterId)) {
     return { ...base, canManage: true, actingRole: "stateChair" };
@@ -82,9 +86,7 @@ export async function resolveOfficeAccess(
   // National fallback ONLY when the state party has neither officer.
   const stateHasOfficer = !!stateOrg?.chairId || !!stateOrg?.viceChairId;
   if (!stateHasOfficer) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId, sequentialId: seq });
+    const party = await politicalPartiesCollection(db).findOne({ countryId, sequentialId: seq });
     if (idEquals(party?.chairId ?? null, characterId)) {
       return { ...base, canManage: true, actingRole: "nationalChair" };
     }

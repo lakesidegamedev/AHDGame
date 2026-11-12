@@ -1,5 +1,9 @@
 import type { ObjectId, Db } from "mongodb";
 import type { IndexFundPosition } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 export type EnrichedFundHolder = {
   holderKind: IndexFundPosition["holderKind"];
@@ -25,8 +29,7 @@ export async function enrichFundPositions(
     .filter((p) => p.holderKind === "corporation" && p.corporationId)
     .map((p) => p.corporationId!);
   const corporations = corporationIds.length
-    ? await db
-        .collection<{ _id: ObjectId; name: string }>("corporations")
+    ? await corporationsCollection<{ _id: ObjectId; name: string }>(db)
         .find({ _id: { $in: corporationIds } }, { projection: { name: 1 } })
         .toArray()
     : [];
@@ -41,22 +44,19 @@ export async function enrichFundPositions(
 
   const [characters, npps, imperials] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<{ _id: ObjectId; name: string }>("characters")
+      ? charactersCollection<{ _id: ObjectId; name: string }>(db)
           .find({ _id: { $in: characterIds } })
           .project({ name: 1 })
           .toArray()
       : Promise.resolve([]),
     nppIds.length
-      ? db
-          .collection<{ _id: ObjectId; name: string; countryId?: string; party?: string }>("npps")
+      ? nppsCollection<{ _id: ObjectId; name: string; countryId?: string; party?: string }>(db)
           .find({ _id: { $in: nppIds } })
           .project({ name: 1, countryId: 1, party: 1 })
           .toArray()
       : Promise.resolve([]),
     imperialIds.length
-      ? db
-          .collection<{ _id: ObjectId; name: string }>("imperialCharacters")
+      ? imperialCharactersCollection<{ _id: ObjectId; name: string }>(db)
           .find({ _id: { $in: imperialIds } })
           .project({ name: 1 })
           .toArray()

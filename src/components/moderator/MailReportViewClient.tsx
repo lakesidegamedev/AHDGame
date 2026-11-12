@@ -52,7 +52,7 @@ const DATE_LABEL_OPTIONS = {
 
 export function MailReportViewClient({
   reportId,
-  backHref: backHrefProp = "/moderator?tab=content&sub=mail-reports",
+  backHref: backHrefProp = "/control/support/mail-reports",
 }: MailReportViewClientProps) {
   const searchParams = useSearchParams();
   const backHref = searchParams.get("back") ?? backHrefProp;

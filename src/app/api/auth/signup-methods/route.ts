@@ -4,17 +4,15 @@ import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { isAppleSignInConfigured } from "@/lib/auth/apple";
 import { computeIntakeStatus, type IntakeStatus } from "@/lib/auth/intakeStatus";
+import { authConfig } from "@/lib/config/auth";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Which ways of signing up actually work on THIS deployment.
  *
- * The register page used to render "Register with Discord" and "Register with
- * Google" unconditionally under copy promising an instant account. On a server
- * with no OAuth credentials, or with test mode on (which hard-blocks new
- * Discord registrations with no test-secret escape hatch), both buttons were
- * dead: one bounced to a login page, the other to an error result. Asking the
- * server up front lets the page disable what does not work and say why, instead
- * of sending the player through a redirect to find out.
+ * OAuth buttons and test mode can make a signup method unusable. The server
+ * reports availability up front so the page can disable what does not work and
+ * say why, instead of sending the player through a redirect to find out.
  */
 export interface SignupMethods {
   testMode: boolean;
@@ -36,7 +34,7 @@ export interface SignupMethods {
 export async function GET() {
   try {
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -52,11 +50,9 @@ export async function GET() {
     const intake = computeIntakeStatus(config);
 
     const discordConfigured = Boolean(
-      process.env.DISCORD_CLIENT_ID && process.env.DISCORD_REDIRECT_URI
+      authConfig.discordClientId() && authConfig.discordRedirectUri()
     );
-    const googleConfigured = Boolean(
-      process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REDIRECT_URI
-    );
+    const googleConfigured = Boolean(authConfig.googleClientId() && authConfig.googleRedirectUri());
 
     const appleConfigured = isAppleSignInConfigured();
 

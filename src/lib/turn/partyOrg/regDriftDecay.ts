@@ -38,45 +38,39 @@ import {
   type SurplusPartyDelta,
   type SurplusPartyView,
 } from "@/lib/parties/surplusSourcing";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { stateApprovalHistoryCollection } from "@/lib/db/repositories/stateApprovalHistory";
+import { orgRegLedgerCollection } from "@/lib/db/repositories/orgRegLedger";
 
 // Re-exported so existing importers (and tests) keep their entry point while
 // the implementation lives in the DB-free `surplusSourcing` module.
 export { sourceFromSurplus };
 
 /**
- * Politics turn-phase steps 3-4 merged: passive Org→Reg drift then Reg decay
- * with eligibility routing. See `docs/design/political-system-reg-support.md`
+ * Politics turn-phase steps 3-4: passive Org→Reg drift then Reg decay with
+ * eligibility routing. See `docs/design/political-system-reg-support.md`
  * §8.3 (turn-order contract) and §8.4 (step ordering invariants).
  *
- * Steps run as one phase (not two siblings) for atomic ledger ordering — the
- * design contract specifies drift first then decay, and merging the writes
- * keeps that ordering even under retry.
+ * Merged into one phase for atomic ledger ordering: drift first, then decay,
+ * preserved under retry.
  *
- * Per-state algorithm:
- *   1. Read all StatePartyOrg rows for the state and the StateRegistrationPool row.
- *      If the pool row is missing (bootstrap from Phase 1.5 not yet landed for
- *      this state), skip — the processor is a no-op until bootstrap runs.
- *   2. Conservation: clamp negative pool buckets and, if the visible sum
- *      (parties + max(0, pool)) is not 100, renormalize so the invariant
- *      holds. Without this, an exhausted pool that went negative is hidden
- *      by the UI (`value > 0` filter) and the legend totals above 100%.
- *   3. Drift: for each party, move regPct toward orgPct by
- *      `min(PASSIVE_REG_DRIFT_RATE, |orgPct - regPct|)`.
- *      The gross party-Reg gain is drawn from Independent+Unregistered first
- *      (without driving either bucket negative); any shortfall is sourced
- *      from parties whose Reg exceeds their own target, in proportion to
- *      that surplus (`sourceFromSurplus`). Drift never mints Reg: if both
- *      the pool and the surplus are exhausted the gain is scaled down.
- *   4. Decay: for each party with regPct > 0, lose `PASSIVE_REG_DECAY_RATE`.
- *      Distribute the lost amount via sqrt(orgPct) weights to parties with
- *      `orgPct >= REG_DRIFT_CATCH_ELIGIBILITY_ORG_PCT`. If no eligible party,
- *      route to non-party buckets with bias toward Independent.
- *   5. Apply all writes in one bulkWrite, plus ledger rows.
+ * Invariants:
+ * - Skip if the state's `StateRegistrationPool` row is missing (bootstrap not
+ *   yet landed).
+ * - Pool sum must stay 100: clamp negative buckets and renormalize, else the
+ *   UI hides negatives (`value > 0` filter) and totals exceed 100%.
+ * - Drift moves regPct toward orgPct by `min(PASSIVE_REG_DRIFT_RATE, delta)`,
+ *   sourced from Independent+Unregistered first, then from party surplus via
+ *   `sourceFromSurplus`. Drift never mints Reg.
+ * - Decay loses `PASSIVE_REG_DECAY_RATE` per party, redistributed by
+ *   sqrt(orgPct) to parties with `orgPct >= REG_DRIFT_CATCH_ELIGIBILITY_ORG_PCT`;
+ *   otherwise to non-party buckets, biased to Independent.
+ * - All writes and ledger rows in one bulkWrite.
  *
- * Bootstrap dependency: this processor produces no work until Phase 1.5 /
- * Phase 2 prerequisite seeds `StatePartyOrg.registration` and creates
- * `StateRegistrationPool` rows. Until then it scans, finds nothing to do per
- * state, and exits.
+ * Depends on Phase 1.5 / Phase 2 seeding prior to producing work.
  */
 
 /** Total writes performed across all states this turn. */
@@ -623,10 +617,7 @@ export async function processRegDriftDecay(
     ledgerRowsWritten: 0,
   };
 
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
-    .find({})
-    .toArray();
+  const pools = await stateRegistrationPoolCollection(db).find({}).toArray();
   result.statesScanned = pools.length;
   if (pools.length === 0) return result;
 
@@ -636,16 +627,14 @@ export async function processRegDriftDecay(
 
   // Enacted registration-access law is national and constant across the turn,
   // so it joins the once-per-phase reads rather than being fetched per pool.
-  const gs = await db
-    .collection<{
-      _id: string;
-      registrationAccessBias?: number;
-      registrationAccessBiasByCountry?: Partial<Record<string, number>>;
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { registrationAccessBias: 1, registrationAccessBiasByCountry: 1 } }
-    );
+  const gs = await gameStateCollection<{
+    _id: string;
+    registrationAccessBias?: number;
+    registrationAccessBiasByCountry?: Partial<Record<string, number>>;
+  }>(db).findOne(
+    { _id: "current" },
+    { projection: { registrationAccessBias: 1, registrationAccessBiasByCountry: 1 } }
+  );
   /**
    * Per country — electoral law is national law. The legacy global field is the
    * fallback so a world written before the map existed still resolves, but a
@@ -656,17 +645,12 @@ export async function processRegDriftDecay(
     gs?.registrationAccessBias ??
     0;
 
-  // Batched: this phase used to do ~5 sequential DB round-trips PER pool
-  // (statePartyOrg find, regional-executive findOne, statePartyOrg bulkWrite,
-  // pool updateOne, ledger insertMany) — ~800+ serial round-trips at ~167
-  // pools, the same anti-pattern fixed repeatedly this session, and it scales
-  // with states × countries. Now: load all statePartyOrg + all regional
-  // executives ONCE, plan every pool in memory, then commit three batched
-  // writes (party updates, pool updates, ledger inserts).
+  // Batched: load all statePartyOrg + all regional executives once, plan every
+  // pool in memory, then commit three batched writes (party updates, pool
+  // updates, ledger inserts) instead of per-pool round-trips.
   const countryIds = Array.from(new Set(pools.map((p) => p.countryId)));
 
-  const allParties = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const allParties = await statePartyOrgCollection(db)
     .find({ countryId: { $in: countryIds } })
     .toArray();
   const partiesByStateKey = new Map<string, StatePartyOrg[]>();
@@ -681,8 +665,7 @@ export async function processRegDriftDecay(
   // "governor" / "ministerPresident"), keyed by country:STATE:officeType with
   // the most-recently-elected winning ties — mirrors getRegionalExecutive's
   // `sort({ electedAt: -1 })` pick.
-  const execOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const execOfficials = await electedOfficialsCollection(db)
     .find({
       countryId: { $in: countryIds },
       officeType: { $in: ["governor", "ministerPresident"] },
@@ -701,8 +684,7 @@ export async function processRegDriftDecay(
     }
   }
 
-  const approvalRows = await db
-    .collection<StateApprovalHistory>("stateApprovalHistory")
+  const approvalRows = await stateApprovalHistoryCollection(db)
     .find(
       { countryId: { $in: countryIds } },
       { projection: { countryId: 1, stateId: 1, approvalRating: 1 } }
@@ -781,13 +763,13 @@ export async function processRegDriftDecay(
   }
 
   if (partyOps.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(partyOps);
+    await statePartyOrgCollection(db).bulkWrite(partyOps);
   }
   if (poolOps.length > 0) {
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(poolOps);
+    await stateRegistrationPoolCollection(db).bulkWrite(poolOps);
   }
   if (ledgerRows.length > 0) {
-    await db.collection<OrgRegLedger>("orgRegLedger").insertMany(ledgerRows);
+    await orgRegLedgerCollection(db).insertMany(ledgerRows);
     result.ledgerRowsWritten += ledgerRows.length;
   }
 

@@ -15,6 +15,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NPP } from "@/lib/db/types";
 import type { GoverningAgendaItem } from "./governingAgenda";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Priority-weighted target attainment at/above which the government is "par". */
 const PERF_NEUTRAL = 0.6;
@@ -79,9 +80,9 @@ export async function applyGovernmentPerformanceNudge(
   now: Date
 ): Promise<number> {
   if (favorabilityDelta === 0) return 0;
-  const res = await db
-    .collection<NPP>("npps")
-    .updateMany({ countryId, party: governingPartyId, retiredAt: null }, [
+  const res = await nppsCollection(db).updateMany(
+    { countryId, party: governingPartyId, retiredAt: null },
+    [
       {
         $set: {
           favorability: {
@@ -93,6 +94,7 @@ export async function applyGovernmentPerformanceNudge(
           updatedAt: now,
         },
       },
-    ]);
+    ]
+  );
   return res.modifiedCount ?? 0;
 }

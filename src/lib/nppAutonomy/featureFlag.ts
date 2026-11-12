@@ -4,14 +4,13 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { GameState, NppAutonomyLevel } from "@/lib/db/types/gameState";
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { NPP_AUTONOMY_LEVEL_RANK } from "./levels";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export type { NppAutonomyLevel };
 
 /**
- * Canonical ordering of the autonomy levels. Exported so callers never hand-roll
- * a local copy (nppActionProcessing and countryAccess used to) and never compare
- * with strict equality: `level === "v3"` silently turns a v3+ feature OFF at v4,
- * which is exactly the bug class this export exists to prevent.
+ * Canonical ordering of autonomy levels. Compare via rank, not strict equality:
+ * `level === "v3"` silently disables a v3+ feature at v4.
  */
 export { NPP_AUTONOMY_LEVEL_RANK };
 
@@ -39,12 +38,10 @@ export async function getNppAutonomyLevel(db: Db): Promise<NppAutonomyLevel> {
 export async function getNppAutonomyWorldContext(
   db: Db
 ): Promise<{ level: NppAutonomyLevel; preset?: string }> {
-  const doc = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1, preset: 1 } }
-    );
+  const doc = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1, preset: 1 } }
+  );
   return {
     level: doc?.nppAutonomyLevel ?? (doc?.nppAutonomyEnabled === true ? "v0" : "off"),
     preset: doc?.preset,
@@ -53,7 +50,7 @@ export async function getNppAutonomyWorldContext(
 
 /**
  * Autonomy level read once and served to every `getNppAutonomyLevel` call inside
- * `fn` (#2690). The per-country gates call it once per actor, which re-read the
+ * `fn`. The per-country gates call it once per actor, which re-read the
  * `gameState` singleton about a hundred times a turn.
  *
  * AsyncLocalStorage, not a module cache: the value exists only for the dynamic

@@ -2,33 +2,17 @@ import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState, LegislationType } from "@/lib/db/types";
 import { calculateFederalLawAnnualCosts } from "@/lib/budget/spending";
-import {
-  applyCountryDepartmentSettlements,
-  applyDepartmentProgramSettlement,
-  ensureDepartmentAccount,
-} from "@/lib/db/collections/departmentAccounts";
-import {
-  PUBLIC_HEALTH_CAPACITY_TYPE,
-  US_HEALTH_DEPARTMENT_ID,
-  US_PUBLIC_HEALTH_PROGRAM_ID,
-} from "@/lib/governmentFinance/departments";
-import {
-  isDepartmentFinanceEnabledFromState,
-  isDepartmentProgramSliceEnabledFromState,
-} from "@/lib/governmentFinance/featureFlag";
+import { applyCountryDepartmentSettlements } from "@/lib/db/collections/departmentAccounts";
 import { buildCountryDepartmentSettlementPlan } from "@/lib/governmentFinance/generalizedSettlementPlan";
 import { withLawAdministration } from "@/lib/governmentFinance/lawAdministrationCatalog";
 import type { DepartmentCountryId } from "@/lib/governmentFinance/departmentCatalog";
 import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
-import { includedAuthorityPerTurn } from "@/lib/governmentFinance/rules/appropriation";
-import { settleCapacity } from "@/lib/governmentFinance/rules/capacity";
-import { settleProgramAccount } from "@/lib/governmentFinance/rules/implementation";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry, type ResetVersionState } from "@/lib/resetVersions/rules";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 const MAX_COMMIT_ATTEMPTS = 3;
-const US_PUBLIC_HEALTH_TYPE = "us_public_health";
-const US_PUBLIC_HEALTH_OPTION = "public_health_opt_1";
 
 export interface DepartmentProgramTurnResult {
   enabled: boolean;
@@ -55,145 +39,12 @@ function emptyResult(enabled: boolean): DepartmentProgramTurnResult {
   };
 }
 
-async function loadUsBudget(db: Db): Promise<FederalBudget | null> {
-  return db.collection<FederalBudget>("federalBudget").findOne(
-    { countryId: "US" },
-    {
-      projection: {
-        _id: 1,
-        countryId: 1,
-        gdp: 1,
-        revenue: 1,
-        spending: 1,
-        baselineSpendingByCategory: 1,
-        baselineStateGrants: 1,
-        departmentAccounts: 1,
-      },
-    }
-  );
-}
-
 export async function processDepartmentProgramSettlement(
   db: Db,
   turn: number,
-  gameState: Pick<
-    GameState,
-    "departmentProgramSliceEnabled" | "departmentFinanceEnabled" | "manuallyEnabledSeats"
-  > &
-    ResetVersionState
+  gameState: Pick<GameState, "manuallyEnabledSeats"> & ResetVersionState
 ): Promise<DepartmentProgramTurnResult> {
-  if (isDepartmentFinanceEnabledFromState(gameState)) {
-    return processGeneralizedDepartmentSettlement(db, turn, gameState);
-  }
-  if (!isDepartmentProgramSliceEnabledFromState(gameState)) return emptyResult(false);
-
-  if (resetSystemVersionsForCountry(gameState, RESET_V2_READY, "US").cabinet === "v2") {
-    return emptyResult(false);
-  }
-  let budget = await loadUsBudget(db);
-  if (!budget) return emptyResult(true);
-  let account = budget.departmentAccounts?.[US_HEALTH_DEPARTMENT_ID];
-  if (!account) {
-    account = (await ensureDepartmentAccount(db, "US", US_HEALTH_DEPARTMENT_ID)) ?? undefined;
-    budget = await loadUsBudget(db);
-  }
-  if (!account || !budget) return emptyResult(true);
-
-  const [costs, legislationType] = await Promise.all([
-    calculateFederalLawAnnualCosts(db, budget),
-    db
-      .collection<LegislationType>("legislationTypes")
-      .findOne(
-        { _id: US_PUBLIC_HEALTH_TYPE },
-        { projection: { _id: 1, administration: 1, policyOptions: 1 } }
-      ),
-  ]);
-  const optionIndex =
-    legislationType?.policyOptions?.findIndex(
-      (candidate) => candidate.id === US_PUBLIC_HEALTH_OPTION
-    ) ?? -1;
-  const option = optionIndex >= 0 ? legislationType?.policyOptions?.[optionIndex] : undefined;
-  if (
-    legislationType?.administration?.primaryDepartmentId !== US_HEALTH_DEPARTMENT_ID ||
-    option?.implementation?.programId !== US_PUBLIC_HEALTH_PROGRAM_ID
-  ) {
-    throw new Error("public-health department slice metadata is missing or inconsistent");
-  }
-
-  const active = costs.items.find(
-    ({ law }) =>
-      law.legislationTypeId === US_PUBLIC_HEALTH_TYPE && law.policyOptionIndex === optionIndex
-  );
-  let previous = account.programs[US_PUBLIC_HEALTH_PROGRAM_ID];
-  if (!active && !previous) return emptyResult(true);
-
-  const annualDemand = Math.max(0, Math.round(active?.amount ?? previous?.annualDemand ?? 0));
-  const periodDemand = includedAuthorityPerTurn(annualDemand, turn);
-  const authority = active ? periodDemand : 0;
-  const repealTurn = !active ? (previous?.repealTurn ?? turn) : undefined;
-
-  for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt += 1) {
-    if (attempt > 0) {
-      budget = await loadUsBudget(db);
-      account = budget?.departmentAccounts?.[US_HEALTH_DEPARTMENT_ID];
-      if (!account) return emptyResult(true);
-      previous = account.programs[US_PUBLIC_HEALTH_PROGRAM_ID];
-    }
-    const capacityPool = account.capacityPools[PUBLIC_HEALTH_CAPACITY_TYPE];
-    if (!capacityPool) throw new Error("public-health capacity pool is missing");
-    const capacityInput = {
-      capacityType: PUBLIC_HEALTH_CAPACITY_TYPE,
-      maintenanceDemand: capacityPool.maintenanceDemand,
-      programDemand: 100,
-      sourceBreakdown: capacityPool.sourceBreakdown,
-    };
-    const capacity = settleCapacity(capacityInput);
-    const free = Math.max(0, account.balance - account.encumbered);
-    const rampFactor = previous ? 1 : 0.5;
-    const requestedOutlay = active
-      ? Math.round(Math.min(periodDemand, free + authority) * capacity.ratio * rampFactor)
-      : 0;
-    const settlement = settleProgramAccount({
-      programId: US_PUBLIC_HEALTH_PROGRAM_ID,
-      legislationTypeId: US_PUBLIC_HEALTH_TYPE,
-      policyOptionId: US_PUBLIC_HEALTH_OPTION,
-      status: previous?.status ?? "authorized",
-      priority: option.implementation.obligationPriority,
-      openingBalance: account.balance,
-      openingEncumbered: account.encumbered,
-      accruedThroughTurn: account.accruedThroughTurn,
-      turn,
-      authority,
-      programDemand: periodDemand,
-      requestedOutlay,
-      requestedEncumbrance: 0,
-      capacity: capacityInput,
-      coverageRatio: 1,
-      rampFactor,
-      ...(repealTurn !== undefined ? { repealTurn } : {}),
-    });
-
-    if (settlement.replayed) return emptyResult(true);
-    const committed = await applyDepartmentProgramSettlement(
-      db,
-      "US",
-      US_HEALTH_DEPARTMENT_ID,
-      account,
-      settlement
-    );
-    if (!committed) continue;
-    return {
-      enabled: true,
-      programsSettled: 1,
-      authorityAccrued: settlement.authorityAccrued,
-      outlaid: settlement.outlaid,
-      encumbered: settlement.closingEncumbered,
-      implementationFactor: settlement.implementation.implementationFactor,
-      reconciliation: "balanced",
-    };
-  }
-
-  throw new Error("department settlement could not commit after concurrent budget changes");
+  return processGeneralizedDepartmentSettlement(db, turn, gameState);
 }
 
 const GENERALIZED_COUNTRIES: DepartmentCountryId[] = [...RESET_V2_COUNTRIES];
@@ -209,8 +60,7 @@ const GENERALIZED_BUDGET_PROJECTION = {
 } as const;
 
 async function loadGeneralizedBudgets(db: Db): Promise<FederalBudget[]> {
-  return db
-    .collection<FederalBudget>("federalBudget")
+  return (await getFederalBudgetCollection(db))
     .find(
       { countryId: { $in: GENERALIZED_COUNTRIES } },
       { projection: GENERALIZED_BUDGET_PROJECTION }
@@ -222,16 +72,16 @@ async function loadGeneralizedBudget(
   db: Db,
   countryId: DepartmentCountryId
 ): Promise<FederalBudget | null> {
-  return db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId }, { projection: GENERALIZED_BUDGET_PROJECTION });
+  return (await getFederalBudgetCollection(db)).findOne(
+    { countryId },
+    { projection: GENERALIZED_BUDGET_PROJECTION }
+  );
 }
 
 async function processGeneralizedDepartmentSettlement(
   db: Db,
   turn: number,
-  gameState: Pick<GameState, "departmentFinanceEnabled" | "manuallyEnabledSeats"> &
-    ResetVersionState
+  gameState: Pick<GameState, "manuallyEnabledSeats"> & ResetVersionState
 ): Promise<DepartmentProgramTurnResult> {
   const budgets = (await loadGeneralizedBudgets(db)).filter(
     (budget) =>
@@ -253,8 +103,7 @@ async function processGeneralizedDepartmentSettlement(
   const storedTypes =
     legislationTypeIds.length === 0
       ? []
-      : await db
-          .collection<LegislationType>("legislationTypes")
+      : await legislationTypesCollection(db)
           .find(
             { _id: { $in: legislationTypeIds } },
             {

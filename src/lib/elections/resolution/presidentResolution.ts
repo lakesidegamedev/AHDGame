@@ -1,0 +1,679 @@
+import { ObjectId } from "mongodb";
+import type {
+  Election,
+  ElectionCandidate,
+  ElectionVoteTally,
+  ElectedOfficial,
+  NPP,
+  CharacterStateOrg,
+  Campaign,
+} from "@/lib/db/types";
+import { updatePoliticianPagesAfterElection } from "@/lib/wiki/updatePoliticianPageOnElection";
+import {
+  allocateElectoralVotes,
+  determinePresidentialWinner,
+} from "@/lib/turn/electionCalculations";
+import type { ContingentElectionResult } from "@/lib/elections/resolution/contingentElection";
+import {
+  announceActingPresidency,
+  needsActingPresidency,
+  seatActingPresidencyForHouseVote,
+} from "@/lib/elections/resolution/contingentActingPresidency";
+import {
+  markContingentResolutionPending,
+  runPresidentialContingentBallot,
+} from "@/lib/elections/resolution/presidentContingentBallot";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
+import { recordPresidentialTenure } from "@/lib/elections/resolution/presidentialTenureLedger";
+import {
+  sendPresidentResolutionMessaging,
+  type PresidentialResolutionMode,
+} from "@/lib/elections/resolution/presidentResolutionMessaging";
+import {
+  isNppContingentId,
+  toCharacterObjectId,
+  toNppObjectId,
+} from "@/lib/elections/resolution/contingentPersonIds";
+import {
+  resolvePresidentialWinnerCandidateId,
+  electoralMajorityFor,
+} from "@/lib/elections/presidentialResolutionDisplay";
+import { getGameStateCollection } from "@/lib/db/collections";
+import { loadApportionment } from "@/lib/elections/apportionment";
+import { captureElectionResultSnapshot } from "@/lib/elections/liveResults/captureResultSnapshot";
+import { logger } from "@/lib/observability/logger";
+import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
+import { loadSurvivingPartyResolver } from "@/lib/parties/survivingParty";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
+
+function recoverUnitVotesFromSnapshots(
+  unitTurnSnapshots: ElectionVoteTally["unitTurnSnapshots"],
+  activeCandidateIds: Set<string>
+): Record<string, Record<string, number>> | null {
+  if (!unitTurnSnapshots) return null;
+  const recovered: Record<string, Record<string, number>> = {};
+  let anyData = false;
+  for (const [unitId, snaps] of Object.entries(unitTurnSnapshots)) {
+    if (!Array.isArray(snaps) || snaps.length === 0) continue;
+    const lastSnap = snaps[snaps.length - 1];
+    if (!lastSnap?.cumulativeVotes) continue;
+    const filtered: Record<string, number> = {};
+    for (const [cid, votes] of Object.entries(lastSnap.cumulativeVotes)) {
+      if (activeCandidateIds.has(cid) && votes > 0) filtered[cid] = votes;
+    }
+    if (Object.keys(filtered).length > 0) {
+      recovered[unitId] = filtered;
+      anyData = true;
+    }
+  }
+  return anyData ? recovered : null;
+}
+
+function filterUnitVotesToCandidates(
+  totalVotesByUnit: Record<string, Record<string, number>>,
+  activeCandidateIds: Set<string>
+): Record<string, Record<string, number>> {
+  if (activeCandidateIds.size === 0) return totalVotesByUnit;
+
+  const filtered: Record<string, Record<string, number>> = {};
+  for (const [unitId, votesByCandidate] of Object.entries(totalVotesByUnit)) {
+    const unitVotes: Record<string, number> = {};
+    for (const [candidateId, votes] of Object.entries(votesByCandidate ?? {})) {
+      if (activeCandidateIds.has(candidateId) && votes > 0) {
+        unitVotes[candidateId] = votes;
+      }
+    }
+    filtered[unitId] = unitVotes;
+  }
+  return filtered;
+}
+
+function computeTiedEv(ranked: [string, number][]): number {
+  if (ranked.length < 2) return 0;
+  const topEv = ranked[0][1];
+  return ranked.filter(([, ev]) => ev === topEv).length >= 2 ? topEv : 0;
+}
+
+async function vacatePresidency(
+  db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
+  election: Election,
+  now: Date,
+  reason: string,
+  currentTurn: number
+): Promise<void> {
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { finalized: true, updatedAt: now } }
+  );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
+  const vacateCountryId = election.countryId ?? "US";
+  const departingPlayers = await charactersCollection(db)
+    .find(
+      { countryId: vacateCountryId, "currentOffice.type": { $in: ["president", "vicePresident"] } },
+      { projection: { party: 1, currentOffice: 1, careerHistory: 1 } }
+    )
+    .toArray()
+    .catch(() => []);
+  await charactersCollection(db).updateMany(
+    {
+      countryId: vacateCountryId,
+      "currentOffice.type": { $in: ["president", "vicePresident"] },
+    },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
+  await nppsCollection(db).updateMany(
+    {
+      countryId: vacateCountryId,
+      "currentOffice.type": { $in: ["president", "vicePresident"] },
+    },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
+  await electedOfficialsCollection(db).updateMany(
+    { countryId: vacateCountryId, officeType: { $in: ["president", "vicePresident"] } },
+    {
+      $set: {
+        characterId: null,
+        characterName: null,
+        party: null,
+        isNPP: false,
+        nppId: null,
+        updatedAt: now,
+      } as Record<string, unknown>,
+    }
+  );
+  await Promise.all(
+    departingPlayers.map((player) =>
+      captureOfficeTransition({
+        db,
+        officeType: player.currentOffice?.type ?? "president",
+        transitionType: "lost",
+        partyId: player.party,
+        selectionMethod: "election",
+        careerStage: player.careerHistory?.length ?? 0,
+        nationId: vacateCountryId,
+        turn: currentTurn,
+      })
+    )
+  );
+  console.log(`[Turn] Vacated presidency — election ${election._id} ${reason}`);
+}
+
+async function resolveVpIds(
+  db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
+  election: Election,
+  winnerCandidate: ElectionCandidate,
+  contingentResult?: ContingentElectionResult
+): Promise<{ vpCharId?: ObjectId; vpNppId?: ObjectId }> {
+  let vpCharId: ObjectId | undefined;
+  let vpNppId: ObjectId | undefined;
+
+  if (contingentResult?.vicePresidentWinnerId) {
+    const contingentVpId = contingentResult.vicePresidentWinnerId;
+    if (isNppContingentId(contingentVpId)) {
+      vpNppId = toNppObjectId(contingentVpId);
+    } else {
+      vpCharId = toCharacterObjectId(contingentVpId);
+    }
+  } else {
+    vpCharId = winnerCandidate.runningMateId;
+  }
+
+  if (winnerCandidate.isNPP && winnerCandidate.nppId && !vpCharId && !vpNppId) {
+    const vpNppCandidates = await nppsCollection(db)
+      .find(
+        {
+          party: winnerCandidate.party,
+          countryId: election.countryId,
+          _id: { $ne: winnerCandidate.nppId },
+          retiredAt: null,
+        },
+        { projection: { _id: 1 } }
+      )
+      .sort({ politicalInfluence: -1 })
+      .limit(1)
+      .toArray();
+    if (vpNppCandidates.length > 0) vpNppId = vpNppCandidates[0]._id;
+  }
+
+  return { vpCharId, vpNppId };
+}
+
+async function finalizePresidentTally(
+  db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
+  election: Election,
+  electoralVotesByCandidate: Record<string, number>,
+  resolutionMode: PresidentialResolutionMode,
+  contingentResult: ContingentElectionResult | undefined,
+  now: Date
+): Promise<{ finalized: boolean; concurrentWinner: boolean }> {
+  const tallyWrite = await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id, finalized: { $ne: true } },
+    {
+      $set: {
+        electoralVotesByCandidate,
+        finalized: true,
+        updatedAt: now,
+        resolutionMode,
+        contingentResolutionPending: false,
+        executiveSeatingPending: true,
+        ...(contingentResult && {
+          contingentResult: {
+            eligiblePresidentCandidateIds: contingentResult.eligiblePresidentCandidateIds,
+            eligibleVicePresidentCandidateIds: contingentResult.eligibleVicePresidentCandidateIds,
+            houseDelegationVotes: contingentResult.houseDelegationVotes,
+            houseVoteTotals: contingentResult.houseVoteTotals,
+            houseBallots: contingentResult.houseBallots,
+            senateVotes: contingentResult.senateVotes,
+            senateVoteTotals: contingentResult.senateVoteTotals,
+            presidentWinnerId: contingentResult.presidentWinnerId,
+            vicePresidentWinnerId: contingentResult.vicePresidentWinnerId,
+            houseThreshold: contingentResult.houseThreshold,
+            senateThreshold: contingentResult.senateThreshold,
+            deadlockBreakerUsed: contingentResult.deadlockBreakerUsed,
+            deadlockBreakerReason: contingentResult.deadlockBreakerReason,
+            houseDeadlocked: contingentResult.houseDeadlocked ?? false,
+            topElectoralVoteTotal: contingentResult.topElectoralVoteTotal,
+          },
+        }),
+      },
+    }
+  );
+
+  if (tallyWrite.modifiedCount === 0) {
+    return { finalized: false, concurrentWinner: true };
+  }
+  return { finalized: true, concurrentWinner: false };
+}
+
+async function runPostFinalizeCleanup(
+  db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
+  election: Election,
+  electoralVotesByCandidate: Record<string, number>,
+  now: Date
+): Promise<void> {
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
+  await campaignsCollection(db).updateMany(
+    { electionId: election._id },
+    { $set: { campaignStrength: 0, updatedAt: now } }
+  );
+  await campaignsCollection<Document>(db).deleteMany({ electionId: election._id });
+
+  // Half-up rounding via floor(x + 0.5) to match the previous Math.round behavior
+  // ($round would use banker's rounding).
+  const orgReset = await characterStateOrgCollection(db).updateMany({ level: { $gt: 0 } }, [
+    {
+      $set: {
+        level: { $floor: { $add: [{ $multiply: ["$level", 0.25] }, 0.5] } },
+        updatedAt: now,
+      },
+    },
+  ]);
+  if (orgReset.modifiedCount > 0) {
+    console.log(
+      `[Turn] President election ${election._id}: partial-25% state-org reset applied to ${orgReset.modifiedCount} row(s)`
+    );
+  }
+
+  // `finalizePresidentTally` has now written the decided college. Capturing
+  // earlier would freeze a result whose electoral votes were still projected.
+  await captureElectionResultSnapshot(db, election, now);
+}
+
+async function terminalizeMissingWinner(
+  db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
+  election: Election,
+  electoralVotesByCandidate: Record<string, number>,
+  resolutionMode: PresidentialResolutionMode,
+  contingentResult: ContingentElectionResult | undefined,
+  now: Date
+): Promise<void> {
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    {
+      $set: {
+        electoralVotesByCandidate,
+        finalized: true,
+        updatedAt: now,
+        resolutionMode,
+        contingentResolutionPending: false,
+        executiveSeatingPending: false,
+        resolutionTerminalReason: "winner_candidate_missing",
+        resolutionTerminalAt: now,
+        ...(contingentResult && { contingentResult }),
+      },
+    }
+  );
+}
+
+/**
+ * Resolve a completed presidential election: allocate EVs per unit, determine winner, update officials.
+ */
+export async function resolvePresidentElection(
+  db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
+  election: Election,
+  tally: ElectionVoteTally,
+  now: Date,
+  currentTurn = election.endTurn ?? 0
+): Promise<boolean> {
+  if (tally.finalized === true && tally.executiveSeatingPending !== true) return true;
+  const seatingRetryOnly = tally.finalized === true && tally.executiveSeatingPending === true;
+
+  let electoralVotesByCandidate = tally.electoralVotesByCandidate;
+  let ranked: [string, number][] = electoralVotesByCandidate
+    ? Object.entries(electoralVotesByCandidate).sort((a, b) => b[1] - a[1])
+    : [];
+  let resolutionMode: PresidentialResolutionMode = tally.resolutionMode ?? "majority";
+  // Majority of the ACTUAL college, not the modern 538-college constant: on
+  // era worlds (531 EV in 1953-60) the hardcoded 270 would wrongly send a
+  // 266-269 EV winner to a contingent House ballot. Both branches below
+  // recompute this from the college they actually allocated.
+  let evNeeded = electoralMajorityFor(
+    electoralVotesByCandidate
+      ? Object.values(electoralVotesByCandidate).reduce((s, v) => s + v, 0)
+      : 0
+  );
+  let contingentResult: ContingentElectionResult | undefined = tally.contingentResult as
+    ContingentElectionResult | undefined;
+
+  if (!seatingRetryOnly) {
+    const activeCandidateIds = new Set(Object.keys(tally.candidateNames ?? {}));
+    let totalVotesByUnit = tally.totalVotesByUnit;
+    const totalVotesByUnitIsEmpty =
+      !totalVotesByUnit ||
+      Object.keys(totalVotesByUnit).length === 0 ||
+      Object.values(totalVotesByUnit).every((uv) => !uv || Object.values(uv).every((v) => !v));
+    if (totalVotesByUnitIsEmpty) {
+      const recovered = recoverUnitVotesFromSnapshots(tally.unitTurnSnapshots, activeCandidateIds);
+      if (recovered) {
+        console.warn(
+          `[Turn] President election ${election._id}: totalVotesByUnit was empty — recovered ${Object.keys(recovered).length} unit(s) from last unitTurnSnapshot entries`
+        );
+        totalVotesByUnit = recovered;
+      }
+    }
+
+    if (totalVotesByUnit) {
+      totalVotesByUnit = filterUnitVotesToCandidates(totalVotesByUnit, activeCandidateIds);
+    }
+
+    if (!totalVotesByUnit || Object.keys(totalVotesByUnit).length === 0) {
+      await vacatePresidency(db, election, now, "resolved with no unit vote data", currentTurn);
+      return true;
+    }
+
+    const presetGameState = await (await getGameStateCollection(db)).findOne({ _id: "current" });
+    // Live (census-updated) EV units; equals the preset seed until a decennial
+    // census reapportions (P1d-2).
+    const evUnits = (
+      await loadApportionment(db, presetGameState?.preset, presetGameState?.currentYear)
+    ).electoralVoteUnits;
+    electoralVotesByCandidate = allocateElectoralVotes(totalVotesByUnit, evUnits);
+    ranked = Object.entries(electoralVotesByCandidate).sort((a, b) => b[1] - a[1]);
+
+    const totalEV = Object.values(electoralVotesByCandidate).reduce((s, v) => s + v, 0);
+    if (totalEV === 0) {
+      await vacatePresidency(db, election, now, "resolved with zero electoral votes", currentTurn);
+      return true;
+    }
+    // Every unit allocates all of its electors, so the allocated sum IS the
+    // college size for this world's apportionment.
+    evNeeded = electoralMajorityFor(totalEV);
+  }
+
+  if (!electoralVotesByCandidate) {
+    console.error(
+      `[Turn] President election ${election._id}: missing electoral vote data during seating retry`
+    );
+    return false;
+  }
+
+  const candidates = await electionCandidatesCollection(db)
+    .find({
+      _id: { $in: Object.keys(electoralVotesByCandidate).map((id) => new ObjectId(id)) },
+      // A seating retry needs the rows withdrawn after tally finalization, but
+      // a fresh resolution must not seat a candidate retired by mortality.
+      ...(seatingRetryOnly ? {} : { status: "active" }),
+    })
+    .toArray();
+  // A candidacy filed under a party that has since merged away seats into the
+  // party that absorbed it (ticket 1376).
+  const survivingParty = await loadSurvivingPartyResolver(db, election.countryId ?? "US");
+  for (const c of candidates) c.party = survivingParty(c.party) ?? c.party;
+  const candidateMap = new Map(candidates.map((c) => [c._id.toString(), c]));
+
+  let winnerId: string;
+  let winnerEV: number;
+  const tiedEv = computeTiedEv(ranked);
+
+  if (seatingRetryOnly) {
+    const retryWinnerId = resolvePresidentialWinnerCandidateId(
+      electoralVotesByCandidate,
+      resolutionMode,
+      contingentResult
+    );
+    if (!retryWinnerId) {
+      console.error(
+        `[Turn] President election ${election._id}: seating retry could not resolve winner from finalized tally`
+      );
+      return false;
+    }
+    winnerId = retryWinnerId;
+    winnerEV = electoralVotesByCandidate[winnerId] ?? ranked[0]?.[1] ?? 0;
+  } else {
+    const winner = determinePresidentialWinner(electoralVotesByCandidate, evNeeded);
+    resolutionMode = "majority";
+    contingentResult = undefined;
+
+    if (winner) {
+      winnerId = winner.winnerId;
+      winnerEV = winner.winnerEV;
+    } else {
+      try {
+        contingentResult = await runPresidentialContingentBallot(
+          db,
+          election,
+          tally,
+          candidates,
+          electoralVotesByCandidate,
+          now
+        );
+      } catch (err) {
+        console.error(
+          `[Turn] President election ${election._id}: contingent resolution failed — will retry next turn`,
+          err
+        );
+        await markContingentResolutionPending(db, election._id, now);
+        return false;
+      }
+
+      winnerId = contingentResult.presidentWinnerId;
+      winnerEV = electoralVotesByCandidate[winnerId] ?? ranked[0][1];
+      resolutionMode = contingentResult.resolutionMode;
+      console.log(
+        `[Turn] President election ${election._id}: no EV majority (${tiedEv > 0 ? `${tiedEv}–${tiedEv} tie` : "pluralities"}), House contingent winner ${winnerId} (${contingentResult.houseVoteTotals[winnerId] ?? 0} state delegations)`
+      );
+    }
+
+    const winnerCandidateCheck = candidateMap.get(winnerId);
+    if (!winnerCandidateCheck) {
+      console.error(
+        `[Turn] President election ${election._id}: winner ${winnerId} has no ElectionCandidate document — recording terminal resolution failure.`
+      );
+      await terminalizeMissingWinner(
+        db,
+        election,
+        electoralVotesByCandidate,
+        resolutionMode,
+        contingentResult,
+        now
+      );
+      await runPostFinalizeCleanup(db, election, electoralVotesByCandidate, now);
+      return true;
+    }
+
+    const { finalized, concurrentWinner } = await finalizePresidentTally(
+      db,
+      election,
+      electoralVotesByCandidate,
+      resolutionMode,
+      contingentResult,
+      now
+    );
+    if (concurrentWinner) {
+      console.log(
+        `[Turn] President election ${election._id} — tally already finalized by concurrent process, skipping duplicate resolution`
+      );
+      return true;
+    }
+    if (finalized) {
+      await runPostFinalizeCleanup(db, election, electoralVotesByCandidate, now);
+    }
+  }
+
+  // House deadlock: nobody is elected president. The Senate's vice-presidential
+  // pick acts while the House keeps voting; covers seating retries as well.
+  if (needsActingPresidency(contingentResult) && tally.contingentHouseVote?.status !== "closed") {
+    try {
+      const vote = await seatActingPresidencyForHouseVote(db, {
+        election,
+        contingentResult: contingentResult!,
+        existingVote: tally.contingentHouseVote,
+        now,
+        turn: currentTurn,
+      });
+      console.log(
+        `[Turn] President election ${election._id}: House deadlocked, ${vote.actingPresidentName} is acting president; the House votes until turn ${vote.closesTurn}`
+      );
+      // Announce once: a seating retry reuses the existing vote record.
+      if (!tally.contingentHouseVote) {
+        await announceActingPresidency(db, {
+          election,
+          vote,
+          houseThreshold: contingentResult!.houseThreshold,
+          candidates,
+        });
+      }
+      return true;
+    } catch (err) {
+      console.error(
+        `[Turn] President election ${election._id}: acting presidency seating failed — will retry next turn`,
+        err
+      );
+      await electionVoteTalliesCollection(db).updateOne(
+        { electionId: election._id },
+        { $set: { executiveSeatingPending: true, updatedAt: now } }
+      );
+      return false;
+    }
+  }
+
+  const winnerCandidate = candidateMap.get(winnerId);
+  if (!winnerCandidate) {
+    console.error(
+      `[Turn] President election ${election._id}: winner ${winnerId} has no ElectionCandidate document — recording terminal resolution failure.`
+    );
+    await terminalizeMissingWinner(
+      db,
+      election,
+      electoralVotesByCandidate,
+      resolutionMode,
+      contingentResult,
+      now
+    );
+    return true;
+  }
+
+  const { vpCharId, vpNppId } = await resolveVpIds(db, election, winnerCandidate, contingentResult);
+  const nationId = election.countryId ?? "US";
+  const previousPresident = await electedOfficialsCollection(db)
+    .findOne({
+      countryId: nationId,
+      officeType: "president",
+    })
+    .catch(() => null);
+  const winnerHolderId = winnerCandidate.isNPP
+    ? winnerCandidate.nppId?.toString()
+    : winnerCandidate.characterId?.toString();
+  const previousHolderId = previousPresident?.isNPP
+    ? previousPresident.nppId?.toString()
+    : previousPresident?.characterId?.toString();
+  const incumbent = !!winnerHolderId && winnerHolderId === previousHolderId;
+
+  try {
+    await seatPresidentialExecutive(db, {
+      election,
+      winnerCandidate,
+      vpCharId,
+      vpNppId,
+      now,
+      turn: currentTurn,
+    });
+    await recordPresidentialTenure(
+      db,
+      election.countryId ?? "US",
+      winnerCandidate.party,
+      election._id.toString()
+    );
+  } catch (err) {
+    console.error(
+      `[Turn] President election ${election._id}: executive seating failed — will retry next turn`,
+      err
+    );
+    await electionVoteTalliesCollection(db).updateOne(
+      { electionId: election._id },
+      { $set: { executiveSeatingPending: true, updatedAt: now } }
+    );
+    return false;
+  }
+
+  await electionVoteTalliesCollection(db).updateOne(
+    { electionId: election._id },
+    { $set: { executiveSeatingPending: false, updatedAt: now } }
+  );
+
+  if (!winnerCandidate.isNPP && winnerCandidate.characterId) {
+    const popularVotes =
+      Object.keys(tally.totalVotes ?? {}).length > 0
+        ? tally.totalVotes
+        : Object.values(tally.totalVotesByUnit ?? {}).reduce<Record<string, number>>(
+            (totals, unitVotes) => {
+              for (const [candidateId, votes] of Object.entries(unitVotes ?? {})) {
+                totals[candidateId] = (totals[candidateId] ?? 0) + votes;
+              }
+              return totals;
+            },
+            {}
+          );
+    const totalPopularVotes = Object.values(popularVotes).reduce((sum, votes) => sum + votes, 0);
+    const winnerVotes = popularVotes[winnerId] ?? 0;
+    const runnerVotes = Object.entries(popularVotes)
+      .filter(([candidateId]) => candidateId !== winnerId)
+      .reduce((highest, [, votes]) => Math.max(highest, votes), 0);
+    const winnerAccount = await charactersCollection<{ userId?: ObjectId }>(db)
+      .findOne({ _id: winnerCandidate.characterId }, { projection: { userId: 1 } })
+      .catch(() => null);
+    await captureElectionWon({
+      db,
+      accountId: winnerAccount?.userId?.toString(),
+      electionId: election._id.toString(),
+      electionType: election.electionType,
+      partyId: winnerCandidate.party,
+      seatCount: 1,
+      voteSharePct: totalPopularVotes > 0 ? (winnerVotes / totalPopularVotes) * 100 : 0,
+      marginPct:
+        totalPopularVotes > 0 ? ((winnerVotes - runnerVotes) / totalPopularVotes) * 100 : 0,
+      incumbent,
+      nationId,
+      turn: currentTurn,
+    });
+  }
+
+  const candidateIds = Object.keys(electoralVotesByCandidate).map((id) => new ObjectId(id));
+  const winnerCandidateIds = new Set([winnerId]);
+  const loserCandidateIds = new Set(ranked.filter(([id]) => id !== winnerId).map(([id]) => id));
+  updatePoliticianPagesAfterElection(
+    db,
+    election,
+    candidateIds.map((id) => id.toString()),
+    tally,
+    winnerCandidateIds,
+    loserCandidateIds,
+    electoralVotesByCandidate,
+    now
+  ).catch((err) => logger.error("Turn", "Failed to update politician pages", err));
+
+  await sendPresidentResolutionMessaging(db, {
+    election,
+    ranked,
+    candidateMap,
+    winnerId,
+    winnerCandidate,
+    winnerEV,
+    resolutionMode,
+    tiedEv,
+    contingentResult,
+    vpCharId,
+    now,
+    evNeeded,
+  });
+
+  console.log(
+    `[Turn] President election ${election._id} resolved — ${winnerCandidate.characterName} wins with ${winnerEV} EV`
+  );
+
+  return true;
+}

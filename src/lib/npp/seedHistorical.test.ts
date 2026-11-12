@@ -9,6 +9,7 @@
  * independent because the slug isn't mapped) without needing a live DB.
  */
 
+import { SeedContractError } from "@/lib/seeds/contract/seedContractError";
 import { describe, expect, it } from "vitest";
 import { SLUG_TO_NAME, INDEPENDENT_SLUGS, buildOfficeType } from "./seedHistorical";
 import { getPresetSeats } from "@/lib/constants/historicalSeats";
@@ -29,6 +30,7 @@ import { bgParties } from "@/lib/seeds/bg/bgParties";
 import { blrParties } from "@/lib/seeds/blr/blrParties";
 import { csParties } from "@/lib/seeds/cs/csParties";
 import { balParties } from "@/lib/seeds/bal/balParties";
+import { caParties } from "@/lib/countries/ca/data/caParties";
 import { isPartyValidForPreset } from "@/lib/seeds/ensureDefaultParties";
 import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 
@@ -50,6 +52,7 @@ const ALL_PARTIES: PartySeed[] = [
   ...blrParties,
   ...csParties,
   ...balParties,
+  ...caParties,
 ];
 
 function partyNamesForPreset(preset: string): Set<string> {
@@ -179,13 +182,10 @@ describe("seedHistorical slug resolution", () => {
     ).toEqual([]);
   });
 
-  // 2023-default resolves cleanly now that the parties that existed by then carry
-  // it in `validForPresets`. It shares 2019's chamber arrays via getPresetSeats'
-  // `default:` branch, so every slug in it is a 2019-era slug.
-  it("2023-default: every party slug in getPresetSeats resolves to a seeded preset-valid party or is whitelisted independent", () => {
-    const validNames = partyNamesForPreset("2023-default");
+  it("2027-default: every party slug resolves except the unseeded Ulster Unionists", () => {
+    const validNames = partyNamesForPreset("2027-default");
     const unresolved: string[] = [];
-    for (const slug of slugsInPreset("2023-default")) {
+    for (const slug of slugsInPreset("2027-default")) {
       if (INDEPENDENT_SLUGS.has(slug)) continue;
       if (slug === "democrat" || slug === "republican") continue; // resolve via the regex fallback
       const name = SLUG_TO_NAME[slug];
@@ -194,46 +194,19 @@ describe("seedHistorical slug resolution", () => {
         continue;
       }
       if (name === "Independent" || name === "Speaker") continue;
-      if (!validNames.has(name)) unresolved.push(`${slug} -> "${name}"`);
+      if (!validNames.has(name)) unresolved.push(slug);
     }
-    expect(unresolved).toEqual([]);
+    // The 2027 UK roster seeds no UUP, so its one Commons seat folds to
+    // independent. Reform UK's five seats used to fold with it.
+    expect(unresolved).toEqual(["uk_uup"]);
   });
 
-  // ── 1999/2007: a RESIDUAL DEFECT, pinned rather than asserted away ─────────
-  //
-  // `getPresetSeats` has no case for these two, so they fall through its
-  // `default:` branch and receive the entire 2020 chamber roster — 1,004 seats
-  // byte-identical to 2019-default. That fallback now records itself (see
-  // recordPresetFallback), so a seed run says so instead of looking authored.
-  //
-  // Widening `validForPresets` for the parties that DID exist by then — LDP
-  // (1955), Kōmeitō (1964), the Greens (merged 1993) — took this from 8 slugs
-  // across 379 seats down to 5 across 128. The five that remain are parties that
-  // genuinely postdate the era: AfD 2013, Die Linke June 2007 (too late to seat
-  // a 2007 chamber), Ishin 2012, CDP 2017, DPFP 2018. Their seats are
-  // anachronistic DATA, not a validity bug, and the fix is authoring real
-  // 1999/2007 JP and DE chambers — a historical-data task.
-  //
-  // Pinned so the remainder is visible and any change to it trips here.
-  const RESIDUAL_UNRESOLVED = ["de_afd", "de_linke", "jp_cdp", "jp_dpfp", "jp_ishin"];
-
-  it.each(["1999-default", "2007-default"])(
-    "%s: only the genuinely-post-era JP/DE parties still fold to independent",
+  // 1999, 2007 and 2023 have no authored chamber rosters, so seating them
+  // throws rather than lending the 2020 roster.
+  it.each(["1999-default", "2007-default", "2023-default"])(
+    "%s: has no roster to borrow",
     (preset) => {
-      const validNames = partyNamesForPreset(preset);
-      const unresolved: string[] = [];
-      for (const slug of slugsInPreset(preset)) {
-        if (INDEPENDENT_SLUGS.has(slug)) continue;
-        if (slug === "democrat" || slug === "republican") continue;
-        const name = SLUG_TO_NAME[slug];
-        if (!name) {
-          unresolved.push(slug);
-          continue;
-        }
-        if (name === "Independent" || name === "Speaker") continue;
-        if (!validNames.has(name)) unresolved.push(slug);
-      }
-      expect([...new Set(unresolved)].sort()).toEqual(RESIDUAL_UNRESOLVED);
+      expect(() => slugsInPreset(preset)).toThrow(SeedContractError);
     }
   );
 

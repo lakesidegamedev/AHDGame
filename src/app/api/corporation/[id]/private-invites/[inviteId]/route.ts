@@ -28,8 +28,11 @@ import { getCorpFxRate, corpLiquidCapitalToAnchor } from "@/lib/currency/corpora
 import { createNotification } from "@/lib/notifications";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { Character, CorporationShareInvite, User } from "@/lib/db/types";
+import type { CorporationShareInvite, User } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationShareInvitesCollection } from "@/lib/db/repositories/corporationShareInvites";
 
 const actionSchema = z.object({
   action: z.enum(["accept", "decline", "cancel"]),
@@ -63,9 +66,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const invite = await db
-      .collection<CorporationShareInvite>("corporationShareInvites")
-      .findOne({ _id: inviteOid, corporationId: corporation._id });
+    const invite = await corporationShareInvitesCollection(db).findOne({
+      _id: inviteOid,
+      corporationId: corporation._id,
+    });
     if (!invite) {
       return errorResponse(404, "Invite not found");
     }
@@ -75,24 +79,21 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
     if (invite.expiresAt <= now) {
       // Lazy-mark expired
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne({ _id: inviteOid }, { $set: { status: "expired", updatedAt: now } });
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid },
+        { $set: { status: "expired", updatedAt: now } }
+      );
       return errorResponse(410, "Invite has expired");
     }
 
     if (action === "cancel") {
       const ceoCheck = requireCeo(corporation, auth.user.userId);
       if (ceoCheck) return ceoCheck;
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne(
-          { _id: inviteOid, status: "pending" },
-          { $set: { status: "cancelled", cancelledAt: now, updatedAt: now } }
-        );
-      const invitee = await db
-        .collection<Character>("characters")
-        .findOne({ _id: invite.invitedCharacterId });
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid, status: "pending" },
+        { $set: { status: "cancelled", cancelledAt: now, updatedAt: now } }
+      );
+      const invitee = await charactersCollection(db).findOne({ _id: invite.invitedCharacterId });
       if (invitee) {
         createNotification({
           userId: invitee.userId,
@@ -106,24 +107,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // decline / accept: caller must be the invitee.
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     const callerCharacterId = userDoc?.activeCharacterId;
     if (!callerCharacterId || !callerCharacterId.equals(invite.invitedCharacterId)) {
       return errorResponse(403, "Only the invitee can accept or decline");
     }
 
     if (action === "decline") {
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne(
-          { _id: inviteOid, status: "pending" },
-          { $set: { status: "declined", declinedAt: now, updatedAt: now } }
-        );
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid, status: "pending" },
+        { $set: { status: "declined", declinedAt: now, updatedAt: now } }
+      );
       const ceoId = corporation.ceoId;
       if (ceoId) {
-        const ceo = await db.collection<Character>("characters").findOne({ _id: ceoId });
+        const ceo = await charactersCollection(db).findOne({ _id: ceoId });
         if (ceo) {
           createNotification({
             userId: ceo.userId,
@@ -142,9 +139,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // action === "accept": atomic flow — re-check cap and unissued capacity,
     // debit invitee cash, credit shares, credit corp liquidCapital.
-    const invitee = await db
-      .collection<Character>("characters")
-      .findOne({ _id: invite.invitedCharacterId });
+    const invitee = await charactersCollection(db).findOne({ _id: invite.invitedCharacterId });
     if (!invitee) {
       return errorResponse(404, "Invitee character not found");
     }
@@ -170,6 +165,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    // Claim the invite before any money moves: a double-submit or an
+    // accept-vs-cancel race must fail here, not debit twice and miss an
+    // unchecked post-facto status write.
+    const inviteClaim = await corporationShareInvitesCollection(db).updateOne(
+      { _id: inviteOid, status: "pending" },
+      { $set: { status: "accepted", acceptedAt: now, updatedAt: now } }
+    );
+    if (inviteClaim.modifiedCount === 0) {
+      return errorResponse(409, "Invite is no longer pending");
+    }
+
     const forexEnabled = await isForexEnabled();
     const debitResult = await atomicallyDebitCharacterCash(
       db,
@@ -179,6 +185,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       forexEnabled
     );
     if (!debitResult.ok) {
+      await corporationShareInvitesCollection(db).updateOne(
+        { _id: inviteOid, status: "accepted" },
+        { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+      );
       return errorResponse(
         400,
         `Insufficient funds. Need ${invite.totalCost.toLocaleString()} ${homeCurrency}.`
@@ -206,16 +216,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
       if (!credited) {
         await refundCharacterCash(db, invitee._id, homeCurrency, invite.totalCost, forexEnabled);
+        await corporationShareInvitesCollection(db).updateOne(
+          { _id: inviteOid, status: "accepted" },
+          { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+        );
         return errorResponse(500, "Failed to credit shares — please retry");
       }
       sharesCredited = true;
-
-      await db
-        .collection<CorporationShareInvite>("corporationShareInvites")
-        .updateOne(
-          { _id: inviteOid, status: "pending" },
-          { $set: { status: "accepted", acceptedAt: now, updatedAt: now } }
-        );
 
       emitTx(db, {
         type: "stock_trade_buy",
@@ -239,9 +246,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }).catch(() => {});
 
       if (corporation.ceoId) {
-        const ceo = await db
-          .collection<Character>("characters")
-          .findOne({ _id: corporation.ceoId });
+        const ceo = await charactersCollection(db).findOne({ _id: corporation.ceoId });
         if (ceo) {
           createNotification({
             userId: ceo.userId,
@@ -261,6 +266,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         console.error("[private-invite accept] failed after credit", err);
       } else {
         await refundCharacterCash(db, invitee._id, homeCurrency, invite.totalCost, forexEnabled);
+        await corporationShareInvitesCollection(db).updateOne(
+          { _id: inviteOid, status: "accepted" },
+          { $set: { status: "pending", updatedAt: now }, $unset: { acceptedAt: "" } }
+        );
       }
       throw err;
     }

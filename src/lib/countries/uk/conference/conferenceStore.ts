@@ -2,12 +2,12 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
 import { getUKPartyConferencesCollection } from "@/lib/db/collections/ukPartyConferences";
-import { CONFERENCE_HISTORY_CAP } from "@/lib/uk/conference/rules";
+import { CONFERENCE_HISTORY_CAP } from "@/lib/countries/uk/conference/rules";
 import type {
   ConferenceHistoryEntry,
   ConferenceHistoryKind,
   UKPartyConference,
-} from "@/lib/uk/conference/types";
+} from "@/lib/countries/uk/conference/types";
 
 export function conferenceDocId(countryId: CountryId, partySeqId: string, year: number): string {
   return `${countryId}:${partySeqId}:${year}`;

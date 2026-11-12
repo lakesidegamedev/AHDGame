@@ -1,0 +1,978 @@
+import { effectiveInterventionPolicy } from "@/lib/currency/intervention/rules";
+import { ObjectId } from "mongodb";
+import {
+  findMergedRegionMetricsForDisplay,
+  findMergedRegionMetricsManyForDisplay,
+} from "@/lib/macroMetrics/displayMerge";
+import { getDb } from "@/lib/mongodb";
+import { getAuthUserWithCharacter } from "@/lib/auth";
+import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
+import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
+import { resolveDepartment, resolveSeatName, isSeatActive } from "@/lib/cabinet/rosterEra";
+import { barredScopesFor, isActingMember } from "@/lib/cabinet/actingScope";
+import {
+  resolveCabinetOfficeVisibility,
+  cabinetOfficeViewerTitles,
+  cabinetOfficeRealmPhrase,
+} from "@/lib/cabinet/officeVisibility";
+import { resolveGameYear } from "@/lib/era/era";
+import { getMinisterialOrders } from "@/lib/constants/cabinetOrders";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { getNationalDocId } from "@/lib/constants/nationalScope";
+import { getEnabledCountryIds } from "@/lib/countryAccess";
+import {
+  DEFENSE_POSITION_BY_COUNTRY,
+  aggregateForce,
+  computeEffectivePower,
+  computeEffectiveUpkeep,
+} from "@/lib/constants/military";
+import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
+import { getNationalDoctrine, settleDoctrineIncome } from "@/lib/db/collections/nationalDoctrine";
+import { getMilitaryCommands } from "@/lib/db/collections/militaryCommands";
+import { getMilitaryFormations } from "@/lib/db/collections/militaryFormations";
+import type { ConflictAssignment } from "@/lib/military/assignments";
+import {
+  listCountryGenerals,
+  listCountryCorps,
+  listCommissionCandidates,
+  type CorpsMember,
+} from "@/lib/db/collections/characterGenerals";
+import { listPendingDeclarations } from "@/lib/db/collections/battleDeclarations";
+import { listRecentBattleReports } from "@/lib/db/collections/battleReports";
+import { listTheaterStates } from "@/lib/db/collections/theaterState";
+import { listActiveConflicts, listConflictsForCountry } from "@/lib/db/collections/conflicts";
+import { getNationalManpower } from "@/lib/db/collections/nationalManpower";
+import { resolveConscriptionStanceFor } from "@/lib/military/conscriptionLaw";
+import { ATTRITION } from "@/lib/military/config";
+import { manpowerCeiling } from "@/lib/military/manpower";
+import { computeRegionThreats } from "@/lib/military/regionThreat";
+import { loadMilitaryBlocs } from "@/lib/military/blocLookup";
+import { homeRegionOf } from "@/lib/military/regionTopology";
+import type { CommanderRef, ThreatLevel } from "@/lib/military/types";
+import { resolveDoctrineEra } from "@/lib/military/currentDoctrineEra";
+import type { MilitaryCommand } from "@/lib/military/types";
+import { isProspectingEnabled } from "@/lib/extraction/featureFlag";
+import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
+import { getDefenseAppropriation } from "@/lib/db/collections/defenseAppropriation";
+import { getNationalArsenal } from "@/lib/db/collections/nationalArsenal";
+import { listOpenContracts } from "@/lib/db/collections/defenceContracts";
+import {
+  listDefenceSuppliers,
+  type DefenceSupplierView,
+} from "@/lib/corporations/queries/defenceSuppliers";
+import { lotPrice } from "@/lib/military/arsenal";
+import { DEFENCE_CARRY_REASON_TEXT } from "@/lib/db/types/defenceContract";
+import { terminationBasis, terminationFee } from "@/lib/military/defenceTermination";
+import { DEFENCE_FACTORY_SLOTS_PER_PLANT } from "@/lib/military/defenceLotEconomics";
+import { militaryPriceAnchor } from "@/lib/military/procurement";
+import type { NationalArsenal } from "@/lib/db/types/nationalArsenal";
+import type { DefenceContractView } from "@/app/country/[code]/executive/cabinet/[positionId]/office/useCabinetOffice";
+import { accrualPerTurn, upkeepPerTurn } from "@/lib/military/appropriation";
+import { resolveSeedRosterUpkeep } from "@/lib/military/seedRosterUpkeepPin";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import {
+  getDefenceContractAllocation,
+  getDefenceContractAvailability,
+} from "@/lib/db/collections/defenceProcurementAllocations";
+import {
+  resolveEstatePortfolio,
+  aggregateEstates,
+  computeEffectiveOutput as computeEstateOutput,
+  computeEffectiveUpkeep as computeEstateUpkeep,
+} from "@/lib/constants/cabinetEstates";
+import { getCabinetEstatesCollection } from "@/lib/db/collections/cabinetEstates";
+import { resolvePortfolioEnvelope } from "@/lib/turn/portfolioEnvelope";
+import {
+  resolveEnergyPosition,
+  aggregateMix,
+  effectiveCapacity as energyEffectiveCapacity,
+  effectiveUpkeep as energyEffectiveUpkeep,
+} from "@/lib/constants/cabinetEnergy";
+import { getEnergyPlantsCollection } from "@/lib/db/collections/energyPlants";
+import { resolveEnergyEnvelope } from "@/lib/turn/energyEnvelope";
+import {
+  resolveInfraPosition,
+  aggregateInfra,
+  effectiveOutput as infraEffectiveOutput,
+  turnsRemaining,
+  progressPct,
+  buildFundingDef,
+} from "@/lib/constants/cabinetInfra";
+import { getInfraProjectsCollection } from "@/lib/db/collections/infraProjects";
+import { resolveInfraEnvelope } from "@/lib/turn/infraEnvelope";
+import { resolveFinancePosition } from "@/lib/constants/cabinetMonetary";
+import { getSovereignConfidencePremium } from "@/lib/budget/debt";
+import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
+import { getTreasuryOperationsCollection } from "@/lib/db/collections/treasuryOperations";
+import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+import type { StateMetrics, PoliticalParty } from "@/lib/db/types";
+import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
+import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { getBankId } from "@/lib/centralBank/helpers";
+import { resolveNationalMetricValue } from "@/lib/cabinet/nationalMetricSource";
+import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
+import {
+  getCabinetSettingsCollection,
+  getMinisterialOrdersCollection,
+} from "@/lib/db/collections/cabinetSettings";
+import { getGameState } from "@/lib/gameState";
+import {
+  presetUsesLongSovereignTenors,
+  sovereignIssuanceMaturities,
+} from "@/lib/bonds/rules/sovereignTenors";
+import {
+  expireMinisterialOrders,
+  isMinisterialOrderActive,
+} from "@/lib/cabinet/ministerialOrderLifecycle";
+import { buildDepartmentFinanceReadModel } from "@/lib/governmentFinance/readModel";
+import {
+  getDepartmentDefinitions,
+  resolveDepartmentDefinitionName,
+  type DepartmentCountryId,
+} from "@/lib/governmentFinance/departmentCatalog";
+import type { LegislationType } from "@/lib/db/types/legislation";
+import { RESET_V2_READY } from "@/lib/resetVersions/availability";
+import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
+import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
+import { buildResetDepartmentFinanceReadModel } from "@/lib/resetCabinet/readModel";
+import { resetActionsForSeat } from "@/lib/resetCabinet/catalog";
+import { actionEligibility, rechargeActionCharges } from "@/lib/resetCabinet/rules/actions";
+import { cabinetActionFunding } from "@/lib/resetCabinet/rules/actionFunding";
+import type { ResetCabinetActionState } from "@/lib/resetCabinet/rules/actionState";
+import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
+
+import type { CabinetPositionMechanics } from "@/lib/constants/cabinetMechanics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
+
+/** Assembles the cabinet position briefing payload for the viewing user. */
+export async function buildCabinetBriefing(
+  countryId: CountryId,
+  positionId: string,
+  mechanics: CabinetPositionMechanics
+) {
+  const db = await getDb();
+  const user = await getAuthUserWithCharacter();
+  const gameState = await getGameState(db);
+  const currentTurn = gameState?.currentTurn ?? 1;
+  // Live year for era-resolved seat name + department (null = canonical).
+  const liveYear = gameState ? resolveGameYear(gameState) : null;
+  const positionDef = getCabinetPositions(countryId).find((p) => p.id === positionId);
+  await expireMinisterialOrders(db, currentTurn);
+
+  // Fetch current holder, settings, active orders in parallel
+  const [member, setting, activeOrderDocs, enabledCountryIds] = await Promise.all([
+    getCabinetMembersCollection(db).findOne({ countryId, positionId }),
+    getCabinetSettingsCollection(db).findOne({ _id: `${countryId}_${positionId}` }),
+    getMinisterialOrdersCollection(db).find({ positionId, countryId, active: true }).toArray(),
+    getEnabledCountryIds(),
+  ]);
+  const activeOrders = activeOrderDocs.filter((order) =>
+    isMinisterialOrderActive(order, currentTurn)
+  );
+
+  // Look up party info and character sequentialId for the current holder
+  const [partyDoc, holderChar] = member
+    ? await Promise.all([
+        member.party
+          ? politicalPartiesCollection(db).findOne(
+              { countryId, sequentialId: Number(member.party) },
+              { projection: { name: 1, color: 1, logoUrl: 1 } }
+            )
+          : null,
+        member.characterId
+          ? charactersCollection(db).findOne(
+              { _id: member.characterId },
+              {
+                projection: {
+                  sequentialId: 1,
+                  avatarUrl: 1,
+                  borderKey: 1,
+                  tintColor: 1,
+                  sharedMinisterialActions: 1,
+                  sharedMinisterialActionTopUpTurn: 1,
+                  actions: 1,
+                },
+              }
+            )
+          : null,
+      ])
+    : [null, null];
+
+  // The letterhead. Shared by the full briefing and the withheld one so the two
+  // cannot drift into disagreeing about what a seat is called.
+  const buildPositionView = () => ({
+    id: mechanics.positionId,
+    name: positionDef ? resolveSeatName(positionDef, liveYear) : null,
+    department: resolveDepartment(mechanics, liveYear),
+    sealImage: mechanics.sealImage ?? null,
+    singleRegionFocus: mechanics.singleRegionFocus ?? null,
+  });
+
+  // `includeActions` is false on a withheld office: the seat and its holder
+  // are public, but a minister's remaining turn actions are not. UK player
+  // holders share one pool across both offices, so both pages report the
+  // same remaining balance.
+  const sharedRemaining =
+    countryId === COUNTRY_CONFIGS.UK.id && member?.characterId
+      ? (holderChar?.sharedMinisterialActions ?? null)
+      : null;
+  const buildMemberView = ({ includeActions }: { includeActions: boolean }) =>
+    member
+      ? {
+          characterId: member.characterId?.toString() ?? null,
+          isNPP: member.isNPP ?? false,
+          nppId: member.nppId?.toString() ?? null,
+          sequentialId: holderChar?.sequentialId ?? null,
+          characterName: member.characterName,
+          avatarUrl: holderChar?.avatarUrl ?? null,
+          borderKey: holderChar?.borderKey ?? null,
+          tintColor: holderChar?.tintColor ?? null,
+          party: member.party ?? null,
+          partyName: partyDoc?.name ?? null,
+          partyColor: partyDoc?.color ?? null,
+          partyLogoUrl: partyDoc?.logoUrl ?? null,
+          ...(includeActions
+            ? { ministerialActions: sharedRemaining ?? member.ministerialActions ?? 2 }
+            : {}),
+          bannerImageUrl: member.bannerImageUrl ?? null,
+          // Acting status remains a roster fact. Keep scope metadata compatible
+          // with existing clients; the current policy returns no barred scopes.
+          acting: isActingMember(member),
+          barredScopes: barredScopesFor(member),
+          // Full departmental authority does not extend the acting term.
+          actingExpiresOnTurn: member.actingExpiresOnTurn ?? null,
+        }
+      : null;
+
+  // Who may read this office, and who may work it. Everything below this point
+  // is departmental record: the force it fields, the money it holds, the orders
+  // it has standing. Resolve the gate BEFORE any of it is assembled.
+  const { canView, canAct } = await resolveCabinetOfficeVisibility(db, {
+    countryId,
+    holderCharacterId: member?.characterId ?? null,
+    viewerCharacterId: user?.character?._id ?? null,
+    // Keyed by user, not character: a reigning monarch is an imperial character.
+    viewerUserId: user?.userId ?? null,
+    isAdmin: !!user?.isAdmin,
+    // Already loaded here, so the resolver does not re-read it.
+    preset: gameState?.preset,
+  });
+
+  // The seat, its department and its holder are roster facts, published on the
+  // cabinet list and on the holder's character page. Withholding them here would
+  // only make the page look broken. Everything else stops at this return, which
+  // also skips the aggregation below rather than computing it and dropping it.
+  if (!canView) {
+    return {
+      canView: false,
+      canAct: false,
+      liveYear,
+      position: buildPositionView(),
+      member: buildMemberView({ includeActions: false }),
+      restriction: {
+        allowedTitles: cabinetOfficeViewerTitles(countryId, gameState?.preset),
+        countryName: cabinetOfficeRealmPhrase(countryId, gameState?.preset),
+      },
+    };
+  }
+
+  // Fetch metrics based on position config
+  const regionIds = mechanics.singleRegionFocus ? [mechanics.singleRegionFocus] : undefined;
+  const nationalDocId = getNationalDocId(countryId) ?? null;
+
+  // Fetch state metrics for country regions
+  const countryStates = await statesCollection<Document>(db)
+    .find({ countryId })
+    .project({ _id: 1, name: 1, population: 1 })
+    .toArray();
+
+  const stateIds = regionIds ?? countryStates.map((s) => s._id);
+  const budgetId = getNationalBudgetId(countryId);
+  // Some macro metrics on the stat strip are sourced from the central bank
+  // (e.g. the prime/interest rate) rather than stateMetrics — fetch the bank
+  // only when a requested metric actually needs it.
+  const needsCentralBank = mechanics.nationalMetrics.some((m) => m.source === "centralBank");
+  const [stateMetrics, nationalMetricsDoc, regionalBudgets, budget, sovereignBonds, bank] =
+    await Promise.all([
+      // SP5: merged two-store views (cabinet stat strips span macro +
+      // political metrics; playable political rows read absent -> 0, the
+      // documented parked channel).
+      findMergedRegionMetricsManyForDisplay(db, { _id: { $in: stateIds } }),
+      nationalDocId
+        ? findMergedRegionMetricsForDisplay(db, { _id: nationalDocId })
+        : Promise.resolve(null),
+      mechanics.allocation || positionId === "chancellor"
+        ? // Scope by CURRENT state ids (not countryId) so stale orphan
+          // regionalBudgets from prior region-id schemes — e.g. CN's pre-rename
+          // NORTHEAST/EAST/… docs alongside the live DB/HB/… ones — are excluded
+          // and the funding pool is not inflated. Mirrors federalBudgetDetail and
+          // calculateFederalSpending, which the National Budget page reads.
+          regionalBudgetsCollection(db)
+            .find({ _id: { $in: stateIds } })
+            .toArray()
+        : Promise.resolve([]),
+      federalBudgetCollection(db).findOne({ _id: budgetId }),
+      bondsCollection(db)
+        .find({ issuerType: "sovereign", countryId, matured: false, defaulted: false })
+        .toArray(),
+      needsCentralBank
+        ? centralBanksCollection(db).findOne({ _id: getBankId(countryId) })
+        : Promise.resolve(null),
+    ]);
+
+  // Resolve each metric from its declared source: stateMetrics (national doc
+  // then regional average), the federal budget (inflation), or the central
+  // bank (prime/interest rate). See resolveNationalMetricValue for why a few
+  // macro metrics cannot be read from stateMetrics.
+  const nationalMetrics: Record<string, number> = {};
+  for (const metric of mechanics.nationalMetrics) {
+    nationalMetrics[`${metric.category}.${metric.metricId}`] = resolveNationalMetricValue({
+      metric,
+      nationalMetricsDoc,
+      stateMetrics,
+      budget,
+      bank,
+    });
+  }
+
+  // Build per-region data. Only stateMetrics-sourced metrics have per-region
+  // values; budget/centralBank metrics (inflation, prime rate) are national
+  // concepts with no regional breakdown, so they are skipped here.
+  const regionData = stateMetrics.map((sm) => {
+    const state = countryStates.find((s) => s._id === sm._id);
+    const metrics: Record<string, number> = {};
+    for (const metric of [...mechanics.nationalMetrics, ...mechanics.regionalMetrics]) {
+      if (metric.source && metric.source !== "stateMetrics") continue;
+      const key = `${metric.category}.${metric.metricId}`;
+      if (metrics[key] !== undefined) continue; // dedupe
+      const cat = sm[metric.category as keyof StateMetrics] as
+        Record<string, { value?: number }> | undefined;
+      metrics[key] = cat?.[metric.metricId]?.value ?? 0;
+    }
+    return {
+      regionId: sm._id,
+      regionName: state?.name ?? sm._id,
+      population: state?.population ?? 0,
+      metrics,
+    };
+  });
+
+  // Defense seat: attach the military order-of-battle + force aggregates + national doctrine.
+  let units: Record<string, unknown>[] | undefined;
+  let forceSummary: Record<string, unknown> | undefined;
+  let doctrine: { adopted: Record<string, number>; points: number } | undefined;
+  let doctrineEra: number | undefined;
+  let commands: MilitaryCommand[] | undefined;
+  let commanders: CommanderRef[] | undefined;
+  let conflictAssignments: ConflictAssignment[] | undefined;
+  /**
+   * Defence seat only: the conflicts this country may post a general to.
+   *
+   * The Commands tab builds its posting dropdown from this and names an existing
+   * posting by looking the theatre id up in it, so without it the seat cannot send
+   * anyone to a war and the posting badge prints the raw id. The Commanding General
+   * page has always sourced it this way; the cabinet office simply never did.
+   */
+  let conflicts: { id: string; name: string }[] | undefined;
+  let corps: CorpsMember[] | undefined;
+  let commissionCandidates: { characterId: string; name: string }[] | undefined;
+  let regionThreats: Record<string, ThreatLevel> | undefined;
+  /** Defense seat only: the national materiel store and the contracts filling it. */
+  let arsenal: NationalArsenal | undefined;
+  let contracts: DefenceContractView[] | undefined;
+  /** Plants the minister may award to, and what a lot from them costs. */
+  let suppliers: DefenceSupplierView[] | undefined;
+  let lotPricePerLot: number | null | undefined;
+  let manpower:
+    | {
+        pool: number;
+        mode: "off" | "trained" | "conscript";
+        regenPerTurn: number;
+        poolCap: number;
+        stanceLabel: string;
+        conscriptAllowed: boolean;
+      }
+    | undefined;
+  if (DEFENSE_POSITION_BY_COUNTRY[countryId] === positionId) {
+    const tier = setting?.tierSetting ?? "standard";
+    const rawUnits = await getMilitaryUnitsCollection(db).find({ countryId }).toArray();
+    units = rawUnits.map((u) => ({
+      ...u,
+      _id: String(u._id),
+      effectivePower: computeEffectivePower(u),
+      effectiveUpkeep: computeEffectiveUpkeep(u, countryId, tier),
+    }));
+    const forceAgg = aggregateForce(rawUnits, countryId, tier);
+    // The defence account the recruit panel prices against and the masthead reports.
+    // The line comes from the budget already loaded above rather than a second read.
+    const defenceLine = resolveDefenseLineFrom(budget ?? null);
+    const appropriationPot = await getDefenseAppropriation(db, countryId);
+    forceSummary = {
+      ...forceAgg,
+      treasuryBalance: budget?.treasuryBalance ?? 0,
+      // `?? null`, NOT `?? 0` — a zero gdp is exactly what makes units free.
+      // Carry the absence through so the panel disables rather than prices at 0.
+      gdp: budget?.gdp ?? null,
+      // Same reasoning: a 0 baseline would anchor prices at zero. Absent means
+      // "price off live GDP", which is what `militaryPriceAnchor` does with null.
+      militaryPriceBaselineGdp: budget?.militaryPriceBaselineGdp ?? null,
+      appropriation: appropriationPot.balance,
+      appropriationAccrual: accrualPerTurn(defenceLine),
+      appropriationUpkeep: upkeepPerTurn(
+        forceAgg.totalUpkeep,
+        await resolveSeedRosterUpkeep(db, gameState?.preset ?? DEFAULT_SEED_PRESET, countryId),
+        defenceLine
+      ),
+      arrearsRatio: appropriationPot.arrearsRatio,
+      hasBudget: budget != null,
+      tier,
+    };
+    // The national materiel store and the contracts filling it. Serialised for the client
+    // with `_id` as a string, matching how `units` is handed over above.
+    arsenal = await getNationalArsenal(db, countryId);
+    // Open, not just active: an offer the supplier has not answered is exactly what the
+    // minister needs to see — otherwise an awarded contract vanishes until it is accepted.
+    const activeContracts = await listOpenContracts(db, countryId);
+    const supplierIds = [...new Set(activeContracts.map((c) => c.corporationId.toString()))];
+    const supplierNames = new Map<string, string>();
+    if (supplierIds.length > 0) {
+      const corps = await corporationsCollection<{ _id: ObjectId; name?: string }>(db)
+        .find({ _id: { $in: supplierIds.map((id) => new ObjectId(id)) } })
+        .project({ _id: 1, name: 1 })
+        .toArray();
+      for (const c of corps) supplierNames.set(c._id.toString(), c.name ?? "Unknown supplier");
+    }
+    contracts = activeContracts.map((c) => ({
+      _id: c._id.toString(),
+      corporationId: c.corporationId.toString(),
+      sectorId: c.sectorId.toString(),
+      supplierName: supplierNames.get(c.corporationId.toString()) ?? "Unknown supplier",
+      component: c.component,
+      lotsOrdered: c.lotsOrdered,
+      lotsDelivered: c.lotsDelivered,
+      pricePerLot: c.pricePerLot,
+      awardedTurn: c.awardedTurn,
+      status: c.status,
+      // The funding state of every order, so the minister's board answers "why has this not
+      // moved" without them having to go and ask the supplier.
+      lotsBuiltNotDelivered: Math.floor(Math.max(0, c.deliveryCarry ?? 0)),
+      amountPaid: c.amountPaid ?? c.lotsDelivered * c.pricePerLot,
+      encumberedAmount: c.encumberedAmount ?? 0,
+      ...(c.carryReason ? { carryReasonText: DEFENCE_CARRY_REASON_TEXT[c.carryReason] } : {}),
+      ...(c.gradeCeiling != null ? { gradeCeiling: c.gradeCeiling } : {}),
+      assignedFactories: c.assignedFactories ?? undefined,
+      totalFactories: DEFENCE_FACTORY_SLOTS_PER_PLANT,
+      ...(c.selfDealing
+        ? {
+            selfDealing: {
+              basis: c.selfDealing.basis,
+              stakeShare: c.selfDealing.stakeShare,
+              ministerName: c.selfDealing.ministerName,
+            },
+          }
+        : {}),
+      // Quoted on the board, not discovered afterwards. The cancel button is one click from
+      // a bill against the appropriation, so the bill belongs next to the button.
+      terminationBasis: terminationBasis(c),
+      terminationFee: terminationFee({ ...c, basis: terminationBasis(c) }),
+    }));
+
+    // The award form needs both halves: who can build, and what a lot costs. The price is
+    // computed the same way the award route computes it, off the same anchored GDP, so the
+    // quote the minister approves is the price they are actually billed.
+    // Price first: a lot's build cost is a share of what it sells for (ticket #1134), so
+    // the picker cannot quote a cost until the anchored price is known.
+    lotPricePerLot = lotPrice(
+      countryId,
+      militaryPriceAnchor(budget?.gdp, budget?.militaryPriceBaselineGdp)
+    );
+    suppliers = await listDefenceSuppliers(db, countryId, liveYear ?? 0, lotPricePerLot ?? null);
+    if (lotPricePerLot != null && lotPricePerLot > 0) {
+      const defenseLine = resolveDefenseLineFrom(budget ?? null);
+      // Every supplier is quoted against the same quota window: read the
+      // allocation document once instead of once per supplier.
+      const allocation = await getDefenceContractAllocation(db, countryId, currentTurn);
+      suppliers = await Promise.all(
+        suppliers.map(async (supplier) => {
+          const availability = await getDefenceContractAvailability(db, {
+            countryId,
+            corporationId: supplier.corporationId,
+            currentTurn,
+            defenseLine,
+            pricePerLot: lotPricePerLot as number,
+            stateOwned: supplier.stateOwned,
+            allocation,
+          });
+          return {
+            ...supplier,
+            availableLots: availability.maxLots,
+            allowanceWindowEndTurn: availability.window.endTurn,
+          };
+        })
+      );
+    }
+
+    const year = liveYear;
+    const startYear = gameState?.startingYear;
+    doctrine =
+      year != null && startYear != null
+        ? await settleDoctrineIncome(db, countryId, startYear, year)
+        : await getNationalDoctrine(db, countryId);
+    doctrineEra = await resolveDoctrineEra(db);
+    commands = await getMilitaryCommands(db, countryId);
+    commanders = await listCountryGenerals(db, countryId);
+    conflictAssignments = (await getMilitaryFormations(db, countryId)).conflictAssignments;
+    conflicts = (await listConflictsForCountry(db, countryId)).map((c) => ({
+      id: c._id,
+      name: c.name,
+    }));
+    // The SecDef's personnel view: the corps (incl. unspecced + dismissed) and who
+    // they could still commission.
+    [corps, commissionCandidates] = await Promise.all([
+      listCountryCorps(db, countryId),
+      listCommissionCandidates(db, countryId),
+    ]);
+
+    // Live, viewer-relative region threat from active W6 conflicts.
+    const [pendingDecls, recentReports, theaterStates, activeConflicts, blocs] = await Promise.all([
+      listPendingDeclarations(db),
+      listRecentBattleReports(db, currentTurn - 24),
+      listTheaterStates(db),
+      listActiveConflicts(db),
+      loadMilitaryBlocs(db),
+    ]);
+    // conflictId → strategic region, so a conflict's activity heats its region.
+    const theaterRegion: Record<string, string> = {};
+    for (const c of activeConflicts) theaterRegion[c._id] = c.region;
+    regionThreats = computeRegionThreats({
+      viewerCountry: countryId,
+      blocs,
+      viewerHomeRegion: homeRegionOf(countryId),
+      currentTurn,
+      theaterRegion,
+      declarations: pendingDecls.map((d) => ({
+        declarerCountry: d.declarerCountry,
+        targetCountry: d.targetCountry,
+        theaterId: d.theaterId,
+      })),
+      reports: recentReports.map((r) => ({
+        declarerCountry: r.declarerCountry,
+        targetCountry: r.targetCountry,
+        attackers: r.attackers,
+        defenders: r.defenders,
+        theaterId: r.theaterId,
+        turn: r.turn,
+        noContact: r.noContact,
+      })),
+      committedByCountry: theaterStates.map((s) => ({
+        country: s.countryId,
+        committed: s.committed,
+      })),
+    });
+
+    // Replacement manpower: the pool, what it regenerates to, and the stance in force
+    // (law-driven for playables). Mirrors applyReinforcement's own arithmetic so the
+    // panel can never disagree with what the turn step actually does.
+    const [manpowerState, stance] = await Promise.all([
+      getNationalManpower(db, countryId),
+      resolveConscriptionStanceFor(db, countryId),
+    ]);
+    const population = countryStates.reduce(
+      (a, s) => a + ((s as { population?: number }).population ?? 0),
+      0
+    );
+    manpower = {
+      pool: manpowerState.pool,
+      mode: manpowerState.mode,
+      regenPerTurn: Math.floor(population * ATTRITION.manpowerRegenFraction * stance.poolMult),
+      // Shared helper, not a third copy of the formula: what the player sees as
+      // poolCap and the ceiling procurement enforces must not drift apart.
+      poolCap: manpowerCeiling(population, stance.poolMult),
+      stanceLabel: stance.label,
+      conscriptAllowed: stance.conscriptAllowed,
+    };
+  }
+
+  // Estates seat: attach the portfolio roster + aggregate.
+  let estates: Record<string, unknown>[] | undefined;
+  let estateSummary: Record<string, unknown> | undefined;
+  const estatePortfolio = resolveEstatePortfolio(countryId, positionId);
+  if (estatePortfolio) {
+    const rawEstates = await getCabinetEstatesCollection(db)
+      .find({ countryId, positionId })
+      .toArray();
+    estates = rawEstates.map((e) => ({
+      ...e,
+      _id: String(e._id),
+      effectiveOutput: computeEstateOutput(e),
+      effectiveUpkeep: computeEstateUpkeep(e),
+    }));
+    const envelope = await resolvePortfolioEnvelope(db, countryId, estatePortfolio);
+    const agg = aggregateEstates(rawEstates);
+    estateSummary = {
+      count: agg.count,
+      totalUpkeep: agg.totalUpkeep,
+      bySite: agg.bySite,
+      envelope,
+      portfolioKey: estatePortfolio,
+    };
+  }
+
+  // Energy seat: attach the plant fleet + national mix aggregate.
+  let plants: Record<string, unknown>[] | undefined;
+  let energySummary: Record<string, unknown> | undefined;
+  if (resolveEnergyPosition(countryId, positionId)) {
+    const rawPlants = await getEnergyPlantsCollection(db).find({ countryId, positionId }).toArray();
+    plants = rawPlants.map((p) => ({
+      ...p,
+      _id: String(p._id),
+      effectiveCapacity: energyEffectiveCapacity(p),
+      effectiveUpkeep: energyEffectiveUpkeep(p),
+    }));
+    const energyEnvelope = await resolveEnergyEnvelope(db, countryId);
+    const mix = aggregateMix(rawPlants);
+    const byRegion: Record<string, Record<string, number>> = {};
+    for (const p of rawPlants) {
+      (byRegion[p.regionId] ??= {})[p.source] =
+        (byRegion[p.regionId][p.source] ?? 0) + energyEffectiveCapacity(p);
+    }
+    energySummary = { ...mix, envelope: energyEnvelope, byRegion };
+  }
+
+  // Transportation seat: attach the project pipeline + aggregate.
+  let projects: Record<string, unknown>[] | undefined;
+  let infraSummary: Record<string, unknown> | undefined;
+  if (resolveInfraPosition(countryId, positionId)) {
+    const rawProjects = await getInfraProjectsCollection(db)
+      .find({ countryId, positionId })
+      .toArray();
+    projects = rawProjects.map((p) => ({
+      ...p,
+      _id: String(p._id),
+      effectiveOutput: infraEffectiveOutput(p),
+      effectiveUpkeep:
+        p.status === "operational"
+          ? p.upkeepBase
+          : +(p.constructionCostBase * buildFundingDef(p.fundingLevel).costMult).toFixed(4),
+      progressPct: progressPct(p),
+      turnsRemaining: turnsRemaining(p),
+    }));
+    const infraEnvelope = await resolveInfraEnvelope(db, countryId);
+    infraSummary = { ...aggregateInfra(rawProjects), envelope: infraEnvelope };
+  }
+
+  // Finance seat: assemble the read-only monetary dossier + the debt-op state.
+  // The prime rate / FX band belong to the Central Bank (read-only here); the
+  // movable component is the sovereign confidence premium.
+  let monetary:
+    | {
+        primeRate: number | null;
+        primeRateHistory: { turn: number; rate: number }[];
+        chairName: string | null;
+        sovereignRate: number | null;
+        confidencePremium: number;
+        investorConfidence: number | null;
+        confidenceBaseline: number;
+        fxRate: number | null;
+        fxBand: { floor: number; ceiling: number } | null;
+        reserveBalance: number | null;
+        forexRevenue: number | null;
+        debtOp: {
+          active: boolean;
+          expiresTurn: number | null;
+          cooldownUntilTurn: number;
+          boostPerTurn: number | null;
+        };
+      }
+    | undefined;
+  if (resolveFinancePosition(countryId) === positionId) {
+    // `bank` may be null above when no nationalMetric needs it — fetch for finance.
+    const financeBank =
+      bank ?? (await centralBanksCollection(db).findOne({ _id: getBankId(countryId) }));
+    const [fx, opDoc] = await Promise.all([
+      exchangeRatesCollection(db).findOne({ _id: countryId }),
+      getTreasuryOperationsCollection(db).findOne({ _id: countryId }),
+    ]);
+    const fxPolicy = fx ? effectiveInterventionPolicy(fx) : null;
+    const confidence = budget?.investorConfidence ?? null;
+    monetary = {
+      primeRate: financeBank?.primeRate ?? null,
+      primeRateHistory: financeBank?.interestRateHistory ?? [],
+      chairName: financeBank?.chairCharacterName ?? null,
+      sovereignRate: budget?.debt?.interestRate ?? null,
+      confidencePremium: getSovereignConfidencePremium(confidence),
+      investorConfidence: confidence,
+      confidenceBaseline: INVESTOR_CONFIDENCE_BASELINE,
+      fxRate: fx?.rate ?? null,
+      fxBand: fxPolicy ? { floor: fxPolicy.floor, ceiling: fxPolicy.ceiling } : null,
+      reserveBalance: financeBank?.reserveBalance ?? null,
+      forexRevenue: financeBank?.forexRevenue ?? null,
+      debtOp: opDoc?.activeOp
+        ? {
+            active: true,
+            expiresTurn: opDoc.activeOp.expiresTurn,
+            cooldownUntilTurn: opDoc.cooldownUntilTurn,
+            boostPerTurn: opDoc.activeOp.boostPerTurn,
+          }
+        : {
+            active: false,
+            expiresTurn: null,
+            cooldownUntilTurn: opDoc?.cooldownUntilTurn ?? 0,
+            boostPerTurn: null,
+          },
+    };
+  }
+
+  const cabinetV2 =
+    resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).cabinet === "v2";
+  const departmentDefinitions = isResetV2Country(countryId)
+    ? getDepartmentDefinitions(
+        countryId as DepartmentCountryId,
+        liveYear,
+        new Set(gameState?.manuallyEnabledSeats ?? [])
+      ).filter((definition) => definition.controllingPositionIds.includes(positionId))
+    : [];
+  const [resetAccounts, resetActionState, currentResetLawPrograms] = cabinetV2
+    ? await Promise.all([
+        resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
+          .find({
+            worldId: gameState?.resetWorldId,
+            countryId: countryId as ResetCountry,
+            controllingSeatId: positionId,
+          })
+          .toArray(),
+        resetCabinetActionStatesCollection<ResetCabinetActionState>(db).findOne({
+          _id: countryId as ResetCountry,
+          worldId: gameState?.resetWorldId,
+        }),
+        resetLawProgramsCollection<ResetLawProgramDocument>(db)
+          .find({
+            worldId: gameState?.resetWorldId,
+            country: countryId as ResetCountry,
+            scope: "national",
+          })
+          .toArray(),
+      ])
+    : [[], null, []];
+  const resetAccountById = new Map(resetAccounts.map((account) => [account.departmentId, account]));
+  const departmentProgramTypeIds = [
+    ...new Set(
+      (cabinetV2 ? [] : departmentDefinitions).flatMap((definition) =>
+        Object.values(budget?.departmentAccounts?.[definition.id]?.programs ?? {}).map(
+          (program) => program.legislationTypeId
+        )
+      )
+    ),
+  ];
+  const departmentLegislationTypes =
+    departmentProgramTypeIds.length === 0
+      ? []
+      : await legislationTypesCollection(db)
+          .find(
+            { _id: { $in: departmentProgramTypeIds } },
+            { projection: { _id: 1, name: 1, policyOptions: 1 } }
+          )
+          .toArray();
+  // An office with no law portfolio (such as the Chief of Staff) has no department
+  // account to show, so the Allocations tab and its panel are omitted for it.
+  const departmentFinances = departmentDefinitions
+    .filter((definition) => !cabinetV2 || definition.portfolioIds.length > 0)
+    .map((definition) => {
+      const departmentName = resolveDepartmentDefinitionName(definition, liveYear);
+      return cabinetV2
+        ? buildResetDepartmentFinanceReadModel({
+            definition,
+            departmentName,
+            account: resetAccountById.get(definition.id),
+            currentPrograms: currentResetLawPrograms,
+          })
+        : buildDepartmentFinanceReadModel({
+            enabled: true,
+            definition,
+            departmentName,
+            account: budget?.departmentAccounts?.[definition.id],
+            legislationTypes: departmentLegislationTypes,
+          });
+    });
+
+  return {
+    // Gates the Treasury-tab "Fund Geological Survey" action (per-surface flag
+    // convention: the office page reads its own briefing GET).
+    prospectingEnabled: await isProspectingEnabled(),
+    // Live in-game year (null = era-awareness unavailable). Client-side
+    // roster chrome (e.g. the position rail) filters with this via the pure
+    // rosterEra helpers.
+    liveYear,
+    canView: true,
+    position: buildPositionView(),
+    mechanics: {
+      tierSetting: mechanics.tierSetting ?? null,
+      tierSettings: mechanics.tierSettings ?? null,
+      regionalTarget: mechanics.regionalTarget ?? null,
+      allocation: mechanics.allocation ?? null,
+      advocacy: mechanics.advocacy ?? null,
+      emergency: mechanics.emergency ?? null,
+    },
+    cabinetVersion: cabinetV2 ? "v2" : "v1",
+    orders: cabinetV2 ? [] : getMinisterialOrders(countryId, positionId),
+    member: buildMemberView({ includeActions: true }),
+    currentSettings: setting
+      ? {
+          tierSetting: setting.tierSetting ?? null,
+          tierSettings: setting.tierSettings ?? null,
+          targetRegionId: setting.targetRegionId ?? null,
+          targetCountryId: setting.targetCountryId ?? null,
+          aidPriority: setting.aidPriority ?? null,
+          advocacyActive: setting.advocacyActive ?? false,
+          allocationPercents: setting.allocationPercents ?? null,
+          lastChangedTurn: setting.lastChangedTurn,
+        }
+      : null,
+    activeOrders: (cabinetV2 ? [] : activeOrders).map((o) => ({
+      orderId: o.orderId,
+      orderName: o.orderName,
+      issuedTurn: o.issuedTurn,
+      expiresTurn: o.expiresTurn,
+      effects: o.effects,
+    })),
+    resetCabinetActions:
+      cabinetV2 && resetActionState && budget
+        ? (() => {
+            const actorId = member?.characterId?.toString();
+            const actor = rechargeActionCharges(
+              actorId ? (resetActionState.actorStates[actorId]?.charges ?? 4) : 0,
+              actorId
+                ? (resetActionState.actorStates[actorId]?.lastRechargeTurn ??
+                    resetActionState.sourceTurn)
+                : resetActionState.sourceTurn,
+              currentTurn
+            );
+            const funding = cabinetActionFunding({
+              accounts: resetAccounts,
+              defenseSeat: DEFENSE_POSITION_BY_COUNTRY[countryId] === positionId,
+              defenseAppropriation: budget?.defenseAppropriation,
+            });
+            return {
+              charges: actor.charges,
+              nextRechargeTurn: actor.nextRechargeTurn,
+              actions: resetActionsForSeat(countryId as ResetCountry, positionId).map((action) => {
+                const eligibility = actionEligibility({
+                  action,
+                  turn: currentTurn,
+                  charges: actor.charges,
+                  seatActive: Boolean(
+                    positionDef &&
+                    isSeatActive(
+                      positionDef,
+                      liveYear,
+                      new Set(gameState?.manuallyEnabledSeats ?? [])
+                    )
+                  ),
+                  legalAuthority: Boolean(member?.characterId),
+                  capacityAvailable: true,
+                  annualNationalGdp: budget?.gdp ?? 0,
+                  flexibleOperatingFunds: funding.flexibleFunds,
+                  active: resetActionState.active,
+                  history: resetActionState.history,
+                });
+                return {
+                  ...action,
+                  operatingCost: eligibility.operatingCost,
+                  allowed: eligibility.allowed,
+                  blockReason: eligibility.reason ?? null,
+                };
+              }),
+              active: resetActionState.active.filter(
+                (entry) => entry.seatId === positionId && entry.expiresTurn > currentTurn
+              ),
+            };
+          })()
+        : null,
+    currentTurn,
+    targetCountries: enabledCountryIds
+      .filter((enabledCountryId) => enabledCountryId !== countryId)
+      .map((enabledCountryId) => ({
+        id: enabledCountryId,
+        label: COUNTRY_CONFIGS[enabledCountryId].name,
+      })),
+    nationalMetrics,
+    regionData,
+    regionalBudgets: regionalBudgets.map((rb) => ({
+      regionId: rb._id,
+      fundingPoolAmount:
+        countryId === COUNTRY_CONFIGS.JP.id
+          ? (rb.nationalGrant ?? 0)
+          : countryId === COUNTRY_CONFIGS.DE.id
+            ? (rb.federalEqualizationGrant ?? 0)
+            : countryId === COUNTRY_CONFIGS.CN.id
+              ? (rb.centralTransferGrant ?? 0)
+              : (rb.westminsterGrant ?? 0),
+      westminsterGrant: rb.westminsterGrant ?? 0,
+      nationalGrant: rb.nationalGrant ?? 0,
+      federalEqualizationGrant: rb.federalEqualizationGrant ?? 0,
+      totalBudget: rb.totalBudget ?? 0,
+      propertyValuePerCapita: rb.propertyValuePerCapita ?? 0,
+      commercialValuePerCapita: rb.commercialValuePerCapita ?? 0,
+      chancellorAllocationPercent: null,
+    })),
+    sovereignBondProfile: budget?.sovereignBondProfile ?? null,
+    sovereignBondMaturities: [
+      ...sovereignIssuanceMaturities(presetUsesLongSovereignTenors(gameState?.preset)),
+    ],
+    debtPrincipal: budget?.debt?.principal ?? 0,
+    sovereignBondsOutstanding: sovereignBonds.reduce((sum, b) => sum + (b.totalIssued ?? 0), 0),
+    canAct,
+    // Holder-only: buy +1 ministerial action with main AP (office pool top-up).
+    // Legacy pool only; the v2 reset cabinet spends its own charges.
+    ministerialTopUp:
+      member?.characterId &&
+      user?.character?._id &&
+      member.characterId.toString() === user.character._id.toString()
+        ? officePoolTopUpStatus(
+            sharedRemaining != null
+              ? holderChar?.sharedMinisterialActionTopUpTurn
+              : member.lastMinisterialActionTopUpTurn,
+            currentTurn,
+            holderChar?.actions
+          )
+        : null,
+    departmentFinances,
+    units,
+    forceSummary,
+    doctrine,
+    doctrineEra,
+    commands,
+    commanders,
+    conflictAssignments,
+    conflicts,
+    corps,
+    commissionCandidates,
+    regionThreats,
+    manpower,
+    arsenal,
+    contracts,
+    suppliers,
+    lotPricePerLot,
+    estates,
+    estateSummary,
+    plants,
+    energySummary,
+    projects,
+    infraSummary,
+    monetary,
+  };
+}

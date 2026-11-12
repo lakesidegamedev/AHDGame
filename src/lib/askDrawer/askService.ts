@@ -1,3 +1,5 @@
+import { servicesConfig } from "@/lib/config/services";
+
 // Server-side connection from the game to the Ask service for the Ask drawer.
 //
 // The player is authenticated here with their game session. The request is
@@ -52,9 +54,9 @@ export interface AskServiceConfig {
 
 /** Null when the drawer is not connected on this deployment. */
 export function askServiceConfig(): AskServiceConfig | null {
-  const secret = process.env.ASK_DRAWER_SECRET?.trim();
+  const secret = servicesConfig.askDrawerSecret()?.trim();
   if (!secret) return null;
-  const baseUrl = (process.env.ASK_DRAWER_URL?.trim() || ASK_SITE_URL).replace(/\/+$/, "");
+  const baseUrl = (servicesConfig.askDrawerUrl()?.trim() || ASK_SITE_URL).replace(/\/+$/, "");
   return { baseUrl, secret };
 }
 

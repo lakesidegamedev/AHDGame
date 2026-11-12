@@ -13,8 +13,7 @@ export const MAX_RATE_CHANGE_DELTA = 0.75;
  * Policy rates move on a quarter-point grid. The rate API rejects anything off
  * it, so EVERY writer has to honour it: the autonomous NPP chair computes a
  * continuous Taylor-rule rate, and storing that raw permanently locks out the
- * next human chair. Stepping by 0.25 from an off-grid base is still off-grid,
- * so the rate card can never produce an acceptable value (ticket #1238).
+ * next human chair. Stepping by 0.25 from an off-grid base is still off-grid.
  */
 export const PRIME_RATE_STEP = 0.25;
 
@@ -128,13 +127,10 @@ export interface RateChangeRecord {
 export const FOMC_BOARD_SIZE = 7;
 
 /**
- * Countries whose central bank runs on the FOMC committee model. The committee
- * is the US Federal Reserve's institution; other central banks run the
- * single-governor / government-controlled model instead. Seeding a committee on
- * every "independent" bank gave the Bank of England, Bundesbank, BoJ and the
- * rest a US-shaped board of technocrat NPPs, which then blocked the government
- * and legislative rate-setting paths those countries actually use (#1195). Keep
- * the committee where it belongs.
+ * Countries whose central bank uses the FOMC committee model. Other central
+ * banks use the single-governor / government-controlled model; seeding a
+ * committee elsewhere blocks their government and legislative rate-setting
+ * paths.
  */
 export const FOMC_COMMITTEE_COUNTRY_IDS: ReadonlySet<string> = new Set(["US"]);
 
@@ -156,7 +152,7 @@ export const FOMC_VOTE_WINDOW_TURNS = 24;
 /**
  * Turns between repeats of the "board seats are vacant" notice to the
  * executive. Vacant seats can only be filled by presidential nomination, so an
- * unstaffed board silently deadlocks every rate motion (ticket #1238); the
+ * unstaffed board silently deadlocks every rate motion; the
  * reminder keeps the one player who can act aware without nagging every turn.
  */
 export const FOMC_VACANCY_REMINDER_INTERVAL_TURNS = 48;
@@ -165,7 +161,7 @@ export const FOMC_VACANCY_REMINDER_INTERVAL_TURNS = 48;
 export type FomcVote = "hike" | "cut" | "hold";
 
 /** Who occupies a seat. "vacant" seats abstain and count against the board majority. */
-export type FomcOccupantType = "player" | "npp" | "vacant";
+type FomcOccupantType = "player" | "npp" | "vacant";
 
 /** One governor seat on the committee. */
 export interface FomcSeat {
@@ -195,7 +191,7 @@ export interface FomcBallot {
   castAt: Date;
 }
 
-export type FomcMeetingStatus = "voting" | "resolved";
+type FomcMeetingStatus = "voting" | "resolved";
 
 /** A single rate-setting meeting. At most one is active per bank at a time. */
 export interface FomcMeeting {
@@ -269,9 +265,6 @@ export interface TurnSnapshot {
   rate: number;
 }
 
-/** @deprecated Use TurnSnapshot instead */
-export type InterestRateSnapshot = TurnSnapshot;
-
 /** Executive nomination for central bank chair */
 export interface CentralBankNomination {
   characterId: ObjectId;
@@ -295,7 +288,7 @@ export interface ChairSelectionPending {
 }
 
 /** Individual lobbying contribution (aggregated for public display) */
-export interface CentralBankLobbyEntry {
+interface CentralBankLobbyEntry {
   targetCharacterId: ObjectId;
   targetCharacterName: string;
   lobbyistCharacterId: ObjectId;
@@ -420,6 +413,12 @@ export interface CentralBank {
   gdpGrowthHistory: TurnSnapshot[];
   /** Mirrored from FederalBudget.economicFactors.tradeGrowth each turn (read-cache) */
   tradeGrowth?: number;
+  /**
+   * Background countries only: smoothed funded-trade balance pressure,
+   * -0.5 (deficit) to 0.5 (surplus), written on the macro kernel tick and read
+   * into the FX macro target. Absent on every other bank.
+   */
+  backgroundTradePressure?: number;
   /** Accumulated spread fee revenue from forex trading (40% of all spreads, home-currency pool). */
   forexRevenue?: number;
   /**

@@ -1,4 +1,6 @@
 import type { Migration } from "../types";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-10-09-corporate-fund-positions",
@@ -6,7 +8,7 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     if (!ctx.dryRun) {
-      await db.collection("indexFundPositions").createIndex(
+      await indexFundPositionsCollection<Document>(db).createIndex(
         { fundId: 1, corporationId: 1 },
         {
           name: "fund_corporation_unique",
@@ -14,12 +16,10 @@ export const migration: Migration = {
           partialFilterExpression: { holderKind: "corporation" },
         }
       );
-      await db
-        .collection("indexFundPositions")
-        .createIndex(
-          { corporationId: 1, holderKind: 1 },
-          { name: "corporation_fund_portfolio", sparse: true }
-        );
+      await indexFundPositionsCollection<Document>(db).createIndex(
+        { corporationId: 1, holderKind: 1 },
+        { name: "corporation_fund_portfolio", sparse: true }
+      );
     }
     return {
       documentsScanned: 0,

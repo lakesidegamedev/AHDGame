@@ -1,0 +1,151 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "National Assembly",
+      "lowerChamber": {
+        "key": "nationalAssembly",
+        "name": "National Assembly",
+        "shortName": "Assembly",
+        "seats": 400,
+        "description": "400 deputies of the Narodno Sabranie, elected to five-year terms - a single-list body controlled by the ruling communist party within the Fatherland Front."
+      },
+      "upperChamber": {
+        "key": "stateCouncil",
+        "name": "State Council",
+        "shortName": "Council",
+        "seats": 21,
+        "description": "A collective head of state exercising standing authority between Assembly sessions.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "labelPlural": "General Secretaries",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "chairmanOfStateCouncil",
+        "label": "Chairman of the State Council",
+        "labelPlural": "Chairmen of the State Council",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "assemblyDeputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "nationalAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the BNB",
+        "labelPlural": "Governors of the BNB",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "governmentType": "parliamentaryRepublic",
+      "legislature": {
+        "name": "National Assembly",
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "National Assembly",
+          "shortName": "Assembly",
+          "seats": 240,
+          "description": "240 deputies elected by proportional representation for a four-year term."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "assemblyDeputy",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNB",
+          "labelPlural": "Governors of the BNB",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": true }
+    },
+    "1991-default": {
+      "governmentType": "parliamentaryRepublic",
+      "legislature": {
+        "name": "Grand National Assembly",
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "Grand National Assembly",
+          "shortName": "Assembly",
+          "seats": 400,
+          "description": "400 deputies elected in the multiparty June 1990 election."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "assemblyDeputy",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the BNB",
+          "labelPlural": "Governors of the BNB",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": true }
+    }
+  }
+}

@@ -8,6 +8,9 @@ import {
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import type { GameState } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Vacate a US executive slot when the seated player resigns. */
 export async function resignExecutiveOffice(
@@ -24,9 +27,9 @@ export async function resignExecutiveOffice(
   const countryId = official.countryId ?? COUNTRY_CONFIGS.US.id;
   const executiveOfficeType = officeType as ExecutiveOfficeType;
 
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateOne(getExecutiveOfficialFilter(countryId, executiveOfficeType), {
+  await electedOfficialsCollection(db).updateOne(
+    getExecutiveOfficialFilter(countryId, executiveOfficeType),
+    {
       $set: {
         characterId: null,
         isNPP: false,
@@ -38,7 +41,8 @@ export async function resignExecutiveOffice(
         nppId: "",
         electedAt: "",
       },
-    });
+    }
+  );
 
   const executiveOffice: OfficeType = { type: executiveOfficeType };
   const careerEvent: CareerEvent = {
@@ -50,7 +54,7 @@ export async function resignExecutiveOffice(
     date: now,
   };
 
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: character._id },
     {
       $set: { currentOffice: null, updatedAt: now },
@@ -58,8 +62,7 @@ export async function resignExecutiveOffice(
     }
   );
 
-  const gameState = await db
-    .collection<GameState>("gameState")
+  const gameState = await gameStateCollection(db)
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
     .catch(() => null);
   await captureOfficeTransition({

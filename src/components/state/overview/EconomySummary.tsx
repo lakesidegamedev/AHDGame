@@ -12,19 +12,16 @@ import {
 /**
  * Economy summary for the State Overview tab's side column.
  *
- * GDP comes straight from `State.gdp` (stored in millions of the country's
- * currency; `formatGDP` handles the unit and `getCurrencyPrefix` the
- * symbol). Unemployment comes from
- * `stateMetrics.economic.unemploymentRate.current`. Top sectors are
- * the per-turn live revenue leaders from `State.topSectorsCache`,
- * falling back to `sectorSpecializations.{primary, secondary}` when
- * the cache is empty.
+ * GDP from `State.gdp` (millions of the country's currency; `formatGDP` handles
+ * the unit, `getCurrencyPrefix` the symbol). Unemployment from
+ * `stateMetrics.economic.unemploymentRate.current`. Top sectors from
+ * `State.topSectorsCache`, falling back to `sectorSpecializations.{primary,
+ * secondary}` when empty.
  *
- * Each sector tagged with `specializationBonus` shows "+5pp margin"
- * (primary) or "+2.5pp margin" (secondary): the regional margin bonus the
- * state grants corps of that type.
+ * Sectors tagged with `specializationBonus` show the regional margin bonus
+ * ("+5pp" primary, "+2.5pp" secondary).
  *
- * `gdpDeltaPct` is still a placeholder (Phase 2+).
+ * `gdpDeltaPct` is a placeholder.
  */
 export function EconomySummary({
   vm,

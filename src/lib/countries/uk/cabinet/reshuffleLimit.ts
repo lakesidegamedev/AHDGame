@@ -1,13 +1,12 @@
 /**
- * UK cabinet reshuffle limit (epic #856, ticket #859 — Cluster B).
+ * UK cabinet reshuffle limit.
  *
- * Decision of record (ops-knowledge `uk-rework-design-2026-08-25`): the PM can
- * replace the ENTIRE cabinet in one action — a reshuffle — but only ONCE PER
- * PARLIAMENT PER GOVERNMENT. (Firing individual ministers is separate and
- * unlimited, but each hits the confidence gauge; see `confidenceGauge.ts`.)
+ * The PM can replace the ENTIRE cabinet in one action (a reshuffle) but only
+ * ONCE PER PARLIAMENT PER GOVERNMENT. Firing individual ministers is separate
+ * and unlimited, but each hits the confidence gauge (see `confidenceGauge.ts`).
  *
- * Pure limiter: it reads a log of prior reshuffles and decides whether another
- * is allowed for a given government + parliament. Persistence lives elsewhere.
+ * Pure limiter: reads a log of prior reshuffles and decides whether another is
+ * allowed for a given government + parliament. Persistence lives elsewhere.
  */
 
 export interface ReshuffleRecord {

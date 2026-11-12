@@ -57,9 +57,6 @@ vi.mock("@/lib/currency/sectorFxSpread", () => ({
 vi.mock("@/lib/currency/marketMaker", () => ({
   safeDistributeConversionSpread: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/corporations/techTree/featureFlag", () => ({
-  isSectorTechTreesEnabled: vi.fn().mockResolvedValue(false),
-}));
 vi.mock("@/lib/corporations/sectorGrowthCost", () => ({
   resolveCountryPrimeRate: vi.fn().mockResolvedValue(0),
 }));
@@ -397,7 +394,7 @@ describe("expandSector — cross-border founding", () => {
   });
 
   it("files the unowned pool row it creates under the HOST country too", async () => {
-    // Ticket #1271. The pool row is an upsert and its `countryId` is stamped
+    // The pool row is an upsert and its `countryId` is stamped
     // from this bucket, so taking the founder's domicile minted a row on a
     // foreign state under the founder's own country: unreachable to the country
     // the capacity is physically in, and counted as the founder's headroom.

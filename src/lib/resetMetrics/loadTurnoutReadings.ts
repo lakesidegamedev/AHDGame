@@ -5,6 +5,8 @@ import type { ElectionVoteTally } from "@/lib/db/types/voteTally";
 import type { State } from "@/lib/db/types/state";
 import { isResetV2Country } from "@/lib/resetVersions/rules";
 import { latestTurnoutReceipts, type TurnoutReceipt } from "./rules/turnoutOwner";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export async function loadTurnoutReadings(
   db: Db,
@@ -15,8 +17,7 @@ export async function loadTurnoutReadings(
     states: readonly Pick<State, "_id" | "countryId" | "votingEligiblePopulation">[];
   }
 ) {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: { $in: input.countries.filter(isResetV2Country) },
@@ -26,8 +27,7 @@ export async function loadTurnoutReadings(
     )
     .toArray();
   if (!elections.length) return new Map<string, TurnoutReceipt>();
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: elections.map((e) => e._id) }, finalized: true },
       {

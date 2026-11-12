@@ -109,11 +109,9 @@ export interface GeneralBlendVM {
   /**
    * Whether the standalone tickets table is worth drawing.
    *
-   * The hero pair already carries the top two by name, party, running mate,
-   * electoral votes, share, popular vote and the endorse button. In the normal
-   * two-way presidential race the table repeated every one of those for the
-   * same two people, so it earns its place only once a third ticket exists and
-   * the hero cannot show them all.
+   * The hero pair already shows the top two with all their numbers, so the
+   * table earns its place only once a third ticket exists that the hero cannot
+   * show.
    */
   showTicketsTable: boolean;
   tickets: GeneralTicketVM[];
@@ -135,14 +133,10 @@ export interface GeneralBlendVM {
   drivers: DriverRowVM[];
   coattailDrivers: DriverRowVM[];
   /**
-   * The referendum standing, with the components that produced it.
-   *
-   * The breakdown travels with the number deliberately. The page used to print
-   * this figure twice — here and again in a card lower down — and the two
-   * carried different bars underneath: the rail's neighbouring "Why it moved"
-   * rows are the persuasion drivers behind a candidate's vote, not the
-   * economic components behind this shift, so a reader met one heading, one
-   * number, and two unrelated explanations.
+   * The referendum standing, with the components that produced it. The breakdown
+   * travels with the number deliberately: the adjacent "Why it moved" rows are
+   * persuasion drivers behind a candidate's vote, not the economic components
+   * behind this shift, so they must not be conflated.
    */
   mood: {
     approval: string;
@@ -522,9 +516,7 @@ export function buildGeneralBlendViewModel(inp: GeneralBlendInput): GeneralBlend
       ? `${turnsLeft}, closes ${endsLocal}`
       : (turnsLeft ?? (endsLocal ? `Closes ${endsLocal}` : null));
 
-  // The table is the one place each ticket's campaign operations (manager,
-  // funds, actions, levels) live next to its standing, so it is drawn for any
-  // race with a ticket in it, not only once the hero overflows.
+  // Always drawn for any race with tickets: the only place each ticket's campaign operations sit next to its standing.
   const showTicketsTable = tickets.length > 0;
 
   const railItems: GeneralBlendVM["railItems"] = [

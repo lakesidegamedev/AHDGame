@@ -29,7 +29,7 @@ const FUNDS = { rdScore: 999, cashAvailable: 1e12, cashCost: 0 };
 
 describe("decades", () => {
   it("returns current decade onward as researchable", () => {
-    expect(getResearchableDecades(2020).map((d) => d.id)).toEqual(["2019", "2029"]);
+    expect(getResearchableDecades(2020).map((d) => d.id)).toEqual(["2019", "2029", "2039", "2049"]);
     expect(getDecadeForYear(1995).id).toBe("1989");
   });
 });

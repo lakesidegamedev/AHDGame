@@ -1,23 +1,21 @@
 import type { Metadata } from "next";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getDb } from "@/lib/mongodb";
 import type {
   Campaign,
-  DemographicCategory,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
   PoliticalParty,
-  Character,
   NPP,
   State,
   StateDemographics,
   StatePartyOrg,
 } from "@/lib/db/types";
 import { projectPrimaryByState } from "@/lib/primaryProjection";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import {
   PRIMARY_WAVES,
   resolvePartyFamily,
@@ -38,6 +36,17 @@ import { allocateDelegates } from "@/lib/primaryDelegateAllocation";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
 import { StateOrganizationPanel } from "./StateOrganizationPanel";
 import { NppAbbr } from "@/components/elections/NppAbbr";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 // This page is a live view over turn-processed delegate awards and per-state
 // projections. It must render from current DB state every request so its
@@ -54,9 +63,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { partyId, stateId } = await params;
   const db = await getDb();
   const party = await findParty(db, partyId);
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId.toUpperCase() }, { projection: { name: 1 } });
+  const state = await statesCollection(db).findOne(
+    { _id: stateId.toUpperCase() },
+    { projection: { name: 1 } }
+  );
   if (!party || !state) return {};
   const title = `${state.name} — ${party.name} Presidential Primary | A House Divided`;
   const description = `${state.name} results, delegate allocation, and projection for the ${party.name} presidential primary.`;
@@ -76,14 +86,13 @@ async function findParty(
 ): Promise<PoliticalParty | null> {
   const seqId = Number(partyId);
   if (Number.isFinite(seqId)) {
-    const byId = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ countryId: "US", sequentialId: seqId });
+    const byId = await politicalPartiesCollection(db).findOne({
+      countryId: "US",
+      sequentialId: seqId,
+    });
     if (byId) return byId;
   }
-  return await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId: "US", abbreviation: partyId });
+  return await politicalPartiesCollection(db).findOne({ countryId: "US", abbreviation: partyId });
 }
 
 export default async function PartyPrimaryStatePage({ params }: PageProps) {
@@ -94,8 +103,8 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   const [party, state, election] = await Promise.all([
     findParty(db, partyId),
     // Presidential primaries are US-only.
-    db.collection<State>("states").findOne({ _id: stateId, countryId: "US" }),
-    db.collection<Election>("elections").findOne({
+    statesCollection(db).findOne({ _id: stateId, countryId: "US" }),
+    electionsCollection(db).findOne({
       electionType: "president",
       countryId: "US",
       status: "active",
@@ -110,11 +119,10 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   });
 
   const [candidates, tally] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: election._id, party: partyKey, status: "active" })
       .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+    electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
   ]);
 
   const candidateKeys = candidates
@@ -127,23 +135,17 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   });
 
   const [chars, npps, partyOrgs, campaigns] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: candidates.filter((c) => !c.isNPP).map((c) => c.characterId) } })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({
         _id: { $in: candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!) },
       })
       .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .find({ countryId: "US", partyId: partyKey })
-      .toArray(),
+    statePartyOrgCollection(db).find({ countryId: "US", partyId: partyKey }).toArray(),
     candidateKeys.length
-      ? db
-          .collection<Campaign>("campaigns")
+      ? campaignsCollection(db)
           .find({ electionId: election._id, candidateId: { $in: candidateKeys } })
           .project<{ candidateId: (typeof candidateKeys)[number]; color?: string | null }>({
             candidateId: 1,
@@ -190,23 +192,18 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     };
   });
 
-  const [categoriesDocs, stateDoc, demographicsDoc, enriched, apportionmentPreset] =
-    await Promise.all([
-      loadDemographicCategories(db),
-      db
-        .collection<State>("states")
-        .find({ _id: { $in: ALL_STATE_IDS } })
-        .toArray(),
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .find({ _id: { $in: ALL_STATE_IDS } })
-        .toArray(),
-      enrichedPromise,
-      db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" })
-        .then((gs) => gs?.preset),
-    ]);
+  const [stateDoc, demographicsDoc, enriched, apportionmentPreset] = await Promise.all([
+    statesCollection(db)
+      .find({ _id: { $in: ALL_STATE_IDS } })
+      .toArray(),
+    stateDemographicsCollection(db)
+      .find({ _id: { $in: ALL_STATE_IDS } })
+      .toArray(),
+    enrichedPromise,
+    gameStateCollection<{ _id: string; preset?: string }>(db)
+      .findOne({ _id: "current" })
+      .then((gs) => gs?.preset),
+  ]);
   const stateMap = new Map(stateDoc.map((doc) => [doc._id as string, doc]));
   if (!stateMap.has(stateId)) stateMap.set(stateId, state);
   const demographicsMap = new Map(demographicsDoc.map((doc) => [doc._id as string, doc]));
@@ -224,12 +221,15 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
   });
 
   const projection = projectPrimaryByState({
+    campaignContext: {
+      ...(await loadCampaignProjectionContext(db, ALL_STATE_IDS)),
+      campaignRulesVersion: election.campaignRulesVersion ?? 0,
+    },
     candidates: enriched,
     candidateMeta,
     stateIds: ALL_STATE_IDS,
     stateMap,
     demographicsMap,
-    categories: categoriesDocs,
     statePartyOrgs: orgMap,
     partyPosition: {
       economicPosition: party.economicPosition,
@@ -242,14 +242,12 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
     countryId: "US",
   });
 
-  // Percentage denominators must cover exactly the candidates we render a row
-  // for. `tally.primaryStateVotes` is an append-only historical record that
-  // keeps entries for candidates who have since withdrawn or been vacated from
-  // the primary, while `rows` below is built from the LIVE `candidates` list.
-  // Summing the raw map therefore inflated the denominator and the visible
-  // percentages added up to less than 100% (ticket #974: "some of the primaries
-  // are not showing a 100% total"). Scope both totals to the live candidate set
-  // so the column always reconciles to 100%.
+  // Percentage denominators must cover exactly the candidates we render a
+  // row for. `tally.primaryStateVotes` is an append-only record that keeps
+  // withdrawn/vacated candidates, while `rows` uses the LIVE `candidates`
+  // list. Summing the raw map inflates the denominator and visible
+  // percentages fall short of 100%. Scope both totals to the live set so the
+  // column always reconciles to 100%.
   const liveCandidateIds = new Set(candidates.map((c) => c._id.toString()));
   const sumForLiveCandidates = (scores: Record<string, number>): number =>
     Object.entries(scores).reduce((s, [cid, v]) => (liveCandidateIds.has(cid) ? s + v : s), 0);

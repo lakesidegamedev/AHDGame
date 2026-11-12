@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ObjectId } from "mongodb";
@@ -7,7 +8,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getUkRecallPetitionsCollection } from "@/lib/db/collections/ukByElection";
-import { addRecallDeclaration } from "@/lib/uk/elections/recallPetitionShell";
+import { addRecallDeclaration } from "@/lib/countries/uk/elections/recallPetitionShell";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 
 const NO_STORE = { "Cache-Control": "no-store, no-transform" };
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
         headers: NO_STORE,
       });
     }
-    if (auth.user.character.countryId !== "UK") {
+    if (!countryHasFeature("ukRecall", auth.user.character.countryId)) {
       return NextResponse.json(
         forbidden("Only UK characters may declare in a Commons recall").toJson(),
         { status: 403, headers: NO_STORE }

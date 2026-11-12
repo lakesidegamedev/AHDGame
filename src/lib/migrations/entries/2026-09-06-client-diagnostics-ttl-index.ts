@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { Migration } from "../types";
+import { clientDiagnosticsCollection } from "@/lib/db/repositories/clientDiagnostics";
+import type { Document } from "mongodb";
 
 const INDEX_NAME = "clientDiagnostics_expiresAt_ttl";
 
@@ -8,7 +10,7 @@ export const migration: Migration = {
   description: "Expire opt-in desktop diagnostics after thirty days",
   idempotent: true,
   execute: async (db: Db, ctx) => {
-    const collection = db.collection("clientDiagnostics");
+    const collection = clientDiagnosticsCollection<Document>(db);
     const exists = (await collection.indexes().catch(() => [])).some(
       (index) => index.name === INDEX_NAME
     );

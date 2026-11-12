@@ -13,8 +13,8 @@
  * opened lazily (routes can return before the db was ever touched).
  */
 import { getDb } from "@/lib/mongodb";
+import { diagnosticsCollection } from "@/lib/db/repositories/diagnostics";
 
-const COLLECTION = "diagnostics";
 const DOCUMENT_ID = "apiRequestTimings";
 
 /** Requests at or above this duration are always kept. */
@@ -58,7 +58,7 @@ export async function recordApiRequestTiming(
     if (sample.durationMs < SLOW_REQUEST_MS && rng() >= REQUEST_SAMPLE_RATE) return;
 
     const db = await getDb();
-    await db.collection<RequestTimingDocument>(COLLECTION).updateOne(
+    await diagnosticsCollection<RequestTimingDocument>(db).updateOne(
       { _id: DOCUMENT_ID },
       {
         $push: { samples: { $each: [sample], $slice: -MAX_SAMPLES } },

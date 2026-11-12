@@ -1,14 +1,14 @@
 /**
- * GET /api/whitehouse/scotus — Court composition, pending nominations, viewer status.
+ * GET /api/whitehouse/scotus - Court composition, pending nominations, viewer status.
  *
- * Presentation-layer read for the SCOTUS UI (#3605) — mirrors the shape of
+ * Presentation-layer read for the SCOTUS UI that mirrors the shape of
  * GET /api/whitehouse/cabinet (positions + nominations + isPresident/isSenator)
  * so the nomination/confirmation UI can reuse the same page conventions.
- * Reuses `getScotusComposition` (#3598, src/lib/scotus/queries.ts) for the
- * per-seat summary; adds a lightweight raw-seat lookup only to resolve
- * `isJustice`/`mySeatNumber` for the viewer, since that summary intentionally
- * omits `justiceCharacterId`.
+ * Reuses `getScotusComposition` for the per-seat summary; adds a lightweight
+ * raw-seat lookup only to resolve `isJustice`/`mySeatNumber` for the viewer,
+ * since that summary intentionally omits `justiceCharacterId`.
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -17,9 +17,13 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { getScotusComposition } from "@/lib/scotus/queries";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
-// GET /api/whitehouse/scotus — Returns the Court's 9-seat composition, active nominations, and the caller's president/senator/justice status. Country-scoped via ?country= (default US); SCOTUS is US-only per #3581, so any other country returns an empty shell.
+// GET /api/whitehouse/scotus: 9-seat composition, active nominations, and caller's president/senator/justice status. Country-scoped via ?country= (default US); SCOTUS is US-only, other countries return an empty shell.
 // Auth: public
 // Errors: 400
 export async function GET(request: Request) {
@@ -28,7 +32,7 @@ export async function GET(request: Request) {
     if (!countryId) {
       return errorResponse(400, "Unknown country");
     }
-    if (countryId !== "US") {
+    if (!countryHasFeature("supremeCourtDocket", countryId)) {
       return NextResponse.json({
         seats: [],
         nominations: [],
@@ -44,25 +48,25 @@ export async function GET(request: Request) {
 
     const [seats, rawSeats, nominations, presidentOfficial, myCharacter] = await Promise.all([
       getScotusComposition(db, countryId),
-      db
-        .collection<SupremeCourtSeat>("supremeCourtSeats")
+      supremeCourtSeatsCollection(db)
         .find({ countryId }, { projection: { seatNumber: 1, justiceCharacterId: 1 } })
         .toArray(),
-      db
-        .collection<ScotusNomination>("scotusNominations")
+      scotusNominationsCollection(db)
         .find({ countryId, status: "active" })
         .sort({ proposedAt: -1 })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "president", characterId: { $ne: null } }),
+      electedOfficialsCollection(db).findOne({
+        countryId,
+        officeType: "president",
+        characterId: { $ne: null },
+      }),
       authUser
-        ? db.collection<Character>("characters").findOne({ userId: new ObjectId(authUser.userId) })
+        ? charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
         : Promise.resolve(null),
     ]);
 
     const senatorOfficial = myCharacter
-      ? await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           countryId,
           officeType: "senate",

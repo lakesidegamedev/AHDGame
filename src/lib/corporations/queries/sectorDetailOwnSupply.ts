@@ -21,6 +21,7 @@ import {
   type OwnSupplyOutput,
   type OwnSupplyReach,
 } from "@/lib/corporations/rules/ownSupplyReach";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 export type OwnSupplyRow = OwnSupplyReach & { sourceStateNames: string[] };
 
@@ -75,8 +76,7 @@ export async function explainOwnSupplyReach(args: {
   }
   if (sourcesByCommodity.size === 0) return;
 
-  const agreements = await args.db
-    .collection<SupplyAgreement>("supplyAgreements")
+  const agreements = await supplyAgreementsCollection(args.db)
     .find(
       {
         buyerCorpId: args.corporation._id,
@@ -120,7 +120,7 @@ export async function explainOwnSupplyReach(args: {
         buyerStateId: args.sector.stateId,
         sourceStateIds,
         output: outputByCommodity.get(commodity) ?? { made: 0, ownSites: 0, soldOutside: 0 },
-        // Only an explicit choice sells on the market first (issue 5505).
+        // Only an explicit choice sells on the market first.
         marketFirst: args.corporation.internalSupplyPolicy?.priority === "market",
         stateScoped: isStateScopedCommodity(commodity as CommodityType),
         hasAgreement: agreed.has(commodity),

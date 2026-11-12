@@ -254,7 +254,7 @@ describe("processPoliticalMetricsDynamics", () => {
     const values = flatValues(50);
     wire({
       metricsDocs: [
-        { _id: "KAN", countryId: "JP", values },
+        { _id: "FR_ARA", countryId: "FR", values },
         { _id: "BY", countryId: "DE", values },
       ],
     });
@@ -269,7 +269,7 @@ describe("processPoliticalMetricsDynamics", () => {
     // undefined the phase would throw; if the residual were wrong the whole
     // board would drift toward 0 on the first turn after deploy.
     const values = flatValues(50);
-    wire({ metricsDocs: [{ _id: "KAN", countryId: "JP", values }] });
+    wire({ metricsDocs: [{ _id: "FR_ARA", countryId: "FR", values }] });
     await processPoliticalMetricsDynamics(db as unknown as Db, 5);
     const ops = db.collectionMocks.politicalMetrics.bulkWrite.mock.calls[0][0] as Array<{
       updateOne: {

@@ -27,6 +27,7 @@ import { UKR_BUCKET_LABELS } from "@/lib/countries/ukr/data/ukrBucketLabels";
 import { BLR_BUCKET_LABELS } from "@/lib/countries/blr/data/blrBucketLabels";
 import { SCO_BUCKET_LABELS } from "@/lib/countries/sco/data/scoBucketLabels";
 import { WAL_BUCKET_LABELS } from "@/lib/countries/wal/data/walBucketLabels";
+import { CA_BUCKET_LABELS } from "@/lib/countries/ca/data/caBucketLabels";
 /**
  * Player-facing bucket names, in each country's own language.
  *
@@ -81,6 +82,8 @@ export const COUNTRY_BUCKET_LABELS: Record<string, CountryBucketLabels> = {
   BLR: BLR_BUCKET_LABELS,
   SCO: SCO_BUCKET_LABELS,
   WAL: WAL_BUCKET_LABELS,
+  CA: CA_BUCKET_LABELS,
+  QC: CA_BUCKET_LABELS, // Quebec keeps Canada's electorate and terms
 };
 
 /** Countries whose labels carry an English gloss because the script is not Latin. */

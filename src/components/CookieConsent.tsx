@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -57,6 +57,9 @@ export function openCookiePreferences() {
   } catch {
     // localStorage unavailable
   }
+  // Re-show the first-paint banner immediately: the gate attribute is what
+  // hides it, and clearing it here avoids waiting for the effect below.
+  delete document.documentElement.dataset.cookieConsent;
   applyFallbackGoogleConsent(null);
   window.dispatchEvent(new Event(CONSENT_RESET_EVENT));
 
@@ -100,33 +103,50 @@ function setConsent(choice: CookieConsentValue) {
   } catch {
     // localStorage unavailable (private mode, quota) — still notify listeners
   }
+  // Hide (or re-show) the banner before React re-renders: the first paint of a
+  // returning player must never be gated on the post-hydration snapshot.
+  document.documentElement.dataset.cookieConsent = choice;
   applyFallbackGoogleConsent(choice);
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }));
 }
 
-export function CookieConsentBanner() {
+export function CookieConsentBanner({ googleCmp = false }: { googleCmp?: boolean }) {
   const pathname = usePathname();
   const consent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const usesGoogleCmp =
-    typeof window !== "undefined" &&
-    shouldRenderGooglePrivacyMessaging(pathname, window.location.hostname);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Google's own CMP renders the consent UI on AdSense-eligible paths. The
+  // server decides that from the request path and host; the client only
+  // re-checks after mount so hydration always matches the server tree.
+  const clientCmp =
+    mounted && shouldRenderGooglePrivacyMessaging(pathname, window.location.hostname);
 
   useEffect(() => {
     if (consent === UNSET) return;
+    const root = document.documentElement;
+    if (consent) {
+      root.dataset.cookieConsent = consent;
+    } else {
+      delete root.dataset.cookieConsent;
+    }
     applyFallbackGoogleConsent(consent);
   }, [consent]);
 
-  if (usesGoogleCmp) return null;
+  if (googleCmp || clientCmp) return null;
 
-  if (consent === UNSET || consent !== null) return null;
-
-  // Small screens: a compact sheet (tighter type and padding, full-width
-  // buttons side by side, height capped) plus an in-flow spacer, so the
-  // register and login forms can always scroll clear of it. On a 390px phone
-  // the old card covered the sign-in buttons. Copy, choices and defaults are
-  // unchanged.
+  // The banner is part of the first paint, not a post-hydration mount. It used
+  // to appear only after the client store resolved localStorage, which made a
+  // fixed overlay the Largest Contentful Paint element on anonymous loads
+  // (/world measured 3.9s of render delay). Rendering it server-side and
+  // hiding it with `html[data-cookie-consent]` (set by the inline script in the
+  // root layout) keeps consenting players from ever seeing it while giving a
+  // first-time visitor the banner at FCP.
   return (
-    <>
+    <div data-cookie-consent-banner="true">
       <div aria-hidden="true" className="h-56 sm:hidden" />
       <div
         role="dialog"
@@ -142,7 +162,7 @@ export function CookieConsentBanner() {
               permission, PostHog records how you use the game and we may record a sample of
               sessions to find confusing flows and technical problems. You can reject optional
               analytics or change your choice at any time. See our{" "}
-              <Link href="/privacy" className="text-primary hover:underline">
+              <Link href="/privacy" className="text-muted underline hover:text-foreground">
                 Privacy policy
               </Link>
               .
@@ -168,6 +188,6 @@ export function CookieConsentBanner() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

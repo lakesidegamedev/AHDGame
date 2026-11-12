@@ -1,30 +1,13 @@
 /**
- * Wartime seizure of enemy-held companies: the portable rules core.
+ * Wartime seizure of enemy-held companies: the portable rules core. Plain data
+ * in and out; the turn number and country codes come from the caller. The shell decides whether a war exists (passing `relation` from the
+ * belligerent sides) and reports the enemy's domestic assets. Nothing is keyed
+ * to a country or pair: any belligerent may take from any enemy, and an owner
+ * on the taker's own side is never an enemy.
  *
- * Plain data in, plain data out. No database, no wall clock, no randomness, no
- * environment and no async, so the same rules can run in the request path, in a
- * turn phase, or in the headless harness without being rewritten. Country ids
- * arrive as codes and the turn number arrives from the caller; nothing here
- * knows what time it is or which conflict it is looking at.
- *
- * Two things this module deliberately does not do:
- *
- * - It does not decide whether a war exists. The shell resolves the conflict and
- *   passes `relation`, derived from the belligerent sides, which keeps these
- *   rules testable without seeding a war.
- * - It does not read the assets. The shell reports whether the enemy holds any
- *   domestic sectors and how many assets an order would take.
- *
- * Nothing is keyed to a country, a region, or a pair. Any belligerent may take
- * from any enemy in either direction; the only asymmetry the rules encode is
- * that an owner on the taker's own side is not an enemy at all.
- *
- * The restitution plan does not name a payee or a payer, and where the owner is
- * gone it does not return a payable amount at all: it returns an `unsettled`
- * marker carrying the recorded valuation. Whether the settlement is paid out of
- * the taker's treasury or created, who receives it, and whether it refunds what
- * was paid or restores what was lost are policy questions for the owner.
- * Nothing here should be read as having answered them.
+ * Where the owner is gone, restitution returns an `unsettled` marker carrying
+ * the recorded valuation, not a payable amount: who funds and receives such a
+ * settlement, and whether it refunds or restores, is not answered here.
  */
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -84,21 +67,11 @@ export interface WarSeizureEligibility {
 }
 
 /**
- * Can this country seize this enemy's domestic assets right now?
- *
- * Checked in this order, and the order is part of the contract:
- *
- * 1. no-government: a country without a government cannot give the order.
- * 2. same-country: a country cannot be its own enemy.
- * 3. not-at-war: there must be an active war with the named owner.
- * 4. not-an-enemy: the owner must be on the opposing side. This is what keeps a
- *    co-belligerent safe, and it is checked before the asset and turn limits so
- *    a minister who names an ally is told the real problem.
- * 5. cooldown: a previous order's cooldown has not elapsed.
- * 6. already-ordered: one order per turn.
- * 7. no-domestic-assets: nothing of the enemy's operates here to take.
- *
- * A caller that fixes each reason in turn eventually reaches `ok`.
+ * Can this country seize this enemy's domestic assets right now? The check
+ * order is part of the contract, so fixing each reason in turn reaches `ok`:
+ * no-government, same-country, not-at-war, not-an-enemy (before the asset and
+ * turn limits, so naming an ally reports the real problem), cooldown,
+ * already-ordered (one per turn), no-domestic-assets.
  */
 export function evaluateWarSeizure(input: WarSeizureEligibilityInput): WarSeizureEligibility {
   if (!input.takerHasGovernment) return { eligible: false, reason: "no-government" };
@@ -166,32 +139,14 @@ export type RestitutionPlan =
 
 /**
  * What a settlement owes one recorded asset.
- *
- * - return: the sector still exists, the taker still holds it, and its owner
- *   still exists, so hand it back. This is the outcome that makes the power
- *   reversible and it must be preferred whenever it is possible.
- * - unsettled: the owner is gone, so the asset cannot go home, and what a
- *   settlement owes is an open owner decision rather than a default. The plan
- *   carries the recorded valuation but names itself `unsettled`, so no caller
- *   can mistake the number for an instruction to pay.
- *
- *   The amount is the net asset value recorded at the taking, before the tier
- *   multiplier and before any premium. A premium applied here would be a second
- *   one, and it is never re-priced: the taker may have grown or run the asset
- *   down since, and a settlement settles the asset that was taken.
- *
- *   Two questions have to be answered before this can become a payment. Who
- *   funds it, the taker's treasury or newly created money, and who receives it
- *   once the former owner's corporation no longer exists. And whether the peace
- *   term refunds only what the owner was actually paid, which is nothing for a
- *   `seizure` tier taking, or restores what it lost. Restoring pays full value
- *   back to an owner that received nothing at the time, which is a real
- *   transfer rather than a refund, so the answer is the owner's to give.
- * - skip: there is nothing to return. A sector that no longer exists cannot be
- *   conjured back, and one the taker no longer holds has already moved on.
- *
- * `unsettled` never carries a negative or non-finite anchor, so a corrupt or
- * stale record cannot become a charge against the former owner.
+ * - return: sector, taker's hold and owner all still exist, so hand it back.
+ *   This keeps the power reversible and is preferred whenever possible.
+ * - unsettled: the owner is gone. Carries the net asset value recorded at the
+ *   taking (before tier and premium, never re-priced) under a name no caller
+ *   can mistake for an instruction to pay; funding and recipient are undecided.
+ * - skip: the sector is gone or the taker no longer holds it.
+ * The anchor is never negative or non-finite, so a stale record cannot become a
+ * charge against the former owner.
  */
 export function restitutionPlan(input: RestitutionInput): RestitutionPlan {
   if (!input.sectorStillExists) return { kind: "skip", reason: "sector-gone" };

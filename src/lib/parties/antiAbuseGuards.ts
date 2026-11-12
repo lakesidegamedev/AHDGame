@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import type { Character, GameState, PoliticalParty, PurgeRejoinBlock } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { PURGE_REJOIN_COOLDOWN_TURNS } from "@/lib/constants/partyActions";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Is the one cooldown-free party move currently open? This is an explicit,
@@ -103,12 +104,10 @@ export async function getPartyNppControlStatus(args: {
   if (args.isAdmin || args.party.isDefault) return { ok: true };
 
   const now = args.now ?? new Date();
-  const gameState = await args.db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { startingPartiesMode: 1, worldEpochStartedAt: 1 } }
-    );
+  const gameState = await gameStateCollection(args.db).findOne(
+    { _id: "current" },
+    { projection: { startingPartiesMode: 1, worldEpochStartedAt: 1 } }
+  );
   const foundingWindow = isFoundingNppControlWindowOpen(gameState, now);
 
   const partyAge = foundingWindow

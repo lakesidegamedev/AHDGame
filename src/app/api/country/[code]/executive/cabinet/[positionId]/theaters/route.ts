@@ -1,6 +1,6 @@
 // PUT /api/country/[code]/executive/cabinet/[positionId]/theaters
 // Save the country's World Situation Board state (war-footing cohesion + per-theater
-// combat-power commitments). Auth: defense holder or admin. Gated by conflictsEnabled +
+// combat-power commitments). Auth: defense holder or admin. Gated by the
 // defense seat. Client-authoritative (commitments grant no resources) with light server
 // validation — the server recomputes the live-unit pool and rejects over-commitment.
 // Errors: 400, 401, 403, 404.
@@ -12,7 +12,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import { getTheaterStateCollection } from "@/lib/db/collections/theaterState";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
@@ -48,11 +47,6 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const gsCol = await getGameStateCollection(db);
-    const gs = await gsCol.findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
 
     const member = await getCabinetMembersCollection(db).findOne({ countryId, positionId });
     const isHolder =

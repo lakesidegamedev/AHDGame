@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { corpOverviewModeSchema } from "@/lib/api/schemas/settings";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/settings/corp-overview-mode — Updates the authenticated user's corporation overview layout (simple or pro)
 // Auth: requireBasicAuth
@@ -28,9 +29,10 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
 
-    await db
-      .collection<User>("users")
-      .updateOne({ _id: new ObjectId(user.userId) }, { $set: { corpOverviewMode } });
+    await usersCollection(db).updateOne(
+      { _id: new ObjectId(user.userId) },
+      { $set: { corpOverviewMode } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

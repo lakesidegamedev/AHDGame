@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { StateDemographics } from "@/lib/db/types/demographics";
+import type { CensusGroupView } from "@/lib/db/types/demographics";
 import type { DocketCase } from "@/lib/db/types/scotus";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
@@ -19,8 +19,8 @@ import {
   buildGranularElectorateSubstrate,
   clearGranularElectorateCache,
 } from "@/lib/demographics/granularElectorate";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 
 /**
  * Minimal stateful fake `Db`: real MongoDB filter semantics are overkill here
@@ -91,8 +91,9 @@ function createFakeDb(fixtures: {
   docketCases: DocketCase[];
   legislationTypes: LegislationType[];
   statePolicies: StatePolicy[];
-  stateDemographics: StateDemographics[];
-  demographicDefaults: StateDemographics[];
+  stateDemographics: CensusGroupView[];
+  demographicDefaults: CensusGroupView[];
+  macroMetrics?: Array<{ _id: string } & Record<string, unknown>>;
 }) {
   const collections = {
     // The turn processor gates on the world's starting year (checkpoints are
@@ -105,6 +106,7 @@ function createFakeDb(fixtures: {
     ),
     stateDemographics: createFakeCollection(fixtures.stateDemographics),
     demographicDefaults: createFakeCollection(fixtures.demographicDefaults),
+    macroMetrics: createFakeCollection(fixtures.macroMetrics ?? []),
   };
   const db = {
     collection: (name: string) => (collections as Record<string, unknown>)[name],
@@ -116,7 +118,7 @@ function makeGroup(economicLean: number, socialLean: number) {
   return { population: 20, economicLean, socialLean, turnout: 60 };
 }
 
-function makeStateDemographics(stateId: string): StateDemographics {
+function makeStateDemographics(stateId: string): CensusGroupView {
   return {
     _id: stateId,
     countryId: "US",
@@ -153,7 +155,7 @@ const DECIDED_DIVERGED_CASE: DocketCase = {
 
 /** `demographicDefaults.layer1PositionOverrides[dim][bucket][axis]`, or 0. */
 function overlay(
-  doc: StateDemographics,
+  doc: CensusGroupView,
   dim: string,
   bucket: string,
   axis: "economicLean" | "socialLean"
@@ -273,8 +275,22 @@ describe("processEraCheckpointsTurn", () => {
       demographicEffects: [
         // Strong, sustained leftward pull on the same group+axis the
         // checkpoint targets — a player campaigning hard against the tide.
-        { groupId: "rural_traditionalists", target: "economicLean", direction: -1, magnitude: 3 },
-        { groupId: "rural_traditionalists", target: "socialLean", direction: -1, magnitude: 3 },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "economicLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "socialLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        { dim: "age", bucket: "mature", target: "economicLean", direction: -1, magnitude: 3 },
+        { dim: "age", bucket: "mature", target: "socialLean", direction: -1, magnitude: 3 },
       ],
     } as unknown as LegislationType;
 
@@ -310,10 +326,8 @@ describe("processEraCheckpointsTurn", () => {
     // per-turn shift several times the checkpoint's own rate, it held the
     // targeted buckets at (or past) their starting position (0, no
     // pre-existing overlay) instead of the full authored shift they would
-    // otherwise have reached. The law is authored against the
-    // `rural_traditionalists` archetype and still nets against bucket targets,
-    // because the turn processor projects every active legislative archetype
-    // shift through `archetypeValuesToBuckets` before netting.
+    // otherwise have reached. The law targets the same buckets, so it nets
+    // against the checkpoint.
     expect(overlay(al, "education", "no_college", "economicLean")).toBeLessThanOrEqual(0);
     expect(overlay(al, "age", "mature", "economicLean")).toBeLessThanOrEqual(0);
   });
@@ -374,7 +388,7 @@ describe("processEraCheckpointsTurn", () => {
 
 /**
  * Acceptance: the checkpoint's pull must reach an outcome computed through
- * the GRANULAR vote path (`granularElectorateEnabled`), not merely move a
+ * the GRANULAR vote path, not merely move a
  * stored archetype field the granular substrate never reads (the previous
  * implementation's fatal flaw — see `eraCheckpoints.ts`'s module doc).
  *
@@ -430,8 +444,7 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       substrate.totalPool,
       substrate.totalPool,
       1_000_000,
-      substrate.demographics,
-      substrate.categories,
+      substrate.electorate,
       new Map(),
       {
         isGeneralElection: true,
@@ -473,7 +486,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alPristine,
-      categories: [],
       enriched,
       demographicDefaults: alPristine, // no overlay — pre-realignment baseline
     })!;
@@ -485,7 +497,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alDefaultsAfter,
-      categories: [],
       enriched,
       demographicDefaults: alDefaultsAfter, // live === defaults: lean-delta fold pinned at 0
     })!;
@@ -518,10 +529,24 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       policyDomain: "governance",
       subCategory: "test",
       demographicEffects: [
-        { groupId: "rural_traditionalists", target: "economicLean", direction: -1, magnitude: 3 },
-        { groupId: "rural_traditionalists", target: "socialLean", direction: -1, magnitude: 3 },
-        { groupId: "evangelicals", target: "economicLean", direction: -1, magnitude: 3 },
-        { groupId: "evangelicals", target: "socialLean", direction: -1, magnitude: 3 },
+        { dim: "race", bucket: "white", target: "economicLean", direction: -1, magnitude: 3 },
+        { dim: "race", bucket: "white", target: "socialLean", direction: -1, magnitude: 3 },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "economicLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        {
+          dim: "education",
+          bucket: "no_college",
+          target: "socialLean",
+          direction: -1,
+          magnitude: 3,
+        },
+        { dim: "age", bucket: "mature", target: "economicLean", direction: -1, magnitude: 3 },
+        { dim: "age", bucket: "mature", target: "socialLean", direction: -1, magnitude: 3 },
       ],
     } as unknown as LegislationType;
     const opposingPolicy: StatePolicy = {
@@ -560,7 +585,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alPristine,
-      categories: [],
       enriched: [],
       demographicDefaults: alPristine,
     })!;
@@ -572,7 +596,6 @@ describe("processEraCheckpointsTurn reaches the granular vote path", () => {
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: alDefaultsAfter,
-      categories: [],
       enriched: [],
       demographicDefaults: alDefaultsAfter,
     })!;
@@ -614,7 +637,7 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
   };
 
   function overlayValue(
-    doc: StateDemographics,
+    doc: CensusGroupView,
     dim: string,
     bucket: string,
     axis: "economicLean" | "socialLean"
@@ -663,7 +686,6 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: ohPristine,
-      categories: [],
       enriched: [],
       demographicDefaults: ohPristine,
     })!;
@@ -675,7 +697,6 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
       turnoutDoc: null,
       statePopulation: 1_000_000,
       demographics: oh,
-      categories: [],
       enriched: [],
       demographicDefaults: oh,
     })!;
@@ -734,27 +755,22 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
     }
   });
 
-  it("is beatable: sustained opposing legislation on a mapped archetype nets against a bucket target's pull", async () => {
-    // union_trades maps onto race:black at weight 0.25 in ARCHETYPE_BUCKET_MAP
-    // — an ordinary archetype-authored law can contest a bucket checkpoint
-    // with no new authoring convention needed, because eraCheckpointTurn.ts
-    // projects every active legislative archetype shift through the SAME
-    // archetypeValuesToBuckets map before netting.
+  it("is beatable: sustained opposing legislation on the same bucket nets against a bucket target's pull", async () => {
     const opposingLegType: LegislationType = {
-      _id: "test-opposing-union-law",
-      name: "Test Opposing Union Law",
+      _id: "test-opposing-bucket-law",
+      name: "Test Opposing Bucket Law",
       description: "test fixture",
       policyDomain: "governance",
       subCategory: "test",
       demographicEffects: [
         // Positive (rightward) direction opposes the checkpoint's negative
         // (leftward) race:black pull.
-        { groupId: "union_trades", target: "economicLean", direction: 1, magnitude: 3 },
+        { dim: "race", bucket: "black", target: "economicLean", direction: 1, magnitude: 3 },
       ],
     } as unknown as LegislationType;
     const opposingPolicy: StatePolicy = {
       stateId: "OH",
-      legislationTypeId: "test-opposing-union-law",
+      legislationTypeId: "test-opposing-bucket-law",
       policyOptionId: "opt-max",
       policyOptionIndex: 6,
       enactedAt: new Date("2026-01-01"),
@@ -783,5 +799,55 @@ describe("processEraCheckpointsTurn — BUCKET-kind targets (direct Layer-1 targ
     // starting position (0 — no pre-existing overlay) instead of letting it
     // drift negative.
     expect(overlayValue(oh, "race", "black", "economicLean")).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("processEraCheckpointsTurn in a 2027 world", () => {
+  function modernWorld(macroMetrics: Array<{ _id: string } & Record<string, unknown>>) {
+    const fixtures = createFakeDb({
+      docketCases: [],
+      legislationTypes: [],
+      statePolicies: [],
+      stateDemographics: [makeStateDemographics("AL"), makeStateDemographics("VT")],
+      demographicDefaults: [makeStateDemographics("AL"), makeStateDemographics("VT")],
+      macroMetrics,
+    });
+    (
+      fixtures.collections as { gameState: { __store: Map<string, { startingYear?: number }> } }
+    ).gameState.__store.get("current")!.startingYear = 2027;
+    return fixtures;
+  }
+
+  const FIRST_TURN_OF_2031 = 4 * 48;
+
+  it("runs no historical checkpoint before 2030 and gates the education pull on its metric", async () => {
+    const { db, collections } = modernWorld([]);
+    const result = await processEraCheckpointsTurn(db, 100, "US");
+    expect(result.checkpointsActive).toBe(2);
+    const al = collections.demographicDefaults.__store.get("AL")!;
+    expect(overlay(al, "age", "young", "socialLean")).toBeLessThan(0);
+    expect(overlay(al, "race", "white", "economicLean")).toBe(0);
+  });
+
+  it("applies the automation pull only in states whose unemployment gate is open", async () => {
+    const { db, collections } = modernWorld([
+      { _id: "AL", economic: { unemploymentRate: { value: 8.2 } } },
+      { _id: "VT", economic: { unemploymentRate: { value: 3.9 } } },
+    ]);
+    await processEraCheckpointsTurn(db, FIRST_TURN_OF_2031, "US");
+    const al = collections.demographicDefaults.__store.get("AL")!;
+    const vt = collections.demographicDefaults.__store.get("VT")!;
+    expect(overlay(al, "wealth", "low", "economicLean")).toBeLessThan(0);
+    expect(overlay(vt, "wealth", "low", "economicLean")).toBe(0);
+    // The ungated cohort pull still reaches both.
+    expect(overlay(vt, "age", "young", "socialLean")).toBeLessThan(0);
+  });
+
+  it("keeps a gated pull shut when the metric is unreadable", async () => {
+    const { db, collections } = modernWorld([{ _id: "AL" }]);
+    await processEraCheckpointsTurn(db, FIRST_TURN_OF_2031, "US");
+    const al = collections.demographicDefaults.__store.get("AL")!;
+    expect(overlay(al, "wealth", "low", "economicLean")).toBe(0);
+    expect(overlay(al, "education", "graduate", "socialLean")).toBe(0);
   });
 });

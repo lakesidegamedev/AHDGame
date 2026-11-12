@@ -6,8 +6,10 @@ import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
-import type { Character, PatreonTier, User } from "@/lib/db/types";
+import type { PatreonTier, User } from "@/lib/db/types";
 import { applyPatreonStatus } from "@/lib/patreon/service";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const bodySchema = z.object({
   userId: z.string().refine((value) => ObjectId.isValid(value), "Invalid user ID"),
@@ -27,7 +29,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   const db = await getDb();
   const objectId = new ObjectId(userId);
 
-  const user = await db.collection<User>("users").findOne({ _id: objectId });
+  const user = await usersCollection(db).findOne({ _id: objectId });
   if (!user) {
     return errorResponse(404, "User not found");
   }
@@ -42,7 +44,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     patreonUserId,
   });
 
-  const character = await db.collection<Character>("characters").findOne({ userId: objectId });
+  const character = await charactersCollection(db).findOne({ userId: objectId });
 
   await createAdminLog({
     category: "account",

@@ -7,8 +7,9 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import { getGameState } from "@/lib/gameState";
 import { resolveMergerAuthority } from "@/lib/corporations/mergerReview/authority";
-import { decideListingPetition, INDEX_LISTING_PETITIONS } from "@/lib/indexFunds/petitions/service";
+import { decideListingPetition } from "@/lib/indexFunds/petitions/service";
 import type { IndexListingPetition } from "@/lib/db/types/indexListingPetition";
+import { indexListingPetitionsCollection } from "@/lib/db/repositories/indexListingPetitions";
 
 /**
  * The committee rules on a petition.
@@ -38,9 +39,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const petition = await db
-      .collection<IndexListingPetition>(INDEX_LISTING_PETITIONS)
-      .findOne({ _id: new ObjectId(petitionId) });
+    const petition = await indexListingPetitionsCollection<IndexListingPetition>(db).findOne({
+      _id: new ObjectId(petitionId),
+    });
     if (!petition) return errorResponse(404, "Petition not found");
 
     const gameState = await getGameState();

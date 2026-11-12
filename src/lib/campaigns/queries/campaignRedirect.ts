@@ -6,6 +6,8 @@ import {
   campaignRedirectTarget,
   type CampaignRedirectQuery,
 } from "@/lib/campaignManager/campaignRedirect";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Where `/campaign/[id]` redirects to, or null when the old page should render
@@ -17,12 +19,13 @@ export async function resolveCampaignRedirect(
   query: CampaignRedirectQuery
 ): Promise<string | null> {
   if (!ObjectId.isValid(campaignId)) return null;
-  const campaign = await db
-    .collection<Campaign>("campaigns")
-    .findOne({ _id: new ObjectId(campaignId) }, { projection: { electionId: 1 } });
+  const campaign = await campaignsCollection(db).findOne(
+    { _id: new ObjectId(campaignId) },
+    { projection: { electionId: 1 } }
+  );
   if (!campaign) return null;
 
-  const election = await db.collection<Election>("elections").findOne(
+  const election = await electionsCollection(db).findOne(
     { _id: campaign.electionId },
     {
       projection: {

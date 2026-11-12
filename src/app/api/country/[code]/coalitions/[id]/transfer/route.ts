@@ -7,10 +7,12 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { requirePlayerTransfersEnabled } from "@/lib/api/requirePlayerTransfers";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const transferSchema = z.object({
   partySequentialId: z.number().int().positive(),
@@ -49,9 +51,10 @@ export async function POST(
     if (transferGuard) return transferGuard;
 
     // Find coalition
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: Number(id), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: Number(id),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -62,9 +65,10 @@ export async function POST(
     }
 
     // Find target party
-    const targetParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parsed.data.partySequentialId, countryId });
+    const targetParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parsed.data.partySequentialId,
+      countryId,
+    });
     if (!targetParty) {
       throw notFound("Target party not found.");
     }
@@ -82,7 +86,7 @@ export async function POST(
 
     const now = new Date();
 
-    await db.collection<Coalition>("coalitions").updateOne(
+    await coalitionsCollection(db).updateOne(
       { _id: coalition._id },
       {
         $set: {
@@ -95,9 +99,10 @@ export async function POST(
 
     // Notify new chair
     if (targetParty.chairId) {
-      const newChairChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: targetParty.chairId }, { projection: { userId: 1 } });
+      const newChairChar = await charactersCollection(db).findOne(
+        { _id: targetParty.chairId },
+        { projection: { userId: 1 } }
+      );
       if (newChairChar) {
         await createNotification({
           userId: newChairChar.userId,

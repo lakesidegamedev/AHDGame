@@ -5,36 +5,21 @@
  * Type-only imports are allowed.
  *
  * UK regions for the 2027-default preset (post-2024-election Westminster, on
- * the 2023 Periodic Review boundaries in force from the 2024 general
- * election). The 12 electoral regions are structurally stable; the
- * era-specific values are projected mid-2027 population, projected 2026
- * nominal regional GDP, and the **650-seat** Westminster distribution in
- * force from 2024 (England 543 / Scotland 57 / Wales 32 / NI 18).
+ * the 2023 Periodic Review boundaries). The 12 electoral regions are
+ * structurally stable; era-specific values are projected mid-2027 population,
+ * projected 2026 nominal regional GDP, and the 650-seat Westminster
+ * distribution (England 543 / Scotland 57 / Wales 32 / NI 18).
  * `stateSenateSeats` holds the devolved/regional-council seat count and is
  * structural, unchanged from 2023.
  *
- * 2027 projection assumptions (documented, not derived in code):
- * - Seats: 2023 Periodic Review of Westminster constituencies, as fought at
- *   the 2024 general election. England regional split: LON 75, SEE 91,
- *   SWE 58, EAE 61, EMI 47, WMI 57, YHU 54, NWE 73, NEE 27 (sums to 543).
- *   Sources: House of Commons Library briefing CBP-10009 "General election
- *   2024: Results and analysis"
- *   (https://commonslibrary.parliament.uk/research-briefings/cbp-10009/),
- *   Boundary Commission for England 2023 Review
- *   (https://boundarycommissionforengland.independent.gov.uk/).
- * - Population: ONS mid-2024 estimates carried to mid-2027 at the pace of
- *   the ONS 2021-based interim national population projections (about 0.6%
- *   per year nationally, faster in London and the South East, near flat in
- *   Scotland and Wales). Mid-2024 anchors: London 9,089,700, South East
- *   9,642,900, East of England 6,576,300. Source: ONS "Population estimates
- *   for England and Wales: mid-2024"
- *   (https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates),
- *   ONS "2021-based interim national population projections"
- *   (https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections).
- * - GDP: 2022 regional GVA carried to 2026 nominal at about 15% cumulative
- *   (roughly 3.5% per year nominal, matching UK nominal GDP growth
- *   2022-2026). Source: ONS "Regional economic activity by gross domestic
- *   product" (https://www.ons.gov.uk/economy/grossdomesticproductgdp).
+ * Projection assumptions (documented, not derived in code):
+ * - Seats: 2023 Periodic Review constituencies as fought in the 2024 general
+ *   election. England split LON 75, SEE 91, SWE 58, EAE 61, EMI 47, WMI 57,
+ *   YHU 54, NWE 73, NEE 27 (sum 543).
+ * - Population: ONS mid-2024 estimates carried to mid-2027 at the pace of the
+ *   ONS 2021-based interim projections (about 0.6%/yr nationally, faster in
+ *   London and the South East, near flat in Scotland and Wales).
+ * - GDP: 2022 regional GVA carried to 2026 nominal at about 15% cumulative.
  */
 import type { State } from "@/lib/db/types";
 

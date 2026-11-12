@@ -23,6 +23,12 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { campaignAnchorToLocal, getCampaignCurrency } from "@/lib/campaigns/campaignCurrency";
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -55,11 +61,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const electionOid = resolved.election._id;
     // Exclude archived campaigns (primary losers / withdrawn) from this active
-    // list surface — they are retained for history but should not appear
-    // alongside the candidates still in the race. The direct /campaign/[id]
-    // page still renders an archived campaign for its owner.
-    const allCampaigns = await db
-      .collection<Campaign>("campaigns")
+    // list; the direct /campaign/[id] page still renders them for the owner.
+    const allCampaigns = await campaignsCollection(db)
       // activityHistory is not returned by this endpoint (see the privileged
       // payload below), so it must not be read either: this is a list query
       // over every campaign in the election, and a campaign now keeps 200
@@ -77,15 +80,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({ campaigns: [] });
     }
 
-    // Then narrow to candidates who are actually still standing. `status:
-    // "archived"` alone is not trustworthy here: it is bookkeeping that every
-    // withdrawal path has to remember to set, and several (party-switch sweeps,
-    // relocation, inactivity) historically did not — which left withdrawn
-    // candidates rendering on this list with a live campaign. The candidacy row
-    // is the real predicate and cannot drift, so it gates the list. Campaigns
-    // for active candidates are guaranteed to exist by selfHealMissingCampaigns.
-    const activeCandidacies = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    // Gate on an active candidacy row, not status: "archived", which withdrawal paths must remember to set and have historically missed, leaving withdrawn candidates with live campaigns. Self-heal guarantees campaigns exist for active candidates.
+    const activeCandidacies = await electionCandidatesCollection(db)
       .find({ electionId: electionOid, status: "active" })
       .project<{
         characterId: ObjectId | null;
@@ -157,34 +153,29 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Batch fetch all required data in parallel
     const [offices, characters, npps, managers, parties] = await Promise.all([
-      db
-        .collection<CampaignFieldOffice>("campaignFieldOffices")
+      campaignFieldOfficesCollection(db)
         .find(
           { campaignId: { $in: campaigns.map((c) => c._id) }, electionId: electionOid },
           { projection: { campaignId: 1 } }
         )
         .toArray(),
       characterIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: characterIds } })
             .toArray()
         : Promise.resolve([]),
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppIds } })
             .toArray()
         : Promise.resolve([]),
       managerIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: managerIds } })
             .toArray()
         : Promise.resolve([]),
       partyIds.size > 0
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find(
               { countryId: electionCountryId, sequentialId: { $in: Array.from(partyIds) } },
               { projection: { sequentialId: 1, name: 1, abbreviation: 1, color: 1 } }

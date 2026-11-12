@@ -1,39 +1,24 @@
 /**
- * Commit one play: validate it, pay for it, queue it.
+ * Commit one play: validate, take the guarded debit, charge the treasury,
+ * insert. Order is the correctness story.
  *
- * Everything lives here rather than in the route so it can be tested without
- * HTTP, and so the ordering below — which is the whole correctness story — is
- * in one readable place.
+ * Both debits are guarded `$inc`s whose filter restates the precondition, so a
+ * double-submit races on the write, not the read, and the loser spends nothing.
  *
- * ORDER MATTERS. Validate fully, then take the guarded debit, then charge the
- * treasury, then insert. Both debits are guarded `$inc`s whose filter restates
- * the precondition, so a double-submit races on the WRITE rather than on the
- * read and the loser spends nothing.
+ * NOT ATOMIC across the three writes; this repo does not use Mongo transactions
+ * on player action paths. Failure modes:
+ *   - guarded claim fails   → nothing spent or queued. Safe; the only outcome a
+ *                             concurrent double-submit can produce.
+ *   - `spendFromTreasury` throws → AP and capital gone, no play.
+ *   - `insertOne` throws    → AP, capital, treasury gone, no play.
+ * The last two require a DB outage mid-request. Money always moves before the
+ * effect exists, so a player can be over-charged and refunded but never get a
+ * free play. If transactions are ever added, wrap claim through insert.
  *
- * NOT ATOMIC ACROSS THE THREE WRITES, and deliberately so — this repo does not
- * use Mongo transactions anywhere on a player action path (see
- * `launchGovernmentProspect`, which takes the same claim → charge → write
- * shape). What that costs, stated plainly rather than left to be discovered:
- *
- *   - the guarded claim fails      → nothing is spent, nothing is queued. Safe,
- *                                    and this is the only failure a concurrent
- *                                    double-submit can actually produce.
- *   - `spendFromTreasury` throws   → seat AP and capital are gone, no play. The
- *                                    player is out a turn's budget.
- *   - `insertOne` throws           → AP, capital and treasury are gone, no play.
- *
- * The last two need a database outage mid-request, and the order is chosen so
- * money always moves BEFORE the effect exists: a player can be over-charged and
- * refunded, but can never get a free play. If this repo ever gains transactions,
- * wrap from the claim to the insert and delete this note.
- *
- * ONE EXCEPTION, on the personal path. A duplicate-key rejection from the
- * once-per-turn index is not an outage — it is the allowance doing its job when
- * two clicks race the count — so that case IS refunded rather than left
- * over-charged. There is no effect to have paid for.
+ * ONE EXCEPTION: on the personal path, a duplicate-key rejection from the
+ * once-per-turn index is refunded because there is no effect to have paid for.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import type { SettlementPaymentMode, SettlementPlayDoc } from "@/lib/db/types/settlementPlay";
 import { capitalPriceFor } from "../capitalPrice";
 import { getPlay, PERSONAL_PLAY_USES_PER_TURN } from "@/lib/constants/settlementCrisis";
@@ -43,6 +28,7 @@ import { spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { loadSettlementActorContext } from "../actorContext";
 import { resolvePersonalFunds, seatFundsLocal } from "../playCost";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CommitPlayInput {
   characterId: ObjectId;
@@ -97,7 +83,6 @@ export async function commitSettlementPlay(
   const capitalCharged = payment === "capital" ? capitalPriceFor(play) : play.capitalCost;
 
   const ctx = await loadSettlementActorContext(db, input.characterId);
-  if (!ctx) return fail(404, "The German Question is not running.");
   if (!ctx.crisisId) return fail(404, "No settlement crisis is open.");
 
   const crises = await getSettlementCrisesCollection(db);
@@ -141,19 +126,14 @@ export async function commitSettlementPlay(
     }
 
     // NO treasury pre-check. `treasuryBalance` is the SIGNED national cash
-    // position, separate from the bond-ledger `debt.principal` (refs #1975),
-    // so a `balance < cost` guard refused every funded play for any country
-    // already carrying a cash hole. That is what player suggestion
-    // S#308 reported.
+    // position, so a `balance < cost` guard would refuse every funded play
+    // for a country already carrying a cash hole.
     //
     // `spendFromTreasury` is built to borrow: it splits a spend into
-    // fromSurplus and addedToDebt, and its own contract says the treasury "is
-    // allowed to go negative — that is national debt". Borrowing is modelled
-    // through interestRate, creditRating and debtToGdpRatio. It is a
-    // consequence, not a refusal, and every other national payment in the app
-    // (org dues, aid, membership bills) already works this way.
-    // Capital mode pays nothing at all from the treasury. `seatFundsLocal` is
-    // not even consulted, so the two routes cannot both charge for one play.
+    // fromSurplus and addedToDebt, and its contract says the treasury "is
+    // allowed to go negative, that is national debt". Borrowing is modelled
+    // through interestRate, creditRating and debtToGdpRatio: a consequence,
+    // not a refusal. Capital mode pays nothing from the treasury.
     const fundsLocal = payment === "capital" ? 0 : seatFundsLocal(play);
 
     // Guarded debit. The filter restates the budget the context reported, so a
@@ -234,14 +214,12 @@ export async function commitSettlementPlay(
     return fail(409, "You have already used this play this turn. It resets next turn.");
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: input.characterId });
+  const character = await charactersCollection(db).findOne({ _id: input.characterId });
   if (!character) return fail(404, "Character not found.");
 
   const funds = await resolvePersonalFunds(db, character, play);
 
-  const debited = await db.collection<Character>("characters").updateOne(
+  const debited = await charactersCollection(db).updateOne(
     {
       _id: input.characterId,
       actions: { $gte: play.actionCost },
@@ -277,7 +255,7 @@ export async function commitSettlementPlay(
     // The debit already happened, so give it back. This is the one place the
     // file's usual ordering — money moves before the effect exists — has to be
     // undone, because there IS no effect to pay for.
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: input.characterId },
       {
         $inc: { actions: play.actionCost, [funds.field]: funds.local },

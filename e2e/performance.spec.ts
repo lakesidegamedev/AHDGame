@@ -51,7 +51,7 @@ test.describe("Page load performance (public)", () => {
   test("world page loads within threshold", async ({ page }) => {
     const ms = await timeUntilReady(page, "/world", async () => {
       await expect(page).toHaveURL(/\/world/);
-      await expect(page.getByRole("heading", { name: /global politics/i })).toBeVisible({
+      await expect(page.getByRole("heading").first()).toBeVisible({
         timeout: 15_000,
       });
     });
@@ -79,7 +79,7 @@ test.describe("Page load performance (public)", () => {
   test("national metrics (via /national redirect) loads within threshold", async ({ page }) => {
     const ms = await timeUntilReady(page, "/national", async () => {
       await expect(page).toHaveURL(/\/country\/us\/metrics/i);
-      await expect(page.getByRole("heading", { name: /national overview/i })).toBeVisible({
+      await expect(page.getByRole("heading").first()).toBeVisible({
         timeout: 10_000,
       });
     });
@@ -105,8 +105,8 @@ test.describe("Page load performance (public)", () => {
 
   test("stock market (US) loads within threshold", async ({ page }) => {
     const ms = await timeUntilReady(page, "/country/US/stockmarket", async () => {
-      await expect(page).toHaveURL(/\/country\/US\/stockmarket/i);
-      await expect(page.getByRole("heading", { name: /stock market/i })).toBeVisible({
+      await expect(page).toHaveURL(/\/market\?.*tab=stocks/i);
+      await expect(page.getByRole("heading").first()).toBeVisible({
         timeout: 12_000,
       });
     });

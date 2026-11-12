@@ -90,7 +90,7 @@ describe("POST /api/admin/alts/digest", () => {
     expect(runAltDigest).toHaveBeenCalledWith(
       {},
       expect.objectContaining({
-        adminUrl: "https://ahousedivided.example/admin?tab=players&sub=alts",
+        adminUrl: "https://ahousedivided.example/control/safety/alts",
       })
     );
   });

@@ -5,7 +5,7 @@ import {
   normalizeNationalMetricBoard,
   type ResetMetricSnapshot,
 } from "@/lib/resetMetrics/rules/snapshot";
-import type { SecedingCountryId } from "../subRegions";
+import type { ResetV2Successor } from "../subRegions";
 import { fiscalOwnerReadings, type FiscalOwnerInput } from "@/lib/resetMetrics/rules/fiscalOwner";
 import {
   clearCountrySources,
@@ -19,7 +19,7 @@ export interface SuccessorRegionSeed {
 }
 
 export function buildSuccessorMetricRows(input: {
-  countryId: SecedingCountryId;
+  countryId: ResetV2Successor;
   aggregate: ResetMetricSnapshot;
   national: ResetMetricSnapshot;
   regions: readonly SuccessorRegionSeed[];
@@ -113,7 +113,7 @@ export function buildSuccessorMetricRows(input: {
 }
 
 export function buildSuccessorRegionalRows(input: {
-  countryId: SecedingCountryId;
+  countryId: ResetV2Successor;
   aggregate: ResetRegionalOpeningBoard;
   regionalReferences: readonly OpeningLawReference[];
   regions: readonly SuccessorRegionSeed[];

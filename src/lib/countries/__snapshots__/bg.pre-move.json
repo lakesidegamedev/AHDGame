@@ -1773,7 +1773,6 @@
         "lockHomeState": true,
         "nppsPerState": 2
       },
-      "demographicProfileId": "bg_archetypes",
       "centralBank": {
         "name": "Bulgarian National Bank",
         "abbreviation": "BNB",

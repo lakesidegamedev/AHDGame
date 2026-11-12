@@ -173,8 +173,12 @@ export const BANKING_SEPARATION_SPECS: readonly BankingSeparationSpec[] = [
   },
 ];
 
-export const bankingSeparationLegislationTypes: LegislationType[] =
-  BANKING_SEPARATION_SPECS.map(makeBankingSeparationType);
+/** Countries whose charter structure is not a legislated choice. */
+const NO_CHARTER_BILL_SCOPES: ReadonlySet<string> = new Set(["us", "uk", "ru", "dd"]);
+
+export const bankingSeparationLegislationTypes: LegislationType[] = BANKING_SEPARATION_SPECS.filter(
+  (spec) => !NO_CHARTER_BILL_SCOPES.has(spec.scope)
+).map(makeBankingSeparationType);
 
 export const BANKING_SEPARATION_TYPE_IDS: readonly string[] = bankingSeparationLegislationTypes.map(
   (t) => t._id

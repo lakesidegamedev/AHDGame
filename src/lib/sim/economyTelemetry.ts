@@ -17,39 +17,51 @@ import {
 } from "@/lib/actions";
 import { getGdpBaseline } from "@/lib/utils/fundGeneration";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
+import { commodityPriceHistoryCollection } from "@/lib/db/repositories/commodityPriceHistory";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { ledgerReconciliationsCollection } from "@/lib/db/repositories/ledgerReconciliations";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
 
 /**
- * Post-run economy telemetry for the #2159 program acceptances
- * (#968, #991, #992, #2119, #2120, #2122).
+ * Post-run economy telemetry.
  *
- * Collected ONCE per sim run, after turn processing completes
- * (see collectBalanceMetrics), so it costs the turn hot path nothing.
- * Every section is independently best-effort: a missing/empty collection
- * yields a zeroed section with `available: false` and a `note`, never a
- * throw. All filtering/grouping happens in JS over projected finds so the
- * collectors stay portable across real and fake DBs; the committed test
- * fake honors Mongo-style query filters, so any predicate later pushed
- * into a query is actually exercised instead of passing silently.
+ * Collected ONCE per sim run, after turn processing completes, so it costs the
+ * turn hot path nothing. Every section is independently best-effort: a missing
+ * or empty collection yields a zeroed section with `available: false` and a
+ * `note`, never a throw. All filtering and grouping happens in JS over projected
+ * finds so collectors stay portable across real and fake DBs; the committed test
+ * fake honors Mongo-style query filters, so pushed-down predicates are actually
+ * exercised.
  *
- * Two deliberate non-goals, documented so a missing gate is never mistaken
- * for a passing one:
- * - #991 resident-vs-local-producer demand classification: no persisted
- *   field distinguishes them in this tree, so coverage reports presence
- *   only and says so explicitly.
- * - #991 NPP-entry rejection reasons: no funnel/rejection rows exist in
- *   this tree, so the section reports availability only.
+ * Two deliberate non-goals, so a missing gate is never mistaken for a passing
+ * one:
+ * - Resident-vs-local-producer demand classification: no persisted field
+ *   distinguishes them, so coverage reports presence only.
+ * - NPP-entry rejection reasons: no funnel or rejection rows exist, so the
+ *   section reports availability only.
  */
 
-/** Number of trailing reconciliation turns retained (#992: 12-turn gate + margin). */
+/** Number of trailing reconciliation turns retained (: 12-turn gate + margin). */
 export const RECON_TRAILING_TURNS = 16;
 /** Trailing window for fund / commodity means. */
 export const TRAILING_TURNS = 12;
 
 /**
- * Fragile-market set for #991 supplier breadth/fill. No canonical
- * FRAGILE_COMMODITIES constant exists in this tree; the set is taken
- * verbatim from #991's gate text (advertising, fertilizers, freight,
- * rare earths) so the report can express the gate metric.
+ * Fragile-market set for supplier breadth/fill reporting. No canonical
+ * FRAGILE_COMMODITIES constant exists in this tree; these four commodities
+ * are the ones the gate metric treats as fragile.
  */
 export const FRAGILE_COMMODITIES: readonly string[] = [
   "advertising",
@@ -215,7 +227,7 @@ export interface EconomyTelemetry {
   eraCosts: EraCostTelemetry;
   coverage: CoverageTelemetry;
   market: MarketTelemetry;
-  /** Forex orders, trades and rate attribution (#2293); absent on older runs. */
+  /** Forex orders, trades and rate attribution; absent on older runs. */
   forex?: ForexActivityRecord | null;
 }
 
@@ -314,8 +326,7 @@ function emptyMarket(note: string): MarketTelemetry {
 }
 
 async function collectReconciliation(db: Db): Promise<ReconciliationTelemetry> {
-  const docs = await db
-    .collection("ledgerReconciliations")
+  const docs = await ledgerReconciliationsCollection<Document>(db)
     .find(
       {},
       {
@@ -402,26 +413,22 @@ const FUND_FLOW_KINDS = [
 
 async function collectFunds(db: Db, currentTurn: number): Promise<FundTelemetry> {
   const [txs, queue, positions, funds, config] = await Promise.all([
-    db
-      .collection("indexFundTransactions")
+    indexFundTransactionsCollection<Document>(db)
       .find({}, { projection: { kind: 1, turn: 1, amountAnchor: 1 } })
       .toArray(),
-    db
-      .collection("indexFundRedemptionQueue")
+    indexFundRedemptionQueueCollection<Document>(db)
       .find(
         {},
         { projection: { status: 1, units: 1, requestedAmountAnchor: 1, paidAmountAnchor: 1 } }
       )
       .toArray(),
-    db
-      .collection("indexFundPositions")
+    indexFundPositionsCollection<Document>(db)
       .find({}, { projection: { fundId: 1, units: 1 } })
       .toArray(),
-    db
-      .collection("indexFunds")
+    indexFundsCollection<Document>(db)
       .find({}, { projection: { _id: 1 } })
       .toArray(),
-    db.collection("gameConfig").findOne({ _id: "default" as never }),
+    gameConfigCollection<Document>(db).findOne({ _id: "default" as never }),
   ]);
   if (txs.length === 0 && queue.length === 0 && positions.length === 0) {
     return emptyFunds(
@@ -511,12 +518,10 @@ function ceoClassOf(ceoType: unknown): CeoClass {
 
 async function collectCorpHealth(db: Db): Promise<CorpHealthTelemetry> {
   const [corps, sectors] = await Promise.all([
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .find({}, { projection: { type: 1, ceoType: 1, liquidCapital: 1, suspended: 1 } })
       .toArray(),
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .find(
         {},
         {
@@ -588,11 +593,12 @@ async function collectCorpHealth(db: Db): Promise<CorpHealthTelemetry> {
 }
 
 async function collectEraCosts(db: Db): Promise<EraCostTelemetry> {
-  const gs = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const g = (gs ?? {}) as Record<string, unknown>;
-  const config = await db
-    .collection("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { campaignEraPriceLevelEnabled: 1 } });
+  const config = await gameConfigCollection<Document>(db).findOne(
+    { _id: "default" as never },
+    { projection: { campaignEraPriceLevelEnabled: 1 } }
+  );
   const rawFlag = config?.campaignEraPriceLevelEnabled;
   const preset = typeof g["preset"] === "string" ? g["preset"] : undefined;
   const priceLevel = resolveCampaignPriceLevel(rawFlag, preset);
@@ -639,8 +645,7 @@ async function collectEraCosts(db: Db): Promise<EraCostTelemetry> {
 
 async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
   const [sectors, commodities, vitalSigns] = await Promise.all([
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .find(
         {},
         {
@@ -655,11 +660,10 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
         }
       )
       .toArray(),
-    db
-      .collection("commodityPrices")
+    commodityPricesCollection<Document>(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
-    db.collection("economicVitalSigns").findOne({}, { sort: { turn: -1 } }),
+    economicVitalSignsCollection<Document>(db).findOne({}, { sort: { turn: -1 } }),
   ]);
   const base = emptyCoverage("corporateSectors is empty.");
   const rawFunnel = (vitalSigns?.marketFormation as Record<string, unknown> | undefined)
@@ -688,7 +692,11 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
   if (sectors.length === 0) return { ...base, entryRejectionFunnel };
   const present = new Set<string>();
   for (const s of sectors) {
-    if (s.countryId === "US" && typeof s.stateId === "string" && typeof s.sectorType === "string") {
+    if (
+      countryHasFeature("usTurn", s.countryId) &&
+      typeof s.stateId === "string" &&
+      typeof s.sectorType === "string"
+    ) {
       present.add(
         `${s.stateId}:${getOperatingSectorType(s.sectorType, s.industryModel, s.mediaDiscriminator)}`
       );
@@ -707,7 +715,7 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
   // Same US-only population as presence/empty combos above: non-US rows
   // carry different market structures and must not move the US mean.
   const usFractions = sectors
-    .filter((s) => s.countryId === "US")
+    .filter((s) => countryHasFeature("usTurn", s.countryId))
     .map((s) => s.soldFraction)
     .filter((v): v is number => typeof v === "number");
   const meanSold = usFractions.length
@@ -745,20 +753,16 @@ async function collectCoverage(db: Db): Promise<CoverageTelemetry> {
 
 async function collectMarket(db: Db): Promise<MarketTelemetry> {
   const [sectors, commodities, history, bonds, listings, gs] = await Promise.all([
-    db
-      .collection("corporateSectors")
+    corporateSectorsCollection<Document>(db)
       .find({}, { projection: { soldFraction: 1, priceRealization: 1 } })
       .toArray(),
-    db
-      .collection("commodityPrices")
+    commodityPricesCollection<Document>(db)
       .find({}, { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
-    db
-      .collection("commodityPriceHistory")
+    commodityPriceHistoryCollection<Document>(db)
       .find({}, { projection: { turn: 1, globalSupply: 1, globalDemand: 1 } })
       .toArray(),
-    db
-      .collection("bonds")
+    bondsCollection(db)
       .find(
         {},
         {
@@ -772,11 +776,10 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
         }
       )
       .toArray(),
-    db
-      .collection("shareListings")
+    shareListingsCollection<Document>(db)
       .find({}, { projection: { status: 1, sharesListed: 1, sharesRemaining: 1 } })
       .toArray(),
-    db.collection("gameState").findOne({ _id: "current" as never }),
+    gameStateCollection<Document>(db).findOne({ _id: "current" as never }),
   ]);
   if (
     sectors.length === 0 &&
@@ -883,8 +886,7 @@ async function collectMarket(db: Db): Promise<MarketTelemetry> {
  * already-completed run's metrics step.
  */
 export async function collectEconomyTelemetry(db: Db): Promise<EconomyTelemetry> {
-  const gs = await db
-    .collection("gameState")
+  const gs = await gameStateCollection<Document>(db)
     .findOne({ _id: "current" as never })
     .catch(() => null);
   const currentTurn = num((gs as Record<string, unknown> | null)?.["currentTurn"]);

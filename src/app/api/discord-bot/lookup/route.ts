@@ -16,10 +16,17 @@ import type {
   State,
   ElectionCandidate,
   Election,
-  Corporation,
   InvestorRankingSnapshot,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -53,15 +60,14 @@ export async function GET(request: Request) {
 
     if (discordId) {
       // Find user by Discord ID, then their character
-      const user = await db.collection<User>("users").findOne({ discordId });
+      const user = await usersCollection(db).findOne({ discordId });
       if (user) {
-        const char = await db.collection<Character>("characters").findOne({ userId: user._id });
+        const char = await charactersCollection(db).findOne({ userId: user._id });
         if (char) characters = [char];
       }
     } else if (name) {
       // Search by character name (case-insensitive, partial match)
-      characters = await db
-        .collection<Character>("characters")
+      characters = await charactersCollection(db)
         .find({
           name: { $regex: escapeRegex(name), $options: "i" },
         })
@@ -100,8 +106,7 @@ export async function GET(request: Request) {
 
     const [parties, states, userDocs, activeCandidacies] = await Promise.all([
       partyLookups.length > 0
-        ? db
-            .collection<PoliticalParty>("politicalParties")
+        ? politicalPartiesCollection(db)
             .find({
               $or: partyLookups.map((l) => ({
                 countryId: l.countryId,
@@ -110,12 +115,10 @@ export async function GET(request: Request) {
             })
             .toArray()
         : Promise.resolve([]),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ _id: { $in: stateIds } })
         .toArray(),
-      db
-        .collection<UserProjection>("users")
+      usersCollection<UserProjection>(db)
         .find({ _id: { $in: userIds } })
         .project<UserProjection>({
           _id: 1,
@@ -125,8 +128,7 @@ export async function GET(request: Request) {
           isBanned: 1,
         })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ characterId: { $in: characterIds }, status: "active" })
         .toArray(),
     ]);
@@ -135,8 +137,7 @@ export async function GET(request: Request) {
     const activeElectionIds = (activeCandidacies as ElectionCandidate[]).map((c) => c.electionId);
     const activeElections =
       activeElectionIds.length > 0
-        ? await db
-            .collection<Pick<Election, "_id" | "electionType" | "state">>("elections")
+        ? await electionsCollection<Pick<Election, "_id" | "electionType" | "state">>(db)
             .find(
               { _id: { $in: activeElectionIds } },
               { projection: { electionType: 1, state: 1 } }
@@ -162,8 +163,7 @@ export async function GET(request: Request) {
     // This avoids scanning all corporations for a single profile lookup
     const corporations =
       characterIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ ceoId: { $in: characterIds }, ceoVacant: { $ne: true } })
             .project<{
               _id: import("mongodb").ObjectId;
@@ -181,9 +181,9 @@ export async function GET(request: Request) {
 
     // Get portfolio values and investor rankings from pre-computed snapshot
     // This is generated once per turn and avoids scanning all corporations
-    const investorSnapshot = await db
-      .collection<InvestorRankingSnapshot>("investorRankingSnapshots")
-      .findOne({ _id: "global" });
+    const investorSnapshot = await investorRankingSnapshotsCollection(db).findOne({
+      _id: "global",
+    });
 
     const portfolioValues = new Map<string, number>();
     const investorRankMap = new Map<string, number>();

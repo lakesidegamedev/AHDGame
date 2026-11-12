@@ -35,8 +35,8 @@ import {
   shiftDirection,
   type IntraGroupPosition,
 } from "./transferPricing";
-
-const AGREEMENTS = "supplyAgreements";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 
 export interface TransferPricingResult {
   positionsTracked: number;
@@ -68,8 +68,7 @@ export async function applyTransferPricingAudit(
     corpIds.add(p.supplierCorpId);
     corpIds.add(p.buyerCorpId);
   }
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...corpIds].map((id) => new ObjectId(id)) } })
     .project<Pick<Corporation, "_id" | "name" | "countryId" | "userId" | "liquidCurrencyCode">>({
       name: 1,
@@ -126,9 +125,8 @@ export async function applyTransferPricingAudit(
       },
     })
   );
-  await db.collection<SupplyAgreement>(AGREEMENTS).bulkWrite(accrualOps, { ordered: true });
-  const exposureDocs = await db
-    .collection<SupplyAgreement>(AGREEMENTS)
+  await supplyAgreementsCollection<SupplyAgreement>(db).bulkWrite(accrualOps, { ordered: true });
+  const exposureDocs = await supplyAgreementsCollection<SupplyAgreement>(db)
     .find(
       { _id: { $in: tracked.map(({ premium }) => new ObjectId(premium.agreementId)) } },
       { projection: { transferPricingExposureAnchor: 1 } }
@@ -221,7 +219,7 @@ export async function applyTransferPricingAudit(
         });
       }
 
-      await db.collection<SupplyAgreement>(AGREEMENTS).updateOne(
+      await supplyAgreementsCollection<SupplyAgreement>(db).updateOne(
         { _id: new ObjectId(premium.agreementId) },
         {
           $set: {

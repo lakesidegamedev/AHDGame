@@ -10,6 +10,11 @@ import { createResetRunRecord } from "./resetRunRecord";
 import { captureSeedBaseline, formatDiagnosticSummary, runSeedDiagnostic } from "./seedDiagnostic";
 import { seedPartylessFoundingCandidates } from "@/lib/npp/seedPartylessFoundingCandidates";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 
 const EMPTY_COLLECTIONS = [
   "characters",
@@ -27,9 +32,9 @@ export class BootstrapRecoveryConflict extends Error {}
 
 export async function preview1991BootstrapRecovery(db: Db, runId: string) {
   const [state, config, audit, counts] = await Promise.all([
-    db.collection("gameState").findOne({ _id: "current" as never }),
-    db.collection("gameConfig").findOne({ _id: "default" as never }),
-    db.collection("adminLogs").findOne({ "resetRun.runId": runId }),
+    gameStateCollection<Document>(db).findOne({ _id: "current" as never }),
+    gameConfigCollection<Document>(db).findOne({ _id: "default" as never }),
+    adminLogsCollection<Document>(db).findOne({ "resetRun.runId": runId }),
     Promise.all(
       EMPTY_COLLECTIONS.map(
         async (name) => [name, await db.collection(name).countDocuments()] as const
@@ -78,7 +83,7 @@ export async function preview1991BootstrapRecovery(db: Db, runId: string) {
       `Recovery runtime is not empty: ${occupied.map(([name, count]) => `${name}=${count}`).join(", ")}`
     );
   }
-  const unownedSectors = await db.collection("unownedSectors").countDocuments();
+  const unownedSectors = await unownedSectorsCollection<Document>(db).countDocuments();
   if (unownedSectors > 10000)
     throw new BootstrapRecoveryConflict("Stale market pool exceeds recovery cap");
   return {
@@ -95,7 +100,7 @@ export async function recover1991Bootstrap(
   options: { runId: string; adminUsername: string; log?: (line: string) => void }
 ) {
   await preview1991BootstrapRecovery(db, options.runId);
-  const claimed = await db.collection("gameConfig").updateOne(
+  const claimed = await gameConfigCollection<Document>(db).updateOne(
     {
       _id: "default" as never,
       "lastReset.runId": options.runId,
@@ -117,7 +122,7 @@ export async function recover1991Bootstrap(
   let aborted = false;
   const auditId = new ObjectId();
   try {
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       _id: auditId,
       category: "system",
       action: "game_reset_recovery",
@@ -127,9 +132,9 @@ export async function recover1991Bootstrap(
     });
     // This pool survived the reference/runtime split. All economic owners and
     // player runtime were verified empty above; bootstrap rebuilds the pool.
-    const cleared = await db.collection("unownedSectors").deleteMany({});
+    const cleared = await unownedSectorsCollection<Document>(db).deleteMany({});
     log(`Recovery cleared ${cleared.deletedCount} stale unowned markets; teardown is not repeated`);
-    const clock = await db.collection("gameState").updateOne(
+    const clock = await gameStateCollection<Document>(db).updateOne(
       {
         _id: "current" as never,
         preset: "1991-default",
@@ -212,7 +217,7 @@ export async function recover1991Bootstrap(
     throw error;
   } finally {
     const status = run.status(aborted);
-    await db.collection("gameConfig").updateOne(
+    await gameConfigCollection<Document>(db).updateOne(
       {
         _id: "default" as never,
         "lastReset.runId": options.runId,
@@ -227,7 +232,7 @@ export async function recover1991Bootstrap(
         },
       }
     );
-    await db.collection("adminLogs").updateOne(
+    await adminLogsCollection<Document>(db).updateOne(
       { _id: auditId },
       {
         $set: {
@@ -239,7 +244,7 @@ export async function recover1991Bootstrap(
         },
       }
     );
-    await db.collection("adminLogs").updateOne(
+    await adminLogsCollection<Document>(db).updateOne(
       { "resetRun.runId": options.runId },
       {
         $set: {

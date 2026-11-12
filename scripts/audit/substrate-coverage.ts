@@ -5,7 +5,7 @@
  *
  * Prints one line per country and a full listing of every region/era that has
  * no substrate. A gap here is a region that renders and votes today only
- * because the legacy archetype documents catch it; delete those and the same
+ * because the legacy voter-group documents catch it; delete those and the same
  * region has no electorate at all. The permanent version of this check is
  * `src/lib/demographics/substrateCoverage.test.ts` — this script exists for the
  * reviewable table, not the pass/fail.

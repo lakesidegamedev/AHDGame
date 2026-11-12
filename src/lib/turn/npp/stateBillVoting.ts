@@ -10,6 +10,9 @@ import {
 } from "./crossPressure";
 import { ADDRESS_AGENDA_FORCE_BIAS } from "@/lib/constants/governorOffice";
 import { cabinetDisciplineForParty } from "@/lib/resetCabinet/loadDiscipline";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
 const LOCAL_BILL_FORCE_WEIGHTS = {
   ideology: 1,
@@ -61,8 +64,7 @@ export async function processStateBillVoting(ctx: NPPContext): Promise<number> {
   const stateIdsWithBills = [...new Set(activeStateBills.map((b) => b.stateId))];
   const addressesByState = new Map<string, { partyId: string; categories: Set<string> }[]>();
   if (stateIdsWithBills.length > 0) {
-    const activeAddresses = await db
-      .collection<GovernorAddress>("governorAddresses")
+    const activeAddresses = await governorAddressesCollection(db)
       .find({
         stateId: { $in: stateIdsWithBills },
         "agendaEffect.expiresAtTurn": { $gt: currentTurn },
@@ -214,12 +216,13 @@ export async function processStateBillVoting(ctx: NPPContext): Promise<number> {
       incFields.votesAbstain = incAbstain;
     }
 
-    await db
-      .collection<StateBill>("stateBills")
-      .updateOne({ _id: bill._id }, { $set: setFields, $inc: incFields });
+    await stateBillsCollection(db).updateOne(
+      { _id: bill._id },
+      { $set: setFields, $inc: incFields }
+    );
 
     if (predictionOps.length > 0) {
-      await db.collection<NPPVotePrediction>("nppVotePredictions").bulkWrite(
+      await nppVotePredictionsCollection(db).bulkWrite(
         predictionOps.map((op) => ({
           updateOne: {
             filter: { nppId: op.nppId, stateBillId: bill._id },

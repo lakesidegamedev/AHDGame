@@ -16,6 +16,10 @@ import {
   isValidSuperShareMultiplier,
   totalVotingPower,
 } from "@/lib/corporations/superShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
+import type { Document } from "mongodb";
 
 export type VoteOutcome = "passed" | "failed" | "open" | "cancelled";
 
@@ -109,7 +113,7 @@ export async function openCorporationVote(opts: {
     }
   }
 
-  const existingVote = await db.collection<CorporationVote>("corporationVotes").findOne({
+  const existingVote = await corporationVotesCollection(db).findOne({
     corporationId: corporation._id,
     status: "open",
   });
@@ -124,7 +128,7 @@ export async function openCorporationVote(opts: {
     };
   }
 
-  const privatizationVote = await db.collection("corporationPrivatizationVotes").findOne({
+  const privatizationVote = await corporationPrivatizationVotesCollection<Document>(db).findOne({
     corporationId: corporation._id,
     status: "open",
   });
@@ -153,9 +157,7 @@ export async function openCorporationVote(opts: {
     updatedAt: now,
   };
 
-  const result = await db
-    .collection<Omit<CorporationVote, "_id">>("corporationVotes")
-    .insertOne(doc);
+  const result = await corporationVotesCollection<Omit<CorporationVote, "_id">>(db).insertOne(doc);
   return { ok: true, voteId: result.insertedId.toHexString() };
 }
 
@@ -184,7 +186,7 @@ export async function castCorporationVote(opts: {
     castAt: new Date(),
   };
 
-  await db.collection<CorporationVote>("corporationVotes").updateOne({ _id: vote._id }, [
+  await corporationVotesCollection(db).updateOne({ _id: vote._id }, [
     {
       $set: {
         votes: {
@@ -205,12 +207,10 @@ export async function cancelCorporationVote(opts: {
   vote: CorporationVote;
 }): Promise<void> {
   const now = new Date();
-  await opts.db
-    .collection<CorporationVote>("corporationVotes")
-    .updateOne(
-      { _id: opts.vote._id },
-      { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
-    );
+  await corporationVotesCollection(opts.db).updateOne(
+    { _id: opts.vote._id },
+    { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
+  );
 }
 
 /**
@@ -237,7 +237,7 @@ export async function resolveCorporationVoteIfReady(opts: {
     vote.totalEligibleSharesAtOpen !== totalEligibleShares
   ) {
     const now = new Date();
-    const claim = await db.collection<CorporationVote>("corporationVotes").updateOne(
+    const claim = await corporationVotesCollection(db).updateOne(
       { _id: vote._id, status: "open" },
       {
         $set: {
@@ -277,9 +277,7 @@ export async function resolveCorporationVoteIfReady(opts: {
   // holder; passive ones mirror the majority actually cast; a fund with neither
   // abstains AND drops out of the denominator, because measuring a threshold
   // against shares nobody can cast is what caused the deadlock.
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: vote.corporationId });
+  const corporation = await corporationsCollection(db).findOne({ _id: vote.corporationId });
   const stewardship = corporation
     ? await resolveFundStewardship(db, {
         corporation,
@@ -313,12 +311,10 @@ export async function resolveCorporationVoteIfReady(opts: {
   // Atomic claim: only one caller wins the open→terminal transition. The
   // loser sees matchedCount === 0 and must not apply side effects.
   const now = new Date();
-  const claim = await db
-    .collection<CorporationVote>("corporationVotes")
-    .updateOne(
-      { _id: vote._id, status: "open" },
-      { $set: { status: outcome, resolvedAt: now, updatedAt: now } }
-    );
+  const claim = await corporationVotesCollection(db).updateOne(
+    { _id: vote._id, status: "open" },
+    { $set: { status: outcome, resolvedAt: now, updatedAt: now } }
+  );
   if (claim.matchedCount > 0) {
     await captureServerGameEvent({
       db,

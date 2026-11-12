@@ -1,3 +1,4 @@
+import { vacateBannedOfficerSeats } from "@/lib/parties/bannedOfficers";
 import { NextResponse } from "next/server";
 import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
 import { getDb, getMongoClient } from "@/lib/mongodb";
@@ -8,7 +9,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseObjectId } from "@/lib/utils/objectId";
 import { parseJsonBody } from "@/lib/api/validate";
 import { sendFundsSchema } from "@/lib/api/schemas/send";
-import type { StatePartyOrg, Character, AdminLog } from "@/lib/db/types";
+import type { StatePartyOrg, AdminLog } from "@/lib/db/types";
 import {
   findPartyBySequentialId,
   getPartyIdString,
@@ -34,6 +35,11 @@ import {
 import { getGameTime } from "@/lib/time/gameTime";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -84,13 +90,15 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db.collection<StatePartyOrg>("statePartyOrg").findOne({
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({
       _id: statePartyKey,
     });
 
     if (!statePartyOrg) {
       return errorResponse(404, "State party not found");
     }
+    await vacateBannedOfficerSeats(db, statePartyOrg);
+    await vacateBannedOfficerSeats(db, party);
 
     // Check authorization: admin, national chair, state chair, vice chair, or state treasurer
     const isAdmin = authUser.isAdmin;
@@ -116,7 +124,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify target character exists and is a member of this state party
-    const targetCharacter = await db.collection<Character>("characters").findOne({
+    const targetCharacter = await charactersCollection(db).findOne({
       _id: targetCharacterOid,
     });
 
@@ -190,19 +198,23 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne({ _id: statePartyKey, treasury: { $gte: sendAmount } }, statePartyDebit, {
+      const debitResult = await statePartyOrgCollection(db).updateOne(
+        { _id: statePartyKey, treasury: { $gte: sendAmount } },
+        statePartyDebit,
+        {
           session,
-        });
+        }
+      );
 
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient treasury funds");
       }
 
-      const creditResult = await db
-        .collection<Character>("characters")
-        .updateOne({ _id: targetCharacterOid }, characterCredit, { session });
+      const creditResult = await charactersCollection(db).updateOne(
+        { _id: targetCharacterOid },
+        characterCredit,
+        { session }
+      );
 
       if (creditResult.matchedCount === 0) {
         throw notFound("Character not found");
@@ -210,26 +222,23 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne({ _id: statePartyKey, treasury: { $gte: sendAmount } }, statePartyDebit);
+      const debitResult = await statePartyOrgCollection(db).updateOne(
+        { _id: statePartyKey, treasury: { $gte: sendAmount } },
+        statePartyDebit
+      );
 
       if (debitResult.matchedCount === 0) {
         return errorResponse(400, "Insufficient treasury funds");
       }
 
-      // The debit has landed and there is no transaction to roll back, so
-      // every exit from here on must either complete the credit or put the
-      // money back. A THROWN credit was previously not compensated at all:
-      // it escaped with the treasury already short.
+      // Debit has landed with no transaction to roll back, so every exit from
+      // here must either complete the credit or refund.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
-          const refundResult = await db
-            .collection<StatePartyOrg>("statePartyOrg")
-            .updateOne(
-              { _id: statePartyKey },
-              { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
-            );
+          const refundResult = await statePartyOrgCollection(db).updateOne(
+            { _id: statePartyKey },
+            { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
+          );
           if (refundResult.matchedCount !== 1) {
             throw new Error("State party treasury no longer exists during refund");
           }
@@ -260,9 +269,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       let creditResult;
       try {
-        creditResult = await db
-          .collection<Character>("characters")
-          .updateOne({ _id: targetCharacterOid }, characterCredit);
+        creditResult = await charactersCollection(db).updateOne(
+          { _id: targetCharacterOid },
+          characterCredit
+        );
       } catch (creditError) {
         await refundDebit("credit threw", creditError);
         throw creditError;
@@ -308,7 +318,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       adminUsername: authUser.username,
       details: `Sent $${sendAmount.toLocaleString()} from ${stateId} ${party.name} treasury to ${targetCharacter.name}${reserveWarning ? ` (${reserveWarning})` : ""}`,
     };
-    await db.collection<AdminLog>("adminLogs").insertOne(adminLog);
+    await adminLogsCollection(db).insertOne(adminLog);
 
     await emitTreasuryTransaction({
       db,
@@ -325,10 +335,6 @@ export async function POST(request: Request, { params }: RouteParams) {
         id: targetCharacterOid.toString(),
         label: targetCharacter.name,
       },
-      // This route previously recorded no initiator, so every state party
-      // payout in the ledger reads as system-generated and there is no
-      // way to see who moved the money. The national and caucus send
-      // routes both record it; this one should too.
       initiatedBy: authUser.character
         ? {
             type: "character" as const,
@@ -344,7 +350,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Fire-and-forget: log fund flow for admin activity tracking
     if (authUser.character) {
-      void db.collection("activityLog").insertOne({
+      void activityLogCollection<Document>(db).insertOne({
         type: "fund_event",
         timestamp: now,
         userId: new ObjectId(authUser.userId),

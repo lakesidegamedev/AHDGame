@@ -7,7 +7,6 @@ import { isSoloCharterTestingEnabled } from "@/lib/deploymentIdentity";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
 import type {
-  Character,
   FoundingCohortPick,
   PartyCharter,
   PartyCharterPlatform,
@@ -25,6 +24,10 @@ import { deParties } from "@/lib/seeds/de/deParties";
 import { jpParties } from "@/lib/countries/jp/data/jpParties";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import { retainsDefaultPartyNameReservation } from "./rules/defaultNameReservation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
  * Names + abbreviations reserved for preset-gated default parties (e.g.
@@ -49,26 +52,14 @@ const PRESET_RESERVED_DEFAULTS: ReadonlyArray<{
   }));
 
 /**
- * Phase 6 — create a new charter draft.
+ * Phase 6: create a new charter draft.
  *
- * Input is the new third party's metadata + 3 founder characterIds (humans
- * only — each character must have an owning `userId`; NPPs live in a
- * separate collection and never qualify per D3). The draft starts in
- * `pending-signatures` — ready for the listed founders to sign / reject.
- * The character that matches `proposedBy` is treated as the proposer and
- * implicitly auto-signs at draft creation.
+ * Founders are 3 human characterIds (each must have an owning `userId`;
+ * NPPs never qualify). The draft starts in `pending-signatures`; the founder
+ * matching `proposedBy` auto-signs. Founders are keyed by characterId so one
+ * user can hold multiple slots via different characters.
  *
- * Founder identity moved from `userId` to `characterId` so a single user
- * can hold multiple founder slots through different characters (multi-
- * character accounts, admin testing). The Phase 6 D3 unique-founder rule
- * is now a unique-character rule, which is strictly equal in production
- * (one character per user per country in normal play) and strictly more
- * permissive for multi-persona play.
- *
- * Idempotency: caller (the API route) is responsible for not double-
- * submitting. This command always creates a new charter row.
- *
- * See plan §"Phase 6 — Tasks" 6.2 and §D6.
+ * Not idempotent: caller must not double-submit; this always inserts a row.
  */
 export interface DraftCharterInput {
   countryId: CountryId;
@@ -132,8 +123,7 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
   // real `userId` (humans only), and belong to the charter's country.
   // Also load `homeState` so founder adjacency and the F4 founding-cohort
   // picks can be validated against the proposer's adjacency.
-  const founderCharacters = await db
-    .collection<Character>("characters")
+  const founderCharacters = await charactersCollection(db)
     .find({ _id: { $in: founders } })
     .project<{
       _id: ObjectId;
@@ -158,7 +148,7 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
     return { ok: false, reason: "founder-wrong-country" };
   }
 
-  // Founder adjacency (2026-07-22): every co-founder must live in the
+  // Founder adjacency: every co-founder must live in the
   // proposer's home state or a state adjacent to it — the party's founding
   // trio is geographically anchored the same way the F4 NPP cohort is.
   // Skipped when the proposer has no homeState (legacy seed data), matching
@@ -183,19 +173,17 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
   // simultaneous drafts from racing to ratify the same name.
   const nameRegex = new RegExp(`^${escapeRegex(input.proposedName)}$`, "i");
   const upperAbbr = input.proposedAbbr.toUpperCase();
-  const livePartyConflict = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { countryId: input.countryId, $or: [{ name: nameRegex }, { abbreviation: upperAbbr }] },
-      { projection: { name: 1, abbreviation: 1 } }
-    );
+  const livePartyConflict = await politicalPartiesCollection(db).findOne(
+    { countryId: input.countryId, $or: [{ name: nameRegex }, { abbreviation: upperAbbr }] },
+    { projection: { name: 1, abbreviation: 1 } }
+  );
   if (livePartyConflict) {
     if (livePartyConflict.abbreviation === upperAbbr) {
       return { ok: false, reason: "abbreviation-taken" };
     }
     return { ok: false, reason: "name-taken" };
   }
-  const liveCharterConflict = await db.collection<PartyCharter>("partyCharters").findOne(
+  const liveCharterConflict = await partyChartersCollection(db).findOne(
     {
       countryId: input.countryId,
       status: { $in: ["draft", "pending-signatures", "founder-replacement"] },
@@ -222,12 +210,10 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
   let reservationGame:
     Pick<GameState, "preset" | "startingPartiesMode" | "currentTurn"> | null | undefined;
   if (reservedConflict) {
-    reservationGame = await db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, startingPartiesMode: 1, currentTurn: 1 } }
-      );
+    reservationGame = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, startingPartiesMode: 1, currentTurn: 1 } }
+    );
     const emptyStart =
       reservationGame?.preset === "1991-default" && reservationGame.startingPartiesMode === "none";
     const playerCountry =
@@ -269,9 +255,9 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
     input.currentTurn ??
     reservationGame?.currentTurn ??
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
+        _id: "current",
+      })
     )?.currentTurn ??
     null;
   const expiresOnTurn = currentTurn != null ? computeCharterDeadlineTurn(currentTurn) : null;
@@ -303,7 +289,7 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
     updatedAt: now,
   };
 
-  await db.collection<PartyCharter>("partyCharters").insertOne(charter);
+  await partyChartersCollection(db).insertOne(charter);
 
   // Notify each non-proposer founder that they've been invited. The
   // proposer is already auto-signed, so they don't need a nudge.

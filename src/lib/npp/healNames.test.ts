@@ -59,7 +59,21 @@ describe("isNameFromCountryPool", () => {
     // Italian names, which made the heal rename them on every run, to another
     // name that could be compound again. Exhaustive over the pools rather than
     // sampled, so it cannot pass by luck the way the randomised heal test did.
-    for (const countryId of ["IT", "FR", "PL", "ES", "RU", "SE", "TR", "CN", "JP"]) {
+    for (const countryId of [
+      "IT",
+      "FR",
+      "PL",
+      "ES",
+      "RU",
+      "SE",
+      "TR",
+      "CN",
+      "JP",
+      "AT",
+      "GR",
+      "FI",
+      "UKR",
+    ]) {
       for (let i = 0; i < 300; i++) {
         const generated = generateUniqueNPPNameAndGender([], 200, countryId);
         if (!generated) continue;
@@ -71,11 +85,20 @@ describe("isNameFromCountryPool", () => {
     }
   });
 
-  it("treats every name as correct for countries with no pool of their own", () => {
-    // These fall back to the US pool by design, so nothing can be wrong.
-    // (PL used to be the example here; it has its own pool now.)
-    expect(isNameFromCountryPool("Carmen Washington", "GR")).toBe(true);
+  it("treats every name as correct when no country is given", () => {
     expect(isNameFromCountryPool("Carmen Washington", undefined)).toBe(true);
+  });
+
+  it("checks Greek, Austrian, Finnish and Ukrainian names against their own pools", () => {
+    expect(isNameFromCountryPool("Carmen Washington", "GR")).toBe(false);
+    expect(isNameFromCountryPool("Maria Papadopoulou", "GR")).toBe(true);
+    expect(isNameFromCountryPool("Lukas Gruber", "AT")).toBe(true);
+    expect(isNameFromCountryPool("Matti Virtanen", "FI")).toBe(true);
+    expect(isNameFromCountryPool("Taras Shevchenko", "UKR")).toBe(true);
+  });
+
+  it("refuses to generate a name for a country with no pool", () => {
+    expect(() => generateUniqueNPPNameAndGender([], 10, "ZZ")).toThrow(/No NPP name pool/);
   });
 
   it("routes East Germany through the German pool", () => {
@@ -100,18 +123,20 @@ describe("planNppNameHeal", () => {
       nppDoc("PL", "Brandon Miller"),
       nppDoc("PL", "Anna Kowalska"),
       nppDoc("GR", "Brandon Miller"),
+      nppDoc("GR", "Eleni Papadopoulou"),
     ]);
 
     const { scanned, renames } = await planNppNameHeal(db as unknown as Db);
 
-    expect(scanned).toBe(6);
-    expect(renames).toHaveLength(3);
+    expect(scanned).toBe(7);
+    expect(renames).toHaveLength(4);
     expect(renames.map((r) => r.oldName).sort()).toEqual([
+      "Brandon Miller",
       "Brandon Miller",
       "Carmen Washington",
       "Joshua Liu",
     ]);
-    expect(renames.filter((r) => r.countryId === "GR")).toHaveLength(0);
+    expect(renames.filter((r) => r.countryId === "GR")).toHaveLength(1);
     for (const rename of renames) {
       expect(isNameFromCountryPool(rename.newName, rename.countryId)).toBe(true);
     }

@@ -20,14 +20,18 @@
  * Client-safe: no db imports.
  */
 
-/** Live year each start begins at, for pole and era resolution. */
-export const PRESET_YEAR: Record<string, number> = {
-  "1953-default": 1953,
-  "1979-default": 1979,
-  "1991-default": 1991,
-  "2019-default": 2019,
-  "2023-default": 2023,
-};
+import { getStartingYearForPreset, SEED_PRESET_IDS } from "@/lib/constants/turnTime";
+import { missingPresetEntry } from "@/lib/seeds/contract/seedContractError";
+import { dataPresetFor } from "@/lib/seeds/presetSelector";
+
+/**
+ * Live year each start begins at, for pole and era resolution. Derived from
+ * the shipping preset list so no start is missing: an absent start seeds no
+ * organisation members.
+ */
+export const PRESET_YEAR: Record<string, number> = Object.fromEntries(
+  SEED_PRESET_IDS.map((preset) => [preset, getStartingYearForPreset(preset)])
+);
 
 export const DEFAULT_PRESET = "2019-default";
 
@@ -533,5 +537,124 @@ export const AUTHORED_ALIGNMENT: Record<string, Record<string, number[]>> = {
     YD: [10, 6, 8, 10],
     YE: [14, 6, 8, 8],
     ZA: [20, 16, 26, 22],
+  }, // Shares in pole order: [WASHINGTON, MOSCOW, BEIJING, NAM]. January 2027:
+  // NATO enlargement in the Nordics, Syria after the fall of its government,
+  // tariff disputes cooling several US partners, Argentina, Ecuador, Panama and
+  // the Philippines moving toward Washington, North Korea toward Moscow.
+  "2027-default": {
+    AD: [54, 2, 2, 0],
+    AF: [34, 6, 8, 8],
+    AL: [62, 3, 6, 0],
+    AO: [14, 8, 40, 14],
+    AR: [60, 3, 14, 4],
+    AT: [56, 8, 8, 0],
+    AU: [80, 1, 6, 0],
+    BAL: [88, 2, 2, 0],
+    BE: [74, 3, 6, 0],
+    BG: [58, 12, 6, 0],
+    BLR: [4, 70, 12, 6],
+    BO: [38, 4, 18, 10],
+    BR: [38, 6, 22, 6],
+    BT: [22, 2, 8, 6],
+    CA: [76, 1, 4, 0],
+    CD: [30, 6, 34, 10],
+    CE: [20, 4, 42, 12],
+    CH: [50, 4, 8, 0],
+    CL: [62, 2, 14, 0],
+    CN: [2, 10, 86, 0],
+    CO: [60, 2, 10, 4],
+    CR: [66, 2, 8, 0],
+    CU: [4, 26, 24, 16],
+    DE: [74, 1, 8, 0],
+    DK: [70, 2, 4, 0],
+    DO: [60, 2, 12, 0],
+    DZ: [22, 20, 14, 20],
+    EC: [56, 2, 16, 4],
+    EG: [40, 12, 14, 14],
+    ES: [66, 3, 7, 0],
+    ET: [26, 6, 36, 10],
+    FI: [80, 1, 3, 0],
+    FR: [72, 3, 5, 0],
+    GH: [38, 4, 20, 16],
+    GR: [52, 8, 16, 0],
+    GT: [62, 2, 6, 0],
+    GY: [44, 3, 14, 12],
+    HN: [70, 2, 4, 2],
+    HT: [54, 2, 4, 2],
+    HU: [40, 18, 18, 0],
+    ID: [30, 6, 18, 16],
+    IE: [60, 2, 6, 0],
+    IL: [80, 2, 4, 0],
+    IN: [36, 18, 10, 22],
+    IQ: [32, 8, 14, 10],
+    IR: [1, 30, 26, 14],
+    IS: [76, 2, 4, 0],
+    IT: [66, 6, 10, 0],
+    JO: [50, 4, 8, 10],
+    JP: [84, 1, 4, 0],
+    KH: [8, 4, 60, 8],
+    KP: [1, 26, 52, 6],
+    KR: [72, 2, 14, 0],
+    LA: [6, 6, 54, 8],
+    LB: [20, 12, 10, 12],
+    LI: [62, 2, 2, 0],
+    LR: [38, 2, 12, 8],
+    LU: [80, 2, 4, 0],
+    LY: [16, 12, 6, 10],
+    MC: [62, 2, 2, 0],
+    MM: [10, 4, 50, 8],
+    MN: [30, 12, 26, 6],
+    MX: [60, 2, 8, 4],
+    MZ: [22, 4, 34, 14],
+    NG: [32, 4, 24, 14],
+    NI: [6, 22, 20, 12],
+    NL: [76, 3, 6, 0],
+    NO: [78, 3, 4, 0],
+    NP: [14, 4, 42, 12],
+    NZ: [70, 2, 10, 0],
+    OM: [52, 4, 12, 6],
+    PA: [64, 2, 10, 4],
+    PE: [48, 2, 20, 6],
+    PH: [56, 2, 16, 8],
+    PK: [20, 5, 50, 12],
+    PL: [86, 1, 3, 0],
+    PT: [62, 3, 12, 0],
+    PY: [66, 2, 2, 0],
+    RO: [70, 4, 4, 0],
+    RU: [2, 74, 20, 0],
+    SA: [56, 6, 18, 6],
+    SE: [80, 1, 3, 0],
+    SM: [56, 2, 2, 0],
+    SO: [20, 4, 12, 12],
+    SV: [50, 2, 16, 2],
+    SY: [30, 6, 6, 14],
+    TH: [36, 4, 32, 6],
+    TR: [34, 24, 10, 4],
+    TW: [72, 1, 4, 0],
+    UK: [88, 2, 2, 0],
+    US: [94, 1, 1, 0],
+    UY: [52, 3, 14, 4],
+    VA: [58, 2, 2, 0],
+    VE: [16, 22, 26, 14],
+    YD: [10, 6, 8, 10],
+    YE: [14, 6, 8, 8],
+    ZA: [16, 16, 28, 22],
   },
 };
+
+/**
+ * Authored rows for a start. A start without rows of its own throws
+ * `SeedContractError`; an earlier start's rows are never borrowed.
+ */
+export function authoredAlignmentFor(preset: string): Record<string, number[]> {
+  const rows = AUTHORED_ALIGNMENT[dataPresetFor(preset)];
+  if (!rows) throw missingPresetEntry(preset, "alignment");
+  return rows;
+}
+
+/** Live starting year for a preset's alignment; throws for an unknown preset. */
+export function alignmentYearFor(preset: string): number {
+  const year = PRESET_YEAR[dataPresetFor(preset)];
+  if (year == null) throw missingPresetEntry(preset, "alignment:startingYear");
+  return year;
+}

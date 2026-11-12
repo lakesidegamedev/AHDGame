@@ -10,10 +10,13 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameTime } from "@/lib/time/gameTime";
 import { resolveGeneralElections } from "@/lib/turn/electionResolution";
-import { initElectionVoteTally } from "@/lib/electionEngine";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initElectionVoteTally } from "@/lib/elections/engine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -42,7 +45,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = gameTime.effectiveNow;
     const { currentTurn } = gameTime;
 
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 
@@ -63,12 +66,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Ensure vote tally exists (init if missing so resolution can run)
-    const tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne({ electionId: electionObjectId });
+    const tally = await electionVoteTalliesCollection(db).findOne({ electionId: electionObjectId });
     if (!tally) {
-      const candidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const candidates = await electionCandidatesCollection(db)
         .find({ electionId: electionObjectId, status: "active" })
         .toArray();
       if (election.electionType === "president") {
@@ -79,7 +79,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Mark as completed so resolveGeneralElections picks it up
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionObjectId },
       {
         $set: {

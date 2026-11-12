@@ -1,18 +1,16 @@
 /**
- * Two-circuit money (P3).
+ * Two-circuit money.
  *
  * The Soviet monetary system ran two non-fungible circuits: enterprise NON-CASH
  * (beznalichnye) money for inter-firm plan settlement, and household CASH. The
- * only sanctioned bridge from non-cash to cash was the WAGE FUND — planners set
- * how much enterprise money could be paid out as wages. That throttle is the
- * primary brake on monetary overhang: if wages are held near real output growth,
- * households never accumulate unspendable money.
+ * only sanctioned bridge from non-cash to cash was the WAGE FUND. That throttle
+ * is the primary brake on monetary overhang: if wages are held near real output
+ * growth, households never accumulate unspendable money.
  *
- * We model this at the MACRO level (a wage-fund cap on nominal wage growth for
- * planned economies) rather than splitting every player wallet into two buckets
- * — a per-wallet split would ripple across every money writer in the engine and
- * is out of scope for a flag-gated regime. The cap composes with the overhang
- * kernel: a tighter wage fund → less forced saving.
+ * Modeled at the MACRO level (a wage-fund cap on nominal wage growth for
+ * planned economies) rather than splitting every player wallet into two buckets,
+ * which would ripple across every money writer in the engine. The cap composes
+ * with the overhang kernel: a tighter wage fund → less forced saving.
  *
  * Pure and NaN-guarded.
  */

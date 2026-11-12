@@ -1,10 +1,9 @@
 import type { Db } from "mongodb";
-import type { Character } from "@/lib/db/types/character";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /** Credit one turn of lottery annuity PI and decrement the counter. */
 export async function processLotteryAnnuities(db: Db): Promise<number> {
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({ "preeLotteryAnnuity.turnsRemaining": { $gt: 0 } })
     .toArray();
 
@@ -14,7 +13,7 @@ export async function processLotteryAnnuities(db: Db): Promise<number> {
     if (!annuity || annuity.turnsRemaining <= 0) {
       continue;
     }
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id },
       {
         $inc: { politicalInfluence: annuity.piPerTurn },

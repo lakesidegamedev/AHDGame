@@ -3,6 +3,7 @@
  * Costs use the actor's equivalent self-action quotes with a premium; see executeSimpleInfluence.
  */
 
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { ObjectId, Db } from "mongodb";
 import type { Campaign, Character, Election, GameConfig, NPP, State } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
@@ -16,37 +17,28 @@ import { quoteAdvertiseAction, quoteCampaignAction } from "@/lib/actions/rules";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { EXTERNAL_ATTACK_PREMIUM, priceExternalBoost, quoteSelfActionsForGain } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import type { Document } from "mongodb";
 
 /**
  * Maximum NET favorability any one target can be moved by player support/attack
  * in a single turn, in either direction.
  *
- * Root cause this closes: `supportPlayer` / `attackPlayer` move favorability by
- * a flat ±1 with no cooldown, no dedupe and no per-turn cap — the only limiter
- * was the actor's own action points and infamy. Those limits are per-ACTOR, so
- * they do not bind in aggregate: a coordinated party simply spreads the cost.
+ * `supportPlayer` / `attackPlayer` move favorability by a flat ±1 with no
+ * cooldown or dedupe, limited only per-ACTOR by action points and infamy, so a
+ * coordinated party can spread the cost and swing a target far. Favorability is
+ * worth roughly 0.45 points of vote share per point because `approvalScalar`
+ * multiplies the candidate's entire vote.
  *
- * Measured on the live 1956 US presidential race (turn 227, harness
- * `scripts/sim/favorability-bomb-replay.ts`, real engine in dry-run):
- * favorability is worth ~0.45 points of vote share per point, because
- * `approvalScalar` multiplies the candidate's ENTIRE vote. Forcing the
- * incumbent from 100 → 20 moved his projected national share 64.8% → 46.6% and
- * the electoral college 531-0 → 141-390. That is 80 landed attacks: two per
- * head across a 42-member party, ~168 action points out of the 3,715 they had
- * banked. Under 5% of one party's reserves bought the presidency.
- *
- * For comparison the approval-scaled incumbency channel measures 0.04 share
- * points per point — favorability is ~11x stronger, and was the only one of the
- * two with no aggregate limit at all.
- *
- * This is a BACKSTOP, not the primary limiter. The primary limiter is the
- * action-equivalent cost of each boost, alongside the softened
- * `APPROVAL_SCALAR_EXPONENT` (favorability is deliberately less decisive).
- * 12/turn is set well above normal coordinated play — the observed median
- * target-turn is far below it — and exists only to stop the extreme case of a
- * candidate being deleted between two turns. For reference the largest observed
- * single-turn swings were -39 and -37, which this bounds without touching
- * ordinary campaigning.
+ * This is a BACKSTOP, not the primary limiter; the primary cost is per-boost
+ * action points plus the softened `APPROVAL_SCALAR_EXPONENT`. 12/turn sits well
+ * above normal coordinated play and only stops a candidate being deleted
+ * between two turns.
  */
 const MAX_NET_FAVORABILITY_SWING_PER_TURN = 12;
 
@@ -68,8 +60,7 @@ async function netFavorabilitySwingThisTurn(
   turn: number
 ): Promise<number> {
   const targetField = targetType === "character" ? "targetCharacterId" : "targetNPPId";
-  const rows = await db
-    .collection<{ result?: { targetFavorabilityChange?: number } }>("actionLogs")
+  const rows = await actionLogsCollection<{ result?: { targetFavorabilityChange?: number } }>(db)
     .find(
       {
         [targetField]: targetId,
@@ -135,12 +126,10 @@ async function getSimpleInfluencePrices(
   barnstormTargetGain?: number
 ): Promise<{ prices?: SimpleInfluencePrices; error?: string }> {
   const targetCountryId = target.countryId ?? actor.countryId;
-  const state = await db
-    .collection<State>("states")
-    .findOne(
-      { _id: target.homeState, countryId: targetCountryId },
-      { projection: { gdp: 1, population: 1 } }
-    );
+  const state = await statesCollection(db).findOne(
+    { _id: target.homeState, countryId: targetCountryId },
+    { projection: { gdp: 1, population: 1 } }
+  );
   if (!state || !Number.isFinite(state.gdp) || !Number.isFinite(state.population)) {
     return {
       error:
@@ -148,15 +137,17 @@ async function getSimpleInfluencePrices(
     };
   }
 
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { campaignEraPriceLevelEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { campaignEraPriceLevelEnabled: 1 } }
+  );
   const priceLevel = resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, preset);
   const quoteTarget = {
     gdpMillions: state.gdp,
     population: state.population,
     countryId: targetCountryId,
     preset,
+    nationalGdpPerCapita: await loadNationalGdpPerCapita(db, targetCountryId),
   };
   // Quote against the target's own stats and home economy so a low-stat booster
   // cannot discount the action. NPPs and pre-stat characters use neutral stats.
@@ -242,8 +233,7 @@ async function isTargetMediaSustainedAtCap(db: Db, target: Character | NPP): Pro
   // keep those whose per-turn favorability clears the decay-at-cap threshold
   // (mediaLevel × 0.5 ≥ 2.0), with a legacy-level fallback.
   const MEDIA_SUSTAIN_FAV_PER_TURN = MEDIA_SUSTAIN_THRESHOLD * 0.5;
-  const allCampaigns = await db
-    .collection<Campaign>("campaigns")
+  const allCampaigns = await campaignsCollection(db)
     .find(
       { candidateId: target._id },
       { projection: { electionId: 1, mediaSpendingLevel: 1, mediaSpendingTree: 1 } }
@@ -252,7 +242,7 @@ async function isTargetMediaSustainedAtCap(db: Db, target: Character | NPP): Pro
   const campaigns = allCampaigns.filter((c) => getMediaFavPerTurn(c) >= MEDIA_SUSTAIN_FAV_PER_TURN);
   if (campaigns.length === 0) return false;
 
-  const presidentialMatch = await db.collection<Election>("elections").findOne(
+  const presidentialMatch = await electionsCollection(db).findOne(
     {
       _id: { $in: campaigns.map((c) => c.electionId) },
       status: "active",
@@ -536,7 +526,7 @@ export async function executeSimpleInfluence(
       [campaignFundsField]: { $gte: fundsCostLocal },
     };
 
-    const debitResult = await db.collection<Character>("characters").updateOne(debitFilter, {
+    const debitResult = await charactersCollection(db).updateOne(debitFilter, {
       $inc: {
         actions: -actionCost,
         [campaignFundsField]: -fundsCostLocal,
@@ -565,7 +555,7 @@ export async function executeSimpleInfluence(
     const targetIdField = targetType === "character" ? "targetCharacterId" : "targetNPPId";
     const targetNameField = targetType === "character" ? "targetCharacterName" : "targetNPPName";
 
-    await db.collection("actionLogs").insertOne({
+    await actionLogsCollection<Document>(db).insertOne({
       characterId: myCharacter._id,
       userId: new ObjectId(userId),
       actionType: "barnstorm",
@@ -596,7 +586,7 @@ export async function executeSimpleInfluence(
       }
     }
 
-    const updatedMyCharacter = await db.collection<Character>("characters").findOne({
+    const updatedMyCharacter = await charactersCollection(db).findOne({
       _id: myCharacter._id,
     });
 
@@ -681,7 +671,7 @@ export async function executeSimpleInfluence(
 
   // Debit the quoted action and campaign-fund costs atomically before applying
   // the effect. Failed attacks still consume both, matching their AP behavior.
-  const debitResult = await db.collection<Character>("characters").updateOne(
+  const debitResult = await charactersCollection(db).updateOne(
     {
       _id: myCharacter._id,
       actions: { $gte: actionCost },
@@ -722,7 +712,7 @@ export async function executeSimpleInfluence(
   const targetIdField = targetType === "character" ? "targetCharacterId" : "targetNPPId";
   const targetNameField = targetType === "character" ? "targetCharacterName" : "targetNPPName";
 
-  await db.collection("actionLogs").insertOne({
+  await actionLogsCollection<Document>(db).insertOne({
     characterId: myCharacter._id,
     userId: new ObjectId(userId),
     actionType: action === "raise" ? "supportPlayer" : "attackPlayer",
@@ -766,7 +756,7 @@ export async function executeSimpleInfluence(
   }
 
   // Get updated character
-  const updatedMyCharacter = await db.collection<Character>("characters").findOne({
+  const updatedMyCharacter = await charactersCollection(db).findOne({
     _id: myCharacter._id,
   });
 

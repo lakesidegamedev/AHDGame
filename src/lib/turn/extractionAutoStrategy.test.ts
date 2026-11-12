@@ -35,7 +35,7 @@ function cursor<T>(rows: T[]) {
   return c;
 }
 
-const ENABLED = { extractionAutoStrategyEnabled: true, lastExtractionAutoStrategyTurn: 0 };
+const ENABLED = { lastExtractionAutoStrategyTurn: 0 };
 const NPC_USER_ID = new ObjectId("000000000000000000000000");
 
 function npcCorp(_id: ObjectId, countryId = "US") {
@@ -449,16 +449,8 @@ describe("processExtractionAutoStrategy", () => {
       .mockReturnValueOnce(cursor([]));
   }
 
-  it("is inert when the flag is off", async () => {
-    const res = await processExtractionAutoStrategy(db as unknown as Db, 10, {});
-    expect(res.converted).toBe(0);
-    expect(res.skippedReason).toBe("disabled");
-    expect(db.collectionMocks.corporateSectors.bulkWrite).not.toHaveBeenCalled();
-  });
-
   it("respects the cadence interval", async () => {
     const res = await processExtractionAutoStrategy(db as unknown as Db, 10, {
-      extractionAutoStrategyEnabled: true,
       lastExtractionAutoStrategyTurn: 10,
     });
     expect(EXTRACTION_AUTO_STRATEGY_CADENCE_TURNS).toBe(1);

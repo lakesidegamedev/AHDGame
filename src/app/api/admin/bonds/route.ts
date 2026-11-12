@@ -8,10 +8,12 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Bond, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import { corpCapitalToAnchor, loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const GET = withAdminAuth(async (_auth, request: Request) => {
   try {
@@ -25,10 +27,8 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     if (countryFilter) filter.countryId = countryFilter;
 
     const [bonds, gameState, fxByCurrency] = await Promise.all([
-      db.collection<Bond>("bonds").find(filter).toArray(),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      bondsCollection(db).find(filter).toArray(),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       loadFxRatesByCurrency(db),
     ]);
 

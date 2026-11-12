@@ -10,56 +10,29 @@ import type {
   HealContext,
   VerifyResult,
 } from "../types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
- * Ticket #1267. At turn 605 Hunt Oil Company absorbed Vermont Finance through
- * the hostile-takeover merge while the merger still deleted the absorbed
- * shell unconditionally. The bank charter is a sub-document on the
- * corporation, so Vermont Finance's live retail USD bank died with it:
- * no transfer, no waterfall, no error. (The code half — transfer-or-refuse on
- * both merge paths — is PR #1389.)
+ * Restitution for a bank charter destroyed by a hostile-takeover merge. The
+ * merge deleted the absorbed shell unconditionally, taking its USD bank (cash
+ * reserves and household deposits) with it. Hunt Oil already ran a USD bank, so
+ * the correct outcome was refusal: this restores the household deposit book to
+ * the money supply from the estate's own cash and pays the residual to Hunt Oil's
+ * liquidCapital, capped at book equity.
  *
- * WHAT WAS LOST (Vermont Finance bank, pre-merge, from the ticket screenshots
- * corroborated by the turn-605 money-supply aggregate)
+ * Amounts are pinned from the ticket screenshots at $M precision: 71,110,000 and
+ * 52,290,000, each plus or minus 5,000. Excluded: one turn of forgone bank income
+ * and the rounding dust.
  *
- *   cashReserves (ring-fenced vault cash)  $123.41M  — destroyed with the doc
- *   npcDeposits (household book)             $71.11M  — stranded: the matching
- *     $71.11M left the central bank's household pool when households deposited
- *     (bankingTurn moves npcDeposits against externalBroadMoney) and was never
- *     returned, so externalBroadMoney_USD is understated by the book
- *   playerDeposits / loans out / CB facilities / interbank  $0 — verified zero
- *     orphaned bankLoans, interbankLoans, savingsAccounts and savingsHolder
- *     pointers, so there is no trapped saver or borrower to re-key
- *   financial sectors — moved to Hunt Oil correctly by the merge itself
+ * Idempotency: each recipient gets a durable remediation marker written in the
+ * same atomic updateOne as the increment, under a filter requiring the marker to
+ * be absent, so a re-run matches nothing.
  *
- * WHAT IS RESTITUTED
- *
- * The revoke waterfall the player would have run had the fixed code refused
- * the merge (Hunt Oil already operated a live USD bank, so refusal was the
- * correct outcome): the household book returns to the money supply out of the
- * estate's own cash, and the residual above the book goes to the owner,
- * capped at book equity — min(123.41 − 71.11, 52.29) = $52.29M to Hunt Oil's
- * liquidCapital. The $0.01M rounding dust stays destroyed.
- *
- * PRECISION. The charter doc is gone, so the figures are the ticket
- * screenshots at displayed $M precision: 71,110,000 and 52,290,000, each
- * ±$5,000. Deliberately EXCLUDED: the ~1 turn of bank income the estate would
- * have earned since (immaterial and speculative) and the dust above.
- *
- * IDEMPOTENCY
- *
- * Each recipient document gets a durable `remediation["AHD-1267-..."]`
- * marker, written in the SAME atomic `updateOne` as the increment, under a
- * filter that requires the marker to be absent. A second run matches nothing,
- * and the detector counts recipients missing the marker, so it returns zero
- * once applied.
- *
- * This heal MINTS MONEY on purpose: it restores value the merge bug
- * destroyed, so `moneyDelta` is non-zero and the `money-conserving` guard is
- * absent. Both legs emit a `restitution_credit` tx row referencing the
- * destroyed charter, so the shadow ledger books an attributed `restitution`
- * mint rather than showing unexplained jumps. USD is the anchor currency
- * (rate 1), so local and anchor amounts coincide.
+ * This heal MINTS MONEY on purpose: it restores value the bug destroyed, so
+ * moneyDelta is non-zero and the money-conserving guard is absent. Each leg emits
+ * a restitution_credit tx row so the shadow ledger books an attributed mint.
  */
 
 /** Marker key under `remediation` on each recipient document. */
@@ -150,11 +123,10 @@ async function loadDocs(db: Db): Promise<{
   usCb: CentralBankDoc | undefined;
 }> {
   const [huntDocs, cbDocs] = await Promise.all([
-    db
-      .collection<CorporationDoc>("corporations")
+    corporationsCollection<CorporationDoc>(db)
       .find({ _id: new ObjectId(HUNT_OIL_ID) })
       .toArray(),
-    db.collection<CentralBankDoc>("centralBanks").find({ _id: US_CB_ID }).toArray(),
+    centralBanksCollection<CentralBankDoc>(db).find({ _id: US_CB_ID }).toArray(),
   ]);
   return { hunt: huntDocs[0], usCb: cbDocs[0] };
 }
@@ -264,12 +236,14 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     };
     const res =
       row.collection === "corporations"
-        ? await db
-            .collection<CorporationDoc>("corporations")
-            .updateOne({ _id: new ObjectId(row.docId), [MARKER_PATH]: { $exists: false } }, update)
-        : await db
-            .collection<CentralBankDoc>("centralBanks")
-            .updateOne({ _id: row.docId, [MARKER_PATH]: { $exists: false } }, update);
+        ? await corporationsCollection<CorporationDoc>(db).updateOne(
+            { _id: new ObjectId(row.docId), [MARKER_PATH]: { $exists: false } },
+            update
+          )
+        : await centralBanksCollection<CentralBankDoc>(db).updateOne(
+            { _id: row.docId, [MARKER_PATH]: { $exists: false } },
+            update
+          );
     if (res.modifiedCount === 1) applied.push(row);
   }
 
@@ -323,8 +297,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // emitTxBulk mints its own ids, so read them back rather than guessing: a
   // rollback has to be able to delete the receipts it created.
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

@@ -13,6 +13,18 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { seatsCollection } from "@/lib/db/repositories/seats";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 interface ReadinessCheck {
   name: string;
@@ -40,8 +52,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const checks: ReadinessCheck[] = [];
 
     // 1. Regions seeded (sub-national chamber gives us the expected count)
-    const regions = await db
-      .collection<{ _id: string }>("states")
+    const regions = await statesCollection<{ _id: string }>(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray();
     const regionCount = regions.length;
@@ -54,7 +65,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
     // 2. Parties seeded (expect at least the majorPartyIds count)
     const expectedPartyCount = Math.max(config.majorPartyIds.length, 1);
-    const partyCount = await db.collection("politicalParties").countDocuments({ countryId });
+    const partyCount = await politicalPartiesCollection<Document>(db).countDocuments({ countryId });
     checks.push({
       name: "Parties",
       status: partyCount >= expectedPartyCount ? "ok" : partyCount > 0 ? "warning" : "missing",
@@ -63,7 +74,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 3. Party org rows (parties × regions)
-    const orgCount = await db.collection("statePartyOrg").countDocuments({ countryId });
+    const orgCount = await statePartyOrgCollection<Document>(db).countDocuments({ countryId });
     const expectedOrgCount = partyCount * regionCount;
     checks.push({
       name: "StatePartyOrg",
@@ -73,9 +84,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 4. Government formation doc
-    const gov = await db
-      .collection<{ _id: string; status?: string; cycle?: number }>("governmentFormations")
-      .findOne({ _id: countryId });
+    const gov = await governmentFormationsCollection<{
+      _id: string;
+      status?: string;
+      cycle?: number;
+    }>(db).findOne({ _id: countryId });
     checks.push({
       name: "GovernmentFormation",
       status: gov ? "ok" : "missing",
@@ -85,7 +98,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 5. Seats (lower chamber + governor per region)
-    const seatCount = await db.collection("seats").countDocuments({ countryId });
+    const seatCount = await seatsCollection<Document>(db).countDocuments({ countryId });
     const expectedSeatCount = regionCount * 2; // delegate + governor per region
     checks.push({
       name: "Seats",
@@ -95,7 +108,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 6. NPPs (≥3 per region by Phase 07 convention)
-    const nppCount = await db.collection("npps").countDocuments({ countryId });
+    const nppCount = await nppsCollection<Document>(db).countDocuments({ countryId });
     const expectedNppCount = regionCount * 3;
     checks.push({
       name: "NPPs",
@@ -105,7 +118,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 7. Elected officials
-    const officialCount = await db.collection("electedOfficials").countDocuments({ countryId });
+    const officialCount = await electedOfficialsCollection<Document>(db).countDocuments({
+      countryId,
+    });
     checks.push({
       name: "ElectedOfficials",
       status: officialCount >= expectedNppCount ? "ok" : officialCount > 0 ? "warning" : "missing",
@@ -114,7 +129,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 8. Demographics (one per region)
-    const demoCount = await db.collection("stateDemographics").countDocuments({ countryId });
+    const demoCount = await stateDemographicsCollection<Document>(db).countDocuments({ countryId });
     checks.push({
       name: "Demographics",
       status: demoCount === regionCount ? "ok" : demoCount > 0 ? "warning" : "missing",
@@ -126,9 +141,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const regionIds = regions.map((r) => r._id);
     // macroMetrics, not stateMetrics — see countryReadinessReport: counting the
     // retired collection reported every country as missing its region metrics.
-    const metricsCount = await db
-      .collection<{ _id: string }>("macroMetrics")
-      .countDocuments({ _id: { $in: regionIds } });
+    const metricsCount = await macroMetricsCollection<{ _id: string }>(db).countDocuments({
+      _id: { $in: regionIds },
+    });
     checks.push({
       name: "RegionMetrics",
       status: metricsCount === regionCount ? "ok" : metricsCount > 0 ? "warning" : "missing",
@@ -137,7 +152,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 10. Legislation types
-    const legTypeCount = await db.collection("legislationTypes").countDocuments({ countryId });
+    const legTypeCount = await legislationTypesCollection<Document>(db).countDocuments({
+      countryId,
+    });
     checks.push({
       name: "LegislationTypes",
       status: legTypeCount > 0 ? "ok" : "missing",
@@ -146,9 +163,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     });
 
     // 11. Country leader state (if any leader installed)
-    const leaderStateCount = await db
-      .collection<{ _id: string }>("countryLeaderStates")
-      .countDocuments({ _id: { $regex: `^${countryId}_` } });
+    const leaderStateCount = await countryLeaderStatesCollection<{ _id: string }>(
+      db
+    ).countDocuments({ _id: { $regex: `^${countryId}_` } });
     checks.push({
       name: "CountryLeaderStates",
       status: leaderStateCount > 0 ? "ok" : "warning",

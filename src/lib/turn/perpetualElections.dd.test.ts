@@ -101,7 +101,7 @@ describe("ensureDDGovernorElections (Land First Secretaries)", () => {
   it("spawns one single-seat race per Land on the Volkskammer cycle when active", async () => {
     const mock = makeDDMockDb(1);
     await mountDD(mock);
-    const { ensureDDGovernorElections } = await import("./perpetualElections");
+    const { ensureDDGovernorElections } = await import("@/lib/elections/scheduling");
     await ensureDDGovernorElections(new Date("2026-04-01T00:00:00Z"));
 
     const inserted = mock.insertCalls.flat();
@@ -118,7 +118,7 @@ describe("ensureDDGovernorElections (Land First Secretaries)", () => {
   it("status gate: coming-soon (not NPP-governed) spawns nothing", async () => {
     const mock = makeDDMockDb(1);
     await mountDD(mock, "coming-soon");
-    const { ensureDDGovernorElections } = await import("./perpetualElections");
+    const { ensureDDGovernorElections } = await import("@/lib/elections/scheduling");
     await ensureDDGovernorElections(new Date("2026-04-01T00:00:00Z"));
     expect(mock.insertCalls.flat()).toHaveLength(0);
   });
@@ -126,7 +126,7 @@ describe("ensureDDGovernorElections (Land First Secretaries)", () => {
   it("NPP-governed gate: coming-soon + nppGoverned spawns the family", async () => {
     const mock = makeDDMockDb(1);
     await mountDD(mock, "coming-soon", /* nppGoverned */ true);
-    const { ensureDDGovernorElections } = await import("./perpetualElections");
+    const { ensureDDGovernorElections } = await import("@/lib/elections/scheduling");
     await ensureDDGovernorElections(new Date("2026-04-01T00:00:00Z"));
     expect(mock.insertCalls.flat()).toHaveLength(DD_REGIONS.length);
   });
@@ -134,7 +134,7 @@ describe("ensureDDGovernorElections (Land First Secretaries)", () => {
   it("era gate: null ddVolkskammer anchor under 2019-default spawns nothing even when active", async () => {
     const mock = makeDDMockDb(1, { startingYear: 2019, preset: "2019-default" });
     await mountDD(mock);
-    const { ensureDDGovernorElections } = await import("./perpetualElections");
+    const { ensureDDGovernorElections } = await import("@/lib/elections/scheduling");
     await ensureDDGovernorElections(new Date("2026-04-01T00:00:00Z"));
     expect(mock.insertCalls.flat()).toHaveLength(0);
   });
@@ -144,7 +144,7 @@ describe("ensureDDLandAssemblyElections (Landtage)", () => {
   it("spawns one multi-seat Landtag race per Land sized by stateSenateSeats", async () => {
     const mock = makeDDMockDb(1);
     await mountDD(mock);
-    const { ensureDDLandAssemblyElections } = await import("./perpetualElections");
+    const { ensureDDLandAssemblyElections } = await import("@/lib/elections/scheduling");
     await ensureDDLandAssemblyElections(new Date("2026-04-01T00:00:00Z"));
 
     const inserted = mock.insertCalls.flat();
@@ -163,7 +163,7 @@ describe("ensureDDLandAssemblyElections (Landtage)", () => {
   it("status gate: coming-soon (not NPP-governed) spawns nothing", async () => {
     const mock = makeDDMockDb(1);
     await mountDD(mock, "coming-soon");
-    const { ensureDDLandAssemblyElections } = await import("./perpetualElections");
+    const { ensureDDLandAssemblyElections } = await import("@/lib/elections/scheduling");
     await ensureDDLandAssemblyElections(new Date("2026-04-01T00:00:00Z"));
     expect(mock.insertCalls.flat()).toHaveLength(0);
   });
@@ -175,7 +175,7 @@ describe("buildDelegateSeatHealOps", () => {
     ({ _id: id, state, totalSeats }) as unknown as Pick<Election, "_id" | "state" | "totalSeats">;
 
   it("rewrites only the races whose count disagrees with the live map", async () => {
-    const { buildDelegateSeatHealOps } = await import("./perpetualElections");
+    const { buildDelegateSeatHealOps } = await import("@/lib/elections/scheduling");
     const ops = buildDelegateSeatHealOps(
       [race("a", "SN", 24), race("b", "MV", 63)],
       { SN: 161, MV: 63 },
@@ -186,13 +186,13 @@ describe("buildDelegateSeatHealOps", () => {
   });
 
   it("fills in a race that carries no count at all", async () => {
-    const { buildDelegateSeatHealOps } = await import("./perpetualElections");
+    const { buildDelegateSeatHealOps } = await import("@/lib/elections/scheduling");
     const ops = buildDelegateSeatHealOps([race("a", "SN")], { SN: 161 }, now);
     expect(ops).toHaveLength(1);
   });
 
   it("leaves a race alone when the map cannot size its region", async () => {
-    const { buildDelegateSeatHealOps } = await import("./perpetualElections");
+    const { buildDelegateSeatHealOps } = await import("@/lib/elections/scheduling");
     // Absent, zero, negative and NaN all mean "no authoritative number". NaN is
     // the sharp one: every comparison against it is false, so a `<= 0` guard
     // would fall straight through and write NaN over a good seat count.
@@ -203,7 +203,7 @@ describe("buildDelegateSeatHealOps", () => {
   });
 
   it("ignores a race with no region", async () => {
-    const { buildDelegateSeatHealOps } = await import("./perpetualElections");
+    const { buildDelegateSeatHealOps } = await import("@/lib/elections/scheduling");
     expect(
       buildDelegateSeatHealOps([race("a", undefined as unknown as string, 24)], { SN: 161 }, now)
     ).toEqual([]);
@@ -238,7 +238,7 @@ describe("regional delegate seat sizing (#1262)", () => {
   it("sizes a new Volkskammer cycle from the live region, not the resolved one", async () => {
     const mock = makeDDMockDb(1, {}, stale("volkskammerDeputy", { SN: 151, MV: 58 }), RESCALED);
     await mountDD(mock);
-    const { ensureDDVolkskammerElections } = await import("./perpetualElections");
+    const { ensureDDVolkskammerElections } = await import("@/lib/elections/scheduling");
     await ensureDDVolkskammerElections(new Date("2026-04-01T00:00:00Z"));
 
     const byState = new Map(mock.insertCalls.flat().map((d) => [d.state, d.totalSeats]));
@@ -249,7 +249,7 @@ describe("regional delegate seat sizing (#1262)", () => {
   it("sizes a new Landtag cycle from the live region too", async () => {
     const mock = makeDDMockDb(1, {}, stale("landAssembly", { SN: 24 }), RESCALED);
     await mountDD(mock);
-    const { ensureDDLandAssemblyElections } = await import("./perpetualElections");
+    const { ensureDDLandAssemblyElections } = await import("@/lib/elections/scheduling");
     await ensureDDLandAssemblyElections(new Date("2026-04-01T00:00:00Z"));
 
     const byState = new Map(mock.insertCalls.flat().map((d) => [d.state, d.totalSeats]));
@@ -281,14 +281,14 @@ describe("regional delegate seat sizing (#1262)", () => {
     ] as unknown as Array<Partial<Election>>;
     const mock = makeDDMockDb(1, {}, [], RESCALED, live);
     await mountDD(mock);
-    const { ensureDDLandAssemblyElections } = await import("./perpetualElections");
+    const { ensureDDLandAssemblyElections } = await import("@/lib/elections/scheduling");
     await ensureDDLandAssemblyElections(new Date("2026-04-01T00:00:00Z"));
 
     // Only the stale one is rewritten; the one already agreeing is left alone.
     expect(mock.bulkWriteCalls.flat()).toEqual([
       {
         updateOne: {
-          filter: { _id: "e1" },
+          filter: { _id: "e1", totalSeats: 24, status: { $in: ["active", "upcoming"] } },
           update: { $set: { totalSeats: 161, updatedAt: expect.any(Date) } },
         },
       },
@@ -305,7 +305,7 @@ describe("regional delegate seat sizing (#1262)", () => {
       { _id: "SN", stateSenateSeats: 161 },
     ]);
     await mountDD(mock);
-    const { ensureDDVolkskammerElections } = await import("./perpetualElections");
+    const { ensureDDVolkskammerElections } = await import("@/lib/elections/scheduling");
     await ensureDDVolkskammerElections(new Date("2026-04-01T00:00:00Z"));
 
     const byState = new Map(mock.insertCalls.flat().map((d) => [d.state, d.totalSeats]));

@@ -14,12 +14,15 @@ import { getDesignatedSectorTypes, corpHasStrategicSector } from "./strategicSec
 import { getTopMarketSharePercent } from "./monopolyTrigger";
 import { allCitedConditionsCleared } from "./noticeWindow";
 import { MONOPOLY_SHARE_THRESHOLD } from "./constants";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { pendingNationalizationsCollection } from "@/lib/db/repositories/pendingNationalizations";
 
 export async function processPendingNationalizations(
   db: Db,
   currentTurn: number
 ): Promise<{ completed: number; cancelled: number }> {
-  const coll = db.collection<PendingNationalization>("pendingNationalizations");
+  const coll = pendingNationalizationsCollection(db);
   const due = await coll
     .find({ status: "pending", noticeDeadlineTurn: { $lte: currentTurn } })
     .toArray();
@@ -52,7 +55,7 @@ async function resolveOne(
   pending: PendingNationalization,
   currentTurn: number
 ): Promise<"completed" | "cancelled"> {
-  const coll = db.collection<PendingNationalization>("pendingNationalizations");
+  const coll = pendingNationalizationsCollection(db);
 
   const cancel = async (notify: boolean, corp?: Corporation | null): Promise<"cancelled"> => {
     await coll.updateOne(
@@ -75,17 +78,10 @@ async function resolveOne(
   let corp: Corporation | null = null;
   let sector: CorporateSector | null = null;
   if (pending.targetSectorId) {
-    sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: pending.targetSectorId });
-    if (sector)
-      corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: sector.corporationId });
+    sector = await corporateSectorsCollection(db).findOne({ _id: pending.targetSectorId });
+    if (sector) corp = await corporationsCollection(db).findOne({ _id: sector.corporationId });
   } else if (pending.targetCorporationId) {
-    corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: pending.targetCorporationId });
+    corp = await corporationsCollection(db).findOne({ _id: pending.targetCorporationId });
   }
 
   // Target gone / already state-owned ⇒ cancel as a no-op.
@@ -101,8 +97,7 @@ async function resolveOne(
   // nationalization the legislature already voted through.)
   if (pending.method !== "legislative") {
     // Re-check the cited curable conditions.
-    const corpSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const corpSectors = await corporateSectorsCollection(db)
       .find({ corporationId: corp._id })
       .toArray();
     const designated = await getDesignatedSectorTypes(db, pending.countryId);

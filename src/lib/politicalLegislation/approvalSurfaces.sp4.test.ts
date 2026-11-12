@@ -4,7 +4,12 @@
  * the byte-identical legacy path, and the country-page global reference
  * excludes playable regions.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Fixture dbs carry no census rows; strict tiers are covered in governmentApproval.censusTier.test.ts.
+vi.mock("@/lib/country/countryTier", () => ({
+  loadCountryTiers: async () => ({ fullSimulationIds: [] }),
+}));
 import type { Db } from "mongodb";
 import { createMockDb, getAccessedCollections, type MockDb } from "@/lib/test-utils/mockDb";
 import { POLITICAL_METRIC_FAMILIES } from "@/lib/politicalMetrics/families";

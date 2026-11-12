@@ -17,6 +17,8 @@ import {
   parseCoalitionCountry,
   resolveCoalitionPriorityViewer,
 } from "@/lib/coalitions/priorityApi";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import type { Document } from "mongodb";
 
 const voteSchema = z.object({
   vote: z.enum(["support", "oppose", "abstain"]),
@@ -105,9 +107,10 @@ export async function POST(
     }
 
     priorities[priorityIndex] = priority;
-    await db
-      .collection("coalitions")
-      .updateOne({ _id: context.coalition._id }, { $set: { priorities, updatedAt: now } });
+    await coalitionsCollection<Document>(db).updateOne(
+      { _id: context.coalition._id },
+      { $set: { priorities, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

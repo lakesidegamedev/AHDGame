@@ -27,7 +27,7 @@ describe("effectiveMarketAnchor", () => {
     expect(effectiveMarketAnchor(30, undefined, 100)).toBe(100);
   });
 
-  // Bug #0775: when a sector-wide nationalization consumes the unowned pool doc,
+  // When a sector-wide nationalization consumes the unowned pool doc,
   // the market fell back to the small GDP floor even though the consolidated
   // owned revenue dwarfed it — producing market shares well over 100%. The
   // effective market can never be smaller than what is already owned in it.
@@ -114,7 +114,7 @@ describe("plants tier — unit-denominated market share", () => {
 
   it("ignores the unowned pool entirely — it is not part of the denominator", () => {
     // A huge unowned pool used to read as "unclaimed market" and shrink every
-    // share (ticket #1145). It no longer touches the ratio.
+    // share. It no longer touches the ratio.
     const withPool = build([sector("a", 1000), sector("b", 3000)], [unowned(9_999_999, 500)]);
     const withoutPool = build([sector("a", 1000), sector("b", 3000)], []);
     expect(withPool.get("a")).toBeCloseTo(25, 10);

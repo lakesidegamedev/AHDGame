@@ -13,7 +13,6 @@
 import type { Db } from "mongodb";
 import type { Character, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { bankBalanceSheet } from "@/lib/banking/rules/balanceSheet";
 import { getReserveRequirement } from "@/lib/banking/reserves";
 import { loadBankingTelemetry, type BankingTelemetryDoc } from "@/lib/banking/telemetry";
@@ -22,6 +21,9 @@ import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { lifecycleStage, type BankLifecycleStage } from "@/lib/banking/rules/lifecycle";
 import { buildSavingsComparison, readCohort, type SavingsComparison } from "@/lib/savings/shadow";
 import { getCurrentTurn } from "@/lib/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface CurrencyBankingHealth {
   currency: CurrencyCode;
@@ -84,8 +86,7 @@ function finite(value: unknown): number {
 /** Player savings pointed at each bank, keyed by bank hex, for one currency. */
 async function playerHeldByBank(db: Db, currency: CurrencyCode): Promise<Map<string, number>> {
   const holderPath = `currencyBalances.savingsHolder.${currency}`;
-  const rows = await db
-    .collection<Character>("characters")
+  const rows = await charactersCollection(db)
     .find({ [holderPath]: { $exists: true, $ne: "centralBank" } })
     .project<Pick<Character, "currencyBalances">>({
       [holderPath]: 1,
@@ -105,8 +106,7 @@ async function playerHeldByBank(db: Db, currency: CurrencyCode): Promise<Map<str
 }
 
 export async function buildBankingHealth(db: Db, now = new Date()): Promise<BankingHealthReport> {
-  const banks = await db
-    .collection<Corporation>("corporations")
+  const banks = await corporationsCollection(db)
     .find({ "bankCharter.status": "active" })
     .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
     .toArray();
@@ -163,10 +163,13 @@ export async function buildBankingHealth(db: Db, now = new Date()): Promise<Bank
     currencies.push(health);
   }
 
-  const unfinished = await db
-    .collection<{ _id: string; kind: string; turn?: number; createdAt: Date; status: string }>(
-      MONEY_MOVE_COLLECTION
-    )
+  const unfinished = await bankMoneyMovesCollection<{
+    _id: string;
+    kind: string;
+    turn?: number;
+    createdAt: Date;
+    status: string;
+  }>(db)
     .find({ status: "partial" })
     .sort({ createdAt: 1 })
     .limit(500)
@@ -183,8 +186,7 @@ export async function buildBankingHealth(db: Db, now = new Date()): Promise<Bank
           authoritativeCurrencies: readCohort(policy),
         });
 
-  const resolvingRows = await db
-    .collection<Corporation>("corporations")
+  const resolvingRows = await corporationsCollection(db)
     .find({
       "bankCharter.resolutionClaimedTurn": { $exists: true },
       "bankCharter.depositorsResolvedTurn": { $exists: false },

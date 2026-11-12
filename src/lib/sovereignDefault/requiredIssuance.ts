@@ -13,12 +13,12 @@
 
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   calculateQuarterlyIssuanceAmount,
   calculateSovereignRolloverAmount,
   getNationalBudgetId,
 } from "@/lib/bonds/sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export async function computeRequiredIssuance(
   db: Db,
@@ -30,7 +30,7 @@ export async function computeRequiredIssuance(
   if (!COUNTRY_CONFIGS[countryCode as CountryId]) return 0;
 
   const budgetId = getNationalBudgetId(countryCode as CountryId);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return 0;
 
   const rolloverAmount = await calculateSovereignRolloverAmount(db, countryCode as CountryId, turn);

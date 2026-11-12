@@ -19,7 +19,7 @@ vi.mock("@/lib/discordWebhooks", () => ({
   sendCountryGameEvent: vi.fn().mockResolvedValue(undefined),
   DISCORD_COLORS: { billEnacted: 0x00ff00 },
 }));
-vi.mock("@/lib/archetypeAffinities", () => ({
+vi.mock("@/lib/policyShiftImpacts", () => ({
   calculateShiftImpacts: vi.fn().mockReturnValue({}),
 }));
 vi.mock("@/lib/budget/revenue", () => ({

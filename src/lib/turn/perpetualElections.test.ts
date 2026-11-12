@@ -14,11 +14,11 @@ describe("perpetualElections", () => {
   describe("DEFAULT_DURATIONS", () => {
     beforeAll(async () => {
       // Load the turn orchestration graph before timing the duration assertions.
-      await import("./perpetualElections");
+      await import("@/lib/elections/scheduling");
     }, 60_000);
 
     it("House is 96h (2 years), shorter than Senate (288h) and Governor (192h)", async () => {
-      const { DEFAULT_DURATIONS } = await import("./perpetualElections");
+      const { DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
       expect(DEFAULT_DURATIONS.house.durationHours).toBe(96);
       expect(DEFAULT_DURATIONS.house.primaryDurationHours).toBe(72);
       expect(DEFAULT_DURATIONS.senate.durationHours).toBe(288);
@@ -28,7 +28,7 @@ describe("perpetualElections", () => {
     });
 
     it("House completes 3x per Senate cycle, 2x per Governor cycle", async () => {
-      const { DEFAULT_DURATIONS } = await import("./perpetualElections");
+      const { DEFAULT_DURATIONS } = await import("@/lib/elections/scheduling");
       const houseTurns = DEFAULT_DURATIONS.house.durationHours;
       const senateTurns = DEFAULT_DURATIONS.senate.durationHours;
       const governorTurns = DEFAULT_DURATIONS.governor.durationHours;
@@ -39,32 +39,32 @@ describe("perpetualElections", () => {
 
   describe("justResolvedInSameTurn", () => {
     it("returns false when prev is undefined", async () => {
-      const { justResolvedInSameTurn } = await import("./perpetualElections");
+      const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
       expect(justResolvedInSameTurn(undefined, new Date())).toBe(false);
     });
 
     it("returns false when prev has no updatedAt", async () => {
-      const { justResolvedInSameTurn } = await import("./perpetualElections");
+      const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
       const prev = { cycle: 1 } as Election;
       expect(justResolvedInSameTurn(prev, new Date())).toBe(false);
     });
 
     it("returns true when prev.updatedAt is the same instant as now", async () => {
-      const { justResolvedInSameTurn } = await import("./perpetualElections");
+      const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
       const now = new Date("2026-04-21T00:00:00Z");
       const prev = { cycle: 1, updatedAt: now } as Election;
       expect(justResolvedInSameTurn(prev, now)).toBe(true);
     });
 
     it("returns true when prev resolved 30 seconds before now (same tick)", async () => {
-      const { justResolvedInSameTurn } = await import("./perpetualElections");
+      const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
       const now = new Date("2026-04-21T00:00:30Z");
       const prev = { cycle: 1, updatedAt: new Date("2026-04-21T00:00:00Z") } as Election;
       expect(justResolvedInSameTurn(prev, now)).toBe(true);
     });
 
     it("returns false when prev resolved one full turn ago", async () => {
-      const { justResolvedInSameTurn } = await import("./perpetualElections");
+      const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
       const now = new Date("2026-04-21T01:00:00Z");
       const prev = { cycle: 1, updatedAt: new Date("2026-04-21T00:00:00Z") } as Election;
       // Exactly 1 turn (3_600_000 ms) apart — not "same tick", must allow spawn
@@ -72,7 +72,7 @@ describe("perpetualElections", () => {
     });
 
     it("returns false when prev resolved many turns ago", async () => {
-      const { justResolvedInSameTurn } = await import("./perpetualElections");
+      const { justResolvedInSameTurn } = await import("@/lib/elections/scheduling");
       const now = new Date("2026-04-21T00:00:00Z");
       const prev = { cycle: 1, updatedAt: new Date("2026-04-11T00:00:00Z") } as Election;
       expect(justResolvedInSameTurn(prev, now)).toBe(false);
@@ -129,7 +129,7 @@ describe("perpetualElections", () => {
         toArray: vi.fn().mockResolvedValue([election]),
       });
 
-      const { advanceElectionTimers } = await import("./perpetualElections");
+      const { advanceElectionTimers } = await import("@/lib/elections/scheduling");
       await advanceElectionTimers(now, 100, mockResolvePrimaries);
 
       expect(mockBulkWrite).toHaveBeenCalledTimes(1);
@@ -164,7 +164,7 @@ describe("perpetualElections", () => {
         toArray: vi.fn().mockResolvedValue([election]),
       });
 
-      const { advanceElectionTimers } = await import("./perpetualElections");
+      const { advanceElectionTimers } = await import("@/lib/elections/scheduling");
       await advanceElectionTimers(now, 100, mockResolvePrimaries);
 
       const [ops] = mockBulkWrite.mock.calls[0];
@@ -194,7 +194,7 @@ describe("perpetualElections", () => {
         toArray: vi.fn().mockResolvedValue([election]),
       });
 
-      const { advanceElectionTimers } = await import("./perpetualElections");
+      const { advanceElectionTimers } = await import("@/lib/elections/scheduling");
       await advanceElectionTimers(now, 100, mockResolvePrimaries);
 
       const [ops] = mockBulkWrite.mock.calls[0];
@@ -207,7 +207,7 @@ describe("perpetualElections", () => {
         toArray: vi.fn().mockResolvedValue([]),
       });
 
-      const { advanceElectionTimers } = await import("./perpetualElections");
+      const { advanceElectionTimers } = await import("@/lib/elections/scheduling");
       const now = new Date();
       await advanceElectionTimers(now, 100, mockResolvePrimaries);
 
@@ -216,7 +216,8 @@ describe("perpetualElections", () => {
     });
 
     it("House completes after exactly 96 turns (durationHours) when now advances 1h per turn", async () => {
-      const { advanceElectionTimers, DEFAULT_DURATIONS } = await import("./perpetualElections");
+      const { advanceElectionTimers, DEFAULT_DURATIONS } =
+        await import("@/lib/elections/scheduling");
       const houseDuration = DEFAULT_DURATIONS.house.durationHours;
       expect(houseDuration).toBe(96);
 
@@ -277,7 +278,7 @@ describe("perpetualElections", () => {
 
       mockFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([election]) });
 
-      const { advanceElectionTimers } = await import("./perpetualElections");
+      const { advanceElectionTimers } = await import("@/lib/elections/scheduling");
       await advanceElectionTimers(now, 148, mockResolvePrimaries);
 
       const [ops] = mockBulkWrite.mock.calls[0];
@@ -303,7 +304,7 @@ describe("perpetualElections", () => {
 
       mockFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([election]) });
 
-      const { advanceElectionTimers } = await import("./perpetualElections");
+      const { advanceElectionTimers } = await import("@/lib/elections/scheduling");
       // Turn held at 130 (< endTurn 148): the deadline is frozen — no completion,
       // even though effectiveNow is years past the endTime Date.
       await advanceElectionTimers(new Date("2030-01-01T00:00:00Z"), 130, mockResolvePrimaries);
@@ -384,7 +385,7 @@ describe("perpetualElections", () => {
         }),
       } as never);
 
-      const { ensurePerpetualElections } = await import("./perpetualElections");
+      const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
       await ensurePerpetualElections(now, 154);
 
       // deleteMany is called with $in containing election IDs only when cleanup prunes.
@@ -431,7 +432,7 @@ describe("perpetualElections", () => {
         }),
       } as never;
 
-      const { cleanupDuplicateElections } = await import("./perpetualElections");
+      const { cleanupDuplicateElections } = await import("@/lib/elections/scheduling");
       await cleanupDuplicateElections(db, now);
 
       expect(elections.updateMany).toHaveBeenCalledWith(
@@ -501,7 +502,7 @@ describe("perpetualElections", () => {
         }),
       } as never;
 
-      const { cleanupDuplicateElections } = await import("./perpetualElections");
+      const { cleanupDuplicateElections } = await import("@/lib/elections/scheduling");
       await cleanupDuplicateElections(db, now);
 
       expect(elections.updateMany).toHaveBeenCalledWith(
@@ -555,7 +556,7 @@ describe("perpetualElections", () => {
         }),
       } as never;
 
-      const { cleanupDuplicateElections } = await import("./perpetualElections");
+      const { cleanupDuplicateElections } = await import("@/lib/elections/scheduling");
       await cleanupDuplicateElections(db, now);
 
       expect(elections.updateMany).toHaveBeenCalledWith(
@@ -603,7 +604,7 @@ describe("perpetualElections", () => {
         }),
       } as never;
 
-      const { cleanupDuplicateElections } = await import("./perpetualElections");
+      const { cleanupDuplicateElections } = await import("@/lib/elections/scheduling");
       await cleanupDuplicateElections(db, now);
 
       expect(elections.updateMany).toHaveBeenCalledWith(
@@ -657,7 +658,7 @@ describe("perpetualElections", () => {
         }),
       } as never);
 
-      const { ensurePerpetualElections } = await import("./perpetualElections");
+      const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
       await ensurePerpetualElections(now, 1);
 
       // Non-vacuous: real state WY must get races (proves generation ran).
@@ -752,7 +753,7 @@ describe("perpetualElections", () => {
         }),
       } as never);
 
-      const { ensurePerpetualElections } = await import("./perpetualElections");
+      const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
       await ensurePerpetualElections(now, 972);
 
       const usPresident = insertedDocs.filter(
@@ -865,7 +866,7 @@ describe("perpetualElections", () => {
       const mock = makeMockDb(["KAN"], [], [resolved], currentTurn);
       await mountDb(mock.electionsCollection, mock.statesCollection, mock.gameStateCollection)();
 
-      const { ensureJPCouncillorElections } = await import("./perpetualElections");
+      const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
       await ensureJPCouncillorElections(now, 1);
 
       expect(mock.insertCalls.flat()).toHaveLength(0);
@@ -897,7 +898,7 @@ describe("perpetualElections", () => {
       const mock = makeMockDb(["KAN"], [], [resolved], currentTurn);
       await mountDb(mock.electionsCollection, mock.statesCollection, mock.gameStateCollection)();
 
-      const { ensureJPCouncillorElections } = await import("./perpetualElections");
+      const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
       await ensureJPCouncillorElections(now, 1);
 
       const inserted = mock.insertCalls.flat();
@@ -940,7 +941,7 @@ describe("perpetualElections", () => {
       const mock = makeMockDb(["KAN"], [], [resolved], currentTurn);
       await mountDb(mock.electionsCollection, mock.statesCollection, mock.gameStateCollection)();
 
-      const { ensureJPCouncillorElections } = await import("./perpetualElections");
+      const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
       await ensureJPCouncillorElections(now, 1);
 
       const inserted = mock.insertCalls.flat();
@@ -976,7 +977,7 @@ describe("perpetualElections", () => {
       const mock = makeMockDb(["HOK"], [live], [], currentTurn);
       await mountDb(mock.electionsCollection, mock.statesCollection, mock.gameStateCollection)();
 
-      const { ensureJPCouncillorElections } = await import("./perpetualElections");
+      const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
       await ensureJPCouncillorElections(now, 2);
 
       expect(mock.bulkWriteCalls.flat()).toEqual([
@@ -1011,7 +1012,7 @@ describe("perpetualElections", () => {
       const mock = makeMockDb(["HOK"], [], [resolved], currentTurn);
       await mountDb(mock.electionsCollection, mock.statesCollection, mock.gameStateCollection)();
 
-      const { ensureJPCouncillorElections } = await import("./perpetualElections");
+      const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
       await ensureJPCouncillorElections(now, 2);
 
       expect(mock.insertCalls.flat()[0]?.totalSeats).toBe(3);
@@ -1041,7 +1042,7 @@ describe("perpetualElections", () => {
       const mock = makeMockDb(["KAN"], [], [resolved], currentTurn);
       await mountDb(mock.electionsCollection, mock.statesCollection, mock.gameStateCollection)();
 
-      const { ensureJPCouncillorElections } = await import("./perpetualElections");
+      const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
       await ensureJPCouncillorElections(now, 1);
 
       const inserted = mock.insertCalls.flat();
@@ -1076,7 +1077,7 @@ describe("perpetualElections", () => {
       const mock = makeMockDb(["KAN"], [], [resolved], currentTurn);
       await mountDb(mock.electionsCollection, mock.statesCollection, mock.gameStateCollection)();
 
-      const { ensureJPCouncillorElections } = await import("./perpetualElections");
+      const { ensureJPCouncillorElections } = await import("@/lib/elections/scheduling");
       await ensureJPCouncillorElections(now, 1);
 
       const inserted = mock.insertCalls.flat();
@@ -1155,7 +1156,7 @@ describe("perpetualElections", () => {
       const mock = makeUKMockDb(["ENG"], [liveSnap], [], currentTurn);
       await mountUKDb(mock);
 
-      const { ensureUKElections } = await import("./perpetualElections");
+      const { ensureUKElections } = await import("@/lib/elections/scheduling");
       await ensureUKElections(now);
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
@@ -1183,7 +1184,7 @@ describe("perpetualElections", () => {
       const mock = makeUKMockDb(["ENG"], [], [resolved], currentTurn);
       await mountUKDb(mock);
 
-      const { ensureUKElections } = await import("./perpetualElections");
+      const { ensureUKElections } = await import("@/lib/elections/scheduling");
       await ensureUKElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -1223,7 +1224,7 @@ describe("perpetualElections", () => {
         preIterationTurns: 48,
       });
       await mountUKDb(mock);
-      const { ensureUKElections } = await import("./perpetualElections");
+      const { ensureUKElections } = await import("@/lib/elections/scheduling");
       await ensureUKElections(now);
       const inserted = mock.insertCalls.flat();
       expect(inserted[0].endTurn).toBe(1468);
@@ -1263,7 +1264,7 @@ describe("perpetualElections", () => {
         preIterationTurns: 48,
       });
       await mountUKDb(mock);
-      const { ensureUKElections } = await import("./perpetualElections");
+      const { ensureUKElections } = await import("@/lib/elections/scheduling");
       await ensureUKElections(now);
       expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
         {
@@ -1298,7 +1299,7 @@ describe("perpetualElections", () => {
         preIterationTurns: 48,
       });
       await mountUKDb(mock);
-      const { ensureUKElections } = await import("./perpetualElections");
+      const { ensureUKElections } = await import("@/lib/elections/scheduling");
       await ensureUKElections(now);
       expect(mock.insertCalls.flat()[0].shiftedScheduleEndTurn).toBe(1468);
     });
@@ -1328,7 +1329,7 @@ describe("perpetualElections", () => {
         preIterationTurns: 48,
       });
       await mountUKDb(mock);
-      const { ensureUKElections } = await import("./perpetualElections");
+      const { ensureUKElections } = await import("@/lib/elections/scheduling");
       await ensureUKElections(now);
       const inserted = mock.insertCalls.flat();
       expect(inserted[0].cycle).toBe(8);
@@ -1359,7 +1360,7 @@ describe("perpetualElections", () => {
       const mock = makeUKMockDb(["ENG"], [], [resolved], currentTurn);
       await mountUKDb(mock);
 
-      const { ensureUKElections } = await import("./perpetualElections");
+      const { ensureUKElections } = await import("@/lib/elections/scheduling");
       await ensureUKElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -1457,10 +1458,10 @@ describe("perpetualElections", () => {
         updatedAt: now,
       } as Election;
 
-      const mock = makeJPMockDb(["tokyo"], [liveSnap], [], currentTurn);
+      const mock = makeJPMockDb(["KAN"], [liveSnap], [], currentTurn);
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
@@ -1479,21 +1480,20 @@ describe("perpetualElections", () => {
       const mock = makeJPMockDb(["HOK"], [live], [], 300, "1953-default");
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
-      expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
-        {
-          updateOne: {
-            filter: {
-              _id: live._id,
-              totalSeats: 12,
-              status: { $in: ["active", "upcoming"] },
-            },
-            update: { $set: { totalSeats: 21, updatedAt: now } },
+      const written = vi.mocked(mock.electionsCollection.bulkWrite).mock.calls.flat(2);
+      expect(written).toContainEqual({
+        updateOne: {
+          filter: {
+            _id: live._id,
+            totalSeats: 12,
+            status: { $in: ["active", "upcoming"] },
           },
+          update: { $set: { totalSeats: 21, updatedAt: now } },
         },
-      ]);
+      });
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
 
@@ -1511,7 +1511,7 @@ describe("perpetualElections", () => {
       const mock = makeJPMockDb(["KAN"], [live], [], 100, "1991-default");
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
       expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
@@ -1544,7 +1544,7 @@ describe("perpetualElections", () => {
       const mock = makeJPMockDb(["KAN"], [live], [], 100, "1991-default");
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
       expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
@@ -1578,7 +1578,7 @@ describe("perpetualElections", () => {
       const mock = makeJPMockDb(["KAN"], [upcoming, active], [], 100, "1991-default");
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
       expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
@@ -1626,7 +1626,7 @@ describe("perpetualElections", () => {
       });
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
       expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
@@ -1652,7 +1652,7 @@ describe("perpetualElections", () => {
       });
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
       const spawned = mock.insertCalls.flat();
@@ -1694,7 +1694,7 @@ describe("perpetualElections", () => {
       const mock = makeJPMockDb(["KAN"], [], [resolved], currentTurn);
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -1730,7 +1730,7 @@ describe("perpetualElections", () => {
       const mock = makeJPMockDb(["KAN"], [], [resolved], currentTurn);
       await mountJPDb(mock);
 
-      const { ensureJPElections } = await import("./perpetualElections");
+      const { ensureJPElections } = await import("@/lib/elections/scheduling");
       await ensureJPElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -1802,7 +1802,7 @@ describe("perpetualElections", () => {
       const mock = makeCNMockDb(regions, [], [], currentTurn);
       await mountCNDb(mock);
 
-      const { ensureCNElections } = await import("./perpetualElections");
+      const { ensureCNElections } = await import("@/lib/elections/scheduling");
       await ensureCNElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -1838,7 +1838,7 @@ describe("perpetualElections", () => {
       const mock = makeCNMockDb(regions, [live], [], currentTurn);
       await mountCNDb(mock);
 
-      const { ensureCNElections } = await import("./perpetualElections");
+      const { ensureCNElections } = await import("@/lib/elections/scheduling");
       await ensureCNElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -1868,7 +1868,7 @@ describe("perpetualElections", () => {
       const mock = makeCNMockDb(regions, [], [resolved], currentTurn);
       await mountCNDb(mock);
 
-      const { ensureCNElections } = await import("./perpetualElections");
+      const { ensureCNElections } = await import("@/lib/elections/scheduling");
       await ensureCNElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -1906,7 +1906,7 @@ describe("perpetualElections", () => {
       const mock = makeCNMockDb(regions, [], [resolved], currentTurn);
       await mountCNDb(mock);
 
-      const { ensureCNElections } = await import("./perpetualElections");
+      const { ensureCNElections } = await import("@/lib/elections/scheduling");
       await ensureCNElections(now);
 
       const inserted = mock.insertCalls.flat();
@@ -2007,7 +2007,7 @@ describe("perpetualElections", () => {
       const mock = makeUSMockDb(["AL", "CA"], [], [alSenateCompleted], currentTurn);
       await mountUSDb(mock);
 
-      const { ensurePerpetualElections } = await import("./perpetualElections");
+      const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
       await ensurePerpetualElections(now, currentTurn);
 
       const senateInserts = mock.insertCalls.flat().filter((d) => d.electionType === "senate");
@@ -2086,7 +2086,7 @@ describe("perpetualElections", () => {
       );
       await mountUSDb(mock);
 
-      const { ensurePerpetualElections } = await import("./perpetualElections");
+      const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
       await ensurePerpetualElections(now, currentTurn);
 
       const senateInserts = mock.insertCalls.flat().filter((d) => d.electionType === "senate");

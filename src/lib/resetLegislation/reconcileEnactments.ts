@@ -5,6 +5,7 @@ import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { applyResetLawBillEnactment } from "./enactBill";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Retry shell for an enactment hook that failed after the bill status committed.
@@ -22,8 +23,7 @@ export async function reconcileResetLawEnactments(
       resetSystemVersionsForCountry(gameState, RESET_V2_READY, country).legislation === "v2"
   );
   if (countries.length === 0) return { candidates: 0, applied: 0 };
-  const [candidate] = await db
-    .collection<Bill>("bills")
+  const [candidate] = await billsCollection(db)
     .aggregate<Bill | StateBill>([
       {
         $match: {

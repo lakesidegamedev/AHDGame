@@ -8,16 +8,15 @@ import {
   northernIrelandRegion,
 } from "@/lib/countries/uk/northernIreland/rules";
 /**
- * SP2 political-metrics dynamics turn phase (dynamics spec §3): enacted laws
- * define per-metric equilibrium targets; every region's politicalMetrics
- * values drift toward them each turn. Writes REGIONAL values only — the
- * national display remains the SP1 read-time population-weighted aggregate.
+ * Political-metrics dynamics turn phase: enacted laws define per-metric
+ * equilibrium targets; every region's politicalMetrics drift toward them each
+ * turn. Writes REGIONAL values only; the national display remains the read-time
+ * population-weighted aggregate.
  *
- * Trend history (§5): every HISTORY_CADENCE_TURNS, the national aggregate is
- * appended to politicalMetricsHistory (capped at HISTORY_MAX_ENTRIES), and
- * each region's own post-drift board is appended to
- * politicalMetricsRegionHistory (capped at REGION_HISTORY_MAX_ENTRIES, #1322)
- * so the region registry can show the same trends the national one does.
+ * Every HISTORY_CADENCE_TURNS the national aggregate is appended to
+ * politicalMetricsHistory (capped at HISTORY_MAX_ENTRIES), and each region's
+ * own post-drift board is appended to politicalMetricsRegionHistory (capped at
+ * REGION_HISTORY_MAX_ENTRIES) so the region registry can show trends too.
  */
 
 import type { AnyBulkWriteOperation, Db } from "mongodb";
@@ -53,7 +52,6 @@ import {
 } from "@/lib/politicalMetrics/cabinetResidual";
 import { macroResidualFor } from "@/lib/politicalLegislation/macroResidual";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
-import type { GameState } from "@/lib/db/types";
 import { resolveGameYear } from "@/lib/era/era";
 import { spendingProvider } from "@/lib/metricEngine/spendingProvider";
 import { governmentApprovalProvider, sectorRevenueTaxProvider } from "@/lib/metricEngine/providers";
@@ -64,14 +62,16 @@ import { politicalNodeTargets } from "@/lib/politicalMetrics/engineNodes";
 import { engineTermFor } from "@/lib/politicalMetrics/engineTerm";
 import { loadLabourRelationsPoliticalNudgesByCountry } from "@/lib/unions/labourRelationsPoliticalProvider";
 import {
-  loadPublicHealthDeliveryMultiplier,
-  US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-} from "@/lib/governmentFinance/deliveryMultiplier";
-import {
   loadDepartmentDeliveryMultipliersByCountry,
   loadRegionalDeliveryMultipliersByRegion,
 } from "@/lib/governmentFinance/deliveryMultipliers";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { politicalMetricsHistoryCollection } from "@/lib/db/repositories/politicalMetricsHistory";
+import { politicalMetricsRegionHistoryCollection } from "@/lib/db/repositories/politicalMetricsRegionHistory";
 
 // Defined in politicalMetrics/historyCadence so a client component can read the
 // cadence without importing this module (and with it the whole turn engine).
@@ -138,9 +138,7 @@ export async function processPoliticalMetricsDynamics(
   //
   // Read from the collection rather than a constant: the seeded set is the
   // authority, so adding a country to the board cannot leave it undriven.
-  const countryIds = (
-    await db.collection<PoliticalMetricsDoc>("politicalMetrics").distinct("countryId")
-  ).filter(Boolean);
+  const countryIds = (await politicalMetricsCollection(db).distinct("countryId")).filter(Boolean);
 
   // Inputs for the ENGINE TERM — the metric engine's political nodes, which
   // model outcomes causally (spending -> attainment, inequality -> safety) and
@@ -162,57 +160,28 @@ export async function processPoliticalMetricsDynamics(
     spendingProvider(db),
     governmentApprovalProvider(db),
     sectorRevenueTaxProvider(db),
-    db.collection<GameState>("gameState").findOne(
+    (await getGameStateCollection(db)).findOne(
       { _id: "current" },
       {
         projection: {
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
-          departmentProgramSliceEnabled: 1,
-          departmentFinanceEnabled: 1,
-          regionalLegislationFinanceEnabled: 1,
-          livingConflictsEnabled: 1,
         },
       }
     ),
     loadLabourRelationsPoliticalNudgesByCountry(db, turnNumber),
   ]);
-  const northernIrelandSignal = await loadNorthernIrelandSignal(
-    db,
-    eraGameState?.livingConflictsEnabled === true
-  );
+  const northernIrelandSignal = await loadNorthernIrelandSignal(db);
   const northernIrelandEffects = northernIrelandPoliticalEffects(northernIrelandSignal);
-  const terrorismSignal = await loadTerrorismSignal(
-    db,
-    eraGameState?.livingConflictsEnabled === true
-  );
-  const pandemicSignal = await loadPandemicSignal(
-    db,
-    eraGameState?.livingConflictsEnabled === true
-  );
-  // Era-aware only while the era system is on, matching every other consumer:
-  // a metric's realistic span moves with the era, so scoring a 1953 outcome
+  const terrorismSignal = await loadTerrorismSignal(db);
+  const pandemicSignal = await loadPandemicSignal(db);
+  // A metric's realistic span moves with the era, so scoring a 1953 outcome
   // against modern thresholds would read it as bottom-of-scale.
-  const eraYear = eraGameState?.eraSystemEnabled
-    ? (resolveGameYear(eraGameState) ?? undefined)
-    : undefined;
-  const generalizedFinanceEnabled = eraGameState?.departmentFinanceEnabled === true;
-  const regionalFinanceEnabled = eraGameState?.regionalLegislationFinanceEnabled === true;
-  const [deliveryByCountry, deliveryByRegion, publicHealthDelivery] = await Promise.all([
-    loadDepartmentDeliveryMultipliersByCountry(
-      db,
-      turnNumber,
-      generalizedFinanceEnabled,
-      countryIds
-    ),
-    loadRegionalDeliveryMultipliersByRegion(db, turnNumber, regionalFinanceEnabled),
-    loadPublicHealthDeliveryMultiplier(
-      db,
-      turnNumber,
-      !generalizedFinanceEnabled && eraGameState?.departmentProgramSliceEnabled === true
-    ),
+  const eraYear = eraGameState ? (resolveGameYear(eraGameState) ?? undefined) : undefined;
+  const [deliveryByCountry, deliveryByRegion] = await Promise.all([
+    loadDepartmentDeliveryMultipliersByCountry(db, turnNumber, true, countryIds),
+    loadRegionalDeliveryMultipliersByRegion(db, turnNumber, true),
   ]);
 
   await Promise.all(
@@ -221,7 +190,7 @@ export async function processPoliticalMetricsDynamics(
       // the whole fan-out runs concurrently. The four country-scoped reads are
       // independent of one another too.
       const [docs, nationalLevels, cabinetSnapshot, macroDocs] = await Promise.all([
-        db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
+        politicalMetricsCollection(db).find({ countryId }).toArray(),
         getEnactedLevels(db, countryId),
         // Standing cabinet effects (momentum driver channel): the contribution
         // snapshot the ministerial step persisted last turn. National standing
@@ -233,16 +202,12 @@ export async function processPoliticalMetricsDynamics(
         // Bridge B: the region's macro reality, flattened to "category.metricId".
         // Only the macro-owned categories matter — the political board supplies
         // everything else.
-        db.collection<MacroMetricsDoc>("macroMetrics").find({ countryId }).toArray(),
+        macroMetricsCollection<MacroMetricsDoc>(db).find({ countryId }).toArray(),
       ]);
       if (docs.length === 0) return;
       countriesProcessed++;
 
-      const nationalMultipliers = generalizedFinanceEnabled
-        ? deliveryByCountry.get(countryId)
-        : countryId === COUNTRY_CONFIGS.US.id
-          ? new Map([[US_PUBLIC_HEALTH_POLITICAL_LAW_ID, publicHealthDelivery.multiplier]])
-          : undefined;
+      const nationalMultipliers = deliveryByCountry.get(countryId);
       const national = lawTargets(countryId, nationalLevels, nationalMultipliers);
       const labourRelationsContribution = labourRelationsNudgesByCountry.get(countryId);
       const labourRelationsOf = (id: PoliticalMetricId) =>
@@ -274,8 +239,7 @@ export async function processPoliticalMetricsDynamics(
       const catalogLawIds = getCatalog(countryId)
         .filter((law) => law.kind !== "tax")
         .map((law) => law.id);
-      const regionalRecords = await db
-        .collection<StatePolicy>("statePolicies")
+      const regionalRecords = await statePoliciesCollection(db)
         .find(
           {
             scope: "state",
@@ -299,10 +263,8 @@ export async function processPoliticalMetricsDynamics(
       const ops: AnyBulkWriteOperation<PoliticalMetricsDoc>[] = [];
       for (const doc of docs) {
         const regionalLevels = regionalLevelsByRegion.get(doc._id);
-        const regionalMultipliers = regionalFinanceEnabled
-          ? new Map(deliveryByRegion.get(doc._id) ?? [])
-          : undefined;
-        if (regionalLevels && regionalMultipliers) {
+        const regionalMultipliers = new Map(deliveryByRegion.get(doc._id) ?? []);
+        if (regionalLevels) {
           for (const law of getCatalog(countryId)) {
             if (
               law.kind !== "tax" &&
@@ -323,16 +285,11 @@ export async function processPoliticalMetricsDynamics(
         let healed = false;
         let changed = false;
 
-        // Accumulate + decay the cabinet contribution into this region's isolated
-        // cabinetResiduals (never touches the day-one `residuals`). National
-        // standing effects plus this region's sited extras (ticket #1129).
-        //
-        // Ticket #1129: the cap is applied PER CHANNEL (orders, tier settings,
-        // military, estates, energy, infrastructure). Under the old single
-        // clamp, 21% of US regional entries sat pinned and a newly built estate
-        // aimed at a pinned family contributed exactly zero, which is what two
-        // players reported. A channel can still saturate, but it can no longer
-        // silence the others.
+        // Accumulate and decay the cabinet contribution into this region's
+        // isolated cabinetResiduals (never the day-one `residuals`). The cap
+        // is applied PER CHANNEL (orders, tier settings, military, estates,
+        // energy, infrastructure), so one saturated channel cannot zero out
+        // the others.
         const regionId = String(doc._id);
         const contributionBySource: Record<string, Record<string, number>> = {};
         for (const [source, sourceContribution] of Object.entries(cabinetSnapshot.sources)) {
@@ -342,9 +299,8 @@ export async function processPoliticalMetricsDynamics(
           );
         }
         if (Object.keys(cabinetSnapshot.sources).length === 0) {
-          // Pre-#1129 snapshot (the ministerial step has not run since the
-          // deploy): treat the whole thing as one channel for this turn. The
-          // next ministerial step writes the split.
+          // Pre-split snapshot: merge into one channel for this turn;
+          // the next ministerial step writes the split.
           const merged = addContributions(
             cabinetSnapshot.contribution,
             cabinetSnapshot.regional[regionId] ?? {}
@@ -436,10 +392,9 @@ export async function processPoliticalMetricsDynamics(
           for (const [metricId, points] of Object.entries(national)) {
             const id = metricId as PoliticalMetricId;
             const value = doc.values[id] ?? 0;
-            // A map that predates a family (or any partial map) falls back to the
-            // SAME derivation the heal above uses. It used to drop the supplement
-            // here, which composed to `value + 0.5 x supplement` and walked the
-            // board up a little every turn for any region holding regional law.
+            // A map that predates a family (or any partial map) falls back to the SAME
+            // derivation the heal above uses; failing to add the supplement here
+            // would walk the board up every turn for regions holding regional law.
             const structural =
               residuals[id] ?? structuralResidual(value, points, supplement?.[id] ?? 0);
             // Bridge B: macro reality bends the equilibrium, bounded so the law
@@ -505,19 +460,18 @@ export async function processPoliticalMetricsDynamics(
       }
 
       if (ops.length > 0) {
-        await db.collection<PoliticalMetricsDoc>("politicalMetrics").bulkWrite(ops);
+        await politicalMetricsCollection(db).bulkWrite(ops);
       }
 
       // §5 trend history: national aggregate snapshot on cadence.
       if (turnNumber % HISTORY_CADENCE_TURNS === 0) {
-        const states = await db
-          .collection<State>("states")
+        const states = await statesCollection(db)
           .find({ countryId: countryId as State["countryId"] }, { projection: { population: 1 } })
           .toArray();
         const populationByRegion = new Map(states.map((s) => [s._id, s.population ?? 0]));
         const values = aggregateNationalPoliticalMetrics(docs, populationByRegion);
         const now = new Date();
-        await db.collection<PoliticalMetricsHistoryDoc>("politicalMetricsHistory").updateOne(
+        await politicalMetricsHistoryCollection(db).updateOne(
           { _id: countryId },
           {
             $push: {
@@ -528,14 +482,13 @@ export async function processPoliticalMetricsDynamics(
           { upsert: true }
         );
 
-        // Per-region series (#1322). `doc.values` is already the POST-drift map
-        // — the loop above assigns `doc.values = nextValues` before this point,
-        // which is the same reason the national aggregate just computed is
-        // correct. Snapshotting the pre-drift read would make every region
+        // Per-region series. `doc.values` is the POST-drift map: the loop above
+        // assigned it before this point, which is why the national aggregate computed
+        // above is correct. Snapshotting the pre-drift read would make every region
         // series lag reality by a full cadence.
         //
-        // Rotation is $slice, never a read-modify-write: a concurrent turn must
-        // not be able to truncate the series.
+        // Rotation is $slice, never read-modify-write: a concurrent turn must not
+        // truncate the series.
         const regionHistoryOps: AnyBulkWriteOperation<PoliticalMetricsRegionHistoryDoc>[] =
           docs.map((doc) => ({
             updateOne: {
@@ -556,9 +509,7 @@ export async function processPoliticalMetricsDynamics(
             },
           }));
         if (regionHistoryOps.length > 0) {
-          await db
-            .collection<PoliticalMetricsRegionHistoryDoc>("politicalMetricsRegionHistory")
-            .bulkWrite(regionHistoryOps);
+          await politicalMetricsRegionHistoryCollection(db).bulkWrite(regionHistoryOps);
         }
       }
     })

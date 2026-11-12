@@ -1,19 +1,25 @@
 import type { Db } from "mongodb";
-import { isAutoDisastersEnabled } from "@/lib/crises/featureFlag";
 import { processAutoDisasterSpawn } from "@/lib/crises/autoDisasterSpawn";
 import { processClimateFeedbackTurn } from "@/lib/crises/climateTurn";
 import { getSimulatedCountryIds } from "@/lib/countryAccess";
+import { createSpawnDirector } from "@/lib/crises/spawnDirector";
 
 export async function processAutoDisasterTurn(
   db: Db,
   turn: number,
-  preloadedGameState?: { autoDisastersEnabled?: boolean; autoCrisisPaused?: boolean }
+  preloadedGameState?: {
+    autoCrisisPaused?: boolean;
+    autoDisastersEnabled?: boolean;
+    startingYear?: number;
+  }
 ): Promise<void> {
-  const enabled = await isAutoDisastersEnabled(preloadedGameState);
-  if (!enabled) return;
-  const climatePressure = await processClimateFeedbackTurn(db, turn);
+  const climatePressure = await processClimateFeedbackTurn(db, turn, {
+    startingYear: preloadedGameState?.startingYear,
+  });
   // Temporary pause: stay enabled but spawn nothing new this turn.
   if (preloadedGameState?.autoCrisisPaused === true) return;
+  // Emergency kill switch. The system ships on, so only an explicit false stops it.
+  if (preloadedGameState?.autoDisastersEnabled === false) return;
 
   // Enumerate via the canonical access helper, not a raw
   // `countryGameStates.find({ isActive: true })`: those docs are created lazily
@@ -23,7 +29,13 @@ export async function processAutoDisasterTurn(
   // Status-based, not player-enablement: these fire wherever the engine is
   // simulating, including countries deliberately closed to players.
   const countryIds = await getSimulatedCountryIds(db);
+  // One read of the live crisis load for every country.
+  const director = await createSpawnDirector(db, turn, new Set<string>(countryIds));
   for (const countryId of countryIds) {
-    await processAutoDisasterSpawn(db, countryId, turn, { enabled: true, climatePressure });
+    await processAutoDisasterSpawn(db, countryId, turn, {
+      enabled: true,
+      climatePressure,
+      director,
+    });
   }
 }

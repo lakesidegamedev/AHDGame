@@ -23,27 +23,22 @@ import {
 } from "@/lib/utils/normalizeNPI";
 import { infamyPenaltyMultiplier } from "@/lib/utils/infamy";
 import type { CountryId } from "@/lib/constants/countries";
-import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/electionEngine/constants";
+import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/elections/engine/constants";
 
 /**
  * Temperature for {@link primarySharePctSoftmax}. Lower = more decisive (the
  * leader pulls away harder); higher = closer to the raw linear share. 8 spreads
  * a ~2-pt score lead into a visible ~15-pt polling gap without over-collapsing
- * the trailing field (#934).
+ * the trailing field.
  */
 export const PRIMARY_SHARE_SOFTMAX_TEMPERATURE = 8;
 
 /**
- * Convert a party's primary scores into display `sharePct` (0–100, 1 decimal)
- * via a softmax rather than a linear `score / Σscore`.
- *
- * Primary scores cluster in a narrow high band (national reach saturates, policy
- * alignment is tight among serious candidates), so the linear mapping squashed a
- * 3-way race to ~33/33/33 and hid real leads (#934). Softmax decompresses that.
- * It is **monotonic**: it never reorders candidates or changes the winner, which
- * is selected from raw score (top-N), not share — this only affects the number
- * players see. Returns percentages index-aligned with `scores`; `[]`→`[]`,
- * singletons→`[100]`, and an all-zero/degenerate field falls back to an even split.
+ * Convert primary scores into display `sharePct` (0-100, 1 decimal) via softmax.
+ * Linear share squashed close scores and hid real leads; softmax decompresses.
+ * Monotonic: never reorders candidates or changes the winner, which is picked
+ * from raw score (top-N). Only affects the displayed number. Returns
+ * percentages index-aligned with `scores`.
  */
 export function primarySharePctSoftmax(
   scores: number[],
@@ -62,19 +57,15 @@ export function primarySharePctSoftmax(
 /**
  * Standard primary score for state-level elections (Senate, House, Governor, State Senate).
  *
- * Components total 100 pts:
- *   - Alignment (state + party):    0–40 pts
- *       split: 25 state + 15 party when state cached lean is available
- *       fallback: 40 party-only when state lean is missing (preserves pre-rework math)
- *   - Favorability:                  0–35 pts
- *   - Political influence:           0–25 pts (sqrt curve via normalizeNPI)
- *
+ * Components (100 pts total):
+ *   - Alignment: 0-40 pts; split 25 state + 15 party when state lean is cached,
+ *     else fallback to 40 party-only.
+ *   - Favorability: 0-35 pts.
+ *   - Political influence: 0-25 pts (sqrt curve via normalizeNPI).
  * Then multiplied by `infamyPenaltyMultiplier(infamy)` (1.0..0.95).
  *
- * @param stateEconLean    candidate's state cached economic lean (-5..+5), or null/undefined
- * @param stateSocialLean  candidate's state cached social   lean (-5..+5), or null/undefined
- *                         BOTH must be present (numbers) to enter the split-alignment path.
- *                         Otherwise the formula falls back to the legacy 40-pt party-only alignment.
+ * BOTH state leans must be numbers to enter split-alignment; otherwise the
+ * 40-pt party-only path is used.
  */
 export function calcPrimaryScore(
   candidateEcon: number,
@@ -120,12 +111,10 @@ export function calcPrimaryScore(
 /**
  * Presidential primary component weights (sum = 100).
  *
- * Party influence used to be weighted above national reach so party standing —
- * and the chair / leadership path that accumulates it — meaningfully moved
- * primary performance (#934 follow-up). Rebalanced 2026-08-19: it was weighted
- * above FAVORABILITY too, and favorability is the single most decisive variable
- * in the general election while party influence does not enter the general vote
- * formula anywhere at all.
+ * Party influence is weighted above national reach so party standing, and the
+ * chair / leadership path that accumulates it, meaningfully moves primary
+ * performance. Favorability is the single most decisive variable in the general
+ * election while party influence does not enter the general vote formula at all.
  *
  * Evidence: `approvalScalar` multiplies a candidate's ENTIRE general-election
  * vote, measured at ~0.45 vote-share points per favorability point on the live
@@ -139,7 +128,7 @@ export function calcPrimaryScore(
  * election rewards. Alignment stays dominant at 40, so parties still nominate
  * people who agree with them; they just stop nominating people the electorate
  * has already rejected. Party influence 30 → 20 and reach 20 → 15 fund it while
- * PRESERVING the #934 ordering (party influence still outranks national reach),
+ * PRESERVING the ordering (party influence still outranks national reach),
  * so the chair / leadership path retains its edge over raw name recognition.
  *
  * Why 25 and not 30: at 30 the favorability term exactly ties the alignment term
@@ -174,17 +163,13 @@ export interface PartyChairPrimaryContext {
 /**
  * Party influence fed into presidential-primary math.
  *
- * Chairs no longer receive an inherent presidential-primary multiplier: the
- * national +25% / state +15%-in-state-and-adjacent chair boost was removed so a
- * party chair does not get a structural advantage in the presidential primary
- * (reverted per design discussion 2026-07-11). Party influence still counts —
- * it feeds the snapshot party-influence weight and the per-state vote
- * multiplier — but it does so from the candidate's raw accumulated influence,
- * not an amplified chair value. Chairs come out ahead only insofar as the
- * leadership path accrues party influence faster over time.
+ * Chairs get no inherent presidential-primary multiplier; influence counts
+ * from the candidate's raw accumulated influence, not an amplified chair
+ * value. Chairs come out ahead only insofar as the leadership path accrues
+ * party influence faster over time.
  *
- * The `role` / `context` args are retained for call-site compatibility and for
- * a planned home-state-influence regional model; they are currently inert.
+ * `role` / `context` are retained for call-site compatibility and a planned
+ * home-state regional model; currently inert.
  */
 export function effectivePartyInfluenceForPresidentialPrimary(
   partyInfluence: number,
@@ -255,16 +240,13 @@ export function buildPartyChairIdSet(
 }
 
 /**
- * Presidential primary score — national recognition, heavier policy and party clout.
+ * Presidential primary score: national recognition, heavier policy and party clout.
  * Uses nationalInfluence for characters; NPPs use politicalInfluence as proxy.
  *
  * `partyInfluence` is the candidate's own accumulated party clout
- * (`character.partyInfluence`, 0..unbounded — no in-game ceiling). It replaced
- * home-state party organization, which was near-constant across same-party
- * rivals and so never differentiated candidates in a primary (see #934). NPPs
- * have no `partyInfluence` and are passed 0 by callers. The normalization is
- * linear + uncapped, so this component exceeds its nominal weight for candidates
- * above the reference scale (partyInfluence 150).
+ * (`character.partyInfluence`, 0..unbounded, no in-game ceiling). NPPs have none
+ * and are passed 0. The normalization is linear + uncapped, so this component
+ * exceeds its nominal weight for candidates above the reference scale (partyInfluence 150).
  *
  * Multiplied by `infamyPenaltyMultiplier(infamy)` at the end.
  */

@@ -5,8 +5,6 @@
  * were you fighting for" is the question a peace deal answers. Retrofitting a goal
  * onto wars already in progress would be far more expensive than carrying one from
  * the start.
- *
- * Spec: docs/superpowers/specs/2026-08-04-war-declaration-legislation-design.md
  */
 /**
  * Turns a country must wait between filing war declarations.

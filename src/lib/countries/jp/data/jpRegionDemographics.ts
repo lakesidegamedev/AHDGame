@@ -1,25 +1,20 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Japan region demographics using JP voter archetypes.
  *
- * Each region has a composition of the 10 JP voter groups (populations sum to 100%).
- * Economic and social leans calibrated to actual voting patterns in each region.
+ * Each region has a composition of the 10 JP voter groups (populations sum to
+ * 100%). Economic and social leans calibrated to actual voting patterns.
  *
  * `categoryWeights` uses `jp_voterGroups: 100` to match the JP demographic
- * profile ID ("jp_archetypes") defined in CountryConfig.
+ * profile ID ("jp_archetypes") in CountryConfig.
  *
- * Values are approximate estimates based on:
- * - 2021 House of Representatives election results by bloc
- * - Japanese Census 2020 regional data
- * - NHK election surveys
+ * Design principle: every archetype has a non-zero population in every region;
+ * regional character is expressed through the population mix.
  *
- * Design principle: every archetype has a non-zero population in every region.
- * Regional character is expressed through the population mix.
- *
- * Group IDs match jpDemographicCategories.ts `jp_voterGroups` groups.
+ * Group IDs match the country Layer-1 model `jp_voterGroups` groups.
  */
-export const jpRegionDemographics: StateDemographics[] = [
+export const jpRegionDemographics: CensusGroupView[] = [
   // ── Hokkaido ──────────────────────────────────────────────────────────────
   // Mixed urban/rural. Sapporo is progressive; rural areas conservative.
   // Historically more competitive than mainland rural regions.

@@ -15,8 +15,8 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { fetchEnrichedCandidates, initElectionVoteTally } from "@/lib/electionEngine";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { fetchEnrichedCandidates, initElectionVoteTally } from "@/lib/elections/engine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   calcPrimaryScore,
   calcPresidentPrimaryScore,
@@ -29,7 +29,6 @@ import type {
   Election,
   ElectionCandidate,
   Character,
-  NPP,
   PoliticalParty,
   State,
   StatePartyOrg,
@@ -38,6 +37,15 @@ import { ObjectId } from "mongodb";
 import { parseSeatId } from "@/lib/seats/seatId";
 import { getGameTime } from "@/lib/time/gameTime";
 import { primaryClosedFilter, electionOpenFilter } from "@/lib/elections/electionDeadlineFilters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/admin/elections/resolve-primaries — Eliminates primary losers and initializes vote tallies for elections whose primary phase has ended.
 // Auth: requireAdmin
@@ -49,8 +57,7 @@ export const POST = withAdminRoute(async (_auth) => {
   const { currentTurn, effectiveNow } = await getGameTime();
 
   // All elections whose primary window has closed but which are still running
-  const pastPrimary = await db
-    .collection<Election>("elections")
+  const pastPrimary = await electionsCollection(db)
     .find({
       status: { $in: ["active", "upcoming"] },
       $and: [
@@ -71,8 +78,7 @@ export const POST = withAdminRoute(async (_auth) => {
   }
 
   // Use composite keys to avoid cross-country sequential ID collisions
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       {},
       {
@@ -90,8 +96,7 @@ export const POST = withAdminRoute(async (_auth) => {
 
   // Pre-batch: all active candidates for all elections at once
   const allPastPrimaryIds = pastPrimary.map((e) => e._id as ObjectId);
-  const allActiveCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const allActiveCandidates = await electionCandidatesCollection(db)
     .find({ electionId: { $in: allPastPrimaryIds }, status: "active" })
     .toArray();
   const candidatesByElection = new Map<string, ElectionCandidate[]>();
@@ -105,8 +110,7 @@ export const POST = withAdminRoute(async (_auth) => {
   // Pre-batch: which elections already have a vote tally
   const existingTallyElectionIds = new Set(
     (
-      await db
-        .collection("electionVoteTallies")
+      await electionVoteTalliesCollection<Document>(db)
         .find({ electionId: { $in: allPastPrimaryIds } }, { projection: { electionId: 1 } })
         .toArray()
     ).map((t) => (t.electionId as ObjectId).toString())
@@ -150,9 +154,10 @@ export const POST = withAdminRoute(async (_auth) => {
       if (!isPresident && election.seatId) {
         const localRegionId = parseSeatId(election.seatId).localRegionId;
         if (localRegionId) {
-          const stateDoc = await db
-            .collection<State>("states")
-            .findOne({ _id: localRegionId, countryId: election.countryId ?? "US" });
+          const stateDoc = await statesCollection(db).findOne({
+            _id: localRegionId,
+            countryId: election.countryId ?? "US",
+          });
           if (
             stateDoc &&
             typeof stateDoc.cachedEconomicLean === "number" &&
@@ -166,28 +171,18 @@ export const POST = withAdminRoute(async (_auth) => {
 
       const partyOrgByStateParty = new Map<string, number>();
       let charMap = new Map<string, Character>();
-      let _nppMap = new Map<string, NPP>();
       let partyChairMaps = buildPartyChairMaps(parties, []);
       if (isPresident) {
         const characterIds = candidates.filter((c) => !c.isNPP).map((c) => c.characterId);
-        const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
-        const [chars, npps, statePartyOrgs] = await Promise.all([
+        const [chars, statePartyOrgs] = await Promise.all([
           characterIds.length > 0
-            ? db
-                .collection<Character>("characters")
+            ? charactersCollection(db)
                 .find({ _id: { $in: characterIds } })
                 .toArray()
             : [],
-          nppIds.length > 0
-            ? db
-                .collection<NPP>("npps")
-                .find({ _id: { $in: nppIds } })
-                .toArray()
-            : [],
-          db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+          statePartyOrgCollection(db).find({}).toArray(),
         ]);
         charMap = new Map(chars.map((c) => [c._id.toString(), c]));
-        _nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
         partyChairMaps = buildPartyChairMaps(parties, statePartyOrgs);
         for (const po of statePartyOrgs) {
           partyOrgByStateParty.set(`${po.stateId}_${po.partyId}`, po.organization ?? 0);
@@ -208,9 +203,7 @@ export const POST = withAdminRoute(async (_auth) => {
             if (!ec) return { candidateId: c._id.toString(), score: 0 };
             let score: number;
             if (isPresident) {
-              // Party influence (candidate's own party clout), NPPs have none. See #934.
-              // National chairs get +25% on the value used for primary calcs.
-              // State chairs get no boost on the national snapshot (geographic only).
+              // Party influence is the candidate's own party clout; NPPs have none. National chairs get +25% for primary calcs; state chairs get no national-snapshot boost (geographic only).
               const rawPartyInfluence = c.isNPP
                 ? 0
                 : (charMap.get(c.characterId.toString())?.partyInfluence ?? 0);
@@ -256,12 +249,10 @@ export const POST = withAdminRoute(async (_auth) => {
       }
 
       if (loserIds.length > 0) {
-        await db
-          .collection("electionCandidates")
-          .updateMany(
-            { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         totalEliminated += loserIds.length;
 
         // Archive (not delete) campaign documents for eliminated primary
@@ -271,7 +262,7 @@ export const POST = withAdminRoute(async (_auth) => {
           .filter((c) => loserIds.includes(c._id.toString()) && c.characterId && !c.isNPP)
           .map((c) => c.characterId!);
         if (loserCharIds.length > 0) {
-          await db.collection("campaigns").updateMany(
+          await campaignsCollection<Document>(db).updateMany(
             { electionId, candidateId: { $in: loserCharIds }, status: { $ne: "archived" } },
             {
               $set: {
@@ -288,8 +279,7 @@ export const POST = withAdminRoute(async (_auth) => {
 
     // Ensure vote tally exists
     if (!existingTallyElectionIds.has(electionId.toString())) {
-      const generalCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const generalCandidates = await electionCandidatesCollection(db)
         .find({ electionId, status: "active" })
         .toArray();
       if (election.electionType === "president") {

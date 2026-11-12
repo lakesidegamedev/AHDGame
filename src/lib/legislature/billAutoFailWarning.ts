@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Election } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const BILL_STAGE_DURATION_MS = 24 * 60 * 60 * 1000;
 
@@ -106,12 +107,12 @@ export async function getBillProposalAutoFailWarning(
   const exposureWindow = getLowerChamberExposureWindow(countryId, originChamber, proposedAt);
   if (!exposureWindow) return null;
 
-  const electionsCollection = db.collection<Election>("elections");
-  if (typeof electionsCollection.findOne !== "function") {
+  const electionDocs = electionsCollection(db);
+  if (typeof electionDocs.findOne !== "function") {
     return null;
   }
 
-  const upcomingElection = await electionsCollection.findOne(
+  const upcomingElection = await electionDocs.findOne(
     {
       countryId,
       electionType: { $in: getTrackedLowerChamberElectionTypes(countryId) },

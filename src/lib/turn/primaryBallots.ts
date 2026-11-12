@@ -1,30 +1,20 @@
 /**
- * Primary ballot accrual — the pure math behind real primary vote counts.
+ * Primary ballot accrual, the pure math behind real primary vote counts.
  *
- * Model (the registration-pool model): each party's primary electorate is the
- * region's resolved turnout pool scaled by that party's registration share of
- * the electorate. Independents and the unregistered are excluded by
- * construction, because party registration shares plus those two buckets sum
- * to 100. Each turn releases a slice of that pool (same `turnVoteWeight`
- * curve the general uses), split within the party by that turn's score-derived
- * shares — so the cumulative count is the time-integral of the standings the
- * players watched, and a late surge moves the result less than a sustained
- * lead, exactly as accumulating ballots should.
+ * Registration-pool model: each party's primary electorate is the region's
+ * resolved turnout pool scaled by that party's registration share (independents
+ * and unregistered are excluded). Each turn releases a slice (same
+ * `turnVoteWeight` curve as the general), split by that turn's standings, so
+ * the cumulative count is the time-integral of the standings players watched.
  *
- * Ballots accrue over the CLOSING stretch of the primary phase only (see
- * {@link primaryBallotWindow}): the "primary" phase of a seat is the whole
- * inter-election gap (a US Senate seat sits in it for 264 turns, a UK region
- * for 200+), and nobody casts a primary ballot five years out. Accruing from
- * day one would also hand whoever filed first an unassailable pile before a
- * rival could enter.
+ * Ballots accrue over the CLOSING stretch of the primary phase only: the
+ * primary phase spans the whole inter-election gap, and accruing from day one
+ * would give the first filer an unassailable pile before rivals could enter.
  *
- * Everything here is pure so the arithmetic is unit-testable without a
- * database; `recordPrimarySnapshots` supplies the loaded data and persists the
- * result, and `resolvePrimariesIfNeeded` reads the cumulative counts back to
- * pick the nominee.
+ * Pure so the arithmetic is unit-testable without a database.
  */
 
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 
 /**

@@ -31,6 +31,7 @@ import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { ParliamentaryGovernmentActions } from "./components/ParliamentaryGovernmentActions";
 import { ReferendumConsentSection } from "@/components/uk/ReferendumConsentSection";
 import { ExecutiveTabsClient } from "./ExecutiveTabsClient";
+import { isCaretakerActive } from "@/lib/elections/rules/caretaker";
 import { formationTurnToLarpDate } from "@/lib/government/formationDate";
 import { fetchImperialPossessive } from "@/lib/imperial";
 import {
@@ -43,16 +44,22 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
-import { getEligibleCabinetCharacters } from "@/lib/uk/cabinetEligibility";
+import { getEligibleCabinetCharacters } from "@/lib/countries/uk/cabinetEligibility";
 import { ShadowCabinetSection } from "./components/ShadowCabinetSection";
 import { ObjectId } from "mongodb";
 import {
   getConfidenceGauge,
   getConfidenceGaugeHistory,
-} from "@/lib/uk/confidence/confidenceGaugeStore";
+} from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import { ConfidenceGaugeReadout } from "@/components/uk/government/ConfidenceGaugeReadout";
-import { getNhsState } from "@/lib/uk/nhs/nhsStore";
+import { getNhsState } from "@/lib/countries/uk/nhs/nhsStore";
 import { NhsQualityTile } from "@/components/uk/nhs/NhsQualityTile";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -95,19 +102,18 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     getConfidenceGaugeHistory(db, countryId),
   ]);
   // eslint-disable-next-line local/no-country-literals -- the NHS quality tile remains UK-specific.
-  const isUK = countryId === "UK";
+  const isUK = countryHasFeature("ukUi", countryId);
   const nhsState = isUK ? await getNhsState(db) : null;
 
   const [parlGov, govFormation, imperialPossessive, chamberSeats] = await Promise.all([
     // Legacy collection — only UK/JP ever wrote it; null elsewhere.
-    db.collection<ParliamentaryGovernment>("parliamentaryGovernments").findOne({ _id: countryId }),
+    parliamentaryGovernmentsCollection(db).findOne({ _id: countryId }),
     getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
     surface.heroTitleUsesImperialPossessive
       ? fetchImperialPossessive(db, countryId)
       : Promise.resolve(null),
-    // Live chamber size (era overlay + region sum) — not the modern-config
-    // default. Ticket #1078: 1953 UK showed "625 of 650" because this panel
-    // called getCountryConfig without the world preset.
+    // Live chamber size (era overlay + region sum), not the modern-config
+    // default. Must use the world preset.
     getLiveLowerChamberSeats(db, countryId),
   ]);
 
@@ -117,7 +123,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const pmCharId = govFormation ? govFormation.pmCharacterId : (parlGov?.pmCharacterId ?? null);
   let pmCharacter: Character | null = null;
   if (pmCharId) {
-    pmCharacter = await db.collection<Character>("characters").findOne({ _id: pmCharId });
+    pmCharacter = await charactersCollection(db).findOne({ _id: pmCharId });
   }
 
   // Optional deputy seat (IE Tánaiste) — seated through the cabinet as
@@ -131,9 +137,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       positionId: surface.deputyPlaque.cabinetPositionId,
     });
     if (deputyMember?.characterId) {
-      deputyCharacter = await db
-        .collection<Character>("characters")
-        .findOne({ _id: deputyMember.characterId });
+      deputyCharacter = await charactersCollection(db).findOne({ _id: deputyMember.characterId });
     }
   }
 
@@ -242,9 +246,11 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   // Viewer is a lower-chamber member — only members may cast votes
   let viewerIsMember = false;
   if (user?.character) {
-    const memberRecord = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ characterId: user.character._id, countryId, officeType: lowerChamberKey });
+    const memberRecord = await electedOfficialsCollection(db).findOne({
+      characterId: user.character._id,
+      countryId,
+      officeType: lowerChamberKey,
+    });
     viewerIsMember = memberRecord != null;
   }
 
@@ -258,9 +264,9 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     !govFormation.activeVoteId
   ) {
     const NO_CONFIDENCE_COOLDOWN_TURNS = 48;
-    const gameState = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+      _id: "current",
+    });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const lastVote = await getNoConfidenceVotesCollection(db)
@@ -285,8 +291,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       : null;
 
   // Seat composition from the lower chamber
-  const allLowerOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const allLowerOfficials = await electedOfficialsCollection(db)
     .find({ officeType: lowerChamberKey, countryId })
     .toArray();
 
@@ -303,8 +308,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const partySeqNums = [
     ...new Set(sortedParties.map(([k]) => Number.parseInt(k, 10)).filter((n) => !Number.isNaN(n))),
   ];
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: partySeqNums } })
     .toArray();
   const partyBySeq = new Map(partyDocs.map((p) => [String(p.sequentialId), p]));
@@ -320,7 +324,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const governingPartyDoc =
     govPartyId && !Number.isNaN(governingPartySeq)
       ? (partyBySeq.get(govPartyId) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: governingPartySeq,
         })))
@@ -334,7 +338,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     if (Number.isNaN(seq)) return null;
     return (
       partyBySeq.get(character.party) ??
-      (await db.collection<PoliticalParty>("politicalParties").findOne({
+      (await politicalPartiesCollection(db).findOne({
         countryId,
         sequentialId: seq,
       }))
@@ -357,9 +361,9 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     parlGov
   );
   if (oppositionResult) {
-    oppositionLeaderChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: oppositionResult.chairId });
+    oppositionLeaderChar = await charactersCollection(db).findOne({
+      _id: oppositionResult.chairId,
+    });
     oppositionPartyDoc = oppositionResult.partyDoc;
   }
 
@@ -407,8 +411,12 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   const lostMajority = govFormation?.lostMajority ?? false;
 
   let statusStripText: string;
-  if (isPending) {
-    statusStripText = "Awaiting Formation";
+  if (isCaretakerActive(govFormation)) {
+    statusStripText = "Caretaker Government: limited powers until a new government forms";
+  } else if (isPending) {
+    statusStripText = govFormation?.succession
+      ? `Awaiting Formation (acting: ${govFormation.succession.actingLabel})`
+      : "Awaiting Formation";
   } else if (lostMajority) {
     statusStripText = "Formed (Lost Majority)";
   } else if (formationType === "coalition") {
@@ -675,7 +683,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
         chrome={{
           governmentType: config.governmentType,
           executiveTermLimit: getExecutiveTermLimit(countryId),
-          hasDevolution: config.id === "UK",
+          hasDevolution: countryHasFeature("ukUi", config.id),
           ordersLabel: getExecutiveOrderNamePlural(countryId),
           legislatureName: config.legislature.name,
           legislaturePath: config.legislature.path,

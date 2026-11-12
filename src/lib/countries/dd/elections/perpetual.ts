@@ -4,19 +4,16 @@ import {
   ensureRegionalDelegateElections,
   ensureRegionalGovernorElections,
   seatsFromRegionField,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 
 /**
- * DD Volkskammer — the GDR's unicameral chamber, elected as a single National
+ * DD Volkskammer: the GDR's unicameral chamber, elected as a single National
  * Front list per macro-region (1953) / Land (1979). One multi-seat regional
  * delegate election per region, seats from the live `houseDistricts`.
  *
- * The seed sums to 500, but the LIVE sum is whatever the region docs say now —
- * reunification carried ten more Laender in and the chamber grew to 693. Sizing
- * from the live docs rather than the seed total is the whole point: the shared
- * spawner forces this map onto each new cycle so a resized chamber cannot go on
- * electing to its old magnitude (#1262). Mirrors `ensureRUSupremeSovietElections`
- * — the sibling one-party command state.
+ * Size from the live region docs, not the seed total: the chamber can be
+ * resized (reunification grew it to 693) and a stale magnitude would keep
+ * electing too few seats. Mirrors `ensureRUSupremeSovietElections`.
  */
 export async function ensureDDVolkskammerElections(
   now: Date,
@@ -49,10 +46,10 @@ export async function ensureDDGovernorElections(now: Date, inFlightTurn?: number
 }
 
 /**
- * Land assemblies (Landtage) — each Land's authored chamber size
+ * Land assemblies (Landtage) , each Land's authored chamber size
  * (`stateSenateSeats` on the seeded State doc). Without this family, Land
  * First Secretaries have no same-party legislature NPPs to queue state bills
- * through (ticket #1044). Mirrors `ensureRURepublicSovietElections`.
+ * through. Mirrors `ensureRURepublicSovietElections`.
  */
 export async function ensureDDLandAssemblyElections(
   now: Date,

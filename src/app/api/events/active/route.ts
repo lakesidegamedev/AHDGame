@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError } from "@/lib/api/errors";
-import { isPlayerRandomEventsEnabled, isWorldEventsEnabled } from "@/lib/events/featureFlag";
+import { isPlayerRandomEventsEnabled } from "@/lib/events/featureFlag";
 import {
   buildActiveEventForCharacter,
   buildActiveEventForCountry,
@@ -13,7 +13,7 @@ import type { CountryId } from "@/lib/constants/countries";
 
 // GET /api/events/active - Pending random event (with options) for the current character,
 // plus their most recent resolved outcome for the actions-page card. When the character
-// currently holds their country's executive office and worldEventsEnabled is on, a pending
+// currently holds their country's executive office, a pending
 // country-scope event takes priority over their own character-scope event.
 // Auth: requireAuthWithCharacter
 // Errors: 401
@@ -26,20 +26,15 @@ export async function GET() {
     const now = Date.now();
     const character = auth.user.character;
 
-    if (await isWorldEventsEnabled()) {
-      const leaderCharId = await getHeadOfGovernmentCharacterId(
+    const leaderCharId = await getHeadOfGovernmentCharacterId(db, character.countryId as CountryId);
+    if (leaderCharId?.equals(character._id)) {
+      const countryEvent = await buildActiveEventForCountry(
         db,
-        character.countryId as CountryId
+        character.countryId as CountryId,
+        now
       );
-      if (leaderCharId?.equals(character._id)) {
-        const countryEvent = await buildActiveEventForCountry(
-          db,
-          character.countryId as CountryId,
-          now
-        );
-        if (countryEvent) {
-          return NextResponse.json({ event: countryEvent, lastResolved: null });
-        }
+      if (countryEvent) {
+        return NextResponse.json({ event: countryEvent, lastResolved: null });
       }
     }
 

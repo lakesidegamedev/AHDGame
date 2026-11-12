@@ -1,11 +1,12 @@
 import LoginPageClient from "./LoginPageClient";
-import { isMissingRequiredEnvError } from "@/lib/env";
+import { isMissingRequiredEnvError } from "@/lib/config/validatedEnv";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
 import { computeIntakeStatus } from "@/lib/auth/intakeStatus";
 import { getEraConfig } from "@/components/landing/eraThemes";
 import { getLoginImage } from "@/lib/images/staticCdnAssets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export default async function LoginPage() {
   let maintenanceMode = false;
@@ -17,12 +18,10 @@ export default async function LoginPage() {
 
   try {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { maintenanceMode: 1, registrationEnabled: 1, seedYear: 1 } }
-      );
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { maintenanceMode: 1, registrationEnabled: 1, seedYear: 1 } }
+    );
 
     // The login page only ever needs "is maintenance active at all" — no
     // partial-specific copy here (MaintenancePartialBanner carries the

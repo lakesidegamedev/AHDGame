@@ -1,9 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, FederalBudget } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -13,6 +12,12 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import type { Document } from "mongodb";
 
 export const DEFECT_ID = "AHD-tinky-stale-vote-excess";
 
@@ -175,16 +180,14 @@ async function survey(db: Db): Promise<Survey> {
   ];
 
   const [corporation, characters, budgets, sourceTradeCount, fxByCurrency] = await Promise.all([
-    db.collection<Corporation>("corporations").findOne({ _id: new ObjectId(CORPORATION_ID) }),
-    db
-      .collection<Character>("characters")
+    corporationsCollection(db).findOne({ _id: new ObjectId(CORPORATION_ID) }),
+    charactersCollection(db)
       .find({ _id: { $in: characterClaims.map((claim) => new ObjectId(claim.destinationId)) } })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ countryId: { $in: treasuryCountries } })
       .toArray(),
-    db.collection("shareTradeHistory").countDocuments({
+    shareTradeHistoryCollection<Document>(db).countDocuments({
       _id: { $in: SOURCE_TRADE_IDS.map((id) => new ObjectId(id)) },
       corporationId: new ObjectId(CORPORATION_ID),
     }),
@@ -367,7 +370,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   let updated = 0;
   for (const credit of payload.characterCredits) {
     const path = `currencyBalances.personal.${credit.currencyCode}`;
-    const result = await db.collection<Character>("characters").updateOne(
+    const result = await charactersCollection(db).updateOne(
       { _id: new ObjectId(credit.characterId), [MARKER_PATH]: { $exists: false } },
       {
         $inc: { [path]: credit.localAmount },
@@ -389,7 +392,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   for (const credit of payload.treasuryCredits) {
-    const result = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const result = await federalBudgetCollection(db).updateOne(
       { _id: credit.budgetId, [MARKER_PATH]: { $exists: false } },
       {
         $inc: { treasuryBalance: credit.localAmount },
@@ -410,7 +413,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     updated += 1;
   }
 
-  const corporation = await db.collection<Corporation>("corporations").updateOne(
+  const corporation = await corporationsCollection(db).updateOne(
     {
       _id: new ObjectId(payload.corporationId),
       [MARKER_PATH]: { $exists: false },
@@ -496,8 +499,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   );
 
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "admin_transfer", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];
@@ -525,13 +527,13 @@ async function verify(db: Db): Promise<VerifyResult> {
   const budgetIds = payload?.treasuryCredits.map((row) => row.budgetId) ?? [];
   const [markedCharacters, markedBudgets] = await Promise.all([
     recipientIds.length > 0
-      ? db.collection<Character>("characters").countDocuments({
+      ? charactersCollection(db).countDocuments({
           _id: { $in: recipientIds },
           [MARKER_PATH]: { $exists: true },
         })
       : 0,
     budgetIds.length > 0
-      ? db.collection<FederalBudget>("federalBudget").countDocuments({
+      ? federalBudgetCollection(db).countDocuments({
           _id: { $in: budgetIds },
           [MARKER_PATH]: { $exists: true },
         })

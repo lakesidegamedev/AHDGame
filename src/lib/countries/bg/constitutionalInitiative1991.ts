@@ -7,6 +7,9 @@ import {
   type Bg1991ConstituentDisposition,
 } from "./rules/constitutionalDecision1991";
 import { bg1991InitiativeSupport } from "./rules/constitutionalInitiative1991";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { bg1991ConstitutionalInitiativesCollection } from "@/lib/db/repositories/bg1991ConstitutionalInitiatives";
 
 export const BG_1991_INITIATIVES_COLLECTION = "bg1991ConstitutionalInitiatives";
 export class Bg1991InitiativeConflict extends Error {}
@@ -26,8 +29,7 @@ function actor(row: Deputy) {
   throw new Error("Constituent deputy has ambiguous financial ownership");
 }
 async function deputies(db: Db, session?: ClientSession) {
-  return db
-    .collection<ElectedOfficial>("electedOfficials")
+  return electedOfficialsCollection(db)
     .find(
       { countryId: "BG", officeType: "assemblyDeputy", seatsHeld: { $ne: 0 } },
       { session, projection: { characterId: 1, nppId: 1, seatsHeld: 1, party: 1 } }
@@ -51,12 +53,10 @@ export async function loadBg1991Initiative(
   session?: ClientSession,
   disposition: Bg1991ConstituentDisposition = "dissolve"
 ) {
-  const journal = await db
-    .collection<Initiative>(BG_1991_INITIATIVES_COLLECTION)
-    .findOne(
-      { _id: id(revision, disposition) },
-      { session, projection: { revision: 1, disposition: 1, signatures: 1 } }
-    );
+  const journal = await bg1991ConstitutionalInitiativesCollection<Initiative>(db).findOne(
+    { _id: id(revision, disposition) },
+    { session, projection: { revision: 1, disposition: 1, signatures: 1 } }
+  );
   if (!journal) return { support: 0, required: 100, canIntroduce: false };
   if (
     journal.revision !== revision ||
@@ -88,9 +88,10 @@ export async function signBg1991Initiative(input: {
   const proposer = rows.find((row) => row.characterId?.equals(characterId));
   if (!proposer)
     throw new Bg1991InitiativeConflict("A seated constituent deputy must endorse this initiative");
-  const journal = await db
-    .collection<Initiative>(BG_1991_INITIATIVES_COLLECTION)
-    .findOne({ _id: id(revision, disposition) }, { session });
+  const journal = await bg1991ConstitutionalInitiativesCollection<Initiative>(db).findOne(
+    { _id: id(revision, disposition) },
+    { session }
+  );
   if (
     journal &&
     (journal.revision !== revision ||
@@ -104,8 +105,7 @@ export async function signBg1991Initiative(input: {
     ),
     [actor(proposer)]: { signedOnTurn: turn, reason: "personal_choice" as const },
   };
-  const npcs = await db
-    .collection<Pick<NPP, "_id" | "party" | "personality">>("npps")
+  const npcs = await nppsCollection<Pick<NPP, "_id" | "party" | "personality">>(db)
     .find(
       { _id: { $in: rows.flatMap((row) => (row.nppId ? [row.nppId] : [])) } },
       { session, projection: { party: 1, personality: 1 } }
@@ -128,21 +128,18 @@ export async function signBg1991Initiative(input: {
       signatures[actor(row)] = { signedOnTurn: turn, reason: "npc_party_line" };
   }
   const result = support(rows, signatures);
-  await db
-    .collection<Initiative>(BG_1991_INITIATIVES_COLLECTION)
-    .updateOne(
-      { _id: id(revision, disposition) },
-      { $set: { revision, disposition, signatures } },
-      { session, upsert: true }
-    );
+  await bg1991ConstitutionalInitiativesCollection<Initiative>(db).updateOne(
+    { _id: id(revision, disposition) },
+    { $set: { revision, disposition, signatures } },
+    { session, upsert: true }
+  );
   return result;
 }
 
 /** Both draft variants share a projected mandate read, but never their signatures. */
 export async function loadBg1991Initiatives(db: Db, revision: number, session?: ClientSession) {
   const variants = ["dissolve", "continue"] as const;
-  const journals = await db
-    .collection<Initiative>(BG_1991_INITIATIVES_COLLECTION)
+  const journals = await bg1991ConstitutionalInitiativesCollection<Initiative>(db)
     .find(
       { _id: { $in: variants.map((variant) => id(revision, variant)) } },
       { session, projection: { revision: 1, disposition: 1, signatures: 1 } }

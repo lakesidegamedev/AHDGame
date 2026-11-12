@@ -9,7 +9,6 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Bond } from "@/lib/db/types/bond";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { FederalBudget } from "@/lib/db/types/budget";
@@ -21,6 +20,12 @@ import { FX_DEPRECIATION_LOOKBACK_TURNS, RECOVERY_CREDIBILITY_RATE_DISCOUNT } fr
 import { computeRequiredIssuance, requiredIssuanceFrom } from "./requiredIssuance";
 import { qualifyingHoldingsFace, sumQualifyingEntitySovereignHoldings } from "./entityHoldings";
 import type { SovereignDemandSnapshot } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 export async function loadCountrySovereignSnapshot(
   db: Db,
@@ -34,25 +39,18 @@ export async function loadCountrySovereignSnapshot(
   // Use the canonical helper for the US-legacy `_id: "federal"` mapping
   // (and any future direct-election country that adopts the same convention).
   const budgetId = getNationalBudgetId(countryCode as CountryId);
-  const federalBudget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId });
+  const federalBudget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!federalBudget) return null;
 
-  const centralBank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: countryCode });
+  const centralBank = await centralBanksCollection(db).findOne({ _id: countryCode });
 
   // `countryCode` is already known to be a real country: the COUNTRY_CONFIGS
   // guard at the top of this function returned null otherwise.
-  const boards = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const boards = await politicalMetricsCollection(db)
     .find({ countryId: countryCode as CountryId })
     .toArray();
 
-  const exchangeRate = await db
-    .collection<ExchangeRate>("exchangeRates")
-    .findOne({ _id: countryCode });
+  const exchangeRate = await exchangeRatesCollection(db).findOne({ _id: countryCode });
 
   // Phase 3 — entity-participation inputs. Run in parallel since they're
   // independent of each other and of the existing single-doc fetches above.
@@ -145,8 +143,7 @@ export async function loadCountrySovereignSnapshots(
 
   const budgetIdByCountry = new Map(known.map((code) => [code, getNationalBudgetId(code)]));
   const [budgets, centralBanks, boards, exchangeRates, imfCorp, bonds] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ _id: { $in: [...budgetIdByCountry.values()] } } as never, {
         projection: {
           debtToGdpRatio: 1,
@@ -159,25 +156,22 @@ export async function loadCountrySovereignSnapshots(
         },
       })
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({ _id: { $in: known } } as never, { projection: { primeRate: 1 } })
       .toArray(),
     // `values` whole: the trust key is the literal dotted name
     // "governance.integrity", which a projection path cannot address.
-    db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
+    politicalMetricsCollection(db)
       .find({ countryId: { $in: known } }, { projection: { countryId: 1, values: 1 } })
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({ _id: { $in: known } } as never, { projection: { rate: 1, rateHistory: 1 } })
       .toArray(),
-    db
-      .collection<{ _id: ObjectId }>("corporations")
-      .findOne({ imfInstitution: true }, { projection: { _id: 1 } }),
-    db
-      .collection<Bond>("bonds")
+    corporationsCollection<{ _id: ObjectId }>(db).findOne(
+      { imfInstitution: true },
+      { projection: { _id: 1 } }
+    ),
+    bondsCollection(db)
       .find(
         { issuerType: "sovereign", countryId: { $in: known }, matured: false, defaulted: false },
         {
@@ -253,17 +247,11 @@ function applyRecoveryCredibilityBonus(
 }
 
 /**
- * Mean public trust across the country's regions, normalized to 0..1.
+ * Mean public trust across regions, normalized to 0..1.
  *
- * Reads `governance.integrity` — the board family legacy `governance.publicTrust`
- * maps onto, and the SAME family `applyLegacyTrustDelta` writes when a default,
- * a debt penalty, or civil unrest damages trust. Those two halves have to name
- * the same thing or the loop does not close: this used to average the legacy
- * `publicTrust` off a store nothing writes any more, so the demand model saw a
- * flat neutral 0.5 no matter what a country did to its own credibility.
- *
- * The board is already on the 0-100 scale the old normalization assumed, so the
- * arithmetic is unchanged.
+ * Reads `governance.integrity`, the same family `applyLegacyTrustDelta`
+ * writes. These must name the same board or the trust loop does not close.
+ * Board values are on the 0-100 scale.
  */
 function computeTrust(boards: Array<Pick<PoliticalMetricsDoc, "values">>): number {
   if (boards.length === 0) return 0.5; // neutral if missing

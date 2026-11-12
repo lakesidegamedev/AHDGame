@@ -24,7 +24,7 @@ import {
   COUNTRY_CURRENCY_MAP,
   CURRENCY_SYMBOLS,
   FOREX_ACTIVE_CURRENCIES,
-} from "@/lib/constants/currencies";
+} from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondDetail, BondUserContext } from "./bondTypes";
 
@@ -153,11 +153,10 @@ export function BondTradeModal({
   const corpLiquidCurrencyCode = (userContext.myCorporation?.liquidCurrencyCode ??
     null) as CurrencyCode | null;
 
-  // Recompute anchor cash on the client to stay consistent with display rates.
-  // The API returns `myCashOnHand` already converted to ₳ using the rates it
-  // saw at request time; if rates shifted before render (turn boundary) the
-  // re-conversion to display currency overshoots a same-currency wallet (the
-  // "Personally $84M cash / Pay with $76M USD" mismatch — see Rashi #156).
+  // Recompute anchor cash on the client to match display rates. The API's
+  // myCashOnHand was converted at request time; if rates shifted before
+  // render, re-converting to display currency overshoots a same-currency
+  // wallet and the pay amount disagrees with the displayed balance.
   const personalCashAnchor =
     personalBalances !== undefined
       ? Object.entries(personalBalances).reduce(

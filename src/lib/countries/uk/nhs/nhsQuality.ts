@@ -1,16 +1,11 @@
 /**
- * UK NHS service-quality model (epic #856, ticket #858 — Cluster B).
+ * UK NHS service-quality model.
  *
- * A running quality score in [0, 100] driven by funding vs demand. It moves
- * GRADUALLY (a collapsed NHS takes time to rebuild; a well-funded one takes time
- * to show), and its state feeds two things:
- *   - a dynamic salience multiplier: a failing NHS becomes THE election issue,
- *     amplifying NHS pledges (Cluster A);
- *   - an approval modifier on the governing party.
- *
- * Closes the Budget → service → approval → election loop. Pure and decoupled:
- * the caller supplies a funding ratio (health spend vs demand). Magnitudes are
- * first-pass; calibrate in worldsim. See ops-knowledge `uk-rework-design-2026-08-25`.
+ * A running quality score in [0, 100] driven by funding vs demand. Moves
+ * GRADUALLY: a collapsed NHS takes time to rebuild. Its state feeds a dynamic
+ * salience multiplier (a failing NHS becomes the election issue, amplifying
+ * NHS pledges) and an approval modifier on the governing party. Pure: the
+ * caller supplies a funding ratio.
  */
 
 const NHS_QUALITY_MIN = 0;

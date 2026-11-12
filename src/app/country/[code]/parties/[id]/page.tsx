@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, use } from "react";
+import { LeaderLegacyPanel } from "@/components/government/LeaderLegacyPanel";
 import { PartyHubPage } from "./PartyHubPage";
 import { PartyPageSkeleton } from "./PartyPageSkeleton";
 
@@ -15,12 +16,15 @@ export default function PartyPage({ params }: { params: Promise<{ code: string; 
 function PartyPageContent({ params }: { params: Promise<{ code: string; id: string }> }) {
   const { code, id } = use(params);
   return (
-    <PartyHubPage
-      scope={{
-        kind: "national",
-        countryCode: code,
-        partyId: id,
-      }}
-    />
+    <>
+      <PartyHubPage
+        scope={{
+          kind: "national",
+          countryCode: code,
+          partyId: id,
+        }}
+      />
+      <LeaderLegacyPanel countryCode={code} partyId={id} title="Leader legacies for this party" />
+    </>
   );
 }

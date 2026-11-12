@@ -6,29 +6,19 @@ import { getUkModel } from "@/lib/seeds/international/uk";
 /**
  * Layer-1 models for the UK's devolved nations.
  *
- * Scotland and Wales run the UK's twelve voter groups and the same five census
- * dimensions, but had no Layer-1 model of their own. That mattered beyond
- * tidiness: `deriveCellsForState` returns null without one, so both fell through
- * to the LEGACY archetype vote path — which is why the archetype engine could
- * not be deleted. It was not a rollback path, it was their live vote path.
+ * Without one, `deriveCellsForState` returns null and these fall through to
+ * the LEGACY archetype vote path, so they need their own model.
  *
  * ERA DERIVATION
- * --------------
- * They have one authored census apiece (modern), and the UK has seven. Rather
- * than hand-invent ~455 historical distributions, each era is derived by taking
- * the nation's MEASURED modern deviation from the modern UK and applying it to
- * that era's UK census.
+ * They have one modern census each; the UK has seven. Rather than invent ~455
+ * historical distributions, each era applies the nation's MEASURED modern
+ * deviation from the modern UK to that era's UK census.
  *
- * That is defensible in a way inventing absolute values would not be: what is
- * stable about Scotland relative to England is structural and slow-moving — more
- * White British, more rural in the Highlands, a different education mix — while
- * the absolute levels (graduate share, ethnic diversity) move enormously between
- * 1953 and 2023. Anchoring the RATIO and letting the UK's authored era data carry
- * the level keeps both halves honest, and means a correction to a UK era census
- * automatically propagates.
- *
- * The alternative — copying the modern census into 1953 — would have put 36%
- * graduates in post-war Glasgow.
+ * Anchoring the RATIO is defensible: what is stable about Scotland relative to
+ * England is structural and slow-moving, while absolute levels (graduate share,
+ * diversity) move enormously 1953-2023. The UK's authored era data carries the
+ * level, so corrections propagate. Copying the modern census into 1953 would
+ * put 36% graduates in post-war Glasgow.
  */
 
 type Dim = keyof UKRegionLayer1;
@@ -137,8 +127,7 @@ function ukEraCensus(era: EraId): Record<string, UKRegionLayer1> {
  *
  * Positions, turnout rates and composition are deliberately shared. Scotland
  * and Wales use the UK's twelve voter groups, so authoring separate tables would
- * be a second copy of the same judgement calls, free to drift — the mistake
- * `archetypeBucketMap.ts` already made once.
+ * be a second copy of the same judgement calls, free to drift.
  */
 export function makeDevolvedNationModel(
   countryId: string,

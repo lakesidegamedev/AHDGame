@@ -1,24 +1,13 @@
 /**
- * GET /api/unions/[id]: union detail + the CorporateSectors currently
- * matching its (countryId, sectorType) scope (v3 Phase 8). Read-only, no
- * auth required, the dashboard UI decides what actions to show based on
- * whether the viewer leads this union. Gated on `labourSystemMode >= "full"`
- * (code-review fix #10/#13, previously ungated, kept serving live union
- * data indefinitely even after the feature was disabled).
+ * GET /api/unions/[id]: union detail plus CorporateSectors matching its
+ * (countryId, sectorType) scope. Read-only, no auth; gated on
+ * `labourSystemMode >= "full"` so live union data is not served when the
+ * feature is disabled.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type {
-  Bill,
-  BargainingCampaign,
-  CollectiveAgreement,
-  Corporation,
-  CorporateSector,
-  Union,
-} from "@/lib/db/types";
-import type { UnionEndorsement, UnionOrganizer } from "@/lib/db/types/union";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { isLabourFullMode } from "@/lib/labour/featureFlag";
@@ -62,11 +51,9 @@ import {
   loadBargainingLastEnded,
 } from "@/lib/unions/commands/bargaining";
 import { buildRatificationView, ratificationBlockReason } from "@/lib/unions/ratification";
-import { RATIFICATION_BALLOTS } from "@/lib/unions/commands/ratifySettlement";
 import type { BargainingRatificationBallot } from "@/lib/db/types/union";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
-import { PENSION_SCHEMES } from "@/lib/pensions/pensionTurn";
 import {
   describeFundingBand,
   pensionFundingBand,
@@ -84,6 +71,16 @@ import {
 import { paidUnionServices } from "@/lib/unions/rules";
 import { normalizeServiceIds } from "@/lib/unions/unionServices";
 import { clampPoliticalContributionPct } from "@/lib/unions/unionPoliticalContributions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
+import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
+import { bargainingRatificationBallotsCollection } from "@/lib/db/repositories/bargainingRatificationBallots";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -100,7 +97,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid union ID");
     }
     const db = await getDb();
-    const union = await db.collection<Union>("unions").findOne({ _id: new ObjectId(id) });
+    const union = await unionsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!union) {
       return errorResponse(404, "Union not found");
     }
@@ -118,8 +115,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       bargainingCampaigns,
       pensionScheme,
     ] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find(
           { countryId: union.countryId, sectorType: union.sectorType },
           {
@@ -138,21 +134,18 @@ export async function GET(_request: Request, { params }: RouteParams) {
           }
         )
         .toArray(),
-      db
-        .collection<UnionEndorsement>("unionEndorsements")
+      unionEndorsementsCollection(db)
         .find({ unionId: union._id })
         .sort({ createdAt: -1 })
         .toArray(),
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .find(buildActiveNationalBillFilter(union.countryId, NATIONAL_TERMINAL_STATUSES), {
           projection: { title: 1, status: 1, proposedAt: 1 },
         })
         .sort({ proposedAt: -1 })
         .toArray(),
       getGameState(db),
-      db
-        .collection<CollectiveAgreement>("collectiveAgreements")
+      collectiveAgreementsCollection(db)
         .find(
           { unionId: union._id, status: "active" },
           {
@@ -167,13 +160,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
           }
         )
         .toArray(),
-      db
-        .collection<BargainingCampaign>("bargainingCampaigns")
+      bargainingCampaignsCollection(db)
         .find({ unionId: union._id })
         .sort({ updatedAt: -1 })
         .limit(50)
         .toArray(),
-      db.collection<PensionScheme>(PENSION_SCHEMES).findOne({ unionId: union._id }),
+      pensionSchemesCollection<PensionScheme>(db).findOne({ unionId: union._id }),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;
 
@@ -231,8 +223,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .map((campaign) => campaign._id);
     const [ratificationBallots, viewer] = await Promise.all([
       ratifyingCampaignIds.length
-        ? db
-            .collection<BargainingRatificationBallot>(RATIFICATION_BALLOTS)
+        ? bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db)
             .find({ campaignId: { $in: ratifyingCampaignIds } })
             .toArray()
         : Promise.resolve([]),
@@ -245,7 +236,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const canOrganizeUnderground = viewer?.character?.countryId === union.countryId;
     const viewerIsOrganizer =
       canOrganizeUnderground && viewerCharacterId
-        ? await db.collection<UnionOrganizer>("unionOrganizers").findOne({
+        ? await unionOrganizersCollection(db).findOne({
             unionId: union._id,
             characterId: viewerCharacterId,
             undergroundStrength: { $gt: 0 },
@@ -264,8 +255,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       (s) => new ObjectId(s)
     );
     const corps = corpIds.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corpIds } }, { projection: { name: 1 } })
           .toArray()
       : [];
@@ -275,8 +265,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       ),
     ].map((id) => new ObjectId(id));
     const representingUnions = representingUnionIds.length
-      ? await db
-          .collection<Union>("unions")
+      ? await unionsCollection(db)
           .find({ _id: { $in: representingUnionIds } }, { projection: { name: 1, approval: 1 } })
           .toArray()
       : [];
@@ -311,8 +300,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     // the union's own dashboard can render "This union has endorsed/opposed: …".
     const billIds = endorsements.map((e) => e.billId);
     const bills = billIds.length
-      ? await db
-          .collection<Bill>("bills")
+      ? await billsCollection(db)
           .find({ _id: { $in: billIds } }, { projection: { title: 1 } })
           .toArray()
       : [];
@@ -434,10 +422,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         unionizedWorkers: members,
         density: representedHeadcount > 0 ? members / representedHeadcount : 0,
       },
-      // No union-wide strike preview: unions no longer call strikes directly,
-      // so the only live cost/eligibility figures are the campaign-scoped ones
-      // in `bargainingCampaigns[].escalationPreview` below, which are built
-      // from the same `strikeCallCost` and `STRIKE_CALL_MIN_UNIONIZATION`.
+      // No union-wide strike preview: strikes are only callable via campaign-scoped escalationPreview entries below, built from the same strikeCallCost and STRIKE_CALL_MIN_UNIONIZATION.
       agreements: liveAgreements.map((agreement) => ({
         agreementId: agreement._id.toString(),
         employerCorporationId: agreement.employerCorporationId.toString(),

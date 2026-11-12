@@ -1,20 +1,14 @@
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types/character";
-import type { State } from "@/lib/db/types/state";
 import { getCountryAccessFromDb } from "@/lib/countryAccess";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "./runtimeEntities";
-import {
-  FEDERATION_RESIDENT_HOLDS_COLLECTION,
-  type FederationResidentHold,
-} from "./materializeResidents";
-import {
-  FEDERATION_RELOCATIONS_COLLECTION,
-  type FederationRelocationRecord,
-} from "./relocationLedger";
+import { type FederationSettlementApplicationRecord } from "./runtimeEntities";
+import { type FederationResidentHold } from "./materializeResidents";
+import { type FederationRelocationRecord } from "./relocationLedger";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { federationRelocationsCollection } from "@/lib/db/repositories/federationRelocations";
+import { federationResidentHoldsCollection } from "@/lib/db/repositories/federationResidentHolds";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export interface FederationResidentDestination {
   countryId: CountryId;
@@ -33,22 +27,22 @@ export async function chooseFederationResidentHome(input: {
   const { db, session, applicationId, characterId, ownerUserId, destination } = input;
   if (!applicationId || !/^[a-f\d]{24}$/i.test(characterId) || !ownerUserId || !destination.stateId)
     throw new Error("Federation residence choice needs a character, owner and destination");
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied" }, { session });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied" }, { session });
   if (!application) throw new Error("Federation residence choice awaits settlement");
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: destination.stateId, countryId: destination.countryId }, { session });
+  const state = await statesCollection(db).findOne(
+    { _id: destination.stateId, countryId: destination.countryId },
+    { session }
+  );
   const access = await getCountryAccessFromDb(db, destination.countryId);
   if (!state || !access.enabledForPlayers || !access.registered)
     throw new Error("Federation residence destination is not playable");
-  const holds = db.collection<FederationResidentHold>(FEDERATION_RESIDENT_HOLDS_COLLECTION);
+  const holds = federationResidentHoldsCollection<FederationResidentHold>(db);
   const holdId = `${applicationId}:${characterId}`;
   const hold = await holds.findOne({ _id: holdId }, { session });
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   const character = await characters.findOne({ _id: new ObjectId(characterId) }, { session });
   if (!hold || !character || character.userId.toString() !== ownerUserId)
     throw new Error("Federation residence choice is not owned or pending");
@@ -58,7 +52,7 @@ export async function chooseFederationResidentHome(input: {
       hold.selectedDestination.stateId !== destination.stateId)
   )
     throw new Error("Federation residence choice conflicts with an earlier choice");
-  const relocations = db.collection<FederationRelocationRecord>(FEDERATION_RELOCATIONS_COLLECTION);
+  const relocations = federationRelocationsCollection<FederationRelocationRecord>(db);
   const relocationId = `${applicationId}:resident:${characterId}`;
   const relocation = await relocations.findOne({ _id: relocationId }, { session });
   if (

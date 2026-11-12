@@ -2,25 +2,23 @@ import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { ReachableBookEntry, ReachableBooksDoc } from "@/lib/trade/reachableBook";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 /**
- * Load the latest turn's reachable books (ticket #1077).
+ * Load the latest turn's reachable books.
  *
- * Returns `null` when no snapshot carries them: worlds that have not run a turn
- * since 1.1.2 shipped, and any world below the trade-clearing tier. Callers MUST
- * treat null as "fall back to the previous global-aggregate behaviour" rather
- * than as "no room", or a world mid-upgrade would show every market closed.
+ * Returns `null` when no snapshot has them. Callers MUST treat null as
+ * "fall back to the previous global-aggregate behaviour" rather than as "no
+ * room", or a world mid-upgrade would show every market closed.
  */
 export async function loadReachableBooks(
   db: Db,
   observedTurn?: number
 ): Promise<ReachableBooksDoc | null> {
-  const doc = await db
-    .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
-    .findOne(
-      { books: { $exists: true }, ...(observedTurn == null ? {} : { turn: observedTurn }) },
-      { sort: { turn: -1 }, projection: { books: 1 } }
-    );
+  const doc = await tradeFlowSnapshotsCollection(db).findOne(
+    { books: { $exists: true }, ...(observedTurn == null ? {} : { turn: observedTurn }) },
+    { sort: { turn: -1 }, projection: { books: 1 } }
+  );
   return doc?.books ?? null;
 }
 

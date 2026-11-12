@@ -16,6 +16,9 @@ import type { Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 interface DefunctParty {
   countryId: CountryId;
@@ -58,8 +61,7 @@ function roundShare(value: number): number {
 }
 
 async function survey(db: Db): Promise<Survey> {
-  const defunctParties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const defunctParties = await politicalPartiesCollection(db)
     .find(
       { isDefunct: true },
       { projection: { countryId: 1, sequentialId: 1, name: 1, abbreviation: 1 } }
@@ -85,8 +87,7 @@ async function survey(db: Db): Promise<Survey> {
     };
   }
 
-  const staleRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const staleRows = await statePartyOrgCollection(db)
     .find(
       {
         $or: parties.map((party) => ({
@@ -126,18 +127,14 @@ async function survey(db: Db): Promise<Survey> {
   );
   const countryIds = [...new Set(affectedStates.map((state) => state.countryId))];
   const [allRows, activeParties, poolRows] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ $or: affectedStates }).toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    statePartyOrgCollection(db).find({ $or: affectedStates }).toArray(),
+    politicalPartiesCollection(db)
       .find(
         { countryId: { $in: countryIds }, isDefunct: { $ne: true } },
         { projection: { countryId: 1, sequentialId: 1 } }
       )
       .toArray(),
-    db
-      .collection<StateRegistrationPool>("stateRegistrationPool")
-      .find({ $or: affectedStates })
-      .toArray(),
+    stateRegistrationPoolCollection(db).find({ $or: affectedStates }).toArray(),
   ]);
 
   const activePartyKeys = new Set(
@@ -268,8 +265,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
 
   const approvedIds = new Set(payload.staleRows.map((row) => row.id));
   const approvedById = new Map(payload.staleRows.map((row) => [row.id, row]));
-  const currentRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const currentRows = await statePartyOrgCollection(db)
     .find({ _id: { $in: [...approvedIds] } })
     .toArray();
   const partyPairs = Array.from(
@@ -281,8 +277,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
     ).values()
   );
   const stillDefunct = partyPairs.length
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
+    ? await politicalPartiesCollection(db)
         .find({
           isDefunct: true,
           $or: partyPairs,
@@ -314,7 +309,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
 
   let poolsUpdated = 0;
   if (poolRepairs.length > 0) {
-    const poolWrite = await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    const poolWrite = await stateRegistrationPoolCollection(db).bulkWrite(
       poolRepairs.map((pool) => ({
         updateOne: {
           filter: { _id: pool.id, countryId: pool.countryId, stateId: pool.stateId },
@@ -331,7 +326,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: { now: Date }): Promise<He
   }
 
   const deleted = toDelete.length
-    ? await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({
+    ? await statePartyOrgCollection(db).deleteMany({
         _id: { $in: toDelete.map((row) => row._id) },
       })
     : { deletedCount: 0 };

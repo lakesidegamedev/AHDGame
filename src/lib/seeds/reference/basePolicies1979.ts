@@ -6,41 +6,9 @@
  */
 
 /**
- * US national + regional base policy positions for the 1979-default preset
- * (Carter administration, 96th Congress). Calibrated to real-world 1979 policy:
- *
- *   US — Carter / 96th Congress (Democratic House AND Senate; the New Deal
- *     coalition at its last high-water mark, on the eve of the 1980 Reagan
- *     realignment). Defining 1979 anchors:
- *       - **70% top marginal income-tax rate** (pre-1981 ERTA) and a **46%
- *         statutory corporate rate** — the high-rate redistributive regime
- *         (LEFT of every later era; the income/corporate `optionIndexes` are the
- *         highest in the cross-era set)
- *       - Stagflation + the 1979 energy crisis: National Energy Act (1978),
- *         phased oil-price decontrol, the Synfuels program, Dept. of Energy
- *         (1977) — energy salient but split between conservation and domestic
- *         production
- *       - Labor at peak strength (union density ~24%); CETA public-service jobs;
- *         FLSA minimum wage rising ($2.90→$3.10); Humphrey-Hawkins (1978) — left
- *       - Safety net expanding: Food Stamp Act 1977 (purchase requirement
- *         eliminated); 1977 Social Security financing amendments — left
- *       - Post-Watergate reform: Ethics in Government Act (1978), FEC, Inspectors
- *         General Act (1978); FEMA created (1979)
- *       - Regulated economy: the Fairness Doctrine and the pre-1984 AT&T/Bell
- *         monopoly under FCC rate regulation — left; BUT airline (1978) and
- *         trucking deregulation underway, and the Tokyo Round (1979) cut tariffs
- *       - Roe (1973) intact, but the Hyde Amendment (1976) restricts funding;
- *         the Moral Majority (1979) and the social-conservative backlash are only
- *         just beginning — so SOCIALLY more traditional than 1999 (guns,
- *         culture near center, not left)
- *       - Defense RISING — Carter's post-Afghanistan FY1980 buildup ends the
- *         post-Vietnam drawdown (center, not the 1999 "peace dividend" low)
- *       - Cold War hardening: Camp David (1978) and SALT II (1979), but the Iran
- *         hostage crisis (Nov 1979) and the Soviet invasion of Afghanistan
- *         (Dec 1979) collapse détente
- *
- * Tax `optionIndexes` reflect the pre-Reagan high-rate regime (the highest in
- * the era set), tuned so FY1979 receipts land near the real ≈18% of GDP.
+ * US national + regional base policies for the 1979-default preset.
+ * Tax optionIndexes reflect the pre-Reagan high-rate regime, tuned so
+ * FY1979 receipts land near the real ~18% of GDP.
  */
 
 import type { CountryPolicyConfig } from "./basePolicies";
@@ -70,17 +38,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
   us: {
     nationalStateId: "federal",
     defaults: {
-      // ── Education ──────────────────────────────────────────────────────────
-      us_federal_education_funding: { economic: -1, social: 0 }, // 1979: Dept. of Education created; federal investment up — left
-      us_federal_science_funding: { economic: -1, social: 0 }, // 1979: post-Apollo NSF/NASA + DOE energy R&D — left
-      us_school_standards: { economic: 0, social: 0 }, // 1979: pre-standards movement; local control; center
-      // ── Healthcare ─────────────────────────────────────────────────────────
-      us_federal_healthcare_funding: { economic: 0, social: 0 }, // 1979: Medicare/Medicaid (1965) baseline; Kennedy–Carter NHI debate unresolved; center
-      us_drug_pricing_medicare: { economic: 0, social: 0 }, // 1979: no Medicare drug benefit; center
-      us_public_health: { economic: 0, social: 0 }, // 1979: standard CDC/NIH posture; center
-      // ── Environment ────────────────────────────────────────────────────────
-      us_clean_energy: { economic: 0, social: 0 }, // 1979: National Energy Act + Synfuels + solar push, but the energy crisis favored coal/domestic oil — mixed, center
-      us_conservation: { economic: -1, social: 0 }, // 1979: ANILCA (Alaska Lands), Superfund pending, strong EPA — left
       // ── Economy ────────────────────────────────────────────────────────────
       us_federal_income_tax_rate: { economic: -1, social: 0 }, // 1979: 70% top marginal rate — the high-rate redistributive regime (left)
       us_federal_domestic_corporate_tax_rate: { economic: -1, social: 0 }, // 1979: 46% statutory corporate rate — left
@@ -88,35 +45,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: { economic: 0, social: 0 }, // 1979: combined OASDI+HI ≈ 12.26% (1977 amendments ramping toward the 1990 level)
       us_federal_tariff_rate: { economic: 0, social: 0 }, // Game baseline 0%; the Tokyo Round (1979) cut tariffs — low-tariff era
       us_federal_sales_tax_rate: { economic: 0, social: 0 }, // 1979: no federal sales tax
-      us_federal_spending_stimulus: { economic: -1, social: 0 }, // 1979: Keynesian fiscal posture, CETA jobs, FY1979 deficit — left
-      us_transportation: { economic: 0, social: 0 }, // 1979: Interstate maintenance; airline/trucking deregulation underway; center
-      us_broadband_energy: { economic: 0, social: 0 }, // 1979: no broadband; National Energy Act on the energy side; center
-      us_minimum_wage: { economic: -1, social: 0 }, // 1979: FLSA minimum wage rising ($2.90→$3.10) — left
-      us_workforce_development: { economic: -1, social: 0 }, // 1979: CETA public-service employment near its peak — left
-      us_housing: { economic: 0, social: 0 }, // 1979: HUD Section 8, but high mortgage rates; center
-      us_food_nutrition: { economic: -1, social: 0 }, // 1979: Food Stamp Act 1977 eliminated the purchase requirement, expanding access — left
-      // ── Safety Net ─────────────────────────────────────────────────────────
-      us_social_security: { economic: 0, social: 0 }, // 1979: 1977 financing amendments shored up the trust fund; protect — center
-      us_medicaid: { economic: 0, social: 0 }, // 1979: 1965 program, pre-reform; center
-      us_medicaid_expansion: { economic: 0, social: 0 }, // 1979: no expansion mechanism; center
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      us_law_enforcement_criminal_justice: { economic: 0, social: 0 }, // 1979: LEAA era, pre-1980s "tough on crime" / war-on-drugs escalation; center
-      us_prison_rehabilitation: { economic: 0, social: 0 }, // 1979: the rehabilitative ideal still alive before the punitive turn; center
-      // ── Defense & Foreign ──────────────────────────────────────────────────
-      us_defense_spending: { economic: 0, social: 0 }, // 1979: Carter's post-Afghanistan FY1980 buildup ends the post-Vietnam drawdown — rising, center (not the 1999 peace-dividend low)
-      us_foreign_policy: { economic: 0, social: 0 }, // 1979: Camp David / SALT II, but Iran hostages + Soviet Afghanistan collapse détente; center
-      // ── Immigration ────────────────────────────────────────────────────────
-      us_border_security_enforcement: { economic: 0, social: 0 }, // 1979: pre-IRCA (1986); low salience; center
-      us_legal_immigration_visas: { economic: 0, social: 0 }, // 1979: Refugee Act (1980) for Indochinese/Cuban arrivals; pre-tech-visa; center
-      // ── Social ─────────────────────────────────────────────────────────────
-      us_reproductive_rights: { economic: 0, social: -1 }, // 1979: Roe intact, but the Hyde Amendment (1976) restricts funding — net mildly pro-choice federal posture (left)
-      us_paid_family_leave: { economic: 0, social: 0 }, // 1979: no leave law (FMLA is 1993); center
-      us_gun_control: { economic: 0, social: 0 }, // 1979: GCA-1968 baseline, no AWB, pre-radicalization NRA, low salience — center (right of 1999)
-      // ── Governance ─────────────────────────────────────────────────────────
-      us_government_ethics: { economic: 0, social: 0 }, // 1979: post-Watergate Ethics in Government Act (1978) + FEC; reformist but coded center
-      us_civics_voting_rights: { economic: 0, social: -1 }, // 1979: VRA in force + 1975 language-minority expansion — left
-      us_media_communications: { economic: -1, social: 0 }, // 1979: Fairness Doctrine + the regulated AT&T/Bell monopoly (pre-1984 breakup) — left (opposite of 1999 deregulation)
-      us_emergency_services: { economic: 0, social: 0 }, // 1979: FEMA newly created; center
     },
     optionIndexes: {
       us_federal_income_tax_rate: 6, // 70% top marginal rate — the highest-tax era; revenue knob (30% × taxableIncome ratio) tuned to ≈8.5% of GDP individual income tax
@@ -125,7 +53,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: 4, // ≈12.26% combined OASDI+HI in 1979 (below the 15.3% modern level reached in 1990)
       us_federal_tariff_rate: 0, // 0% game baseline
       us_federal_sales_tax_rate: 0, // 0% — no federal sales tax
-      us_social_security: 5,
     },
     regions: states1979,
   },
@@ -142,54 +69,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
     defaults: {
       // ── Healthcare ─────────────────────────────────────────────────────────
       uk_nhs_funding: { economic: 1, social: 0 }, // 1979: Thatcher first budget imposed NHS cuts; underfunded but maintained; right of center
-      uk_social_care: { economic: 1, social: 0 }, // 1979: local authority social care; Conservatives skeptical; right
-      uk_mental_health: { economic: 0, social: 0 }, // 1979: deinstitutionalisation beginning (Mental Health Act 1983 approaching); center
-      uk_public_health: { economic: 0, social: 0 }, // 1979: NHS baseline; center
-      // ── Education ──────────────────────────────────────────────────────────
-      uk_tuition_fees: { economic: 0, social: 0 }, // 1979: no tuition fees (grants for students); maintenance grants
-      uk_education_standards: { economic: 0, social: 1 }, // 1979: Black Papers on education; back-to-basics sentiment; conservative
-      uk_education_funding: { economic: 1, social: 0 }, // 1979: Thatcher cutting public spending; education budget squeezed; right
-      uk_research_science: { economic: 0, social: 0 }, // 1979: MRC/SRC active; center
-      // ── Economic ───────────────────────────────────────────────────────────
-      uk_fiscal_spending: { economic: 1, social: 0 }, // 1979: MTFS (Medium Term Financial Strategy); monetarist austerity; right
-      uk_local_government_funding: { economic: 1, social: 0 }, // 1979: Thatcher squeezing council budgets; Rate Support Grant cuts; right
-      // ── Infrastructure ─────────────────────────────────────────────────────
-      uk_transport_rail: { economic: 0, social: 0 }, // 1979: British Rail still nationalised; no privatisation yet; center
-      uk_energy_grid: { economic: 0, social: 0 }, // 1979: CEGB/British Gas still nationalised; Thatcher era privatisation not yet; center
-      // ── Environment ────────────────────────────────────────────────────────
-      uk_climate_net_zero: { economic: 0, social: 0 }, // 1979: no climate framework; center
-      uk_north_sea_energy: { economic: -1, social: 0 }, // 1979: North Sea oil at 1.6M bbl/day; BNOC active; Thatcher later privatises but not yet; left
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      uk_policing_crime: { economic: 0, social: 1 }, // 1979: "law and order" manifesto; Police Federation support for Tories; conservative
-      uk_prison_rehabilitation: { economic: 0, social: 1 }, // 1979: rising crime; punitive sentiment growing; conservative
-      // ── Defence ────────────────────────────────────────────────────────────
-      uk_defence_spending: { economic: -1, social: 0 }, // 1979: NATO commitment (3% real increase pledge); Cold War; left-leaning spend
-      uk_trident_defence: { economic: -1, social: 0 }, // 1979: nuclear deterrent committed; Chevaline upgrade; high priority
-      // ── Foreign Policy ─────────────────────────────────────────────────────
-      uk_foreign_policy: { economic: -1, social: 0 }, // 1979: Thatcher Atlanticist; Special Relationship; anti-Soviet; NATO hawk
-      // ── Welfare ────────────────────────────────────────────────────────────
-      uk_universal_credit: { economic: 0, social: 0 }, // 1979: National Insurance / DHSS benefits; Supplementary Benefit; center
-      uk_state_pensions: { economic: 0, social: 0 }, // 1979: SERPS just introduced (1978); basic plus earnings-related pension; center
-      uk_childcare: { economic: 1, social: 0 }, // 1979: minimal state childcare; Thatcher hostile to nursery expansion; right
-      // ── Immigration ────────────────────────────────────────────────────────
-      uk_immigration_asylum: { economic: 0, social: 2 }, // 1979: British Nationality Act 1981 being prepared; tightening; right
-      uk_work_visas: { economic: 0, social: 1 }, // 1979: Commonwealth immigration now controlled; tighter than 1953; right of center
-      // ── Labour ─────────────────────────────────────────────────────────────
-      uk_workers_rights: { economic: 1, social: 0 }, // 1979: Employment Act 1980 approaching; Thatcher anti-union; Winter of Discontent just past; right
-      uk_workforce_development: { economic: 0, social: 0 }, // 1979: MSC (Manpower Services Commission) active; center
-      // ── Housing ────────────────────────────────────────────────────────────
-      uk_housing_planning: { economic: 0, social: 0 }, // 1979: Right to Buy announced (Housing Act 1980 approaching); shift from council building; center transitioning right
-      uk_leasehold_reform: { economic: 0, social: 0 }, // 1979: leasehold unchanged; center
-      // ── Governance ─────────────────────────────────────────────────────────
-      uk_devolution_local_powers: { economic: 1, social: 0 }, // 1979: devolution referenda failed (March 1979); Thatcher anti-devolution; right
-      uk_government_ethics: { economic: 0, social: 0 }, // 1979: center
-      uk_electoral_reform: { economic: 0, social: 0 }, // 1979: FPTP unchallenged; center
-      // ── Media ──────────────────────────────────────────────────────────────
-      uk_bbc_public_media: { economic: 0, social: 0 }, // 1979: BBC licence fee; ITV franchise system; center
-      uk_digital_broadband: { economic: 0, social: 0 }, // 1979: no digital; center
-      // ── Civil Liberties ────────────────────────────────────────────────────
-      uk_surveillance_privacy: { economic: 0, social: 1 }, // 1979: MI5/Special Branch; IRA threat; conservative
-      uk_drug_policy: { economic: 0, social: 1 }, // 1979: Misuse of Drugs Act 1971 framework; conservative
     },
     optionIndexes: {
       uk_income_tax_rate: 4, // 1979: top rate 60% (cut from 83%); basic 30% — much lower than 1953's 97.5% (index 9); Thatcher's first budget
@@ -199,9 +78,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       uk_domestic_corporation_tax: 6, // 1979: standard rate 52% → being cut; above modern rates
       uk_foreign_corporation_tax: 5, // day-one parity below domestic
       uk_nhs_funding: 3, // 1979: slightly higher than 1953 (NHS more established); underfunded by Thatcher
-      uk_tuition_fees: 0, // 1979: no tuition fees; student grants
-      uk_state_pensions: 4, // 1979: SERPS just introduced; higher than 1953's index 2
-      uk_fiscal_spending: 2, // 1979: MTFS austerity; same tight stance as 1953
     },
     regions: ukRegions1979,
   },
@@ -872,13 +748,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: { economic: 0, social: 0 }, // 1979: turnover tax major revenue source; center
       su_social_insurance: { economic: 0, social: 0 }, // 1979: state provides all; center
       su_customs_tariff: { economic: -3, social: 0 }, // 1979: foreign trade state monopoly; very left
-      su_economic_system: { economic: -3, social: 0 }, // 1979: Gosplan central planning; less intense than 1953 Stalinist peak; very left
-      su_political_system: { economic: 0, social: 2 }, // 1979: SU one-party; slightly less repressive than 1953 Stalinist peak
-      su_price_controls: { economic: -3, social: 0 }, // 1979: all prices state-set; maximum control
-      su_agriculture: { economic: -2, social: 0 }, // 1979: collective farms; some private plot tolerance (vs 1953 peak); left
-      su_civil_liberties: { economic: 0, social: 2 }, // 1979: KGB; Gulag much reduced from Stalin; dissident suppression; authoritarian (less than 1953)
-      su_defense_spending: { economic: -3, social: 1 }, // 1979: arms race; Afghanistan; very high defense share; very left
-      su_housing: { economic: -3, social: 0 }, // 1979: state housing (Khrushchyovka blocks); very left
     },
     optionIndexes: {
       su_enterprise_levy: 4, // 1979: below 1953's maximum 5; still high
@@ -886,13 +755,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: 3, // 1979: below 1953's 3; stable
       su_social_insurance: 1, // 1979: unified state; same as 1953
       su_customs_tariff: 2, // 1979: foreign trade monopoly; same as 1953
-      su_economic_system: 4, // 1979: Gosplan central planning; less than 1953's pure Stalinist 5
-      su_political_system: 2, // 1979: one-party; less than 1953 Stalinist index 3
-      su_price_controls: 3, // 1979: maximum price setting; same as 1953
-      su_agriculture: 2, // 1979: collective farms; some private plots; less than 1953's 3
-      su_civil_liberties: 1, // 1979: minimum civil liberties; same scale inverted (1=least free)
-      su_defense_spending: 3, // 1979: Afghanistan + arms race; maximum
-      su_housing: 3, // 1979: state housing; same as 1953
     },
     regions: ruRegions,
   },
@@ -912,11 +774,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       dd_product_tax: { economic: 0, social: 0 }, // 1979: commodity tax on output; center
       dd_social_insurance: { economic: 0, social: 0 }, // 1979: comprehensive state social insurance; center
       dd_foreign_trade: { economic: -3, social: 0 }, // 1979: foreign trade state monopoly; Außenhandel; very left
-      dd_economic_system: { economic: -3, social: 0 }, // 1979: central planning (Gosplan-style); Kombinat system; very left
-      dd_political_system: { economic: 0, social: 2 }, // 1979: SED leading role; Honecker hard-line but less than Ulbricht 1953
-      dd_price_controls: { economic: -3, social: 0 }, // 1979: all prices state-set; maximum
-      dd_civil_liberties: { economic: 0, social: 2 }, // 1979: Stasi at maximum; still very authoritarian; below 1953 peak
-      dd_housing: { economic: -2, social: 0 }, // 1979: state housing (Plattenbau); better supply than 1953; left
     },
     optionIndexes: {
       dd_enterprise_levy: 3, // 1979: Kombinat surplus remittance; below 1953's 4
@@ -924,11 +781,6 @@ export const COUNTRY_POLICY_CONFIGS_1979: Record<string, CountryPolicyConfig> = 
       dd_product_tax: 2, // 1979: commodity tax; same as 1953
       dd_social_insurance: 1, // 1979: unified state social insurance; same
       dd_foreign_trade: 2, // 1979: foreign trade monopoly; same as 1953
-      dd_economic_system: 3, // 1979: Kombinat central planning; below 1953's Stalinist 4
-      dd_political_system: 3, // 1979: SED leading role; same as 1953
-      dd_price_controls: 3, // 1979: maximum price regulation; same
-      dd_civil_liberties: 1, // 1979: Stasi maximum; same scale (1=least free)
-      dd_housing: 3, // 1979: Plattenbau mass housing; above 1953's 2
     },
     regions: ddRegions,
   },

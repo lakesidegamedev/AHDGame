@@ -6,6 +6,9 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import { publicPageMetadata } from "@/lib/siteMetadata";
 import { isFilledOfficial } from "@/lib/governors/senateVacancy";
 import { US_SENATE_2020 } from "@/lib/constants/historicalSeats";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export const metadata: Metadata = {
   ...publicPageMetadata({
@@ -23,7 +26,7 @@ export const metadata: Metadata = {
 export default async function OfficialsPage() {
   const user = await getAuthUserWithCharacter();
   const db = await getDb();
-  const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
+  const officialsCollection = electedOfficialsCollection(db);
 
   // Check if user is a governor
   let isGovernor = false;
@@ -44,8 +47,7 @@ export default async function OfficialsPage() {
   // Get Senate officials, states, and Governor officials in one round
   const [senateOfficials, states, governorOfficials] = await Promise.all([
     officialsCollection.find({ officeType: "senate" }).toArray(),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .find({}, { projection: { abbreviation: 1 } })
       .toArray(),
     officialsCollection.find({ officeType: "governor" }).toArray(),

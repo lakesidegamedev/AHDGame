@@ -21,4 +21,11 @@ export const COST_INCOME_ANCHORS: Record<CostAnchorCountryId, number> = {
   // book contains 119 rescoped dd.* v2 laws that remain priced at the DD
   // anchor until the unified state's income dynamics produce a new band index.
   DE: 1900,
+  // Canada: about 70% of 2027 GDP per capita on the national basis
+  // (about 3.45 trillion Canadian dollars over 41.5 million people).
+  CA: 58_000,
+  // About half the 1953 display income anchor, the same relationship US and UK hold.
+  JP: 350,
+  // Half the 1953 display income anchor, the same relationship US and UK hold.
+  CN: 40,
 };

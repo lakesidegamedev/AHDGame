@@ -1,5 +1,5 @@
 /**
- * Player-facing Commons seat commands (epic #856, #860).
+ * Player-facing Commons seat commands.
  *
  * Strategic resignation (quit the seat so your party can contest it) and
  * defection (cross the floor, vacating the seat behind you) both tombstone
@@ -13,14 +13,17 @@ import { ObjectId } from "mongodb";
 import type { Db } from "@/lib/mongodb";
 import type { Character, ElectedOfficial, ElectionCandidate } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import { vacateCommonsSeat } from "@/lib/uk/elections/commonsVacancyShell";
+import { vacateCommonsSeat } from "@/lib/countries/uk/elections/commonsVacancyShell";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export type CommonsSeatCommandResult =
   | { ok: true; officialId: ObjectId; vacancyId: ObjectId; label: string }
   | { ok: false; status: 400 | 404 | 409; error: string };
 
 async function findHeldCommonsSeat(db: Db, character: Character): Promise<ElectedOfficial | null> {
-  return await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  return await electedOfficialsCollection(db).findOne({
     officeType: "commons",
     countryId: "UK",
     characterId: character._id,
@@ -28,7 +31,7 @@ async function findHeldCommonsSeat(db: Db, character: Character): Promise<Electe
 }
 
 async function hasActiveCandidacy(db: Db, characterId: ObjectId): Promise<boolean> {
-  const row = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const row = await electionCandidatesCollection(db).findOne({
     characterId,
     status: "active",
   });
@@ -37,9 +40,10 @@ async function hasActiveCandidacy(db: Db, characterId: ObjectId): Promise<boolea
 
 async function clearCommonsCurrentOffice(db: Db, character: Character, now: Date): Promise<void> {
   if (character.currentOffice?.type !== "commons") return;
-  await db
-    .collection<Character>("characters")
-    .updateOne({ _id: character._id }, { $set: { currentOffice: null, updatedAt: now } });
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
 }
 
 /**
@@ -112,12 +116,10 @@ export async function defectCommonsSeat(
     };
   }
   const currentTurn = await getCurrentTurn(db);
-  await db
-    .collection<Character>("characters")
-    .updateOne(
-      { _id: character._id },
-      { $set: { party: toParty, partyInfluence: 0, updatedAt: now } }
-    );
+  await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $set: { party: toParty, partyInfluence: 0, updatedAt: now } }
+  );
   const vacancy = await vacateCommonsSeat(db, official, "defection", currentTurn, now);
   if (!vacancy) {
     return { ok: false, status: 409, error: "That seat changed. Refresh and try again." };

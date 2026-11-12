@@ -31,21 +31,7 @@ export type RouteErrorProps = Pick<ErrorPageContentProps, "error" | "reset">;
 
 /**
  * Reusable error content for Next.js error.tsx pages.
- * Handles logging and provides consistent error UI.
- *
- * @example
- * export default function DashboardError({ error, reset }: { error: Error; reset: () => void }) {
- *   return (
- *     <ErrorPageContent
- *       error={error}
- *       reset={reset}
- *       title="Couldn't load dashboard"
- *       description="Your dashboard failed to load. This may be a temporary issue."
- *       logPrefix="Dashboard error"
- *       navigationLinks={[{ href: "/", label: "Go home" }]}
- *     />
- *   );
- * }
+ * Handles reporting and renders consistent error UI.
  */
 export function ErrorPageContent({
   error,

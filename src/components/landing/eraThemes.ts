@@ -7,8 +7,9 @@ import { tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import type { CountryId } from "@/lib/constants/countries";
 import { SHOWCASE_1991, TICKER_1991 } from "./broadcast1991";
 import type { HistoricalCrisisShowcaseEntry } from "./historicalCrisisShowcase";
+import type { EraId } from "@/lib/seeds/presetSelector";
 
-export type EraId = "1953" | "1979" | "1991" | "1999" | "2007" | "2019" | "2023" | "2027";
+export type { EraId };
 
 export type EraAccess = {
   enabledForPlayers: boolean;
@@ -154,7 +155,7 @@ function accessFor(
     const tier = tierFor(preset, id as CountryId);
     if (tier === "player") out[id] = PLAYER;
     else if (tier === "econ") out[id] = ECON;
-    else if (tier === "npp") out[id] = NPP;
+    else if (tier === "npp" || tier === "background") out[id] = NPP;
     // `latent` and `absent` are not shown on the landing page at all.
   }
   return out;
@@ -169,6 +170,9 @@ function nationsFor(
   for (const { id, name } of curated) {
     const tier = tierFor(preset, id as CountryId);
     if (tier === "player" || tier === "econ" || tier === "npp") out.push({ id, name, tier });
+    // A background country is not joinable, so the landing roster lists it the
+    // way it lists an NPP-run one.
+    else if (tier === "background") out.push({ id, name, tier: "npp" });
   }
   return out;
 }
@@ -271,29 +275,41 @@ const NATIONS_2019 = [
   n("RU", "Russia"),
 ] as const;
 
-/** Curated display roster for 2023: name and order only; tier is derived. */
-const NATIONS_2023 = [
-  n("US", "United States"),
-  n("UK", "United Kingdom"),
-  n("DE", "Germany"),
-  n("FR", "France"),
-  n("JP", "Japan"),
-  n("CN", "China"),
-  n("BR", "Brazil"),
-  n("IN", "India"),
-  n("RU", "Russia"),
-] as const;
+// 2023 and 2027 share the 2019 roster: name and order only, tier is derived from ERA_ROSTER.
+const NATIONS_2023 = NATIONS_2019;
+const NATIONS_2027 = NATIONS_2019;
 
-/**
- * Curated display roster for 2027: identical to 2023's, because the list is
- * name and ORDER only.
- *
- * Upstream authored 2027 with per-nation tiers baked in (`P`/`E`/`N`). This
- * branch derives the tier from `ERA_ROSTER` instead, so hard-coding one here
- * would give the landing page a second opinion about who is playable -- and the
- * landing page disagreeing with the world is the drift this roster removed.
- */
-const NATIONS_2027 = NATIONS_2023;
+const ERA_2023: EraConfig = {
+  id: "2023",
+  year: 2023,
+  label: "Current Era · 2023",
+  gameDate: "January 2023",
+  wireframeColor: null,
+  loginTagline: "A political simulation set in 2023.",
+  heroHeadline: "A political simulation set in 2023.",
+  heroDek:
+    "Inflation is cooling but hasn't broken. The Ukraine war has reshaped European security. AI is upending labor markets. Every real hour is a game week.",
+  primaryCta: "Start playing",
+  secondaryCta: "Explore the map",
+  eraChips: [
+    "AI Revolution",
+    "Ukraine War",
+    "Inflation",
+    "De-Dollarization",
+    "Green Transition",
+    "Tech Regulation",
+  ],
+  playSectionDek:
+    "Govern through an era of rapid technological change, geopolitical realignment, and fiscal pressure.",
+  worldSectionDek:
+    "{playableCount} of these nations are open to players. The rest run their own economies and politics. Drag the globe to explore.",
+  closingHeadline: "Pick a country and a role.",
+  closingDek: "A turn resolves every hour, and the world keeps running while you are offline.",
+  closingCta: "Get started",
+  footerTagline: "A persistent political and economic simulation with no seasonal resets.",
+  accessMap: accessFor("2023-default", NATIONS_2023),
+  nations: nationsFor("2023-default", NATIONS_2023),
+};
 
 export const ERA_CONFIGS: Record<EraId, EraConfig> = {
   "1953": {
@@ -494,65 +510,15 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     nations: nationsFor("2019-default", NATIONS_2019),
   },
 
-  "2023": {
-    id: "2023",
-    year: 2023,
-    label: "Current Era · 2023",
-    gameDate: "January 2023",
-    wireframeColor: null,
-    loginTagline: "A political simulation set in 2023.",
-    heroHeadline: "A political simulation set in 2023.",
-    heroDek:
-      "Inflation is cooling but hasn't broken. The Ukraine war has reshaped European security. AI is upending labor markets. Every real hour is a game week.",
-    primaryCta: "Start playing",
-    secondaryCta: "Explore the map",
-    eraChips: [
-      "AI Revolution",
-      "Ukraine War",
-      "Inflation",
-      "De-Dollarization",
-      "Green Transition",
-      "Tech Regulation",
-    ],
-    playSectionDek:
-      "Govern through an era of rapid technological change, geopolitical realignment, and fiscal pressure.",
-    worldSectionDek:
-      "{playableCount} of these nations are open to players. The rest run their own economies and politics. Drag the globe to explore.",
-    closingHeadline: "Pick a country and a role.",
-    closingDek: "A turn resolves every hour, and the world keeps running while you are offline.",
-    closingCta: "Get started",
-    footerTagline: "A persistent political and economic simulation with no seasonal resets.",
-    accessMap: accessFor("2023-default", NATIONS_2023),
-    nations: nationsFor("2023-default", NATIONS_2023),
-  },
+  "2023": ERA_2023,
   "2027": {
+    ...ERA_2023,
     id: "2027",
     year: 2027,
     label: "Current Era · 2027",
     gameDate: "January 2027",
-    wireframeColor: null,
     loginTagline: "A political simulation set in 2027.",
     heroHeadline: "A political simulation set in 2027.",
-    heroDek:
-      "Inflation is cooling but hasn't broken. The Ukraine war has reshaped European security. AI is upending labor markets. Every real hour is a game week.",
-    primaryCta: "Start playing",
-    secondaryCta: "Explore the map",
-    eraChips: [
-      "AI Revolution",
-      "Ukraine War",
-      "Inflation",
-      "De-Dollarization",
-      "Green Transition",
-      "Tech Regulation",
-    ],
-    playSectionDek:
-      "Govern through an era of rapid technological change, geopolitical realignment, and fiscal pressure.",
-    worldSectionDek:
-      "{playableCount} of these nations are open to players. The rest run their own economies and politics. Drag the globe to explore.",
-    closingHeadline: "Pick a country and a role.",
-    closingDek: "A turn resolves every hour, and the world keeps running while you are offline.",
-    closingCta: "Get started",
-    footerTagline: "A persistent political and economic simulation with no seasonal resets.",
     accessMap: accessFor("2027-default", NATIONS_2027),
     nations: nationsFor("2027-default", NATIONS_2027),
   },

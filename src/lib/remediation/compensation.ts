@@ -1,10 +1,8 @@
 // Compensation: paying corporations what a bug cost them, with a receipt.
 //
-// Why this exists: on 2026-10-12, 28 owner-approved credits after the turn 134
-// governor cliff were written as direct balance edits (an ad-hoc `set` of
-// liquidCapital and a script). The money landed, but no financialTxLog row
-// and no shadow-ledger entry recorded it, so the corporations' histories show
-// cash appearing from nowhere and the ledger cannot attribute the mint.
+// Direct balance edits to affected corporations landed money without a
+// financialTxLog row or shadow-ledger entry, so their histories showed cash
+// appearing from nowhere and the ledger could not attribute the mint.
 //
 // A compensation spec is compiled into a real `Defect`, like an ad-hoc spec,
 // so it runs down the same path: dry run, confirm token, turn lock, row cap,
@@ -13,16 +11,15 @@
 // corporation so a repeat run pays nobody twice, reports the real moneyDelta,
 // and emits one `restitution_credit` receipt per credit.
 //
-// `receipt-only` mode exists for money that already moved outside the heal
-// engine: it writes the missing receipt, stamped to when and in which ledger
-// turn the money actually moved, without touching the balance again.
+// `receipt-only` mode is for money that already moved outside the heal engine:
+// it writes the missing receipt, stamped to when and in which ledger turn the
+// money actually moved, without touching the balance again.
 
 import { createHash } from "crypto";
 import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { runWithLedgerTurn } from "@/lib/ledger/ledgerTurn";
 import type {
@@ -34,6 +31,10 @@ import type {
   HealResult,
   VerifyResult,
 } from "./types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface CompensationProblem {
   field: string;
@@ -172,13 +173,12 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
 
   async function load(db: Db) {
     const [docs, rates] = await Promise.all([
-      db
-        .collection<CorporationDoc>("corporations")
+      corporationsCollection<CorporationDoc>(db)
         .find({ _id: { $in: ids } } as never, {
           projection: { name: 1, countryId: 1, liquidCurrencyCode: 1, remediation: 1 },
         })
         .toArray(),
-      db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+      exchangeRatesCollection(db).find({}).toArray(),
     ]);
     return {
       byId: new Map(docs.map((doc) => [String(doc._id), doc])),
@@ -267,7 +267,7 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
     for (const c of credits) {
       // Marker and increment in ONE update, under a filter demanding the
       // marker's absence, so a concurrent or repeated run pays nobody twice.
-      const res = await db.collection("corporations").updateOne(
+      const res = await corporationsCollection(db).updateOne(
         {
           _id: { $in: idCandidates(c.corporationId) },
           [markerPath]: { $exists: false },
@@ -295,9 +295,10 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
 
     if (applied.length > 0) {
       const thresholds = await loadTxThresholds(db);
-      const state = await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const state = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       const createdAt = creditMode ? ctx.now : new Date(spec.movedAt as string);
       // Rows carry the clock as their display turn; the ledger entry belongs
       // to the turn whose closing snapshot saw the money move.
@@ -332,8 +333,7 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
 
     // emitTxBulk mints its own ids: read them back so a rollback deletes them.
     const receipts = ctx.runId
-      ? await db
-          .collection<FinancialTxLogEntry>("financialTxLog")
+      ? await financialTxLogCollection(db)
           .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
           .toArray()
       : [];
@@ -353,9 +353,10 @@ export function compileCompensationDefect(spec: CompensationSpec): Defect {
   const verify = async (db: Db): Promise<VerifyResult> => {
     const { byId } = await load(db);
     const marked = spec.credits.filter((c) => byId.get(c.corporationId)?.remediation?.[id]);
-    const receipts = await db
-      .collection("financialTxLog")
-      .countDocuments({ type: "restitution_credit", "meta.compensationId": id });
+    const receipts = await financialTxLogCollection(db).countDocuments({
+      type: "restitution_credit",
+      "meta.compensationId": id,
+    });
     const unmarked = spec.credits.filter((c) => byId.has(c.corporationId)).length - marked.length;
     return {
       ok: unmarked === 0 && receipts >= marked.length,

@@ -28,6 +28,7 @@ import {
   SETTLED_COOLDOWN_TURNS,
   SETTLED_DESIRE_TARGET,
 } from "@/lib/constants/referendum";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export interface ReferendumVoteOutcome {
   finalYesShare: number;
@@ -170,7 +171,7 @@ async function applyReferendumOutcomeInTransaction(
   }
 
   // SP5: independenceDesire lives top-level on macroMetrics.
-  await db.collection<MacroMetricsDoc>("macroMetrics").updateOne(
+  await macroMetricsCollection<MacroMetricsDoc>(db).updateOne(
     { _id: ref.regionId },
     {
       $set: {

@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { notificationTypeFilter } from "@/lib/notifications/visibility";
 // GET /api/pip/standard — Returns decay projections, income summary, and recent notifications for the Standard PiP view.
@@ -16,14 +17,15 @@ import {
   projectFavorabilityDecay,
   projectInfamyDecay,
 } from "@/lib/utils/decayProjections";
-import type {
-  User,
-  Character,
-  Notification,
-  PoliticalParty,
-  State,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { User, Notification, PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import type { Document } from "mongodb";
 
 export async function GET() {
   try {
@@ -31,17 +33,18 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) });
+    const character = await charactersCollection(db).findOne({
+      userId: new ObjectId(auth.user.userId),
+    });
     if (!character) {
       return errorResponse(404, "Character not found");
     }
 
     const userId = new ObjectId(auth.user.userId);
-    const user = await db
-      .collection<User>("users")
-      .findOne({ _id: userId }, { projection: { notificationPreferences: 1 } });
+    const user = await usersCollection(db).findOne(
+      { _id: userId },
+      { projection: { notificationPreferences: 1 } }
+    );
     const visibility = notificationTypeFilter(user?.notificationPreferences, new Date());
 
     const [
@@ -54,34 +57,31 @@ export async function GET() {
       unionContribution,
     ] = await Promise.all([
       character.homeState
-        ? db
-            .collection<State>("states")
-            .findOne({ _id: character.homeState, countryId: character.countryId })
+        ? statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId })
         : null,
       character.party && Number.isFinite(Number(character.party))
-        ? db.collection<PoliticalParty>("politicalParties").findOne({
+        ? politicalPartiesCollection(db).findOne({
             sequentialId: Number(character.party),
             countryId: character.countryId,
           })
         : null,
       character.party
-        ? db.collection<StatePartyOrg>("statePartyOrg").findOne({
+        ? statePartyOrgCollection(db).findOne({
             stateId: character.homeState,
             partyId: character.party,
           })
         : null,
-      db
-        .collection<Notification>("notifications")
+      notificationsCollection(db)
         .find({ userId, ...visibility, read: false })
         .sort({ createdAt: -1 })
         .limit(3)
         .toArray(),
-      db
-        .collection<Notification>("notifications")
-        .countDocuments({ userId, ...visibility, read: false }),
-      db
-        .collection("playerMail")
-        .countDocuments({ toUserId: userId, read: false, deletedByRecipient: false }),
+      notificationsCollection(db).countDocuments({ userId, ...visibility, read: false }),
+      playerMailCollection<Document>(db).countDocuments({
+        toUserId: userId,
+        read: false,
+        deletedByRecipient: false,
+      }),
       unionContributionIncomePerTurn(db, character._id),
     ]);
 
@@ -102,7 +102,10 @@ export async function GET() {
       character.countryId,
       undefined,
       preset,
-      await loadCampaignPriceLevel(db)
+      await loadCampaignPriceLevel(db),
+      homeState?.gdp === undefined
+        ? undefined
+        : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
     );
 
     return NextResponse.json(

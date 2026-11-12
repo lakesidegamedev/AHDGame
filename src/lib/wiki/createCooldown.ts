@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { WikiPage } from "@/lib/db/types";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 export const WIKI_CREATE_COOLDOWN_HOURS = 12;
 const WIKI_CREATE_COOLDOWN_MS = WIKI_CREATE_COOLDOWN_HOURS * 60 * 60 * 1000;
@@ -27,8 +28,7 @@ export async function checkWikiCreateCooldown(
 ): Promise<CooldownResult> {
   if (options.bypass) return { ok: true, remainingMs: 0 };
 
-  const latest = await db
-    .collection<WikiPage>("wikiPages")
+  const latest = await wikiPagesCollection(db)
     .find({ submittedBy: userId })
     .sort({ createdAt: -1 })
     .limit(1)

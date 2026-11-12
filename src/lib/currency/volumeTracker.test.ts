@@ -88,7 +88,7 @@ describe("computeCurrencyVolumes", () => {
       toArray: vi
         .fn()
         .mockResolvedValue([
-          { fromCurrency: "CAD", toCurrency: "USD", amount: 500, rate: 1.0, turn: 48 },
+          { fromCurrency: "AUD", toCurrency: "USD", amount: 500, rate: 1.0, turn: 48 },
         ]),
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
@@ -97,10 +97,10 @@ describe("computeCurrencyVolumes", () => {
     });
 
     const result = await computeCurrencyVolumes(db as unknown as Db, 50);
-    // CAD is not in volumes map, USD gets the buy
+    // AUD is not a game currency; USD gets the buy
     expect(result.USD.buyVolume24).toBe(500);
-    // CAD should not be in the result (only active currencies)
-    expect((result as Record<string, unknown>).CAD).toBeUndefined();
+    // AUD is not in the result (only active currencies)
+    expect((result as Record<string, unknown>).AUD).toBeUndefined();
   });
 });
 

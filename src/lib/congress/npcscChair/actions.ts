@@ -15,7 +15,6 @@ import { resolveNpcscChairElection } from "./resolveElection";
 import type {
   NpcscChairElection,
   NpcscChairNomination,
-  Character,
   ElectedOfficial,
   PoliticalParty,
 } from "@/lib/db/types";
@@ -25,6 +24,10 @@ import {
   isPartyEligible,
   POLICY_BY_ROLE,
 } from "@/lib/congress/leadership/rolePolicy";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { npcscChairNominationsCollection } from "@/lib/db/repositories/npcscChairNominations";
+import { npcscChairElectionsCollection } from "@/lib/db/repositories/npcscChairElections";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -49,12 +52,12 @@ export async function handleNpcscChairAction(ctx: ActionContext): Promise<Action
 
   // declare, withdraw, vote require character + NPC membership
   const { db, npc, authUser, nominationId } = ctx;
-  const character = await db.collection<Character>("characters").findOne({
+  const character = await charactersCollection(db).findOne({
     userId: new ObjectId(authUser.userId),
   });
   if (!character) return { success: false, error: "No character", status: 400 };
 
-  const myOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const myOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     officeType: "npcDelegate",
     countryId: "CN",
@@ -67,9 +70,7 @@ export async function handleNpcscChairAction(ctx: ActionContext): Promise<Action
     };
   }
 
-  const election = await db
-    .collection<NpcscChairElection>("npcscChairElections")
-    .findOne({ _id: "current" });
+  const election = await npcscChairElectionsCollection(db).findOne({ _id: "current" });
   const gameTime = await getGameTime();
   const isVoting =
     election?.status === "voting" &&
@@ -95,14 +96,15 @@ export async function handleNpcscChairAction(ctx: ActionContext): Promise<Action
         status: 403,
       };
     }
-    const existing = await db
-      .collection<NpcscChairNomination>("npcscChairNominations")
-      .findOne({ nomineeId: character._id, status: { $in: ["open", "voting"] } });
+    const existing = await npcscChairNominationsCollection(db).findOne({
+      nomineeId: character._id,
+      status: { $in: ["open", "voting"] },
+    });
     if (existing) {
       return { success: false, error: "You already have an open nomination.", status: 409 };
     }
     const now = new Date();
-    await db.collection<NpcscChairNomination>("npcscChairNominations").insertOne({
+    await npcscChairNominationsCollection(db).insertOne({
       _id: new ObjectId(),
       nomineeId: character._id,
       nomineeName: character.name ?? "",
@@ -128,12 +130,10 @@ export async function handleNpcscChairAction(ctx: ActionContext): Promise<Action
     if (!isVoting) {
       return { success: false, error: "No active election to withdraw from.", status: 409 };
     }
-    const result = await db
-      .collection<NpcscChairNomination>("npcscChairNominations")
-      .updateOne(
-        { nomineeId: character._id, status: { $in: ["open", "voting"] } },
-        { $set: { status: "cancelled", updatedAt: new Date() } }
-      );
+    const result = await npcscChairNominationsCollection(db).updateOne(
+      { nomineeId: character._id, status: { $in: ["open", "voting"] } },
+      { $set: { status: "cancelled", updatedAt: new Date() } }
+    );
     if (result.matchedCount === 0) {
       return { success: false, error: "No open nomination to withdraw.", status: 404 };
     }
@@ -157,9 +157,7 @@ export async function handleNpcscChairAction(ctx: ActionContext): Promise<Action
     const oid = parseObjectId(nominationId);
     if (!oid) return { success: false, error: "Invalid nomination id.", status: 400 };
     const charKey = character._id.toString();
-    const nom = await db
-      .collection<NpcscChairNomination>("npcscChairNominations")
-      .findOne({ _id: oid });
+    const nom = await npcscChairNominationsCollection(db).findOne({ _id: oid });
     if (!nom || (nom.status !== "open" && nom.status !== "voting")) {
       return { success: false, error: "Nomination not accepting votes.", status: 404 };
     }
@@ -169,7 +167,7 @@ export async function handleNpcscChairAction(ctx: ActionContext): Promise<Action
     }
     const now = new Date();
     // Move this voter's vote off any prior nomination (one vote per voter).
-    await db.collection<NpcscChairNomination>("npcscChairNominations").updateMany(
+    await npcscChairNominationsCollection(db).updateMany(
       { [`votes.${charKey}`]: { $exists: true } },
       {
         $inc: { votesFor: -1 },
@@ -177,7 +175,7 @@ export async function handleNpcscChairAction(ctx: ActionContext): Promise<Action
         $set: { updatedAt: now },
       }
     );
-    await db.collection<NpcscChairNomination>("npcscChairNominations").updateOne(
+    await npcscChairNominationsCollection(db).updateOne(
       { _id: oid },
       {
         $inc: { votesFor: 1 },
@@ -195,9 +193,7 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   if (!authUser.isAdmin) {
     return { success: false, error: "Admin only.", status: 403 };
   }
-  const existing = await db
-    .collection<NpcscChairElection>("npcscChairElections")
-    .findOne({ _id: "current" });
+  const existing = await npcscChairElectionsCollection(db).findOne({ _id: "current" });
   if (existing?.status === "voting") {
     return { success: false, error: "An election is already in progress.", status: 409 };
   }
@@ -205,13 +201,11 @@ async function handleStartElection(ctx: ActionContext): Promise<ActionResult> {
   const endsAt = new Date(now.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = (await getGameTime()).currentTurn + ELECTION_DURATION_MS / 3_600_000;
   // Clear any stale nominations from a prior cycle.
-  await db
-    .collection<NpcscChairNomination>("npcscChairNominations")
-    .updateMany(
-      { status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
-  await db.collection<NpcscChairElection>("npcscChairElections").updateOne(
+  await npcscChairNominationsCollection(db).updateMany(
+    { status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
+  await npcscChairElectionsCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {

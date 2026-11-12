@@ -1,21 +1,9 @@
 /**
- * China Region Census Profiles — 1953 era (early PRC).
+ * China region census profiles, 1953 era (early PRC).
  *
- * 1953-default companion to {@link cnRegionCensusData} (the 2019 profiles).
- * Anchored on the 1953 National Population Census of the PRC (the first ever
- * conducted in China), reported by NBS in 1954.
- *
- * Era anchors (first Five-Year Plan / Korean War ending): 89% of the
- * population was rural (NBS 1953); per-capita GDP was approximately USD 50
- * in current dollars (one of the lowest in the world); the Korean War ended
- * July 1953; land reform (collectivisation) was beginning but communes had
- * not yet been formed (Great Leap Forward not until 1958); university
- * enrolment was tiny (~90,000 students nationally = <0.5% of adults);
- * education was devastated by a century of conflict — 80%+ of adults had
- * primary school or less; the Cultural Revolution had not yet happened so
- * this is the starting point, not the nadir. Income is heavily compressed
- * around subsistence; there was no meaningful middle class yet. All tiers
- * are era-neutral relative values.
+ * 1953-default companion to {@link cnRegionCensusData} (2019 profiles).
+ * Anchored on the 1953 National Population Census of the PRC (first ever,
+ * reported by NBS in 1954). All tiers are era-neutral relative values.
  */
 
 import type { CNRegionLayer1 } from "@/lib/seeds/cn/cnRegionCensusData";

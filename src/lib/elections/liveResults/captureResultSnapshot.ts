@@ -3,6 +3,8 @@ import type { Election, GameState } from "@/lib/db/types";
 import type { ElectionResultSnapshot } from "@/lib/db/types/electionResultSnapshot";
 import { logger } from "@/lib/observability/logger";
 import { buildResultsPayload, snapshotFromPayload } from "./buildResultsPayload";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 
 /**
  * Freeze a finalized election result without making snapshot availability a
@@ -19,12 +21,10 @@ export async function captureElectionResultSnapshot(
   now: Date
 ): Promise<void> {
   try {
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, currentYear: 1, preset: 1, fastMode: 1 } }
-      );
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, currentYear: 1, preset: 1, fastMode: 1 } }
+    );
     const payload = await buildResultsPayload(db, election, gameState, {
       // Resolution uses the live seat map; the year pins the era rules.
       apportionmentYear: election.electionYear ?? null,
@@ -34,9 +34,11 @@ export async function captureElectionResultSnapshot(
       _id: new ObjectId(),
       ...snapshotFromPayload(payload, election, gameState?.currentTurn ?? 0, now),
     };
-    await db
-      .collection<ElectionResultSnapshot>("electionResultSnapshots")
-      .updateOne({ electionId: election._id }, { $setOnInsert: snapshot }, { upsert: true });
+    await electionResultSnapshotsCollection(db).updateOne(
+      { electionId: election._id },
+      { $setOnInsert: snapshot },
+      { upsert: true }
+    );
   } catch (err) {
     logger.error(
       "elections",

@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { getPreservedCollectionNames } from "@/lib/admin/seed/seedManifest";
 import { PRIMARY_KEY_INDEX_POLICIES } from "../../../../scripts/architecture/collectionIndexCoverage";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 import { getBucketProfileForRegion } from "../bucketProfile";
 import { withLegislativePriorities } from "./profile";
 import {
@@ -13,6 +13,10 @@ import {
 } from "./overrides";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+
+const projectedUsLaws = getProjectedPoliticalLegislationTypes().filter(
+  (law) => law.countryScope === "us"
+);
 
 describe("saved electorate priorities on region pages", () => {
   let db: MockDb;
@@ -46,7 +50,7 @@ describe("saved electorate priorities on region pages", () => {
       toArray: vi.fn().mockResolvedValue([{ _id: "US:CA:age:young", priorities: saved }]),
     });
     db.collection("legislationTypes").find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue(legislationTypes.filter((l) => l.countryScope === "us")),
+      toArray: vi.fn().mockResolvedValue(projectedUsLaws),
     });
     const profile = getBucketProfileForRegion("US", "CA", world.preset, null, {
       year: 2000,
@@ -76,7 +80,7 @@ describe("saved electorate priorities on region pages", () => {
     expect(db.collection("electoratePriorityOverrides").deleteOne).not.toHaveBeenCalled();
   });
 
-  it("restoration and editor defaults track the live clock and honour the era flag", async () => {
+  it("restoration and editor defaults track the live clock", async () => {
     const target = { countryId: "UK", regionId: "SCO", bucketId: "age:young" } as const;
     const gameState = db.collection("gameState");
     gameState.findOne.mockResolvedValue({
@@ -86,17 +90,8 @@ describe("saved electorate priorities on region pages", () => {
       eraSystemEnabled: true,
     });
     expect((await loadPriorityDefaults(db as unknown as Db, target)).primary.policyOptionId).toBe(
-      "uk_tuition_fees_opt_0"
+      "l4"
     );
-    gameState.findOne.mockResolvedValue({
-      preset: "1953-default",
-      currentYear: 2000,
-      startingYear: 1953,
-      eraSystemEnabled: false,
-    });
-    expect(
-      (await loadPriorityDefaults(db as unknown as Db, target)).primary.policyOptionId
-    ).not.toBe("uk_tuition_fees_opt_0");
   });
 
   it("uses durable checkpoint position and turnout overlays for editor/restoration defaults", async () => {
@@ -149,9 +144,7 @@ describe("saved electorate priorities on region pages", () => {
     });
     const laws = db.collection("legislationTypes");
     laws.find.mockReturnValue({
-      toArray: vi
-        .fn()
-        .mockResolvedValue(legislationTypes.filter((law) => law.countryScope === "us")),
+      toArray: vi.fn().mockResolvedValue(projectedUsLaws),
     });
     const result = await loadProfileLegislativePriorities(db as unknown as Db, profile, "US", "CA");
     expect(

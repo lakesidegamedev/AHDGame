@@ -96,7 +96,7 @@ function mockDb(
 
 const NODE_1950_1 = corpNodeId("1950", 1); // Management by Objectives, rd cost 8
 // No stored plant P&L, so the node is priced off revenue: 5% of a 300M daily
-// gross, well above the era tech cash floor (#1506).
+// gross, well above the era tech cash floor.
 const CASH_1950_1 = Math.round(300_000_000 * 0.05); // 15_000_000
 
 beforeEach(() => {

@@ -15,6 +15,7 @@ import { getAppleAuthorizeUrl, getAppleSignInConfig } from "@/lib/auth/apple";
 import { getBaseUrl, getClientIp } from "@/lib/utils/network";
 import { AUTH_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { withNoStore } from "@/lib/api/withNoStore";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/auth/apple — Starts Sign in with Apple to link an Apple ID to the signed-in user.
 // Auth: required (redirects to /login when unauthenticated)
@@ -39,7 +40,7 @@ export const GET = withNoStore(async function GET(request: Request) {
     // Link start requires the fresh current account/session, not the cached
     // grant alone: the sealed link context below binds this binding.
     const db = await getDb();
-    const account = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const account = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const auth = await verifyAuth();
     if (!account || !auth || !credentialSessionIsCurrent(user.userId, account, auth)) {
       return NextResponse.redirect(new URL("/login", baseUrl));

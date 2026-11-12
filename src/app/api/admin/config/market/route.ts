@@ -20,6 +20,8 @@ import {
   validateInterventionActivation,
   type EconomicInterventionPlan,
 } from "@/lib/economy/interventionGovernance";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 // Enum derived from the canonical order so route validation can never drift
 // from the client selector or the engine.
@@ -88,7 +90,7 @@ const patchSchema = z.object({
 // Errors: 403
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -247,7 +249,7 @@ export async function PATCH(request: Request) {
     }
 
     const db = await getDb();
-    const gameConfig = db.collection<GameConfig>("gameConfig");
+    const gameConfig = gameConfigCollection(db);
     if (productLinesV2Enabled === true && !marketAtLeast(mode, "plants")) {
       return errorResponse(400, "Product lines require the plants market tier.");
     }
@@ -313,9 +315,7 @@ export async function PATCH(request: Request) {
         return errorResponse(400, activationError);
       }
     }
-    // #1001 dark gates are sandbox-only until the worldsim comparison and
-    // stress report land: enabling them on the live world is refused here.
-    // Explicit false (or absent) is fine and persists like any other flag.
+    // Sandbox-only until worldsim comparison and stress report land; enabling on the live world is refused here. Explicit false or absent persists normally.
     if (
       sovereignIssuanceConsolidationEnabled === true ||
       domesticSovereignBondCoverageEnabled === true
@@ -462,7 +462,7 @@ export async function PATCH(request: Request) {
     if (typeof mediaRegulationEnabled === "boolean")
       governorSet.mediaRegulationEnabled = mediaRegulationEnabled;
 
-    const gameState = db.collection<GameState>("gameState");
+    const gameState = gameStateCollection(db);
     const snapshot = (enabled: boolean) => ({
       enabled,
       marketSystemMode: mode,

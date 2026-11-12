@@ -5,24 +5,15 @@
  */
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CountryGameState } from "@/lib/db/types";
 import type { Bond } from "@/lib/db/types/bond";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import { CURRENCY_ANCHOR_COUNTRY, type CurrencyCode } from "@/lib/constants/currencies";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { resolveBondCurrency } from "@/lib/bonds/resolveBondCurrency";
 import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import { hashSettlementPayload, type FederationSettlementIntentRecord } from "./settlementIntent";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "./runtimeEntities";
-import {
-  FEDERATION_FISCAL_ACCOUNTS_COLLECTION,
-  type FederationFiscalAccount,
-} from "./materializeFiscalAccounts";
+import { type FederationSettlementApplicationRecord } from "./runtimeEntities";
+import { type FederationFiscalAccount } from "./materializeFiscalAccounts";
 import type { SuccessionAccountingSnapshot } from "./normalizeLiveFinances";
 import {
   allocateSuccessionAmount,
@@ -34,8 +25,16 @@ import {
   continuingContributionRiskLoss,
   planContinuingDebtService,
 } from "./rules/continuingService";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationSettlementIntentsCollection } from "@/lib/db/repositories/federationSettlementIntents";
+import { federationFiscalAccountsCollection } from "@/lib/db/repositories/federationFiscalAccounts";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { federationContinuingServiceTurnsCollection } from "@/lib/db/repositories/federationContinuingServiceTurns";
 
-const FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION = "federationContinuingServiceTurns";
 export interface FederationContinuingServiceTurn {
   _id: string;
   applicationId: string;
@@ -72,26 +71,24 @@ export async function materializeContinuingFederationServiceTurn(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Continuing service needs a transaction, application, turn and time");
-  const receipts = db.collection<FederationContinuingServiceTurn>(
-    FEDERATION_CONTINUING_SERVICE_TURNS_COLLECTION
-  );
+  const receipts = federationContinuingServiceTurnsCollection<FederationContinuingServiceTurn>(db);
   const receiptId = `${applicationId}:${turn}`;
   const existing = await receipts.findOne({ _id: receiptId }, { session });
   if (existing) return existing;
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
   if (!application || application.appliedOnTurn > turn)
     throw new Error("Continuing service needs an applied federation settlement");
   const sourceCountryId = application.sourceEntityId as CountryId;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: sourceCountryId }, { session, projection: { dissolvedTurn: 1 } });
-  const intent = await db
-    .collection<FederationSettlementIntentRecord>("federationSettlementIntents")
-    .findOne({ _id: applicationId }, { session });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: sourceCountryId },
+    { session, projection: { dissolvedTurn: 1 } }
+  );
+  const intent = await federationSettlementIntentsCollection<FederationSettlementIntentRecord>(
+    db
+  ).findOne({ _id: applicationId }, { session });
   if (
     !country ||
     country.dissolvedTurn != null ||
@@ -118,8 +115,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
     Object.values(originalPrincipal).some((value) => !Number.isSafeInteger(value) || value < 0)
   )
     throw new Error("Continuing service lacks approved inherited creditor contracts");
-  const accounts = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
+  const accounts = await federationFiscalAccountsCollection<FederationFiscalAccount>(db)
     .find({ applicationId }, { session })
     .toArray();
   const issuer = accounts.filter((account) => account.kind === "continuing-state");
@@ -135,8 +131,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
       [sourceCountryId, ...ids].sort().join(",")
   )
     throw new Error("Continuing successor duties disagree with approved terms");
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       { $or: [{ _id: sourceCountryId }, { countryId: sourceCountryId }] },
       { session, projection: { treasuryBalance: 1, currencyCode: 1 } }
@@ -145,8 +140,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
   if (budgets.length !== 1) throw new Error("Continuing issuer needs one treasury");
   const allBonds =
     input.bondSnapshot ??
-    (await db
-      .collection<Bond>("bonds")
+    (await bondsCollection(db)
       .find({ issuerType: "sovereign", countryId: sourceCountryId, matured: false }, { session })
       .toArray());
   const bonds = allBonds.filter(
@@ -165,8 +159,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
   ];
   if (currencyCodes.some((code) => !Object.hasOwn(CURRENCY_ANCHOR_COUNTRY, code!)))
     throw new Error("Continuing service has an unsupported issuer currency");
-  const exchangeRows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const exchangeRows = await exchangeRatesCollection(db)
     .find({ currencyCode: { $in: currencyCodes as CurrencyCode[] } }, { session })
     .toArray();
   const rates: Record<string, number> = {};
@@ -185,8 +178,7 @@ export async function materializeContinuingFederationServiceTurn(input: {
     turn,
     ratesLocalPerAnchor: rates,
   });
-  const macros = await db
-    .collection<MacroCountryState>("macroCountries")
+  const macros = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       { _id: { $in: ids }, presetId: "1991-default", simulationTier: "background-macro" },
       { session }
@@ -252,9 +244,10 @@ export async function materializeContinuingFederationServiceTurn(input: {
       },
     };
   });
-  const macroUpdated = await db
-    .collection<MacroCountryState>("macroCountries")
-    .bulkWrite(macroWrites, { session });
+  const macroUpdated = await macroCountriesCollection<MacroCountryState>(db).bulkWrite(
+    macroWrites,
+    { session }
+  );
   if (macroUpdated.matchedCount !== ids.length)
     throw new Error("Continuing successor budget changed during service");
   const accountWrites = accounts.map((account) => ({
@@ -280,9 +273,9 @@ export async function materializeContinuingFederationServiceTurn(input: {
       },
     },
   }));
-  const accountUpdated = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
-    .bulkWrite(accountWrites, { session });
+  const accountUpdated = await federationFiscalAccountsCollection<FederationFiscalAccount>(
+    db
+  ).bulkWrite(accountWrites, { session });
   if (accountUpdated.matchedCount !== accounts.length)
     throw new Error("Continuing successor duty changed during service");
   // The ordinary sovereign budget already expenses coupons and retires maturity
@@ -290,13 +283,11 @@ export async function materializeContinuingFederationServiceTurn(input: {
   const endingCash = safeMinor(startingCash + plan.totalContributionsMinor);
   const localCash = budgets[0].treasuryBalance + (plan.totalContributionsMinor / 100) * issuerRate;
   if (!Number.isFinite(localCash)) throw new Error("Continuing cash exceeds local precision");
-  const sourceUpdated = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
-      { $set: { treasuryBalance: localCash } },
-      { session }
-    );
+  const sourceUpdated = await federalBudgetCollection(db).updateOne(
+    { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
+    { $set: { treasuryBalance: localCash } },
+    { session }
+  );
   if (sourceUpdated.matchedCount !== 1)
     throw new Error("Continuing issuer cash changed during service");
   const receipt: FederationContinuingServiceTurn = {
@@ -322,8 +313,7 @@ export async function processContinuingFederationServiceTurn(
   now: Date,
   bondSnapshot?: readonly Bond[]
 ): Promise<number> {
-  const accounts = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
+  const accounts = await federationFiscalAccountsCollection<FederationFiscalAccount>(db)
     .find({ kind: "continuing-state" }, { projection: { applicationId: 1 } })
     .toArray();
   for (const account of accounts)

@@ -8,10 +8,10 @@
 
 import type { ClientSession, Db } from "mongodb";
 import type { Corporation, EquityMarketPool, EquityMarketPoolFlowKind } from "@/lib/db/types";
-import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { resolveShareExecutionPrice } from "@/lib/corporations/marketExecution";
 import { quoteEquityPrices, type EquityPoolQuote } from "@/lib/equities/marketPoolQuotes";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 /** Share of broad money used as the pool's long-run secondary-liquidity target. */
 export const EQUITY_POOL_M2_SHARE = 0.05;
@@ -34,9 +34,10 @@ export async function readEquityPool(
   currency: CurrencyCode,
   options?: { session?: ClientSession }
 ): Promise<EquityMarketPool | null> {
-  return db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-    .findOne({ _id: currency }, options?.session ? { session: options.session } : undefined);
+  return equityMarketPoolsCollection<EquityMarketPool>(db).findOne(
+    { _id: currency },
+    options?.session ? { session: options.session } : undefined
+  );
 }
 
 export async function creditEquityPool(
@@ -49,7 +50,7 @@ export async function creditEquityPool(
 ): Promise<void> {
   const amount = roundCents(amountLocal);
   if (!Number.isFinite(amount) || amount <= 0) return;
-  await db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).updateOne(
+  await equityMarketPoolsCollection<EquityMarketPool>(db).updateOne(
     { _id: currency },
     {
       $inc: { cashLocal: amount, [`lifetime.${kind}`]: amount },
@@ -97,8 +98,7 @@ export async function creditEquityPoolsBatch(
 
   // One read to learn which pools exist, replacing the per-accrual findOne.
   const currencies = [...totalByCurrency.keys()];
-  const existing = await db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
+  const existing = await equityMarketPoolsCollection<EquityMarketPool>(db)
     .find(
       { _id: { $in: currencies } },
       { projection: { _id: 1 }, ...(options?.session ? { session: options.session } : {}) }
@@ -122,8 +122,7 @@ export async function creditEquityPoolsBatch(
     }));
   if (ops.length === 0) return;
 
-  await db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
+  await equityMarketPoolsCollection<EquityMarketPool>(db)
     // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing; runtime shape is valid
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .bulkWrite(ops as any[], options?.session ? { session: options.session } : undefined);
@@ -143,20 +142,18 @@ export async function debitEquityPoolGated(
     const pool = await readEquityPool(db, currency, options);
     return { ok: true, cashAfter: Math.max(0, pool?.cashLocal ?? 0) };
   }
-  const result = await db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-    .findOneAndUpdate(
-      { _id: currency, cashLocal: { $gte: amount } },
-      {
-        $inc: { cashLocal: -amount, [`lifetime.${kind}`]: amount },
-        $set: { updatedAt: now },
-      },
-      {
-        returnDocument: "after",
-        projection: { cashLocal: 1 },
-        ...(options?.session ? { session: options.session } : {}),
-      }
-    );
+  const result = await equityMarketPoolsCollection<EquityMarketPool>(db).findOneAndUpdate(
+    { _id: currency, cashLocal: { $gte: amount } },
+    {
+      $inc: { cashLocal: -amount, [`lifetime.${kind}`]: amount },
+      $set: { updatedAt: now },
+    },
+    {
+      returnDocument: "after",
+      projection: { cashLocal: 1 },
+      ...(options?.session ? { session: options.session } : {}),
+    }
+  );
   return result ? { ok: true, cashAfter: result.cashLocal } : { ok: false };
 }
 
@@ -170,7 +167,7 @@ export async function refundEquityPoolDebit(
 ): Promise<void> {
   const amount = roundCents(amountLocal);
   if (!Number.isFinite(amount) || amount <= 0) return;
-  await db.collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION).updateOne(
+  await equityMarketPoolsCollection<EquityMarketPool>(db).updateOne(
     { _id: currency },
     {
       $inc: { cashLocal: amount, [`lifetime.${kind}`]: -amount },
@@ -201,10 +198,7 @@ export interface LoadedEquityQuote extends EquityPoolQuote {
 export async function loadEquityPoolsByCurrency(
   db: Db
 ): Promise<Map<CurrencyCode, EquityMarketPool>> {
-  const pools = await db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-    .find({})
-    .toArray();
+  const pools = await equityMarketPoolsCollection<EquityMarketPool>(db).find({}).toArray();
   return new Map(pools.map((pool) => [pool._id as CurrencyCode, pool]));
 }
 

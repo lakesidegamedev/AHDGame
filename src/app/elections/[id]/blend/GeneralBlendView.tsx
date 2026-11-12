@@ -41,6 +41,7 @@ import {
   WhyItMovedBlock,
   type GeneralBlendViewProps,
 } from "./GeneralBlendParts";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 export type { GeneralBlendViewProps } from "./GeneralBlendParts";
 
 /** The Blend general-election screen (Proposal D). */
@@ -71,7 +72,7 @@ export function GeneralBlendView({
    * and so do funds and levels.
    */
   const { campaigns, loading: campaignsLoading } = useElectionCampaigns(electionId, {
-    enabled: election.countryId === "US",
+    enabled: countryHasFeature("usUi", election.countryId),
     refreshKey: election.gameState?.currentTurn ?? undefined,
   });
 
@@ -95,7 +96,7 @@ export function GeneralBlendView({
       gv?.electoralVotesByCandidate,
       college > 0 ? electoralMajorityFor(college) : PRESIDENTIAL_EV_NEEDED
     );
-    if (!risk?.atRisk || election.countryId !== "US") return null;
+    if (!risk?.atRisk || !countryHasFeature("usUi", election.countryId)) return null;
     return (
       <ContingentRiskBanner
         risk={risk}
@@ -195,11 +196,9 @@ export function GeneralBlendView({
   /**
    * Endorse or un-endorse a ticket.
    *
-   * A refusal used to be swallowed whole: the handler acted only on `res.ok`,
-   * so a rejected endorsement left the button looking like it did nothing and
-   * said nothing about why. The route has real reasons to say no — the race has
-   * ended, the endorsement is already spent elsewhere — and the reader is
-   * entitled to hear them.
+   * Surface the route's refusal reasons to the reader: the race has ended, or
+   * the endorsement is already spent elsewhere, and the button should say why
+   * rather than silently doing nothing.
    */
   async function toggleEndorse(candidateId: string, currentlyEndorsed: boolean) {
     setBusy(candidateId);
@@ -250,14 +249,11 @@ export function GeneralBlendView({
   /**
    * The endorse control, shared by the hero and the tickets table.
    *
-   * It used to exist only inside the table, which the mobile tree never
-   * rendered, so a player on a phone could not endorse anybody. Defining it
-   * once means the affordance cannot go missing from one layout again — and
-   * that the self-endorsement guard cannot be applied to one and not the other.
+   * Defined once so the affordance cannot go missing from one layout and the
+   * self-endorsement guard cannot be applied to one and not the other.
    *
-   * Nothing is rendered for the reader's own ticket. The route refuses it
-   * ("You cannot endorse yourself", 400), so the button could never do anything
-   * but fail; offering it was an affordance that had no action behind it.
+   * Nothing is rendered for the reader's own ticket: the route refuses it, so
+   * the button could never do anything but fail.
    */
   const endorseButton = (c: GeneralTicketVM) => {
     if (c.isYou) return null;
@@ -313,10 +309,7 @@ export function GeneralBlendView({
         display: "flex",
         justifyContent: i === 0 ? "flex-start" : "flex-end",
         textAlign: i === 0 ? "left" : "right",
-        // A grid item's default `min-width: auto` floors the track at its
-        // widest word. On a phone each track is roughly 160px, and `body` is
-        // `overflow-x: clip`, so a long name would push the other ticket off
-        // a screen that cannot scroll sideways to reach it.
+        // Reset the default `min-width: auto` so a long name cannot overflow the ~160px track; body has `overflow-x: clip`, so overflow would be unreachable.
         minWidth: 0,
         ...style,
       }}
@@ -326,23 +319,15 @@ export function GeneralBlendView({
   );
 
   /**
-   * The two leading tickets, side by side, at a given type scale.
+   * The two leading tickets side by side at a given type scale.
    *
-   * Counted first, forecast second. The hero figure is the ballots the engine
-   * has actually banked; the electoral votes under it are read off those same
-   * ballots by winner-take-all and are a projection, because no state is
-   * awarded until the race resolves — mid-race there is no such thing as an
-   * electoral vote a ticket already holds. Leading with the electoral figure
-   * unlabelled invited it to be read as won. Each half is named and the two
-   * are ruled apart.
+   * Counted first, forecast second: the hero figure is banked ballots; the
+   * electoral votes are a projection off those ballots, since no state is
+   * awarded until the race resolves. Leading with the electoral figure invited
+   * it to be read as won. Each half is named and the two are ruled apart.
    *
-   * One function for both trees. The phone used to draw its own inline copy of
-   * this block, so a fix applied to one layout left the other as it was — and
-   * both copies had the same latent fault, since each side was an independent
-   * flex column. Any asymmetry between them (one ticket with a running mate,
-   * the reader's own ticket with no endorse button) pushed one column down and
-   * the figures stopped lining up. Shared grid rows align by construction,
-   * whatever each side happens to carry.
+   * Shared grid rows keep both sides aligned by construction, whatever each
+   * side carries (running mate, endorse button, etc.).
    */
   const heroPair = (
     scale: {

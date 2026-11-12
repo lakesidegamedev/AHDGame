@@ -17,6 +17,7 @@ import { ReshufflePanel } from "./ReshufflePanel";
 import { WhipPanel } from "./WhipPanel";
 import type { ParliamentaryCabinetConfig } from "./parliamentaryCabinetConfig";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface Position {
   id: string;
@@ -119,7 +120,7 @@ function reducer(state: State, action: Action): State {
 }
 
 // Cabinet cooldowns are real-clock — the API records expiry as a wall-clock
-// timestamp (see src/lib/uk/cabinetApi.ts and parallel DE/JP/CN paths). Display
+// timestamp (see src/lib/countries/uk/cabinetApi.ts and parallel DE/JP/CN paths). Display
 // routes through formatRealTimeCountdown rather than the game clock.
 function formatCooldownRemaining(targetDate: string): string {
   const result = formatRealTimeCountdown(targetDate);
@@ -423,7 +424,7 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
                             )}
                           {/* Issue #859: only the holder may resign their own
                               seat. UK surface only. */}
-                          {config.countryId === "UK" &&
+                          {countryHasFeature("ukUi", config.countryId) &&
                             member?.characterId &&
                             state.data!.myPositionId === pos.id &&
                             !positionData?.isHeadOfGovernment && (
@@ -518,7 +519,7 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
                   PM, holder-only resignation above, PM-only whip controls
                   below. UK surface only; other parliamentary countries keep
                   the appoint/fire flow unchanged. */}
-              {config.countryId === "UK" && (
+              {countryHasFeature("ukUi", config.countryId) && (
                 <>
                   <ReshufflePanel
                     countryId={countryId}

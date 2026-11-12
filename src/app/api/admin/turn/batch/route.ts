@@ -7,6 +7,7 @@ import { adminTurnBatchSchema } from "@/lib/api/schemas/admin";
 import { getDb } from "@/lib/mongodb";
 import { turnsOwnedByWorker } from "@/lib/turn/turnWorkerHandoff";
 import { queueAdminTurns } from "@/lib/turn/queueAdminTurns";
+import { serverEnv } from "@/lib/config/read";
 
 // POST /api/admin/turn/batch — Processes multiple game turns in sequence and returns per-turn results.
 // When the turn worker owns turns (CRON_OWNER=worker) it queues them for the worker
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     }
     const { count } = parsed.data;
 
-    if (turnsOwnedByWorker(process.env)) {
+    if (turnsOwnedByWorker(serverEnv())) {
       return queueAdminTurns(await getDb(), { count, requestedBy: auth.admin.username });
     }
 

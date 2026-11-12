@@ -291,6 +291,7 @@ describe("POST /api/country/[code]/legislature/bills", () => {
       name: "Income Tax",
       policyDomain: "tax",
       policyOptions: [{ id: "opt_center", effectDirection: 0 }],
+      administration: { defaultJurisdictionMode: "national_direct" },
     };
     const legislationTypesCollection = {
       findOne: vi.fn().mockResolvedValue(legislationType),

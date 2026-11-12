@@ -12,10 +12,11 @@ import { processChallengerGeneration } from "./challengerSupply";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
-// createNPP is only hit when no free NPP exists in a bucket; stub it so the
-// generate-fallback path is deterministic and DB-free.
-vi.mock("@/lib/npp/generator", () => ({
-  createNPP: vi.fn(
+// createNPP (reached through the phase's creation batch) is only hit when no
+// free NPP exists in a bucket; stub it so the generate-fallback path is
+// deterministic and DB-free.
+vi.mock("@/lib/npp/generator", () => {
+  const createNPP = vi.fn(
     async ({ state, party, countryId }: { state: string; party: string; countryId: string }) => ({
       _id: new ObjectId(),
       name: `Generated ${party}`,
@@ -23,9 +24,13 @@ vi.mock("@/lib/npp/generator", () => ({
       countryId,
       homeState: state,
     })
-  ),
-  calculateQualityBonus: vi.fn(() => 0),
-}));
+  );
+  return {
+    createNPP,
+    openNppCreationBatch: vi.fn(() => ({ create: createNPP, close: vi.fn(async () => {}) })),
+    calculateQualityBonus: vi.fn(() => 0),
+  };
+});
 
 interface WorldFixture {
   currentTurn: number;
@@ -568,5 +573,25 @@ describe("player-country challenger supply safeguards", () => {
   it("uses static player-enabled defaults when the runtime override is absent", async () => {
     mountWorld(db, { ...fixture(), countryAccessRows: [] });
     expect(await processChallengerGeneration(new Date())).toBe(0);
+  });
+});
+
+describe("getChallengerSupplyPolicy for the special presidential election", () => {
+  it("keeps a player country's special presidential election for players", async () => {
+    const { getChallengerSupplyPolicy } = await import("./rules/challengerSupply");
+    const players = { registered: true, enabledForPlayers: true };
+    expect(getChallengerSupplyPolicy(players, "special_president")).toEqual({
+      canReuse: false,
+      canGenerate: false,
+    });
+    expect(getChallengerSupplyPolicy(players, "president").canReuse).toBe(false);
+    expect(getChallengerSupplyPolicy(players, "special_governor").canReuse).toBe(true);
+  });
+
+  it("still supplies challengers in a country without players", async () => {
+    const { getChallengerSupplyPolicy } = await import("./rules/challengerSupply");
+    expect(
+      getChallengerSupplyPolicy({ registered: true, enabledForPlayers: false }, "special_president")
+    ).toEqual({ canReuse: true, canGenerate: true });
   });
 });

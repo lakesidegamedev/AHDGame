@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import politicianImages from "@/data/npp-politician-images.json";
 import { selectPoliticianImage, weightedRandomEthnicity } from "./generator";
+import { portraitAvatarPath, portraitToken } from "./portraitTokens";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NPPEthnicity, NPPGender } from "@/lib/db/types";
 
@@ -79,12 +80,14 @@ describe("npp politician portrait pool", () => {
         weightedRandomEthnicity(country as CountryId),
         "Fictional Nobody"
       );
-      expect(url, `no portrait for ${country}`).toMatch(/^\/api\/images\/npp-politicians\//);
+      expect(url, `no portrait for ${country}`).toMatch(/^\/api\/images\/npp-politicians\/p-/);
     }
   });
 
   it.each(ALIASED_COUNTRIES)("routes %s to the %s pool", (country, poolCountry) => {
-    const poolIds = new Set(images.filter((i) => i.country === poolCountry).map((i) => i.id));
+    const poolIds = new Set(
+      images.filter((i) => i.country === poolCountry).map((i) => portraitToken(i.id))
+    );
     const url = selectPoliticianImage(country, "female", "white", "Fictional Nobody");
     expect(url).toBeDefined();
     expect(poolIds.has(url!.split("/").pop()!)).toBe(true);
@@ -101,7 +104,7 @@ describe("npp politician portrait pool", () => {
         sample.ethnicity,
         sample.name
       );
-      expect(url).not.toBe(`/api/images/npp-politicians/${sample.id}`);
+      expect(url).not.toBe(portraitAvatarPath(sample.id));
     }
   });
 

@@ -44,6 +44,6 @@ export function resolveResetLawProvision(provision: ResetLawProvision): Provisio
       transitionCost: provision.reviewedOption.accruedTransitionLiability,
     },
     metricEffects,
-    archetypeApprovals: v2EnactmentApproval([provision], provision.reviewedOption.country),
+    bucketApprovals: v2EnactmentApproval([provision], provision.reviewedOption.country),
   };
 }

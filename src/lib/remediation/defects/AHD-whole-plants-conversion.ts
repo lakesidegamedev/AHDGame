@@ -25,7 +25,7 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import type {
   Defect,
   DetectResult,
@@ -34,49 +34,50 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /**
  * Whole plants conversion (one time, between turns, before
  * `gameConfig.wholePlantsStage` is switched on).
  *
- * Every sector is recounted to whole plants of `plantSizeForSector(sector)`:
- *
- *   - the part-plant left over is credited to the owner as money at the
- *     sector's book cost per unit (`capacityBookAnchor / capitalStock`, list
- *     price when no basis is recorded), and the basis drops by the same amount;
- *   - a sector holding less than one plant rounds UP to one plant at no charge;
- *   - the sector's in-flight cash orders are pooled and recounted to whole
- *     plants of the sector (`convertQueueToWholePlants`): plant k lands with
- *     the order at which the running total first reaches k plants, remaining
- *     plants ramp from now to each order's unchanged online turn, and the
- *     part-plant left over is refunded at the pool's paid cost per unit. An
- *     order that ends up with no plant is cancelled. A sector that owns no
- *     plant and whose orders add up to less than one gets one plant at no
- *     extra charge. AI-owned sectors (any CEO that is not a character: NPP,
- *     imperial or state) round the pool to the NEAREST plant instead: half a
- *     plant or more rounds up at no charge, less is refunded. Player orders
- *     keep the floor and refund. Financed orders (construction loan or claim) are left
- *     untouched and counted: their bank settlement is a separate step;
+ * Recounts every sector to whole plants of `plantSizeForSector(sector)`:
+ *   - part-plant left over is credited to the owner at book cost per unit
+ *     (`capacityBookAnchor / capitalStock`, list price when no basis), and
+ *     the basis drops by the same amount;
+ *   - a sector holding less than one plant rounds UP to one at no charge;
+ *   - in-flight cash orders are pooled and recounted to whole plants
+ *     (`convertQueueToWholePlants`): plant k lands with the order at which
+ *     the running total reaches k, remaining plants ramp to each order's
+ *     unchanged online turn, part-plant leftover is refunded at the pool's
+ *     paid cost per unit. An order ending with no plant is cancelled. A
+ *     sector with no plant and orders under one gets one free. AI-owned
+ *     sectors round the pool to the NEAREST plant (half or more free, less
+ *     refunded); player orders keep the floor and refund. Financed orders
+ *     (construction loan or claim) are untouched and counted;
  *   - `plantWearUnits` and `plantUnitRemainder` start at 0.
  *
- * MONEY. This heal mints money on purpose: the part-plants are bought back.
- * Each sector's credit is one `corp_capacity_build_refund` tx row
- * (`meta.wholePlantConversion`), the same leg a cancelled build uses, so the
- * shadow ledger and money reconciler attribute it.
+ * MONEY. Mints on purpose: part-plants are bought back. Each credit is one
+ * `corp_capacity_build_refund` tx row (`meta.wholePlantConversion`), the
+ * same leg a cancelled build uses, so the shadow ledger and money reconciler
+ * attribute it.
  *
  * IDEMPOTENCY. Three atomic steps, each guarded so a rerun is a no-op:
- *   1. the sector write is a compare-and-swap on the stock and queue it was
- *      planned from, and stamps `wholePlantsConversion.turn`;
- *   2. the owner credit is an `$inc` under a filter requiring the per-sector
- *      key `remediation.AHD-whole-plants-conversion.<sectorId>_<turn>` to be
+ *   1. sector write is a compare-and-swap on stock and queue, and stamps
+ *      `wholePlantsConversion.turn`;
+ *   2. owner credit is an `$inc` filtered on the per-sector key
+ *      `remediation.AHD-whole-plants-conversion.<sectorId>_<turn>` being
  *      absent, set in the same update;
- *   3. the tx row has an `_id` derived from that key, so a re-emit is a
+ *   3. the tx row's `_id` derives from that key, so a re-emit is a
  *      duplicate and is skipped.
  * A crash between steps leaves state the detector counts and the next apply
  * finishes.
  *
- * ROLLBACK. The runner snapshots every planned sector and owner before the
- * first write. Restore with the CLI rollback, then delete the tx rows with
+ * ROLLBACK. The runner snapshots planned sectors and owners before the first
+ * write. Restore with the CLI rollback, then delete tx rows with
  * `meta.wholePlantConversion: true` and the run's `meta.conversionTurn`.
  */
 
@@ -308,15 +309,16 @@ interface WorldFacts {
 }
 
 async function loadWorld(db: Db): Promise<WorldFacts> {
-  const gs = await db
-    .collection<{
-      _id: string;
-      currentTurn?: number;
-      currentYear?: number;
-      isProcessing?: boolean;
-      preset?: string | null;
-    }>("gameState")
-    .findOne({}, { projection: { currentTurn: 1, currentYear: 1, isProcessing: 1, preset: 1 } });
+  const gs = await gameStateCollection<{
+    _id: string;
+    currentTurn?: number;
+    currentYear?: number;
+    isProcessing?: boolean;
+    preset?: string | null;
+  }>(db).findOne(
+    {},
+    { projection: { currentTurn: 1, currentYear: 1, isProcessing: 1, preset: 1 } }
+  );
   const turn = gs?.currentTurn ?? 0;
   return {
     turn,
@@ -363,8 +365,7 @@ export interface ConversionReport {
 /** READ ONLY. Everything the conversion would do. */
 export async function buildConversionReport(db: Db): Promise<ConversionReport> {
   const world = await loadWorld(db);
-  const sectors = await db
-    .collection<SectorRow>("corporateSectors")
+  const sectors = await corporateSectorsCollection<SectorRow>(db)
     .find(
       { $or: [{ capitalStock: { $gt: 0 } }, { "buildQueue.0": { $exists: true } }] },
       { projection: SECTOR_PROJECTION }
@@ -372,8 +373,7 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
     .toArray();
   const pending = sectors.filter((s) => needsConversion(s, world.turn));
   const corpIds = [...new Set(pending.map((s) => s.corporationId.toHexString()))];
-  const corps = await db
-    .collection<CorpRow>("corporations")
+  const corps = await corporationsCollection<CorpRow>(db)
     .find(
       { _id: { $in: corpIds.map((id) => new ObjectId(id)) } },
       {
@@ -473,8 +473,9 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
 
 /** Converted sectors whose owner credit or tx row has not landed yet. */
 async function pendingCredits(db: Db) {
-  const credited = await db
-    .collection<CorporateSector & { [SECTOR_MARKER]?: Record<string, unknown> }>("corporateSectors")
+  const credited = await corporateSectorsCollection<
+    CorporateSector & { [SECTOR_MARKER]?: Record<string, unknown> }
+  >(db)
     .find(
       { [`${SECTOR_MARKER}.creditAnchor`]: { $gt: 0 } },
       {
@@ -510,8 +511,9 @@ async function pendingCredits(db: Db) {
   const corpIds = [...new Set(rows.map((r) => r.corporationId.toHexString()))].map(
     (id) => new ObjectId(id)
   );
-  const corps = await db
-    .collection<CorpRow & { remediation?: Record<string, Record<string, unknown>> }>("corporations")
+  const corps = await corporationsCollection<
+    CorpRow & { remediation?: Record<string, Record<string, unknown>> }
+  >(db)
     .find(
       { _id: { $in: corpIds } },
       {
@@ -530,8 +532,7 @@ async function pendingCredits(db: Db) {
   const txIds = rows.map((r) => r.txId);
   const existingTx = new Set(
     (
-      await db
-        .collection("financialTxLog")
+      await financialTxLogCollection(db)
         .find({ _id: { $in: txIds } }, { projection: { _id: 1 } })
         .toArray()
     ).map((d) => String(d._id))
@@ -548,8 +549,7 @@ async function pendingCredits(db: Db) {
 }
 
 async function invariantViolations(db: Db): Promise<number> {
-  const converted = await db
-    .collection<SectorRow>("corporateSectors")
+  const converted = await corporateSectorsCollection<SectorRow>(db)
     .find({ [SECTOR_MARKER]: { $exists: true } }, { projection: SECTOR_PROJECTION })
     .toArray();
   return converted.filter((s) => !isWholePlantStock(s.capitalStock ?? 0, plantSizeForSector(s)))
@@ -620,7 +620,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     turn: number;
     conversions: SectorConversion[];
   };
-  const sectors = db.collection("corporateSectors");
+  const sectors = corporateSectorsCollection<Document>(db);
   let converted = 0;
   let casMisses = 0;
 
@@ -665,7 +665,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     const rate = fxRateForCorpFromMap(c.corp, fx);
     const amountLocal = anchorToCorpLiquidCapital(c.creditAnchor, c.corp, rate);
     if (!c.credited) {
-      const res = await db.collection("corporations").updateOne(
+      const res = await corporationsCollection(db).updateOne(
         { _id: c.corporationId, [`${CORP_MARKER}.${c.key}`]: { $exists: false } },
         {
           $inc: { liquidCapital: amountLocal },

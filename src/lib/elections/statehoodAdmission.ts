@@ -1,24 +1,22 @@
 /**
- * Statehood admission — era-windowed pressure, not a script.
+ * Statehood admission: era-windowed pressure, not a script.
  *
- * Statehood in this codebase is defined by presence in the active apportionment
- * map (see `initializeOfficials`: "the apportionment map is what defines
- * statehood"). That map is a frozen per-preset constant, so a territory absent
- * from it — Alaska and Hawaii under `1953-default` — was seeded but seatless
- * and could never become a state. `runCensus` can reapportion, but it only ever
- * redistributes among states that already hold seats; nothing could ADMIT.
+ * Statehood is defined by presence in the active apportionment map (see
+ * `initializeOfficials`: "the apportionment map is what defines statehood").
+ * That map is a frozen per-preset constant, so a territory absent from it
+ * (e.g. Alaska and Hawaii under `1953-default`) is seeded but seatless and can
+ * never become a state. `runCensus` can reapportion, but it only redistributes
+ * among states that already hold seats; nothing can ADMIT.
  *
- * This module supplies the missing transition, under the program's design law:
- * **gravity, not rails**. Admission is not scripted to fire in 1959. Each
- * territory carries a window and a cumulative admission curve whose median sits
- * on the historical year, so a world left alone will usually admit Alaska and
- * Hawaii around 1959 — and sometimes in 1956, sometimes in 1963. It is a pull,
- * not a timetable.
+ * This module supplies the missing transition under the design law: gravity,
+ * not rails. Admission is not scripted to fire in a fixed year. Each territory
+ * carries a window and a cumulative admission curve whose median sits on the
+ * historical year, so a world left alone will usually admit Alaska and Hawaii
+ * around 1959 but sometimes in 1956 or 1963. It is a pull, not a timetable.
  *
- * The curve is expressed as a CDF rather than a per-year hazard, because the
- * property worth guaranteeing is "the median lands on the historical year", and
- * a CDF states that directly instead of leaving it to emerge from tuning. The
- * per-year hazard is derived from it.
+ * The curve is expressed as a CDF rather than a per-year hazard because the
+ * property worth guaranteeing is "the median lands on the historical year"; a
+ * CDF states that directly. The per-year hazard is derived from it.
  */
 
 import { hashToUint32 } from "@/lib/events/substrate/rng";
@@ -93,22 +91,13 @@ const POST_WINDOW_RAMP_EXPONENT = 0.7;
 
 /**
  * Cumulative probability that `t` has been admitted by the end of `year`.
- *
- * Pinned to three fixed points — 0 at the year before the window opens,
- * {@link ADMISSION_CDF_AT_HISTORICAL_YEAR} at the historical year, and 1 at the
- * window's end — with a shaped ramp between them.
- *
- * The ramps are curved rather than straight, and the curvature is the history:
- *
- * - **Before** the historical year the ramp is quadratic, so pressure builds.
- *   A straight line would make admission in 1950 exactly as likely as in 1958,
- *   which misstates a statehood movement that gathered force over a decade.
- * - **After** it the ramp is {@link POST_WINDOW_RAMP_EXPONENT}, below 1, so it
- *   climbs fast and then flattens. A world that misses the historical moment
- *   resolves soon after rather than drifting to the end of the window.
- *
- * Both shapes hit `progress = 1` at their anchor, so the median stays exactly on
- * the historical year regardless of curvature — the curve controls spread only.
+ * Pinned at 0 the year before the window opens, at
+ * {@link ADMISSION_CDF_AT_HISTORICAL_YEAR} at the historical year, and 1 at
+ * the window's end. Before the historical year the ramp is quadratic so
+ * pressure builds; after it the exponent is {@link POST_WINDOW_RAMP_EXPONENT}
+ * (below 1) so it climbs fast then flattens. Both shapes hit progress = 1 at
+ * their anchor, so the median stays on the historical year and curvature only
+ * controls spread.
  */
 export function admissionCdf(t: TerritoryAdmission, year: number): number {
   if (year < t.windowStartYear) return 0;
@@ -199,16 +188,10 @@ export interface AdmissionBearingState {
 }
 
 /**
- * State ids admitted to the Union at or before `asOfYear`.
- *
- * This is the single reader of `admittedYear`, and every statehood gate goes
- * through it: apportionment, seat creation, bootstrap officials, and the
- * perpetual-election spawner. They previously all tested
- * `getHouseSeats(preset)[id] != null` directly, which can never become true
- * mid-game — so a gate that forgets this reader silently keeps an admitted
- * state a territory in its own corner of the game.
- *
- * The year check matters: an admission must not take effect before its year.
+ * State ids admitted to the Union at or before `asOfYear`. Single reader of
+ * `admittedYear`; every statehood gate must go through it (apportionment,
+ * seat creation, bootstrap officials, perpetual-election spawner). An
+ * admission must not take effect before its year.
  */
 export function admittedStateIdsAsOf(
   states: readonly AdmissionBearingState[],

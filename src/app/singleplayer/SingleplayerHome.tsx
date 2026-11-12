@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { NppAutonomyLevel } from "@/lib/db/types/gameState";
+import { SEED_PRESET_IDS, type SeedPresetId } from "@/lib/constants/turnTime";
 import type { SingleplayerStatus } from "@/lib/singleplayerServer";
 import {
   DEFAULT_SINGLEPLAYER_FEATURE_FLAGS,
@@ -12,40 +13,24 @@ import {
   type SingleplayerFeatureFlagKey,
 } from "@/lib/singleplayerFeatureFlags";
 
+/** One line per era a local player can start from. Keyed so a new preset must be described here. */
+const ERA_BLURBS: Record<SeedPresetId, string> = {
+  "1953-default": "Post-war order, founding elections, the long boom ahead.",
+  "1979-default": "Stagflation, oil shocks and the turn to the right.",
+  "1991-default": "The Cold War just ended; nobody agrees what comes next.",
+  "1999-default": "Peak globalisation and a surplus to argue over.",
+  "2007-default": "The crash is twelve months out.",
+  "2019-default": "Polarised, online, and one shock from anything.",
+  "2023-default": "Inflation, realignment, and a world that stopped waiting.",
+  "2027-default": "Cheap intelligence, costly defence, and debts coming due.",
+};
+
 /** Era presets a local player can start from, oldest first. */
-const ERA_PRESETS: ReadonlyArray<{ preset: string; label: string; blurb: string }> = [
-  {
-    preset: "1953-default",
-    label: "1953",
-    blurb: "Post-war order, founding elections, the long boom ahead.",
-  },
-  {
-    preset: "1979-default",
-    label: "1979",
-    blurb: "Stagflation, oil shocks and the turn to the right.",
-  },
-  {
-    preset: "1991-default",
-    label: "1991",
-    blurb: "The Cold War just ended; nobody agrees what comes next.",
-  },
-  {
-    preset: "1999-default",
-    label: "1999",
-    blurb: "Peak globalisation and a surplus to argue over.",
-  },
-  { preset: "2007-default", label: "2007", blurb: "The crash is twelve months out." },
-  {
-    preset: "2019-default",
-    label: "2019",
-    blurb: "Polarised, online, and one shock from anything.",
-  },
-  {
-    preset: "2023-default",
-    label: "2023",
-    blurb: "Inflation, realignment, and a world that stopped waiting.",
-  },
-];
+const ERA_PRESETS = SEED_PRESET_IDS.map((preset) => ({
+  preset,
+  label: preset.slice(0, 4),
+  blurb: ERA_BLURBS[preset],
+}));
 
 interface Props {
   status: SingleplayerStatus;

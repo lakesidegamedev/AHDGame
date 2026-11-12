@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { Crisis } from "@/lib/db/types/crisis";
 import { ALL_CRISIS_TEMPLATES } from "./templates";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Map crisis display name → template hero image URL. First template wins on duplicates. */
 export function buildHeroImageByCrisisName(): Map<string, string> {
@@ -26,7 +27,7 @@ export interface ReseedCrisisHeroImagesResult {
  */
 export async function reseedCrisisHeroImages(db: Db): Promise<ReseedCrisisHeroImagesResult> {
   const byName = buildHeroImageByCrisisName();
-  const crises = await db.collection<Crisis>("crises").find({}).toArray();
+  const crises = await crisesCollection(db).find({}).toArray();
 
   let updated = 0;
   let alreadyCorrect = 0;
@@ -42,7 +43,7 @@ export async function reseedCrisisHeroImages(db: Db): Promise<ReseedCrisisHeroIm
       alreadyCorrect++;
       continue;
     }
-    await db.collection<Crisis>("crises").updateOne({ _id: crisis._id }, { $set: { heroImage } });
+    await crisesCollection(db).updateOne({ _id: crisis._id }, { $set: { heroImage } });
     updated++;
   }
 

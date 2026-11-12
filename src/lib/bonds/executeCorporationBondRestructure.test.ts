@@ -11,6 +11,13 @@ vi.mock("@/lib/bonds/corporateBondDefault", () => ({
   computeSectorNpvSum: vi.fn((sectors: { revenue: number }[]) => sectors[0]?.revenue ?? 0),
   sumDefaultedBondPrincipal: vi.fn(() => 1000),
 }));
+vi.mock("@/lib/bonds/marketPool", () => ({
+  bondPoolCurrency: vi.fn(() => "USD"),
+  creditBondPool: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/turn/nppBondCash", () => ({
+  payNppBondReturns: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/corporations/restoreSectorsToUnowned", () => ({
   restoreSectorsToUnowned: vi.fn().mockResolvedValue({
     sectorsProcessed: 0,
@@ -120,6 +127,75 @@ describe("executeCorporationBondRestructure", () => {
     expect(result.sectorsLiquidated).toBe(2);
     expect(result.bondsMatured).toBe(1);
     expect(result.paid).toBe(1000);
+  });
+
+  it("pays fund, NPP and pool holders in full and does not debit the issuer's own units", async () => {
+    const fundId = new ObjectId();
+    const nppId = new ObjectId();
+    db.collection("bonds").find.mockReturnValue(
+      makeCursor([
+        {
+          _id: new ObjectId(),
+          corporationId: corpId,
+          couponRate: 5,
+          currencyCode: undefined,
+          publicFloat: 1,
+          totalIssued: 5000,
+          holders: [
+            { characterId: charId, units: 1 },
+            { fundId, units: 1 },
+            { nppId, units: 1 },
+            { corporationId: corpId, units: 1 },
+          ],
+        },
+      ])
+    );
+    db.collection("corporateSectors").find.mockReturnValue(
+      makeCursor([
+        { _id: idA, corporationId: corpId, revenue: 2000 },
+        { _id: idB, corporationId: corpId, revenue: 300 },
+      ])
+    );
+    db.collection("indexFunds").find.mockReturnValue(
+      makeCursor([{ _id: fundId, name: "Index", anchorCurrencyCode: "USD" }])
+    );
+    const defaults = await import("@/lib/bonds/corporateBondDefault");
+    vi.mocked(defaults.sumDefaultedBondPrincipal).mockReturnValue(1000);
+    vi.mocked(defaults.computeSectorNpvSum).mockImplementation(
+      (sectors: { revenue: number }[]) => sectors[0]?.revenue ?? 0
+    );
+    const { executeCorporationBondRestructure } =
+      await import("./executeCorporationBondRestructure");
+    const { creditBondPool } = await import("@/lib/bonds/marketPool");
+    const { payNppBondReturns } = await import("@/lib/turn/nppBondCash");
+
+    await executeCorporationBondRestructure(db as unknown as Db, { _id: corpId } as never, {
+      now: new Date(),
+      cureTurn: 50,
+    });
+
+    // The stubbed principal is 1000 and equals the issuer's own unit, which is not
+    // debited, so the whole 1700 of salvage stays with the issuer.
+    const corpUpdate = db.collection("corporations").updateOne.mock.calls[0]!;
+    expect((corpUpdate[1] as { $inc: { liquidCapital: number } }).$inc.liquidCapital).toBeCloseTo(
+      1700,
+      6
+    );
+    expect(creditBondPool).toHaveBeenCalledWith(
+      expect.anything(),
+      "USD",
+      1000,
+      "maturitiesIn",
+      expect.any(Date)
+    );
+    const fundOps = db.collection("indexFunds").bulkWrite.mock.calls[0]![0] as {
+      updateOne: { filter: { _id: ObjectId }; update: { $inc: { cashAnchor: number } } };
+    }[];
+    expect(fundOps).toHaveLength(1);
+    expect(fundOps[0]!.updateOne.update.$inc.cashAnchor).toBe(1000);
+    const nppReturns = vi.mocked(payNppBondReturns).mock.calls[0]![1];
+    expect(nppReturns.get(nppId.toString())).toEqual({ total: 1000, coupon: 0, maturity: 1000 });
+    expect(db.collection("characters").bulkWrite).toHaveBeenCalled();
   });
 
   it("throws (caller falls back to dissolve) when sectors can't cover the debt", async () => {

@@ -213,9 +213,8 @@ const learnLinks = (t: TFunc) =>
   ] as const;
 
 /**
- * Era-neutral tile copy. Anything an era does not override falls back to these,
- * so a new preset can never inherit another decade's politics by accident (a
- * 1953 world used to advertise "the post-Watergate trust deficit").
+ * Era-neutral tile copy. Eras fall back to these when they don't override,
+ * so a preset can't inherit another decade's politics by accident.
  */
 const defaultTileBodies = (t: TFunc): Record<EraTileKey, string> => ({
   stateMetrics: t("landing.tiles.stateMetricsBody"),
@@ -764,7 +763,7 @@ export function SandboxHome({
             >
               {footer.map((col) => (
                 <div key={col.headingKey}>
-                  <h3 className="mb-2 text-sm font-semibold text-muted/80">{col.heading}</h3>
+                  <h3 className="mb-2 text-sm font-semibold text-muted">{col.heading}</h3>
                   <ul className="space-y-1.5">
                     {col.links.map((link) => (
                       <li key={link.href}>
@@ -806,7 +805,7 @@ export function SandboxHome({
               />
               <span>{t("landing.byLakeside")}</span>
             </a>
-            <p className="mx-auto mt-3 max-w-3xl text-body-xs leading-relaxed text-muted/70">
+            <p className="mx-auto mt-3 max-w-3xl text-body-xs leading-relaxed text-muted">
               {t("landing.attribution")}
             </p>
           </div>

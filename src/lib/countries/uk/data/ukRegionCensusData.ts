@@ -1,19 +1,7 @@
 /**
- * UK Region Census Profiles — Layer 1 demographic breakdown per region.
- *
- * Mirrors the structure of the US `stateCensusData` / `Layer1Config` system,
- * adapted for UK census categories and ONS definitions.
- *
- * Source data: ONS Census 2021, HESA, DfE, DWP, ONS Regional Profiles.
- * All figures are approximate 2021-era estimates (% of adult population
- * unless otherwise noted).
- *
- * Fields:
- *   ethnicity  — ONS 2021 categories; unlike US "race", UK uses these groupings
- *   age        — Distribution of adult (18+) population
- *   education  — Highest qualification level (NVQ/equivalent)
- *   income     — Household income bands (approx)
- *   urbanization — Urban / suburban / rural split (ONS rural/urban classification)
+ * UK region census profiles, layer 1 demographic breakdown per region.
+ * Figures are approximate 2021-era estimates (% of adult population).
+ * Ethnicity uses ONS 2021 categories (not US race groupings).
  */
 
 export interface UKRegionLayer1 {

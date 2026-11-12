@@ -13,17 +13,22 @@ import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import { resolveGameYear } from "@/lib/era/era";
 import { planEuroSettlement, type EuroMonetaryUnion } from "./rules";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 export async function loadEuroMonetaryUnion(db: Db): Promise<EuroMonetaryUnion | undefined> {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { euroMonetaryUnion: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { euroMonetaryUnion: 1 } }
+  );
   return state?.euroMonetaryUnion;
 }
 
 /** No financial amounts, principal, receipts or account identities are transferred. */
 export async function syncEuroMonetaryPolicy(db: Db, union: EuroMonetaryUnion): Promise<void> {
-  const banks = db.collection<CentralBank>("centralBanks");
+  const banks = centralBanksCollection(db);
   const authority = await banks.findOne(
     { _id: union.authorityId },
     {
@@ -65,7 +70,7 @@ export async function reconcileEuroMonetaryUnion(
   db: Db,
   turn: number
 ): Promise<EuroMonetaryUnion | undefined> {
-  const states = db.collection<GameState>("gameState");
+  const states = gameStateCollection(db);
   for (let attempt = 0; attempt < 3; attempt++) {
     const state = await states.findOne(
       { _id: "current" },
@@ -98,16 +103,13 @@ export async function reconcileEuroMonetaryUnion(
       return state.euroMonetaryUnion;
     }
     const [members, rates, banks] = await Promise.all([
-      db
-        .collection<OrganizationMembership>("organizationMemberships")
+      organizationMembershipsCollection(db)
         .find({ organizationId: "EU" }, { projection: { countryId: 1 } })
         .toArray(),
-      db
-        .collection<ExchangeRate>("exchangeRates")
+      exchangeRatesCollection(db)
         .find({}, { projection: { currencyCode: 1, rate: 1 } })
         .toArray(),
-      db
-        .collection<CentralBank>("centralBanks")
+      centralBanksCollection(db)
         .find({}, { projection: { _id: 1 } })
         .toArray(),
     ]);

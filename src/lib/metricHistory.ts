@@ -2,6 +2,7 @@ import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { StateMetrics, MetricCategoryId } from "@/lib/db/types";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 export const METRIC_HISTORY_CAP = 96; // 2 in-game years (48 turns/year)
 
@@ -44,7 +45,7 @@ export async function snapshotMetricHistory(db: Db, turn: number): Promise<void>
   // board, whose trend history is written by the dynamics phase into
   // politicalMetricsHistory on its own cadence — a second snapshot of an empty
   // legacy store would just write nothing.
-  const macroDocs = await db.collection<StateMetrics>("macroMetrics").find({}).toArray();
+  const macroDocs = await macroMetricsCollection(db).find({}).toArray();
 
   const snapshotStore = async (docs: StateMetrics[], historyCollection: string) => {
     const metricsMap = new Map(docs.map((m) => [String(m._id), m]));

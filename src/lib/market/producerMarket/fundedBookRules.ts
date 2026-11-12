@@ -1,21 +1,7 @@
-/**
- * Reachable books rebuilt from the funded market itself.
- *
- * The commodity price phase used to build every country's reachable book from
- * MODELLED trade: `buildReachableBooks` counted a country's imports and
- * exports from the gravity clearing, so a country the model shipped gas to
- * looked supplied even when no funded buyer there could reach a seller. The
- * funded market already knows what its buyers ordered and what actually
- * changed hands across borders, so on a funded turn the book is rebuilt from
- * those orders and fills instead.
- *
- * Units are the price phase's per-turn basis (funded orders and fills scaled
- * by TURNS_PER_DAY when the rows are persisted), the same basis the funded
- * ledger uses, so `reachableDemandUnits` and the price knee read the book the
- * market actually cleared on.
- *
- * Pure: rows in, books out. No DB and no money.
- */
+// Reachable books rebuilt from funded orders and fills rather than modelled
+// trade, so a country looks supplied only when a funded buyer there could
+// actually reach a seller. Units are the price phase's per-turn basis, the
+// same basis the funded ledger uses. Pure: rows in, books out.
 import type { CountryId } from "@/lib/constants/countries";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { ReachableBooks } from "@/lib/trade/reachableBook";
@@ -34,10 +20,10 @@ export interface FundedCountryBookRow {
   /** Units sold to a buyer in another country. */
   exports: number;
   /**
-   * Measurement only (#5450); the price phase does not read these.
-   * `requested`: units buyers asked for, with a reservation and its public
-   * fallback counted once (`demand` adds both). `funded`: the part of
-   * `requested` the buyers' shared cash could pay for at their limit prices.
+   * Measurement only; the price phase does not read these.
+   * `requested`: units buyers asked for, counting a reservation and its
+   * public fallback once (`demand` adds both). `funded`: the part of
+   * `requested` buyers' shared cash could pay for at their limit prices.
    * `filled`: units buyers in the country actually received.
    */
   requested?: number;

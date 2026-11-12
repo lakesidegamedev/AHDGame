@@ -59,3 +59,17 @@ describe("global climate feedback turn", () => {
     expect(db.collectionMocks.climateFeedbackState!.updateOne).not.toHaveBeenCalled();
   });
 });
+
+describe("seeded climate pressure", () => {
+  it("opens the 2027 world on 0.20 and leaves other presets at zero", async () => {
+    const db = createMockDb();
+    db.collection("climateFeedbackState").findOne.mockResolvedValue(null);
+    expect(await processClimateFeedbackTurn(db as unknown as Db, 5, { startingYear: 2027 })).toBe(
+      0.2
+    );
+    expect(await processClimateFeedbackTurn(db as unknown as Db, 5, { startingYear: 2019 })).toBe(
+      0
+    );
+    expect(await processClimateFeedbackTurn(db as unknown as Db, 5)).toBe(0);
+  });
+});

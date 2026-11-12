@@ -1,23 +1,19 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, PartyCharter } from "@/lib/db/types";
+import type { PartyCharter } from "@/lib/db/types";
 import { computeCharterDeadline, computeCharterDeadlineTurn } from "./charterDeadlines";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 /**
- * Phase 6 — record a founder's rejection on a charter. Transitions the
- * charter to `founder-replacement` so a new founder can be invited
- * within the deadline (Phase 6 D3 + D4).
+ * Records a founder's rejection on a charter and transitions it to
+ * `founder-replacement` so a new founder can be invited within the deadline.
  *
- * Founder identity is `characterId`; auth runs against the session's
- * `userId` so the caller passes both.
+ * Founder identity is `characterId`; auth runs against the session's `userId`,
+ * so the caller passes both.
  *
- * Edge cases:
- *  - Charter not in `pending-signatures` → returns `not-rejectable`.
- *  - Character isn't a founder → returns `not-a-founder`.
- *  - Caller doesn't own the character → returns `not-character-owner`.
- *  - Character already signed → returns `already-signed` (must withdraw
- *    via a separate endpoint; not in Phase 6 MVP scope).
- *
- * See plan §"Phase 6 — Tasks" 6.2 + D3.
+ * Failure reasons: `not-rejectable`, `not-a-founder`, `not-character-owner`,
+ * `already-signed` (withdrawal is a separate endpoint and out of scope).
  */
 export type RejectCharterResult =
   | { ok: true; status: "founder-replacement" }
@@ -39,7 +35,7 @@ export async function rejectCharter(
   db: Db,
   now: Date = new Date()
 ): Promise<RejectCharterResult> {
-  const charter = await db.collection<PartyCharter>("partyCharters").findOne({ _id: charterId });
+  const charter = await partyChartersCollection(db).findOne({ _id: charterId });
   if (!charter) return { ok: false, reason: "charter-not-found" };
   if (charter.status !== "pending-signatures") {
     return { ok: false, reason: "not-rejectable" };
@@ -51,9 +47,10 @@ export async function rejectCharter(
   }
 
   // Auth: the session userId must own the character that's rejecting.
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: rejecterCharacterId }, { projection: { userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: rejecterCharacterId },
+    { projection: { userId: 1 } }
+  );
   if (!character?.userId || !character.userId.equals(rejecterUserId)) {
     return { ok: false, reason: "not-character-owner" };
   }
@@ -63,9 +60,9 @@ export async function rejectCharter(
   const replacementDeadline = computeCharterDeadline(now);
   const currentTurn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
+        _id: "current",
+      })
     )?.currentTurn ?? null;
   const replacementDeadlineTurn =
     currentTurn != null ? computeCharterDeadlineTurn(currentTurn) : null;
@@ -87,7 +84,7 @@ export async function rejectCharter(
   // concurrent `expireCharters` sweep that flipped the charter to
   // `expired` cannot be silently un-expired by writing
   // status=founder-replacement here.
-  const result = await db.collection<PartyCharter>("partyCharters").updateOne(
+  const result = await partyChartersCollection(db).updateOne(
     {
       _id: charterId,
       status: "pending-signatures",
@@ -106,8 +103,7 @@ export async function rejectCharter(
       (cid) => !cid.equals(rejecterCharacterId)
     );
     if (remaining.length > 0) {
-      const remainingCharacters = await db
-        .collection<Character>("characters")
+      const remainingCharacters = await charactersCollection(db)
         .find({ _id: { $in: remaining } })
         .project<{ _id: ObjectId; userId: ObjectId | null | undefined }>({
           _id: 1,

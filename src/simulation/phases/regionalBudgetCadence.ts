@@ -1,19 +1,19 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
- * Regional budgets alternate turns.
+ * Regional budgets run every other turn.
  *
- * The five regional-budget phases recompute every region's annual budget from
- * its enacted laws and drift value bases toward a policy target. Nothing in
- * them accrues a per-turn flow: run every other turn with the drift scaled to
- * two turns, a region ends up in the same place, one turn later. What running
- * every turn costs is ~20,000 documents decoded per turn (DE alone reads
- * 9,000 sector rows because nearly every corporation there is state-owned),
- * on every turn, for every player.
+ * The five regional-budget phases recompute each region's annual budget from
+ * enacted laws and drift value bases toward a policy target. Nothing accrues a
+ * per-turn flow: run every other turn with the drift scaled to two turns and a
+ * region lands in the same place, one turn later. Running every turn costs
+ * ~20,000 documents decoded per turn (DE alone reads 9,000 sector rows because
+ * nearly every corporation there is state-owned).
  *
  * Slots are balanced by measured cost: DE + RU + UK on even turns, JP + CN on
- * odd turns. `AHD_REGIONAL_BUDGET_EVERY_TURNS=1` restores every-turn
- * processing without a deploy. The phase keys are the identifiers turn logs
- * and turndiag are keyed by, so a skipped phase is marked "skipped:
- * conditional" rather than silently absent.
+ * odd. `AHD_REGIONAL_BUDGET_EVERY_TURNS=1` restores every-turn processing
+ * without a deploy. Skipped phases are marked "skipped: conditional" rather
+ * than silently absent.
  */
 
 export const REGIONAL_BUDGET_EVERY_TURNS = 2;
@@ -28,7 +28,7 @@ export const REGIONAL_BUDGET_PHASE_SLOTS: Readonly<Record<string, number>> = {
 };
 
 export function resolveRegionalBudgetCadence(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = serverEnv()
 ): number {
   const raw = env.AHD_REGIONAL_BUDGET_EVERY_TURNS;
   const parsed = raw === undefined || raw === "" ? REGIONAL_BUDGET_EVERY_TURNS : Number(raw);

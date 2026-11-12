@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { FederalBudget, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import type { CountryState } from "@/lib/db/types/countryState";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -8,6 +8,9 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { liveNationalGdpUnits, resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
 
 function finiteOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -17,15 +20,13 @@ export async function queryCountries(db: Db) {
   const accessByCountry = await getAllCountryAccess(db);
   const countryIds = Object.keys(accessByCountry) as CountryId[];
   const [states, runtimeStates] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId: { $in: countryIds } },
         { projection: { countryId: 1, population: 1, gdp: 1 } }
       )
       .toArray(),
-    db
-      .collection<CountryState>("countryState")
+    countryStateCollection(db)
       .find({ _id: { $in: countryIds } }, { projection: { _id: 1, governmentType: 1 } })
       .toArray(),
   ]);
@@ -73,11 +74,7 @@ export async function queryCountryRegions(db: Db, country: string) {
   const countryId = country.toUpperCase() as CountryId;
   if (!COUNTRY_CONFIGS[countryId]) return null;
 
-  const states = await db
-    .collection<State>("states")
-    .find({ countryId })
-    .sort({ name: 1 })
-    .toArray();
+  const states = await statesCollection(db).find({ countryId }).sort({ name: 1 }).toArray();
 
   const regions = states.map((state) => {
     const population = finiteOrNull(state.population);
@@ -133,11 +130,10 @@ export async function queryCountryBudget(db: Db, country: string) {
   if (!COUNTRY_CONFIGS[countryId]) return null;
 
   const [budget, states] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({
+    federalBudgetCollection(db).findOne({
       _id: getNationalBudgetId(countryId),
     }),
-    db
-      .collection<Pick<State, "gdp">>("states")
+    statesCollection<Pick<State, "gdp">>(db)
       .find({ countryId }, { projection: { gdp: 1 } })
       .toArray(),
   ]);

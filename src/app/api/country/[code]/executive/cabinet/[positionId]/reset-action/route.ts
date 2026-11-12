@@ -5,7 +5,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -21,6 +20,10 @@ import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { resolveGameYear } from "@/lib/era/era";
 import { cabinetActionFunding } from "@/lib/resetCabinet/rules/actionFunding";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
+import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetCabinetActionStates";
 
 const bodySchema = z.object({ actionId: z.string().min(1).max(120) }).strict();
 interface RouteParams {
@@ -66,7 +69,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         };
       }
       const actorId = member.characterId.toString();
-      const gameState = await db.collection<GameState>("gameState").findOne(
+      const gameState = await gameStateCollection(db).findOne(
         { _id: "current" },
         {
           session,
@@ -102,14 +105,15 @@ export async function POST(request: Request, { params }: RouteParams) {
           new Set(gameState.manuallyEnabledSeats ?? [])
         )
       );
-      const state = await db
-        .collection<ResetCabinetActionState>("resetCabinetActionStates")
-        .findOne({ _id: country, worldId: gameState.resetWorldId }, { session });
-      const budget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId }, { session, projection: { gdp: 1, defenseAppropriation: 1 } });
-      const accounts = await db
-        .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
+      const state = await resetCabinetActionStatesCollection<ResetCabinetActionState>(db).findOne(
+        { _id: country, worldId: gameState.resetWorldId },
+        { session }
+      );
+      const budget = await federalBudgetCollection(db).findOne(
+        { countryId },
+        { session, projection: { gdp: 1, defenseAppropriation: 1 } }
+      );
+      const accounts = await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)
         .find(
           {
             worldId: gameState.resetWorldId,
@@ -163,7 +167,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       let remainingDebit = used.operatingDebit;
       if (funding.source === "defense" && remainingDebit > 0) {
         const debit = Math.round(remainingDebit);
-        const written = await db.collection<FederalBudget>("federalBudget").updateOne(
+        const written = await federalBudgetCollection(db).updateOne(
           {
             countryId,
             $expr: {
@@ -191,18 +195,18 @@ export async function POST(request: Request, { params }: RouteParams) {
           const available = Math.max(0, account.balance - account.encumbered);
           const debit = Math.min(available, remainingDebit);
           if (debit > 0) {
-            const written = await db
-              .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
-              .updateOne(
-                {
-                  _id: account._id,
-                  worldId: gameState.resetWorldId,
-                  balance: account.balance,
-                  encumbered: account.encumbered,
-                },
-                { $inc: { balance: -debit } },
-                { session }
-              );
+            const written = await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(
+              db
+            ).updateOne(
+              {
+                _id: account._id,
+                worldId: gameState.resetWorldId,
+                balance: account.balance,
+                encumbered: account.encumbered,
+              },
+              { $inc: { balance: -debit } },
+              { session }
+            );
             if (written.matchedCount !== 1)
               throw new Error("Cabinet action account changed concurrently");
             remainingDebit -= debit;
@@ -210,20 +214,20 @@ export async function POST(request: Request, { params }: RouteParams) {
         }
       }
       if (remainingDebit > 0.01) throw new Error("Cabinet action debit did not reconcile");
-      const written = await db
-        .collection<ResetCabinetActionState>("resetCabinetActionStates")
-        .updateOne(
-          { _id: country, worldId: gameState.resetWorldId, updatedTurn: state.updatedTurn },
-          {
-            $set: {
-              actorStates: { ...state.actorStates, [actorId]: used.actor },
-              active: [...used.active],
-              history: [...used.history],
-              updatedTurn: gameState.currentTurn,
-            },
+      const written = await resetCabinetActionStatesCollection<ResetCabinetActionState>(
+        db
+      ).updateOne(
+        { _id: country, worldId: gameState.resetWorldId, updatedTurn: state.updatedTurn },
+        {
+          $set: {
+            actorStates: { ...state.actorStates, [actorId]: used.actor },
+            active: [...used.active],
+            history: [...used.history],
+            updatedTurn: gameState.currentTurn,
           },
-          { session }
-        );
+        },
+        { session }
+      );
       if (written.matchedCount !== 1) throw new Error("Cabinet action state changed concurrently");
       return {
         status: 200,

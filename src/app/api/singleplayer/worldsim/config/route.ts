@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants/countries";
 import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   try {
     const db = await getDb();
     const [state, singleplayerConfig, enabledIds] = await Promise.all([
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -43,22 +44,10 @@ export async function GET(request: Request) {
             nppAutonomyLevel: 1,
             nppAutonomyEnabled: 1,
             forexEnabled: 1,
-            rpgStatsEnabled: 1,
-            onboardingChecklistEnabled: 1,
             playerRandomEventsEnabled: 1,
-            autoSectorSeedEnabled: 1,
-            extractionAutoStrategyEnabled: 1,
             nppEntryViabilityMode: 1,
             nppCorpStrategyEnabled: 1,
-            redistrictingEnabled: 1,
             sectorTechTreesEnabled: 1,
-            subsidiaryCorporationsEnabled: 1,
-            embargoTradeExposureEnabled: 1,
-            liveElectionResultsEnabled: 1,
-            legislationDemographicEffectsV2Enabled: 1,
-            seasonRecapEnabled: 1,
-            intOrgAlignmentEnabled: 1,
-            settlementCrisisEnabled: 1,
             eurozoneEnabled: 1,
           },
         }
@@ -110,23 +99,10 @@ export async function GET(request: Request) {
         nppAutonomyLevel: state?.nppAutonomyLevel ?? (state?.nppAutonomyEnabled ? "v0" : "off"),
         featureFlags: {
           forexEnabled: state?.forexEnabled === true,
-          rpgStatsEnabled: state?.rpgStatsEnabled === true,
-          onboardingChecklistEnabled: state?.onboardingChecklistEnabled === true,
           playerRandomEventsEnabled: state?.playerRandomEventsEnabled === true,
-          autoSectorSeedEnabled: state?.autoSectorSeedEnabled === true,
-          extractionAutoStrategyEnabled: state?.extractionAutoStrategyEnabled === true,
           nppEntryViabilityMode: state?.nppEntryViabilityMode ?? "observe",
           nppCorpStrategyEnabled: state?.nppCorpStrategyEnabled !== false,
-          redistrictingEnabled: state?.redistrictingEnabled === true,
           sectorTechTreesEnabled: state?.sectorTechTreesEnabled === true,
-          subsidiaryCorporationsEnabled: state?.subsidiaryCorporationsEnabled === true,
-          embargoTradeExposureEnabled: state?.embargoTradeExposureEnabled === true,
-          liveElectionResultsEnabled: state?.liveElectionResultsEnabled === true,
-          legislationDemographicEffectsV2Enabled:
-            state?.legislationDemographicEffectsV2Enabled === true,
-          seasonRecapEnabled: state?.seasonRecapEnabled === true,
-          intOrgAlignmentEnabled: state?.intOrgAlignmentEnabled === true,
-          settlementCrisisEnabled: state?.settlementCrisisEnabled === true,
           eurozoneEnabled: state?.eurozoneEnabled === true,
           ...singleplayerConfig?.featureFlags,
         },

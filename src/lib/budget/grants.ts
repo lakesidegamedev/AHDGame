@@ -10,6 +10,10 @@ import type { Db } from "mongodb";
 import type { FormulaGrant, StateBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 interface StateData {
   id: string;
@@ -18,14 +22,12 @@ interface StateData {
 }
 
 async function getStateData(db: Db, countryId?: CountryId): Promise<StateData[]> {
-  const states = await db
-    .collection("states")
+  const states = await statesCollection<Document>(db)
     .find(countryId ? { countryId } : {})
     .toArray();
 
   const stateIds = states.map((s) => String(s._id));
-  const metricsDocs = await db
-    .collection("macroMetrics")
+  const metricsDocs = await macroMetricsCollection<Document>(db)
     .find(
       { stateId: { $in: stateIds } },
       { projection: { stateId: 1, "economic.povertyRate.value": 1 } }
@@ -130,7 +132,7 @@ export async function updateStateGrantRevenue(
   countryId: CountryId,
   grantAmount: number
 ): Promise<void> {
-  await db.collection<StateBudget>("stateBudgets").updateOne(
+  await stateBudgetsCollection(db).updateOne(
     { _id: stateId, countryId },
     {
       $set: {

@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { SubNavLayout } from "./SubNavLayout";
 
 const CentralBankAdminPanel = dynamic(
   () =>
@@ -152,12 +151,11 @@ export type EconomySubTab =
 
 interface AdminEconomyTabProps {
   activeSub: EconomySubTab;
-  onSubChange: (sub: EconomySubTab) => void;
 }
 
-export function AdminEconomyTab({ activeSub, onSubChange }: AdminEconomyTabProps) {
+export function AdminEconomyTab({ activeSub }: AdminEconomyTabProps) {
   return (
-    <SubNavLayout tab="economy" active={activeSub} onChange={onSubChange}>
+    <>
       <div className="space-y-6">
         {activeSub === "central-banks" && <CentralBankAdminPanel />}
         {activeSub === "inflation" && <InflationAdminPanel />}
@@ -182,6 +180,6 @@ export function AdminEconomyTab({ activeSub, onSubChange }: AdminEconomyTabProps
         {activeSub === "financial-ledger" && <FinancialLedgerAdminPanel />}
         {activeSub === "sector-seed" && <SectorSeedAdminPanel />}
       </div>
-    </SubNavLayout>
+    </>
   );
 }

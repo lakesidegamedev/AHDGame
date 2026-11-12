@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
@@ -73,7 +74,6 @@ import {
 import { getTranslations } from "next-intl/server";
 import { CeoCorporationCard } from "@/app/profile/components/CeoCorporationCard";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import { CharacterStatsPanel } from "@/app/profile/components/CharacterStatsPanel";
 import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
 import { LocWalletStrip } from "@/components/forex/LocWalletStrip";
@@ -89,6 +89,11 @@ import { countryElectionsUrl, countryUrl, politiciansUrl, regionUrl } from "@/li
 import { truncate, loadCharacterByUrlId } from "./characterLoaders";
 import { buildPublicSummary, getCharacterById, type OverviewStatItem } from "./characterData";
 import { raceHref } from "@/lib/campaignManager/links";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -127,10 +132,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CharacterPage({ params }: PageProps) {
   const { id } = await params;
-  const [userData, forexEnabled, rpgStatsEnabled, data] = await Promise.all([
+  const [userData, forexEnabled, data] = await Promise.all([
     getAuthUserWithCharacter(),
     isForexEnabled(),
-    isRpgStatsEnabled(),
     getCharacterById(id),
   ]);
 
@@ -175,7 +179,6 @@ export default async function CharacterPage({ params }: PageProps) {
     ceoCorporation,
     statePartyOrg,
     nationalNpiOrdinalRank,
-    conflictsEnabled,
     doctrineAdopted,
     general,
     militaryService,
@@ -234,25 +237,25 @@ export default async function CharacterPage({ params }: PageProps) {
   const needsPartyPool = !!(character.party && character.party !== "independent" && party);
   const [chairBankRow, cabinetSeats, congressLeadershipRows, justiceSeat, poolAgg] =
     await Promise.all([
-      apDb
-        .collection("centralBanks")
-        .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } }),
+      centralBanksCollection(apDb).findOne(
+        { chairCharacterId: character._id },
+        { projection: { _id: 1 } }
+      ),
       getCabinetMembersCollection(apDb)
         .find(
           { characterId: character._id },
           { projection: { countryId: 1, positionId: 1, acting: 1 } }
         )
         .toArray(),
-      apDb
-        .collection<CongressLeader>("congressLeaders")
+      congressLeadersCollection(apDb)
         .find({ characterId: character._id }, { projection: { role: 1 } })
         .toArray(),
-      apDb
-        .collection<SupremeCourtSeat>("supremeCourtSeats")
-        .findOne({ justiceCharacterId: character._id }, { projection: { _id: 1 } }),
+      supremeCourtSeatsCollection(apDb).findOne(
+        { justiceCharacterId: character._id },
+        { projection: { _id: 1 } }
+      ),
       needsPartyPool
-        ? apDb
-            .collection<Character>("characters")
+        ? charactersCollection(apDb)
             .aggregate<{ totalInfluence: number; memberCount: number }>([
               {
                 $match: {
@@ -275,7 +278,7 @@ export default async function CharacterPage({ params }: PageProps) {
   const cabinetSeat = cabinetSeats[0] ?? null;
   const electedSeat =
     character.currentOffice && CABINET_OFFICE_TYPES.has(character.currentOffice.type)
-      ? await apDb.collection<ElectedOfficial>("electedOfficials").findOne(
+      ? await electedOfficialsCollection(apDb).findOne(
           { characterId: character._id },
           {
             projection: {
@@ -418,7 +421,10 @@ export default async function CharacterPage({ params }: PageProps) {
     character.countryId,
     character.politicalInfluence ?? 0,
     gamePreset,
-    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gamePreset)
+    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gamePreset),
+    homeState?.gdp === undefined
+      ? undefined
+      : await loadNationalGdpPerCapita(await getDb(), character.countryId ?? "US")
   );
   const populationTier = getPopulationTier(statePopulation);
 
@@ -574,7 +580,6 @@ export default async function CharacterPage({ params }: PageProps) {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-16">
       <ProfileTabs
-        conflictsEnabled={conflictsEnabled}
         adopted={doctrineAdopted}
         general={general}
         militaryService={militaryService}
@@ -707,7 +712,7 @@ export default async function CharacterPage({ params }: PageProps) {
               />
             </section>
 
-            {rpgStatsEnabled && character.stats && <CharacterStatsPanel stats={character.stats} />}
+            {character.stats && <CharacterStatsPanel stats={character.stats} />}
             {isOwnProfile && forexEnabled ? <LocWalletStrip countryId={countryIdResolved} /> : null}
 
             <ProfileAchievements

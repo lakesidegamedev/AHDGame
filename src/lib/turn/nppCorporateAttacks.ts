@@ -1,30 +1,27 @@
 /**
- * nppCorporateAttacks — autonomous NPP corporate aggression (NPP-autonomy V2.2).
+ * nppCorporateAttacks, autonomous NPP corporate aggression.
  *
  * NPP-run corporations (spawned NPP corps and player-appointed caretaker CEOs)
- * don't just expand into unowned markets — they go on the offensive, launching
- * the same economic **sector attacks** a player corp can, capturing market share
- * from rival owned sectors. Targets are chosen **by rule** (best capture
- * opportunity in a market the attacker operates in) and may be NPP-owned or
- * player-owned alike — the attack is indifferent to who owns the defender, so a
- * player corp is a legitimate target exactly as another NPP corp is.
+ * go on the offensive, launching the same economic sector attacks a player corp
+ * can and capturing market share from rival owned sectors. Targets are chosen
+ * by rule (best capture opportunity in a market the attacker operates in) and
+ * may be NPP-owned or player-owned alike; the attack is indifferent to owner.
  *
- * Everything routes through the **same** cost/capture helpers as the player
- * attack path (`calculateAttackCostAnchor`, `calculateSplitMsCost`,
+ * Everything routes through the same cost/capture helpers as the player attack
+ * path (`calculateAttackCostAnchor`, `calculateSplitMsCost`,
  * `fetchAttackerDefenderShares`, the dominance/underdog multipliers,
  * `ATTACK_OWNED_CONTESTED_FRACTION`) so an autonomous attack and a player attack
- * resolve identically — no bespoke "NPP damage" and no way to exceed the normal
- * mechanic. Aggression is bounded: only `aggressive`-archetype corps attack,
- * only with surplus cash + MS, and only once per `ATTACK_COOLDOWN_TURNS`.
+ * resolve identically. Aggression is bounded: only `aggressive`-archetype corps
+ * attack, only with surplus cash + MS, and only once per `ATTACK_COOLDOWN_TURNS`.
  *
- * Gating: `nppAutonomyAtLeast(attacker.countryId, "v2")` — economic aggression is
- * the comingle-tier capability. A no-op below v2 / where autonomy is off.
+ * Gating: `nppAutonomyAtLeast(attacker.countryId, "v2")`. No-op below v2 or
+ * where autonomy is off.
  */
 
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import {
   ATTACK_OWNED_CONTESTED_FRACTION,
@@ -60,7 +57,7 @@ import {
   countRecentNppNotifications,
   NPP_NOTIFICATION_WINDOW_TURNS,
 } from "@/lib/nppAutonomy/playerImpactBudget";
-import type { NPP, NPPPersonality } from "@/lib/db/types/npp";
+import type { NPPPersonality } from "@/lib/db/types/npp";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { randomInt } from "node:crypto";
@@ -68,6 +65,11 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import type { CountryId } from "@/lib/constants/countries";
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { attemptPlantSectorSplit } from "@/lib/corporations/commands/plantSectorSplitAttempt";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** Turns between autonomous attacks by the same corp (telegraphed, not a barrage). */
 export const ATTACK_COOLDOWN_TURNS = 24;
@@ -144,10 +146,10 @@ export interface NppAttackResult {
 }
 
 /**
- * Defender-facing message for an autonomous revenue attack below plants
- * (suggestion #324). Names the attacking corp, the sector, and the state, and
- * says what the $ figure is. Pure, so notification copy can be pinned by unit
- * test. Plants-economy splits write their own copy in `executeNppPlantSplit`.
+ * Defender-facing message for an autonomous revenue attack below plants.
+ * Names the attacker corp, sector, and state, and clarifies the $ figure is
+ * revenue moved, not profit or total sector value. Pure for unit testing.
+ * Plants-economy splits write their own copy in `executeNppPlantSplit`.
  */
 export function formatNppSectorAttackDefenderMessage(args: {
   attackerName: string;
@@ -239,7 +241,7 @@ export async function executeNppSectorAttack(
   // defender is written so the P5 basis transfer sees both sides' pre-attack state.
   const stateId = targetSector.stateId;
   // Only the match is wanted: the found sector is credited in place by _id.
-  const existing = await db.collection<Pick<CorporateSector, "_id">>("corporateSectors").findOne(
+  const existing = await corporateSectorsCollection<Pick<CorporateSector, "_id">>(db).findOne(
     {
       stateId,
       sectorType: targetSector.sectorType,
@@ -251,20 +253,20 @@ export async function executeNppSectorAttack(
   );
 
   // Reduce the defender's revenue.
-  await db
-    .collection<CorporateSector>("corporateSectors")
-    .updateOne(
-      { _id: targetSector._id },
-      { $inc: { revenue: -captureInDefenderLocal }, $set: { updatedAt: now } }
-    );
+  await (
+    await getCorporateSectorsCollection(db)
+  ).updateOne(
+    { _id: targetSector._id },
+    { $inc: { revenue: -captureInDefenderLocal }, $set: { updatedAt: now } }
+  );
 
   if (existing) {
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .updateOne(
-        { _id: existing._id },
-        { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
-      );
+    await (
+      await getCorporateSectorsCollection(db)
+    ).updateOne(
+      { _id: existing._id },
+      { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
+    );
   } else {
     const newSector: Omit<CorporateSector, "_id"> = {
       corporationId: attacker._id,
@@ -285,12 +287,12 @@ export async function executeNppSectorAttack(
       updatedAt: now,
     };
     try {
-      await db
-        .collection<CorporateSector>("corporateSectors")
-        .insertOne(newSector as CorporateSector);
+      await (await getCorporateSectorsCollection(db)).insertOne(newSector as CorporateSector);
     } catch (error) {
       if (isCorporateSectorDuplicateKey(error)) {
-        await db.collection<CorporateSector>("corporateSectors").updateOne(
+        await (
+          await getCorporateSectorsCollection(db)
+        ).updateOne(
           {
             corporationId: attacker._id,
             stateId,
@@ -308,7 +310,9 @@ export async function executeNppSectorAttack(
 
   // Deduct cost + MS, escalate, and stamp the attack cooldown on the attacker.
   const attackCostLocal = anchorToCorpLiquidCapital(attackCostAnchor, attacker, attackerFxRate);
-  await db.collection<Corporation>("corporations").updateOne(
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne(
     { _id: attacker._id },
     {
       $inc: { liquidCapital: -attackCostLocal, marketingStrength: -msCost, splitEscalation: 1 },
@@ -320,18 +324,18 @@ export async function executeNppSectorAttack(
   // often one NPP corp attacks; it says nothing about how often a given corp is
   // attacked, so any number of NPP corps could converge on one player in the same
   // turn. This is the field that makes the shared defender cooldown possible.
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
 
   const sectorLabel =
     OPERATING_SECTOR_TYPE_LABELS[targetSector.sectorType as CorporationType] ??
     targetSector.sectorType;
 
   // Wire headline (same surface as a player attack) so the action is visible.
-  const stateName = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId }, { projection: { name: 1 } });
+  const stateName = await (
+    await getStatesCollection(db)
+  ).findOne({ _id: stateId }, { projection: { name: 1 } });
   logWireEvent(
     "sector_attack",
     wireHeadlineSectorAttack(
@@ -445,24 +449,21 @@ export async function executeNppPlantSplit(
     },
   }).catch(() => {});
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: attacker._id },
-      { $set: { lastAutoAttackTurn: currentTurn, updatedAt: now } }
-    );
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne({ _id: attacker._id }, { $set: { lastAutoAttackTurn: currentTurn, updatedAt: now } });
+  await (
+    await getCorporationsCollection(db)
+  ).updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
 
   const sectorLabel =
     OPERATING_SECTOR_TYPE_LABELS[targetSector.sectorType as CorporationType] ??
     targetSector.sectorType;
   const stateName =
     (
-      await db
-        .collection<State>("states")
-        .findOne({ _id: targetSector.stateId }, { projection: { name: 1 } })
+      await (
+        await getStatesCollection(db)
+      ).findOne({ _id: targetSector.stateId }, { projection: { name: 1 } })
     )?.name ?? targetSector.stateId;
   const plantsWord = result.plantsTransferred === 1 ? "plant" : "plants";
   const outcomeText = result.succeeded
@@ -547,8 +548,9 @@ export async function runNppCorporateAttacks(
   // phase carries its own per-attacker nppAutonomyAtLeast(v2) gate, so raising
   // political autonomy (e.g. to v3 for government formation) does not by itself
   // make NPP corps attack owned sectors.
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {
@@ -575,8 +577,9 @@ export async function runNppCorporateAttacks(
   // Hydrate CEO NPP personalities (archetype → aggression).
   const ceoIds = nppCorps.map((c) => c.ceoId).filter(Boolean);
   const npps = ceoIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await (
+        await getNppsCollection(db)
+      )
         .find({ _id: { $in: ceoIds } }, { projection: { personality: 1 } })
         .toArray()
     : [];
@@ -619,15 +622,13 @@ export async function runNppCorporateAttacks(
   });
   if (eligibleAttackers.length === 0) return 0;
 
-  // All corporateSectors, once — grouped by owning corp (own-market lookup)
-  // and by (stateId, sectorType) bucket (rival lookup), replacing the two
-  // per-attacker queries above.
-  // Attack targeting and execution use only the Pick<CorporateSector, ...>
-  // contract below: owner/market identity plus the capacity and revenue basis.
-  // Avoid decoding every plant and labor telemetry field while building the
-  // two in-memory indexes.
-  const allSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  // All corporateSectors loaded once, indexed by owning corp (own-market
+  // lookup) and by (stateId, sectorType) bucket (rival lookup). Only the
+  // Pick<CorporateSector, ...> fields are projected to avoid decoding plant
+  // and labor telemetry.
+  const allSectors = await (
+    await getCorporateSectorsCollection(db)
+  )
     .find(
       {},
       {
@@ -663,8 +664,9 @@ export async function runNppCorporateAttacks(
   // Projected to the target/defender contract: the attack itself re-reads the
   // defender inside its transaction, so the full balance sheet here would only
   // be decoded to look up a name and a marketing strength.
-  const allCorps = await db
-    .collection<Corporation>("corporations")
+  const allCorps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       {},
       {

@@ -4,6 +4,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { shareHistoryQuerySchema } from "@/lib/api/schemas/shareHistory";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import type { ShareTradeHistory } from "@/lib/db/types";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -34,12 +35,9 @@ export async function GET(request: Request, { params }: RouteParams) {
     const { corporation } = resolved;
 
     const filter = { corporationId: corporation._id };
-    const total = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
-      .countDocuments(filter);
+    const total = await shareTradeHistoryCollection(db).countDocuments(filter);
 
-    const entries = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const entries = await shareTradeHistoryCollection(db)
       .find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .skip((page - 1) * pageSize)

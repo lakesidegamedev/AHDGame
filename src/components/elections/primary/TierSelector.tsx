@@ -3,18 +3,17 @@
 /**
  * Race-tier selector chip strip — Presidential / Senate / Governor / House.
  *
- * Renders as the chrome at the top of the per-party primary surfaces. Each
- * chip navigates to its tier's per-party page:
+ * Renders at the top of per-party primary surfaces. Each chip navigates to its
+ * tier's per-party page:
  *  - Presidential → `/president/primary/[partyId]`
  *  - Senate / Governor / House → `/elections/primary/[tier]/[partyId]`
  *
- * Strip renders only when `countryId === "US"` — non-US surfaces don't have
- * the same nationally-aggregated tier system.
- *
- * Pure presentational; routing is delegated to `onTierChange` so the
- * caller can either navigate (via Next router) or update local state.
+ * Only rendered when `countryHasFeature("usUi", countryId)`; non-US surfaces have no
+ * nationally-aggregated tier system. Pure presentational; routing is delegated
+ * to `onTierChange` so the caller can navigate or update local state.
  */
 import { useTranslations } from "next-intl";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type RaceTier = "president" | "senate" | "stateSenate" | "governor" | "house";
 
@@ -53,7 +52,7 @@ export function TierSelector({
 }) {
   const t = useTranslations("elections");
   // Hide entirely outside the US.
-  if (countryId.toUpperCase() !== "US") return null;
+  if (!countryHasFeature("usUi", countryId.toUpperCase())) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-1 py-2">

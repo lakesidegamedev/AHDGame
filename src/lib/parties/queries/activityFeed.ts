@@ -4,6 +4,9 @@ import type { CountryId } from "@/lib/constants/countries";
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { SLATE_REFUSAL_LABEL, isSlateFilingFailure } from "@/lib/slateRefusalReasons";
 import type { Db } from "mongodb";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 const HIDDEN_OVERVIEW_TREASURY_CATEGORIES = new Set(["gotv", "suppression", "fund_generation"]);
 
@@ -65,14 +68,12 @@ export async function getPartyActivityFeed(
   if (before) slateFilter.updatedAt = { $lt: before };
 
   const [transactions, slateRows] = await Promise.all([
-    db
-      .collection<TreasuryTransaction>("treasuryTransactions")
+    treasuryTransactionsCollection(db)
       .find(txFilter)
       .sort({ createdAt: -1 })
       .limit(sourceLimit)
       .toArray(),
-    db
-      .collection<SlateCandidate>("slateCandidates")
+    slateCandidatesCollection(db)
       .find(slateFilter)
       .sort({ updatedAt: -1 })
       .limit(sourceLimit)
@@ -82,8 +83,7 @@ export async function getPartyActivityFeed(
   const slates =
     slateRows.length === 0
       ? []
-      : await db
-          .collection<RecruitmentSlate>("recruitmentSlates")
+      : await recruitmentSlatesCollection(db)
           .find({ _id: { $in: slateRows.map((row) => row.slateId) } })
           .toArray();
   const slateById = new Map(slates.map((slate) => [slate._id.toString(), slate]));

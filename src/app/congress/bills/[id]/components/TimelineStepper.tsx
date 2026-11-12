@@ -11,6 +11,7 @@ import {
   TERMINAL_STATUSES,
   STATUS_LABELS,
 } from "../billHelpers";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export function TimelineStepper({ bill }: { bill: BillDetail }) {
   // Resolve the country from the bill (or its stateId) so chamber STRUCTURE,
@@ -27,7 +28,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
 
   // JP keeps bespoke handling: cabinet-originated bills and the Shūgiin 2/3
   // override path are structurally unique and not expressible as config shape.
-  const isJP = bill.countryId === "JP";
+  const isJP = countryHasFeature("jpUi", bill.countryId);
   const isJPCabinetBill = isJP && bill.originChamber === "cabinet";
   const isLegislativeOnly = !isUnicameral && !isJP && !bill.requiresExecutiveAction;
 

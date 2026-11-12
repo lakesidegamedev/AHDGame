@@ -6,6 +6,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getOfficeHolderRow } from "@/lib/governorOffice/queries";
 import { withdrawEndorsement } from "@/lib/governorOffice/endorsements/withdrawEndorsement";
 import type { GovernorEndorsement } from "@/lib/db/types";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 // DELETE /api/country/[code]/region/[id]/office/endorsements/[endorsementId] — Withdraw.
 // Auth: requireHumanSessionWithCharacter; must be the original endorser.
@@ -32,9 +33,7 @@ export async function DELETE(
     if (!holder) return errorResponse(403, "Not the office-holder");
 
     const oid = new ObjectId(endorsementId);
-    const endorsement = await db
-      .collection<GovernorEndorsement>("governorEndorsements")
-      .findOne({ _id: oid });
+    const endorsement = await governorEndorsementsCollection(db).findOne({ _id: oid });
     if (!endorsement) return errorResponse(404, "Not found");
     if (endorsement.endorsedByCharacterId.toString() !== auth.user.character._id.toString()) {
       return errorResponse(403, "Not your endorsement");

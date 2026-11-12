@@ -29,6 +29,9 @@ import { producerFillSpend } from "@/lib/market/producerMarket/rules";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
+import { producerMarketShadowsCollection } from "@/lib/db/repositories/producerMarketShadows";
+import { producerMarketShadowStateCollection } from "@/lib/db/repositories/producerMarketShadowState";
+import type { Document } from "mongodb";
 
 export const PRODUCER_SHADOW_COLLECTION = "producerMarketShadows";
 /** Shadow-only carried state, one document per run and turn. Never read by live code. */
@@ -56,9 +59,9 @@ export async function runProducerMarketShadowPhase(
   try {
     const started = Date.now();
     const worldEpoch = input.worldEpoch;
-    const stateCollection = db.collection<ShadowCarryState & { _id: string; at: Date }>(
-      PRODUCER_SHADOW_STATE_COLLECTION
-    );
+    const stateCollection = producerMarketShadowStateCollection<
+      ShadowCarryState & { _id: string; at: Date }
+    >(db);
     const predecessor = await stateCollection.findOne(
       { worldEpoch, turn: input.turn - 1, schemaVersion: SHADOW_STATE_SCHEMA_VERSION },
       { sort: { at: -1 } }
@@ -382,7 +385,7 @@ export async function runProducerMarketShadowPhase(
       );
       await stateCollection.deleteMany({ runId: continuity.runId, turn: { $lt: input.turn - 1 } });
       stage("stateWrite");
-      await db.collection(PRODUCER_SHADOW_COLLECTION).replaceOne(
+      await producerMarketShadowsCollection<Document>(db).replaceOne(
         { _id: input.turn as never },
         {
           ...summary,

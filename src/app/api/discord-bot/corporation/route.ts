@@ -6,8 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
-import type { Corporation, CorporateSector, State, StateMetrics, Bond } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
+import type { CorporateSector, State, StateMetrics } from "@/lib/db/types";
 import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
 import {
@@ -29,7 +28,6 @@ import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { calculateCreditScore, getBondCouponRate } from "@/lib/constants/bonds";
 import { corporateBondMaturityLiquidity } from "@/lib/bonds/corporateCredit";
 import { isBondDefaultCreditPenaltyActive } from "@/lib/bonds/corporateBondDefault";
-import type { CentralBank } from "@/lib/db/types";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { getGameState } from "@/lib/gameState";
 import { getPublicShareQuote, getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
@@ -49,6 +47,13 @@ import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/c
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const LIST_CACHE_HEADERS = {
@@ -63,8 +68,7 @@ async function buildCorpList(): Promise<{
   corporations: { id: string; name: string }[];
 }> {
   const db = await getDb();
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({})
     .project<{ _id: ObjectId; name: string }>({ _id: 1, name: 1 })
     .sort({ name: 1 })
@@ -101,9 +105,9 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   // Find corporation by exact name (case-insensitive). The cache key is the
   // lowercased name, so two callers asking for the same corp share output.
   const escapedName = nameLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne({ name: { $regex: new RegExp(`^${escapedName}$`, "i") } });
+  const corporation = await corporationsCollection(db).findOne({
+    name: { $regex: new RegExp(`^${escapedName}$`, "i") },
+  });
 
   if (!corporation) {
     return { found: false };
@@ -111,15 +115,12 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
 
   // Fetch CEO, sectors, bonds, game state in parallel
   const [ceo, sectors, outstandingBonds, gameState] = await Promise.all([
-    db
-      .collection<Character>("characters")
-      .findOne({ _id: corporation.ceoId }, { projection: { name: 1, sequentialId: 1 } }),
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corporation._id })
-      .toArray(),
-    db
-      .collection<Bond>("bonds")
+    charactersCollection(db).findOne(
+      { _id: corporation.ceoId },
+      { projection: { name: 1, sequentialId: 1 } }
+    ),
+    corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
+    bondsCollection(db)
       .find({ corporationId: corporation._id, matured: false })
       .sort({ createdAt: -1 })
       .toArray(),
@@ -129,12 +130,12 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const currentTurn = gameState?.currentTurn ?? 1;
 
   // Source the income statement from the SAME shared builder the website uses,
-  // so the bot embed matches the corp page by construction (ticket #970). The
-  // builder returns daily-unit, corp-LOCAL figures — the same units the fields
-  // below already use — and folds in the engine's realized income when a
-  // corporationHistory row exists. `viewerUserId: null` = public view (no
-  // request-scoped auth needed). We only take `financials` here; the sectors,
-  // bonds, balance-sheet and credit sections keep their existing computations.
+  // so the bot embed matches the corp page by construction. The builder returns
+  // daily-unit, corp-LOCAL figures (the same units the fields below use) and
+  // folds in the engine's realized income when a corporationHistory row exists.
+  // `viewerUserId: null` = public view. Only `financials` is used here; the
+  // sectors, bonds, balance-sheet and credit sections keep their existing
+  // computations.
   const detail = await loadCorporationDetailView({
     db,
     corporation,
@@ -153,8 +154,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const [states, stateMetricsDocs] =
     uniqueStateIds.length > 0
       ? await Promise.all([
-          db
-            .collection<State>("states")
+          statesCollection(db)
             .find({ _id: { $in: uniqueStateIds } })
             .project<Pick<State, "_id" | "name" | "sectorSpecializations">>({
               _id: 1,
@@ -162,10 +162,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
               sectorSpecializations: 1,
             })
             .toArray(),
-          db
-            // SP5: unemployment lives on macroMetrics (workforceSkill flows
-            // through loadWorkforceSkillByState separately).
-            .collection<StateMetrics>("macroMetrics")
+          macroMetricsCollection(db)
             .find(
               { _id: { $in: uniqueStateIds } },
               { projection: { "economic.unemploymentRate.value": 1 } }
@@ -201,9 +198,8 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const corpFxRate = fxRateForCorpFromMap(corporation, fxByCurrency);
 
   // Sector economic fields are stored in each sector's HOST-market currency,
-  // not the owning corp's — same shape as the web sector-detail currency bug
-  // fixed in #3540. Normalize host -> ₳ (for currency-invariant math, e.g.
-  // workers) and host -> corp currency (for anything displayed as money).
+  // not the owning corp's. Normalize host -> ₳ for currency-invariant math
+  // (e.g. workers) and host -> corp currency for anything shown as money.
   const sectorAmountAnchor = (amount: number, sector: CorporateSector) =>
     readCorpEconomicAnchor(
       amount,
@@ -366,9 +362,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   // Prime rate for coupon
   const countryId = corporation.countryId;
   // getBankId: shared-bank members (IE → ECB) have no doc under their own id.
-  const centralBank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: getBankId(countryId) });
+  const centralBank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
   const primeRate =
     centralBank?.primeRate ?? getCountryConfig(countryId).centralBank.defaultPrimeRate;
   const effectiveCouponRate = getBondCouponRate(primeRate, creditRating.rating);

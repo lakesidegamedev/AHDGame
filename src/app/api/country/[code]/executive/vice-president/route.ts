@@ -12,7 +12,7 @@ import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth"; // Optional auth — intentionally uses getAuthUser()
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, Character } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { resolveExecutiveHolder } from "@/lib/elections/resolveExecutiveHolder";
 import {
   VP_ACTIONS,
@@ -21,6 +21,8 @@ import {
 } from "@/lib/constants/vicePresidentActions";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { getCurrentTurn } from "@/lib/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -34,12 +36,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const authUser = await getAuthUser().catch(() => null);
 
     const [presidentOfficial, vicePresidentOfficial] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "president" }),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "vicePresident" }),
+      electedOfficialsCollection(db).findOne({ countryId, officeType: "president" }),
+      electedOfficialsCollection(db).findOne({ countryId, officeType: "vicePresident" }),
     ]);
 
     const [president, vicePresident] = await Promise.all([
@@ -48,9 +46,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     ]);
 
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
     const isVicePresident =
       !!vicePresidentOfficial?.characterId &&

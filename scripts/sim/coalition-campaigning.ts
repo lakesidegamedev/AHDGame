@@ -1,4 +1,5 @@
 /** Reproducible synthetic balance report. No database, player data, or random inputs. */
+import { electorateFromFixture } from "../../src/lib/demographics/electorateFixture";
 import assert from "node:assert/strict";
 import {
   deriveGranularCellsGeneric,
@@ -15,9 +16,9 @@ import {
   type CampaignCell,
   type TargetedAd,
 } from "../../src/lib/campaignTargeting/rules";
-import { distributeVotesByGroupLevelAllocation } from "../../src/lib/electionEngine/voteDistribution";
-import type { EnrichedCandidate } from "../../src/lib/electionEngine/types";
-import type { DemographicCategory, StateDemographics } from "../../src/lib/db/types";
+import { distributeVotesByGroupLevelAllocation } from "../../src/lib/elections/engine/voteDistribution";
+import type { EnrichedCandidate } from "../../src/lib/elections/engine/types";
+import type { DemographicCategory, CensusGroupView } from "../../src/lib/db/types";
 
 const right = { economicLean: 3, socialLean: 3 };
 const left = { economicLean: -3, socialLean: -3 };
@@ -104,7 +105,7 @@ function shares(
       turn
     ),
   }));
-  const demographics: StateDemographics = {
+  const demographics: CensusGroupView = {
     _id: "region",
     countryId: "US",
     categoryWeights: { cells: 100 },
@@ -141,8 +142,7 @@ function shares(
     pool,
     pool,
     1_000_000,
-    demographics,
-    categories,
+    electorateFromFixture(demographics, categories),
     new Map(),
     { votingSystem: "rcv" }
   );

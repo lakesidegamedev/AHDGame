@@ -5,15 +5,12 @@ import type { Db, Document, Filter, ObjectId, UpdateFilter } from "mongodb";
  *
  * Issues a single guarded `updateOne(filter, update)` and returns `true` only
  * when THIS call matched the pre-state and flipped it. Callers gate their
- * non-idempotent side effects (Discord posts, treasury/legislation effects) on
- * the return value, so two concurrent invocations — a turn phase racing a
- * real-time action route, or two containers overlapping during a rolling
- * deploy — can never both fire the side effect.
+ * non-idempotent side effects on the return value, so two concurrent
+ * invocations can never both fire the side effect.
  *
  * The `filter` MUST include the pre-state field(s) the `update` changes (e.g.
- * `status: "voting"`). MongoDB applies concurrent `updateOne`s serially, so the
- * first caller flips the doc out of the pre-state and every later caller's
- * filter matches zero documents — `matchedCount === 1` is the unique winner.
+ * `status: "voting"`). MongoDB applies concurrent `updateOne`s serially, so
+ * only one caller's filter can match, `matchedCount === 1` is the winner.
  */
 export async function claimStatusTransition(
   db: Db,

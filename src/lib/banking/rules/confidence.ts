@@ -61,7 +61,7 @@ export type ConfidenceInput = {
   /**
    * CASH-BACKED deposits only (`npcDeposits`). Player savings pointed at the
    * bank are not cash the bank holds, so they cannot be in a reserve-cover
-   * denominator: ticket 1111 is what happens when one surface uses the whole
+   * denominator: it goes wrong when one surface uses the whole
    * deposit aggregate and another uses this one. Read it from
    * `balanceSheet.cashBackedDeposits` rather than assembling it at the caller.
    */
@@ -103,9 +103,8 @@ export type ConfidenceCovers = {
 /**
  * The three cover terms, decomposed.
  *
- * The console used to re-derive these with its own copy of the arithmetic and
- * its own literal penalty constants, so a change here moved the score without
- * moving the explanation of the score next to it. One implementation, two
+ * Keeping the arithmetic and penalty constants in one place means a change here
+ * moves the score and its explanation together. One implementation, two
  * consumers: `computeConfidence` weights them, `riskReadout` displays them.
  */
 export function confidenceCovers(input: {

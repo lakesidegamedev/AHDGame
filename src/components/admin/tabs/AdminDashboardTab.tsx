@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { TurnControls } from "@/components/TurnControls";
 import { TasksWidget } from "@/components/admin/tasks/TasksWidget";
 import { AdminRegistrationPanel } from "@/components/admin/players/AdminRegistrationPanel";
@@ -15,6 +14,12 @@ import { RecentAdminActionsCard } from "@/components/admin/dashboard/RecentAdmin
 import type { AdminBadgeCounts } from "@/components/admin/nav/useAdminBadgeCounts";
 import type { MainTabId } from "@/components/admin/tabs/AdminTabsConfig";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { toolForLegacy, toolPath } from "@/lib/staff/panelRegistry";
+
+function quickLinkHref(tab: string, sub: string): string {
+  const tool = toolForLegacy("admin", tab, sub);
+  return tool ? toolPath(tool) : "/control";
+}
 
 const QUICK_LINKS = [
   {
@@ -67,8 +72,6 @@ interface AdminDashboardTabProps {
 }
 
 export function AdminDashboardTab({ counts, onNavigate }: AdminDashboardTabProps) {
-  const pathname = usePathname();
-
   return (
     <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
       {/* Primary column */}
@@ -113,7 +116,7 @@ export function AdminDashboardTab({ counts, onNavigate }: AdminDashboardTabProps
             {QUICK_LINKS.map(({ tab, sub, label, desc, tag }) => (
               <Link
                 key={`${tab}-${sub}`}
-                href={`${pathname}?tab=${tab}&sub=${sub}`}
+                href={quickLinkHref(tab, sub)}
                 className="block rounded-lg border border-card-border bg-card p-3 transition-shadow hover:shadow-md sm:p-4"
               >
                 <div className="mb-1 flex items-center justify-between">

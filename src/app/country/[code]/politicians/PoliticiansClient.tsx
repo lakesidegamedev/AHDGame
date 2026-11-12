@@ -14,6 +14,7 @@ import { formatPartyCountryMoney } from "@/lib/utils/formatters";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { politiciansApiUrl } from "@/lib/urls";
 import type { PoliticianData } from "@/lib/politicians/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface Props {
   initialPoliticians: PoliticianData[];
@@ -27,7 +28,7 @@ function getOfficeFilters(countryCode: string): { value: OfficeFilter; label: st
   const cid = countryCode.toUpperCase() as CountryId;
   const config = COUNTRY_CLIENT_CONFIGS[cid];
   const legislatureName = config?.legislature?.name ?? "Congress";
-  const isUS = cid === "US";
+  const isUS = countryHasFeature("usUi", cid);
   const subNationalLabel = isUS ? "State" : "Region";
   return [
     { value: "all", label: "All offices" },

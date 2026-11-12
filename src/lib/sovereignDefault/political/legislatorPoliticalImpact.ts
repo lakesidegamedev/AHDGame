@@ -15,9 +15,10 @@
 
 import { ObjectId, type Db } from "mongodb";
 import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
-import type { Character } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types/npp";
 import type { NpcIdeology } from "../npc/npcConstants";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 type AlignmentTable = Record<SovereignResolutionChoice, number>;
 
@@ -113,7 +114,7 @@ export async function applyLegislatorImpacts(
   }
 
   if (nppOps.length > 0) {
-    await db.collection<NPP>("npps").bulkWrite(
+    await nppsCollection(db).bulkWrite(
       nppOps.map((op) => ({
         updateOne: {
           filter: { _id: op.id },
@@ -123,7 +124,7 @@ export async function applyLegislatorImpacts(
     );
   }
   if (charOps.length > 0) {
-    await db.collection<Character>("characters").bulkWrite(
+    await charactersCollection(db).bulkWrite(
       charOps.map((op) => ({
         updateOne: {
           filter: { _id: op.id },

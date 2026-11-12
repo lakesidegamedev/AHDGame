@@ -7,6 +7,7 @@ import { turnsOwnedByWorker } from "@/lib/turn/turnWorkerHandoff";
 import { queueAdminTurns } from "@/lib/turn/queueAdminTurns";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminTurnProcessSchema } from "@/lib/api/schemas/admin";
+import { serverEnv } from "@/lib/config/read";
 
 // POST /api/admin/turn/process — Runs a single game turn now. When the turn worker
 // owns turns (CRON_OWNER=worker) it queues `count` turns (default 1, max 20) for the
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    if (turnsOwnedByWorker(process.env)) {
+    if (turnsOwnedByWorker(serverEnv())) {
       // The body is optional: a bodiless click (an admin page loaded before this
       // change) means one turn.
       let count = 1;

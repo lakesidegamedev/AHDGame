@@ -5,8 +5,7 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import { conflict, forbidden } from "@/lib/api/errors";
-import type { CentralBank, GameConfig } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import type { GameConfig } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { loadEuroMonetaryUnion, syncEuroMonetaryPolicy } from "@/lib/currency/euro/service";
@@ -28,6 +27,10 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { COMMAND_CEILING, scheduledMarketizationLevel } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { loadInflationVsTarget } from "@/lib/monetaryGovernance/inflationGap";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 type PrimeRateActor = {
   userId: string;
@@ -104,9 +107,7 @@ async function updatePrimeRateInner(params: {
   // Canonical jurisdiction: a shared-currency bank has one authoritative
   // document and the URL's country is only a viewpoint onto it.
   const jurisdiction = await resolveJurisdiction(db, countryId);
-  const bank = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: jurisdiction.institutionId });
+  const bank = await centralBanksCollection(db).findOne({ _id: jurisdiction.institutionId });
   if (!bank) {
     return { ok: false as const, status: 404, error: "Central bank not found" };
   }
@@ -119,19 +120,18 @@ async function updatePrimeRateInner(params: {
   // reaches the same BoE doc through its own URL), and authority belongs to
   // that home country's government too.
   const bankHomeCountryId = jurisdiction.anchorCountryId;
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
   // API processes do not hydrate the turn engine's marketization registry.
   // Read the anchor's persisted level, falling back to its era schedule.
   const rateBudget = commandEconomyEnabled
-    ? await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne(
-          { _id: getNationalBudgetId(bankHomeCountryId) },
-          { projection: { "economicFactors.marketizationLevel": 1 } }
-        )
+    ? await federalBudgetCollection(db).findOne(
+        { _id: getNationalBudgetId(bankHomeCountryId) },
+        { projection: { "economicFactors.marketizationLevel": 1 } }
+      )
     : null;
   const persistedLevel = rateBudget?.economicFactors?.marketizationLevel;
   const resolvedLevel =
@@ -158,12 +158,10 @@ async function updatePrimeRateInner(params: {
   // never set: the promise to defend a corridor is the commitment.
   let fxCommitment: { regime: "float" | "peg" | "band"; capitalControls: boolean } | null = null;
   if (!isAdmin) {
-    const fxDoc = await db
-      .collection<ExchangeRate>("exchangeRates")
-      .findOne(
-        { countryId: bankHomeCountryId },
-        { projection: { fxRegime: 1, capitalControls: 1, interventionPolicy: 1 } }
-      );
+    const fxDoc = await exchangeRatesCollection(db).findOne(
+      { countryId: bankHomeCountryId },
+      { projection: { fxRegime: 1, capitalControls: 1, interventionPolicy: 1 } }
+    );
     if (fxDoc) {
       const regime: FxRegime = fxDoc.fxRegime ?? (fxDoc.interventionPolicy ? "band" : "float");
       fxCommitment = { regime, capitalControls: fxDoc.capitalControls === true };
@@ -220,7 +218,7 @@ async function updatePrimeRateInner(params: {
   }
   const set = materializeTransitionSet(bank, decision.transition, now);
   set.updatedAt = now;
-  await db.collection<CentralBank>("centralBanks").updateOne({ _id: bank._id }, { $set: set });
+  await centralBanksCollection(db).updateOne({ _id: bank._id }, { $set: set });
 
   const rateEvent = decision.transition.events.find((e) => e.kind === "policy.rate_changed");
   const previousRate = bank.primeRate;

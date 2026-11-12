@@ -11,6 +11,11 @@ import { computeSentimentMultiplier, getHqConfidenceSentiment } from "./sentimen
 import { computeOrderFlowMultiplier } from "./orderFlowEngine";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import type { Document } from "mongodb";
+import { sentimentPulsesCollection } from "@/lib/db/repositories/sentimentPulses";
 
 export interface ApplyPriceMultipliersResult {
   updated: number;
@@ -28,9 +33,10 @@ export interface ApplyPriceMultipliersResult {
 let sentimentTtlEnsured = false;
 async function ensureSentimentPulseTtlIndex(database: Db): Promise<void> {
   if (sentimentTtlEnsured) return;
-  await database
-    .collection("sentimentPulses")
-    .createIndex({ createdAt: 1 }, { expireAfterSeconds: 86400, name: "ttl_createdAt" });
+  await sentimentPulsesCollection<Document>(database).createIndex(
+    { createdAt: 1 },
+    { expireAfterSeconds: 86400, name: "ttl_createdAt" }
+  );
   sentimentTtlEnsured = true;
 }
 
@@ -40,12 +46,11 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
 
   await ensureSentimentPulseTtlIndex(database);
 
-  const pulses = await database.collection<SentimentPulse>("sentimentPulses").find({}).toArray();
+  const pulses = await sentimentPulsesCollection(database).find({}).toArray();
 
   // Per-state investor confidence (0–100) → HQ-state share-price sentiment. One
   // batched projection; corps join on `headquartersState`.
-  const confidenceDocs = await database
-    .collection("macroMetrics")
+  const confidenceDocs = await macroMetricsCollection<Document>(database)
     .find({}, { projection: { "economic.investorConfidence.value": 1 } })
     .toArray();
   const investorConfidenceByState = new Map<string, number>();
@@ -58,8 +63,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
   }
 
   const [corps, sectors, activeFtaPairs] = await Promise.all([
-    database
-      .collection<Corporation>("corporations")
+    corporationsCollection(database)
       .find(
         { fundamentalSharePrice: { $exists: true } },
         {
@@ -82,8 +86,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
         }
       )
       .toArray(),
-    database
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(database)
       .find(
         {},
         {
@@ -173,12 +176,9 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
 
     ops.push({
       updateOne: {
-        // CAS on fundamentalSharePrice: if a writer (e.g. the consolidate
-        // route's reverse/forward split) updated the fundamental between this
-        // pass's read and write, skip the update so we don't clobber the
-        // fresh price with a multiplier derived from the stale fundamental.
-        // See bug #0449 — deterministic clobber was fixed at the consolidate
-        // route; this CAS closes the residual sub-second race window.
+        // CAS on fundamentalSharePrice: if a writer updated the fundamental
+        // between our read and write, skip so we don't clobber the fresh price
+        // with a multiplier derived from the stale fundamental.
         filter: { _id: corp._id, fundamentalSharePrice: fundamentalPrice },
         update: {
           $set: {
@@ -194,7 +194,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
   }
 
   if (ops.length > 0) {
-    await database.collection<Corporation>("corporations").bulkWrite(ops);
+    await corporationsCollection(database).bulkWrite(ops);
   }
 
   return { updated: ops.length, pulseCount: pulses.length };

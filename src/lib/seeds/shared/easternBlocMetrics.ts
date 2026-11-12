@@ -4,21 +4,16 @@ import type { EraId } from "@/lib/seeds/presetSelector";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 
 /**
- * Shared command-economy metric baseline for the Warsaw-Pact one-party states:
- * full employment, administered/subsidised prices, low inequality, a pervasive
- * security state (very low press freedom), and lignite/heavy-industry pollution.
- * Per-country/region values are layered on top. `medianIncome` is annual
- * household income in the country's currency.
+ * Shared command-economy baseline for Warsaw-Pact one-party states:
+ * full employment, subsidised prices, low inequality, pervasive security
+ * state, heavy-industry pollution. Per-country values layer on top.
+ * `medianIncome` is annual household income in the country's currency.
  *
- * Two authored eras. **1979** is mature consumer socialism — the bloc at its
- * material peak, near-universal literacy, a built-out health and transit system,
- * and stagnating growth. **1953** is the opposite end of the same system: war
- * damage barely repaired, reconstruction growth rates, mass illiteracy in the
- * southern members, a health and road network that does not exist yet, famine-
- * adjacent food insecurity, and the terror state at full extent (mass
- * incarceration, near-zero transparency). Grading a 1953 bloc world on the 1979
- * table made every early-Cold-War region read as a collapsing 1979 state rather
- * than a poor, fast-industrialising 1953 one.
+ * Two authored eras: 1979 (mature consumer socialism, near-peak material
+ * output) and 1953 (post-war reconstruction, mass illiteracy in the south,
+ * terror state, famine-adjacent insecurity). Grading a 1953 world on the
+ * 1979 table made early-Cold-War regions read as collapsing 1979 states
+ * rather than poor, fast-industrialising 1953 ones.
  */
 function mv(value: number) {
   return { value };
@@ -230,8 +225,8 @@ function baseline1953(income: number): Omit<StateMetrics, "_id" | "lastUpdated">
       // `population.birthRate` is a 0-100 fertility INDEX (metricDefinitions
       // `unit: "index"`), NOT a crude rate per 1000 — see the doc comment on
       // `BIRTH_RATE_1953` in reference/stateMetrics1953.ts for the full
-      // mechanism. This field was previously ABSENT here, so every 1953
-      // Eastern-bloc region fell through `seedCohortVectors`'s
+      // mechanism. Without this field every 1953
+      // Eastern-bloc region falls through `seedCohortVectors`'s
       // `DEFAULT_BIRTH_RATE = 50` — a 2019-replacement-level fertility
       // reading (birthRateIndexToTFR(50, 2.06) = 2.06 TFR) silently imposed on
       // a postwar-baby-boom bloc whose real 1953 TFRs ran ~2.3 (Hungary,

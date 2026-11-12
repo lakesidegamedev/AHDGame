@@ -5,18 +5,14 @@
  */
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { CountryGameState } from "@/lib/db/types";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
-import {
-  RUSSIAN_COUNCIL_RESULTS_COLLECTION,
-  type RussianCouncilResultRecord,
-} from "./councilElectionResult";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
+import { type RussianCouncilResultRecord } from "./councilElectionResult";
 import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { planRussianDumaBallot } from "./rules/assemblySchedule";
 import { loadRussianAssemblyRepeatTerm } from "./assemblyRepeatTerm";
 import { pendingRussianCouncilRepeatBallots } from "./rules/councilRepeat";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export async function loadRussianCouncilOpeningBinding(input: {
   db: Db;
@@ -35,28 +31,28 @@ export async function loadRussianCouncilOpeningBinding(input: {
   const { db, session, cohortId, country } = input;
   const rootCohortId = country.ruFirstCouncilElectionCohortId;
   if (!rootCohortId || country.ruCouncilComposition) return null;
-  const opening = await db
-    .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
-    .findOne(
-      { cohortId },
-      {
-        session,
-        projection: {
-          cohortId: 1,
-          rootCohortId: 1,
-          generation: 1,
-          previousResultId: 1,
-          countryId: 1,
-          preset: 1,
-          mandateSinceTurn: 1,
-          electionIds: 1,
-          seatIds: 1,
-          registeredBySubject: 1,
-          npcAdmission: 1,
-          openedOnTurn: 1,
-        },
-      }
-    );
+  const opening = await russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(
+    db
+  ).findOne(
+    { cohortId },
+    {
+      session,
+      projection: {
+        cohortId: 1,
+        rootCohortId: 1,
+        generation: 1,
+        previousResultId: 1,
+        countryId: 1,
+        preset: 1,
+        mandateSinceTurn: 1,
+        electionIds: 1,
+        seatIds: 1,
+        registeredBySubject: 1,
+        npcAdmission: 1,
+        openedOnTurn: 1,
+      },
+    }
+  );
   if (
     !opening ||
     opening.countryId !== "RU" ||
@@ -90,27 +86,27 @@ export async function loadRussianCouncilOpeningBinding(input: {
     !opening.previousResultId
   )
     return null;
-  const previous = await db
-    .collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION)
-    .findOne(
-      {
-        _id: opening.previousResultId,
-        countryId: "RU",
-        preset: "1991-default",
-        mandateSinceTurn: opening.mandateSinceTurn,
+  const previous = await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(
+    db
+  ).findOne(
+    {
+      _id: opening.previousResultId,
+      countryId: "RU",
+      preset: "1991-default",
+      mandateSinceTurn: opening.mandateSinceTurn,
+    },
+    {
+      session,
+      projection: {
+        cohortId: 1,
+        rootCohortId: 1,
+        generation: 1,
+        ballots: 1,
+        seatedOnTurn: 1,
+        resolvedOnTurn: 1,
       },
-      {
-        session,
-        projection: {
-          cohortId: 1,
-          rootCohortId: 1,
-          generation: 1,
-          ballots: 1,
-          seatedOnTurn: 1,
-          resolvedOnTurn: 1,
-        },
-      }
-    );
+    }
+  );
   if (
     !previous ||
     !(previous.rootCohortId ?? previous.cohortId).equals(rootCohortId) ||

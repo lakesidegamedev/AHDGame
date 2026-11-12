@@ -1,18 +1,15 @@
 /**
- * Japan Region Census Profiles — 1979 era.
+ * Japan Region Census Profiles , 1979 era.
  *
  * 1979-default companion to {@link jpRegionCensusData} (the 2019 profiles).
  *
- * Era anchor: 1980 Population Census of Japan (high-growth tail). All values
- * independently authored from historical knowledge of each region circa 1979 —
+ * All values independently authored for circa 1979 from historical knowledge ,
  * NOT derived by scaling any other era's file.
  *
- * Character of the era: very young adult population (baby boomers in their
- * 20s–30s), seniors under 20% everywhere, near-zero foreign residents (the
- * zainichi Korean community in Kansai/Kyushu was the only sizable minority),
- * high-school-dominant education (university advancement ~25–35% only in the
- * metropolises), rural prefectures still populous, manufacturing belt
- * (Chubu/Kansai) booming. Income uses era-neutral relative tiers.
+ * Character of the era: young adult population (baby boomers in their 20s-30s),
+ * seniors under 20% everywhere, near-zero foreign residents, high-school-dominant
+ * education, rural prefectures still populous, Chubu/Kansai manufacturing boom.
+ * Income uses era-neutral relative tiers.
  */
 
 import type { JPRegionLayer1 } from "./jpRegionCensusData";

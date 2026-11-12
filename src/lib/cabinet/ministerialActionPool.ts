@@ -9,8 +9,10 @@ import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import { sharedPoolFromRows } from "@/lib/uk/dualMinistry/rules";
+import { sharedPoolFromRows } from "@/lib/countries/uk/dualMinistry/rules";
 import { isOfficePoolAccrualTurn } from "@/lib/actions/officePoolAccrual";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export { MINISTERIAL_ACTION_RESET_HINT } from "./ministerialActionHint";
 
@@ -59,12 +61,10 @@ export async function ensureUkSharedPool(
 ): Promise<{ remaining: number; resetDay: string | null }> {
   const today = getCalendarDayInTimezone(now);
   const [character, rows] = await Promise.all([
-    db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: characterId },
-        { projection: { sharedMinisterialActions: 1, sharedMinisterialActionResetDay: 1 } }
-      ),
+    charactersCollection(db).findOne(
+      { _id: characterId },
+      { projection: { sharedMinisterialActions: 1, sharedMinisterialActionResetDay: 1 } }
+    ),
     getCabinetMembersCollection(db)
       .find({ countryId: "UK" as never, characterId })
       .project({ ministerialActions: 1, lastMinisterialActionResetDay: 1 })
@@ -77,7 +77,7 @@ export async function ensureUkSharedPool(
     };
   }
   const shared = sharedPoolFromRows(rows.map(toRowState), MINISTERIAL_ACTION_CAP);
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: characterId },
     {
       $set: {
@@ -138,13 +138,11 @@ export async function spendMinisterialAction(
   if (usesSharedMinisterialPool(countryId, member)) {
     const pool = await ensureUkSharedPool(db, member.characterId, now);
     if (pool.remaining < 1) return { ok: false, remaining: pool.remaining };
-    const updated = await db
-      .collection<Character>("characters")
-      .findOneAndUpdate(
-        { _id: member.characterId, sharedMinisterialActions: { $gte: 1 } },
-        { $inc: { sharedMinisterialActions: -1 }, $set: { updatedAt: now } },
-        { returnDocument: "after", projection: { sharedMinisterialActions: 1 } }
-      );
+    const updated = await charactersCollection(db).findOneAndUpdate(
+      { _id: member.characterId, sharedMinisterialActions: { $gte: 1 } },
+      { $inc: { sharedMinisterialActions: -1 }, $set: { updatedAt: now } },
+      { returnDocument: "after", projection: { sharedMinisterialActions: 1 } }
+    );
     if (!updated || (updated.sharedMinisterialActions ?? 0) < 0) {
       const current = await ensureUkSharedPool(db, member.characterId, now);
       return { ok: false, remaining: current.remaining };
@@ -189,12 +187,14 @@ export async function refundMinisterialAction(
   now: Date = new Date()
 ): Promise<void> {
   if (usesSharedMinisterialPool(countryId, member)) {
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: member.characterId }, { $inc: { sharedMinisterialActions: 1 } });
-    const pool = await db
-      .collection<Character>("characters")
-      .findOne({ _id: member.characterId }, { projection: { sharedMinisterialActions: 1 } });
+    await charactersCollection(db).updateOne(
+      { _id: member.characterId },
+      { $inc: { sharedMinisterialActions: 1 } }
+    );
+    const pool = await charactersCollection(db).findOne(
+      { _id: member.characterId },
+      { projection: { sharedMinisterialActions: 1 } }
+    );
     if (pool?.sharedMinisterialActions != null) {
       await getCabinetMembersCollection(db).updateMany(
         { countryId: "UK" as never, characterId: member.characterId },
@@ -226,7 +226,7 @@ export async function reconcileUkSharedPool(
     .toArray();
   const shared = sharedPoolFromRows(rows.map(toRowState), MINISTERIAL_ACTION_CAP);
   const resetDay = shared.resetDay ?? today;
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: characterId },
     {
       $set: {
@@ -267,12 +267,12 @@ export async function accrueUkSharedPools(
   const holderIds = [
     ...new Set(
       rows
-        .filter((row) => row.countryId === "UK" && row.characterId != null)
+        .filter((row) => countryHasFeature("ukLib", row.countryId) && row.characterId != null)
         .map((row) => (row.characterId as ObjectId).toString())
     ),
   ].map((id) => new ObjectId(id));
   if (!holderIds.length) return 0;
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   const members = getCabinetMembersCollection(db);
   const [holders, holderRows] = await Promise.all([
     characters

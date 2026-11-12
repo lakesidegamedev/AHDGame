@@ -6,8 +6,12 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import { z } from "zod";
 import { MAX_REGION_ID_LENGTH } from "@/lib/constants/states";
-import type { Character, State } from "@/lib/db/types";
+import type { State } from "@/lib/db/types";
 import { performRelocation } from "@/lib/character/performRelocation";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const updateStateSchema = z.object({
   username: z.string().min(1, "username is required"),
@@ -43,7 +47,7 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
 
-    const user = await db.collection("users").findOne({ username });
+    const user = await usersCollection<Document>(db).findOne({ username });
     if (!user) {
       return errorResponse(404, `User '${username}' not found`);
     }
@@ -51,7 +55,7 @@ export async function PATCH(request: Request) {
       return errorResponse(403, "Cannot perform actions on admin accounts");
     }
 
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+    const character = await charactersCollection(db).findOne({ userId: user._id });
     if (!character) {
       return errorResponse(404, `No character found for user '${username}'`);
     }
@@ -67,9 +71,10 @@ export async function PATCH(request: Request) {
     // Moderators move characters WITHIN their own country: scoping the lookup
     // to `character.countryId` both resolves the region and rejects
     // cross-country moves. This is the authoritative check on `homeState`.
-    const targetState = await db
-      .collection<State>("states")
-      .findOne({ _id: homeState, countryId: character.countryId });
+    const targetState = await statesCollection(db).findOne({
+      _id: homeState,
+      countryId: character.countryId,
+    });
     if (!targetState) {
       // Name the country searched — "not found" is far more often the wrong
       // country picked than a bad id. See the admin twin of this route.

@@ -45,12 +45,11 @@ export async function seedSlowQueryIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
-  // --- GlitchTip slow-query sweep 2026-07-18 (issue #3343) ---
-  // These collections use `_id` for most lookups, but a handful of hot paths
-  // filter on the `countryId` *field* (distinct from `_id`) or on `status`,
-  // which the `_id` index cannot serve — so those queries were COLLSCANning.
-  // Indexes below target only those field-filter shapes, not the `_id` reads
-  // (already covered) nor the deliberate `find({})` bulk loaders (unindexable).
+  // These collections use `_id` for most lookups, but some hot paths filter on
+  // the `countryId` field (distinct from `_id`) or `status`, which the `_id`
+  // index cannot serve, so those queries COLLSCAN. Indexes below target only
+  // those field-filter shapes, not `_id` reads or deliberate `find({})` bulk
+  // loaders.
 
   // federalBudget — per-turn envelope calculators
   // (infra/energy/portfolio/defenseEnvelope.ts) and the national crisis snapshot

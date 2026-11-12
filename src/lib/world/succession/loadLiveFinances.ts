@@ -3,6 +3,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Bond } from "@/lib/db/types/bond";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export interface LiveSuccessionCreditorContract {
   bondId: string;
@@ -32,8 +34,7 @@ export async function loadLiveSuccessionFinances(
   sourceCountryId: CountryId,
   session?: ClientSession
 ): Promise<LiveSuccessionFinances> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ $or: [{ _id: sourceCountryId }, { countryId: sourceCountryId }] }, { session })
     .toArray();
   if (budgets.length !== 1)
@@ -46,8 +47,7 @@ export async function loadLiveSuccessionFinances(
   )
     throw new Error("Federation source budget has invalid cash or debt stock");
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ issuerType: "sovereign", countryId: sourceCountryId }, { session })
     .toArray();
   const activeBondPrincipalByCurrency: Record<string, number> = {};

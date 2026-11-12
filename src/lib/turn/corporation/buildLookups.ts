@@ -1,37 +1,7 @@
-import { loadCabinetGameplayEffects } from "@/lib/resetCabinet/loadGameplayEffects";
-import {
-  applyCabinetPoliticalInputs,
-  cabinetEffectsForRegion,
-} from "@/lib/resetCabinet/rules/gameplay";
-import {
-  loadResetApprovalModifiers,
-  RESET_APPROVAL_BOARD_PROJECTION,
-} from "@/lib/resetMetrics/loadApprovalModifiers";
-import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
-import { RESET_V2_READY } from "@/lib/resetVersions/availability";
-import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { Db } from "mongodb";
-import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
-import type {
-  Character,
-  Corporation,
-  CorporateSector,
-  FederalBudget,
-  StateBudget,
-  State,
-  CentralBank,
-  Bond,
-  Tariff,
-  ExchangeRate,
-  StateResourceCapacity,
-  UnownedSector,
-  GameState,
-} from "@/lib/db/types";
-import type { Crisis } from "@/lib/db/types/crisis";
-import { buildDisasterEffectsByState } from "@/lib/crises/disasterMarginPenalty";
+import type { CorporateSector, FederalBudget, CentralBank, Bond, GameState } from "@/lib/db/types";
 import { excludePendingFederationFirms } from "@/lib/world/succession/rules/pendingFirmActivity";
-import type { CommodityPrice } from "@/lib/db/types";
 import {
   HONEST_LOANS_STAGE,
   loadConstructionLoanDebtAnchorByCorpId,
@@ -39,7 +9,6 @@ import {
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { soeSizeCostByCorpId as soeSizeCostByCorpIdRule } from "@/lib/corporations/rules/soeSizeCost";
 import { buildGroupDominanceShares } from "@/lib/corporations/groups/groupDominanceShares";
-import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
 import { readFreightBillingSnapshot } from "@/lib/logistics/freightBillingSnapshot";
@@ -48,9 +17,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import { isCorporateIssuerBond } from "@/lib/bonds/corporateCredit";
 import { buildPrimeRateByCountry } from "@/lib/centralBank/helpers";
 import { isCurtained } from "@/lib/constants/commandEconomy";
-import { capInputPriceRatioAtWorld } from "@/lib/corporations/physicalPnl";
-import { getActiveSubsidies } from "@/lib/subsidies/subsidyEffects";
-import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { reconcileSignedTariffBills } from "@/lib/tariffs/reconcileTariffs";
 import { reconcileSignedEmbargoBills } from "@/lib/trade/reconcileEmbargoes";
 import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
@@ -60,14 +26,9 @@ import {
 } from "@/lib/market/tradePartition";
 import { sectorCountryForClearing } from "./sectorCountry";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
-import { activeManufacturingProductProjectProjection } from "@/lib/products/manufacturingProjectPersistence";
-import { MEDIA_PRODUCT_PROJECTS, type MediaProductProject } from "@/lib/products/mediaProduct";
+import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
+import { type MediaProductProject } from "@/lib/products/mediaProduct";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
-import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import {
   getUnemploymentMarginModifier,
   getGridReliabilityMarginModifier,
@@ -86,68 +47,31 @@ import {
 } from "@/lib/constants/corporations";
 import { controlGroupRootByCorpId, groupTotals } from "@/lib/corporations/groups/controlGroups";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
-import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
-import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
-import {
-  ownedPoliticalValues,
-  ownedPoliticalModifiers,
-} from "@/lib/resetMetrics/rules/ownedInputs";
-import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
-import { evaluateModifiers } from "@/lib/utils/approvalModifiers";
-import { resolveGameYear } from "@/lib/era/era";
-import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
+import { NATIONAL_SCOPE } from "@/lib/constants/nationalScope";
 import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { CorporationLookups } from "./types";
-import {
-  buildBondAndImfPortfolioAnchorByCorpId,
-  buildCrossCorpStockHoldingsByHolderCorpId,
-  buildImfPrincipalAnchorByLenderCorpId,
-  buildPortfolioAnchorValueByCorpId,
-} from "@/lib/corporations/portfolioAnchorValuation";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
-import { buildNationalCommodityBalances } from "@/lib/commodity-map";
 import { buildSectorShareMaps } from "@/lib/corporations/marketShare";
-import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { buildSovereignDefaultMarginByCorpId } from "@/lib/sovereignDefault/marginPenalty/buildPerCorpMap";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
-import {
-  eraScaledBasePrices,
-  EXTRACTABLE_RESOURCES,
-  extractionOutputScaleFor,
-  SECTOR_SUPPLY,
-} from "@/lib/constants/commodities";
-import type { ExtractableResource } from "@/lib/constants/commodities";
-import {
-  getEffectiveStrategyRates,
-  getOperatingSectorType,
-} from "@/lib/constants/sectorStrategies";
+import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { retoolProductionMeasurements } from "@/lib/corporations/retooling/rules";
-import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
-import {
-  computeExtractionCapacityMultipliers,
-  fullOutputMultipliers,
-  type ExtractionSectorInput,
-} from "@/lib/turn/extraction/extractionCapacity";
-import { depletedCapacityDoc } from "@/lib/extraction/depletion";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
-import { extractionRevenueAnchorOf } from "@/lib/extraction/revenueAnchor";
-import {
-  getExtractionContractsCollection,
-  activeExtractionContractFilter,
-} from "@/lib/db/collections/extractionContracts";
-import {
-  haircutScarcityRelief,
-  limitExtractionUtilizationRise,
-  scarcityReliefCappedUtilization,
-} from "@/lib/extraction/capacityHaircut";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { ownRouteKey, recordedGroupRouteMembers } from "@/lib/market/internalSupply/rules";
-import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
-import { latentDemandTopUp } from "@/lib/market/latentShortageSignal";
 import { countBlockEmbargoes, tradeEligibilityScope } from "./rules/tradeEligibilityScope";
+import { loadBlockadeClosure } from "@/lib/turn/commodity/blockadeClosure";
+import { loadCorporationLookupInputs } from "./buildLookupsLoad";
+import { buildCommodityBalanceLookups } from "./buildLookupsCommodityBalances";
+import { buildExtractionAndPortfolioLookups } from "./buildLookupsExtraction";
+import { loadAutomationPolicies } from "@/lib/automationPolicy/policies";
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
+import { tradeEmbargoesCollection } from "@/lib/db/repositories/tradeEmbargoes";
 
 export async function buildCorporationLookups(
   db: Db,
@@ -210,8 +134,7 @@ export async function buildCorporationLookups(
   const embargoTurn = await getCurrentTurn(db);
   await reconcileSignedEmbargoBills(db, embargoTurn);
   const corporateEmbargoSuppression = new Set<string>();
-  const totalEmbargoes = await db
-    .collection<TradeEmbargo>("tradeEmbargoes")
+  const totalEmbargoes = await tradeEmbargoesCollection(db)
     .find({
       commodity: "all",
       mode: "block",
@@ -231,293 +154,29 @@ export async function buildCorporationLookups(
     }
   }
 
-  const [
+  const {
     loadedCorporations,
     loadedSectors,
-    allStateMetrics,
-    commodityPrices,
-    centralBanks,
-    activeBonds,
-    federalBudgets,
-    stateBudgets,
-    allTariffs,
-    activeSubsidies,
-    states,
-    exchangeRateDocs,
-    stateResourceCapacityDocs,
-    activeFtaPairs,
-    unownedSectorDocs,
-    latestTradeSnapshot,
-    orgMembershipDocs,
-    activeEmbargoDocs,
-    worldPreset,
     activeManufacturingProjects,
     activeMediaProductProjects,
-  ] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
-      .find(
-        {},
-        {
-          projection: {
-            // Money-move settlement history: most of each document's bytes,
-            // read only by the settlement protocol under its own projection.
-            ...SETTLEMENT_HISTORY_EXCLUDED,
-            // Per-order political advertising receipts: written by the money
-            // move that pays the seller, then never read back (the guard is
-            // the move key). Two kilobytes of pure write-only history on every
-            // corporation, decoded by every turn read.
-            politicalMediaReceipts: 0,
-            groupSupplyBasis: 0,
-            ...(options?.mediaEditorialEnabled === true ? {} : { editorialStance: 0 }),
-            ...(options?.productLinesV2Enabled === true
-              ? {}
-              : {
-                  manufacturingProductAdvertisingObligationsV2: 0,
-                  manufacturingProductAdvertisingReceiptV2: 0,
-                  manufacturingProductDevelopmentReceiptV2: 0,
-                  manufacturingProductDevelopmentPaidTurnV2: 0,
-                }),
-            ...(options?.mediaProductSlatesEnabled === true
-              ? {}
-              : {
-                  mediaProductDevelopmentReceiptV1: 0,
-                  mediaProductAdvertisingReceiptV1: 0,
-                  mediaProductAdvertisingObligationsV1: 0,
-                }),
-          },
-        }
-      )
-      .toArray(),
-    // `plantsPnl` is ~15% of the collection. corporationTurn writes it via
-    // sectorTurn as a complete overwrite and never reads the prior value.
-    // `soldByCommodity` IS read: the demand throttle values last turn's sales
-    // leg by leg (ticket 1370), so it must not be projected out.
-    // `constructionFinancing` and `constructionPropertyTransition` are the
-    // construction-lending claim on the sector: no turn module reads either
-    // field (the banking commands do, under their own projections), so the
-    // whole turn pays to decode them for nothing. Nothing writes a sector back
-    // as a whole document either: sectorTurn emits targeted $set/$inc/$pull/
-    // $push ops, so an excluded field cannot be blanked by a write-back.
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find(
-        {},
-        {
-          projection: {
-            plantsPnl: 0,
-            constructionFinancing: 0,
-            constructionPropertyTransition: 0,
-            ...(options?.explicitPlantCostsEnabled === true
-              ? {}
-              : { pricingMode: 0, costPlusCostBasis: 0 }),
-            ...(options?.omitBuildQueue ? { buildQueue: 0 } : {}),
-            ...(options?.productLinesV2Enabled
-              ? {}
-              : {
-                  outputUnitsByCommodity: 0,
-                  outputAnchorByCommodity: 0,
-                  productQualityByCommodity: 0,
-                  productOutputCapacityUnits: 0,
-                }),
-          },
-        }
-      )
-      .toArray(),
-    // Legacy-shaped view so the headline maps, condition modifiers, and the
-    // margin engine's stored-value reads keep their single-doc shape.
-    findMergedRegionMetricsMany(db, {}),
-    // Projected to the fields actually read by this file (and the
-    // buildNationalCommodityBalances helper it feeds). commodityPrices
-    // documents carry per-state supply/demand maps which can be large; the
-    // unread fields (history, metadata, etc.) compound per turn.
-    db
-      .collection<CommodityPrice>("commodityPrices")
-      .find(
-        {},
-        {
-          projection: {
-            _id: 1,
-            commodity: 1,
-            turn: 1,
-            globalSupply: 1,
-            globalDemand: 1,
-            globalPrice: 1,
-            basePrice: 1,
-            statePrices: 1,
-            stateSupply: 1,
-            stateDemand: 1,
-            stateInputAvailability: 1,
-            statePlacedSupply: 1,
-            stateDeliveryLimitedSupply: 1,
-            stateOwnerDeliveryLimited: 1,
-            nationalSupply: 1,
-            nationalDemand: 1,
-            reachablePrices: 1,
-            demandTruncatedUnits: 1,
-          },
-        }
-      )
-      .toArray() as Promise<CommodityPrice[]>,
-    // Only countryId + primeRate read here; the doc is NOT returned from
-    // buildCorporationLookups so downstream consumers are unaffected.
-    db
-      .collection<CentralBank>("centralBanks")
-      .find({}, { projection: { countryId: 1, primeRate: 1, primeRateSmoothed: 1 } })
-      .toArray() as Promise<CentralBank[]>,
-    // All active bonds — sovereigns included. Issuer-side filtering (corporate-only)
-    // happens in the bondsByCorpId loop below; holder-side keeps everything so
-    // sovereign bonds held by corps contribute to portfolio anchor / share price.
-    db.collection<Bond>("bonds").find({ matured: false }).toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .find(
-        {},
-        {
-          projection: {
-            countryId: 1,
-            "economicFactors.inflationRate": 1,
-            debtToGdpRatio: 1,
-            surplus: 1,
-            gdp: 1,
-            "taxRates.domesticCorporateTax": 1,
-            "taxRates.foreignCorporateTax": 1,
-            // Pass-through owners are taxed at the top personal rate.
-            "taxRates.incomeTaxHigh": 1,
-            "taxRates.incomeTax": 1,
-            // Per-country authored GDP-share targets (fiscal-scale audit,
-            // 2026-07-29) - updateCorporateTaxBases below reads
-            // taxBaseGdpShareBaseline.{domestic,foreign}CorporateProfits as the
-            // per-country floor share instead of the universal
-            // GDP_DOMESTIC/FOREIGN_CORPORATE_FACTOR constants. Must be
-            // projected here or it silently reads undefined for every budget.
-            taxBaseGdpShareBaseline: 1,
-            // Labour system (v1 minimum wage, v3 Phase 7b union-law bias) —
-            // both read via lookups.federalBudgets in turn/corporation/index.ts
-            // (buildMinWageRatioByCountry / buildUnionLawBiasByCountry). Must
-            // be projected here or those builders silently see every budget
-            // as absent/neutral.
-            minimumWageKaitzRatio: 1,
-            unionLawBias: 1,
-            unionsBanned: 1,
-            // Producer market shadow: public buyers are funded from the budget
-            // outlay by category, converted from the budget's own currency.
-            currencyCode: 1,
-            "spending.byCategory": 1,
-            ...(options?.politicalMediaMarketEnabled === true
-              ? {
-                  treasuryCashLocal: 1,
-                  treasuryBalance: 1,
-                }
-              : {}),
-          },
-        }
-      )
-      .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
-      .find(
-        {},
-        {
-          projection: {
-            _id: 1,
-            "taxRates.domesticCorporateTax": 1,
-            "taxRates.foreignCorporateTax": 1,
-            "taxRates.incomeTaxHigh": 1,
-            "taxRates.incomeTax": 1,
-          },
-        }
-      )
-      .toArray(),
-    db.collection<Tariff>("tariffs").find({}).toArray(),
-    getActiveSubsidies(db),
-    db
-      .collection<State>("states")
-      .find(
-        {},
-        {
-          projection: {
-            _id: 1,
-            countryId: 1,
-            gdp: 1,
-            sectorSpecializations: 1,
-            ...(options?.mediaEditorialEnabled === true
-              ? { cachedEconomicLean: 1, cachedSocialLean: 1 }
-              : {}),
-          },
-        }
-      )
-      .toArray(),
-    // Only currencyCode + rate read; consumed only as exchangeRatesByCurrency map.
-    db
-      .collection<ExchangeRate>("exchangeRates")
-      .find({}, { projection: { currencyCode: 1, rate: 1 } })
-      .toArray() as Promise<ExchangeRate[]>,
-    db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .find({}, { projection: { stateId: 1, resources: 1 } })
-      .toArray(),
-    loadActiveFtaPairs(db),
-    db.collection<UnownedSector>("unownedSectors").find({}).toArray(),
-    // Latest trade-flow snapshot (prev turn) → per-country export intensity for
-    // the export-reward margin premium. One small doc.
-    db
-      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
-      .find({}, { sort: { turn: -1 }, limit: 1 })
-      .toArray(),
-    // Trade-graph inputs for the market partition (era worlds): shared org
-    // blocs and ALL active embargoes (the suppression query above keeps only
-    // comprehensive ones; the affinity graph needs every block/cap lane).
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
-      .find({}, { projection: { countryId: 1, organizationId: 1 } })
-      .toArray(),
-    db
-      .collection<TradeEmbargo>("tradeEmbargoes")
-      .find({
-        $or: [{ expiresTurn: { $exists: false } }, { expiresTurn: { $gte: embargoTurn } }],
-      })
-      .toArray(),
-    loadWorldPreset(db),
-    options?.productLinesV2Enabled === true
-      ? db
-          .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-          .find(
-            { activeCorporationId: { $exists: true } },
-            { projection: activeManufacturingProductProjectProjection() }
-          )
-          .toArray()
-      : Promise.resolve([] as ManufacturingProductProject[]),
-    options?.mediaProductSlatesEnabled === true
-      ? db
-          .collection<MediaProductProject>(MEDIA_PRODUCT_PROJECTS)
-          .find({ stage: { $in: ["development", "launch", "growth", "mature", "decline"] } })
-          .project<MediaProductProject>({
-            _id: 1,
-            corporationId: 1,
-            activeDevelopmentCorporationId: 1,
-            sectorId: 1,
-            operatingSectorType: 1,
-            kindId: 1,
-            title: 1,
-            allocationShare: 1,
-            stage: 1,
-            startedTurn: 1,
-            stageStartedTurn: 1,
-            lastProcessedTurn: 1,
-            developmentPaidAnchor: 1,
-            paidThresholdAnchor: 1,
-            elapsedDevelopmentTurns: 1,
-            elapsedThresholdTurns: 1,
-            developmentAdvertisingAnchor: 1,
-            developmentAdvertisingTurns: 1,
-            launchQuality: 1,
-            qualityBonus: 1,
-            productBrand: 1,
-          })
-          .toArray()
-      : Promise.resolve([] as MediaProductProject[]),
-  ]);
+    states,
+    activeBonds,
+    exchangeRateDocs,
+    worldPreset,
+    centralBanks,
+    federalBudgets,
+    allStateMetrics,
+    stateBudgets,
+    commodityPrices,
+    latestTradeSnapshot,
+    activeEmbargoDocs,
+    orgMembershipDocs,
+    activeFtaPairs,
+    allTariffs,
+    unownedSectorDocs,
+    stateResourceCapacityDocs,
+    activeSubsidies,
+  } = await loadCorporationLookupInputs({ db, options, embargoTurn });
 
   // A split can preserve a player's corporation while its owner chooses a new
   // playable headquarters. Its retained facilities pause with the company;
@@ -631,8 +290,7 @@ export async function buildCorporationLookups(
     .filter((id, i, arr) => arr.findIndex((x) => x.equals(id)) === i);
   const ceoStatByCharId = new Map<string, number>();
   if (playerCeoIds.length > 0) {
-    const ceoChars = await db
-      .collection<Character>("characters")
+    const ceoChars = await charactersCollection(db)
       .find({ _id: { $in: playerCeoIds } }, { projection: { _id: 1, stats: 1 } })
       .toArray();
     for (const ch of ceoChars) {
@@ -832,209 +490,28 @@ export async function buildCorporationLookups(
   // cp.nationalSupply/nationalDemand so federal injections (e.g. govt healthcare)
   // that never land in any state still flow into the modifier math.
   const globalCommodityBalances = new Map<CommodityType, { supply: number; demand: number }>();
-  const nationalCommodityBalancesByCountry = new Map<
-    CountryId,
-    Map<CommodityType, { supply: number; demand: number }>
-  >();
-  const rawStateBalances = new Map<
-    string,
-    Map<CommodityType, { supply: number; demand: number }>
-  >();
-  // Lagged price-over-base per STATE, the state twin of
-  // `reachablePriceRatioByCountry`. Feeds the price-realization leg for
-  // state-scoped commodities, so a seller in a locally short
-  // state is paid that state's scarcity price rather than the national one.
-  const statePriceRatioByState = new Map<string, Map<CommodityType, number>>();
-  const stateInputAvailabilityByState = new Map<string, Map<CommodityType, number>>();
-  const statePlacementRatioByState = new Map<string, Map<CommodityType, number>>();
-  const stateDeliveryLimitedRatioByState = new Map<string, Map<CommodityType, number>>();
-  const ownerDeliveryLimitedRatioByCorp = new Map<
-    string,
-    Map<string, Map<CommodityType, number>>
-  >();
-  // Market rework (marketSystemMode >= "realization"): lagged price-over-base
-  // ratio per commodity. commodityPrices docs hold the price computed by the
-  // PRIOR commodity-price pass, so reading them here is the one-turn lag that
-  // breaks the price->revenue->supply->price circularity.
-  const priceRatioByCommodity = new Map<CommodityType, number>();
-  const initializedLaggedBooks = new Set<CommodityType>();
-  const reachablePriceRatioByCountry = new Map<string, Map<CommodityType, number>>();
-  // Demand the ledger cut off at its 1.5x-supply cap, as a multiple of the
-  // capped demand it kept. The price signal already adds this back
-  // (latentShortageSignal); the production throttle's headroom needs it too, or
-  // a sold-out plant ramps only toward the truncated book and supply never
-  // catches a deep shortage.
-  const latentDemandFactorByCommodity = new Map<CommodityType, number>();
-  for (const cp of commodityPrices) {
-    if (cp.turn > 0) initializedLaggedBooks.add(cp.commodity);
-    const topUp = latentDemandTopUp(cp.globalDemand, cp.globalDemand, cp.demandTruncatedUnits);
-    if (topUp > 0) latentDemandFactorByCommodity.set(cp.commodity, 1 + topUp / cp.globalDemand);
-    globalCommodityBalances.set(cp.commodity, {
-      supply: cp.globalSupply,
-      demand: cp.globalDemand,
-    });
-    if (
-      typeof cp.globalPrice === "number" &&
-      typeof cp.basePrice === "number" &&
-      Number.isFinite(cp.globalPrice / cp.basePrice) &&
-      cp.globalPrice > 0 &&
-      cp.basePrice > 0
-    ) {
-      priceRatioByCommodity.set(cp.commodity, cp.globalPrice / cp.basePrice);
-    }
-
-    // Lagged per-country reachable price ratios (partition worlds). Feeds
-    // clearing's price-realization leg AND the physical input bill so a
-    // partitioned buyer pays ITS market's price level, not the worldwide one
-    // — observed live (t174): US farms billed fertilizer at the world 2.38x
-    // while their own reachable market sold it at 1.08x, so margins FELL as
-    // the domestic shortage cleared. Sparse: absent countries fall back to
-    // `priceRatioByCommodity` at each consumer.
-    if (typeof cp.basePrice === "number" && cp.basePrice > 0 && cp.reachablePrices) {
-      for (const [countryId, price] of Object.entries(cp.reachablePrices)) {
-        if (!(typeof price === "number" && price > 0)) continue;
-        let byCommodity = reachablePriceRatioByCountry.get(countryId);
-        if (!byCommodity) {
-          byCommodity = new Map<CommodityType, number>();
-          reachablePriceRatioByCountry.set(countryId, byCommodity);
-        }
-        byCommodity.set(cp.commodity, price / cp.basePrice);
-      }
-    }
-
-    for (const stateId of Object.keys(cp.stateSupply)) {
-      if (!rawStateBalances.has(stateId)) {
-        rawStateBalances.set(stateId, new Map());
-      }
-      rawStateBalances.get(stateId)!.set(cp.commodity, {
-        supply: cp.stateSupply[stateId] ?? 0,
-        demand: cp.stateDemand[stateId] ?? 0,
-      });
-    }
-
-    if (typeof cp.basePrice === "number" && cp.basePrice > 0 && cp.statePrices) {
-      for (const [stateId, price] of Object.entries(cp.statePrices)) {
-        if (!(typeof price === "number" && price > 0)) continue;
-        let byCommodity = statePriceRatioByState.get(stateId);
-        if (!byCommodity) {
-          byCommodity = new Map<CommodityType, number>();
-          statePriceRatioByState.set(stateId, byCommodity);
-        }
-        byCommodity.set(cp.commodity, price / cp.basePrice);
-      }
-    }
-
-    if (options?.freightSettlementActive) {
-      for (const [stateId, availability] of Object.entries(cp.stateInputAvailability ?? {})) {
-        if (!Number.isFinite(availability)) continue;
-        if (!stateInputAvailabilityByState.has(stateId)) {
-          stateInputAvailabilityByState.set(stateId, new Map());
-        }
-        stateInputAvailabilityByState
-          .get(stateId)!
-          .set(cp.commodity, Math.max(0, Math.min(1, availability)));
-      }
-      // Sell-side twin of the availability read above: the share of a state's
-      // own output that last turn's network could place. Sectors offer into a
-      // COUNTRY-scoped clearing book while their goods move on a STATE-scoped
-      // network, so without this the offer claims deliveries the network never
-      // made (t225: 60.4% of world production stranded in a state that did not
-      // need it, against 28.7% of world demand unmet). Missing state, missing
-      // doc field, or zero supply all mean "no evidence of a limit" and are
-      // read as a ratio of 1 by the consumer.
-      for (const [stateId, placed] of Object.entries(cp.statePlacedSupply ?? {})) {
-        if (!Number.isFinite(placed)) continue;
-        const supply = cp.stateSupply?.[stateId] ?? 0;
-        if (!(supply > 0)) continue;
-        if (!statePlacementRatioByState.has(stateId)) {
-          statePlacementRatioByState.set(stateId, new Map());
-        }
-        statePlacementRatioByState
-          .get(stateId)!
-          .set(cp.commodity, Math.max(0, Math.min(1, placed / supply)));
-      }
-      // Second ratio, same denominator, different question. The placement ratio
-      // caps the OFFER (the book should shrink whatever the reason, glut
-      // included); this one is the only figure allowed to tell a player their
-      // goods could not get there. Keeping them apart is the whole point: the
-      // two states of the world call for opposite decisions.
-      for (const [stateId, byCorp] of Object.entries(cp.stateOwnerDeliveryLimited ?? {})) {
-        for (const [corpId, fraction] of Object.entries(byCorp)) {
-          if (!Number.isFinite(fraction)) continue;
-          let byState = ownerDeliveryLimitedRatioByCorp.get(corpId);
-          if (!byState) ownerDeliveryLimitedRatioByCorp.set(corpId, (byState = new Map()));
-          let byCommodity = byState.get(stateId);
-          if (!byCommodity) byState.set(stateId, (byCommodity = new Map()));
-          byCommodity.set(cp.commodity, Math.max(0, Math.min(1, fraction)));
-        }
-      }
-      for (const [stateId, deliveryLimited] of Object.entries(
-        cp.stateDeliveryLimitedSupply ?? {}
-      )) {
-        if (!Number.isFinite(deliveryLimited)) continue;
-        const supply = cp.stateSupply?.[stateId] ?? 0;
-        if (!(supply > 0)) continue;
-        if (!stateDeliveryLimitedRatioByState.has(stateId)) {
-          stateDeliveryLimitedRatioByState.set(stateId, new Map());
-        }
-        stateDeliveryLimitedRatioByState
-          .get(stateId)!
-          .set(cp.commodity, Math.max(0, Math.min(1, deliveryLimited / supply)));
-      }
-    }
-
-    const perCountry = buildNationalCommodityBalances(cp, stateCountryMap);
-    for (const [countryId, balance] of perCountry) {
-      if (!nationalCommodityBalancesByCountry.has(countryId as CountryId)) {
-        nationalCommodityBalancesByCountry.set(countryId as CountryId, new Map());
-      }
-      nationalCommodityBalancesByCountry.get(countryId as CountryId)!.set(cp.commodity, balance);
-    }
-  }
-
-  // Per-country INPUT price ratios: the world map overlaid with each
-  // country's reachable ratios, CAPPED AT THE WORLD RATIO per commodity.
-  // The input bill is linear and unclamped while revenue realization is
-  // damped (ratio^0.5, max 1.5x), so billing inputs above the world level
-  // hands every buyer a cost no seller-side leg can capture back. Observed
-  // live (t175): pinned bloc reachable ratios (steel FR 4.1x vs world 2.0x)
-  // fed straight into the bill and put ~70% of all corps at negative income
-  // in one turn. min(world, reachable) keeps the t174 fix (buyers in cheap
-  // reachable markets stop paying world) without the blowup. World-map
-  // fallback per commodity; base-price fallback only where the world has no
-  // ratio either.
-  const reachableInputPriceRatiosByCountry = new Map<string, Map<CommodityType, number>>();
-  for (const [countryId, byCommodity] of reachablePriceRatioByCountry) {
-    const merged = new Map(priceRatioByCommodity);
-    for (const [commodity, ratio] of byCommodity) {
-      const world = priceRatioByCommodity.get(commodity);
-      merged.set(commodity, capInputPriceRatioAtWorld(world, ratio));
-    }
-    reachableInputPriceRatiosByCountry.set(countryId, merged);
-  }
-
-  // Per-country export intensity from the latest trade snapshot: for each
-  // commodity a country net-exports, the fraction of its surplus that cleared
-  // abroad ∈ [0,1]. Feeds the export-reward margin premium. Empty when no
-  // snapshot exists yet (pre-first-trade-turn).
-  const exportIntensityByCountry = new Map<CountryId, Map<CommodityType, number>>();
-  const tradeSnapshotDoc = latestTradeSnapshot[0];
-  if (tradeSnapshotDoc) {
-    for (const [commodity, cf] of Object.entries(tradeSnapshotDoc.commodities) as Array<
-      [CommodityType, NonNullable<TradeFlowSnapshot["commodities"][CommodityType]>]
-    >) {
-      for (const [countryId, pc] of Object.entries(cf.perCountry)) {
-        if (pc.net <= 0 || pc.exports <= 0) continue;
-        const surplusValue = pc.exports + Math.max(0, pc.uncleared);
-        const intensity = surplusValue > 0 ? pc.exports / surplusValue : 0;
-        if (intensity <= 0) continue;
-        if (!exportIntensityByCountry.has(countryId as CountryId)) {
-          exportIntensityByCountry.set(countryId as CountryId, new Map());
-        }
-        exportIntensityByCountry.get(countryId as CountryId)!.set(commodity, intensity);
-      }
-    }
-  }
+  const {
+    nationalCommodityBalancesByCountry,
+    tradeSnapshotDoc,
+    initializedLaggedBooks,
+    stateInputAvailabilityByState,
+    statePlacementRatioByState,
+    stateDeliveryLimitedRatioByState,
+    ownerDeliveryLimitedRatioByCorp,
+    priceRatioByCommodity,
+    latentDemandFactorByCommodity,
+    reachablePriceRatioByCountry,
+    reachableInputPriceRatiosByCountry,
+    exportIntensityByCountry,
+    rawStateBalances,
+    statePriceRatioByState,
+  } = buildCommodityBalanceLookups({
+    commodityPrices,
+    globalCommodityBalances,
+    options,
+    stateCountryMap,
+    latestTradeSnapshot,
+  });
 
   // Build per-state margin modifier lookups
   const unemploymentByState = new Map<string, number>();
@@ -1123,36 +600,37 @@ export async function buildCorporationLookups(
   // Management overhead: a margin charge on every sector of a corporation that
   // grows with its total whole-plant count (snowball brake). Off unless the
   // gameConfig knob is set.
-  const overheadCfg = await db
-    .collection<{
-      _id: string;
-      managementOverheadPpPerDoubling?: number;
-      strengthUpkeepStage?: number;
-      groupSizeCostsStage?: number;
-      soeSizeCostScale?: number;
-      dominanceRunningCostScale?: number;
-      honestBalanceSheetsStage?: number;
-      fundedOverheadStage?: number;
-      fundedHeadcountStage?: number;
-      fundedValuationStage?: number;
-    }>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      {
-        projection: {
-          managementOverheadPpPerDoubling: 1,
-          strengthUpkeepStage: 1,
-          groupSizeCostsStage: 1,
-          soeSizeCostScale: 1,
-          dominanceRunningCostScale: 1,
-          honestBalanceSheetsStage: 1,
-          fundedOverheadStage: 1,
-          fundedHeadcountStage: 1,
-          fundedValuationStage: 1,
-        },
-      }
-    );
+  const overheadCfg = await gameConfigCollection<{
+    _id: string;
+    managementOverheadPpPerDoubling?: number;
+    strengthUpkeepStage?: number;
+    groupSizeCostsStage?: number;
+    soeSizeCostScale?: number;
+    dominanceRunningCostScale?: number;
+    honestBalanceSheetsStage?: number;
+    fundedOverheadStage?: number;
+    fundedHeadcountStage?: number;
+    fundedValuationStage?: number;
+    producerTariffStage?: number;
+  }>(db).findOne(
+    { _id: "default" },
+    {
+      projection: {
+        managementOverheadPpPerDoubling: 1,
+        strengthUpkeepStage: 1,
+        groupSizeCostsStage: 1,
+        soeSizeCostScale: 1,
+        dominanceRunningCostScale: 1,
+        honestBalanceSheetsStage: 1,
+        fundedOverheadStage: 1,
+        fundedHeadcountStage: 1,
+        fundedValuationStage: 1,
+        producerTariffStage: 1,
+      },
+    }
+  );
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
+  const fundedTariffsOn = (overheadCfg?.producerTariffStage ?? 0) >= 1;
   const strengthUpkeepStage =
     typeof overheadCfg?.strengthUpkeepStage === "number" ? overheadCfg.strengthUpkeepStage : 0;
   const groupSizeCostsStage =
@@ -1253,6 +731,7 @@ export async function buildCorporationLookups(
   const tradeScope = tradeEligibilityScope({
     eraUnitScale,
     activeBlockEmbargoCount: countBlockEmbargoes(activeEmbargoDocs),
+    fundedTariffs: fundedTariffsOn,
   });
   let countryClearingBooks: ReturnType<typeof buildCountryClearingBooks> | null = null;
   let tradeRoutes: CorporationLookups["tradeRoutes"] = null;
@@ -1271,12 +750,11 @@ export async function buildCorporationLookups(
       // isCurtained, so the curtain lifts on the historical marketization dates
       // and the Tito-split exemption keeps Yugoslavia trading with the open world.
       const [curtainCfg, curtainState, registeredCountries] = await Promise.all([
-        db
-          .collection<{ _id: string; commandEconomyEnabled?: boolean }>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-        db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+        gameConfigCollection<{ _id: string; commandEconomyEnabled?: boolean }>(db).findOne(
+          { _id: "default" },
+          { projection: { commandEconomyEnabled: 1 } }
+        ),
+        gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
         getRegisteredCountryIds(db),
       ]);
       const curtainEnabled = curtainCfg?.commandEconomyEnabled === true;
@@ -1286,12 +764,16 @@ export async function buildCorporationLookups(
         countries.filter((c) => isCurtained(c, curtainYear, curtainEnabled))
       );
     }
+    // Funded tariffs also close the routes a full naval blockade shuts, read
+    // fresh as the commodity turn does. Off, the graph is built without it.
+    const blockadeClosure = fundedTariffsOn ? await loadBlockadeClosure(db) : undefined;
     const { affinityFor, capUnitsFor, importCostMultiplierFor } = buildTradeAffinity({
       ftaPairs: activeFtaPairs,
       blocsByCountry,
       tariffs: allTariffs,
       embargoes: activeEmbargoDocs,
       ...(curtainedCountries ? { curtainedCountries } : {}),
+      ...(blockadeClosure && blockadeClosure.size > 0 ? { blockadeClosure } : {}),
     });
     tradeRoutes = { affinityFor, importCostMultiplierFor };
     if (tradeScope.countryBooks) {
@@ -1351,318 +833,36 @@ export async function buildCorporationLookups(
   // the identical clamp for market supply) runs AFTER sector income is
   // calculated — the capacity revenue haircut needs these while processing
   // sectors. Mirrors the revenueBasedOutput construction in commodityPriceTurn.
-  const extractionSectors = allSectors.filter((s) => s.sectorType === "extraction");
-  const extractionCapacityUtilBySector = new Map<
-    string,
-    { utilization: number; bindingResource: ExtractableResource | null }
-  >();
-  if (extractionSectors.length > 0) {
-    const capacityTurn = options?.productionTurn ?? (await getCurrentTurn(db));
-    // Mirror the supply-ledger input exactly (commodityPriceTurn): the
-    // extraction output-scale flag gates the per-resource boost, and the
-    // ₳↔unit conversion runs on this world's ERA base-price table. The
-    // previous modern-table figure here was 70-174x smaller than what the
-    // ledger books on a 1953 world, so this clamp rationed against a
-    // fraction of the sector's real desired output and never bound.
-    const extractionOutputScaleEnabled = await getExtractionOutputScaleEnabled();
-    const extractionBasePrices = eraScaledBasePrices(eraUnitScale);
-    // The ledger anchor-normalizes revenue before dividing by ₳ base prices
-    // (buildSectorRows); this clamp must too, or a non-USD miner's desired
-    // output is inflated by its exchange rate and it reads as far over its
-    // deposit (live: 46 mines, mostly yen, lira and peseta).
-    const extractionRevenueAnchor = extractionRevenueAnchorOf(corpById, exchangeRatesByCurrency);
-    const extractionStateIds = [...new Set(extractionSectors.map((s) => s.stateId))];
-    const activeContracts = await (
-      await getExtractionContractsCollection(db)
-    )
-      .find({ stateId: { $in: extractionStateIds }, ...activeExtractionContractFilter() })
-      .toArray();
-    // Resolve each extraction sector's effective supply rates once, then reuse
-    // them for both the capacity clamp input and the revenue-weighted utilization.
-    const ratesBySector = new Map<string, Partial<Record<ExtractableResource, number>>>();
-    const outputUnitsBySector = new Map<string, Partial<Record<ExtractableResource, number>>>();
-    const extractionInputs: ExtractionSectorInput[] = extractionSectors.map((sector) => {
-      const hasStrategy = sector.strategyId && sector.strategyId !== "standard";
-      const strategyRates =
-        hasStrategy || sector.transitionFromStrategyId
-          ? getEffectiveStrategyRates(
-              "extraction",
-              sector.strategyId ?? "standard",
-              sector.transitionFromStrategyId,
-              sector.transitionStartTurn,
-              capacityTurn
-            )
-          : null;
-      const rates: Partial<Record<ExtractableResource, number>> = {};
-      const revenueBasedOutput: Partial<Record<ExtractableResource, number>> = {};
-      for (const resource of EXTRACTABLE_RESOURCES) {
-        const rate = strategyRates
-          ? (strategyRates.supply[resource] ?? 0)
-          : ((SECTOR_SUPPLY["extraction"] ?? []).find((f) => f.commodity === resource)?.rate ?? 0);
-        if (rate > 0) {
-          rates[resource] = rate;
-          // Identical expression to the ledger path: revenue x rate x
-          // per-resource output scale, over the era-scaled base price. At
-          // eraUnitScale 1 the table IS COMMODITY_BASE_PRICES and the scale
-          // follows the same config flag as the ledger, so modern worlds are
-          // unchanged whenever the ledger is.
-          revenueBasedOutput[resource] =
-            (extractionRevenueAnchor(sector) *
-              rate *
-              extractionOutputScaleFor(resource, extractionOutputScaleEnabled)) /
-            extractionBasePrices[resource];
-        }
-      }
-      const sectorId = sector._id.toString();
-      ratesBySector.set(sectorId, rates);
-      outputUnitsBySector.set(sectorId, revenueBasedOutput);
-      // Plants (#4503): parked or mothballed capacity digs nothing, so it does
-      // not claim a share of the deposit. This turn's demand throttle is not
-      // known yet here; the ledger caps at real output.
-      let plantOutputCap: ExtractionSectorInput["plantOutputCap"];
-      if (options?.plantsEnabled === true) {
-        const active = activeCapacityFraction(sector);
-        plantOutputCap = {};
-        for (const [resource, units] of Object.entries(revenueBasedOutput) as [
-          ExtractableResource,
-          number,
-        ][]) {
-          plantOutputCap[resource] = units * active;
-        }
-      }
-      return {
-        sectorId,
-        stateId: sector.stateId,
-        corporationId: sector.corporationId,
-        revenueBasedOutput,
-        ...(plantOutputCap ? { plantOutputCap } : {}),
-      };
-    });
-    // P3b: under plants the corp phase rations against the DEPLETION-ADJUSTED
-    // ceiling, matching what commodityPriceTurn books the extraction against.
-    // Without this the sector's revenue-side utilization and the world's supply
-    // ledger would disagree about how much ore is left. Below plants the raw
-    // docs are used, byte-identically.
-    // Utilization below stays a share of FULL output (the plants hard-min
-    // divides it by the active fraction), so capped grants are re-expressed.
-    const multipliers = fullOutputMultipliers(
-      extractionInputs,
-      computeExtractionCapacityMultipliers(
-        extractionInputs,
-        activeContracts,
-        options?.plantsEnabled === true
-          ? stateResourceCapacityDocs.map(depletedCapacityDoc)
-          : stateResourceCapacityDocs
-      )
-    );
-    // Scarcity relief: lift the haircut off resources in global shortage
-    // (lagged balances — same one-turn lag as every market input) so the
-    // haircut stops taxing exactly the extraction the economy is short of.
-    const reliefByResource: Partial<Record<ExtractableResource, number>> = {};
-    for (const resource of EXTRACTABLE_RESOURCES) {
-      const bal = globalCommodityBalances.get(resource);
-      const relief = haircutScarcityRelief(bal?.supply, bal?.demand);
-      if (relief > 0) reliefByResource[resource] = relief;
-    }
-    const priorUtilizationBySector = new Map(
-      extractionSectors.map((sector) => [sector._id.toString(), sector.capacityUtilization])
-    );
-    for (const [sectorId, rates] of ratesBySector) {
-      // Relief is capped at the raw capacity ratio over the CORRECTED
-      // desired-output units: a sector whose desired output exceeds its
-      // state's deposit ceiling cannot have the haircut lifted past what
-      // those deposits can actually yield. A rise eases in from last turn's
-      // persisted reading; a fall applies at once.
-      extractionCapacityUtilBySector.set(
-        sectorId,
-        limitExtractionUtilizationRise(
-          scarcityReliefCappedUtilization(
-            rates,
-            multipliers.get(sectorId),
-            reliefByResource,
-            outputUnitsBySector.get(sectorId)
-          ),
-          priorUtilizationBySector.get(sectorId)
-        )
-      );
-    }
-  }
-
-  const imfPrincipalAnchorByLenderCorpId = buildImfPrincipalAnchorByLenderCorpId(
-    corporations,
-    exchangeRatesByCurrency
-  );
-  const bondAndImfPortfolioAnchorByCorpId = buildBondAndImfPortfolioAnchorByCorpId(
-    bondsHeldByCorpId,
-    imfPrincipalAnchorByLenderCorpId,
-    exchangeRatesByCurrency
-  );
-  const crossCorpStockHoldingsByHolderCorpId =
-    buildCrossCorpStockHoldingsByHolderCorpId(corporations);
-  const portfolioAnchorValueByCorpId = buildPortfolioAnchorValueByCorpId(
+  const {
+    gameState,
+    eraYear,
+    portfolioAnchorValueByCorpId,
+    bondAndImfPortfolioAnchorByCorpId,
+    crossCorpStockHoldingsByHolderCorpId,
+    politicalBaseModifiersByState,
+    politicalBoardByState,
+    ftaCoverage,
+    extractionCapacityUtilBySector,
+    activeDisasterEffectsByState,
+    climateProfile,
+    climateEnergyDemandByState,
+    energyTransition,
+    regionalConditionMarginByState,
+  } = await buildExtractionAndPortfolioLookups({
+    allSectors,
+    options,
+    db,
+    eraUnitScale,
+    corpById,
+    exchangeRatesByCurrency,
+    stateResourceCapacityDocs,
+    globalCommodityBalances,
     corporations,
     bondsHeldByCorpId,
-    imfPrincipalAnchorByLenderCorpId,
-    exchangeRatesByCurrency
-  );
-
-  // FTA coverage shares — used by getDomesticTariffMalus and getTariffBlendWeights
-  // to scale supply-chain friction and commodity-blend tilt by partner exposure.
-  // Built from already-loaded sectors + corpById; no extra DB roundtrips.
-  const ftaCoverage = buildFtaCoverageLookup(allSectors, corpById, activeFtaPairs);
-
-  // Active crisis decay margin effects indexed by stateId. One batched query;
-  // no per-sector reads. Covers ALL active crises (auto-spawned disasters,
-  // auto-crises, and admin-created crises) that carry a decay `profitMargin`
-  // effect with a non-null `durationTurns`. The scope-aware resolver expands a
-  // crisis to its affected states: global → every real state, country → that
-  // country's states, region → its `regionIds`. So an economic crisis (Pandemic,
-  // Recession, …) hits every corp in scope, not just region disasters.
-  const disasterCrises = await db.collection<Crisis>("crises").find({ status: "active" }).toArray();
-  const realStateIds: string[] = [];
-  const stateIdsByCountry = new Map<string, string[]>();
-  for (const s of states) {
-    const id = String(s._id);
-    if (NATIONAL_SCOPE_IDS.has(id)) continue;
-    realStateIds.push(id);
-    const arr = stateIdsByCountry.get(s.countryId) ?? [];
-    arr.push(id);
-    stateIdsByCountry.set(s.countryId, arr);
-  }
-  const resolveCrisisStateIds = (
-    c: Pick<Crisis, "scope" | "countryIds" | "regionIds">
-  ): readonly string[] =>
-    c.scope === "global"
-      ? realStateIds
-      : c.scope === "country"
-        ? c.countryIds.flatMap((cid) => stateIdsByCountry.get(cid) ?? [])
-        : c.regionIds;
-  const activeDisasterEffectsByState = buildDisasterEffectsByState(
-    disasterCrises,
-    resolveCrisisStateIds
-  );
-
-  const gameState = await db.collection<GameState>("gameState").findOne(
-    { _id: "current" },
-    {
-      projection: {
-        preset: 1,
-        hardwareInputReliefStartTurn: 1,
-        stockHoldingTaxStartTurn: 1,
-        passThroughOwnerTaxStartTurn: 1,
-        nppCeoPayStartTurn: 1,
-        currentYear: 1,
-        currentTurn: 1,
-        startingYear: 1,
-        eraSystemEnabled: 1,
-        resetWorldId: 1,
-        resetVersionSeeds: 1,
-        metricsSystemVersion: 1,
-        cabinetSystemVersion: 1,
-        isProcessing: 1,
-        processingKind: 1,
-        processingTargetTurn: 1,
-      },
-    }
-  );
-  // Live year for era-aware regional-condition margins; null while the flag is off.
-  const eraYear = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
-
-  // SP4 §4a: political margin overlays for playable regions — the sector-margin
-  // engine resolves demolished political signals from these instead of the
-  // (stripped) stateMetrics docs. One batch read, one map per region.
-  const cabinetEffects = await loadCabinetGameplayEffects(db, gameState, options?.productionTurn);
-  const politicalDocs = (
-    await db.collection<PoliticalMetricsDoc>("politicalMetrics").find({}).toArray()
-  ).map((doc) => ({
-    ...doc,
-    values: applyCabinetPoliticalInputs(
-      doc.values,
-      cabinetEffectsForRegion(cabinetEffects, doc.countryId, String(doc._id))
-    ),
-  }));
-  const politicalBaseModifiersByState = new Map(
-    politicalDocs.map((doc) => [String(doc._id), buildPoliticalBaseModifiers(doc.values)])
-  );
-  const politicalBoardByState = new Map(politicalDocs.map((doc) => [String(doc._id), doc.values]));
-  const resetCountries = RESET_V2_COUNTRIES.filter(
-    (country) => resetSystemVersionsForCountry(gameState, RESET_V2_READY, country).metrics === "v2"
-  );
-  const resetBoards =
-    resetCountries.length > 0
-      ? await db
-          .collection<ResetMetricSnapshot>("resetMetricSnapshots")
-          .find(
-            { worldId: gameState!.resetWorldId, countryId: { $in: resetCountries } },
-            {
-              projection: RESET_APPROVAL_BOARD_PROJECTION,
-            }
-          )
-          .toArray()
-      : [];
-  const politicalById = new Map(politicalDocs.map((doc) => [String(doc._id), doc]));
-  for (const board of resetBoards) {
-    if (board.scope !== "regional" || !board.regionId) continue;
-    const prior = politicalById.get(board.regionId);
-    if (!prior || prior.countryId !== board.countryId) continue;
-    politicalBaseModifiersByState.set(
-      board.regionId,
-      ownedPoliticalModifiers(
-        prior.values,
-        board.observations,
-        board.countryId,
-        eraYear ?? gameState?.currentYear ?? 1991
-      )
-    );
-    politicalBoardByState.set(
-      board.regionId,
-      ownedPoliticalValues(
-        prior.values,
-        board.observations,
-        board.countryId,
-        eraYear ?? gameState?.currentYear ?? 1991
-      )
-    );
-  }
-  const resetConditions = new Map(
-    await Promise.all(
-      resetCountries.map(
-        async (country) =>
-          [
-            country,
-            await loadResetApprovalModifiers(
-              db,
-              country,
-              allStateMetrics
-                .filter(
-                  (metrics) =>
-                    metrics.countryId === country && !NATIONAL_SCOPE_IDS.has(String(metrics._id))
-                )
-                .map((metrics) => String(metrics._id)),
-              gameState,
-              undefined,
-              resetBoards,
-              cabinetEffects
-            ),
-          ] as const
-      )
-    )
-  );
-  const regionalConditionMarginByState = new Map<string, number>();
-  for (const metrics of allStateMetrics) {
-    const stateId = String(metrics._id);
-    if (NATIONAL_SCOPE_IDS.has(stateId)) continue;
-    const modifiers =
-      resetConditions
-        .get(metrics.countryId as (typeof RESET_V2_COUNTRIES)[number])
-        ?.modifiersByRegion.get(stateId) ??
-      evaluateModifiers(buildFlatMetrics(metrics), {
-        preset: gameState?.preset,
-        countryId: metrics.countryId,
-        year: eraYear,
-      });
-    regionalConditionMarginByState.set(stateId, computeRegionalConditionMargin(modifiers));
-  }
+    activeFtaPairs,
+    states,
+    allStateMetrics,
+  });
 
   // Money wiring (interstate-logistics plan step 5, phase A): LAST turn's
   // landed-price premiums, loaded only when the flag is on. `embargoTurn`
@@ -1688,8 +888,7 @@ export async function buildCorporationLookups(
     options?.canonicalFreightBillingEnabled ||
     options?.freightSettlementActive
   ) {
-    const networkDoc = await db
-      .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+    const networkDoc = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
       .find({ turn: { $lte: embargoTurn } })
       .sort({ turn: -1 })
       .limit(1)
@@ -1885,6 +1084,7 @@ export async function buildCorporationLookups(
     nationalDominanceShareBySectorId,
     stateSectorSpecializationByState,
     activeDisasterEffectsByState,
+    ...(climateProfile.broaderEffects ? { climateEnergyDemandByState, energyTransition } : {}),
     regionalConditionMarginByState,
     corporateEmbargoSuppression,
     // Legacy full-mothball embargo model DISABLED (ticket 984): always use the
@@ -1893,8 +1093,10 @@ export async function buildCorporationLookups(
     // sales operating normally. The old model zeroed a foreign corp's entire
     // domestic production (realizedRevenue -> 0) even when its export exposure
     // was 0, wrongly bankrupting purely-domestic sectors under an import embargo.
-    // The `gameState.embargoTradeExposureEnabled` flag is retained for
-    // provenance but no longer gates behavior.
     embargoTradeExposureEnabled: true,
+    // 2027 world: enacted automation laws, one read for all countries.
+    ...(presetUsesSocietyPressures(marketSharePreset)
+      ? { automationPolicyByCountry: await loadAutomationPolicies(db) }
+      : {}),
   };
 }

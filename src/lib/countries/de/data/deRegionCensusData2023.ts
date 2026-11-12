@@ -1,21 +1,18 @@
 /**
- * Germany Region Census Profiles — 2023 (post-pandemic, Ampel era).
+ * Germany Region Census Profiles, 2023.
  *
  * 2023-era companion to {@link deRegionCensusData} (the 2019 profiles).
  * All values independently authored from 2023 historical knowledge of each
- * Land (Zensus 2022, Mikrozensus 2022/23) — never derived by scaling
- * another era's file.
+ * Land (Zensus 2022, Mikrozensus 2022/23); never derived by scaling another
+ * era's file.
  *
- * Era anchor: Scholz Ampel coalition; post-2015 refugee cohorts integrated
- * into the resident adult population plus the 2022 Ukrainian displacement
- * wave (counted under `turkish_russian_diaspora` alongside Russian-German
- * Aussiedler) push migration-background shares in western metros past 30%
- * of adults — Hamburg, Bremen, Berlin, the Rhine-Ruhr and Rhein-Main belts
- * are now structurally diverse. Eastern Länder remain far more homogeneous
- * but are no longer near-mono-ethnic, and are the oldest regions in the EU
- * (senior shares 30%+). Tertiary attainment continues climbing in the
- * city-states and the South; vocational Lehre still dominant in the East.
- * Inflation-squeezed low band ticks up slightly versus 2019.
+ * Migration-background shares in western metros are past 30% of adults
+ * (post-2015 refugee cohorts, 2022 Ukrainian displacement counted under
+ * `turkish_russian_diaspora`). Eastern Laender remain far more homogeneous but
+ * are the oldest regions in the EU (senior shares 30%+). Tertiary attainment
+ * keeps climbing in the city-states and the South; vocational Lehre still
+ * dominant in the East. Inflation-squeezed low band ticks up slightly versus
+ * 2019.
  */
 
 import type { DERegionLayer1 } from "@/lib/seeds/de/deRegionCensusData";

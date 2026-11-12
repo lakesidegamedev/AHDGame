@@ -36,6 +36,7 @@ import type {
   SerializedOfficial,
   SerializedPlayer,
 } from "./StatePageTabsTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface PoliticsTabPartyBudget {
   gotvBudgetPercent: number;
@@ -417,7 +418,7 @@ export function PoliticsTab({
 
   return (
     <div className="space-y-10">
-      {isAdmin && state.countryId === "US" ? (
+      {isAdmin && countryHasFeature("usUi", state.countryId) ? (
         <AdminRedistrictPanel countryCode={state.countryId} stateId={state._id} />
       ) : null}
 
@@ -446,7 +447,7 @@ export function PoliticsTab({
         {quickActions}
       </section>
 
-      {state.countryId === "US" ? (
+      {countryHasFeature("usUi", state.countryId) ? (
         <StateDistrictsSection
           countryCode={state.countryId}
           stateId={state._id}

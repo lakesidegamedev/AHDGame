@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
-import { processExpiredLeadershipChallenges } from "@/lib/uk/leadership/leadershipCommands";
+import { processExpiredLeadershipChallenges } from "@/lib/countries/uk/leadership/leadershipCommands";
 
 export interface UkLeadershipChallengeTurnResult {
   expired: number;
@@ -11,7 +11,7 @@ export interface UkLeadershipChallengeTurnResult {
 const EMPTY: UkLeadershipChallengeTurnResult = { expired: 0, resolved: 0, removed: 0 };
 
 /**
- * UK party-leadership challenge turn driver (ticket #861).
+ * UK party-leadership challenge turn driver.
  *
  * Expires gathering challenges that never reached their trigger threshold
  * and resolves ballots past their closing turn. UK-gated: a cheap no-op on

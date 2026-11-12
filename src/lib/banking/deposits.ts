@@ -1,6 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { SavingsHolder } from "@/lib/db/types/bank";
 import { isPrivateBankingEnabled } from "@/lib/banking/featureFlag";
 import { isBlockedDepositor } from "@/lib/banking/blacklist";
@@ -11,6 +11,8 @@ import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { runSavingsCommand } from "@/lib/savings/accountsShell";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export type MoveCharacterSavingsResult =
   { ok: true; holder: SavingsHolder } | { ok: false; error: string };
@@ -97,7 +99,7 @@ async function moveCharacterSavingsInner(
       return { ok: false, error: "Invalid bank corporation id" };
     }
 
-    targetBank = await db.collection<Corporation>("corporations").findOne({
+    targetBank = await corporationsCollection(db).findOne({
       _id: new ObjectId(holder),
     });
     if (!targetBank) {
@@ -123,7 +125,7 @@ async function moveCharacterSavingsInner(
     }
   }
 
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { _id: characterId },
     {
       projection: {
@@ -145,8 +147,7 @@ async function moveCharacterSavingsInner(
     if (currentHolder !== holder) {
       const ceiling = await getBankDepositCeiling(db, targetBank);
       const myBalance = Math.max(0, character.currencyBalances?.savings?.[currency] ?? 0);
-      const peerRows = await db
-        .collection<Character>("characters")
+      const peerRows = await charactersCollection(db)
         .aggregate<{ total: number }>([
           {
             $match: {
@@ -179,7 +180,7 @@ async function moveCharacterSavingsInner(
   // Pointer-only: never touch currencyBalances.savings.<CODE>.
   const holderPath = `currencyBalances.savingsHolder.${currency}`;
   const previousHolder = character.currencyBalances?.savingsHolder?.[currency] ?? "centralBank";
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: characterId },
     {
       $set: {

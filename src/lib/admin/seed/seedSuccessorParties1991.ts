@@ -6,6 +6,7 @@ import { SUCCESSOR_PARTIES_1991 } from "@/lib/seeds/reference/successorParties19
 import { PARTY_SEED_MODULES } from "@/lib/seeds/partySeedRegistry";
 import { prunePresetMismatchedDefaultParties } from "@/lib/seeds/ensureDefaultParties";
 import type { CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 /** Seed only the parties that existed in the January 1991 scenario. */
 export async function seedSuccessorParties1991(
@@ -17,7 +18,7 @@ export async function seedSuccessorParties1991(
 
   // Remove two early draft entries that were founded/renamed after the
   // scenario's January start. Keep player-created parties with these names.
-  await db.collection<PoliticalParty>("politicalParties").deleteMany({
+  await politicalPartiesCollection(db).deleteMany({
     isDefault: true,
     $or: [
       { countryId: "RU", name: "Liberal Democratic Party of the Soviet Union" },
@@ -34,15 +35,16 @@ export async function seedSuccessorParties1991(
       const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
       void _seedOrder;
       void _validForPresets;
-      const existing = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ name: party.name, countryId });
+      const existing = await politicalPartiesCollection(db).findOne({
+        name: party.name,
+        countryId,
+      });
       if (existing && !existing.isDefault) {
         log(`[${countryId}] existing player party owns ${party.name}; skipped 1991 default`);
         continue;
       }
       if (existing) {
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           { _id: existing._id },
           {
             $set: {
@@ -54,7 +56,7 @@ export async function seedSuccessorParties1991(
         );
       } else {
         const sequentialId = await getNextSequentialId(db, "party", countryId);
-        await db.collection<PoliticalParty>("politicalParties").insertOne({
+        await politicalPartiesCollection(db).insertOne({
           _id: new ObjectId(),
           sequentialId,
           ...partyData,

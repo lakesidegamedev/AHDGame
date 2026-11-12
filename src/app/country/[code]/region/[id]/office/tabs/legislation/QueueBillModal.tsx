@@ -18,7 +18,7 @@ import { PolicyEffectIndicators } from "@/components/legislation/PolicyEffectInd
 import { LawProvisionComparison } from "@/components/bills/LawProvisionComparison";
 import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 
@@ -511,10 +511,9 @@ function LegacyQueueBillModal({
               <PolicyEffectIndicators
                 effectTargetsWeighted={selectedType?.effectTargetsWeighted}
                 effectDirection={effectDirection}
-                archetypeApprovals={
-                  policyOptions.find((o) => o.id === policyOptionId)?.archetypeApprovals
+                bucketApprovals={
+                  policyOptions.find((o) => o.id === policyOptionId)?.bucketApprovals
                 }
-                groupApprovals={policyOptions.find((o) => o.id === policyOptionId)?.groupApprovals}
                 policyDomain={selectedType?.policyDomain}
                 currentPolicyIndex={
                   currentPolicies[legId] ?? ladderBounds(policyOptions.length).centerIndex

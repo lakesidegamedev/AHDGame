@@ -8,11 +8,15 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getPartyHex } from "@/lib/utils/politics";
-import type { ElectedOfficial, PoliticalParty, Character, NPP } from "@/lib/db/types";
+import type { ElectedOfficial, PoliticalParty, NPP } from "@/lib/db/types";
 import { TOTAL_HOUSE_SEATS, TOTAL_SENATE_SEATS } from "@/lib/constants";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { CongressMember, CongressMembersResponse } from "@/lib/congress/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Re-export for any consumer that still imports types from the route file.
 // New consumers should import from "@/lib/congress/types" directly.
@@ -42,15 +46,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     }
 
     const [officials, parties] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find(officialFilter)
         .sort({ state: 1, senateClass: 1, district: 1 })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .find({ countryId: requestedCountry })
-        .toArray(),
+      politicalPartiesCollection(db).find({ countryId: requestedCountry }).toArray(),
     ]);
 
     // Only real (filled) seats — vacant DB rows are discarded here.
@@ -61,8 +61,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const [charDocs, nppDocs] = await Promise.all([
       charIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: charIds } },
               { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }
@@ -70,8 +69,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
             .toArray()
         : Promise.resolve([]),
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find(
               { _id: { $in: nppIds } },
               { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }

@@ -1,28 +1,14 @@
 /**
- * A7 part 2: the index committee, and what a waiver can and cannot buy.
+ * Index committee waiver rules. Index inclusion pays the issuer, so the
+ * decision is answerable to a named officeholder.
  *
- * Part 1 made index membership a bar. This is the discretion on top of it: an
- * issuer that fails a standard petitions the committee, and a named
- * officeholder rules. Inclusion pays the issuer (a credit notch and a share
- * price premium once funds hold 10%), so there is a real reason to lobby for it,
- * and a real reason for the decision to be answerable to somebody.
+ * Solvency is NOT waivable: free float and size are qualification bars that
+ * can be argued, but solvency is a going-concern judgement. The waiver
+ * suppresses only the first two, enforced here so no caller can grant more.
  *
- * ## Solvency is NOT waivable
- *
- * A committee that can wave an insolvent corporation into an index is a
- * committee that can make fund holders pay for a political favour. Free float
- * and size are qualification bars and can be argued about; solvency is a
- * statement about whether the thing is going concern. The waiver suppresses the
- * first two and never the third, enforced here rather than at the API, so no
- * future caller can grant something the rule does not allow.
- *
- * ## The automatic decision is DETERMINISTIC
- *
- * Most seats in most worlds are NPP-held or vacant. Those petitions are decided
- * by rule at the deadline, never by a dice roll, so a replay produces the same
- * world. The rule is: a big enough contribution, against a shortfall that is
- * close enough to the bar to be arguable. Money alone does not get a shell into
- * an index, and being nearly qualified does not get you in for free.
+ * Automatic decisions for NPP-held or vacant seats are deterministic at the
+ * deadline, never a dice roll, so replays produce the same world. A waiver
+ * needs both a large contribution and a shortfall close enough to the bar.
  */
 
 import type { ListingFailure } from "../listingStandards";

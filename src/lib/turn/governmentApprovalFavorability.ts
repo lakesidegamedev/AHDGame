@@ -5,6 +5,9 @@ import { getCountryState } from "@/lib/countryState";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 export {
   governmentApprovalFavorabilityDrain,
   MAX_GOVERNMENT_APPROVAL_FAVORABILITY_DRAIN,
@@ -13,16 +16,14 @@ export {
 /** Resolve the actual head-of-government party using runtime regime state. */
 export async function loadRulingExecutiveParties(db: Db): Promise<Map<CountryId, string>> {
   const [presidents, formations, parliamentary] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find(
         { officeType: "president" },
         { projection: { countryId: 1, characterId: 1, nppId: 1, party: 1 } }
       )
       .toArray(),
-    db.collection<GovernmentFormation>("governmentFormations").find({}).toArray(),
-    db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    governmentFormationsCollection(db).find({}).toArray(),
+    parliamentaryGovernmentsCollection(db)
       .find({ _id: { $not: /_/ } })
       .toArray(),
   ]);
@@ -96,18 +97,4 @@ export async function loadRulingExecutiveParties(db: Db): Promise<Map<CountryId,
     if (party) parties.set(countryId, party);
   }
   return parties;
-}
-
-export async function loadGovernmentApprovalByCountry(db: Db): Promise<Map<CountryId, number>> {
-  const rows = await db
-    .collection<{ _id: CountryId; approvalRating?: number }>("governmentApprovals")
-    .find({}, { projection: { _id: 1, approvalRating: 1 } })
-    .toArray();
-  return new Map(
-    rows
-      .filter((r): r is { _id: CountryId; approvalRating: number } =>
-        Number.isFinite(r.approvalRating)
-      )
-      .map((r) => [r._id, r.approvalRating])
-  );
 }

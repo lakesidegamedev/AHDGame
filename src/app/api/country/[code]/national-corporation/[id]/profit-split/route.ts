@@ -10,11 +10,11 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { clampRetentionPercent } from "@/lib/nationalization/ceoFinance";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
 import { requireSeatedCeo } from "@/lib/nationalization/ceoRouteGuard";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({ retentionPercent: z.number() });
 
@@ -50,9 +50,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const target = await db
-      .collection<Corporation>("corporations")
-      .findOne({ ...idQuery, countryOwnerId: countryId });
+    const target = await corporationsCollection(db).findOne({
+      ...idQuery,
+      countryOwnerId: countryId,
+    });
     if (!target || !isStateOwned(target)) {
       return errorResponse(404, "National Corporation not found for this country.");
     }
@@ -60,12 +61,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (ceoGate) return ceoGate;
 
     const retentionPercent = clampRetentionPercent(parsed.data.retentionPercent);
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: target._id },
-        { $set: { profitRetentionPercent: retentionPercent, updatedAt: new Date() } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: target._id },
+      { $set: { profitRetentionPercent: retentionPercent, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, retentionPercent });
   } catch (error) {

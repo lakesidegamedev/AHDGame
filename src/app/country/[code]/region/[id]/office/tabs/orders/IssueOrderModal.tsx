@@ -341,8 +341,7 @@ export function IssueOrderModal({
                 <PolicyEffectIndicators
                   effectTargetsWeighted={selectedType?.effectTargetsWeighted}
                   effectDirection={shift > 0 ? 1 : -1}
-                  archetypeApprovals={proposedOption.archetypeApprovals}
-                  groupApprovals={proposedOption.groupApprovals}
+                  bucketApprovals={proposedOption.bucketApprovals}
                   policyDomain={selectedType?.policyDomain}
                   currentPolicyIndex={currentIndex}
                   proposedPolicyIndex={proposedIndex}

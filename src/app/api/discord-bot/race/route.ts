@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
@@ -20,7 +20,6 @@ import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
 import type {
   Election,
   ElectionCandidate,
-  Character,
   NPP,
   PoliticalParty,
   GameState,
@@ -31,6 +30,18 @@ import type {
   StatePartyOrg,
   State,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -71,9 +82,7 @@ export async function GET(request: Request) {
       if (!ObjectId.isValid(electionId)) {
         return errorResponse(400, "Invalid electionId");
       }
-      election = await db
-        .collection<Election>("elections")
-        .findOne({ _id: new ObjectId(electionId) });
+      election = await electionsCollection(db).findOne({ _id: new ObjectId(electionId) });
     } else {
       // Find by country + state + race
       const query: Record<string, unknown> = {
@@ -85,16 +94,14 @@ export async function GET(request: Request) {
 
       // If no state or race given, just return the list of active races for this country
       if (!state && !race) {
-        const elections = await db
-          .collection<Election>("elections")
+        const elections = await electionsCollection(db)
           .find(query)
           .sort({ endTime: 1 })
           .limit(30)
           .toArray();
 
         const stateIds = [...new Set(elections.map((e) => e.state))];
-        const states = await db
-          .collection<State>("states")
+        const states = await statesCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray();
         const stateMap = new Map(states.map((s) => [s._id, s.name]));
@@ -114,9 +121,7 @@ export async function GET(request: Request) {
       }
 
       // Find the best matching election
-      election = await db
-        .collection<Election>("elections")
-        .findOne(query, { sort: { endTime: 1 } });
+      election = await electionsCollection(db).findOne(query, { sort: { endTime: 1 } });
     }
 
     if (!election) {
@@ -128,8 +133,7 @@ export async function GET(request: Request) {
     const electionOid = election._id;
     const isPresident = election.electionType === "president";
 
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId: electionOid, status: "active" })
       .toArray();
 
@@ -151,46 +155,35 @@ export async function GET(request: Request) {
       stateDoc,
     ] = await Promise.all([
       allCharIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: allCharIds } })
             .toArray()
         : [],
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find({ _id: { $in: nppIds } })
             .toArray()
         : [],
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId: election.countryId ?? "US" })
         .toArray(),
-      db
-        .collection<NPPEndorsement>("nppEndorsements")
+      nppEndorsementsCollection(db)
         .find(buildActiveVisibleNppEndorsementFilter({ electionId: electionOid }))
         .toArray(),
-      db
-        .collection<PlayerEndorsement>("playerEndorsements")
-        .find({ electionId: electionOid, isActive: true })
-        .toArray(),
-      db
-        .collection<PrimarySnapshot>("primarySnapshots")
+      playerEndorsementsCollection(db).find({ electionId: electionOid, isActive: true }).toArray(),
+      primarySnapshotsCollection(db)
         .find({ electionId: electionOid })
         .sort({ recordedAt: 1 })
         .limit(144)
         .toArray()
         // A split turn holds an early and a rest row; chart one per turn.
         .then((rows) => oneRowPerTurn(rows).slice(0, 72)),
-      isPresident ? db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray() : [],
-      db
-        .collection<Campaign>("campaigns")
+      isPresident ? statePartyOrgCollection(db).find({}).toArray() : [],
+      campaignsCollection(db)
         .find({ electionId: electionOid }, { projection: { _id: 1, candidateId: 1, funds: 1 } })
         .toArray(),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      db
-        .collection<State>("states")
-        .findOne({ _id: election.state, countryId: election.countryId }),
+      gameStateCollection(db).findOne({ _id: "current" }),
+      statesCollection(db).findOne({ _id: election.state, countryId: election.countryId }),
     ]);
 
     // Enrich candidates
@@ -336,7 +329,7 @@ export async function GET(request: Request) {
         homeState: election.state,
         "currentOffice.type": officeType,
       };
-      const incumbentChar = await db.collection<Character>("characters").findOne(officeQuery);
+      const incumbentChar = await charactersCollection(db).findOne(officeQuery);
       if (incumbentChar) {
         const incumbentParty = partyMap.get(incumbentChar.party);
         incumbent = {

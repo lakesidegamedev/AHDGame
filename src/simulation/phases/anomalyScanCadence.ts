@@ -1,19 +1,19 @@
+import { serverEnv } from "@/lib/config/read";
+
 /**
  * How often the anti-abuse scans run in a shared world.
  *
- * The three scans (financialSuspectScan, auditAnomalyScan, suspiciousDetection)
- * each look back over a rolling window: six turns for the two ledger scans,
- * three to fourteen days for alt detection. Nothing they flag depends on
- * running every turn; a transaction is inside the window for six turns
- * whether it is examined once or six times. What running every turn does
- * cost is ~18% of every document a turn deserializes, on every turn.
+ * Each scan looks back over a rolling window (six turns for the ledger scans,
+ * three to fourteen days for alt detection), so nothing depends on running
+ * every turn: a transaction stays in the window for six turns whether examined
+ * once or six times. Running every turn costs ~18% of every document a turn
+ * deserializes.
  *
- * Every third turn keeps every transaction inside at least one scanned
- * window with a turn to spare. The value must stay at or below the shortest
- * window (6) or coverage develops holes; the predicate clamps for that.
+ * Every third turn keeps every transaction inside at least one window with a
+ * turn to spare. The value must not exceed the shortest window (6) or coverage
+ * develops holes; the predicate clamps for that.
  *
- * `AHD_ANOMALY_SCAN_EVERY_TURNS=1` restores scanning on every turn without a
- * deploy, for when a moderator wants faster detection during an incident.
+ * `AHD_ANOMALY_SCAN_EVERY_TURNS=1` restores per-turn scanning for incidents.
  */
 export const ANOMALY_SCAN_EVERY_TURNS = 3;
 
@@ -28,7 +28,7 @@ export const ANTI_ABUSE_SCAN_PHASES: ReadonlySet<string> = new Set([
 ]);
 
 export function resolveAnomalyScanCadence(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = serverEnv()
 ): number {
   const raw = env.AHD_ANOMALY_SCAN_EVERY_TURNS;
   const parsed = raw === undefined || raw === "" ? ANOMALY_SCAN_EVERY_TURNS : Number(raw);

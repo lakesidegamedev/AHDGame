@@ -10,6 +10,11 @@ import {
   nppCanPlausiblyEndorseElection,
   type RequestedEndorsementLikelihood,
 } from "@/lib/nppEndorsements";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
 
 interface EndorsementRequestEvaluation {
   relationshipRequirement: number;
@@ -52,8 +57,8 @@ export async function getNppDirectActionView(
   const forexEnabled = await isForexEnabled();
   const relationshipKey = `${characterId.toString()}_${nppId.toString()}`;
   const [npp, characterDoc, relationship] = await Promise.all([
-    db.collection<NPP>("npps").findOne({ _id: nppId }),
-    db.collection<Character>("characters").findOne(
+    nppsCollection(db).findOne({ _id: nppId }),
+    charactersCollection(db).findOne(
       { _id: characterId },
       {
         projection: {
@@ -66,7 +71,7 @@ export async function getNppDirectActionView(
         },
       }
     ),
-    db.collection<NPPRelationship>("nppRelationships").findOne({ _id: relationshipKey }),
+    nppRelationshipsCollection(db).findOne({ _id: relationshipKey }),
   ]);
 
   if (!npp) {
@@ -102,8 +107,7 @@ export async function getNppDirectActionView(
   }> = [];
 
   if (!isRetired) {
-    const playerCandidacies = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const playerCandidacies = await electionCandidatesCollection(db)
       .find({ characterId, status: "active" })
       .project<{
         _id: ObjectId;
@@ -113,8 +117,7 @@ export async function getNppDirectActionView(
       .toArray();
 
     if (playerCandidacies.length > 0) {
-      const elections = await db
-        .collection<Election>("elections")
+      const elections = await electionsCollection(db)
         .find({ _id: { $in: playerCandidacies.map((candidacy) => candidacy.electionId) } })
         .project<{
           _id: ObjectId;

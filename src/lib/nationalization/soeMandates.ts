@@ -33,6 +33,7 @@ export interface MandateContribution {
   delta: number;
 }
 
+/** Deliberately partial: media, media_entertainment and extraction carry no mandate. */
 export const MANDATE_MAP: Partial<Record<OperatingSectorType, MandateContributionDef[]>> = {
   healthcare: [{ metricPath: "healthcare.physicianRate", direction: 1, weight: 1 }],
   energy: [{ metricPath: "infrastructure.powerGridReliability", direction: 1, weight: 1 }],

@@ -1,20 +1,8 @@
 /**
- * The group balance sheet: what a parent actually controls, rather than what
- * its own corporation document says.
- *
- * A parent's page shows the parent's cash, the parent's sectors, the parent's
- * revenue. For a corporation whose business is held through subsidiaries, every
- * one of those numbers understates it, and there is nowhere to see the real
- * position at all.
- *
- * This is a READ surface. It consolidates nothing in the engine — the members
- * keep their own balance sheets, their own share prices and their own
- * shareholders. What it does is answer "how big is this group" with one number
- * instead of making a player add up subsidiaries by hand.
- *
- * Intra-group holdings are netted out. Counting a parent's stake in its own
- * subsidiary as an asset AND counting that subsidiary's sectors would be
- * double-counting the same business.
+ * Group balance sheet: what a parent controls through subsidiaries, not just
+ * what its own corporation document says. READ-only; members keep their own
+ * balance sheets and shareholders. Intra-group holdings are netted out so a
+ * subsidiary's sectors aren't counted both as an asset and as production.
  */
 
 import { ObjectId, type Db } from "mongodb";
@@ -30,6 +18,8 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { groupRegionFootprint } from "./rules/overview";
 import { resolveFormalizedGroups } from "./groupMembership";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface GroupMemberSummary {
   corporationId: string;
@@ -75,8 +65,7 @@ export async function loadGroupBalanceSheet(
   const memberIds = membership.membersByRootId.get(rootId);
   if (!memberIds || memberIds.length < 2) return null;
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: memberIds.map((id) => new ObjectId(id)) } })
     .project<
       Pick<
@@ -88,8 +77,7 @@ export async function loadGroupBalanceSheet(
   if (corps.length === 0) return null;
 
   const [sectors, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ corporationId: { $in: corps.map((c) => c._id) } })
       .project<
         Pick<CorporateSector, "corporationId" | "sectorType" | "stateId" | "countryId" | "revenue">

@@ -4,6 +4,8 @@ import {
   JP_CORE5_NORMALS,
   JP_INCOME_ANCHORS,
   JP_ISO_NUMERIC,
+  JP_UN_MEMBER_SINCE,
+  JP_WORLD_REGION,
 } from "./geographyFacts";
 import type { ConscriptionPolicy } from "@/lib/demographics/conscription";
 import type { CountryModifierPatch } from "@/lib/states/conditions/countryPatches";
@@ -16,6 +18,7 @@ import { jpRegionCensusData1979 } from "@/lib/countries/jp/data/jpRegionCensusDa
 import { jpRegionCensusData1991 } from "@/lib/countries/jp/data/jpRegionCensusData1991";
 import { jpRegionCensusData2027 } from "@/lib/countries/jp/data/jpRegionCensusData2027";
 import { jpMetricPresets2019 } from "@/lib/countries/jp/data/jpMetricPresets";
+import { jpMetricPresets2027 } from "@/lib/countries/jp/data/jpMetricPresets2027";
 import { jpMetricPresets1953 } from "@/lib/countries/jp/data/jpMetricPresets1953";
 import { jpMetricPresets1979 } from "@/lib/countries/jp/data/jpMetricPresets1979";
 import { jpMetricPresets1991 } from "@/lib/countries/jp/data/jpMetricPresets";
@@ -33,47 +36,25 @@ import {
 import { jpStateMetrics } from "@/lib/countries/jp/data/jpStateMetrics";
 
 /**
- * Japan's geography, regions and demographics. Phase D5.
+ * Japan's geography, regions, and demographics.
  *
- * ⚠️ GENERATED FROM THE PRE-MOVE SNAPSHOT. The bulk payloads live in data/
- * because four of them total roughly 6,000 lines.
+ * Bulk payload registries hold module references, not copies: identity
+ * matters (tests assert the 1979 lookup is not an alias of 2019) and copies
+ * would duplicate ~6000 lines of seed data.
  *
- * ⚠️ THE BULK REGISTRIES HOLD REFERENCES, NOT COPIES. The originals were maps of
- * MODULE REFERENCES -- `{ "1979-default": jpRegionCensusData1979, ... }` -- and
- * an early draft of this file embedded generated copies of their contents
- * instead. Deep equality passed and preset1979Bundles.test.ts still failed,
- * because it asserts IDENTITY with `toBe` to prove the 1979 lookup is not an
- * alias of the 2019 record. Copying also duplicated ~6,000 lines of authored
- * seed data, giving Japan two sources for every census and metric bundle.
- *
- * Referencing the authored modules keeps identity, keeps one source, and needs
- * no size-cap exemption. Those modules live in seeds/jp/ and D6 relocates them.
- *
- * ⚠️ CORE5_NORMALS IS NOT HERE. It is METRIC-first, not country-first:
- * `CORE5_NORMALS["gdpGrowth"]` holds one entry per country PLUS a `global`
- * pseudo-country that is a shared fallback and must not move. There is no
- * `CORE5_NORMALS.JP` to read, and moving the metric keys would take every other
- * country's values with them. Its Japan slices are forwarded per metric instead.
- *
- * ⚠️ POPULATION_MULTIPLIERS forwards WITHOUT its const being exported. Seven
- * country seeders destructure `applyEra1991DemographicAdjustments` out of a
- * ternary that unions the whole module type with a stub, so adding any export to
- * that module collapses the seeded value to `unknown`. Forwarding the JP entry
- * only adds an import, which does not change the module's export shape.
- *
- * ⚠️ The ISO pair moves together. `COUNTRY_TO_ISO_NUMERIC` and its exported
- * inverse `ISO_NUMERIC_TO_COUNTRY` are two halves of one fact; splitting them
- * gives the halves separate homes and lets them drift.
+ * CORE5_NORMALS is metric-first (JP slices forwarded per metric, not
+ * moved). POPULATION_MULTIPLIERS forwards without exporting its const, since
+ * adding an export to that module collapses the seeded value to unknown.
+ * COUNTRY_TO_ISO_NUMERIC and ISO_NUMERIC_TO_COUNTRY move together as two
+ * halves of one fact.
  */
 
 /** Japan's eight regions and their neighbours. */
 
 /**
- * ⚠ DERIVED, NOT REPEATED. This used to spell out all eight names while
- * `JP_REGIONS` in the region directory spelled out the same eight. The values
- * agreed and nothing kept them agreeing -- a second source in the state that
- * looks fine until one side is edited. The directory is the richer record (it
- * also carries each region's prefectures), so it is the one that holds the name.
+ * DERIVED, NOT REPEATED. The region directory is the richer record (it also
+ * carries each region's prefectures), so it holds the names; repeating them
+ * here would be a second source with nothing keeping the two in agreement.
  */
 const regionNames: Record<string, string> = Object.fromEntries(
   JP_REGIONS.map((region) => [region.id, region.name])
@@ -113,6 +94,7 @@ const censusBundles = {
 };
 
 const metricPresets = {
+  "2027-default": jpMetricPresets2027,
   "2019-default": jpMetricPresets2019,
   "1991-default": jpMetricPresets1991,
   "1979-default": jpMetricPresets1979,
@@ -291,6 +273,7 @@ const hazardGroups = {
   volcanic: ["HOK", "TOH", "KAN", "CHU", "KNS", "KYU"],
   flood: ["HOK", "TOH", "KAN", "CHU", "KNS", "CGK", "SHI", "KYU"],
   wintry: ["HOK", "TOH", "CHU"],
+  hot: ["KAN", "KNS", "CGK", "SHI", "KYU"],
 };
 
 /** ⚠️ Cast: projectionCenter and similar fields are tuples, not number[]. */
@@ -367,8 +350,8 @@ import { JP_MODIFIER_PATCHES } from "@/lib/countries/jp/data/jpModifierPatches";
 export const JP_GEOGRAPHY: CountryGeography = {
   continent: JP_CONTINENT,
   isoNumeric: JP_ISO_NUMERIC,
-  unMemberSince: 1956,
-  worldRegion: "asia",
+  unMemberSince: JP_UN_MEMBER_SINCE,
+  worldRegion: JP_WORLD_REGION,
   nppCapitalState: "KAN",
   nonPartyIndependentBias: 1.5,
   adjacency: JP_ADJACENCY_MAP,

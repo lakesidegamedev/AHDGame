@@ -15,6 +15,11 @@ import { freezeRussianDumaElectorate } from "./rules/assemblyElectorate";
 import { planRussianDumaBallot } from "./rules/assemblySchedule";
 import { RU_1991_ECONOMIC_REGION_POPULATION } from "./data/ruPopulation1991";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export async function materializeRussianDumaElectionOpening(input: {
   db: Db;
@@ -39,7 +44,7 @@ export async function materializeRussianDumaElectionOpening(input: {
     preIterationTurns: game.preIterationTurns,
   };
   if (ru1993LegislatureStage(calendarTurn(turn, clock)) === "congress") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -61,7 +66,7 @@ export async function materializeRussianDumaElectionOpening(input: {
     )
   )
     return null;
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   if (country.ruFirstDumaElectionCohortId) {
     const existing = await elections
       .find(
@@ -130,15 +135,10 @@ export async function materializeRussianDumaElectionOpening(input: {
     { session, projection: { _id: 1 } }
   );
   if (conflict) throw new Error("An unresolved Russian Duma ballot already exists");
-  const regions = await db
-    .collection<State>("states")
-    .find(
-      { countryId: "RU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+  const regions = await statesCollection(db)
+    .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "RU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   if (new Set(pools.map((row) => row.stateId)).size !== pools.length)

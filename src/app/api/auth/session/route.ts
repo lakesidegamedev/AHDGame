@@ -10,6 +10,7 @@ import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { getDb } from "@/lib/mongodb";
 import type { User } from "@/lib/db/types";
 import { errorResponse, statusResponse } from "@/lib/api/errors";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const claimsSchema = z.object({
   userId: z.string().regex(/^[a-fA-F0-9]{24}$/),
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
 
     // Bypass the app's user cache: bans and revocation must be current here.
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne(
+    const user = await usersCollection(db).findOne(
       { _id: new ObjectId(userId) },
       {
         projection: {

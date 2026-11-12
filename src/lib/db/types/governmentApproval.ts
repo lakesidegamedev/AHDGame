@@ -45,6 +45,8 @@ export interface GovernmentApproval {
   headOfGovernmentSinceTurn?: number | null;
   /** Durable idempotency witnesses for funded country-event effect replay. */
   appliedEventEffects?: string[];
+  /** Crisis approval writes already applied here, so a repeated write is a no-op. */
+  appliedCrisisEffects?: string[];
   /** Turn-by-turn history (most recent last, capped at 20 entries) */
   history: Array<{
     turn: number;
@@ -53,14 +55,12 @@ export interface GovernmentApproval {
   }>;
   /**
    * The war block's applied total as of the last snapshot: the sum of the war
-   * chips, nothing more. No longer a damped quantity in its own right — every
-   * term is now either a slow integrator or bounded and recomputed, so the block
-   * has nothing left that can jump.
+   * chips, nothing more. Every term is a slow integrator or bounded and
+   * recomputed, so the block has nothing that can jump.
    *
-   * Written for diagnostics and read by nothing. The snapshot decides when a
-   * non-playable belligerent's document can be released from `warExhaustion`
-   * instead: this total rounds to a tenth for display, so it reads zero while a
-   * real residue is still healing.
+   * Diagnostics only, read by nothing. Snapshot release of a non-playable
+   * belligerent's document keys off `warExhaustion` instead: this total rounds
+   * to a tenth for display and reads zero while residue is still healing.
    */
   warApprovalTotal?: number;
   /**

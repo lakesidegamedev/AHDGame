@@ -3,9 +3,9 @@ import {
   buildGranularElectorateSubstrate,
   type GranularSubstrateInput,
 } from "@/lib/demographics/granularElectorate";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { distributeVotesBySwingFlow } from "@/lib/electionEngine/voteDistributionSwingFlow";
-import type { EnrichedCandidate } from "@/lib/electionEngine/types";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import { distributeVotesBySwingFlow } from "@/lib/elections/engine/voteDistributionSwingFlow";
+import type { EnrichedCandidate } from "@/lib/elections/engine/types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { planAdPurchase } from "./rules";
 
@@ -32,10 +32,8 @@ const input: GranularSubstrateInput = {
     _id: "PA",
     countryId: "US",
     categoryWeights: {},
-    groups: {},
     lastUpdated: new Date(0),
   },
-  categories: [],
   enriched: [candidate("A"), candidate("B")],
 };
 const ads = planAdPurchase([], { stateId: "PA", dimension: "race", bucket: "white" }, 10, 1)!;
@@ -49,8 +47,7 @@ function run(data: GranularSubstrateInput, general: boolean) {
     substrate.totalPool,
     substrate.totalPool,
     input.statePopulation,
-    substrate.demographics,
-    substrate.categories,
+    substrate.electorate,
     new Map(),
     { isGeneralElection: general, liveTurnouts: substrate.liveTurnouts, votingSystem: "rcv" }
   );

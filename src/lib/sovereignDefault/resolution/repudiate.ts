@@ -8,7 +8,6 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bond } from "@/lib/db/types/bond";
 import type { FederalBudget, SovereignCrisisState } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -32,6 +31,9 @@ import {
   REPUDIATE_GDP_PENALTY,
   REPUDIATE_GDP_PENALTY_TURNS,
 } from "../constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 export interface RepudiateResolutionInput {
   countryCode: CountryId;
@@ -62,7 +64,7 @@ export async function applyRepudiateResolution(
   const { countryCode, currentTurn, realtimeMs, decisionId } = input;
 
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return { ok: false, reason: "no-budget" };
 
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
@@ -77,8 +79,7 @@ export async function applyRepudiateResolution(
   // Cascade: load the bonds we just flipped and write down their holders.
   // Filter on `defaultedAtTurn: currentTurn` so we only see this batch, never
   // historic defaults from prior crises.
-  const justDefaultedBonds = await db
-    .collection<Bond>("bonds")
+  const justDefaultedBonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       countryId: countryCode,
@@ -98,8 +99,7 @@ export async function applyRepudiateResolution(
   // ledger (zero once every active bond is defaulted). Treasury cash is a
   // separate position and stays untouched. Reading the ledger back keeps
   // this a pure function of bond state, so crash/retry replay converges.
-  const postDefaultBonds = await db
-    .collection<Bond>("bonds")
+  const postDefaultBonds = await bondsCollection(db)
     .find(
       { issuerType: "sovereign", countryId: countryCode, matured: false, defaulted: false },
       // The outstanding helper re-checks the query-filtered fields, so they
@@ -146,9 +146,7 @@ export async function applyRepudiateResolution(
     debtToGdpRatio: terms.debtToGdpRatio,
   };
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: update });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: update });
 
   if (!input.skipDecisionUpdate) {
     const decisionUpdate: Partial<SovereignCrisisDecision> = {
@@ -158,9 +156,10 @@ export async function applyRepudiateResolution(
       resolvedAt: new Date(realtimeMs),
       resolvedReason: "Sovereign debt repudiated (phase 6 auto-ratify)",
     };
-    await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne({ _id: decisionId }, { $set: decisionUpdate });
+    await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decisionId },
+      { $set: decisionUpdate }
+    );
   }
 
   await emitRepudiatedNews(countryCode, currentTurn, bondsAffected);
@@ -168,9 +167,7 @@ export async function applyRepudiateResolution(
   await emitMassCascadeAlert(db, countryCode, cascadeResult.totalCorpsInsolvent, currentTurn);
 
   // Phase 11b: executive personal political impact (Repudiate is the harshest).
-  const decision = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-    .findOne({ _id: decisionId });
+  const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "repudiate");
 
   // Phase 11b: parliamentary countries auto-trigger a no-confidence vote

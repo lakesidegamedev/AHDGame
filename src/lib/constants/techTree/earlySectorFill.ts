@@ -1,11 +1,7 @@
 /**
- * Early-era sector-lane fill (slots 3–9) for decades 1940–1970.
- *
- * Base SECTOR content historically only authored slots 1–2 for these decades,
- * so the Tech tab drew a binary fork with an empty right branch ("Sector is not
- * fully shown"). These fills restore parity with the Corporate lane's 9-slot
- * topology without rewriting the already-shipped slot 1–2 names.
- *
+ * Early-era sector-lane fill (slots 3-9) for decades 1940-1970.
+ * Base SECTOR content only authored slots 1-2, leaving an empty right branch.
+ * These fills restore parity with the Corporate lane's 9-slot topology.
  * Wired in by buildTreeForSector via SECTOR_EARLY_FILL.
  */
 import type { OperatingSectorType } from "../corporations";

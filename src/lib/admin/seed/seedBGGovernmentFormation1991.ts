@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { getCountryConfig } from "@/lib/constants/countries";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** Open the 1991 Bulgarian Grand National Assembly formation cycle. */
 export async function seedBGGovernmentFormation1991(
@@ -33,12 +34,10 @@ export async function seedBGGovernmentFormation1991(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .updateOne(
-      { _id: "BG" },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: "BG" },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   log("Seeded BG 1991 government formation document (pending, 400 seats)");
 }

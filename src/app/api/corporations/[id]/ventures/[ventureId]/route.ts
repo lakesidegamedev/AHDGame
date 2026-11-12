@@ -10,8 +10,9 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { applyEventChoice, clampFundingPerTurn } from "@/lib/products/venture/engine";
 import { settleCancelledVentureReceipt } from "@/lib/products/venture/refund";
-import { PRODUCT_VENTURES, ventureDocument } from "@/lib/products/venture/store";
+import { ventureDocument } from "@/lib/products/venture/store";
 import type { ProductVenture } from "@/lib/products/venture/types";
+import { productVenturesCollection } from "@/lib/db/repositories/productVentures";
 
 interface RouteParams {
   params: Promise<{ id: string; ventureId: string }>;
@@ -53,7 +54,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const denied = requireCeo(corporation, auth.user.userId);
     if (denied) return denied;
 
-    const collection = db.collection<ProductVenture>(PRODUCT_VENTURES);
+    const collection = productVenturesCollection<ProductVenture>(db);
     const venture = await collection.findOne({
       _id: ventureId,
       corporationId: corporation._id.toString(),

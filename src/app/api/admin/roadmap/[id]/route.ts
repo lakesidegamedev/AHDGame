@@ -5,6 +5,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, badRequest, notFound } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
+import { roadmapItemsCollection } from "@/lib/db/repositories/roadmapItems";
+import type { Document } from "mongodb";
 
 const updateRoadmapItemSchema = z.object({
   title: z.string().optional(),
@@ -76,7 +78,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (Object.keys(update).length > 0) op.$set = update;
     if (Object.keys(unset).length > 0) op.$unset = unset;
 
-    const result = await db.collection("roadmapItems").updateOne({ _id: new ObjectId(id) }, op);
+    const result = await roadmapItemsCollection<Document>(db).updateOne(
+      { _id: new ObjectId(id) },
+      op
+    );
 
     if (result.matchedCount === 0) {
       return NextResponse.json(notFound("Item not found").toJson(), { status: 404 });
@@ -102,7 +107,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     const db = await getDb();
-    const result = await db.collection("roadmapItems").deleteOne({ _id: new ObjectId(id) });
+    const result = await roadmapItemsCollection<Document>(db).deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(notFound("Item not found").toJson(), { status: 404 });

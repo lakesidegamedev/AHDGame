@@ -2,6 +2,10 @@ import { ObjectId, type Db } from "mongodb";
 import { badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { isCampaignManagerUser, isCampaignNomineeUser } from "@/lib/campaigns/access";
 import type { Campaign, Character, ElectionCandidate } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 export type PresenceCampaign = Pick<
   Campaign,
@@ -46,7 +50,7 @@ export async function resolvePresenceSubject(
   const { campaignId, userId, activeCharacterId } = params;
   if (!ObjectId.isValid(campaignId)) throw badRequest("Invalid campaign id");
 
-  const campaign = await db.collection<Campaign>("campaigns").findOne(
+  const campaign = await campaignsCollection(db).findOne(
     { _id: new ObjectId(campaignId) },
     {
       projection: {
@@ -79,24 +83,20 @@ export async function resolvePresenceSubject(
     throw badRequest("Campaign Presence is not available for this ticket.");
   }
 
-  const candidateRow = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .findOne(
-      { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
-      { projection: { campaignSuspended: 1 } }
-    );
+  const candidateRow = await electionCandidatesCollection(db).findOne(
+    { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
+    { projection: { campaignSuspended: 1 } }
+  );
   if (candidateRow?.campaignSuspended) {
     throw badRequest("This campaign is suspended. Management actions are disabled.");
   }
 
-  const candidate = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: campaign.candidateId },
-      { projection: { countryId: 1, party: 1, homeState: 1 } }
-    );
+  const candidate = await charactersCollection(db).findOne(
+    { _id: campaign.candidateId },
+    { projection: { countryId: 1, party: 1, homeState: 1 } }
+  );
   if (!candidate) throw notFound("Candidate not found");
-  if (candidate.countryId !== "US") {
+  if (!countryHasFeature("usLib", candidate.countryId)) {
     throw forbidden("Campaign Presence is currently a US-only feature");
   }
 

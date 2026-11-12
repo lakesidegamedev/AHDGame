@@ -6,6 +6,8 @@ import {
   resolveAltScoringConfig,
   type AltSignalWeights,
 } from "./config";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { altClustersCollection } from "@/lib/db/repositories/altClusters";
 
 /**
  * Learning loop (forensics-v2 Wave 2): turn moderator dispositions
@@ -208,16 +210,13 @@ function buildSuggestion(
  */
 export async function computeTuningSuggestions(db: Db): Promise<TuningReport> {
   const [clusters, gameConfig] = await Promise.all([
-    db
-      .collection<AltCluster>("altClusters")
+    altClustersCollection(db)
       .find(
         { status: { $in: ["confirmed", "dismissed"] as AltClusterStatus[] } },
         { projection: { status: 1, signalSummary: 1 } }
       )
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
   ]);
 
   const { weights } = resolveAltScoringConfig(gameConfig?.altScoring);

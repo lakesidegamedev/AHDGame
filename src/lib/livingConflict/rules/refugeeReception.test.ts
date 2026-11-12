@@ -182,11 +182,20 @@ describe("enacted asylum authorization and service obligations", () => {
   });
   it("a closed law moves nobody and creates no service obligation", () => {
     const authorization = refugeeAdmissionAuthorization([
-      { legislationTypeId: "uk_immigration_asylum", policyOptionIndex: 6, enactedAt: 1 },
+      { legislationTypeId: "uk.sec.nationalityMigration", policyOptionIndex: 0, enactedAt: 1 },
     ]);
     expect(
       planRefugeeReceptions([order({ authorization })], regions(), 8, "world").results[0]
     ).toMatchObject({ movedPeople: 0, annualServiceCost: 0, reason: "closed-by-law" });
+  });
+  it("reads the five-level immigration laws from closed to open", () => {
+    const at = (policyOptionIndex: number) =>
+      refugeeAdmissionAuthorization([
+        { legislationTypeId: "us.sec.immigrationNationality", policyOptionIndex, enactedAt: 1 },
+      ]).admissionMultiplier;
+    expect(at(0)).toBe(0);
+    expect(at(4)).toBe(1);
+    expect(() => at(5)).toThrow("valid enacted option");
   });
   it("does not treat an unrelated law as border permission and rejects unknown asylum options", () => {
     expect(

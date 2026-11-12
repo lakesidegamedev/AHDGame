@@ -43,10 +43,9 @@ export interface NPP {
   countryId?: CountryId;
   name: string;
   /**
-   * Calendar birth year. Stamped for historically-seeded NPPs (real age at the
-   * preset's starting year) and generated for runtime replacements. Absent on
-   * legacy rows, which are exempt from age-based mortality until healed.
-   * Age in game years = gameState.currentYear - birthYear.
+   * Calendar birth year. Absent on legacy rows, which are exempt from
+   * age-based mortality until healed. Age in game years =
+   * gameState.currentYear - birthYear.
    */
   birthYear?: number | null;
   gender?: NPPGender;
@@ -75,6 +74,16 @@ export interface NPP {
    * from every other creation path (runtime generation, admin spawn).
    */
   seededForOfficeType?: string;
+  /**
+   * Executive terms counted toward the country's `executiveTermLimit`, keyed
+   * by country. Seeded from a roster's `priorExecutiveTerms` for a real
+   * incumbent already in a later term, and incremented each time the NPP is
+   * elected to the executive (founding and acting terms excluded, as for
+   * players). Absent = no terms served.
+   */
+  executiveTermsServed?: Partial<Record<CountryId, number>>;
+  /** Election whose win last incremented `executiveTermsServed` (replay guard). */
+  lastExecutiveTermElectionId?: string;
   personality: NPPPersonality;
   generatedAt: Date;
   retiredAt: Date | null;
@@ -85,20 +94,12 @@ export interface NPP {
   electionCooldowns?: Record<string, string>;
   /**
    * Per-group approval modifiers (-100 to +100), keyed on Layer-1 census
-   * BUCKETS (`"education:no_college"`). Bill enactment writes them from the
-   * bucket affinity tables (`src/lib/bucketAffinities.ts`), and the vote path
-   * remaps them onto granular units by bucket membership.
-   *
-   * Legacy voter-archetype keys still resolve: `archetypeValuesToBuckets` fans
-   * an archetype out across its buckets and passes a bucket key through
-   * untouched, so rows written before the conversion keep working until the
-   * migration has run. The field name is the last archetype-era artefact here
-   * and goes with the rest of the vocabulary in the deletion pass.
+   * buckets (`"education:no_college"`).
    *
    * Applied as: effectiveFavorability = favorability + approval * 0.5
    * Decays 0.5% per turn toward 0.
    */
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
   createdAt: Date;
   updatedAt: Date;
   /** Sequential ID for stable URLs (e.g., /politicians/npp/1) */

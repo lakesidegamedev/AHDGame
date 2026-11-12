@@ -9,6 +9,8 @@ import {
   isUnionProsecutionBarred,
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type AcceptUnionLeadershipResult =
   { ok: true; status: 200; unionId: ObjectId } | { ok: false; status: number; error: string };
@@ -38,12 +40,10 @@ export async function acceptUnionLeadership(
     union.ownerType !== "npp" &&
     union.ownerId.toString() === character._id.toString()
   ) {
-    await db
-      .collection<Union>("unions")
-      .updateOne(
-        { _id: union._id },
-        { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
-      );
+    await unionsCollection(db).updateOne(
+      { _id: union._id },
+      { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
+    );
     return { ok: true, status: 200, unionId: union._id };
   }
   if (
@@ -70,7 +70,7 @@ export async function acceptUnionLeadership(
 
   async function install(session?: ClientSession): Promise<void> {
     const opts = session ? { session } : {};
-    const unionClaim = await db.collection<Union>("unions").updateOne(
+    const unionClaim = await unionsCollection(db).updateOne(
       { _id: union._id, pendingLeaderCharacterId: character._id },
       {
         $set: {
@@ -84,7 +84,7 @@ export async function acceptUnionLeadership(
     );
     if (unionClaim.modifiedCount === 0) throw new Error("OFFER_GONE");
 
-    const charClaim = await db.collection<Character>("characters").updateOne(
+    const charClaim = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         $or: [
@@ -99,13 +99,11 @@ export async function acceptUnionLeadership(
     if (charClaim.modifiedCount === 0) throw new Error("CHARACTER_ALREADY_LEADING");
 
     if (previousPlayerOwnerId && previousPlayerOwnerId.toString() !== character._id.toString()) {
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: previousPlayerOwnerId, unionLeaderOf: union._id },
-          { $set: { unionLeaderOf: null, updatedAt: now } },
-          opts
-        );
+      await charactersCollection(db).updateOne(
+        { _id: previousPlayerOwnerId, unionLeaderOf: union._id },
+        { $set: { unionLeaderOf: null, updatedAt: now } },
+        opts
+      );
     }
   }
 
@@ -126,19 +124,17 @@ export async function acceptUnionLeadership(
               pendingLeaderCharacterId: character._id,
             };
             if (union.ownerType) restore.ownerType = union.ownerType;
-            await db.collection<Union>("unions").updateOne(
+            await unionsCollection(db).updateOne(
               { _id: union._id, ownerId: character._id },
               {
                 $set: restore,
                 ...(union.ownerType ? {} : { $unset: { ownerType: "" } }),
               }
             );
-            await db
-              .collection<Character>("characters")
-              .updateOne(
-                { _id: character._id, unionLeaderOf: union._id },
-                { $set: { unionLeaderOf: null, updatedAt: now } }
-              );
+            await charactersCollection(db).updateOne(
+              { _id: character._id, unionLeaderOf: union._id },
+              { $set: { unionLeaderOf: null, updatedAt: now } }
+            );
           }
           throw error;
         }

@@ -23,9 +23,6 @@ vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: vi.fn().mockReturnValue({ ok: true }),
   rateLimitResponse: vi.fn(),
 }));
-vi.mock("@/lib/corporations/techTree/featureFlag", () => ({
-  isSectorTechTreesEnabled: vi.fn().mockResolvedValue(false),
-}));
 vi.mock("@/lib/corporations/capexTxLog", () => ({
   emitBuildCapexTx: vi.fn().mockResolvedValue(undefined),
 }));

@@ -13,21 +13,19 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation — EDUCATION category, 240 turns.
  *
- * Law: "Federal Education Investment Act" (us_federal_education_funding), the
+ * Law: Ireland's education funding law (ie_education_funding), the
  * highest-investment option (effectDirection +1). A funding law works through the
  * education BUDGET (budgetCategory: education) — the outcome nodes read
  * `spending.education` directly — so enacting it is modelled as the spend rising from
- * today's realistic US federal baseline ($806/capita) to that baseline plus the
- * bill's own top-option per-capita cost ($1303, its "Universal Public Education
- * Expansion Act" option — src/lib/seeds/reference/legislationTypes.ts
- * us_federal_education_funding), i.e. $806 -> $2109/capita. See the
+ * a realistic national baseline ($806/capita) to that baseline plus a top-option
+ * per-capita cost of $1303, i.e. $806 -> $2109/capita. See the
  * EDU_SPEND_HALF_SAT comment in ./education for how these figures were derived.
  * Control (no law, baseline spend) runs beside it; divergence isolates the law.
  */
 const TURNS = 240;
 const TPY = 48;
 
-const law = legislationTypes.find((l) => l._id === "us_federal_education_funding");
+const law = legislationTypes.find((l) => l._id === "ie_education_funding");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -50,9 +48,9 @@ const HIGHER_BETTER: NodeId[] = [
   "education.gcseAttainment",
 ];
 
-describe("legislation sim — education (Federal Education Investment Act, 240 turns)", () => {
+describe("legislation sim: education (education funding law, 240 turns)", () => {
   it("the seed law and its top-investment option exist", () => {
-    expect(law, "us_federal_education_funding present").toBeTruthy();
+    expect(law, "ie_education_funding present").toBeTruthy();
     expect(invest, "an investment (effectDirection +1) option exists").toBeTruthy();
   });
 
@@ -77,12 +75,7 @@ describe("legislation sim — education (Federal Education Investment Act, 240 t
 
   it("prints the 240-turn trajectory report", () => {
     console.log(
-      reportTrajectory(
-        "Education — Federal Education Investment Act",
-        HIGHER_BETTER,
-        control,
-        enacted
-      )
+      reportTrajectory("Education — education funding law", HIGHER_BETTER, control, enacted)
     );
     expect(true).toBe(true);
   });

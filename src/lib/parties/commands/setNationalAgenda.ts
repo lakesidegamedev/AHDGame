@@ -2,6 +2,8 @@ import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
 import type { PartyAgenda, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyAgendasCollection } from "@/lib/db/repositories/partyAgendas";
 
 /**
  * Chair-only command to set the National Agenda for a party.
@@ -36,14 +38,14 @@ export async function setNationalAgenda(
   const headline = input.headline.trim();
   if (!headline) return { ok: false, reason: "blank-headline" };
 
-  const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+  const party = await politicalPartiesCollection(db).findOne({
     countryId: input.countryId,
     sequentialId: Number(input.partyId),
   });
   if (!party) return { ok: false, reason: "missing-party" };
 
   // Expire any active agenda for this party + iteration.
-  await db.collection<PartyAgenda>("partyAgendas").updateMany(
+  await partyAgendasCollection(db).updateMany(
     {
       countryId: input.countryId,
       partyId: input.partyId,
@@ -63,7 +65,7 @@ export async function setNationalAgenda(
     setBy: input.setBy,
     setAtTurn: input.setAtTurn,
   };
-  await db.collection<PartyAgenda>("partyAgendas").insertOne(newAgenda);
+  await partyAgendasCollection(db).insertOne(newAgenda);
 
   return { ok: true, agendaId: newAgenda._id };
 }

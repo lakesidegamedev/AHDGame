@@ -9,12 +9,15 @@ import { sendCountryGameEvent, DISCORD_COLORS } from "@/lib/discordWebhooks";
 import { leadershipRoleLabel } from "@/lib/congress/leadership/electionRoleMap";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import type {
-  Character,
   NpcscChairElection,
   NpcscChairNomination,
   CongressLeader,
   PoliticalParty,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { npcscChairNominationsCollection } from "@/lib/db/repositories/npcscChairNominations";
+import { npcscChairElectionsCollection } from "@/lib/db/repositories/npcscChairElections";
 
 /**
  * Resolve the open NPC Standing Committee Chairman election. Mirrors
@@ -31,9 +34,7 @@ export async function resolveNpcscChairElection(
   _partyMap: Map<string, PoliticalParty>,
   force = false
 ): Promise<boolean> {
-  const election = await db
-    .collection<NpcscChairElection>("npcscChairElections")
-    .findOne({ _id: "current" });
+  const election = await npcscChairElectionsCollection(db).findOne({ _id: "current" });
   if (!election || election.status !== "voting") return false;
   if (!force) {
     const gameTime = await getGameTime();
@@ -42,31 +43,30 @@ export async function resolveNpcscChairElection(
   }
 
   const now = new Date();
-  const candidacies = await db
-    .collection<NpcscChairNomination>("npcscChairNominations")
+  const candidacies = await npcscChairNominationsCollection(db)
     .find({ status: { $in: ["open", "voting"] } })
     .sort({ votesFor: -1 })
     .toArray();
 
   if (candidacies.length === 0) {
     await vacateCongressLeadershipRole(db, "chair_npcsc", now);
-    await db
-      .collection<NpcscChairElection>("npcscChairElections")
-      .updateOne({ _id: "current" }, { $set: { status: "closed", updatedAt: now } });
+    await npcscChairElectionsCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { status: "closed", updatedAt: now } }
+    );
     return true;
   }
 
   const winner = candidacies[0];
-  await db
-    .collection<NpcscChairNomination>("npcscChairNominations")
-    .updateOne({ _id: winner._id }, { $set: { status: "confirmed", updatedAt: now } });
-  await db
-    .collection<NpcscChairNomination>("npcscChairNominations")
-    .updateMany(
-      { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
-  await db.collection<CongressLeader>("congressLeaders").updateOne(
+  await npcscChairNominationsCollection(db).updateOne(
+    { _id: winner._id },
+    { $set: { status: "confirmed", updatedAt: now } }
+  );
+  await npcscChairNominationsCollection(db).updateMany(
+    { _id: { $ne: winner._id }, status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
+  await congressLeadersCollection(db).updateOne(
     { role: "chair_npcsc" },
     {
       $set: {
@@ -96,9 +96,10 @@ export async function resolveNpcscChairElection(
   if (claimed) {
     const roleLabel = leadershipRoleLabel("chair_npcsc");
     const nomineeAvatarUrl = (
-      await db
-        .collection<Character>("characters")
-        .findOne({ _id: winner.nomineeId }, { projection: { avatarUrl: 1 } })
+      await charactersCollection(db).findOne(
+        { _id: winner.nomineeId },
+        { projection: { avatarUrl: 1 } }
+      )
     )?.avatarUrl;
     sendCountryGameEvent("CN", {
       title: `Leadership Election Result — ${roleLabel}`,

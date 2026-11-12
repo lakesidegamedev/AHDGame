@@ -8,6 +8,7 @@ import {
   resetSystemVersionsFrom,
 } from "@/lib/resetVersions/rules";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const LIVE_DEMOGRAPHICS_V2_MIGRATION_ID = "2026-10-07-activate-live-demographics-v2";
 
@@ -62,7 +63,7 @@ function alreadyActivated(state: ActivationState): boolean {
 }
 
 async function activateLiveDemographicsV2(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const collection = db.collection<GameState>("gameState");
+  const collection = gameStateCollection(db);
   const state = await collection.findOne({ _id: "current" }, { projection: ACTIVATION_PROJECTION });
   assertActivatableWorld(state);
 

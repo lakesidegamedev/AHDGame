@@ -1,18 +1,15 @@
 /**
  * Households spend from income (gameConfig.producerHouseholdIncomeSpendStage).
  *
- * A household basket budgets the wallet's spend share of all the cash it holds.
- * Cash it could not spend because shelves were empty stays in the wallet and is
- * budgeted again next turn, on top of new wages, so in a shortage the orders
- * snowball. On the live world (turn 678) households held 569M, earned 127M in
- * wages that turn, tried to spend 512M and could not spend 377M: orders read
- * about four times real spending power, every shortage looked four times worse
- * than it was, and the unspent pile kept growing.
+ * If a household basket budgets the spend share of ALL cash held, unspent cash
+ * from empty shelves stays in the wallet and is budgeted again next turn on
+ * top of new wages, so orders snowball during a shortage and read far above
+ * real spending power.
  *
  * Here the budget is the spend share of this turn's wages plus a draw share of
- * the rest of the wallet. Money that arrives between turns (benefits and other
- * transfers) sits in the rest and is drawn down at the draw share, so savings
- * settle where the draw matches that inflow instead of growing without bound.
+ * the rest of the wallet. Between-turn inflows (benefits, transfers) sit in the
+ * rest and are drawn down at the draw share, so savings settle where the draw
+ * matches that inflow instead of growing without bound.
  *
  * The result is returned as the cash figure the basket rule multiplies by its
  * spend share, so the basket and demand-curve paths need no change.

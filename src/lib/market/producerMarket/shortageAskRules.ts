@@ -1,24 +1,17 @@
 /**
  * Shortage ask step (gameConfig.producerShortageAskStage).
  *
- * An automatic seller posts last turn's clearing price for its lane, and the
- * clearing is the average of what traded. Nothing in that loop can raise a
- * price: one cheap seller pulls the average down, every automatic seller
- * follows it next turn, and the lane stays there even when buyers go short.
- * On the live world (turn 673) iron cleared at 0.21x its reference with 34%
- * of orders unfilled, natural gas at 0.15x with half unfilled, and most plants
- * in both books cost more to run than the price, so the loss brake kept
- * cutting the supply the buyers were missing.
+ * Automatic sellers post last turn's clearing price, which is the average of what
+ * traded. That loop cannot raise a price: one cheap seller drags the average down
+ * and every automatic seller follows, leaving a lane short even when buyers go
+ * unfilled.
  *
- * Here a seller that sold out last turn, in a lane where buyers asked for more
- * than they got, asks one step above the clearing. The step grows with the
- * unfilled share and is capped per turn, and the ask never passes the price
- * ceiling (reference x maximum multiplier). A lane that clears in full gets no
- * step, so the price holds; a seller with stock left over gets no step, so a
- * raise the book rejected is not repeated, and the stock-cover markdown still
- * applies to it.
+ * Here a seller that sold out last turn in a lane with unfilled demand asks one
+ * step above the clearing. The step grows with unfilled share, is capped per turn,
+ * and never passes the price ceiling. A fully-cleared lane gets no step, and a
+ * seller with leftover stock gets no step so rejected raises are not repeated.
  *
- * Pure: last turn's clearing, reference, pressure and sell-out in, an ask out.
+ * Pure: last clearing, reference, pressure and sell-out in, an ask out.
  */
 
 /** Default largest raise in one turn. */

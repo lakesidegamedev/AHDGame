@@ -16,6 +16,15 @@ import {
   type TutorialChapterId,
   type TutorialPlan,
 } from "@/lib/onboarding/tutorialPlan";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 /**
  * Canonical new-player onboarding checklist.
@@ -303,7 +312,7 @@ export function deriveOnboardingChecklist(
 export async function hasVotedOnAnyBill(db: Db, characterId: ObjectId): Promise<boolean> {
   const key = characterId.toString();
   const [national, state] = await Promise.all([
-    db.collection("bills").countDocuments(
+    billsCollection<Document>(db).countDocuments(
       {
         $or: [
           { [`votes.${key}`]: { $exists: true } },
@@ -312,9 +321,10 @@ export async function hasVotedOnAnyBill(db: Db, characterId: ObjectId): Promise<
       },
       { limit: 1 }
     ),
-    db
-      .collection("stateBills")
-      .countDocuments({ [`votes.${key}`]: { $exists: true } }, { limit: 1 }),
+    stateBillsCollection<Document>(db).countDocuments(
+      { [`votes.${key}`]: { $exists: true } },
+      { limit: 1 }
+    ),
   ]);
   return national > 0 || state > 0;
 }
@@ -335,31 +345,26 @@ export async function loadOnboardingSignals(
     organizedUnion,
   ] = await Promise.all([
     hasVotedOnAnyBill(db, characterId),
-    db
-      .collection("electionCandidates")
+    electionCandidatesCollection<Document>(db)
       .countDocuments({ characterId }, { limit: 1 })
       .then((n) => n > 0),
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .countDocuments(
         { shareholders: { $elemMatch: { characterId, shares: { $gt: 0 } } } },
         { limit: 1 }
       )
       .then((n) => n > 0),
-    db
-      .collection("indexFundPositions")
+    indexFundPositionsCollection<Document>(db)
       .countDocuments({ holderKind: "character", characterId, units: { $gt: 0 } }, { limit: 1 })
       .then((n) => n > 0),
-    db
-      .collection("actionLogs")
+    actionLogsCollection<Document>(db)
       .countDocuments({ characterId, actionType: "campaign" }, { limit: 1 })
       .then((n) => n > 0),
     // Player-run seat only. `ceoType` defaults to "character" when absent
     // (see Corporation type); founding historically omitted the field, so
     // treat missing the same as "character". Exclude imperial / NPP seats.
     // Same $or shape as allocate-stats' corpsOwned query.
-    db
-      .collection("corporations")
+    corporationsCollection(db)
       .countDocuments(
         {
           ceoId: characterId,
@@ -368,12 +373,10 @@ export async function loadOnboardingSignals(
         { limit: 1 }
       )
       .then((n) => n > 0),
-    db
-      .collection("unions")
+    unionsCollection<Document>(db)
       .countDocuments({ ownerId: characterId }, { limit: 1 })
       .then((n) => n > 0),
-    db
-      .collection("unionOrganizers")
+    unionOrganizersCollection<Document>(db)
       .countDocuments({ characterId }, { limit: 1 })
       .then((n) => n > 0),
   ]);

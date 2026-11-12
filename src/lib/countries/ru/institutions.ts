@@ -16,12 +16,9 @@ import {
 /**
  * Russia's institutions.
  *
- * ⚠️ NO `legislativeProcess`, AND THAT IS THE FINDING THIS COUNTRY BROUGHT.
- * `LEGISLATIVE_PROCESS` holds six keys -- exactly the six countries converted
- * before this one -- and Russia is not among them; readers fall through to
- * `DEFAULT_PROCESS`. The field was required on the contract only because the
- * first cohort all happened to have it. Writing the default in here would say
- * Russia authored a process it never did.
+ * Omits `legislativeProcess` on purpose: Russia has no authored process, so
+ * readers fall through to `DEFAULT_PROCESS`. Writing the default in here
+ * would claim a process Russia never authored.
  */
 export const RU_INSTITUTIONS: CountryInstitutions = {
   config: RU_CONFIG,

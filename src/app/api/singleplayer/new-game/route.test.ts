@@ -22,6 +22,8 @@ vi.mock("@/lib/admin/resetAndBootstrapGameWorld", () => ({
   resetAndBootstrapGameWorld: mocks.resetAndBootstrapGameWorld,
 }));
 
+vi.mock("@/lib/seeds/contract/checkSeedContract", () => ({ checkSeedContract: () => [] }));
+
 import { POST } from "./route";
 
 const request = (body: unknown) =>

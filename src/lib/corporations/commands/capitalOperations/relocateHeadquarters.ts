@@ -13,7 +13,6 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { getGameState } from "@/lib/gameState";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CountryId } from "@/lib/constants/countries";
 import { commandEconomyRelocationBlock } from "@/lib/corporations/relocationCommandEconomyGate";
@@ -53,6 +52,13 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import type { Document } from "mongodb";
 
 const relocateSchema = z.object({
   targetStateId: z.string().min(1, "Target state/region ID required"),
@@ -119,8 +125,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
       );
     }
 
-    const propertySectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const propertySectors = await corporateSectorsCollection(db)
       .find({ corporationId: corporation._id })
       .toArray();
 
@@ -136,9 +141,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
 
     const resolvedTargetCountryId = (targetCountryId ??
       corporation.countryId) as typeof corporation.countryId;
-    const targetState = await db
-      .collection<State>("states")
-      .findOne({ _id: normalizedTarget, countryId: resolvedTargetCountryId });
+    const targetState = await statesCollection(db).findOne({
+      _id: normalizedTarget,
+      countryId: resolvedTargetCountryId,
+    });
     if (!targetState) {
       return errorResponse(400, "Invalid target state or region");
     }
@@ -147,7 +153,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     }
 
     if (!corporation.isPrivate && targetState.countryId) {
-      const passedVote = await db.collection("corporationVotes").findOne({
+      const passedVote = await corporationVotesCollection<Document>(db).findOne({
         corporationId: corporation._id,
         type: "relocation",
         status: "passed",
@@ -177,9 +183,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
 
     let corpCountryId: CountryId | undefined = corporation.countryId;
     if (!corpCountryId && corporation.headquartersState) {
-      const currentHq = await db
-        .collection<State>("states")
-        .findOne({ _id: corporation.headquartersState }, { projection: { countryId: 1 } });
+      const currentHq = await statesCollection(db).findOne(
+        { _id: corporation.headquartersState },
+        { projection: { countryId: 1 } }
+      );
       corpCountryId = currentHq?.countryId;
     }
     if (!corpCountryId) {
@@ -231,12 +238,14 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
 
     const isImperialCeo = corporation.ceoType === "imperial";
     const ceoChar = isImperialCeo
-      ? await db
-          .collection<ImperialCharacter>("imperialCharacters")
-          .findOne({ _id: corporation.ceoId }, { projection: { userId: 1, homeState: 1 } })
-      : await db
-          .collection<Character>("characters")
-          .findOne({ _id: corporation.ceoId }, { projection: { userId: 1, homeState: 1 } });
+      ? await imperialCharactersCollection(db).findOne(
+          { _id: corporation.ceoId },
+          { projection: { userId: 1, homeState: 1 } }
+        )
+      : await charactersCollection(db).findOne(
+          { _id: corporation.ceoId },
+          { projection: { userId: 1, homeState: 1 } }
+        );
     if (!ceoChar) {
       return errorResponse(400, "CEO record not found");
     }
@@ -356,9 +365,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
       // Only refetch when conversion actually mutated the corp — skipping the
       // round trip on no-op conversions keeps same-currency moves cheap.
       if (convResult.converted) {
-        const refreshed = await db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: corporation._id });
+        const refreshed = await corporationsCollection(db).findOne({ _id: corporation._id });
         if (!refreshed) {
           return errorResponse(500, "Corporation not found after currency conversion");
         }
@@ -423,7 +430,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
           workingFxRate
         );
 
-        const updateResult = await db.collection<Corporation>("corporations").updateOne(
+        const updateResult = await corporationsCollection(db).updateOne(
           {
             _id: workingCorp._id,
             primaryUnderwritingIncomingFunding: { $exists: false },
@@ -552,9 +559,10 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
           primaryUnderwritingIncomingFunding: { $exists: false },
           bankUnderwritingFunding: { $exists: false },
         };
-        const leaseFree = await db
-          .collection<Corporation>("corporations")
-          .findOne(leaseFreeFilter, { projection: { _id: 1 }, session });
+        const leaseFree = await corporationsCollection(db).findOne(leaseFreeFilter, {
+          projection: { _id: 1 },
+          session,
+        });
         if (!leaseFree) return { status: "underwriting_busy" as const };
 
         const frozenFxByCurrency = new Map(fxByCurrency);
@@ -576,7 +584,7 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
           workingCorp,
           frozenBondLease!.nativeFxRate
         );
-        const updateResult = await db.collection<Corporation>("corporations").updateOne(
+        const updateResult = await corporationsCollection(db).updateOne(
           leaseFreeFilter,
           {
             $set: baseCorpSet,

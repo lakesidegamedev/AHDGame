@@ -1,43 +1,22 @@
 /**
  * The bank's balance sheet, separate from its holding company's.
  *
- * ## Why two fields and not one field with a rule
+ * Two balances instead of one with a rule: the corporation spends
+ * `liquidCapital`, the bank spends `bankCharter.cashReserves`. Neither can
+ * reach the other except through the two operations below, the only places
+ * the boundary is crossed and the only places the rules live.
  *
- * A chartered bank used to keep its money in `corporation.liquidCapital`, the
- * same field the corporation spends on capacity, shares, bonds and payouts.
- * One pot, two claims on it, and nothing in between. The first attempt at
- * fixing that added a reserve floor to the shared cash guard: the corporation
- * could not spend below `deposits × reserveRatio`.
- *
- * That was the wrong shape twice over. It put a banking rule inside a helper
- * used by thirty-odd unrelated callers, none of which know what a deposit is;
- * and because the engine's deposits never actually arrived as cash, the floor
- * demanded reserves that eight of the twelve live banks had never held, which
- * would have frozen their corporations out of ordinary spending on the turn it
- * shipped.
- *
- * Two balances make the problem go away rather than guarding against it. The
- * corporation spends `liquidCapital`. The bank spends `bankCharter.cashReserves`.
- * Neither can reach the other except through the two operations below, which
- * are the only places the boundary is crossed and therefore the only places the
- * rules have to live.
- *
- * ## The transfer rules are deliberately asymmetric
- *
- * Money goes IN freely and comes OUT under supervision. A shareholder putting
- * their own money at risk behind the depositors needs no permission; the same
- * shareholder taking money back out is reducing the buffer that stands between
- * a bank failure and a depositor haircut, and the recovery waterfall in
- * `insurance.ts` funds payouts from exactly this cash.
- *
- * So: injection is capped only by what the corporation has. Upstreaming is
- * capped by {@link upstreamCapacity} — only genuinely surplus reserves, only
- * from a bank the supervisor calls adequate, and never so much that the bank
- * drops below its reserve requirement.
+ * The asymmetry is deliberate. Money goes IN freely (capped only by what the
+ * corporation has): a shareholder risking their own money behind depositors
+ * needs no permission. Money comes OUT under supervision (capped by
+ * {@link upstreamCapacity}): withdrawing reduces the buffer between a bank
+ * failure and a depositor haircut, and the recovery waterfall in
+ * `insurance.ts` funds payouts from exactly this cash. Upstreaming is limited
+ * to genuinely surplus reserves, only from a bank the supervisor calls
+ * adequate, never below the reserve requirement.
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { loadBankingSnapshot } from "@/lib/banking/snapshot";
 import { decideBankCommand } from "@/lib/banking/rules/decide";
 import type { BankCommand } from "@/lib/banking/rules/boundary";
@@ -50,6 +29,7 @@ import {
   type BalanceSheetCharter,
   type BalanceSheetOptions,
 } from "@/lib/banking/balanceSheet";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type BankCashResult =
   | { ok: true; cashReserves: number; liquidCapital: number; amount: number }
@@ -89,9 +69,10 @@ async function readBankCash(
   db: Db,
   corporationId: ObjectId
 ): Promise<{ cashReserves: number; liquidCapital: number }> {
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId }, { projection: { liquidCapital: 1, bankCharter: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    { projection: { liquidCapital: 1, bankCharter: 1 } }
+  );
   return {
     cashReserves: readCashReserves(corp?.bankCharter),
     liquidCapital: corp?.liquidCapital ?? 0,

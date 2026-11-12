@@ -13,6 +13,7 @@ import type {
   CountryTariffInflationExposure,
   TurnTariffInflationExposure,
 } from "./rules/tariffInflationExposure";
+import { commoditySourcingFlowsCollection } from "@/lib/db/repositories/commoditySourcingFlows";
 
 export { countryTurnTariffInflationExposure, measuredTariffInflationRate };
 export type { CountryTariffInflationExposure, TurnTariffInflationExposure };
@@ -22,8 +23,7 @@ export async function loadTurnTariffInflationExposure(
   db: Db,
   turn: number
 ): Promise<TurnTariffInflationExposure> {
-  const rows = await db
-    .collection<CommoditySourcingDoc>("commoditySourcingFlows")
+  const rows = await commoditySourcingFlowsCollection<CommoditySourcingDoc>(db)
     .find(
       { turn },
       {

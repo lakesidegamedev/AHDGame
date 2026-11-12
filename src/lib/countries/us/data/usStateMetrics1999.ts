@@ -1,21 +1,20 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
+ * SEED INDEPENDENCE , DO NOT DERIVE FROM ANOTHER ERA.
  * Each era seed is self-contained. This file MUST NOT import and transform
  * another era's seed data. All values are authored for 1999 directly.
  * Type-only imports and same-era imports (states1999) are allowed.
  *
- * SCALE NOTE: 1999 is a *dot-com-boom, budget-surplus, pre-broadband* world.
- * Era anchors that sit far from 2019/2023:
- *   - median household income national ≈ $40,816 (≈51% of the 2023 ≈$80,610)
- *   - home broadband ≈ 1–3% of households (DIAL-UP era; broadband barely shipped)
+ * SCALE NOTE: 1999 is a dot-com-boom, budget-surplus, pre-broadband world.
+ *   - median household income ≈ $40,816 (≈51% of 2023's ≈$80,610)
+ *   - home broadband ≈ 1,3% (dial-up era)
  *   - federal budget in SURPLUS (FY1999 ≈ +1.4% of GDP)
- *   - uninsured ≈ 14%, life expectancy ≈ 76.7, HS-grad (AFGR) ≈ 71%
+ *   - uninsured ≈ 14%, life expectancy ≈ 76.7, HS-grad ≈ 71%
  *   - renewable electricity ≈ 9% (mostly hydro); carbon ≈ 20 t/capita
- *   - violent crime ≈ 523/100k (still elevated, falling from the early-90s peak)
- *   - institutional trust HIGHER and media polarization LOWER than the 2000s+
+ *   - violent crime ≈ 523/100k (falling from early-90s peak)
+ *   - institutional trust HIGHER, media polarization LOWER than 2000s+
  * `metricScoring.THRESHOLDS`/`medianIncomeThreshold` are 2019-nominal and only
  * era-scale for the "1991" prefix, so these era-true values MIS-SCORE until a
- * 1999 band is added (deferred scoring-rebalance flag — seeds first).
+ * 1999 band is added.
  */
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { states1999 } from "./usStates1999";

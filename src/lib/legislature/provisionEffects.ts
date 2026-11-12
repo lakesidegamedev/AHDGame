@@ -18,10 +18,8 @@ interface ComputeChipsParams {
 }
 
 /** Per-metric projected-effect chips expressing the DELTA vs current law.
- * Extracted from billEnrichment's inline computation so the national and
- * state bill pages stay in lockstep. The delta uses graded option intensity
- * (Bug #0962), so a same-side change of INTENSITY (16%→8% tax, Moderate→Maximum)
- * still shows chips; only a literal no-op (identical option) yields zero delta. */
+ * The delta uses graded option intensity, so a same-side change of INTENSITY
+ * still shows chips; only a literal no-op (identical option) yields zero. */
 export function computeProvisionEffectChips({
   effectTargetsWeighted,
   proposedIntensity,

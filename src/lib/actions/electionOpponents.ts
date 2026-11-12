@@ -1,28 +1,48 @@
 import { usesCampaignRules } from "@/lib/campaignTargeting/rules";
 import { getDb } from "@/lib/mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { ObjectId } from "mongodb";
-import type {
-  Character,
-  State,
-  StateDemographics,
-  StatePartyOrg,
-  Election,
-  ElectionCandidate,
-  NPP,
-} from "@/lib/db/types";
-import { computePollData, type OpponentForShare } from "@/lib/actions/pollCalculations";
+import type { Character, State, Election, ElectionCandidate, NPP } from "@/lib/db/types";
+import { buildGranularElectorateForState } from "@/lib/actions/granularPollPayload";
+import { computePollHeadline } from "@/lib/actions/granularPollPayload/rules";
+import { getGameState } from "@/lib/gameState";
+import { eraYearContextFromGameState } from "@/lib/era/context";
+import { eraForPreset } from "@/lib/seeds/presetSelector";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { clampPercentStat } from "@/lib/numeric/rules";
 import {
   getLastElectionPartyShares,
   type LastElectionPartySummary,
 } from "@/lib/actions/prevElectionPartyShares";
-import { computeLiveGroupTurnouts } from "@/lib/seeds/stateDemographics";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import {
   resolveHouseIncumbentTenures,
   resolveSingleSeatLegislativeIncumbent,
-} from "@/lib/electionEngine/singleSeatIncumbency";
+} from "@/lib/elections/engine/singleSeatIncumbency";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+
+/** A rival candidate as the poll and the opponent summary see them. */
+export interface OpponentForShare {
+  candidateId: string;
+  name?: string;
+  economicPosition: number;
+  socialPosition: number;
+  favorability: number;
+  politicalInfluence: number;
+  /** National reach used by presidential general elections. */
+  nationalInfluence?: number;
+  /** Whether the general-election NPP weight applies. */
+  isNPP?: boolean;
+  party: string;
+  /** Per-archetype modifiers when known (same as Character/NPP). */
+  bucketApprovals?: Record<string, number>;
+  /** Character infamy (0..100); omit for NPPs (yields no penalty). */
+  infamy?: number;
+}
 
 export interface ElectionOpponents {
   campaignRulesVersion?: number;
@@ -56,8 +76,7 @@ export async function getElectionOpponents(
     const charId = character._id;
 
     // Find elections in their home state that are active and in general phase
-    const elections = await db
-      .collection<Election>("elections")
+    const elections = await electionsCollection(db)
       .find({
         countryId: character.countryId,
         state: { $in: [character.homeState, character.countryId] },
@@ -88,7 +107,7 @@ export async function getElectionOpponents(
         continue;
 
       // Check if our character is a candidate
-      const myEntry = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+      const myEntry = await electionCandidatesCollection(db).findOne({
         electionId: election._id,
         characterId: charId,
         status: "active",
@@ -99,8 +118,7 @@ export async function getElectionOpponents(
       const inPrimary = !isPrimaryEnded(election, currentTurn, gameTime);
 
       // Fetch active rivals in the same contest and primary party.
-      const otherCandidates = await db
-        .collection<ElectionCandidate>("electionCandidates")
+      const otherCandidates = await electionCandidatesCollection(db)
         .find({
           electionId: election._id,
           status: "active",
@@ -143,24 +161,17 @@ export async function getElectionOpponents(
         }
       }
 
-      const [state, demographics, categories, statePartyOrgs] = await Promise.all([
-        db
-          .collection<State>("states")
-          .findOne({ _id: character.homeState, countryId: character.countryId }),
-        db
-          .collection<StateDemographics>("stateDemographics")
-          .findOne({ _id: character.homeState, countryId: character.countryId }),
-        loadDemographicCategories(db),
-        db
-          .collection<StatePartyOrg>("statePartyOrg")
-          .find({ countryId: character.countryId, stateId: character.homeState })
-          .toArray(),
-      ]);
+      const state = await statesCollection(db).findOne({
+        _id: character.homeState,
+        countryId: character.countryId,
+      });
+      if (!state) return null;
 
-      if (!state || !demographics) return null;
-
-      // Pre-fetch turnout data once (same state for all opponents)
-      const liveTurnouts = await computeLiveGroupTurnouts(state._id as string);
+      // One electorate for every opponent summary: the same Layer-1 cells the
+      // poll and the vote engines use. A world with no census model yields
+      // zeroed headline numbers rather than failing the race lookup.
+      const statePopulation = state.votingEligiblePopulation ?? state.population;
+      const electorateCells = await loadElectorateCells(state);
 
       // Pre-batch opponent lookups by type
       const nppIds = [
@@ -178,14 +189,12 @@ export async function getElectionOpponents(
 
       const [nppDocs, charDocs] = await Promise.all([
         nppIds.length > 0
-          ? db
-              .collection<NPP>("npps")
+          ? nppsCollection(db)
               .find({ _id: { $in: nppIds.map((id) => new ObjectId(id)) } })
               .toArray()
           : Promise.resolve([]),
         charIds.length > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: charIds.map((id) => new ObjectId(id)) } })
               .toArray()
           : Promise.resolve([]),
@@ -194,69 +203,50 @@ export async function getElectionOpponents(
       const charById = new Map(charDocs.map((c) => [c._id.toString(), c]));
 
       // Build opponent summaries with their own poll numbers
-      const opponents = await Promise.all(
-        otherCandidates.map(async (c) => {
-          let opponentChar: Character | null = null;
-          let opponentNPP: NPP | null = null;
+      const opponents = otherCandidates.map((c) => {
+        let opponentChar: Character | null = null;
+        let opponentNPP: NPP | null = null;
 
-          if (c.isNPP && c.nppId) {
-            opponentNPP = nppById.get(c.nppId.toString()) ?? null;
-          } else if (c.characterId) {
-            opponentChar = charById.get(c.characterId.toString()) ?? null;
-          }
+        if (c.isNPP && c.nppId) {
+          opponentNPP = nppById.get(c.nppId.toString()) ?? null;
+        } else if (c.characterId) {
+          opponentChar = charById.get(c.characterId.toString()) ?? null;
+        }
 
-          const econ = opponentChar?.policies.economic ?? opponentNPP?.policies.economic ?? 0;
-          const social = opponentChar?.policies.social ?? opponentNPP?.policies.social ?? 0;
-          const fav = opponentChar?.favorability ?? opponentNPP?.favorability ?? 50;
-          const polInf = opponentChar?.politicalInfluence ?? opponentNPP?.politicalInfluence ?? 0;
+        const econ = opponentChar?.policies.economic ?? opponentNPP?.policies.economic ?? 0;
+        const social = opponentChar?.policies.social ?? opponentNPP?.policies.social ?? 0;
+        const fav = opponentChar?.favorability ?? opponentNPP?.favorability ?? 50;
+        const polInf = opponentChar?.politicalInfluence ?? opponentNPP?.politicalInfluence ?? 0;
 
-          // Compute their estimated potential voters using same formula
-          const syntheticChar = {
-            ...character,
-            policies: { economic: econ, social },
-            favorability: fav,
-            politicalInfluence: polInf,
-            party: c.party,
-          } as Character;
+        const bucketApprovals = opponentChar?.bucketApprovals ?? opponentNPP?.bucketApprovals;
+        const nationalInfluence = opponentNPP
+          ? Math.min(100, Math.max(0, Number.isFinite(polInf) ? polInf : 10))
+          : Math.max(0, opponentChar?.nationalInfluence ?? 0);
+        // NPPs don't carry infamy; characters do. Leaving infamy undefined for
+        // NPPs yields no penalty (infamyPenaltyMultiplier(undefined) === 1.0).
+        const opponentInfamy = opponentChar?.infamy;
 
-          const pd = await computePollData(
-            syntheticChar,
-            state,
-            demographics,
-            categories,
-            statePartyOrgs,
-            undefined,
-            liveTurnouts,
-            state.votingSystem ?? "fptp"
-          );
-
-          const archetypeApprovals =
-            opponentChar?.archetypeApprovals ?? opponentNPP?.archetypeApprovals;
-          const nationalInfluence = opponentNPP
-            ? Math.min(100, Math.max(0, Number.isFinite(polInf) ? polInf : 10))
-            : Math.max(0, opponentChar?.nationalInfluence ?? 0);
-          // NPPs don't carry infamy; characters do. Leaving infamy undefined for
-          // NPPs yields no penalty (infamyPenaltyMultiplier(undefined) === 1.0).
-          const opponentInfamy = opponentChar?.infamy;
-
-          return {
-            candidateId: c._id.toString(),
-            name: c.characterName,
-            party: c.party,
-            isNPP: c.isNPP ?? false,
+        return {
+          candidateId: c._id.toString(),
+          name: c.characterName,
+          party: c.party,
+          isNPP: c.isNPP ?? false,
+          economicPosition: econ,
+          socialPosition: social,
+          favorability: fav,
+          politicalInfluence: polInf,
+          nationalInfluence,
+          ...(bucketApprovals && { bucketApprovals }),
+          ...(opponentInfamy != null && { infamy: opponentInfamy }),
+          ...computePollHeadline(electorateCells, statePopulation, {
             economicPosition: econ,
             socialPosition: social,
             favorability: fav,
-            politicalInfluence: polInf,
-            nationalInfluence,
-            ...(archetypeApprovals && { archetypeApprovals }),
-            ...(opponentInfamy != null && { infamy: opponentInfamy }),
-            overallAppeal: pd.overallAppeal,
-            totalPotentialVoters: pd.totalPotentialVoters,
-            totalEstimatedVoters: pd.totalEstimatedVoters,
-          };
-        })
-      );
+            politicalInfluence: clampPercentStat(polInf),
+            approvalBuckets: bucketApprovals ?? {},
+          }),
+        };
+      });
 
       const lastElection = await getLastElectionPartyShares(db, election);
 
@@ -279,5 +269,23 @@ export async function getElectionOpponents(
   } catch (err) {
     console.error("[getElectionOpponents]", err);
     return null;
+  }
+}
+
+async function loadElectorateCells(state: State) {
+  try {
+    const gameState = await getGameState();
+    const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
+    const eraYear = eraYearContextFromGameState(gameState);
+    return buildGranularElectorateForState({
+      countryId: state.countryId ?? "US",
+      stateId: state._id as string,
+      preset,
+      era: eraYear.year != null ? undefined : eraForPreset(preset),
+      year: eraYear.year,
+      startingYear: eraYear.startingYear,
+    }).cells;
+  } catch {
+    return [];
   }
 }

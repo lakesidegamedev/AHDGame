@@ -14,11 +14,8 @@ import { expireFinancialCrisisAusterity } from "@/lib/crises/financialCrisisBudg
 import { advanceTaxRatePhaseIn } from "@/lib/budget/taxRatePhaseIn";
 import { getDb } from "@/lib/mongodb";
 import type { FederalBudget, TreasuryAccrualReceipt } from "@/lib/db/types/budget";
-import type { Bond } from "@/lib/db/types/bond";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -28,7 +25,7 @@ import {
   sovereignCouponBooksByCountry,
 } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
-import { ensureFederalBudget } from "@/lib/turn/ensureFederalBudget";
+import { ensureFederalBudgets } from "@/lib/turn/ensureFederalBudget";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
@@ -67,6 +64,13 @@ import {
   fiscalScaleClaimLoadBound,
   normalizeFiscalScaleStage,
 } from "@/lib/budget/rules/fiscalScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Concurrent country settlements; a shared payee or pool still orders them. */
 const TREASURY_LANES = 8;
@@ -121,14 +125,12 @@ function treasuryBudgetProjection(
 }
 
 /**
- * Per-turn fiscal accrual (spec §4). For each country's federalBudget, move a
- * 1/TURNS_PER_YEAR slice of the current primary balance (revenue minus spending
- * excluding debt interest) into the signed treasuryBalance, then deduct live
- * debt-service on the bond-owned principal stock. This phase owns treasury cash
- * only: `debt.principal` belongs to the bond ledger (see
- * bonds/sovereignPrincipal.ts) and is never re-derived from the balance here
- * (#1975). Replaces the annual deficit jump that
- * processFiscalYear/processAnnualDebt used to apply.
+ * Per-turn fiscal accrual. For each country's federalBudget, move a
+ * 1/TURNS_PER_YEAR slice of the primary balance (revenue minus spending
+ * excluding debt interest) into treasuryBalance, then deduct live debt-service
+ * on the bond-owned principal stock. treasuryBalance only; `debt.principal`
+ * belongs to the bond ledger (bonds/sovereignPrincipal.ts) and is never
+ * re-derived here.
  */
 export async function processTreasuryTurn(_turn: number): Promise<{ countriesProcessed: number }> {
   const db = await getDb();
@@ -139,11 +141,10 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // (e.g. a world bootstrapped via a partial seed path) would otherwise never
   // appear in the query below and would silently never accrue fiscal history.
   const [banks, gameStateDoc] = await Promise.all([
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({}, { projection: { countryId: 1 } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -161,19 +162,18 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // Shared banks (ECB) cover multiple member countries; heal every member's
   // budget, not just the anchor recorded on the bank doc. Banks and members
   // are independent, so the whole self-heal fans out.
-  await Promise.all(
+  const memberCountryLists = await Promise.all(
     banks.map(async (bank) => {
       const { memberCountries } = await getCentralBankScope(db, bank.countryId as CountryId);
-      await Promise.all(
-        memberCountries.map((countryId) => ensureFederalBudget(db, countryId, preset))
-      );
+      return memberCountries;
     })
   );
+  await ensureFederalBudgets(db, memberCountryLists.flat(), preset);
 
   // Flag posture first: it decides which optional fields the budget read below
   // has to decode.
   const [config, rates] = await Promise.all([
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -185,8 +185,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
         },
       }
     ),
-    db
-      .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+    exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray(),
   ]);
@@ -200,8 +199,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
 
   // Projected read: see `treasuryBudgetProjection`. The rows are a narrower
   // shape than `FederalBudget`; every field the settle path reads is included.
-  const allBudgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const allBudgets = await federalBudgetCollection(db)
     .find({}, { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled, fiscalScaleStage) })
     .toArray();
   // Dissolved countries keep their budget doc but must not be simulated against
@@ -209,12 +207,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // is answered by the coupon prefetch below, in the same grouping that already
   // reads the queue, instead of a separate distinct over the whole collection.
   const liveCountries = await getRegisteredCountryIdSet(db);
-  // Read once for every flag posture: the coupon book prices debt service on
-  // the stock (issue #2089) even when bank/treasury cash ledgers are off.
-  // Holder arrays are only needed by the funded coupon paths.
+  // Read once for all flag postures: coupon book prices debt service on the stock even when cash ledgers are off. Holder arrays are only needed by funded coupon paths.
   const holderPathsEnabled = bankTreasury || treasuryCashLedgerEnabled;
-  const sovereignBonds = await db
-    .collection<Bond>("bonds")
+  const sovereignBonds = await bondsCollection(db)
     .find(
       {
         issuerType: "sovereign",
@@ -243,8 +238,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   ];
   const corporationQuotes = new Map<string, SovereignCouponCorporationQuote>();
   if (treasuryCashLedgerEnabled && corporationIds.length > 0) {
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find(
         { _id: { $in: corporationIds } },
         { projection: { _id: 1, countryId: 1, liquidCurrencyCode: 1 } }
@@ -646,10 +640,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       // target, so a large move arrives over several turns instead of shocking
       // the economy in one. Reached targets drop out of the map on their own.
       const ramp = advanceTaxRatePhaseIn(
-        // FederalTaxRates is a fixed-key shape with no string index signature,
-        // so widening needs the explicit two-step. The helper only reads keys it
-        // was handed in `pending`, all of which are real tax types.
-        (b.taxRates ?? {}) as unknown as Record<string, number | null | undefined>,
+        { ...b.taxRates },
         b.taxRatePhaseIn as Record<string, number> | undefined
       );
       const rampSet: Record<string, number> = {};
@@ -736,12 +727,10 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
         countriesProcessed += 1;
         return;
       }
-      const refreshed = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne(
-          { _id: b._id },
-          { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) }
-        );
+      const refreshed = await federalBudgetCollection(db).findOne(
+        { _id: b._id },
+        { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) }
+      );
       if (!refreshed) throw new Error(`Treasury budget ${b._id} disappeared during accrual`);
       b = refreshed;
       if (attempt === 3) throw new Error(`Treasury accrual ${b._id}:${_turn} could not claim cash`);
@@ -767,5 +756,5 @@ async function claimTreasuryAccrual(
   filter: Filter<FederalBudget>,
   update: UpdateFilter<FederalBudget>
 ) {
-  return db.collection<FederalBudget>("federalBudget").updateOne(filter, update);
+  return federalBudgetCollection(db).updateOne(filter, update);
 }

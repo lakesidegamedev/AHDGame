@@ -2,6 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+// National GDP per capita is a database read; pin it to the era baseline so
+// these tests keep exercising the pre-existing scalar of exactly 1.0.
+vi.mock("@/lib/campaigns/nationalGdpBasis", async () => {
+  const { gdpBaselinePerCapita } = await import("@/lib/campaigns/rules/gdpBaseline");
+  return {
+    loadNationalGdpPerCapita: vi.fn(async (_db: unknown, countryId: string) =>
+      gdpBaselinePerCapita(countryId)
+    ),
+  };
+});
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/db/partyLookup", async () => {
   const actual = await vi.importActual<object>("@/lib/db/partyLookup");

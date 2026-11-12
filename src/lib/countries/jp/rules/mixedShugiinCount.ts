@@ -4,7 +4,7 @@
  */
 import { JP_SHUGIIN_1994_CONSTITUENCIES } from "../data/jpShugiinConstituencies1994";
 import { JP_SHUGIIN_1994_LIST_SEATS } from "./shugiinElectoralLaw";
-import { STANDARD_MULTI_SEAT_MIN_SHARE } from "@/lib/turn/election/rules/seatEligibility";
+import { STANDARD_MULTI_SEAT_MIN_SHARE } from "@/lib/elections/rules/seatEligibility";
 
 export interface ShugiinDistrictCandidate {
   candidateId: string;

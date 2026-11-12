@@ -10,41 +10,51 @@ import {
   type CurrencyCode,
 } from "@/lib/constants/currencies";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 import { accountId } from "@/lib/ledger/accounts";
 import type { BalanceSnapshot } from "@/lib/ledger/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { organizationFundsCollection } from "@/lib/db/repositories/organizationFunds";
+import { customInternationalOrganizationsCollection } from "@/lib/db/repositories/customInternationalOrganizations";
+import { balanceSnapshotCheckpointsCollection } from "@/lib/db/repositories/balanceSnapshotCheckpoints";
+import { balanceSnapshotsCollection } from "@/lib/db/repositories/balanceSnapshots";
 
 export const BALANCE_SNAPSHOTS_COLLECTION = "balanceSnapshots";
 export const BALANCE_CHECKPOINTS_COLLECTION = "balanceSnapshotCheckpoints";
 
 /**
- * Snapshot the authoritative money-balance fields into a per-turn account→₳ map.
+ * Snapshot authoritative money balances into a per-turn account to ⱺ map,
+ * for the stock-vs-flow reconciler to diff: an account that moved between
+ * snapshots with no matching ledger legs is an uninstrumented write; legs that
+ * move an account whose real balance did not are a wrong-currency bug.
  *
- * This is the reference the stock-vs-flow reconciler check diffs against: an
- * account that moved between two snapshots with no matching ledger legs is an
- * uninstrumented write (the Phase 3 coverage queue); legs that move an account
- * whose real balance didn't are the t841 wrong-currency class.
+ * Balances are stored in ⱺ (anchor) units (local / FX rate) to match ledger
+ * legs' `anchorAmount`; a missing rate is treated 1:1, mirroring the
+ * financialTxLog emit fallback. Government treasury cash uses the receipt
+ * valuation contract instead, with no fabricated rate for a missing active
+ * currency.
  *
- * Balances are stored in ₳ (anchor) units - local balance / FX rate - to match
- * the ledger legs' `anchorAmount`. Missing rate ⇒ treated 1:1 (mirrors
- * financialTxLog/emit.ts's amountToAnchor fallback). Government treasury cash
- * instead uses the receipt valuation contract below, with account-specific
- * provenance and no fabricated rate for a missing active currency. See plan §2.
- *
- * Scope: every financialTxLog subject kind plus the fund cash its holders move
- * against - character personal + savings wallets, corporation liquidCapital,
- * party treasury, government treasuryBalance, NPP investment cash, pension
- * scheme cash (assetsAnchor), state-party treasury, and index-fund cashAnchor.
- * Scheme unit value (investedValueAnchor) is a marked-to-market valuation
- * cache, not a cash balance: it reprices without flows, so it stays out the
- * same way forex repricing stays out of cash deltas (see reconcile.ts).
- * International-org balances have no stored treasury field yet, so the `org`
- * account kind remains defined but uncovered.
+ * Covers every financialTxLog subject kind plus the fund cash its holders move
+ * against: character personal and savings wallets, corporation liquidCapital,
+ * party and state-party treasuries, government treasuryBalance, NPP investment
+ * cash, pension scheme cash, and index-fund cash. Scheme unit value is a
+ * mark-to-market valuation cache, not cash, so it is excluded. International-org
+ * balances have no stored treasury field and remain uncovered.
  */
 
 async function loadAnchorRates(db: Db): Promise<Map<string, number>> {
-  const rates = await db
-    .collection<{ currencyCode: string; rate: number }>("exchangeRates")
+  const rates = await exchangeRatesCollection<{ currencyCode: string; rate: number }>(db)
     .find({}, { projection: { currencyCode: 1, rate: 1 } })
     .toArray();
   return new Map(rates.map((r) => [r.currencyCode, r.rate]));
@@ -80,7 +90,7 @@ async function collectBalanceState(
   const balances: Record<string, number> = {};
 
   // Bond pools hold the funded buyer side of sovereign primary placements.
-  const pools = db.collection<{ _id: CurrencyCode; cashLocal?: number }>("bondMarketPools");
+  const pools = bondMarketPoolsCollection<{ _id: CurrencyCode; cashLocal?: number }>(db);
   for await (const pool of pools.find({}, { projection: { cashLocal: 1 } })) {
     add(
       balances,
@@ -90,14 +100,14 @@ async function collectBalanceState(
   }
 
   // --- Characters: personal + savings wallets --------------------------------
-  const characters = db.collection<{
+  const characters = charactersCollection<{
     _id: ObjectId;
     cashOnHand?: number;
     currencyBalances?: {
       personal?: Partial<Record<CurrencyCode, number>>;
       savings?: Partial<Record<CurrencyCode, number>>;
     };
-  }>("characters");
+  }>(db);
   const charCursor = characters.find(
     {},
     { projection: { cashOnHand: 1, "currencyBalances.personal": 1, "currencyBalances.savings": 1 } }
@@ -133,19 +143,19 @@ async function collectBalanceState(
   // field as M2. balanceUsd remains a legacy UI fallback, never copied/minted here.
   const customFounders = new Map(
     (
-      await db
-        .collection<{ id: string; foundingMembers?: CountryId[] }>(
-          "customInternationalOrganizations"
-        )
+      await customInternationalOrganizationsCollection<{
+        id: string;
+        foundingMembers?: CountryId[];
+      }>(db)
         .find({}, { projection: { id: 1, foundingMembers: 1 } })
         .toArray()
     ).map((row) => [row.id, row.foundingMembers?.[0] ?? "US"])
   );
-  const organizationFunds = db.collection<{
+  const organizationFunds = organizationFundsCollection<{
     organizationId: string;
     currencyCountryId?: CountryId;
     balanceLocal?: number;
-  }>("organizationFunds");
+  }>(db);
   for await (const fund of organizationFunds.find(
     {},
     { projection: { organizationId: 1, currencyCountryId: 1, balanceLocal: 1 } }
@@ -165,12 +175,12 @@ async function collectBalanceState(
   }
 
   // --- Corporations: liquidCapital -------------------------------------------
-  const corps = db.collection<{
+  const corps = corporationsCollection<{
     _id: ObjectId;
     liquidCapital?: number;
     pendingOperatingCash?: number;
     liquidCurrencyCode?: CurrencyCode;
-  }>("corporations");
+  }>(db);
   const corpCursor = corps.find(
     {},
     { projection: { liquidCapital: 1, pendingOperatingCash: 1, liquidCurrencyCode: 1 } }
@@ -189,9 +199,11 @@ async function collectBalanceState(
   // Collection is `politicalParties` (there is no `parties` collection) - the
   // party `subjectId` on financialTxLog rows is the politicalParties `_id`, so
   // this is the balance the party primary legs reconcile against.
-  const parties = db.collection<{ _id: ObjectId; treasury?: number; countryId?: string }>(
-    "politicalParties"
-  );
+  const parties = politicalPartiesCollection<{
+    _id: ObjectId;
+    treasury?: number;
+    countryId?: string;
+  }>(db);
   const partyCursor = parties.find({}, { projection: { treasury: 1, countryId: 1 } });
   for await (const p of partyCursor) {
     if (typeof p.treasury !== "number") continue;
@@ -200,12 +212,15 @@ async function collectBalanceState(
   }
 
   // --- Governments: federalBudget treasuryBalance ----------------------------
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; worldEpochId?: string }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
-  const producerWalletCursor = db
-    .collection<ProducerEconomyAccount>("producerEconomyAccounts")
-    .find({ worldEpoch: gameState?.worldEpochId ?? "" }, { projection: { currency: 1, cash: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    worldEpochId?: string;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1 } });
+  const producerWalletCursor = producerEconomyAccountsCollection(db).find(
+    { worldEpoch: gameState?.worldEpochId ?? "" },
+    { projection: { currency: 1, cash: 1 } }
+  );
   for await (const wallet of producerWalletCursor) {
     const currency = ZOD_CURRENCY_ENUM.find((code) => code === wallet.currency);
     const rate = currency && rates.get(currency);
@@ -216,12 +231,12 @@ async function collectBalanceState(
     add(balances, accountId("economy_wallet", wallet._id, currency), wallet.cash / rate);
   }
   const accountValuations: NonNullable<BalanceSnapshot["accountValuations"]> = {};
-  const budgets = db.collection<{
+  const budgets = federalBudgetCollection<{
     countryId?: string;
     treasuryBalance?: number;
     treasuryCashLocal?: number;
     currencyCode?: CurrencyCode;
-  }>("federalBudget");
+  }>(db);
   const budgetCursor = budgets.find(
     {},
     {
@@ -263,11 +278,11 @@ async function collectBalanceState(
   // matches financialTxLog subject rows; the stored balance is already in ₳.
   // NPP is included in REAL_ACCOUNT_KINDS so uncovered investment writers
   // surface as amber stock-vs-flow findings instead of being hidden.
-  const npps = db.collection<{
+  const npps = nppsCollection<{
     _id: ObjectId;
     countryId?: string;
     nppInvestmentCashAnchor?: number;
-  }>("npps");
+  }>(db);
   const nppCursor = npps.find({}, { projection: { countryId: 1, nppInvestmentCashAnchor: 1 } });
   for await (const npp of nppCursor) {
     if (typeof npp.nppInvestmentCashAnchor !== "number") continue;
@@ -281,16 +296,14 @@ async function collectBalanceState(
   // --- Index funds: cashAnchor (already ₳, like NPP cash) -------------------
   // The cash leg every holder↔fund movement settles against. Holdings, bond
   // allocations and queued redemptions are asset/liability accounts the shadow
-  // ledger does not carry; only the cash leg is a money balance. #992
-  // tranches 5-6: every fund cash write (float buys, holding/bond sales,
-  // order-fill seller credits, bond-reserve deploys) now carries a
-  // fund-subject ledger row against this key, so those flows stop reading as
-  // divergences.
-  const funds = db.collection<{
+  // ledger does not carry; only the cash leg is a money balance. Every fund
+  // cash write carries a fund-subject ledger row against this key, so those
+  // flows do not read as divergences.
+  const funds = indexFundsCollection<{
     _id: ObjectId;
     anchorCurrencyCode?: CurrencyCode;
     cashAnchor?: number;
-  }>("indexFunds");
+  }>(db);
   const fundCursor = funds.find({}, { projection: { anchorCurrencyCode: 1, cashAnchor: 1 } });
   for await (const fund of fundCursor) {
     if (typeof fund.cashAnchor !== "number") continue;
@@ -302,10 +315,10 @@ async function collectBalanceState(
   }
 
   // Pending cash belongs to the subscriber and stays outside fund NAV and bank capital.
-  const subscriptions = db.collection<{
+  const subscriptions = indexFundCommandsCollection<{
     _id: string;
     subscription: { amountAnchor: number; currency: CurrencyCode };
-  }>("indexFundCommands");
+  }>(db);
   const subscriptionCursor = subscriptions.find(
     { "subscription.status": "queued" },
     { projection: { "subscription.amountAnchor": 1, "subscription.currency": 1 } }
@@ -323,11 +336,11 @@ async function collectBalanceState(
   // move. `investedValueAnchor` is deliberately excluded: it is a
   // marked-to-market cache of the scheme's fund units that reprices without
   // any flow, so snapshotting it would alarm on valuation drift.
-  const schemes = db.collection<{
+  const schemes = pensionSchemesCollection<{
     _id: ObjectId;
     countryId?: string;
     assetsAnchor?: number;
-  }>("pensionSchemes");
+  }>(db);
   const schemeCursor = schemes.find({}, { projection: { countryId: 1, assetsAnchor: 1 } });
   for await (const scheme of schemeCursor) {
     if (typeof scheme.assetsAnchor !== "number") continue;
@@ -343,11 +356,11 @@ async function collectBalanceState(
   // --- State parties: treasury (native, converted to ₳) --------------------
   // `_id` is the composite `${stateId}_${partySequentialId}` key the dues and
   // transfer rows carry in `meta.statePartyKey`, so it is the account ref.
-  const stateParties = db.collection<{
+  const stateParties = statePartyOrgCollection<{
     _id: string;
     countryId?: string;
     treasury?: number;
-  }>("statePartyOrg");
+  }>(db);
   const statePartyCursor = stateParties.find({}, { projection: { countryId: 1, treasury: 1 } });
   for await (const sp of statePartyCursor) {
     if (typeof sp.treasury !== "number") continue;
@@ -421,7 +434,7 @@ export async function writeBalanceSnapshot(
     const now = new Date();
     // Keep the stored identity on replay. A replacement carrying a new _id is
     // rejected by Mongo as an immutable-field change.
-    await db.collection<BalanceSnapshot>(BALANCE_SNAPSHOTS_COLLECTION).updateOne(
+    await balanceSnapshotsCollection<BalanceSnapshot>(db).updateOne(
       { turn },
       {
         $set: {
@@ -459,7 +472,7 @@ export async function writePreForexBalanceCheckpoint(
       opts.treasuryCashLedgerEnabled === true
     );
     const now = new Date();
-    await db.collection<BalanceSnapshot>(BALANCE_CHECKPOINTS_COLLECTION).updateOne(
+    await balanceSnapshotCheckpointsCollection<BalanceSnapshot>(db).updateOne(
       { turn },
       {
         $set: { createdAt: now, balances, anchorRates, accountValuations },
@@ -475,12 +488,12 @@ export async function writePreForexBalanceCheckpoint(
 }
 
 export async function loadBalanceSnapshot(db: Db, turn: number): Promise<BalanceSnapshot | null> {
-  return db.collection<BalanceSnapshot>(BALANCE_SNAPSHOTS_COLLECTION).findOne({ turn });
+  return balanceSnapshotsCollection<BalanceSnapshot>(db).findOne({ turn });
 }
 
 export async function loadPreForexBalanceCheckpoint(
   db: Db,
   turn: number
 ): Promise<BalanceSnapshot | null> {
-  return db.collection<BalanceSnapshot>(BALANCE_CHECKPOINTS_COLLECTION).findOne({ turn });
+  return balanceSnapshotCheckpointsCollection<BalanceSnapshot>(db).findOne({ turn });
 }

@@ -21,6 +21,14 @@ import { normalizeStateSpending, SECTOR_SUBSIDIES_SPENDING_KEY } from "@/lib/bud
 import { computeRegionalSpendingByCategory } from "@/lib/budget/regionalSpending";
 import { buildRegionalRevenueShape } from "@/lib/budget/regionalRevenueShape";
 import { calculateFiscalYear } from "@/lib/budget/fiscalYear";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 export async function GET(
   request: Request,
@@ -66,27 +74,26 @@ async function serveRegionalBudget(
   countryId: CountryId,
   grantLabel: string
 ) {
-  const gameState = await db
-    .collection("gameState")
-    .findOne({ _id: "current" } as Record<string, unknown>, {
+  const gameState = await gameStateCollection<Document>(db).findOne(
+    { _id: "current" } as Record<string, unknown>,
+    {
       projection: { currentTurn: 1, currentYear: 1 },
-    });
+    }
+  );
   const liveFiscalYear = calculateFiscalYear(
     (gameState as { currentYear?: number } | null)?.currentYear ?? 2020,
     (gameState as { currentTurn?: number } | null)?.currentTurn ?? 1
   );
 
-  const regionalBudget = await db
-    .collection<RegionalBudget>("regionalBudgets")
-    .findOne({ _id: stateId, countryId });
+  const regionalBudget = await regionalBudgetsCollection(db).findOne({ _id: stateId, countryId });
 
   if (!regionalBudget) {
-    let fallbackStateBudget = await db.collection<StateBudget>("stateBudgets").findOne({
+    let fallbackStateBudget = await stateBudgetsCollection(db).findOne({
       _id: stateId,
       countryId,
     });
     if (!fallbackStateBudget) {
-      const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+      const state = await statesCollection(db).findOne({ _id: stateId, countryId });
       if (state) {
         const { generateStateBudgets } = await import("@/lib/seeds/reference/budgets");
         fallbackStateBudget =
@@ -104,8 +111,7 @@ async function serveRegionalBudget(
       return errorResponse(404, "Regional budget not found");
     }
 
-    const enactedLaws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const enactedLaws = await enactedLawsCollection(db)
       .find({ scope: "state", stateId, countryId, repealedAt: { $exists: false } })
       .toArray();
 
@@ -127,13 +133,12 @@ async function serveRegionalBudget(
   }
 
   // Fetch state for the region's fiscal base (population + GDP)
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   const population = state?.population ?? 0;
 
   // Compute spending by category from enacted regional policies
   const taxTypeIds = TAX_TYPE_IDS_BY_COUNTRY[countryId] ?? new Set();
-  const regionPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const regionPolicies = await statePoliciesCollection(db)
     .find({ stateId, scope: "state" })
     .toArray();
 
@@ -142,8 +147,7 @@ async function serveRegionalBudget(
   // Fetch legislation types to look up policyDomain and annualCostPerCapita
   // (legacy policies only — v2 laws price through the shared cost engine).
   const legTypeIds = spendingPolicies.map((p) => p.legislationTypeId);
-  const legTypes = await db
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: legTypeIds } })
     .toArray();
 
@@ -179,8 +183,7 @@ async function serveRegionalBudget(
   };
 
   // Fetch enacted regional laws
-  const enactedLaws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const enactedLaws = await enactedLawsCollection(db)
     .find({ scope: "state", stateId, countryId, repealedAt: { $exists: false } })
     .toArray();
 
@@ -201,15 +204,12 @@ async function serveStateBudget(
   countryId: CountryId,
   grantLabel: string
 ) {
-  const stateBudget = await db
-    .collection<StateBudget>("stateBudgets")
-    .findOne({ _id: stateId, countryId });
+  const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
     return errorResponse(404, "State budget not found");
   }
 
-  const enactedLaws = await db
-    .collection<EnactedLaw>("enactedLaws")
+  const enactedLaws = await enactedLawsCollection(db)
     .find({ scope: "state", stateId, repealedAt: { $exists: false } })
     .toArray();
 

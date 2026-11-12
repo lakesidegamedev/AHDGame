@@ -1,5 +1,7 @@
 import { MANUFACTURING_PRODUCT_ACTIVE_INDEX_V2 } from "@/lib/products/manufacturingProject";
 import type { Migration } from "../types";
+import { manufacturingProductProjectsV2Collection } from "@/lib/db/repositories/manufacturingProductProjectsV2";
+import type { Document } from "mongodb";
 
 /** Enforce one active v2 product project per corporation. */
 export const migration: Migration = {
@@ -8,7 +10,7 @@ export const migration: Migration = {
   idempotent: true,
   execute: async (db, ctx) => {
     if (!ctx.dryRun) {
-      await db.collection("manufacturingProductProjectsV2").createIndex(
+      await manufacturingProductProjectsV2Collection<Document>(db).createIndex(
         { activeCorporationId: 1 },
         {
           name: MANUFACTURING_PRODUCT_ACTIVE_INDEX_V2,

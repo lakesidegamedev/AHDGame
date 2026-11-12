@@ -33,6 +33,7 @@ import {
   type OpeningMetricObservation,
 } from "./rules/openingObservation";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type Country = "US" | "UK" | "JP" | "IE";
 const bundles = {
@@ -150,7 +151,7 @@ export function openingLifeCalibration1991(): Record<
           ? ukStateMetrics
           : country === COUNTRY_CONFIGS.JP.id
             ? jpStateMetrics
-            : country === "IE"
+            : countryHasFeature("ieSeeds", country)
               ? ieStateMetrics
               : stateMetrics1991;
       const rawById = new Map(shapeRows.map((row) => [String(row._id), row]));
@@ -344,10 +345,10 @@ export function auditOpeningNationalMetricSources1991(): Record<
     getInitialNationalBudgetsForPreset("1991-default")
       .filter(
         (budget) =>
-          budget.countryId === "US" ||
-          budget.countryId === "UK" ||
-          budget.countryId === "JP" ||
-          budget.countryId === "IE"
+          countryHasFeature("usSeeds", budget.countryId) ||
+          countryHasFeature("ukSeeds", budget.countryId) ||
+          countryHasFeature("jpSeeds", budget.countryId) ||
+          countryHasFeature("ieSeeds", budget.countryId)
       )
       .map((budget) => [budget.countryId, budget.economicFactors.inflationRate])
   );
@@ -396,7 +397,7 @@ export function auditOpeningMetricSources(): MetricSeedAuditRow[] {
         ? ukStateMetrics
         : country === COUNTRY_CONFIGS.JP.id
           ? jpStateMetrics
-          : country === "IE"
+          : countryHasFeature("ieSeeds", country)
             ? ieStateMetrics
             : stateMetrics1991;
     const lifeShapeById = new Map(lifeShapeRows.map((row) => [String(row._id), row]));

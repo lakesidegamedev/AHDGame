@@ -13,6 +13,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { changePasswordSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/change-password — Changes the authenticated user's password after verifying the current one.
 // Auth: requireBasicAuth
@@ -33,10 +34,10 @@ export async function POST(request: Request) {
     const { currentPassword, newPassword } = parsed.data;
 
     const db = await getDb();
-    const usersCollection = db.collection<User>("users");
+    const usersCollectionHandle = usersCollection(db);
 
     // Get user from database
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    const user = await usersCollectionHandle.findOne({ _id: new ObjectId(userId) });
 
     if (!user) {
       return errorResponse(404, "User not found");
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
     const changedAt = new Date();
 
     // Update password in database — also invalidate all existing sessions
-    const updated = await usersCollection.updateOne(
+    const updated = await usersCollectionHandle.updateOne(
       {
         _id: new ObjectId(userId),
         password: user.password ?? null,

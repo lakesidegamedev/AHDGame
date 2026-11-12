@@ -38,11 +38,9 @@ const CONFLICT: ConflictDoc = {
   sideB: { label: "Korean People's Army", countries: ["KP"] },
 } as unknown as ConflictDoc;
 
-let conflictsEnabled = true;
-
 const stubDb = () =>
   ({
-    collection: () => ({ findOne: async () => ({ _id: "current", conflictsEnabled }) }),
+    collection: () => ({ findOne: async () => ({ _id: "current" }) }),
   }) as unknown as Db;
 
 const propose = (input: Record<string, unknown>, orgId = "NATO") =>
@@ -64,19 +62,6 @@ describe("tabling a join_conflict resolution", () => {
     recordOrgHistoryEvent.mockClear();
     orgCategory = "bloc";
     conflict = CONFLICT;
-    conflictsEnabled = true;
-  });
-
-  it("is refused when the Conflicts subsystem is switched off", async () => {
-    // Conflict documents outlive the flag, so the conflict lookup below would
-    // still succeed — the switch has to be checked in its own right, as the admin
-    // create route checks it.
-    conflictsEnabled = false;
-    const res = await propose({ type: "join_conflict", theaterId: "korea-1953", side: "A" });
-
-    expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.status).toBe(404);
-    expect(insertOne).not.toHaveBeenCalled();
   });
 
   it("is accepted at a bloc", async () => {

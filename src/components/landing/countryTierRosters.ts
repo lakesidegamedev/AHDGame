@@ -1,31 +1,17 @@
 /**
- * Landing-globe tier rosters, MATERIALISED FROM the world entity manifest.
+ * Landing-globe tier rosters, materialised from the world entity manifest
+ * (`getWorldEntityMapSnapshot(presetId)`).
  *
- * Source of truth is `src/lib/world/worldEntityManifest.ts`, read through
- * `getWorldEntityMapSnapshot(presetId)`:
+ *   - Economic Powers    = `simulationTier: "full-autonomous"` and not a player
+ *                          nation (`legacyAccess !== "player"`).
+ *   - Battleground Nations = `simulationTier: "sphere-macro"`.
  *
- *   - Economic Powers    = `simulationTier: "full-autonomous"` and not a
- *                          player nation (`legacyAccess !== "player"`). This is
- *                          what puts the Warsaw Pact bloc — Poland, Hungary,
- *                          Romania, Bulgaria — in the same tier as the West,
- *                          which the landing era `accessMap` alone does not.
- *   - Battleground Nations = `simulationTier: "sphere-macro"` — the Cold War
- *                          sphere / conflict / crisis theatres.
+ * Ids are Natural Earth ISO 3166-1 numeric feature ids, matching the globe
+ * topojson, so no second lookup is needed at render time.
  *
- * Ids are Natural Earth ISO 3166-1 numeric feature ids, i.e. the ids the globe
- * topojson uses, so no second lookup is needed at render time.
- *
- * WHY A COPY INSTEAD OF AN IMPORT: the landing globe is a client component.
- * Importing the manifest would pull ~1,800 lines of world-entity domain code
- * plus the five-file Tier-3 registry into the marketing bundle to produce, on
- * the client, a few dozen strings. `countryTiers.test.ts` re-derives both
- * tables from the manifest on every run and fails if they drift, so this cannot
- * silently rot. Regenerate from the test's diff output when it does.
- *
- * Entities the manifest deliberately leaves without a modern geometry proxy are
- * absent by construction: divided states (Czechoslovakia, Yugoslavia, East
- * Germany, North/South Vietnam) and not-yet-existing emergents (Somalia, Congo,
- * South Yemen). See worldEntityMap.test.ts.
+ * Copied rather than imported because the landing globe is a client component;
+ * importing the manifest would pull ~1,800 lines into the marketing bundle.
+ * `countryTiers.test.ts` re-derives both tables and fails on drift.
  */
 
 /** Full-autonomy NPP economies players can run and split sectors in. */
@@ -128,11 +114,13 @@ export const ECONOMIC_POWER_FEATURE_IDS_BY_PRESET: Readonly<Record<string, reado
     "276", // DE
     "372", // IE
   ],
-  // Only Ireland. France, Italy and the rest are npp in 2027, as they are in
-  // 2023, and Brazil and Nigeria carry the same 1953-gated full-autonomous
-  // promotion gap they do elsewhere. Re-derived from the manifest by
-  // countryTiers.test.ts.
-  "2027-default": ["372"],
+  // UK, DE, JP and CN are NPP-run full simulations in 2027. The 16 background countries, Ireland included, are background-macro economies in the manifest, not economic powers. Re-derived from the manifest by countryTiers.test.ts.
+  "2027-default": [
+    "156", // CN
+    "276", // DE
+    "392", // JP
+    "826", // UK
+  ],
   "2019-default": [
     "156", // CN
     "276", // DE

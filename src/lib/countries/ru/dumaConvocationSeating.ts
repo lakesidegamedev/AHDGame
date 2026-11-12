@@ -5,30 +5,16 @@
  */
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  CountryGameState,
-  ElectedOfficial,
-  Election,
-  NPP,
-  GameState,
-} from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import {
   RUSSIAN_DUMA_AUTHORITY_PROJECTION,
-  RUSSIAN_DUMA_CONVOCATIONS_COLLECTION,
   loadRussianDumaAuthority,
   type RussianDumaConvocationRecord,
 } from "./dumaConvocationAuthority";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
 import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION,
-  RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION,
   type RussianAssemblySeatingRecord,
   type RussianAssemblyOfficeArchive,
 } from "./assemblySeating";
@@ -38,6 +24,21 @@ import { applyRussianAssemblyOwnerEligibility } from "./rules/assemblyOwnerEligi
 import { russianDumaConvocationOfficeCompatible } from "./rules/dumaConvocation";
 import { planRussianAssemblyVacancySeating } from "./rules/assemblyVacancySeating";
 import type { RussianCouncilCompositionSeating } from "./councilCompositionSeating";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import type { Document } from "mongodb";
+import { russianCouncilCompositionSeatingsCollection } from "@/lib/db/repositories/russianCouncilCompositionSeatings";
+import { russianDumaConvocationsCollection } from "@/lib/db/repositories/russianDumaConvocations";
+import { russianAssemblyOfficeArchivesCollection } from "@/lib/db/repositories/russianAssemblyOfficeArchives";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
 
 export async function materializeRussianDumaConvocationSeating(input: {
   db: Db;
@@ -53,25 +54,22 @@ export async function materializeRussianDumaConvocationSeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Ordinary Duma seating needs an active transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return false;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne(
-      { _id: "RU" },
-      { session, projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruCouncilComposition: 1 } }
-    );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection: { ...RUSSIAN_DUMA_AUTHORITY_PROJECTION, ruCouncilComposition: 1 } }
+  );
   if (!country?.ruDumaConvocationCohortId) return false;
   const root = country.ruDumaConvocationCohortId;
   const authority = await loadRussianDumaAuthority({ db, session, country, root, turn });
   if (!authority?.record) throw new Error("Ordinary Duma seating lacks its bound authority");
   const opening = authority.record;
   if (turn >= opening.termEndTurn) return false;
-  const journals = db.collection<RussianAssemblySeatingRecord>(
-    RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION
-  );
+  const journals = russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db);
   const latest = (
     await journals
       .find(
@@ -93,7 +91,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
       .limit(1)
       .toArray()
   )[0];
-  const receipts = db.collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION);
+  const receipts = russianDumaElectionResultsCollection<RussianDumaResultRecord>(db);
   const preview = (
     await receipts
       .find(
@@ -139,8 +137,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
       ownerId: row.ownerId.toHexString(),
     })),
   });
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "RU" as const,
@@ -192,7 +189,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     )
       throw new Error("Ordinary Duma receipt disagrees with its resolved ballots");
   }
-  const retainedCouncil = await db.collection("russianCouncilElectionResults").findOne(
+  const retainedCouncil = await russianCouncilElectionResultsCollection<Document>(db).findOne(
     {
       countryId: "RU",
       preset: "1991-default",
@@ -202,9 +199,10 @@ export async function materializeRussianDumaConvocationSeating(input: {
   );
   if (!retainedCouncil) throw new Error("Duma handover lacks the retained Council certificate");
   if (country.ruCouncilComposition) {
-    const composition = await db
-      .collection<RussianCouncilCompositionSeating>("russianCouncilCompositionSeatings")
-      .findOne(
+    const composition =
+      await russianCouncilCompositionSeatingsCollection<RussianCouncilCompositionSeating>(
+        db
+      ).findOne(
         {
           _id: country.ruCouncilComposition.receiptId,
           countryId: "RU",
@@ -234,8 +232,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     ...new Set(planned.seats.filter((row) => !row.isNpc).map((row) => row.ownerId)),
   ].map((id) => new ObjectId(id));
   const characters = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           { _id: { $in: playerIds } },
           {
@@ -247,8 +244,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
         .toArray()
     : [];
   const profiles = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npcIds } },
           {
@@ -263,13 +259,11 @@ export async function materializeRussianDumaConvocationSeating(input: {
     ...(playerIds.length ? [{ characterId: { $in: playerIds } }] : []),
     ...(npcIds.length ? [{ nppId: { $in: npcIds } }] : []),
   ];
-  const physical = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const physical = await electedOfficialsCollection(db)
     .find({ $or: [{ countryId: "RU" }, ...identities] }, { session, batchSize: 10000 })
     .toArray();
   const cabinet = identities.length
-    ? await db
-        .collection<UnifiedCabinetMember>("cabinetMembers")
+    ? await cabinetMembersCollection<UnifiedCabinetMember>(db)
         .find(
           { $or: identities },
           { session, batchSize: 1000, projection: { characterId: 1, nppId: 1, countryId: 1 } }
@@ -440,20 +434,18 @@ export async function materializeRussianDumaConvocationSeating(input: {
     ? delta.retire.map((row) => russianAssemblyOfficialId(idPrefix, row.candidateId))
     : currentDuma.map((row) => row._id);
   const retired = physical.filter((row) => retireIds.some((id) => id.equals(row._id)));
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
   if (retired.length) {
-    await db
-      .collection<RussianAssemblyOfficeArchive>(RUSSIAN_ASSEMBLY_ARCHIVES_COLLECTION)
-      .insertMany(
-        retired.map((official) => ({
-          _id: `${seatingId}:${official._id.toHexString()}`,
-          preset: "1991-default",
-          seatingId,
-          turn,
-          official,
-        })),
-        { session }
-      );
+    await russianAssemblyOfficeArchivesCollection<RussianAssemblyOfficeArchive>(db).insertMany(
+      retired.map((official) => ({
+        _id: `${seatingId}:${official._id.toHexString()}`,
+        preset: "1991-default",
+        seatingId,
+        turn,
+        official,
+      })),
+      { session }
+    );
     const deleted = await officials.deleteMany(
       { countryId: "RU" as const, officeType: "dumaDeputy" as const, _id: { $in: retireIds } },
       { session }
@@ -464,29 +456,23 @@ export async function materializeRussianDumaConvocationSeating(input: {
       .filter((row) => !row.isNPP && row.characterId)
       .map((row) => row.characterId!);
     if (oldPlayerIds.length)
-      await db
-        .collection<Character>("characters")
-        .updateMany(
-          { _id: { $in: oldPlayerIds }, "currentOffice.type": "dumaDeputy" },
-          { $set: { currentOffice: null, updatedAt: now } },
-          { session }
-        );
+      await charactersCollection(db).updateMany(
+        { _id: { $in: oldPlayerIds }, "currentOffice.type": "dumaDeputy" },
+        { $set: { currentOffice: null, updatedAt: now } },
+        { session }
+      );
     const oldNpcIds = retired.filter((row) => row.isNPP && row.nppId).map((row) => row.nppId!);
     if (!latest && oldNpcIds.length) {
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: oldNpcIds }, "currentOffice.type": "dumaDeputy" },
-          { $set: { currentOffice: null, updatedAt: now } },
-          { session }
-        );
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: oldNpcIds } },
-          { $set: { seatsHeld: 0, updatedAt: now } },
-          { session }
-        );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: oldNpcIds }, "currentOffice.type": "dumaDeputy" },
+        { $set: { currentOffice: null, updatedAt: now } },
+        { session }
+      );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: oldNpcIds } },
+        { $set: { seatsHeld: 0, updatedAt: now } },
+        { session }
+      );
     }
   }
   if (delta.update.length) {
@@ -568,14 +554,15 @@ export async function materializeRussianDumaConvocationSeating(input: {
       },
     }));
     const result = isNpc
-      ? await db.collection<NPP>("npps").bulkWrite(operations, { session })
-      : await db.collection<Character>("characters").bulkWrite(operations, { session });
+      ? await nppsCollection(db).bulkWrite(operations, { session })
+      : await charactersCollection(db).bulkWrite(operations, { session });
     if (result.matchedCount !== selected.length)
       throw new Error("Duma owner changed during seating");
   }
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .findOne({ _id: "RU" }, { session, projection: { coalitionPartyIds: 1, governingPartyId: 1 } });
+  const formation = await governmentFormationsCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection: { coalitionPartyIds: 1, governingPartyId: 1 } }
+  );
   if (formation) {
     const supporting = new Set(
       formation.coalitionPartyIds?.length
@@ -588,7 +575,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
       (sum, [party, count]) => sum + (supporting.has(party) ? count : 0),
       0
     );
-    await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+    await governmentFormationsCollection(db).updateOne(
       { _id: "RU" },
       {
         $set: {
@@ -608,7 +595,7 @@ export async function materializeRussianDumaConvocationSeating(input: {
     { $set: { seatedOnTurn: turn } },
     { session }
   );
-  const claimed = await db.collection<CountryGameState>("countryGameStates").updateOne(
+  const claimed = await countryGameStatesCollection(db).updateOne(
     {
       _id: "RU",
       ruDumaConvocationCohortId: root,
@@ -656,19 +643,17 @@ export async function materializeRussianDumaConvocationSeating(input: {
     },
     { session }
   );
-  const bound = await db
-    .collection<RussianDumaConvocationRecord>(RUSSIAN_DUMA_CONVOCATIONS_COLLECTION)
-    .updateOne(
-      { _id: opening._id, revision: opening.revision ?? { $exists: false } },
-      {
-        $set: {
-          ...(opening.seatedOnTurn == null ? { seatedOnTurn: turn } : {}),
-          resultId: receipt._id,
-          revision,
-        },
+  const bound = await russianDumaConvocationsCollection<RussianDumaConvocationRecord>(db).updateOne(
+    { _id: opening._id, revision: opening.revision ?? { $exists: false } },
+    {
+      $set: {
+        ...(opening.seatedOnTurn == null ? { seatedOnTurn: turn } : {}),
+        resultId: receipt._id,
+        revision,
       },
-      { session }
-    );
+    },
+    { session }
+  );
   if (bound.matchedCount !== 1) throw new Error("Duma seating journal changed at final receipt");
   return true;
 }

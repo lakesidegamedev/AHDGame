@@ -313,11 +313,7 @@ export function AdminTrafficTab() {
     return { label: SLOT_LABELS[top.slot] ?? "—", views: top.views };
   }, [data]);
 
-  const topCountry = useMemo(() => {
-    if (!data || data.byCountry.length === 0) return null;
-    const top = data.byCountry[0];
-    return top;
-  }, [data]);
+  const topCountry = data?.byCountry[0] ?? null;
 
   const slowestPages = data?.slowestPaths ?? [];
   const breakdownKey = breakdownMetric === "pageviews" ? "pageviews" : "visits";

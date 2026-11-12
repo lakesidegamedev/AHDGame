@@ -10,3 +10,7 @@ export * from "./images";
 export * from "./costs";
 export * from "./selectors";
 export * from "./strategyAvailability";
+export * from "./breakthrough";
+export * from "./frontier";
+export * from "./sunset";
+export * from "./diffusion";

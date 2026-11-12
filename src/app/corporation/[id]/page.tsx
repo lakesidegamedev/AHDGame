@@ -1048,9 +1048,7 @@ export default function CorporationDetailPage() {
             corpId={id}
             exchangeLabel={exchangeLabel}
             creditRating={corporation.creditRatingSnapshot ?? bondInfo?.creditRating?.rating}
-            // Retained income after dividends, from the shared basis. The realized
-            // figure is already net of the payout, so netting the projection-derived
-            // `dividendDistribution` off it read as a loss on a profitable corp (#1098).
+            // Retained income after dividends, from the shared basis. Realized figures are already net of payout, so netting `dividendDistribution` again shows a loss on a profitable corp.
             retainedDaily={financials != null ? corpIncomeBasis(financials).retained : null}
             revenueGrowth={
               financials != null

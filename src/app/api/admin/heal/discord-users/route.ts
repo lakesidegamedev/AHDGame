@@ -5,6 +5,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Character, State, User } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/admin/heal/discord-users — Diagnoses user/character linkage issues and characters missing countryId
 // Auth: requireAdmin
@@ -17,8 +20,8 @@ export async function GET() {
     const db = await getDb();
 
     const [allUsers, allChars] = await Promise.all([
-      db.collection<User>("users").find({}).toArray(),
-      db.collection<Character>("characters").find({}).toArray(),
+      usersCollection(db).find({}).toArray(),
+      charactersCollection(db).find({}).toArray(),
     ]);
 
     // Build a map of userId -> character for fast lookups
@@ -56,7 +59,7 @@ export async function GET() {
     }
 
     // C: Characters missing countryId
-    const charactersMissingCountryId = await db.collection<Character>("characters").countDocuments({
+    const charactersMissingCountryId = await charactersCollection(db).countDocuments({
       countryId: { $exists: false },
     });
 
@@ -92,8 +95,8 @@ export async function POST() {
     const now = new Date();
 
     const [allUsers, allChars] = await Promise.all([
-      db.collection<User>("users").find({}).toArray(),
-      db.collection<Character>("characters").find({}).toArray(),
+      usersCollection(db).find({}).toArray(),
+      charactersCollection(db).find({}).toArray(),
     ]);
 
     const charByUserId = new Map<string, Character>();
@@ -116,7 +119,7 @@ export async function POST() {
         // A: Missing activeCharacterId — set from character lookup
         const char = charByUserId.get(userId);
         if (char) {
-          await db.collection<User>("users").updateOne(
+          await usersCollection(db).updateOne(
             { _id: user._id },
             {
               $set: {
@@ -136,7 +139,7 @@ export async function POST() {
           // Try to find the real character by userId
           const realChar = charByUserId.get(userId);
           if (realChar) {
-            await db.collection<User>("users").updateOne(
+            await usersCollection(db).updateOne(
               { _id: user._id },
               {
                 $set: {
@@ -148,7 +151,7 @@ export async function POST() {
             );
           } else {
             // No character at all — clear the stale reference
-            await db.collection<User>("users").updateOne(
+            await usersCollection(db).updateOne(
               { _id: user._id },
               {
                 $set: {
@@ -170,8 +173,7 @@ export async function POST() {
 
     if (charsMissingCountryId.length > 0) {
       const stateIds = [...new Set(charsMissingCountryId.map((c) => c.homeState))];
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find({ _id: { $in: stateIds } })
         .toArray();
 
@@ -183,12 +185,10 @@ export async function POST() {
       for (const char of charsMissingCountryId) {
         const countryId = stateCountryMap.get(char.homeState);
         if (countryId) {
-          await db
-            .collection<Character>("characters")
-            .updateOne(
-              { _id: char._id },
-              { $set: { countryId: countryId as CountryId, updatedAt: now } }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: char._id },
+            { $set: { countryId: countryId as CountryId, updatedAt: now } }
+          );
           fixedCharacterCountryIds++;
         } else {
           console.warn(

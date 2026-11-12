@@ -26,29 +26,22 @@ const NOTHING: CovertNuclearTurnResult = { spent: 0, discovered: false };
 
 /**
  * Per-turn: the covert programme's quiet grind, run right after the overt
- * stockpile accrual in the same defence loop, for COVERT_CAPABLE countries only.
+ * stockpile accrual, for COVERT_CAPABLE countries only.
  *
  * Money follows the nuclearProductionTurn pattern: size the turn against the
- * UNCOMMITTED appropriation, take the cash through the guarded
- * `debitAppropriation` so a concurrent spend loses cleanly, and refund on a
- * failed programme write. Covert funding deliberately IGNORES
- * `defenceProcurementPaused`: the programme is off the books by design.
- *
- * A country that never opened the programme (no doc, no funding, no stages) is
- * skipped without a write, so the collection only carries countries that acted.
+ * UNCOMMITTED appropriation, debit through the guarded `debitAppropriation` so
+ * a concurrent spend loses cleanly, and refund on a failed programme write.
+ * Covert funding deliberately IGNORES `defenceProcurementPaused`: the programme
+ * is off the books by design.
  *
  * Discovery is a Soviet crackdown: a world tension spike, a public wire story
- * that names undeclared facilities but never the programme's actual stage, and
- * the approval hit above. The public learns there was SOMETHING, not what.
+ * naming undeclared facilities but never the programme's actual stage.
  */
 export async function applyCovertNuclearTurn(
   db: Db,
   countryId: CountryId,
-  turn: number,
-  gates: { coldWarEnabled?: boolean }
+  turn: number
 ): Promise<CovertNuclearTurnResult> {
-  if (gates.coldWarEnabled !== true) return NOTHING;
-
   // Never started: no doc, nothing funded, nothing built. Skip without a write
   // so the collection never grows a doc for a country that never opened it.
   const doc = await getCovertNuclearProgramsCollection(db).findOne({ _id: countryId });

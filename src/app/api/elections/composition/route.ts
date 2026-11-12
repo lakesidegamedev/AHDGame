@@ -2,12 +2,9 @@
  * GET /api/elections/composition?country=XX
  *
  * Current and projected party seat breakdown for a country's elected chambers,
- * sourced from ElectedOfficial records and live vote tallies.
- *
- * This used to hardcode `countryId: "US"`, and the frontend divided by a
- * hardcoded 435/100, so every non-US country was shown US House and Senate
- * numbers as if they were its own. Chambers, office types and seat totals now
- * all come from the country's own config.
+ * sourced from ElectedOfficial records and live vote tallies. Chambers, office
+ * types and seat totals all come from the country's own config, not hardcoded
+ * constants.
  */
 
 import { NextResponse } from "next/server";
@@ -36,6 +33,12 @@ import type {
   CompositionResponse,
   PartySeats,
 } from "@/lib/elections/electionResponseTypes";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export type { PartySeats, CompositionResponse } from "@/lib/elections/electionResponseTypes";
 
@@ -75,15 +78,14 @@ export async function GET(request: Request) {
     // for the US only. Every other country is filtered strictly.
     const countryScope: Record<string, unknown> =
       // eslint-disable-next-line local/no-country-literals -- back-compat for legacy US rows without countryId
-      countryId === "US"
+      countryHasFeature("usApi", countryId)
         ? { $or: [{ countryId: "US" }, { countryId: { $exists: false } }] }
         : { countryId };
 
     const [officials, parties, activeElections, gameTime] = await Promise.all([
-      db.collection<ElectedOfficial>("electedOfficials").find(countryScope).toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
-      db
-        .collection<Election>("elections")
+      electedOfficialsCollection(db).find(countryScope).toArray(),
+      politicalPartiesCollection(db).find({ countryId }).toArray(),
+      electionsCollection(db)
         .find({ status: { $in: ["active", "upcoming"] }, ...countryScope })
         .toArray(),
       getGameTime(),
@@ -177,12 +179,10 @@ export async function GET(request: Request) {
       if (generalElections.length > 0) {
         const electionIds = generalElections.map((e) => e._id);
         const [tallies, candidates] = await Promise.all([
-          db
-            .collection<ElectionVoteTally>("electionVoteTallies")
+          electionVoteTalliesCollection(db)
             .find({ electionId: { $in: electionIds } })
             .toArray(),
-          db
-            .collection<ElectionCandidate>("electionCandidates")
+          electionCandidatesCollection(db)
             .find({ electionId: { $in: electionIds }, status: "active" })
             .toArray(),
         ]);

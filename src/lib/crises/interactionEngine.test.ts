@@ -18,7 +18,6 @@ import { YUGOSLAV_REFUGEE_RECEPTION } from "@/lib/livingConflict/rules/refugeeRe
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("./featureFlag", () => ({ isCrisisAidBillsEnabled: vi.fn().mockResolvedValue(false) }));
 
 let db: MockDb;
 
@@ -436,12 +435,101 @@ describe("submitCrisisDecision", () => {
     expect(result.interaction.collectiveCurrent).toBe(5_000_000);
     expect(result.interaction.resolvedAt).toBeNull();
     expect(result.interaction.currentNodeId).toBe("fund");
-    // Treasury was debited via spendFromTreasury (uses $set, not $inc).
+    // Treasury was debited via spendFromTreasury as an atomic $inc.
     const debit = db.collectionMocks["federalBudget"]!.updateOne.mock.calls.at(-1);
     expect(debit?.[0]).toEqual({ countryId: "US" });
-    expect((debit?.[1] as { $set: { treasuryBalance: number } }).$set.treasuryBalance).toBe(
-      95_000_000
+    expect((debit?.[1] as { $inc: { treasuryBalance: number } }).$inc.treasuryBalance).toBe(
+      -5_000_000
     );
+  });
+
+  it("charges nothing when a concurrent request already claimed the contribution", async () => {
+    const interaction = makeInteraction({ currentNodeId: "fund", collectiveTarget: 10_000_000 });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+    db.collectionMocks["crisisInteractions"]!.updateOne.mockResolvedValueOnce({
+      matchedCount: 0,
+      modifiedCount: 0,
+    });
+    db.collectionMocks["federalBudget"]!.findOne.mockResolvedValue({
+      treasuryBalance: 100_000_000,
+    });
+    const charId = new ObjectId();
+
+    await expect(
+      submitCrisisDecision(mdb(), interaction._id, "contribute_5m", charId, "US", ["any"])
+    ).rejects.toThrow("already contributed");
+    const [filter, update] = db.collectionMocks["crisisInteractions"]!.updateOne.mock.calls[0];
+    expect(filter).toMatchObject({ "contributors.characterId": { $ne: charId } });
+    expect(update).toMatchObject({ $inc: { collectiveCurrent: 5_000_000 } });
+    expect(db.collectionMocks["federalBudget"]!.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("releases the contribution claim when the treasury spend fails", async () => {
+    const interaction = makeInteraction({ currentNodeId: "fund", collectiveTarget: 10_000_000 });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+    db.collectionMocks["federalBudget"]!.findOne.mockResolvedValue({
+      treasuryBalance: 100_000_000,
+    });
+    db.collectionMocks["federalBudget"]!.updateOne.mockRejectedValue(new Error("write failed"));
+    const charId = new ObjectId();
+
+    await expect(
+      submitCrisisDecision(mdb(), interaction._id, "contribute_5m", charId, "US", ["any"])
+    ).rejects.toThrow("write failed");
+
+    const calls = db.collectionMocks["crisisInteractions"]!.updateOne.mock.calls;
+    expect(calls[0][1]).toMatchObject({ $inc: { collectiveCurrent: 5_000_000 } });
+    expect(calls[1][1]).toMatchObject({
+      $pull: { contributors: { characterId: charId } },
+      $inc: { collectiveCurrent: -5_000_000 },
+    });
+  });
+
+  it("applies nothing when a concurrent request already claimed the choice", async () => {
+    const costly: CrisisDecisionNode = {
+      ...TREE[0],
+      options: [
+        {
+          optionId: "costly",
+          label: "Costly",
+          description: "spends and acts",
+          requiredBudget: 1_000,
+          nextNodeId: "terminal",
+          effects: [
+            {
+              effectType: "flat",
+              targetType: "inflation",
+              metricCategory: null,
+              metricField: null,
+              value: 1.5,
+              sectorType: null,
+              strategyId: null,
+              label: "spike",
+            },
+          ],
+        },
+      ],
+    };
+    const interaction = makeInteraction({ decisionTree: [costly, TREE[2]] });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+    db.collectionMocks["federalBudget"]!.findOne.mockResolvedValue({ treasuryBalance: 1_000_000 });
+    db.collectionMocks["crisisInteractions"]!.updateOne.mockResolvedValueOnce({
+      matchedCount: 0,
+      modifiedCount: 0,
+    });
+
+    await expect(
+      submitCrisisDecision(mdb(), interaction._id, "costly", new ObjectId(), "US", [
+        "any",
+        "headOfState",
+      ])
+    ).rejects.toThrow("already made");
+    const [filter] = db.collectionMocks["crisisInteractions"]!.updateOne.mock.calls[0];
+    expect(filter).toMatchObject({
+      currentNodeId: "choice1",
+      updatedAt: interaction.updatedAt,
+    });
+    expect(db.collectionMocks["federalBudget"]!.updateOne).not.toHaveBeenCalled();
   });
 
   it("rejects a contribution when the treasury is short", async () => {
@@ -529,6 +617,17 @@ describe("autoResolveCrisisInteraction", () => {
     expect(setArg.$set.resolutionOutcome).toBe("auto");
     expect(setArg.$set.currentNodeId).toBeNull();
     expect(setArg.$set.resolutionPath).toEqual(["decline", "terminal"]);
+  });
+
+  it("closes an interaction whose current node is missing from its tree", async () => {
+    const interaction = makeInteraction({ currentNodeId: "gone" });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(interaction);
+
+    await autoResolveCrisisInteraction(mdb(), interaction._id);
+
+    const [filter, update] = db.collectionMocks["crisisInteractions"]!.updateOne.mock.calls.at(-1)!;
+    expect(filter).toEqual({ _id: interaction._id, resolvedAt: null });
+    expect(update.$set).toMatchObject({ currentNodeId: null, resolutionOutcome: "auto" });
   });
 
   it("closes an unanswered domestic bank window without funding an intervention", async () => {
@@ -929,11 +1028,8 @@ describe("submitCrisisDecision — aid node (decline path)", () => {
   });
 });
 
-describe("createCrisisInteraction — aid node transform (flag ON)", () => {
-  it("transforms a choice node with aid_contribute option into an aid node when flag is enabled", async () => {
-    const { isCrisisAidBillsEnabled } = await import("./featureFlag");
-    vi.mocked(isCrisisAidBillsEnabled).mockResolvedValueOnce(true);
-
+describe("createCrisisInteraction — aid node transform", () => {
+  it("transforms a choice node with aid_contribute option into an aid node", async () => {
     const templateTree: CrisisDecisionNode[] = [
       {
         nodeId: "response",
@@ -1029,72 +1125,6 @@ describe("createCrisisInteraction — aid node transform (flag ON)", () => {
     // The original template tree must NOT be mutated
     const originalAidNode = templateTree.find((n) => n.nodeId === "intl_aid");
     expect(originalAidNode!.type).toBe("choice");
-  });
-
-  it("leaves the tree unchanged when the flag is OFF", async () => {
-    // isCrisisAidBillsEnabled is mocked to return false by default
-    const templateTree: CrisisDecisionNode[] = [
-      {
-        nodeId: "aid_choice",
-        type: "choice",
-        title: "Aid",
-        description: "",
-        requiredRoles: ["any"],
-        timeLimitMinutes: null,
-        options: [
-          {
-            optionId: "aid_contribute",
-            label: "Send Aid",
-            description: "",
-            nextNodeId: "terminal",
-            effects: [],
-          },
-          {
-            optionId: "aid_skip",
-            label: "No Aid",
-            description: "",
-            nextNodeId: "terminal",
-            effects: [],
-          },
-        ],
-      },
-      {
-        nodeId: "terminal",
-        type: "terminal",
-        title: "Done",
-        description: "",
-        outcomeEffects: [],
-        outcomeMessage: "Done.",
-        requiredRoles: ["any"],
-        timeLimitMinutes: null,
-      },
-    ];
-
-    const crisis: Crisis = {
-      _id: new ObjectId(),
-      name: "Test",
-      description: "Test",
-      scope: "country",
-      countryIds: ["US"],
-      regionIds: [],
-      durationTurns: 6,
-      effects: [],
-      status: "active",
-      createdBy: new ObjectId(),
-      createdAt: new Date(),
-      resolvedAt: null,
-      startTurn: 1,
-      endTurn: null,
-      wireMessageOnStart: "start",
-      wireMessageOnEnd: "end",
-      interactionDefinition: { decisionTree: templateTree, autoResolveOnExpiry: true },
-    };
-
-    const result = await createCrisisInteraction(mdb(), crisis);
-
-    // Node should remain as "choice" type (not transformed)
-    const aidNode = result!.decisionTree.find((n) => n.nodeId === "aid_choice");
-    expect(aidNode!.type).toBe("choice");
   });
 });
 

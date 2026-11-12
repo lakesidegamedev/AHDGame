@@ -1,16 +1,15 @@
 /**
- * Command Economy v2 (P2) — office wiring and lever ranges for the three
- * player economic seats (SOE Director, Gosplan Planner, Gosbank Chair).
+ * Office wiring and lever ranges for the three player economic seats
+ * (SOE Director, Gosplan Planner, Gosbank Chair).
  *
- * The Gosplan and Gosbank seats are ordinary cabinet positions already created
- * and filled by the RU / CN cabinet + Supreme Soviet work (see `ruCabinet.ts`,
- * `cnCabinet.ts`). This module only maps each command country to the cabinet
- * `positionId` that OPERATES each economic panel, so the write endpoints can
- * check the caller holds the seat. SOE directors are appointed per enterprise
- * onto `SoeState.directorId` (there is no fixed cabinet seat per SOE).
+ * Gosplan and Gosbank are ordinary cabinet positions (see `ruCabinet.ts`,
+ * `cnCabinet.ts`); this module maps each command country to the cabinet
+ * `positionId` that operates each economic panel so write endpoints can
+ * authorize the seat. SOE directors are appointed per enterprise onto
+ * `SoeState.directorId` (no fixed cabinet seat per SOE).
  *
- * Everything here is inert unless `commandEconomyEnabled` is on and the country
- * runs a planned economy — market worlds never reach these code paths.
+ * Inert unless `commandEconomyEnabled` is on and the country runs a planned
+ * economy.
  */
 
 import type { CountryId } from "@/lib/constants/countries";

@@ -6,28 +6,14 @@ import type { IncomeStartVintage, NormalAnchor } from "@/lib/era/metricCatalog";
 import type { WorldEntityRegion } from "@/lib/world/worldEntityManifest";
 
 /**
- * The small facts about where FR is.
- *
- * ⚠ GENERATED FROM `__snapshots__/fr.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * Small geography facts for FR. Generated from
+ * `__snapshots__/fr.pre-move.json`; regenerate with:
  *
  *     npx tsx scripts/countries/gen-country-geography-facts.ts FR --force
  *
- * A hand-written draft of this file got six values wrong, including an
- * independent-bias of 0.06 where the registry says 2.33 and a threshold object
- * with the wrong KEYS. All six typechecked. Do not edit values here by hand.
- *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair;
- * `geography.ts` imports every era of census, metric and region data as values.
- * A registry that forwards to the heavy module for one string ships all of it to
- * the browser -- which shipped once already, when `countryContinents.ts` started
- * pulling 108 KB per bundle for a continent name.
- *
- * ⚠ THE ISO PAIR IS TWO REGISTRIES DESCRIBING ONE FACT.
- * `COUNTRY_TO_ISO_NUMERIC` maps FR to the code and
- * `ISO_NUMERIC_TO_COUNTRY` maps it back. The generator asserts they agree
- * before writing; if they ever disagree, a lookup by code and a lookup by
- * country would report different things.
+ * Do not edit values by hand. Keep this file free of value imports: it is the
+ * light half of the pair, and importing from `geography.ts` would pull every
+ * era of census/metric/region data into the browser bundle.
  */
 
 export const FR_CONTINENT: Continent = "Europe";
@@ -133,8 +119,7 @@ export const FR_INCOME_ANCHORS: NormalAnchor[] = [
 /**
  * Income anchor for a world that STARTS in the given year. Used only at the
  * exact start year; never interpolated, so a 1953 world running forward keeps
- * its flat 1953 anchor. 1991 is the derived franc household median from
- * seeds/reference/income1991 (#3393). The 1953 point above is in anciens francs.
+ * its flat 1953 anchor. The 1953 point above is in anciens francs.
  */
 export const FR_INCOME_START_VINTAGES: Record<number, IncomeStartVintage> = {
   1979: { value: 50_000, id: "fr-1979-household-authored" },

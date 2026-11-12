@@ -65,7 +65,7 @@ describe("ensureIEUachtaranElections", () => {
         };
       });
 
-    const { ensureIEUachtaranElections } = await import("./perpetualElections");
+    const { ensureIEUachtaranElections } = await import("@/lib/elections/scheduling");
     await ensureIEUachtaranElections(NOW);
 
     expect(db.collectionMocks["elections"]!.insertOne).not.toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe("ensureIEUachtaranElections", () => {
     db.collectionMocks["elections"]!.findOne = vi.fn().mockResolvedValue(null);
     db.collectionMocks["elections"]!.insertOne = vi.fn().mockResolvedValue({});
 
-    const { ensureIEUachtaranElections } = await import("./perpetualElections");
+    const { ensureIEUachtaranElections } = await import("@/lib/elections/scheduling");
     await ensureIEUachtaranElections(NOW);
 
     expect(db.collectionMocks["elections"]!.insertOne).toHaveBeenCalledTimes(1);

@@ -13,15 +13,27 @@
  * the same signal `checkPartyPresence` uses, so a recruited NPP extends the
  * frontier and a party expands outward one hop at a time.
  *
+ * Party renewal adds re-entry: a region the party held in either of the
+ * last two renewal cycles stays in its frontier, so a wipe-out is not a
+ * permanent lock-out. Worlds without party renewal have no renewal rows and
+ * keep the plain one-hop frontier.
+ *
  * Presence is always read LIVE. Never gate on `statePartyOrg.hasPresence` —
  * that cached flag only refreshes on membership events and lags, which is the
  * same reason the Build Org foothold rule re-checks presence live.
  */
 import type { Db, ObjectId } from "mongodb";
-import { STATE_ADJACENCY, adjacentStates, annexedNeighbours } from "@/lib/constants/stateAdjacency";
+import { STATE_ADJACENCY, adjacentStates } from "@/lib/constants/stateAdjacency";
+import { annexedNeighbours } from "./rules/annexedAdjacency";
 import type { Character, ElectedOfficial, NPP, PoliticalParty, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { connectedGrowthFrontier, type TerritoryAdjacency } from "./rules/territory";
+import { reentryRegions } from "./rules/partyRenewal";
+import { getPartyRenewalStatesCollection } from "@/lib/db/collections/partyRenewalStates";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Keep paths inside the country's current region set, including transferred regions. */
 export function getTerritoryAdjacency(
@@ -113,8 +125,7 @@ export function isInFrontier(
 
 /** Every region `_id` belonging to `countryId`. */
 export async function getCountryRegionIds(db: Db, countryId: CountryId): Promise<string[]> {
-  const rows = await db
-    .collection<State>("states")
+  const rows = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   return rows.map((r) => r._id);
@@ -142,20 +153,20 @@ export async function getPartyPresenceStates(
   const countryScope = { $or: [{ countryId }, { countryId: { $exists: false } }] };
 
   const [memberStates, officialStates, nppStates] = await Promise.all([
-    db.collection<Character>("characters").distinct("homeState", {
+    charactersCollection(db).distinct("homeState", {
       ...countryScope,
       party: partyId,
       homeState: inCountry,
       ...(departing?.characterId ? { _id: { $ne: departing.characterId } } : {}),
     }),
-    db.collection<ElectedOfficial>("electedOfficials").distinct("state", {
+    electedOfficialsCollection(db).distinct("state", {
       ...countryScope,
       party: partyId,
       state: inCountry,
       ...(departing?.characterId ? { characterId: { $ne: departing.characterId } } : {}),
       ...(departing?.nppId ? { nppId: { $ne: departing.nppId } } : {}),
     }),
-    db.collection<NPP>("npps").distinct("homeState", {
+    nppsCollection(db).distinct("homeState", {
       ...countryScope,
       party: partyId,
       retiredAt: null,
@@ -180,14 +191,60 @@ export async function getPartyFrontier(
 ): Promise<{ presence: Set<string>; frontier: Set<string> }> {
   const regions = regionIds ?? (await getCountryRegionIds(db, countryId));
   const presence = await getPartyPresenceStates(db, countryId, partyId, regions);
-  return {
+  // An empty presence already fails open, so only a present party needs the read.
+  const reentry =
+    presence.size > 0
+      ? ((await loadReentryRegions(db, countryId, [partyId])).get(partyId) ?? [])
+      : [];
+  return { presence, frontier: frontierFromPresence(countryId, presence, regions, reentry) };
+}
+
+/**
+ * The growth frontier for a presence already in hand, plus any re-entry
+ * regions party renewal grants. Pure: the read-side of `getPartyFrontier`,
+ * shared with callers that cache presence across several changes.
+ */
+export function frontierFromPresence(
+  countryId: CountryId,
+  presence: ReadonlySet<string>,
+  regions: readonly string[],
+  reentry: readonly string[]
+): Set<string> {
+  const frontier = connectedGrowthFrontier(
     presence,
-    frontier: connectedGrowthFrontier(
-      presence,
-      expandFrontier(countryId, presence, regions),
-      getTerritoryAdjacency(countryId, regions)
-    ),
-  };
+    expandFrontier(countryId, presence, regions),
+    getTerritoryAdjacency(countryId, regions)
+  );
+  if (presence.size > 0) {
+    for (const region of reentry) {
+      if (regions.includes(region)) frontier.add(region);
+    }
+  }
+  return frontier;
+}
+
+/** Regions each party may re-enter under party renewal. Empty without renewal rows. */
+export async function loadReentryRegions(
+  db: Db,
+  countryId: CountryId,
+  partyIds: readonly string[]
+): Promise<Map<string, string[]>> {
+  const row = await getPartyRenewalStatesCollection(db).findOne(
+    { _id: countryId },
+    {
+      projection: {
+        cycleIndex: 1,
+        ...Object.fromEntries(partyIds.map((id) => [`heldRegions.${id}`, 1])),
+      },
+    }
+  );
+  const out = new Map<string, string[]>();
+  if (!row) return out;
+  for (const id of partyIds) {
+    const regions = reentryRegions(row.heldRegions?.[id], row.cycleIndex ?? 0);
+    if (regions.length > 0) out.set(id, regions);
+  }
+  return out;
 }
 
 /** Batch live presence for a country's parties without expanding adjacency. */
@@ -203,16 +260,13 @@ export async function getPartyPresenceMap(
   const homeState = { $in: regions };
   const countryScope = { $or: [{ countryId }, { countryId: { $exists: false } }] };
   const [members, officials, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ ...countryScope, party, homeState }, { projection: { party: 1, homeState: 1 } })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ ...countryScope, party, state: homeState }, { projection: { party: 1, state: 1 } })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         { ...countryScope, party, homeState, retiredAt: null },
         { projection: { party: 1, homeState: 1 } }
@@ -238,17 +292,22 @@ export async function getPartyFrontiers(
   if (partyIds.length === 0) return new Map();
   const regions = await getCountryRegionIds(db, countryId);
   const presence = await getPartyPresenceMap(db, countryId, partyIds, regions);
+  const present = [...presence].filter(([, states]) => states.size > 0).map(([id]) => id);
+  const reentry = present.length > 0 ? await loadReentryRegions(db, countryId, present) : new Map();
   return new Map(
     [...presence].map(([id, states]) => [
       id,
       states.size === 0
         ? null
         : [
-            ...connectedGrowthFrontier(
-              states,
-              expandFrontier(countryId, states, regions),
-              getTerritoryAdjacency(countryId, regions)
-            ),
+            ...new Set([
+              ...connectedGrowthFrontier(
+                states,
+                expandFrontier(countryId, states, regions),
+                getTerritoryAdjacency(countryId, regions)
+              ),
+              ...(reentry.get(id) ?? []).filter((region: string) => regions.includes(region)),
+            ]),
           ].sort(),
     ])
   );

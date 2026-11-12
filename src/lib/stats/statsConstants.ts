@@ -4,7 +4,7 @@
  * Seven stats, each a float clamped to [1, 10], allocated at character creation
  * from a fixed point budget and shaped by play (use-growth + idle decay +
  * events). Every magnitude here is a tunable constant — balance is expected to
- * be adjusted after playtesting. See plans/2026-06-18-rpg-stats-overhaul-design.md.
+ * be adjusted after playtesting.
  */
 
 /** The seven stat keys, in canonical display order. */

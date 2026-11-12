@@ -6,7 +6,6 @@ import { handleRouteError, badRequest, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse, SAVINGS_WALLET_LIMITS } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
-import type { Character } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   getHomeCurrency,
@@ -24,6 +23,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { runSavingsCommand } from "@/lib/savings/accountsShell";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const depositSchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
         return NextResponse.json(badRequest(deposited.error).toJson(), { status: 400 });
       }
     } else if (forexEnabled) {
-      const res = await db.collection<Character>("characters").updateOne(
+      const res = await charactersCollection(db).updateOne(
         {
           _id: character._id,
           [`currencyBalances.personal.${c}`]: { $gte: normalized },
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      const res = await db.collection<Character>("characters").updateOne(
+      const res = await charactersCollection(db).updateOne(
         {
           _id: character._id,
           cashOnHand: { $gte: normalized },
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
 
     const gameState = await getGameState();
     const turn = gameState?.currentTurn ?? 0;
-    const after = await db.collection<Character>("characters").findOne({ _id: character._id });
+    const after = await charactersCollection(db).findOne({ _id: character._id });
     if (after) {
       await insertSavingsLedgerEntry(db, {
         characterId: character._id,

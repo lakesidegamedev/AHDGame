@@ -44,6 +44,7 @@ import type {
 } from "./components/types";
 import { POSITIONS, fmt as nationalFmt } from "./components/helpers";
 import { PartyPageSkeleton } from "./PartyPageSkeleton";
+import { usePartyHubLoaders } from "./usePartyHubLoaders";
 import { resolveTreasuryPermissions } from "./treasuryPermissions";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { resolveScopeSwitcherRegionId } from "./resolveScopeSwitcherRegion";
@@ -54,6 +55,7 @@ import type { MainTab as StateMainTab } from "../../region/[id]/party/[partyId]/
 import type { StatePartyAnalyticsPayload } from "@/lib/partyAnalytics";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type PartyHubScope =
   | { kind: "national"; countryCode: string; partyId: string }
@@ -488,98 +490,28 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     "us";
   const partiesListHref = `/country/${backCountry}/parties`;
 
-  const fetchUser = useCallback(async () => {
-    try {
-      const r = await fetch("/api/auth/me", { credentials: "same-origin" });
-      if (r.ok) {
-        const d = await r.json();
-        setUser(d.user);
-      }
-    } catch {}
-  }, []);
-
-  const fetchParty = useCallback(async () => {
-    try {
-      const url = partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id);
-      const r = await fetch(url, { credentials: "same-origin" });
-      if (r.ok) {
-        const d = await r.json();
-        setParty(d);
-        const memberStates = [
-          ...new Set(
-            (d.members ?? [])
-              .map((m: { homeState?: string }) => m.homeState)
-              .filter(Boolean) as string[]
-          ),
-        ];
-        setLinkedStateIds(memberStates);
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  }, [id, requestedCountry]);
-
-  const fetchLinkedStates = useCallback(async () => {
-    try {
-      const r = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/state-parties`,
-        { credentials: "same-origin" }
-      );
-      if (r.ok) {
-        const d = await r.json();
-        const ids = (d.rows ?? [])
-          .filter((row: { hasPresence?: boolean }) => row.hasPresence)
-          .map((row: { regionId: string }) => row.regionId);
-        if (ids.length > 0) setLinkedStateIds(ids);
-      }
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchElections = useCallback(async () => {
-    try {
-      const r = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/election`,
-        { credentials: "same-origin" }
-      );
-      if (r.ok) setElectionData(await r.json());
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchCommittee = useCallback(async () => {
-    try {
-      const r = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/committee`,
-        { credentials: "same-origin" }
-      );
-      if (r.ok) setCommitteeData(await r.json());
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchEligibleStates = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/npp-influence-states`,
-        { credentials: "same-origin" }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setEligibleStates(data.states ?? []);
-      }
-    } catch {}
-  }, [id, requestedCountry]);
-
-  const fetchAnalytics = useCallback(async () => {
-    try {
-      const analyticsUrl = modViewEnabled
-        ? `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/analytics?modView=1`
-        : `${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/analytics`;
-      const response = await fetch(analyticsUrl, { credentials: "same-origin" });
-      if (!response.ok) return;
-      const payload = (await response.json()) as PartyAnalyticsPayload;
-      setAnalyticsData(payload);
-    } catch {}
-  }, [id, requestedCountry, modViewEnabled]);
+  const {
+    fetchUser,
+    fetchParty,
+    fetchLinkedStates,
+    fetchElections,
+    fetchCommittee,
+    fetchEligibleStates,
+    fetchAnalytics,
+  } = usePartyHubLoaders({
+    id,
+    requestedCountry,
+    modViewEnabled,
+    setUser,
+    setParty,
+    setLinkedStateIds,
+    setElectionData,
+    setCommitteeData,
+    setEligibleStates,
+    setAnalyticsData,
+    setLoading,
+    setMsg,
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -610,9 +542,8 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
     user?.character?.party === id &&
     user?.character?.countryId === party.countryId;
   const canUsePartyInfluenceEarly = user?.isAdmin || isChairEarly || isViceChairEarly;
-  // Committee-confirmed campaigners reach NPP Management but not Recruitment
-  // or the other chair/VC surfaces (suggestion #269), so this is a separate
-  // predicate rather than a widening of `canUsePartyInfluence`.
+  // Committee-confirmed campaigners reach NPP Management but not
+  // Recruitment or other chair/VC surfaces, so this is separate from `canUsePartyInfluence`.
   const isCampaignerEarly =
     hasCharEarly && !!party?.campaigners?.some((c) => c.id === user?.character?.id);
   const canManageNppsEarly = canUsePartyInfluenceEarly || isCampaignerEarly;
@@ -622,7 +553,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
   useEffect(() => {
     if (
       !party ||
-      party.countryId !== "US" ||
+      !countryHasFeature("usUi", party.countryId) ||
       !user?.character?.id ||
       user.isAdmin ||
       isChairEarly ||
@@ -686,10 +617,9 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
       : new Set<NationalMainTab>(["overview", "members"]);
     if (canViewExtendedTabsEarly && canManageNppsEarly) allowed.add("actions");
     if (canViewExtendedTabsEarly && canActAsChairEarly) allowed.add("chair-office");
-    // UK party-leadership removal (#861): national hub only, UK parties only.
-    if (canViewExtendedTabsEarly && party?.countryId === "UK") allowed.add("leadership");
-    // UK party conferences (#862): national hub only, UK parties only.
-    if (canViewExtendedTabsEarly && party?.countryId === "UK") allowed.add("conference");
+    // UK party leadership removal and conferences: national hub, UK parties only.
+    if (canViewExtendedTabsEarly && countryHasFeature("ukUi", party?.countryId))
+      allowed.add("leadership").add("conference");
     if (canViewExtendedTabsEarly && user?.isAdmin) allowed.add("admin");
     if (allowed.has(tabParam as NationalMainTab)) {
       setActiveTab(tabParam as NationalMainTab);
@@ -892,10 +822,10 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
               },
             ]
           : []),
-        ...(party.countryId === "UK"
+        ...(countryHasFeature("ukUi", party.countryId)
           ? [{ id: "leadership" as NationalMainTab, label: "Leadership" }]
           : []),
-        ...(party.countryId === "UK"
+        ...(countryHasFeature("ukUi", party.countryId)
           ? [{ id: "conference" as NationalMainTab, label: "Conference" }]
           : []),
         ...(user?.isAdmin ? [{ id: "admin" as NationalMainTab, label: "Admin" }] : []),
@@ -1387,11 +1317,11 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
         </>
       )}
 
-      {activeTab === "leadership" && party.countryId === "UK" && (
+      {activeTab === "leadership" && countryHasFeature("ukUi", party.countryId) && (
         <LeadershipPanel countryCode={backCountry} partyId={id} />
       )}
 
-      {activeTab === "conference" && party.countryId === "UK" && (
+      {activeTab === "conference" && countryHasFeature("ukUi", party.countryId) && (
         <ConferencePanel countryCode={backCountry} partyId={id} />
       )}
 
@@ -1414,6 +1344,7 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
     stateParty,
     currentTurn,
     loading,
+    loadError,
     fetchUser,
     fetchStateParty,
     taxRate,
@@ -1446,6 +1377,10 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   const [nppSubtab, setNppSubtab] = useState<"recruitment" | "management">("recruitment");
   const [msg, setMsg] = useState("");
   const [analyticsData, setAnalyticsData] = useState<StatePartyAnalyticsPayload | null>(null);
+
+  useEffect(() => {
+    if (loadError) setMsg("✗ Could not load state party data. Check your connection and refresh.");
+  }, [loadError]);
 
   const treasury = useStatePartyTreasuryActions({
     countryCode,
@@ -1562,7 +1497,11 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   if (!stateParty) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted">State party not found.</div>
+        <div className="text-muted">
+          {loadError
+            ? "Could not load this state party. Check your connection and refresh."
+            : "State party not found."}
+        </div>
       </div>
     );
   }
@@ -1610,7 +1549,7 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   const canViewExtendedTabs = user?.isAdmin || isMember || isNatChair || isNatViceChair;
 
   const regionAdjective = (() => {
-    if (countryCode !== "UK") return stateParty.stateName;
+    if (!countryHasFeature("ukUi", countryCode)) return stateParty.stateName;
     const region = UK_REGIONS.find((r) => r.id === stateId);
     return region?.adjective ?? stateParty.stateName;
   })();

@@ -1,18 +1,17 @@
-/**
- * Energy productivity ramp: output per unit of energy capacity climbs smoothly
- * with the world turn in the 1991 opening world, where energy demand runs at
- * roughly three times supply and plants take 96 turns to build.
+/*
+ * Energy productivity ramp: output per energy capacity unit rises smoothly
+ * with world turn in the 1991 opening world (energy demand ~3x supply, plants
+ * take 96 turns to build).
  *
- * Pure rules: turn number and preset id in, multiplier out. No database, no
- * clock, no randomness, so the same turn always yields the same value and a
- * restarted or resumed world lands on the same curve.
+ * Pure rules: turn number and preset id in, multiplier out. No DB, clock, or
+ * randomness, so the same turn always yields the same value.
  *
- * The start turn is a constant, not stored state, so there is nothing to
- * initialise or migrate. Below it the multiplier is exactly 1; it rises
- * linearly (about 0.6 percentage points a turn, no steps) to the cap and holds.
+ * The start turn is a constant, not stored state, so nothing to initialise or
+ * migrate. Below it the multiplier is exactly 1; it rises linearly (~0.6pp/turn,
+ * no steps) to the cap and holds.
  *
- * Imports nothing on purpose: the commodity ledger imports this, and a rules
- * module that reaches back into constants would close an import cycle.
+ * Imports nothing on purpose: the commodity ledger imports this, and reaching
+ * into constants would close an import cycle.
  */
 export interface EnergyProductivityRamp {
   /** World turn at which the ramp begins (multiplier is exactly 1 until then). */

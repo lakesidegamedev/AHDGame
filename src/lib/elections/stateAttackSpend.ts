@@ -11,7 +11,10 @@ import {
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type { Campaign, Character, PrimaryStateAction } from "@/lib/db/types";
+import type { Campaign, PrimaryStateAction } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { primaryStateActionsCollection } from "@/lib/db/repositories/primaryStateActions";
 
 export interface StateAttackSpendInput {
   characterId: ObjectId;
@@ -51,17 +54,16 @@ function mapSpendError(step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Er
 
 /**
  * Charge a primary state attack (character actions + campaign funds) and
- * record the attack row so the result is exactly-once on every topology
- * (issue #1672).
+ * record the attack row so the result is exactly-once on every topology.
  *
  * Under real transactions the legs, the row insert, and the idempotency
- * receipt join the transaction and commit atomically, preserving the old
- * behavior. On a standalone deployment the fallback runs the same writes as
- * keyed idempotent steps: a crash between the debits and the insert leaves
- * an `in_progress` receipt, and retrying with the same key reconciles to
- * exactly one charged attack instead of charging for an attack that never
- * landed (or landing it twice). A retry after a terminal failure throws
- * `MoneyFlowTerminalError` (fail closed); a new attempt needs a new key.
+ * receipt join the transaction and commit atomically. On a standalone
+ * deployment the fallback runs the same writes as keyed idempotent steps: a
+ * crash between the debits and the insert leaves an `in_progress` receipt, and
+ * retrying with the same key reconciles to exactly one charged attack instead
+ * of charging for an attack that never landed (or landing it twice). A retry
+ * after a terminal failure throws `MoneyFlowTerminalError` (fail closed); a new
+ * attempt needs a new key.
  */
 export async function applyStateAttackSpend(
   db: Db,
@@ -81,9 +83,9 @@ export async function applyStateAttackSpend(
     throw new RangeError("State attack idempotency key must be 1-128 characters");
   }
 
-  const characters = db.collection<Character>("characters");
-  const campaigns = db.collection<Campaign>("campaigns");
-  const actions = db.collection<PrimaryStateAction>("primaryStateActions");
+  const characters = charactersCollection(db);
+  const campaigns = campaignsCollection(db);
+  const actions = primaryStateActionsCollection(db);
   const receipts = await getMoneyFlowReceiptsCollection(db);
   const actionId = keyedInsertId(key, "state-attack");
 

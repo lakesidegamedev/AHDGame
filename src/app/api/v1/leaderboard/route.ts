@@ -8,6 +8,10 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { Character, NPP } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -72,8 +76,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Fetch player characters (exclude banned users)
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .aggregate<Character & { _userDoc?: { isBanned?: boolean } }>([
         { $match: countryFilter },
         {
@@ -100,8 +103,7 @@ export async function GET(request: Request) {
     // Fetch NPPs unless playersOnly
     const npps = playersOnly
       ? []
-      : await db
-          .collection<NPP>("npps")
+      : await nppsCollection(db)
           .find({ retiredAt: null, ...countryFilter })
           .sort({ [sortField]: -1, name: 1 })
           .toArray();
@@ -163,15 +165,13 @@ export async function GET(request: Request) {
     const partySeqIds = partyIds.map((id) => Number(id)).filter((n) => Number.isFinite(n));
 
     const [partyDocs, stateDocs] = await Promise.all([
-      db
-        .collection<{ sequentialId: number; name: string; color?: string }>("politicalParties")
+      politicalPartiesCollection<{ sequentialId: number; name: string; color?: string }>(db)
         .find(
           { sequentialId: { $in: partySeqIds }, countryId },
           { projection: { sequentialId: 1, name: 1, color: 1 } }
         )
         .toArray(),
-      db
-        .collection<{ _id: string; name: string }>("states")
+      statesCollection<{ _id: string; name: string }>(db)
         .find({ _id: { $in: stateIds } }, { projection: { name: 1 } })
         .toArray(),
     ]);

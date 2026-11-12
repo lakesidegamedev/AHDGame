@@ -4,6 +4,8 @@ import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/li
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { validateResetDepartmentAllocations } from "./rules/allocation";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import { resetDepartmentAccountsCollection } from "@/lib/db/repositories/resetDepartmentAccounts";
 
 export type ResetAllocationWriteResult =
   { ok: true } | { ok: false; status: 400 | 403 | 404 | 409; error: string };
@@ -22,11 +24,10 @@ export async function setResetDepartmentAllocations(input: {
   if (!worldId || !Number.isSafeInteger(turn) || turn < 1 || !actorId) {
     return { ok: false, status: 409, error: "The active reset world is not ready" };
   }
-  const collection = db.collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts");
+  const collection = resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db);
   const [account, currentPrograms] = await Promise.all([
     collection.findOne({ _id: `${countryId}:${departmentId}`, worldId }),
-    db
-      .collection<ResetLawProgramDocument>("resetLawPrograms")
+    resetLawProgramsCollection<ResetLawProgramDocument>(db)
       .find({ worldId, country: countryId, scope: "national" })
       .toArray(),
   ]);

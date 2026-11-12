@@ -12,6 +12,11 @@ import type { CountryId } from "@/lib/constants/countries";
 import { computeSlateAssignmentScore, isNppSlateCompliant } from "@/lib/slateAssignments";
 import { SLATE_ASSIGNMENT_CAP } from "@/lib/slateAssignmentCap";
 import { getSlateAcceptanceStatBonus } from "@/lib/slateAuthority";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
+import { recruitmentSlatesCollection } from "@/lib/db/repositories/recruitmentSlates";
 
 /**
  * List all slates owned by a (countryId, partyId). Active by default; pass
@@ -25,11 +30,7 @@ export async function listPartySlates(
 ): Promise<RecruitmentSlate[]> {
   const filter: Record<string, unknown> = { countryId, partyId };
   if (!includeArchived) filter.archivedAt = null;
-  return db
-    .collection<RecruitmentSlate>("recruitmentSlates")
-    .find(filter)
-    .sort({ state: 1, createdAt: -1 })
-    .toArray();
+  return recruitmentSlatesCollection(db).find(filter).sort({ state: 1, createdAt: -1 }).toArray();
 }
 
 /**
@@ -42,9 +43,7 @@ export async function findSlateForElection(
   partyId: string,
   electionId: ObjectId
 ): Promise<RecruitmentSlate | null> {
-  return db
-    .collection<RecruitmentSlate>("recruitmentSlates")
-    .findOne({ countryId, partyId, electionId });
+  return recruitmentSlatesCollection(db).findOne({ countryId, partyId, electionId });
 }
 
 /**
@@ -82,7 +81,7 @@ export async function ensureSlate(
     createdAt: args.now,
     updatedAt: args.now,
   };
-  await db.collection<RecruitmentSlate>("recruitmentSlates").insertOne(slate);
+  await recruitmentSlatesCollection(db).insertOne(slate);
   return slate;
 }
 
@@ -92,23 +91,16 @@ export async function ensureSlate(
  * ones.
  */
 export async function listSlateCandidates(db: Db, slateId: ObjectId): Promise<SlateCandidate[]> {
-  return db
-    .collection<SlateCandidate>("slateCandidates")
-    .find({ slateId })
-    .sort({ invitedAt: 1 })
-    .toArray();
+  return slateCandidatesCollection(db).find({ slateId }).sort({ invitedAt: 1 }).toArray();
 }
 
 /**
  * Should a slate row appear on the chair's Slate tab?
  *
- * Withdrawn rows are tombstones, but they come from two places. A reasonless
- * one is a chair action — they removed the row, or reassigned that NPP to
- * another race in the same region — and stays hidden. One carrying a
- * `refusalReason` is the turn's filing pass reporting that it could not put
- * the chair's pick on the ballot; before #1181 those were hidden too, so a
- * chair-assigned NPP silently vanished and read as an assignment that never
- * saved.
+ * Reasonless withdrawn rows are chair tombstones and stay hidden. Withdrawn
+ * rows carrying a `refusalReason` are the filing pass reporting the pick could
+ * not reach the ballot, and must remain visible so the assignment is not read
+ * as silently lost.
  */
 export function isSlateRowVisibleToChair(
   row: Pick<SlateCandidate, "status" | "refusalReason">
@@ -122,21 +114,18 @@ export async function listSlateCandidatesByIds(
   slateIds: ObjectId[]
 ): Promise<SlateCandidate[]> {
   if (slateIds.length === 0) return [];
-  return db
-    .collection<SlateCandidate>("slateCandidates")
+  return slateCandidatesCollection(db)
     .find({ slateId: { $in: slateIds } })
     .toArray();
 }
 
 /**
- * Candidate IDs already assigned to a non-withdrawn slot in another live race
- * in this (state, party). Used by the slate-detail endpoint to grey those
- * candidates out in the picker.
+ * Candidate IDs already assigned to a non-withdrawn slot in another live
+ * race in this (state, party); used to grey them out in the picker.
  *
- * Restricted to slates whose election is still `upcoming` or `active` — slates
- * for resolved elections persist as cross-cycle templates
- * ([[findLatestSlateTemplate]]) and must not block the picker for fresh races.
- * Bug #0573.
+ * Only slates whose election is `upcoming` or `active` count: slates for
+ * resolved elections persist as cross-cycle templates ([[findLatestSlateTemplate]])
+ * and must not block fresh races.
  */
 export async function listStateAssignedCandidateIds(
   db: Db,
@@ -151,8 +140,7 @@ export async function listStateAssignedCandidateIds(
   }
 ): Promise<string[]> {
   const liveElectionIds = (
-    await db
-      .collection<Election>("elections")
+    await electionsCollection(db)
       .find({
         countryId,
         state,
@@ -163,8 +151,7 @@ export async function listStateAssignedCandidateIds(
   ).map((e) => e._id);
   if (liveElectionIds.length === 0) return [];
 
-  const sameStateSlates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const sameStateSlates = await recruitmentSlatesCollection(db)
     .find({
       countryId,
       partyId,
@@ -177,8 +164,7 @@ export async function listStateAssignedCandidateIds(
   if (sameStateSlates.length === 0) return [];
 
   const candidateIds = (
-    await db
-      .collection<SlateCandidate>("slateCandidates")
+    await slateCandidatesCollection(db)
       .find({
         slateId: { $in: sameStateSlates.map((slate) => slate._id) },
         status: { $ne: "withdrawn" },
@@ -256,8 +242,7 @@ async function loadTemplateElections(
   const ids = Array.from(new Set(slates.map((slate) => slate.electionId.toString()))).map(
     (id) => new ObjectId(id)
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({ _id: { $in: ids } })
     .project<TemplateElection>({ _id: 1, cycle: 1, senateClass: 1, chamberClass: 1 })
     .toArray();
@@ -277,8 +262,7 @@ export async function prefetchSlateTemplates(
   const result = new Map<string, SlateTemplatePrefetch>();
   if (targets.length === 0) return result;
 
-  const slates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const slates = await recruitmentSlatesCollection(db)
     .find({
       countryId: { $in: Array.from(new Set(targets.map((t) => t.countryId))) },
       partyId: { $in: Array.from(new Set(targets.map((t) => t.partyId))) },
@@ -314,8 +298,7 @@ export async function prefetchSlateTemplates(
   const rows =
     templateIds.length === 0
       ? []
-      : await db
-          .collection<SlateCandidate>("slateCandidates")
+      : await slateCandidatesCollection(db)
           .find({ slateId: { $in: templateIds } })
           .sort({ invitedAt: 1 })
           .toArray();
@@ -334,14 +317,12 @@ export async function prefetchSlateTemplates(
   const [npps, characters] = await Promise.all([
     nppIds.length === 0
       ? Promise.resolve([] as NPP[])
-      : db
-          .collection<NPP>("npps")
+      : nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .toArray(),
     characterIds.length === 0
       ? Promise.resolve([] as Character[])
-      : db
-          .collection<Character>("characters")
+      : charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .toArray(),
   ]);
@@ -380,9 +361,7 @@ export async function materializeSlateAssignmentsFromTemplate({
     ? (knownEmptySlate ?? null)
     : (knownEmptySlate ?? (await findSlateForElection(db, countryId, partyId, election._id)));
   if (existing && !knownEmptySlate) {
-    const rowCount = await db
-      .collection<SlateCandidate>("slateCandidates")
-      .countDocuments({ slateId: existing._id });
+    const rowCount = await slateCandidatesCollection(db).countDocuments({ slateId: existing._id });
     if (rowCount > 0) return existing;
   }
 
@@ -432,13 +411,10 @@ export async function materializeSlateAssignmentsFromTemplate({
         candidateId: npp._id,
         candidateName: npp.name,
         homeState: npp.homeState,
-        // Carried-forward rows are an automatic cross-cycle persistence, not a
-        // fresh chair action. Drop the human attribution (the original assigner
-        // may have been deleted — e.g. #0961's phantom "Jonah Heidelbaum") and
-        // mark the row autoFilled so the board shows "Auto" rather than a stale/
-        // nonexistent chair. The role is preserved so the state-chair compliance
-        // bonus the race was originally slated under still applies (no behavior
-        // change to acceptance).
+        // Carried-forward rows are automatic cross-cycle persistence, not a fresh
+        // chair action. Drop the human attribution (the original assigner may be
+        // deleted or stale) and mark autoFilled so the board shows "Auto". The
+        // role is preserved so the state-chair compliance bonus still applies.
         assignedByCharacterId: null,
         assignedByCharacterName: null,
         assignedByRole: row.assignedByRole ?? null,
@@ -508,9 +484,9 @@ export async function materializeSlateAssignmentsFromTemplate({
     } satisfies RecruitmentSlate);
 
   if (!existing) {
-    await db.collection<RecruitmentSlate>("recruitmentSlates").insertOne(slate);
+    await recruitmentSlatesCollection(db).insertOne(slate);
   }
-  await db.collection<SlateCandidate>("slateCandidates").insertMany(
+  await slateCandidatesCollection(db).insertMany(
     carriedRows.map((row) => ({
       ...row,
       slateId: slate._id,
@@ -524,8 +500,7 @@ async function loadTemplateRoster(
   templateRows: SlateCandidate[]
 ): Promise<Pick<SlateTemplatePrefetch, "nppById" | "characterById">> {
   const [npps, characters] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find({
         _id: {
           $in: templateRows
@@ -534,8 +509,7 @@ async function loadTemplateRoster(
         },
       })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({
         _id: {
           $in: templateRows
@@ -558,8 +532,7 @@ async function findLatestSlateTemplate(
   partyId: string,
   election: TemplateTarget
 ): Promise<RecruitmentSlate | null> {
-  const candidates = await db
-    .collection<RecruitmentSlate>("recruitmentSlates")
+  const candidates = await recruitmentSlatesCollection(db)
     .find({
       countryId,
       partyId,

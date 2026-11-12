@@ -16,6 +16,7 @@ import { fieldOfficeRamp } from "@/lib/campaigns/fieldOffices/effects";
 import { getFieldOfficeRules } from "@/lib/campaigns/fieldOffices/rules";
 import { campaignStrengthLookupKey } from "@/lib/campaigns/suspendEndorseLifecycle";
 import { getGameTime } from "@/lib/time/gameTime";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface RouteParams {
   params: Promise<{ id: string; partyId: string; stateId: string }>;
@@ -57,7 +58,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
     const election = resolved.election;
-    if (election.electionType !== "president" || (election.countryId ?? "US") !== "US") {
+    if (
+      election.electionType !== "president" ||
+      !countryHasFeature("usApi", election.countryId ?? "US")
+    ) {
       return errorResponse(404, "County results are only available for US presidential primaries");
     }
 

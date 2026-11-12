@@ -16,14 +16,16 @@ test.describe("Critical flows", () => {
 
   test("view congress bills", async ({ page }) => {
     await page.goto("/congress");
-    await expect(page).toHaveURL(/\/congress/);
+    await expect(page).toHaveURL(/\/(congress|legislature)/);
     await expect(page.locator("body")).toBeVisible({ timeout: 10_000 });
     // Congress page shows Composition, Bills, or chamber content
-    await expect(page.locator("body")).toContainText(/composition|bills|senate|house|congress/i);
+    await expect(page.locator("body")).toContainText(
+      /composition|bills|senate|house|congress|legislature/i
+    );
     const billsLink = page.getByRole("link", { name: /bills/i });
     if (await billsLink.isVisible()) {
       await billsLink.click();
-      await expect(page).toHaveURL(/\/congress/);
+      await expect(page).toHaveURL(/\/(congress|legislature)/);
     }
   });
 
@@ -48,6 +50,6 @@ test.describe("Critical flows", () => {
 
     // From dashboard, navigate to congress
     await page.goto("/congress");
-    await expect(page).toHaveURL(/\/congress/);
+    await expect(page).toHaveURL(/\/(congress|legislature)/);
   });
 });

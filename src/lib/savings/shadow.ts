@@ -1,17 +1,16 @@
 /**
  * Shadow savings accounts.
  *
- * Before any read or write moves onto the account model, the accounts are
- * built from the legacy character fields every turn and compared, projection
- * by projection, with what the world currently believes: each owner's total,
- * each holder's total, each bank's pointer-deposit aggregate and each central
- * bank's savings stock. A discrepancy is a place where the account model and
- * the legacy model would answer a question differently, which is exactly the
- * list of things that have to be understood before the model becomes true.
+ * Accounts are built from the legacy character fields every turn and compared
+ * projection by projection against what the world currently believes: each
+ * owner's total, each holder's total, each bank's pointer-deposit aggregate,
+ * and each central bank's savings stock. A discrepancy marks where the account
+ * model and the legacy model would answer a question differently, which is
+ * exactly what must be understood before the model becomes true.
  *
- * Shadow mode changes no live behaviour. Discrepancies are counted on the
- * banking telemetry, reported on the banking health page, and published as
- * audit events with aggregates only.
+ * Shadow mode changes no live behaviour. Discrepancies are counted on banking
+ * telemetry, reported on the banking health page, and published as audit
+ * events with aggregates only.
  */
 
 import { ObjectId, type Db } from "mongodb";
@@ -40,6 +39,11 @@ import {
 } from "@/lib/savings/rules/accounts";
 import { countBankingEvent, timedBankingStage } from "@/lib/banking/telemetry";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import type { Document } from "mongodb";
 
 export const SAVINGS_ACCOUNTS_COLLECTION = "savingsAccounts";
 
@@ -94,8 +98,7 @@ export async function loadLegacySavingsRows(db: Db): Promise<LegacySavingsRow[]>
       { [`savingsAccountsOpened.${c}`]: true },
     ]),
   };
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find(filter)
     .project<Pick<Character, "_id" | "currencyBalances" | "savingsAccountsOpened">>({
       currencyBalances: 1,
@@ -190,7 +193,7 @@ export async function refreshShadowAccounts(
       };
     });
   if (ops.length === 0) return 0;
-  await db.collection(SAVINGS_ACCOUNTS_COLLECTION).bulkWrite(ops, { ordered: false });
+  await savingsAccountsCollection<Document>(db).bulkWrite(ops, { ordered: false });
   return ops.length;
 }
 
@@ -287,17 +290,12 @@ export async function buildSavingsComparison(
 ): Promise<SavingsComparison> {
   const [rows, accountDocs, charters, banks] = await Promise.all([
     loadLegacySavingsRows(db),
-    db
-      .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
-      .find({ ownerType: "character" })
-      .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    savingsAccountsCollection<SavingsAccount>(db).find({ ownerType: "character" }).toArray(),
+    corporationsCollection(db)
       .find({ "bankCharter.status": "active" })
       .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({})
       .project<Pick<CentralBank, "_id" | "nationalSavingsBalance">>({ nationalSavingsBalance: 1 })
       .toArray(),

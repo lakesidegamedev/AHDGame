@@ -1,44 +1,20 @@
 /**
- * NPP corporation strategy loop (v5).
+ * NPP corporation strategy loop.
  *
- * WHAT WAS WRONG. The brain was a stateless reflex controller: every turn it
- * re-derived the same fixed if/else ladders from scratch, with a static CEO
- * archetype multiplier as the only variation. It never recorded what it tried
- * and never measured whether anything worked, so it could not course-correct.
- * A corp in a structurally hopeless position kept applying the same levers
- * forever, which is why prod corps sat losing money for twenty turns with
- * healthy factories.
+ * Memory: `corp.nppStrategy` records strategy, adoption turn, score at adoption,
+ * and best score realized per strategy. Score is `corpMargin` (net income over
+ * revenue), currency-normalized, scale-free, and inclusive of debt service.
+ * Five lever bundles re-weight existing knobs only; no new mechanics.
  *
- * WHAT THIS ADDS. A closed loop with four parts:
+ * `expand` is the default and reproduces pre-strategy lever settings exactly
+ * (all multipliers 1). A corp doing fine never leaves it, so shipping into a
+ * live world only changes corps already failing.
  *
- *   1. MEMORY      `corp.nppStrategy`: which strategy, when adopted, the score
- *                  at adoption, and the best score each strategy has ever
- *                  realized for this corp.
- *   2. A SCORE     `corpMargin`, net income over revenue. Already computed by
- *                  the brain, already currency-normalized, scale-free, and (as
- *                  of the debt-service change) inclusive of the cost that was
- *                  actually killing corps. One number, comparable across
- *                  countries and eras, unlike every money constant in the
- *                  module.
- *   3. A MENU      Five bundles of levers that ALREADY EXIST. No new mechanics:
- *                  a strategy only re-weights growth targets, budgets,
- *                  dividends, divestment tolerance and whether expansion and
- *                  growth capex are permitted.
- *   4. SWITCHING   Lag-aware, hysteretic, deterministic.
- *
- * WHY `expand` IS THE DEFAULT AND WHY THAT MATTERS. `expand` reproduces the
- * pre-v5 lever settings exactly (every multiplier 1, everything permitted). A
- * corp that is doing fine never leaves it and therefore never changes
- * behaviour. Only a corp whose score fails to improve over a full evaluation
- * window moves, which bounds the blast radius of shipping this into a live
- * world to precisely the corps that are already failing.
- *
- * THE LAG IS THE HARD PART. `CAPACITY_BUILD_TURNS` is 48 for most sector
- * types, so a plant ordered under `expand` does not exist for 48 turns. Any
- * evaluation window shorter than the build lag judges `expand` a failure
- * before its capacity lands, switches away, and oscillates forever. Hence
+ * LAG IS THE HARD PART. `CAPACITY_BUILD_TURNS` is 48 for most sectors, so any
+ * evaluation window shorter than the build lag judges `expand` a failure before
+ * its capacity lands, switches away, and oscillates. Hence
  * {@link CAPACITY_STRATEGY_TENURE}: capacity-bearing strategies get a full
- * build cycle before they may be judged at all.
+ * build cycle before they may be judged.
  */
 
 import { CAPACITY_BUILD_TURNS_DEFAULT } from "@/lib/constants/capacityEconomy";
@@ -329,26 +305,14 @@ export function advanceStrategy(args: {
     return { state: { ...held, adoptedTurn: turn }, changed: false };
   }
 
-  // It is not working. Pick the next one, never the incumbent.
+  // Never pick the incumbent id; choose the next strategy.
   //
-  // The ordering below is the whole explore/exploit balance, and both extremes
-  // were wrong when tried:
-  //
-  //   Exploit-first (prefer the best already-tried strategy) LIVELOCKS. A corp
-  //   scoring below zero always reads "retrench" from the situational prior, so
-  //   once retrench itself stops working the only candidate left is whatever it
-  //   ran before, and the corp ping-pongs between two strategies forever
-  //   without ever evaluating the other three.
-  //
-  //   Explore-first (always prefer an untried strategy) THROWS AWAY WHAT WORKS.
-  //   A corp that already discovered harvest scores 40 here abandons it to try
-  //   expand, which is the opposite of learning.
-  //
-  // So: the situational prior wins when it is untried, because the situation is
-  // live information about the corp's position NOW and a recorded score is not.
-  // Failing that, exploit a tried strategy that is clearly better than what the
-  // corp is currently achieving. Failing that, explore. Every branch is
-  // deterministic; there is no randomness anywhere in this module.
+  // Ordering is the explore/exploit balance; both extremes break:
+  // exploit-first livelocks (a sub-zero corp ping-pongs retrench with its
+  // previous strategy, never trying the rest), and explore-first abandons known
+  // winners. So prefer an untried situational prior (live position beats a stale
+  // score), else exploit a clearly better tried strategy, else explore.
+  // Fully deterministic, no randomness.
   const candidates = NPP_CORP_STRATEGIES.filter((k) => allowed.has(k) && k !== prior.id);
   const untried = candidates.filter((k) => scores[k] === undefined);
   const situational = situationalStrategy(situation);

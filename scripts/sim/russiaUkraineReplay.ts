@@ -202,7 +202,6 @@ async function main() {
         {
           $set: {
             livingConflictsEnabled: true,
-            crisisInteractionEnabled: true,
             currentYear: 2013,
             currentTurn: 1056,
           },

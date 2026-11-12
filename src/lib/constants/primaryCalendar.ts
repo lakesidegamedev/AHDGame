@@ -136,9 +136,7 @@ export function getWaveForTurnsRemaining(
 }
 
 /**
- * Flatten all wave states. Used to sanity-check every state is assigned. State
- * membership is identical across schedules, so the default compressed schedule
- * yields the same set as the stretched one.
+ * Flatten all wave states. Used to sanity-check every state is assigned.
  */
 export function getAllStaggerStates(schedule: PrimaryWaveSchedule = COMPRESSED_SCHEDULE): string[] {
   return schedule.waves.flatMap((w) => w.states);

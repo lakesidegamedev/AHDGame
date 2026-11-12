@@ -167,13 +167,13 @@ describe("resolveSourceLink", () => {
     const s = resolveSourceLink("feedback_status_changed", {
       issueNumber: 42,
     });
-    expect(s?.href).toBe("/admin?tab=feedback&issue=42");
+    expect(s?.href).toBe("/control/support/feedback?issue=42");
     expect(s?.label).toBe("View issue #42");
   });
 
   it("new_feedback links to admin feedback tab", () => {
     const s = resolveSourceLink("new_feedback", { issueNumber: 5 });
-    expect(s?.href).toBe("/admin?tab=feedback&issue=5");
+    expect(s?.href).toBe("/control/support/feedback?issue=5");
     expect(s?.label).toBe("View #5");
   });
 
@@ -182,7 +182,7 @@ describe("resolveSourceLink", () => {
     const s = resolveSourceLink("new_player_suggestion", {
       suggestionIssueNumber: 3,
     });
-    expect(s?.href).toBe("/admin?tab=support&sub=suggestions&issue=3");
+    expect(s?.href).toBe("/control/support/suggestions?issue=3");
     expect(s?.label).toBe("Review S#3");
   });
 

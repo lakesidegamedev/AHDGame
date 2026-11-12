@@ -54,7 +54,6 @@ beforeEach(async () => {
   vi.clearAllMocks();
   for (const c of ["gameState", "conflicts", "federalBudget"]) db.collection(c);
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    conflictsEnabled: true,
     currentTurn: 40,
   });
   db.collectionMocks.federalBudget.findOne.mockResolvedValue({ countryId: "TR", gdp: 1_000_000 });
@@ -167,7 +166,6 @@ describe("POST impose terms", () => {
     // The sweeper runs on a tick, so a window can sit past its closing turn for a
     // while. A victor must not be able to impose inside that gap.
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 60,
     });
     const { POST } = await import("./route");
@@ -245,12 +243,6 @@ describe("POST impose terms", () => {
     const { POST } = await import("./route");
     await POST(req(indemnity), params);
     expect(order).toEqual(["apply", "resolve"]);
-  });
-
-  it("404s when the conflicts subsystem is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { POST } = await import("./route");
-    expect((await POST(req(indemnity), params)).status).toBe(404);
   });
 
   it("400s an invalid country code", async () => {

@@ -18,6 +18,18 @@ import {
   type SnapshotCandidateRow,
 } from "./storyData";
 import type { CharacterRecap, RecapCorporation, RecapRaces, RecapWorld } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 
 /**
  * I/O for the v2 Wrapped sections. Reads the runtime collections the reset is
@@ -158,7 +170,7 @@ export async function loadStoryData(
 
   // ── Clock ────────────────────────────────────────────────────────────────
   const gs = await section("clock", warn, null, () =>
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -171,8 +183,7 @@ export async function loadStoryData(
     )
   );
   const turnTimeline = await section("timeline", warn, [] as Array<[number, number]>, async () => {
-    const rows = await db
-      .collection("actionLogs")
+    const rows = await actionLogsCollection<Document>(db)
       .aggregate<{ _id: number; t: Date }>([
         { $match: { turn: { $type: "number" } } },
         { $group: { _id: "$turn", t: { $min: "$createdAt" } } },
@@ -201,8 +212,7 @@ export async function loadStoryData(
 
   // ── Activity ─────────────────────────────────────────────────────────────
   await section("activity", warn, undefined, async () => {
-    const rows = await db
-      .collection("actionLogs")
+    const rows = await actionLogsCollection<Document>(db)
       .aggregate<{ _id: { c: ObjectId; t: number }; n: number }>([
         { $match: { characterId: { $in: ids } } },
         { $group: { _id: { c: "$characterId", t: "$turn" }, n: { $sum: 1 } } },
@@ -229,8 +239,7 @@ export async function loadStoryData(
       if (e.electionId) careerElectionIds.add(String(e.electionId));
 
   const raceData = await section("races", warn, null, async () => {
-    const candidacies = await db
-      .collection("electionCandidates")
+    const candidacies = await electionCandidatesCollection<Document>(db)
       .find(
         { characterId: { $in: ids } },
         { projection: { _id: 1, electionId: 1, characterId: 1 } }
@@ -243,8 +252,7 @@ export async function loadStoryData(
       if (ObjectId.isValid(id)) electionIds.set(id, new ObjectId(id));
     const oids = [...electionIds.values()];
     const [elections, snapshots] = await Promise.all([
-      db
-        .collection<ElectionRow>("elections")
+      electionsCollection<ElectionRow>(db)
         .find(
           { _id: { $in: oids } },
           {
@@ -259,8 +267,7 @@ export async function loadStoryData(
           }
         )
         .toArray(),
-      db
-        .collection<SnapshotRow>("electionResultSnapshots")
+      electionResultSnapshotsCollection<SnapshotRow>(db)
         .find(
           { electionId: { $in: oids } },
           {
@@ -283,8 +290,7 @@ export async function loadStoryData(
       for (const c of s.candidates ?? [])
         if (!c.isNPP && ObjectId.isValid(c.id)) opponentCandidateIds.push(new ObjectId(c.id));
     const identities = opponentCandidateIds.length
-      ? await db
-          .collection("electionCandidates")
+      ? await electionCandidatesCollection<Document>(db)
           .find({ _id: { $in: opponentCandidateIds } }, { projection: { characterId: 1 } })
           .toArray()
       : [];
@@ -372,10 +378,9 @@ export async function loadStoryData(
       proposedTurn: 1,
     };
     const [bills, stateBills, npps] = await Promise.all([
-      db.collection<BillRow>("bills").find({}, { projection }).toArray(),
-      db.collection<BillRow>("stateBills").find({}, { projection }).toArray(),
-      db
-        .collection<Document>("npps")
+      billsCollection<BillRow>(db).find({}, { projection }).toArray(),
+      stateBillsCollection<BillRow>(db).find({}, { projection }).toArray(),
+      nppsCollection<Document>(db)
         .find({}, { projection: { party: 1, countryId: 1 } })
         .toArray(),
     ]);
@@ -414,8 +419,7 @@ export async function loadStoryData(
 
   // ── Wealth ───────────────────────────────────────────────────────────────
   await section("wealth", warn, undefined, async () => {
-    const rows = await db
-      .collection("portfolioHistory")
+    const rows = await portfolioHistoryCollection<Document>(db)
       .aggregate<{ _id: { c: ObjectId; b: number }; v: number; t: number }>([
         { $match: { characterId: { $in: ids } } },
         {
@@ -446,8 +450,7 @@ export async function loadStoryData(
 
   // ── Corporation ──────────────────────────────────────────────────────────
   await section("corporation", warn, undefined, async () => {
-    const corps = await db
-      .collection<Document>("corporations")
+    const corps = await corporationsCollection<Document>(db)
       .find(
         { $or: [{ ceoId: { $in: ids } }, { "ceoHistory.holderId": { $in: ids } }] },
         {
@@ -499,9 +502,9 @@ export async function loadStoryData(
   if (opts.includeWorld) {
     world = await section("world", warn, null, async () => {
       const [electionsHeld, conflicts, crises] = await Promise.all([
-        db.collection("elections").countDocuments({ status: { $in: FINISHED_ELECTION } }),
-        db.collection("conflicts").countDocuments({}),
-        db.collection("crises").countDocuments({}),
+        electionsCollection<Document>(db).countDocuments({ status: { $in: FINISHED_ELECTION } }),
+        conflictsCollection<Document>(db).countDocuments({}),
+        crisesCollection<Document>(db).countDocuments({}),
       ]);
       let closestRace: RecapWorld["closestRace"] = null;
       for (const races of racesByChar.values()) {

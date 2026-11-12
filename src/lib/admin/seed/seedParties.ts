@@ -4,6 +4,8 @@ import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { politicalParties } from "@/lib/seeds/reference/politicalParties";
 import { generateStatePartyOrg } from "@/lib/seeds/reference/statePartyOrg";
 import { fillAbsentSeedFields } from "./fillAbsentSeedFields";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function seedParties(db: Db, log: (msg: string) => void) {
   // NOTE: Never drop politicalParties collection - it would delete player-created third parties
@@ -15,9 +17,10 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
   for (const party of politicalParties) {
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     // Check if party already exists by name + country
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
       // Fill gaps only — never overwrite. This runs against LIVE worlds, where
@@ -31,9 +34,10 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
         preserved++;
         continue;
       }
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...gaps, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...gaps, updatedAt: now } }
+      );
       filled++;
     } else {
       // Insert new party with generated _id and sequentialId
@@ -45,7 +49,7 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
       created++;
     }
   }
@@ -55,9 +59,8 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
 }
 
 export async function seedStatePartyOrg(db: Db, log: (msg: string) => void, preset: string) {
-  // NOTE: Never drop statePartyOrg collection - it would delete third party state organizations
-  // Only upsert the default party orgs (Democrat, Republican per state). Preset
-  // selects the presidential-margin baseline used to compute initial cap + Org.
+  // Never drop statePartyOrg: it holds third party state organizations.
+  // Only upsert the default Democrat and Republican orgs per state.
   const now = new Date();
   const statePartyOrg = generateStatePartyOrg(preset);
   if (statePartyOrg.length === 0) {
@@ -70,8 +73,7 @@ export async function seedStatePartyOrg(db: Db, log: (msg: string) => void, pres
   // `organization` back to the lean-derived baseline and its `treasury` to 0,
   // and dropped elected state chairs — the single most destructive write in
   // the reseed path, since Org is the stat players spend whole games building.
-  const existingRows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existingRows = await statePartyOrgCollection(db)
     .find({ _id: { $in: statePartyOrg.map((org) => org._id) } })
     .toArray();
   const existingById = new Map(existingRows.map((row) => [row._id, row]));
@@ -112,7 +114,7 @@ export async function seedStatePartyOrg(db: Db, log: (msg: string) => void, pres
   }
 
   if (ops.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(ops, { ordered: false });
+    await statePartyOrgCollection(db).bulkWrite(ops, { ordered: false });
   }
 
   log(

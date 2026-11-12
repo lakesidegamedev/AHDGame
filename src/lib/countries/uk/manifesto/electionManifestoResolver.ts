@@ -7,56 +7,31 @@ import {
   buildManifestoMultipliers,
   type GroupLeanWithId,
 } from "@/lib/countries/uk/manifesto/manifestoPopularity";
+import { runtimeConfig } from "@/lib/config/runtime";
+import type { ElectorateUnit } from "@/lib/demographics/electorateUnit";
 
 /**
- * Election-time bridge from locked manifestos → the vote engine's
- * `manifestoMultipliers` option (epic #856, ticket #857).
- *
- * GATED OFF BY DEFAULT. The feature only produces multipliers when the env flag
- * `UK_MANIFESTO_VOTE_EFFECT=1` is set — until then this returns `undefined` and
- * the vote engine falls back to 1.0 (no behaviour change). The flag exists
- * specifically so the balance-sensitive coefficient stays off in prod until it
- * is calibrated in worldsim (the A/B harness is dead). See ops-knowledge
- * `uk-rework-design-2026-08-25`.
- *
- * When off, the env check short-circuits BEFORE any DB read, so this is a no-op
- * on the hot vote-tally path.
+ * Election-time bridge from locked manifestos to the vote engine's
+ * `manifestoMultipliers` option.
+ * Gated off by default: only produces multipliers when env
+ * `UK_MANIFESTO_VOTE_EFFECT=1`; otherwise returns undefined and the engine uses 1.0.
+ * The flag keeps the balance-sensitive coefficient off in prod until calibrated.
+ * When off, the env check short-circuits BEFORE any DB read, so it is a no-op on
+ * the hot vote-tally path.
  */
 export function isManifestoVoteEffectEnabled(): boolean {
-  return process.env.UK_MANIFESTO_VOTE_EFFECT === "1";
+  return runtimeConfig.ukManifestoVoteEffect();
 }
 
-/** Minimal shapes so this stays decoupled from the engine's concrete types. */
-interface CategoryLike {
-  groups: { id: string; defaultEconomicLean: number; defaultSocialLean: number }[];
-}
-interface DemographicsLike {
-  groups: Record<string, { economicLean?: number; socialLean?: number } | undefined>;
-}
-
-/**
- * Derive the per-group lean list the multiplier builder needs, mirroring the
- * engine's fallback (state group lean, else the category default).
- */
-export function deriveGroupLeans(
-  categories: CategoryLike[],
-  demographics: DemographicsLike
-): GroupLeanWithId[] {
-  const out: GroupLeanWithId[] = [];
-  const seen = new Set<string>();
-  for (const category of categories) {
-    for (const group of category.groups) {
-      if (seen.has(group.id)) continue;
-      seen.add(group.id);
-      const sg = demographics.groups[group.id];
-      out.push({
-        id: group.id,
-        economicLean: sg?.economicLean ?? group.defaultEconomicLean,
-        socialLean: sg?.socialLean ?? group.defaultSocialLean,
-      });
+/** The per-unit lean list the multiplier builder needs, from the census electorate units. */
+export function deriveGroupLeans(electorate: readonly ElectorateUnit[]): GroupLeanWithId[] {
+  return electorate.map((unit) => {
+    const id = unit.id;
+    if (!Number.isFinite(unit.economicLean) || !Number.isFinite(unit.socialLean)) {
+      throw new Error(`Electorate unit ${id} has no lean`);
     }
-  }
-  return out;
+    return { id, economicLean: unit.economicLean, socialLean: unit.socialLean };
+  });
 }
 
 /**

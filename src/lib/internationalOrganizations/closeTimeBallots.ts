@@ -1,27 +1,14 @@
 /**
  * Close-time ballots for autonomy-active org voters.
  *
- * The active-mode foreign-policy planner takes ONE diplomatic action per
- * six-hour Tier-1 slot per country. A pending unanimous ballot — an admission,
- * an FTA, a bloc war call — competes for that slot against routine diplomacy,
- * and a 24-turn window gives each member only a handful of chances. One busy
- * cycle starves the vote, the member "withholds consent", and a single silent
- * member vetoes the whole bloc forever. This module is the safety net the
- * resolvers lean on: as an item's window closes, every autonomy-active member
- * of the voting roll that has not yet cast casts the cooperative ballot the
- * shadow-mode voter has always cast (see castAutonomousOrgVotes).
- *
- * Firing at the deadline, not the filing turn, keeps the window the planner's
- * own: it scores real opinions all window long, and the safety net only fills
- * the silence it never got to. The vote is "yes" because everything that
- * reaches this pass was already cleared to carry — an alignment-accession
- * application only exists because the alignment engine sustained the applicant
- * past the join share for a full sustain window, and the planner's own routine
- * votes score 46+, above its action threshold. A government that wants to vote
- * no does so through the planner, which has the whole window to itself.
- *
- * Player-enabled members are never touched: their foreign minister still
- * decides, and their silence stays a nay.
+ * The autonomous planner takes ONE diplomatic action per six-hour Tier-1 slot
+ * per country, so pending unanimous ballots (admission, FTA, bloc war call)
+ * compete with routine diplomacy. A busy cycle starves the vote and a single
+ * silent member vetoes the bloc forever. As a window closes, this fills in the
+ * cooperative yes ballot for each autonomy-active member that has not yet cast.
+ * The yes is safe because everything reaching this pass was already cleared to
+ * carry, and the planner had the whole window. Player-enabled members are
+ * never touched: their silence stays a nay.
  */
 
 import type { Db } from "mongodb";
@@ -31,23 +18,24 @@ import type { NPP } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { ProposalVoteRecord } from "@/lib/db/types/internationalOrganization";
 import { isNppAutonomyActive } from "@/lib/nppAutonomy/featureFlag";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** The head-of-government NPP that speaks for an autonomous country's ballot. */
 async function headNppFor(
   db: Db,
   countryId: CountryId
 ): Promise<{ characterId: NPP["_id"]; characterName: string } | null> {
-  const formation = await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .findOne(
-      { _id: countryId, status: "formed" },
-      { projection: { presidentNppId: 1, pmNppId: 1 } }
-    );
+  const formation = await governmentFormationsCollection(db).findOne(
+    { _id: countryId, status: "formed" },
+    { projection: { presidentNppId: 1, pmNppId: 1 } }
+  );
   const headNppId = formation?.presidentNppId ?? formation?.pmNppId ?? null;
   if (!headNppId) return null;
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: headNppId }, { projection: { _id: 1, name: 1 } });
+  const npp = await nppsCollection(db).findOne(
+    { _id: headNppId },
+    { projection: { _id: 1, name: 1 } }
+  );
   if (npp) return { characterId: npp._id, characterName: npp.name };
   // A dangling NPP id must not stall the ballot: fall through to a synthetic
   // identity rather than re-creating the silent-veto this pass exists to end.

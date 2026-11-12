@@ -3,8 +3,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
-import type { Corporation } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -48,7 +48,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     // Only mark the seat vacant if it was already vacant before the offer.
     // If the current CEO declines a re-election offer, the seat stays filled.
     const wasAlreadyVacant = corporation.ceoVacant === true;
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $set: {

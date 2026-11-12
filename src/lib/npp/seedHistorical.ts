@@ -7,17 +7,18 @@
 import { ObjectId, type Db } from "mongodb";
 import { generateUniqueNPPName } from "./nameGenerator";
 import { selectPoliticianImage, weightedRandomEthnicity } from "./generator";
-import {
-  getHistoricalRosterEntry,
-  rosterPortraitUrl,
-  type HistoricalRosterEntry,
-} from "./historicalRosters";
+import { getHistoricalRosterEntry, type HistoricalRosterEntry } from "./historicalRosters";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { reserveSequentialIds } from "@/lib/db/sequentialId";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import type { NPP, ElectedOfficial, OfficeType, PoliticalParty, State } from "@/lib/db/types";
 import { getPresetSeats, type HistoricalSeat } from "@/lib/constants/historicalSeats";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { CA_PARTY_SLUG_TO_NAME } from "@/lib/countries/ca/data/caParties";
 
 /**
  * Slug → party-name lookup used at resolve time. Exported so tests can
@@ -47,6 +48,7 @@ export const SLUG_TO_NAME: Record<string, string> = {
   uk_sdlp: "Social Democratic and Labour Party",
   uk_alliance: "Alliance Party",
   uk_uup: "Ulster Unionist Party",
+  uk_reform: "Reform UK",
   uk_speaker: "Speaker",
   uk_independent: "Independent",
   // JP
@@ -139,6 +141,8 @@ export const SLUG_TO_NAME: Record<string, string> = {
   by_cpb: "Communist Party of Byelorussia",
   cs_ksc: "Komunistická strana Československa",
   bal_cpsu: "Communist Party (Baltic Republics)",
+  // CA
+  ...CA_PARTY_SLUG_TO_NAME,
 };
 
 /**
@@ -344,10 +348,10 @@ export interface SeedFromSeatsOptions {
   skipAlreadySeatedChambers?: boolean;
 
   /**
-   * Reset preset id (e.g. "1991-default"). When it names a rostered preset,
-   * seated NPPs take the authored real officeholder (name, birth year,
-   * portrait) instead of a generated fictional identity. Absent or unrostered
-   * presets — backfills, admin spawns, other eras — keep generated names.
+   * Reset preset id (e.g. "2027-default"). When it names a rostered preset,
+   * authored seats take their fixed fictional identity (name, birth year)
+   * instead of a generated one. Absent or unrostered presets, backfills and
+   * admin spawns keep generated names.
    */
   presetId?: string;
 }
@@ -392,7 +396,7 @@ export function buildOfficeType(seat: HistoricalSeat): OfficeType | null {
       return { type: "peoplesCongress", state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
     case "republicSupremeSoviet":
       // RU republic Supreme Soviets — the one-party sub-national analog of the
-      // CN People's Congress (multi-seat per republic, seatsHeld-backed). #3386.
+      // CN People's Congress (multi-seat per republic, seatsHeld-backed)..
       return { type: "republicSupremeSoviet", state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
     case "bundestag":
       // DE Bundestag is a multi-seat Land-proportional chamber; seatsHeld lives on
@@ -425,6 +429,7 @@ export function buildOfficeType(seat: HistoricalSeat): OfficeType | null {
     case "senator":
     case "member":
     case "procurador":
+    case "caCommons":
       // Beta-parliament office-type keys (FR/IT/ES/SE/TR + ES 1953 Cortes).
       // Multi-seat regional PR; seatsHeld varies per region.
       return { type: seat.officeType, state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
@@ -457,9 +462,7 @@ async function resolvePartyId(
   // Try to find by name
   const partyName = SLUG_TO_NAME[partySlug];
   if (partyName) {
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: partyName, countryId });
+    const party = await politicalPartiesCollection(db).findOne({ name: partyName, countryId });
     if (party) {
       partyCache.set(cacheKey, party);
       return String(party.sequentialId);
@@ -475,9 +478,10 @@ async function resolvePartyId(
   // capture group and never match the literally-parenthesised stored name,
   // silently defaulting the whole delegation to "independent". Not anchored:
   // substring matching is load-bearing for the bare-slug callers above.
-  const fallbackParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ name: { $regex: new RegExp(escapeRegex(partySlug), "i") }, countryId });
+  const fallbackParty = await politicalPartiesCollection(db).findOne({
+    name: { $regex: new RegExp(escapeRegex(partySlug), "i") },
+    countryId,
+  });
   if (fallbackParty) {
     partyCache.set(cacheKey, fallbackParty);
     return String(fallbackParty.sequentialId);
@@ -517,8 +521,7 @@ export async function seedFromSeats(
   const now = new Date();
 
   // Build state → countryId lookup
-  const allStates = await db
-    .collection<State>("states")
+  const allStates = await statesCollection(db)
     .find({})
     .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
     .toArray();
@@ -544,8 +547,7 @@ export async function seedFromSeats(
   const seededChambers = new Set<string>();
   if (options.skipAlreadySeatedChambers) {
     if (seatWinners) {
-      const seated = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const seated = await electedOfficialsCollection(db)
         .aggregate<{ _id: { countryId?: string; officeType?: string } }>([
           { $match: { isNPP: true } },
           { $group: { _id: { countryId: "$countryId", officeType: "$officeType" } } },
@@ -557,8 +559,7 @@ export async function seedFromSeats(
     } else {
       // Live candidates only: `retiredAt: null` matches the existing-name query
       // above, so a retired prior-world roster never blocks a fresh founding seed.
-      const seededCandidates = await db
-        .collection<NPP>("npps")
+      const seededCandidates = await nppsCollection(db)
         .aggregate<{ _id: { countryId?: string; officeType?: string } }>([
           { $match: { retiredAt: null, seededForOfficeType: { $ne: null } } },
           { $group: { _id: { countryId: "$countryId", officeType: "$seededForOfficeType" } } },
@@ -576,8 +577,7 @@ export async function seedFromSeats(
   const partyCache = new Map<string, PoliticalParty>();
 
   // Get existing names to avoid duplicates
-  const existingNPPs = await db
-    .collection<NPP>("npps")
+  const existingNPPs = await nppsCollection(db)
     .find({ retiredAt: null })
     .project({ name: 1 })
     .toArray();
@@ -645,8 +645,8 @@ export async function seedFromSeats(
       continue;
     }
 
-    // Rostered presets seat the real officeholder; everything else generates
-    // a fictional identity as before.
+    // Rostered seats take their authored (fictional) identity; everything else
+    // generates one.
     const rosterEntry = rosterFor(seat);
     let rosterBirthYear: number | null = null;
 
@@ -696,13 +696,11 @@ export async function seedFromSeats(
     const currentOffice = seatWinners ? buildOfficeType(seat) : null;
 
     // Assign demographics and avatar using the same pipeline as dynamic NPP generation.
-    // Rostered officeholders keep their real gender, political-class ethnicity,
-    // and portrait (pool id when one is findable, demographic pick otherwise).
+    // Rostered seats keep their authored gender and ethnicity; the portrait is
+    // always the generic demographic pick, never a specific person's photo.
     const gender = rosterEntry ? rosterEntry.gender : Math.random() < 0.5 ? "male" : "female";
     const ethnicity = rosterEntry ? rosterEntry.ethnicity : weightedRandomEthnicity(nppCountryId);
-    const avatarUrl = rosterEntry?.portraitId
-      ? rosterPortraitUrl(rosterEntry.portraitId)
-      : selectPoliticianImage(nppCountryId, gender, ethnicity, name);
+    const avatarUrl = selectPoliticianImage(nppCountryId, gender, ethnicity, name);
 
     // Create NPP
     const nppId = new ObjectId();
@@ -710,7 +708,7 @@ export async function seedFromSeats(
       _id: nppId,
       sequentialId,
       name,
-      // Real age for rostered officeholders; absent otherwise (legacy and
+      // Authored age for rostered seats; absent otherwise (legacy and
       // generated NPPs stay exempt from V5 mortality until healed/stamped).
       ...(rosterBirthYear != null ? { birthYear: rosterBirthYear } : {}),
       countryId: nppCountryId,
@@ -728,6 +726,10 @@ export async function seedFromSeats(
       // identifies which chamber the candidate was seeded for — the key the
       // idempotency guard needs.
       seededForOfficeType: seat.officeType,
+      // A real incumbent already in a later term keeps it toward the limit.
+      ...(rosterEntry?.priorExecutiveTerms
+        ? { executiveTermsServed: { [nppCountryId]: rosterEntry.priorExecutiveTerms } }
+        : {}),
       personality: generateDefaultPersonality(),
       generatedAt: now,
       retiredAt: null,
@@ -738,7 +740,7 @@ export async function seedFromSeats(
       // small donor income from turn one) via the shared SSOT so every creation
       // path stays consistent.
       ...NPP_ECONOMY_DEFAULTS,
-      archetypeApprovals: {},
+      bucketApprovals: {},
       electionCooldowns: {},
       createdAt: now,
       updatedAt: now,
@@ -792,13 +794,15 @@ export async function seedFromSeats(
       // (the CN People's Congress analog). Without this the backfilled
       // delegation collapses to one official per republic and the chamber seats
       // ~1 of its authored ~5000 seats, so the elections resolve near-empty
-      // (#3386). Kept in sync with backfillMissingSeats.ts SEATS_HELD_OFFICE_TYPES.
+      //. Kept in sync with backfillMissingSeats.ts SEATS_HELD_OFFICE_TYPES.
       seat.officeType === "republicSupremeSoviet" ||
       // Beta-parliament office-type keys (FR/IT/ES/SE/TR + ES 1953 Cortes).
       seat.officeType === "deputy" ||
       seat.officeType === "senator" ||
       seat.officeType === "member" ||
-      seat.officeType === "procurador"
+      seat.officeType === "procurador" ||
+      // Canada's Commons blocs hold every seat a party won in a province.
+      seat.officeType === "caCommons"
     ) {
       official.seatsHeld = seat.seatsHeld ?? 1;
     }
@@ -814,10 +818,10 @@ export async function seedFromSeats(
 
   // Bulk insert
   if (nppsToInsert.length > 0) {
-    await db.collection<NPP>("npps").insertMany(nppsToInsert);
+    await nppsCollection(db).insertMany(nppsToInsert);
   }
   if (officialsToInsert.length > 0) {
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officialsToInsert);
+    await electedOfficialsCollection(db).insertMany(officialsToInsert);
   }
 
   return {
@@ -847,7 +851,7 @@ export async function seedHistoricalOfficials(
   // no-op there; it earns its keep on the seed-only / re-run paths
   // (`bootstrapGameWorld({ seedOnly })`, the admin re-seed buttons) that do NOT
   // wipe first.
-  // presetId flows through so rostered presets seat real officeholders.
+  // presetId flows through so rostered presets seat their authored identities.
   const result = await seedFromSeats(db, seats, seedMode, {
     skipAlreadySeatedChambers: true,
     presetId,

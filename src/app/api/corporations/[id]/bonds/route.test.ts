@@ -10,7 +10,7 @@
  * insolvent on the second basis two turns later. Both halves are checked here:
  * the GET must quote the lower figure and the POST must enforce it.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
@@ -259,5 +259,31 @@ describe("POST /api/corporations/[id]/bonds — ticket #1198 exit-equity ceiling
       params: Promise.resolve({ id: CORP_ID.toString() }),
     });
     expect(res.status).toBe(200);
+  });
+});
+
+describe("/api/corporations/[id]/bonds: no wall-clock issuance freeze", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("issues normally on a date inside the retired August 2026 launch window", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-10T00:00:00Z"));
+    setupDb();
+    db.collectionMocks["bonds"]!.insertOne.mockResolvedValue({ insertedId: new ObjectId() });
+    const { GET, POST } = await import("./route");
+
+    const quote = await GET(
+      new Request(`http://localhost/api/corporations/${CORP_ID.toString()}/bonds`),
+      { params: Promise.resolve({ id: CORP_ID.toString() }) }
+    );
+    expect(await quote.json()).not.toHaveProperty("issuanceFrozenUntil");
+
+    const res = await POST(postRequest(5_000_000), {
+      params: Promise.resolve({ id: CORP_ID.toString() }),
+    });
+    expect(res.status).toBe(200);
+    expect(db.collectionMocks["bonds"]!.insertOne).toHaveBeenCalledTimes(1);
   });
 });

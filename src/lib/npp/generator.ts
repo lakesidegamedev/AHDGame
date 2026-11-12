@@ -16,17 +16,28 @@ import type {
   LegislationType,
 } from "@/lib/db/types";
 import { generateUniqueNPPNameAndGender } from "./nameGenerator";
+import { portraitAvatarPath } from "./portraitTokens";
 import type { NPPGender, NPPEthnicity } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { deriveDomainPositions } from "./domainPositions";
 import { NPP_ECONOMY_DEFAULTS } from "./economyDefaults";
 import { NPP_POLITICAL_INFLUENCE_FLOOR } from "@shared/constants/formulas";
-import { getPartyFrontier, isInFrontier } from "@/lib/parties/partyFrontier";
-import { withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
+import {
+  frontierFromPresence,
+  getCountryRegionIds,
+  getPartyFrontier,
+  getPartyPresenceMap,
+  isInFrontier,
+  loadReentryRegions,
+} from "@/lib/parties/partyFrontier";
+import { holdPartyTerritory, withPartyTerritoryMutation } from "@/lib/parties/territoryMutation";
 import fs from "fs";
 import path from "path";
 import { JP_ETHNICITY_WEIGHTS } from "@/lib/countries/jp/data/jpNppEthnicity";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 
 // ── Politician image pool (country/gender/ethnicity-gated) ───────────────────
 
@@ -61,20 +72,16 @@ let politicianImageCache: PoliticianImage[] | null = null;
 /**
  * Year the photograph is from, read out of its source URL.
  *
- * Commons filenames usually carry the year ("...portrait_2019.jpg"). About a
- * third of the pool has one, and that third is overwhelmingly modern — 307 of
- * 345 are 2000 or later. So this catches almost exactly the press photos that
- * wreck a historical world, which is the whole point.
- *
- * Parsed from the URL already in the file rather than stored as a second field:
- * a duplicated year would be free to drift from the image it describes.
+ * Commons filenames sometimes carry the year ("...portrait_2019.jpg"), mostly
+ * for modern photos, so this filters out press images that would wreck a
+ * historical world. Parsed from the URL rather than stored as a second field:
+ * a duplicated year could drift from the image it describes.
  *
  * Deliberately conservative. An unparsed URL yields null, and null means
- * "unknown", NOT "old" — an undated portrait stays eligible everywhere rather
- * than being assumed archival on no evidence.
+ * "unknown", not "old": an undated portrait stays eligible everywhere.
  */
-function photoYearFromUrl(url: string): number | null {
-  const m = /(1[89]\d\d|20[0-2]\d)/.exec(url);
+export function photoYearFromUrl(url: string): number | null {
+  const m = /(1[89]\d\d|20\d\d)/.exec(url);
   if (!m) return null;
   const year = Number(m[1]);
   return Number.isFinite(year) ? year : null;
@@ -125,7 +132,8 @@ export function portraitsForYear<T extends { photoYear?: number | null }>(
  * Falls back progressively: exact match → country+gender → country only.
  * Excludes any portrait whose real-world name matches the NPP's generated name to avoid
  * accidentally assigning e.g. Hillary Clinton's photo to an NPP also named Hillary Clinton.
- * Returns an internal route path so the image URL can be updated without DB migrations.
+ * Returns an internal route path with an opaque token, so neither the URL nor the
+ * response names the person in the photograph.
  */
 export function selectPoliticianImage(
   countryId: CountryId,
@@ -155,7 +163,7 @@ export function selectPoliticianImage(
   const pool = byGender.length > 0 ? byGender : all;
 
   const chosen = pool[Math.floor(Math.random() * pool.length)];
-  return `/api/images/npp-politicians/${chosen.id}`;
+  return portraitAvatarPath(chosen.id);
 }
 
 // ── Ethnicity weighted random ─────────────────────────────────────────────────
@@ -352,6 +360,13 @@ interface NPPGenerationConfig {
  */
 export interface NPPGenerationContext {
   existingNames: Set<string>;
+  /**
+   * Party positions already loaded by the caller, keyed `${countryId}:${sequentialId}`.
+   * A hit replaces the per-NPP party read; a miss falls back to it.
+   */
+  partyPositions?: ReadonlyMap<string, Pick<PoliticalParty, "economicPosition" | "socialPosition">>;
+  /** Legislation types projected for stances, loaded once by a bulk caller. */
+  legislationTypes?: LegislationType[];
 }
 
 /**
@@ -409,8 +424,7 @@ async function getLegislationTypesCached(
   if (cached && now - cached.at < LEGISLATION_TYPE_CACHE_TTL_MS) {
     return cached.rows;
   }
-  const rows = await db
-    .collection<LegislationType>("legislationTypes")
+  const rows = await legislationTypesCollection(db)
     .find(
       {},
       {
@@ -431,15 +445,15 @@ async function generatePolicyPositions(
   db: Db,
   partyId: string,
   countryId: CountryId,
-  quality: number = 0
+  quality: number = 0,
+  context?: NPPGenerationContext
 ): Promise<PolicyPositions> {
   // Parties are uniquely identified by (sequentialId, countryId).
   const seqId = parseInt(partyId, 10);
-  const party = Number.isFinite(seqId)
-    ? await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: seqId, countryId })
-    : null;
+  const party = !Number.isFinite(seqId)
+    ? null
+    : (context?.partyPositions?.get(`${countryId}:${seqId}`) ??
+      (await politicalPartiesCollection(db).findOne({ sequentialId: seqId, countryId })));
 
   // Default positions if party not found
   let baseEconomic = 0;
@@ -464,7 +478,7 @@ async function generatePolicyPositions(
 
   // Derive per-legislation-type stances so the cross-pressure resolver has
   // ideology + donor signal beyond the small economic tint.
-  const legislationTypes = await getLegislationTypesCached(db);
+  const legislationTypes = context?.legislationTypes ?? (await getLegislationTypesCached(db));
   const domainPositions = deriveDomainPositions(legislationTypes, economicRounded, socialRounded);
 
   return {
@@ -506,9 +520,9 @@ export async function generateNPP(
   // for the operation, avoiding one full NPP scan for every generated row.
   const existingNames = context
     ? [...context.existingNames]
-    : (
-        await db.collection<NPP>("npps").find({ retiredAt: null }).project({ name: 1 }).toArray()
-      ).map((n) => n.name);
+    : (await nppsCollection(db).find({ retiredAt: null }).project({ name: 1 }).toArray()).map(
+        (n) => n.name
+      );
 
   const quality = config.quality ?? 0;
   const now = new Date();
@@ -530,7 +544,7 @@ export async function generateNPP(
 
   // Generate components
   const personality = generatePersonality(quality);
-  const policies = await generatePolicyPositions(db, config.party, countryId, quality);
+  const policies = await generatePolicyPositions(db, config.party, countryId, quality, context);
   const politicalInfluence = generatePoliticalInfluence();
   const favorability = generateFavorability(quality);
 
@@ -559,7 +573,7 @@ export async function generateNPP(
     ...NPP_ECONOMY_DEFAULTS,
     // Cross-pressure voting modifiers — initialized empty so the decay
     // pass always has a stable object to iterate.
-    archetypeApprovals: {},
+    bucketApprovals: {},
     // Election cooldown tracking — initialized empty for consistent shape.
     electionCooldowns: {},
     createdAt: now,
@@ -596,10 +610,115 @@ export async function createNPP(
     const sequentialId = await getNextSequentialId(db, "npp");
     const nppWithId: NPP = { ...npp, sequentialId };
 
-    await db.collection<NPP>("npps").insertOne(nppWithId);
+    await nppsCollection(db).insertOne(nppWithId);
 
     return nppWithId;
   });
+}
+
+/**
+ * Batches createNPP calls to avoid per-NPP round trips.
+ *
+ * Claims a country's listed parties' territory and reads their regions,
+ * presence, and renewal rows once; updates presence in memory as NPPs land.
+ * While held, no other writer can move these parties' territory, so the
+ * frontier answer matches createNPP. Parties outside partiesByCountry are
+ * claimed and read individually on first use.
+ *
+ * Callers must `close` in `finally`.
+ */
+export interface NppCreationBatch {
+  create(config: NPPGenerationConfig, context?: NPPGenerationContext): Promise<NPP>;
+  close(): Promise<void>;
+}
+
+export function openNppCreationBatch(
+  db: Db,
+  partiesByCountry: ReadonlyMap<string, readonly string[]>
+): NppCreationBatch {
+  const hold = holdPartyTerritory(db);
+  const regionsByCountry = new Map<string, string[]>();
+  const presenceByParty = new Map<string, Set<string>>();
+  const reentryByParty = new Map<string, string[]>();
+  let legislationTypes: LegislationType[] | undefined;
+
+  const territoryKey = (countryId: string, partyId: string) => `${countryId}:${partyId}`;
+  const normalize = (partyId: string) => String(parseInt(partyId, 10));
+
+  const loadTerritory = async (countryId: CountryId, partyId: string) => {
+    if (presenceByParty.has(territoryKey(countryId, partyId))) return;
+    const listed = [...new Set((partiesByCountry.get(countryId) ?? []).map(normalize))];
+    const group = (listed.includes(partyId) ? listed : [partyId]).filter(
+      (id) =>
+        !presenceByParty.has(territoryKey(countryId, id)) &&
+        Number.isSafeInteger(Number(id)) &&
+        Number(id) > 0
+    );
+    await hold.claim(group.map((id) => ({ countryId, partyId: id })));
+    let regions = regionsByCountry.get(countryId);
+    if (!regions) {
+      regions = await getCountryRegionIds(db, countryId);
+      regionsByCountry.set(countryId, regions);
+    }
+    const [presence, reentry] = await Promise.all([
+      getPartyPresenceMap(db, countryId, group, regions),
+      loadReentryRegions(db, countryId, group),
+    ]);
+    for (const id of group) {
+      presenceByParty.set(territoryKey(countryId, id), presence.get(id) ?? new Set());
+      reentryByParty.set(territoryKey(countryId, id), reentry.get(id) ?? []);
+    }
+  };
+
+  return {
+    async create(config, context) {
+      const countryId = config.countryId ?? "US";
+      let effectiveConfig = config;
+      let heldPresence: Set<string> | undefined;
+      const sequentialPartyId = parseInt(config.party, 10);
+      if (Number.isSafeInteger(sequentialPartyId) && sequentialPartyId > 0) {
+        const partyId = String(sequentialPartyId);
+        effectiveConfig = { ...config, party: partyId };
+        await loadTerritory(countryId, partyId);
+        const key = territoryKey(countryId, partyId);
+        const presence = presenceByParty.get(key)!;
+        const regions = regionsByCountry.get(countryId)!;
+        const frontier = frontierFromPresence(
+          countryId,
+          presence,
+          regions,
+          reentryByParty.get(key) ?? []
+        );
+        if (isInFrontier(presence, frontier, config.state)) {
+          if (config.state && regions.includes(config.state)) heldPresence = presence;
+          else if (!config.state) {
+            // No region requested (an office filled outside any one region):
+            // home the NPP in a region the party already holds, so the NPP
+            // keeps the party and has a real home region.
+            const home = [...presence].filter((id) => regions.includes(id)).sort()[0] ?? regions[0];
+            if (home) effectiveConfig = { ...effectiveConfig, state: home };
+          }
+        } else {
+          // Same rule as createNPP: no distant partisan foothold as a side effect.
+          effectiveConfig = { ...config, party: "independent" };
+        }
+      }
+      // Stances read the same projected types for every NPP: load them once.
+      legislationTypes ??= context?.legislationTypes ?? (await getLegislationTypesCached(db));
+      const npp = await generateNPP(
+        effectiveConfig,
+        context ? { ...context, legislationTypes } : undefined,
+        db
+      );
+      const sequentialId = await getNextSequentialId(db, "npp");
+      const nppWithId: NPP = { ...npp, sequentialId };
+      await nppsCollection(db).insertOne(nppWithId);
+      // The new NPP is presence for its party, exactly as a re-read would see it.
+      heldPresence?.add(config.state);
+      return nppWithId;
+    },
+    close: () => hold.release(),
+  };
 }
 
 /**
@@ -614,33 +733,6 @@ export async function createNPP(
 export function calculateNPPsToGenerate(totalElections: number, partyOrg: number): number {
   const reduction = Math.floor((100 - partyOrg) / 20);
   return Math.max(1, totalElections - reduction);
-}
-
-/**
- * Get all active (non-retired) NPPs
- */
-export async function getActiveNPPs(): Promise<NPP[]> {
-  const db = await getDb();
-  return db.collection<NPP>("npps").find({ retiredAt: null }).toArray();
-}
-
-/**
- * Get NPPs by state
- */
-export async function getNPPsByState(stateId: string): Promise<NPP[]> {
-  const db = await getDb();
-  return db.collection<NPP>("npps").find({ homeState: stateId, retiredAt: null }).toArray();
-}
-
-/**
- * Get NPPs holding office
- */
-export async function getNPPsWithOffice(): Promise<NPP[]> {
-  const db = await getDb();
-  return db
-    .collection<NPP>("npps")
-    .find({ currentOffice: { $ne: null }, retiredAt: null })
-    .toArray();
 }
 
 // ── Technocrat NPP spawn ──────────────────────────────────────────────────────
@@ -701,6 +793,6 @@ export async function spawnTechnocratNpp(db: Db, countryId: CountryId, role: str
     funds: 0,
     actionPoints: 0,
   };
-  await db.collection<NPP>("npps").insertOne(doc);
+  await nppsCollection(db).insertOne(doc);
   return doc;
 }

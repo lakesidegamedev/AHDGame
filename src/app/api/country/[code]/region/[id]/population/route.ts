@@ -4,6 +4,10 @@ import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State, StateMetrics, GameState } from "@/lib/db/types";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -25,15 +29,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const stateId = id;
     const db = await getDb();
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
 
     const [demo, metrics, gameState] = await Promise.all([
-      db.collection<RegionDemographics>("regionDemographics").findOne({ _id: stateId }),
-      db.collection<StateMetrics>("macroMetrics").findOne({ _id: stateId }),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
+      regionDemographicsCollection(db).findOne({ _id: stateId }),
+      macroMetricsCollection(db).findOne({ _id: stateId }),
+      gameStateCollection(db).findOne({ _id: "current" }),
     ]);
 
     const pop = metrics?.population as Record<string, { value?: number } | undefined> | undefined;

@@ -25,6 +25,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { NPP_SPONSOR_ACTIVE_CAP, NPP_SPONSOR_COOLDOWN_TURNS } from "./constants";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
 
 // ── Legislature ──────────────────────────────────────────────────────────────
 
@@ -186,7 +188,7 @@ export async function countRecentNppNotifications(
   types: string[],
   windowStart: Date
 ): Promise<number> {
-  return db.collection("notifications").countDocuments({
+  return notificationsCollection<Document>(db).countDocuments({
     userId,
     type: { $in: types },
     createdAt: { $gte: windowStart },

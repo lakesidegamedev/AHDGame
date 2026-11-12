@@ -30,14 +30,12 @@ const schema = z.object({
 // Errors: 400, 401, 403, 404, 409, 413, 429
 //
 // No 402: a play is never refused for want of money. `treasuryBalance` is the
-// signed national cash position, separate from the bond-ledger `debt.principal`
-// (refs #1975), so spending past zero digs a cash hole, which
-// `spendFromTreasury` models rather than blocks.
+// signed national cash position, separate from the bond-ledger `debt.principal`,
+// so spending past zero digs a cash hole, which `spendFromTreasury` models.
 //
 // `requireHumanSessionWithCharacter` rather than `requireAuthWithCharacter`:
 // this route spends a NATIONAL TREASURY, so it needs the same-origin assertion
-// (a plain cookie guard would let a cross-origin POST commit plays) and the
-// bot-token rejection that the comparable `/api/actions/execute` uses.
+// and the bot-token rejection.
 export async function POST(request: Request) {
   try {
     const auth = await requireHumanSessionWithCharacter(request);

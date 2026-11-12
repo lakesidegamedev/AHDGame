@@ -1,4 +1,6 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { producerInputBidLimit } from "@/lib/market/producerMarket/inputBidRules";
 import {
   ownDemandRunShare,
@@ -24,8 +26,14 @@ import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
-import { getSectorTechEffectsForYear, NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree";
+import {
+  getSectorTechEffectsForYear,
+  NEUTRAL_TECH_EFFECTS,
+  withSunsetPenalty,
+} from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { withEnergyTransition } from "@/lib/energyTransition/policies";
+import { lawAdjustedLabourFactor, lawWageCostMultiplier } from "@/lib/automationPolicy/policies";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
 import {
   LOW_USE_COLD_UPKEEP_FRACTION,
@@ -164,6 +172,8 @@ export type ProducerPhysicalEnv = Pick<
   jointRunStage?: number;
   /** gameConfig.producerRunPlanStage: >= 1 plans the run from last turn's plan, recovers in steps of capacity, floors only a lasting glut. */
   runPlanStage?: number;
+  /** gameConfig.producerTariffStage: >= 1 charges import tariffs in the funded market (tariffRules). */
+  tariffStage?: number;
   /** gameConfig.producerSalesAdvancePriceStage >= 1: the sales advance judges a run on its inputs' clearing prices. */
   salesAdvanceAtClearing?: boolean;
   /** gameConfig.producerSalesAdvanceRevenueShare: expected sales a run may borrow against (default 0.9). */
@@ -223,6 +233,8 @@ export type ProducerPhysicalEnv = Pick<
     | "politicalBaseModifiersByState"
     | "regionalConditionMarginByState"
     | "stateOwnershipConcentrationByCountry"
+    | "energyTransition"
+    | "automationPolicyByCountry"
   >;
 };
 
@@ -301,16 +313,33 @@ export function prepareProducerPhysicalSector(input: {
     lookups.labourDemandWageIndexByState?.get(sector.stateId),
     countryId
   );
-  const tech =
+  const operatingType = getOperatingSectorType(
+    sector.sectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
+  const transitionTech = withEnergyTransition(
     env.techTreesEnabled && currentYear != null
-      ? getSectorTechEffectsForYear(
-          corp,
-          sector.sectorType,
-          currentYear,
-          sector.industryModel,
-          sector.mediaDiscriminator
+      ? withSunsetPenalty(
+          getSectorTechEffectsForYear(
+            corp,
+            sector.sectorType,
+            currentYear,
+            sector.industryModel,
+            sector.mediaDiscriminator
+          ),
+          operatingType,
+          sector.strategyId,
+          currentYear
         )
-      : NEUTRAL_TECH_EFFECTS;
+      : NEUTRAL_TECH_EFFECTS,
+    lookups.energyTransition,
+    sector,
+    operatingType,
+    currentYear
+  );
+  // Automation levies are paid to the treasury at settlement, not folded into input rates.
+  const tech = transitionTech;
   const recipe = getEffectiveStrategyRatesForOperatingModel(
     sector.sectorType,
     sector.strategyId ?? "standard",
@@ -322,11 +351,6 @@ export function prepareProducerPhysicalSector(input: {
     lookups.preset,
     lookups.hardwareInputReliefStartTurn,
     { advertisingInput: env.advertisingInput === true }
-  );
-  const operatingType = getOperatingSectorType(
-    sector.sectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
   );
   const outputRateValueBasis = Object.values(recipe.supply).reduce<number>(
     (sum, value) => sum + (value ?? 0),
@@ -449,6 +473,10 @@ export function prepareProducerPhysicalSector(input: {
   if (pricing?.transferPricing && pricing.transferPricing !== "free") {
     plan.internalTransferPricing = { mode: pricing.transferPricing, discount: pricing.discount };
   }
+  // captiveMarketValue only values opted-in accounts. Everything except Free
+  // opts in; explicitly-priced accounts are filtered out at booking and keep
+  // their own entries.
+  if (pricing?.transferPricing !== "free") plan.ownSiteMarketValue = true;
   if (sector.sellOutsideFirst === true) plan.sellOutsideFirst = true;
   // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
   if ((env.stockCoverTurns ?? 0) > 0) {
@@ -583,6 +611,11 @@ export function prepareProducerPhysicalSector(input: {
     labourDemandByState: env.labourDemandByState,
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: sector.wageLevel,
+    labourPerUnitFactor: lawAdjustedLabourFactor(
+      operatingCrewFactor(sector, currentTurn, presetUsesSocietyPressures(lookups.preset)),
+      lookups.automationPolicyByCountry,
+      countryId
+    ),
   });
   const metrics = lookups.stateMetricsByState?.get(sector.stateId);
   const staffedShare =
@@ -598,6 +631,7 @@ export function prepareProducerPhysicalSector(input: {
     grossMaintenance: (nominalDaily * runningFraction * staffedShare) / TURNS_PER_DAY,
     computedWorkers: headcount.workers,
     techLaborCostMultiplier: tech.laborCostMultiplier,
+    employerWageCostMultiplier: lawWageCostMultiplier(lookups.automationPolicyByCountry, countryId),
     costOfLivingIndex: metrics?.economic?.costOfLiving?.value,
     unemploymentRate: metrics?.economic?.unemploymentRate?.value,
     wageIndexByState: env.wageIndexByState,

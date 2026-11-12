@@ -132,6 +132,13 @@ describe("spendGroundGame", () => {
     expect(db.collectionMocks["referendums"].updateOne).not.toHaveBeenCalled();
   });
 
+  it("official mode charges the referendum's own country, not the UK", async () => {
+    setRef(db, { countryId: "CA", regionId: "CA_QC" });
+    psMock.mockResolvedValue({ ok: true, effectiveCost: 5 });
+    await spendGroundGame(db as unknown as Db, { ...official, countryId: "CA" as never });
+    expect(psMock.mock.calls[0][0]).toMatchObject({ countryId: "CA", stateId: "CA_QC" });
+  });
+
   it("volunteer mode atomically debits the preset's actions + funds; insufficient → 400", async () => {
     setRef(db);
     db.collection("characters").updateOne.mockResolvedValue({ modifiedCount: 0 });

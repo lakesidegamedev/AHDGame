@@ -1,5 +1,5 @@
 /**
- * Gated domestic sovereign-bond coverage shell (#1001).
+ * Gated domestic sovereign-bond coverage shell.
  *
  * When gameConfig.domesticSovereignBondCoverageEnabled is exactly true,
  * ensures one home-sovereign bond fund per uncovered sovereign issuer (see
@@ -13,7 +13,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, GameConfig, IndexFund, IndexFundPosition } from "@/lib/db/types";
+import type { GameConfig, IndexFund, IndexFundPosition } from "@/lib/db/types";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -27,6 +27,10 @@ import {
   buildDomesticSovereignBondFundSeed,
   planDomesticSovereignCoverage,
 } from "@/lib/indexFunds/domesticSovereignCoverage/rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 export interface EnsureDomesticCoverageResult {
   /** Sorted country ids ensured this pass (inserted now, not merely planned). */
@@ -40,8 +44,7 @@ export async function ensureDomesticSovereignBondFunds(
   if (options.enabled !== true) return { ensured: [] };
 
   const registered = await getRegisteredCountryIds(db);
-  const budgets = await db
-    .collection<{ _id: string }>("federalBudget")
+  const budgets = await federalBudgetCollection<{ _id: string }>(db)
     .find(
       { _id: { $in: registered.map((countryId) => getNationalBudgetId(countryId)) } },
       { projection: { _id: 1 } }
@@ -49,14 +52,13 @@ export async function ensureDomesticSovereignBondFunds(
     .toArray();
   const budgetedCountryIds = budgets.map((doc) => (doc._id === "federal" ? "US" : String(doc._id)));
   const liveIssuerCountryIds = (
-    await db.collection<Bond>("bonds").distinct("countryId", {
+    await bondsCollection(db).distinct("countryId", {
       issuerType: "sovereign",
       matured: false,
       defaulted: { $ne: true },
     })
   ).flatMap((value) => (typeof value === "string" && value.length > 0 ? [value] : []));
-  const serviceableFunds = await db
-    .collection<IndexFund>("indexFunds")
+  const serviceableFunds = await indexFundsCollection(db)
     .find(
       { $or: [{ status: "active" }, { status: "paused", pauseReason: "backing_ratio" }] },
       { projection: { countryId: 1, anchorCurrencyCode: 1, scope: 1 } }
@@ -86,8 +88,7 @@ export async function ensureDomesticSovereignBondFunds(
   );
   const existingSlugs = new Set(
     (
-      await db
-        .collection<IndexFund>("indexFunds")
+      await indexFundsCollection(db)
         .find({ slug: { $in: seeds.map((seed) => seed.slug) } }, { projection: { slug: 1 } })
         .toArray()
     ).map((fund) => fund.slug)
@@ -97,8 +98,8 @@ export async function ensureDomesticSovereignBondFunds(
 
   const now = new Date();
   const ensured: string[] = [];
-  const funds = db.collection<IndexFund>("indexFunds");
-  const positions = db.collection<IndexFundPosition>("indexFundPositions");
+  const funds = indexFundsCollection(db);
+  const positions = indexFundPositionsCollection(db);
   for (const seed of missing) {
     const fundId = new ObjectId();
     await funds.insertOne({

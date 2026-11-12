@@ -1,19 +1,14 @@
 /**
  * Atomic debit + credit for "Send to Member" treasury actions.
  *
- * Extracted from `src/app/api/country/[code]/parties/[id]/send/route.ts`
- * so the same logic runs in both the immediate path (`transactionApproval
- * Mode === "single"`) and the two-person-approval execute step
- * (`.../treasury/pending/[txnId]/approve`). Behavior must stay identical
- * to the legacy immediate path — balance race-protection, replica-set
- * vs standalone Mongo fallback, admin log, treasury audit log,
- * activity log — so existing tests against the immediate path continue
- * to apply.
+ * Shared by the immediate path (`transactionApprovalMode === "single"`) and
+ * the two-person-approval execute step. Balance race-protection, replica-set
+ * vs standalone Mongo fallback, admin log, treasury audit log, and activity
+ * log stay identical across callers.
  *
- * Auth, target lookup, and player-transfers feature gate stay in the
- * route layer (different in each calling context). Reserve breach
- * computation is also up to the caller; pass the warning string (or
- * null) so it shows in the admin log + response message.
+ * Auth, target lookup, and the player-transfers feature gate stay in the
+ * route layer. Reserve breach computation is up to the caller; pass the
+ * warning string (or null) so it shows in the admin log and response message.
  */
 
 import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
@@ -35,6 +30,11 @@ import { checkPlayerPayoutCap } from "@/lib/treasury/payoutCap";
 // database-facing module should not have to stub it.
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 export interface ExecuteSendToMemberArgs {
   db: Db;
@@ -117,41 +117,42 @@ export async function executeSendToMember(
   };
 
   const applyInTransaction = async (session: ClientSession) => {
-    const debitResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id, treasury: { $gte: amount } }, partyDebit, { session });
+    const debitResult = await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, treasury: { $gte: amount } },
+      partyDebit,
+      { session }
+    );
     if (debitResult.matchedCount === 0) {
       throw badRequest("Insufficient treasury funds");
     }
-    const creditResult = await db
-      .collection<Character>("characters")
-      .updateOne({ _id: targetCharacter._id }, characterCredit, { session });
+    const creditResult = await charactersCollection(db).updateOne(
+      { _id: targetCharacter._id },
+      characterCredit,
+      { session }
+    );
     if (creditResult.matchedCount === 0) {
       throw notFound("Character not found");
     }
   };
 
   const applyWithoutTransaction = async (): Promise<NextResponse | null> => {
-    const debitResult = await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne({ _id: party._id, treasury: { $gte: amount } }, partyDebit);
+    const debitResult = await politicalPartiesCollection(db).updateOne(
+      { _id: party._id, treasury: { $gte: amount } },
+      partyDebit
+    );
     if (debitResult.matchedCount === 0) {
       return errorResponse(400, "Insufficient treasury funds");
     }
     // The debit has landed and there is no transaction to roll back, so
-    // every exit from here on must either complete the credit or put the
-    // money back. A THROWN credit was previously not compensated at all:
-    // it escaped with the treasury already short, and the approve route
-    // read that as "nothing happened" and reopened the row for a second
-    // debit.
+    // every exit from here must either complete the credit or refund the
+    // debit. A thrown credit that escapes leaves the treasury short and
+    // lets a retry debit again.
     const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
       try {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id },
-            { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
+        );
       } catch (refundError) {
         console.error(
           JSON.stringify({
@@ -180,9 +181,10 @@ export async function executeSendToMember(
 
     let creditResult;
     try {
-      creditResult = await db
-        .collection<Character>("characters")
-        .updateOne({ _id: targetCharacter._id }, characterCredit);
+      creditResult = await charactersCollection(db).updateOne(
+        { _id: targetCharacter._id },
+        characterCredit
+      );
     } catch (creditError) {
       await refundDebit("credit threw", creditError);
       throw creditError;
@@ -248,7 +250,7 @@ export async function executeSendToMember(
     }`,
   };
   try {
-    await db.collection<AdminLog>("adminLogs").insertOne(adminLog);
+    await adminLogsCollection(db).insertOne(adminLog);
   } catch (err) {
     console.error(
       JSON.stringify({
@@ -312,7 +314,7 @@ export async function executeSendToMember(
   // SYNCHRONOUSLY on a malformed id, so even a call that is never
   // awaited can escape this function with the money already moved.
   try {
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(args.initiatorUserId),

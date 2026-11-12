@@ -1,17 +1,16 @@
 /**
  * POST /api/admin/demographics/reseed
  *
- * Upserts demographic categories and state demographics from the seed data.
- * Admin-only. Removes legacy categories (race, gender, education, wealth, age, ideology)
- * so only the new voterGroups schema remains. Clears stored polls from all characters
- * so they commission fresh polls with the new 12 voter groups.
+ * Upserts state demographics from seed data.
+ * Admin-only. Clears stored polls from all characters so they commission
+ * fresh polls from the reseeded electorate.
  *
  * Optional JSON body:
  *   { era?: EraId, countryId?: string, skipPollClear?: boolean }
  * Defaults: era="2019", countryId="US", skipPollClear=false
- * Backward-compatible: callers that POST with no body get US/2019 behaviour.
+ * Callers that POST with no body get US/2019 behaviour.
  *
- * For countryId !== "US", uses the international Layer-1 model path
+ * For !countryHasFeature("usApi", countryId), uses the international Layer-1 model path
  * (getCountryLayer1Model + buildModelRegionDemographics). Returns 400 if
  * no model exists for the requested country+era.
  *
@@ -26,18 +25,20 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import type { Db } from "mongodb";
-import type { DemographicCategory, State, StateDemographics } from "@/lib/db/types";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import type { State, StateDemographics } from "@/lib/db/types";
 import { registerAndGenerate } from "@/lib/seeds/stateDemographics";
-import { isLayer1PositionsEnabled } from "@/lib/seeds/layer1PositionsFlag";
-import { calculateStateLean } from "@/lib/utils/demographics";
 import { calculateStateLeanForCache } from "@/lib/demographics/cachedStateLean";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
-import type { EraId } from "@/lib/seeds/presetSelector";
+import { SEED_ERA_IDS, type EraId } from "@/lib/seeds/presetSelector";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { stateDemographicsBackupCollection } from "@/lib/db/repositories/stateDemographicsBackup";
 
-const LEGACY_CATEGORY_IDS = ["race", "gender", "education", "wealth", "age", "ideology"] as const;
-
-const VALID_ERAS = ["1953", "1979", "1991", "1999", "2007", "2019", "2023"] as const;
+const VALID_ERAS = SEED_ERA_IDS;
 
 const ReseedBodySchema = z
   .object({
@@ -70,10 +71,9 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const layer1Positions = await isLayer1PositionsEnabled();
 
     // ── International path ──────────────────────────────────────────────────
-    if (countryId !== "US") {
+    if (!countryHasFeature("usApi", countryId)) {
       const { getCountryLayer1Model, buildModelRegionDemographics } =
         await import("@/lib/seeds/international");
       const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
         return errorResponse(400, `No Layer-1 model for ${countryId}:${era}`);
       }
 
-      const full = layer1Positions ? await loadFullOverride(countryId, era) : null;
+      const full = await loadFullOverride(countryId, era);
       const regionDemographics = buildModelRegionDemographics(
         model,
         full?.positions ?? undefined,
@@ -94,24 +94,25 @@ export async function POST(request: Request) {
       const regionIds = regionDemographics.map((r) => r._id);
       const snapshotId = await takeSnapshot(db, countryId, era, regionIds, auth.admin.username);
 
-      // Categories must come from the DB, not the US static import: a region's
-      // lean is summed only over categories named in its `categoryWeights`, so
-      // scoring an RU/DD/UK region against US voter groups matches nothing and
-      // silently yields a 0/0 lean (#3752).
-      const countryCategories = await db
-        .collection<DemographicCategory>("demographicCategories")
-        .find({})
-        .toArray();
-
       for (const sd of regionDemographics) {
-        await db
-          .collection<StateDemographics>("stateDemographics")
-          .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
-        await db
-          .collection<StateDemographics>("demographicDefaults")
-          .updateOne({ _id: sd._id }, { $set: sd }, { upsert: true });
-        const calculatedLean = calculateStateLean(sd, countryCategories);
-        await db.collection<State>("states").updateOne(
+        const { groups: _groups, ...storedDemographics } = sd;
+        await stateDemographicsCollection(db).updateOne(
+          { _id: sd._id },
+          { $set: storedDemographics },
+          { upsert: true }
+        );
+        await demographicDefaultsCollection(db).updateOne(
+          { _id: sd._id },
+          { $set: storedDemographics },
+          { upsert: true }
+        );
+        const calculatedLean = calculateStateLeanForCache(sd, [], {
+          countryId,
+          stateId: sd._id,
+          preset: `${era}-default`,
+          demographicDefaults: sd,
+        });
+        await statesCollection(db).updateOne(
           { _id: sd._id },
           {
             $set: {
@@ -127,7 +128,6 @@ export async function POST(request: Request) {
         success: true,
         countryId,
         era,
-        layer1Positions,
         snapshotId,
         statesCount: regionDemographics.length,
         message: `Reseeded ${regionDemographics.length} ${countryId} regions (era ${era}).`,
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
     // ── US path ─────────────────────────────────────────────────────────────
     const { loadEraFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const override = layer1Positions ? ((await loadEraFullOverride(era)) ?? undefined) : undefined;
+    const override = (await loadEraFullOverride(era)) ?? undefined;
 
     // Era-aware census bundle
     const { stateCensusData } = await import("@/lib/seeds/stateCensusData");
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
 
     const regenerated = Object.entries(censusBundle).map(([stateId, config]) =>
       registerAndGenerate(stateId, config, era, {
-        layer1Positions,
+        layer1Positions: true,
         positions: override?.positions,
         turnout: override?.turnout,
       })
@@ -157,50 +157,42 @@ export async function POST(request: Request) {
     const stateIds = regenerated.map((r) => r._id);
     const snapshotId = await takeSnapshot(db, countryId, era, stateIds, auth.admin.username);
 
-    // Upsert demographic categories (US-only; international uses country-specific categories)
-    for (const category of demographicCategories) {
-      await db
-        .collection<DemographicCategory>("demographicCategories")
-        .updateOne({ _id: category._id }, { $set: category }, { upsert: true });
-    }
-
-    // Remove legacy categories so only voterGroups remains
-    if (LEGACY_CATEGORY_IDS.length > 0) {
-      await db
-        .collection<DemographicCategory>("demographicCategories")
-        .deleteMany({ _id: { $in: LEGACY_CATEGORY_IDS } });
-    }
-
     // Clear stored polls (skippable to avoid disrupting active players)
     let charactersCleared = 0;
     if (!skipPollClear) {
-      const charsResult = await db
-        .collection("characters")
-        .updateMany({}, { $unset: { lastPoll: "", lastPollLarge: "" } });
+      const charsResult = await charactersCollection<Document>(db).updateMany(
+        {},
+        { $unset: { lastPoll: "", lastPollLarge: "" } }
+      );
       charactersCleared = charsResult.modifiedCount;
     }
 
     for (const sd of regenerated) {
-      const calculatedLean = calculateStateLeanForCache(sd, demographicCategories, {
+      const calculatedLean = calculateStateLeanForCache(sd, [], {
         countryId: "US",
         stateId: sd._id,
         preset: `${era}-default`,
         demographicDefaults: sd,
       });
+      const { groups: _groups, ...storedDemographics } = sd;
       const cachedDemographics = {
-        ...sd,
+        ...storedDemographics,
         cachedEconomicLean: calculatedLean.economicLean,
         cachedSocialLean: calculatedLean.socialLean,
       };
-      await db
-        .collection<StateDemographics>("stateDemographics")
-        .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
-      await db
-        .collection<StateDemographics>("demographicDefaults")
-        .updateOne({ _id: sd._id }, { $set: cachedDemographics }, { upsert: true });
+      await stateDemographicsCollection(db).updateOne(
+        { _id: sd._id },
+        { $set: cachedDemographics },
+        { upsert: true }
+      );
+      await demographicDefaultsCollection(db).updateOne(
+        { _id: sd._id },
+        { $set: cachedDemographics },
+        { upsert: true }
+      );
 
       // Refresh cached leans on states
-      await db.collection<State>("states").updateOne(
+      await statesCollection(db).updateOne(
         { _id: sd._id },
         {
           $set: {
@@ -212,20 +204,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const groupsPerCategory = demographicCategories.reduce(
-      (s, c) => s + (c.groups?.length ?? 0),
-      0
-    );
     return NextResponse.json({
       success: true,
       countryId,
       era,
-      layer1Positions,
       snapshotId,
       skipPollClear,
-      message: `Reseeded ${demographicCategories.length} category (${groupsPerCategory} voter archetypes) and ${regenerated.length} state demographics (era ${era}). ${skipPollClear ? "Poll clear skipped." : `Cleared stored polls from ${charactersCleared} characters.`}`,
-      categoriesCount: demographicCategories.length,
-      groupsCount: groupsPerCategory,
+      message: `Reseeded ${regenerated.length} state demographics (era ${era}). ${skipPollClear ? "Poll clear skipped." : `Cleared stored polls from ${charactersCleared} characters.`}`,
       statesCount: regenerated.length,
       charactersCleared,
     });
@@ -251,13 +236,12 @@ async function takeSnapshot(
   regionIds: string[],
   triggeredBy: string
 ): Promise<string> {
-  const currentDocs = await db
-    .collection<{ _id: string }>("stateDemographics")
+  const currentDocs = await stateDemographicsCollection<{ _id: string }>(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
 
   const snapshotId = `${countryId}:${era}:${Date.now()}`;
-  await db.collection<SnapshotDoc>("stateDemographicsBackup").insertOne({
+  await stateDemographicsBackupCollection<SnapshotDoc>(db).insertOne({
     _id: snapshotId,
     countryId,
     era,
@@ -267,16 +251,13 @@ async function takeSnapshot(
   });
 
   // Prune: keep last 3 snapshots per country+era
-  const all = await db
-    .collection<SnapshotDoc>("stateDemographicsBackup")
+  const all = await stateDemographicsBackupCollection<SnapshotDoc>(db)
     .find({ countryId, era })
     .sort({ snapshotAt: -1 })
     .toArray();
   if (all.length > 3) {
     const toDelete = all.slice(3).map((s) => s._id);
-    await db
-      .collection<SnapshotDoc>("stateDemographicsBackup")
-      .deleteMany({ _id: { $in: toDelete } });
+    await stateDemographicsBackupCollection<SnapshotDoc>(db).deleteMany({ _id: { $in: toDelete } });
   }
 
   return snapshotId;
@@ -314,7 +295,15 @@ async function resolveUsCensusBundle(
       const { stateCensusData2023 } = await import("@/lib/seeds/stateCensusData2023");
       return stateCensusData2023;
     }
-    default:
+    case "2027": {
+      const { stateCensusData2027 } = await import("@/lib/seeds/stateCensusData2027");
+      return stateCensusData2027;
+    }
+    case "2019":
       return fallback;
+    default: {
+      const unhandled: never = era;
+      return unhandled;
+    }
   }
 }

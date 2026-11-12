@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
@@ -29,7 +30,6 @@ import type {
   User,
   ImperialCharacter,
   GameState,
-  Corporation,
   ExchangeRate,
   CongressLeader,
   SupremeCourtSeat,
@@ -61,7 +61,6 @@ import {
 } from "@/lib/parties/influenceQueries";
 import { PolicyDemographicsCard } from "./components/PolicyDemographicsCard";
 import { CharacterStatsPanel } from "./components/CharacterStatsPanel";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import type { CompassMarker } from "@/components/PoliticalCompass";
 import { ProfileAchievements } from "@/components/ProfileAchievements";
 import { checkPassiveProfileAchievements } from "@/lib/achievements/triggers";
@@ -74,7 +73,6 @@ import { getNationalDoctrine } from "@/lib/db/collections/nationalDoctrine";
 import { getCharacterCommission } from "@/lib/db/collections/characterGenerals";
 import { getMilitaryCommands } from "@/lib/db/collections/militaryCommands";
 import { resolveGeneralEra } from "@/lib/military/currentGeneralEra";
-import { CUR_ERA_YEAR } from "@/lib/military/generalsTree";
 import { PoliticalStanding } from "./components/PoliticalStanding";
 import { FinancialStrip } from "./components/FinancialStrip";
 import { CareerHistory } from "./components/CareerHistory";
@@ -86,10 +84,8 @@ import {
 } from "@/lib/parties/historyQuery";
 import { ConstituencySelector } from "./components/ConstituencySelector";
 import { CeoCorporationCard } from "./components/CeoCorporationCard";
-import { NewPlayerBanner } from "./components/OnboardingCard";
 import { ReplayTutorialButton } from "@/components/tutorial/ReplayTutorialButton";
 import { OnboardingFlaggedCard } from "./components/OnboardingFlaggedCard";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { isOnboardingDismissed, loadOnboardingChecklist } from "@/lib/onboarding/checklist";
 import { recordOnboardingProgress } from "@/lib/onboarding/stepStamps";
 import { loadFirstDays, type FirstDaysData } from "@/lib/onboarding/firstDays";
@@ -120,6 +116,20 @@ import { unionContributionIncomePerTurn } from "@/lib/unions/unionContributionIn
 import { ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
 import { isPatreonActive } from "@/lib/db/types";
 import { resolveMemberSince } from "@/lib/character/memberSince";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -130,16 +140,14 @@ async function getCharacterData() {
   const db = await getDb();
 
   // Resolve character by activeCharacterId if set (admin multi-character), fallback to userId
-  const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+  const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
 
   // Redirect to imperial profile when in imperial mode
   if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
-      .findOne(
-        { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) },
-        { projection: { sequentialId: 1 } }
-      );
+    const imperial = await imperialCharactersCollection(db).findOne(
+      { _id: userDoc.activeImperialCharacterId, userId: new ObjectId(user.userId) },
+      { projection: { sequentialId: 1 } }
+    );
     if (imperial) {
       redirect(`/imperial/${imperial.sequentialId}`);
     }
@@ -148,7 +156,7 @@ async function getCharacterData() {
   const characterQuery = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
     : { userId: new ObjectId(user.userId) };
-  const character = await db.collection<Character>("characters").findOne(characterQuery);
+  const character = await charactersCollection(db).findOne(characterQuery);
   if (!character) return null;
 
   const hasParty = Boolean(character.party && character.party !== "independent");
@@ -169,24 +177,21 @@ async function getCharacterData() {
     gameState,
     partyHistoryEvents,
   ] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: character.homeState, countryId: character.countryId }),
-    db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+    statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
+    gameConfigCollection(db).findOne({ _id: "default" }),
     hasParty
       ? (async () => {
           const partySeqId = parseInt(character.party as string, 10);
           if (isNaN(partySeqId)) return null;
           const charCountry = character.countryId ?? "US";
-          return db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ sequentialId: partySeqId, countryId: charCountry });
+          return politicalPartiesCollection(db).findOne({
+            sequentialId: partySeqId,
+            countryId: charCountry,
+          });
         })()
       : Promise.resolve(null),
-    hasParty
-      ? db.collection<StatePartyOrg>("statePartyOrg").findOne({ _id: statePartyKey })
-      : Promise.resolve(null),
-    db.collection<Corporation>("corporations").findOne(
+    hasParty ? statePartyOrgCollection(db).findOne({ _id: statePartyKey }) : Promise.resolve(null),
+    corporationsCollection(db).findOne(
       {
         ceoId: character._id,
         ceoVacant: { $ne: true },
@@ -204,13 +209,9 @@ async function getCharacterData() {
       }
     ),
     isForexEnabled(),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    gameStateCollection(db).findOne({ _id: "current" }),
     fetchPartyHistory(db, character._id),
   ]);
-
-  const rpgStatsEnabled = await isRpgStatsEnabled({
-    rpgStatsEnabled: gameState?.rpgStatsEnabled,
-  });
 
   // Record first-completion times for every onboarding step (whether or not
   // the card is shown), after the response so the page never waits on it.
@@ -222,10 +223,7 @@ async function getCharacterData() {
   const firstDays: FirstDaysData | null = await loadFirstDays(db, character).catch(() => null);
 
   // New-player onboarding checklist: derive step completion only while the
-  // card is actually shown (flag on, not dismissed, reward not yet claimed).
-  const onboardingChecklistEnabled = await isOnboardingChecklistEnabled({
-    onboardingChecklistEnabled: gameState?.onboardingChecklistEnabled,
-  });
+  // card is actually shown (not dismissed, reward not yet claimed).
   let onboardingChecklist: {
     steps: Array<{
       id: string;
@@ -240,16 +238,12 @@ async function getCharacterData() {
     rewardAmount: number;
     rewardSymbol: string;
   } | null = null;
-  if (
-    onboardingChecklistEnabled &&
-    !isOnboardingDismissed(character) &&
-    character.onboarding?.rewardGrantedAt === undefined
-  ) {
+  if (!isOnboardingDismissed(character) && character.onboarding?.rewardGrantedAt === undefined) {
     const checklist = await loadOnboardingChecklist(db, character);
     const homeCurrency = getHomeCurrency(character, gameState?.preset);
     const anchorCountry = getCountryIdForCurrency(homeCurrency);
     const rateDoc = forexEnabled
-      ? await db.collection<ExchangeRate>("exchangeRates").findOne({ _id: anchorCountry })
+      ? await exchangeRatesCollection(db).findOne({ _id: anchorCountry })
       : null;
     onboardingChecklist = {
       steps: checklist.steps,
@@ -284,7 +278,10 @@ async function getCharacterData() {
     character.countryId,
     character.politicalInfluence ?? 0,
     gameState?.preset,
-    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gameState?.preset)
+    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gameState?.preset),
+    homeState?.gdp === undefined
+      ? undefined
+      : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
   );
 
   // Determine character's country for country-specific NPI rankings
@@ -293,15 +290,13 @@ async function getCharacterData() {
   const npiCountryMatch: Filter<Character> = { countryId: charCountryId ?? "US" };
 
   const [topNPI, topDonor] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ isBanned: { $ne: true }, ...npiCountryMatch })
       .sort({ nationalInfluence: -1 })
       .limit(1)
       .project({ nationalInfluence: 1 })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ isBanned: { $ne: true } })
       .sort({ donorBaseLevel: -1 })
       .limit(1)
@@ -320,8 +315,7 @@ async function getCharacterData() {
   if (careerPartyIds.length > 0) {
     const numericIds = careerPartyIds.map(Number).filter((n) => !isNaN(n));
     if (numericIds.length > 0) {
-      const parties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const parties = await politicalPartiesCollection(db)
         .find({ sequentialId: { $in: numericIds } })
         .project({ sequentialId: 1, name: 1, countryId: 1 })
         .toArray();
@@ -357,46 +351,31 @@ async function getCharacterData() {
   const nationalNpiOrdinalRank = await getNationalNpiOrdinalRank(db, character);
 
   // Conflict-path reads are independent of one another — one round, with the
-  // posting load still gated on the commission (an uncommissioned character
-  // has no order of battle).
-  const conflictExtras = gameState?.conflictsEnabled
-    ? await (async () => {
-        const [doctrine, commission, generalEra, commands] = await Promise.all([
-          getNationalDoctrine(db, charCountryId ?? "US"),
-          getCharacterCommission(db, character._id.toString()),
-          resolveGeneralEra(db),
-          getMilitaryCommands(db, charCountryId ?? "US"),
-        ]);
-        return {
-          doctrineAdopted: doctrine.adopted,
-          // Retain former service for the read-only military profile.
-          general: commission.general,
-          militaryService: {
-            commissioned: commission.commissioned,
-            commissionedTurn: commission.commissionedTurn,
-            dismissedTurn: commission.dismissedTurn,
-          },
-          generalPosting: commission.commissioned
-            ? await loadGeneralPosting(db, character._id.toString(), charCountryId ?? "US")
-            : EMPTY_POSTING,
-          generalEra,
-          isCommandingGeneral: commands.some(
-            (c) => c.commandingGeneralId === character._id.toString()
-          ),
-        };
-      })()
-    : {
-        doctrineAdopted: {},
-        general: null,
-        militaryService: {
-          commissioned: false,
-          commissionedTurn: undefined,
-          dismissedTurn: undefined,
-        },
-        generalPosting: EMPTY_POSTING,
-        generalEra: CUR_ERA_YEAR,
-        isCommandingGeneral: false,
-      };
+  // posting load gated on the commission (an uncommissioned character has no
+  // order of battle).
+  const conflictExtras = await (async () => {
+    const [doctrine, commission, generalEra, commands] = await Promise.all([
+      getNationalDoctrine(db, charCountryId ?? "US"),
+      getCharacterCommission(db, character._id.toString()),
+      resolveGeneralEra(db),
+      getMilitaryCommands(db, charCountryId ?? "US"),
+    ]);
+    return {
+      doctrineAdopted: doctrine.adopted,
+      // Retain former service for the read-only military profile.
+      general: commission.general,
+      militaryService: {
+        commissioned: commission.commissioned,
+        commissionedTurn: commission.commissionedTurn,
+        dismissedTurn: commission.dismissedTurn,
+      },
+      generalPosting: commission.commissioned
+        ? await loadGeneralPosting(db, character._id.toString(), charCountryId ?? "US")
+        : EMPTY_POSTING,
+      generalEra,
+      isCommandingGeneral: commands.some((c) => c.commandingGeneralId === character._id.toString()),
+    };
+  })();
 
   return {
     character,
@@ -420,11 +399,8 @@ async function getCharacterData() {
       profileCreatedAt: character.createdAt,
       historyStartedAt: gameState?.singleplayerConfig ? null : gameState?.createdAt,
     }),
-    // Gate on active status exactly as the public profile does
-    // (src/app/character/[id]/page.tsx). Without this the owner keeps their
-    // badge, border and highlight colour after the pledge lapses while every
-    // other player correctly sees none of it — the two pages disagreed about
-    // the same person.
+    // Gate on active status exactly as the public profile does, or the owner
+    // keeps badges and colors after the pledge lapses that others cannot see.
     patreonHighlightColor: supporterActive ? (viewerUser?.patreonHighlightColor ?? null) : null,
     patreonTier: supporterActive ? (viewerUser?.patreonTier ?? null) : null,
     patreonExpiresAt: supporterActive ? (viewerUser?.patreonExpiresAt ?? null) : null,
@@ -436,12 +412,9 @@ async function getCharacterData() {
     partyHistory,
     ceoCorporation,
     forexEnabled,
-    rpgStatsEnabled,
-    onboardingChecklistEnabled,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
-    conflictsEnabled: !!gameState?.conflictsEnabled,
     ...conflictExtras,
     gameDateAnchor: gameState ? gameDateAnchorFromState(gameState) : undefined,
     preset: gameState?.preset,
@@ -501,8 +474,6 @@ export default async function ProfilePage() {
     partyHistory,
     ceoCorporation,
     forexEnabled,
-    rpgStatsEnabled,
-    onboardingChecklistEnabled,
     onboardingChecklist,
     firstDays,
     nationalNpiOrdinalRank,
@@ -510,7 +481,6 @@ export default async function ProfilePage() {
     preset,
     gameYear,
     enabledCabinetSeats,
-    conflictsEnabled,
     doctrineAdopted,
     general,
     militaryService,
@@ -568,27 +538,28 @@ export default async function ProfilePage() {
    */
   const apDb = await getDb();
   const [chairBankRow, cabinetSeats, congressLeadershipRows, justiceSeat] = await Promise.all([
-    apDb
-      .collection("centralBanks")
-      .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } }),
+    centralBanksCollection(apDb).findOne(
+      { chairCharacterId: character._id },
+      { projection: { _id: 1 } }
+    ),
     getCabinetMembersCollection(apDb)
       .find(
         { characterId: character._id },
         { projection: { countryId: 1, positionId: 1, acting: 1 } }
       )
       .toArray(),
-    apDb
-      .collection<CongressLeader>("congressLeaders")
+    congressLeadersCollection(apDb)
       .find({ characterId: character._id }, { projection: { role: 1 } })
       .toArray(),
-    apDb
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .findOne({ justiceCharacterId: character._id }, { projection: { _id: 1 } }),
+    supremeCourtSeatsCollection(apDb).findOne(
+      { justiceCharacterId: character._id },
+      { projection: { _id: 1 } }
+    ),
   ]);
   const cabinetSeat = cabinetSeats[0] ?? null;
   const electedSeat =
     character.currentOffice && CABINET_OFFICE_TYPES.has(character.currentOffice.type)
-      ? await apDb.collection<ElectedOfficial>("electedOfficials").findOne(
+      ? await electedOfficialsCollection(apDb).findOne(
           { characterId: character._id },
           {
             projection: {
@@ -714,8 +685,7 @@ export default async function ProfilePage() {
 
     const charCountry = character.countryId ?? "US";
     const piDb = await getDb();
-    const poolAgg = await piDb
-      .collection<Character>("characters")
+    const poolAgg = await charactersCollection(piDb)
       .aggregate<{ totalInfluence: number; memberCount: number }>([
         {
           $match: {
@@ -776,10 +746,7 @@ export default async function ProfilePage() {
 
   const stateLabel = homeState?.name ?? character.homeState;
 
-  // Office titles are resolved here, where the full country registry is
-  // already loaded, so the career card does not ship the cabinet tables to the
-  // browser. `getOfficeLabel` recomputes what each stored label was meant to
-  // hold, so this is the same text the card used to compute client-side.
+  // Resolved server-side where the country registry is loaded, so the career card does not ship cabinet tables to the browser.
   const careerHistory = (character.careerHistory ?? []).map((event) =>
     event.office
       ? { ...event, officeLabel: getOfficeLabel(event.office, character.countryId) }
@@ -790,7 +757,6 @@ export default async function ProfilePage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-16" data-replay-block>
       <ProfileTabs
-        conflictsEnabled={conflictsEnabled}
         adopted={doctrineAdopted}
         general={general}
         militaryService={militaryService}
@@ -834,17 +800,12 @@ export default async function ProfilePage() {
                 partiesHref={partiesUrl(character.countryId)}
               />
             )}
-            {/* New player onboarding: checklist when the flag is on, legacy banner otherwise */}
-            {onboardingChecklistEnabled ? (
-              <OnboardingFlaggedCard
-                checklist={onboardingChecklist}
-                bannerDismissed={!!character.onboardingDismissed}
-              />
-            ) : (
-              !character.onboardingDismissed && <NewPlayerBanner />
-            )}
+            <OnboardingFlaggedCard
+              checklist={onboardingChecklist}
+              bannerDismissed={!!character.onboardingDismissed}
+            />
             {/* Persistent reminder when the one-time stat allocation was set aside */}
-            {rpgStatsEnabled && !character.statsAllocated && character.statAllocationDismissed && (
+            {!character.statsAllocated && character.statAllocationDismissed && (
               <StatAllocationBanner />
             )}
           </>
@@ -882,7 +843,7 @@ export default async function ProfilePage() {
               partyInfluenceShare={partyInfluenceShare}
             />
 
-            {rpgStatsEnabled && character.stats && (
+            {character.stats && (
               <CharacterStatsPanel
                 stats={character.stats}
                 canReallocate={!!character.statsAllocated && !character.statsReallocationUsed}

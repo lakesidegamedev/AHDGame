@@ -10,6 +10,11 @@ import type { CountryId } from "@/lib/constants/countries";
 import {} from "@/lib/constants";
 import { loadApportionment } from "@/lib/elections/apportionment";
 import { getGameStateCollection } from "@/lib/db/collections";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export interface MapPresidentialState {
   leadingParty: string;
@@ -49,8 +54,8 @@ export async function computePresidentialMap(
   totalElectoralVotes?: number;
 }> {
   const [parties, allStates] = await Promise.all([
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
-    db.collection<State>("states").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
+    statesCollection(db).find({ countryId }).toArray(),
   ]);
 
   const partyColorMap = new Map(
@@ -58,7 +63,7 @@ export async function computePresidentialMap(
   );
   const stateMap = new Map(allStates.map((s) => [s._id, s]));
 
-  const presidentElection = await db.collection<Election>("elections").findOne(
+  const presidentElection = await electionsCollection(db).findOne(
     {
       countryId,
       state: countryId,
@@ -84,11 +89,8 @@ export async function computePresidentialMap(
   }
 
   const [voteTally, electionCandidates] = await Promise.all([
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne({ electionId: presidentElection._id }),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionVoteTalliesCollection(db).findOne({ electionId: presidentElection._id }),
+    electionCandidatesCollection(db)
       .find({ electionId: presidentElection._id, status: { $in: ["active", "withdrawn"] } })
       .project({ _id: 1, characterName: 1 })
       .toArray(),

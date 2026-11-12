@@ -15,6 +15,9 @@ import {
   russianDumaRootFilter,
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 export async function materializeRussianDumaNpcAdmission(input: {
   db: Db;
   session: ClientSession;
@@ -31,11 +34,12 @@ export async function materializeRussianDumaNpcAdmission(input: {
     now.getTime() < 0
   )
     throw new Error("Duma NPC admission requires a transaction, turn and time");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -67,8 +71,7 @@ export async function materializeRussianDumaNpcAdmission(input: {
   if (!authority) throw new Error("Duma campaign authority changed");
   if (country.ruDumaNpcAdmissionCohortId?.equals(cohortId))
     return { created: 0, unrepresentedParties: country.ruDumaUnrepresentedParties ?? [] };
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": cohortId },
       {
@@ -159,11 +162,12 @@ export async function admitRussianDumaNpcNominees(input: {
     input.now.getTime() < 0
   )
     throw new Error("Duma NPC admission requires a turn and time");
-  const game = await input.db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const game = await gameStateCollection(input.db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") return null;
-  const country = await input.db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(input.db).findOne(
     { _id: "RU" },
     {
       projection: {

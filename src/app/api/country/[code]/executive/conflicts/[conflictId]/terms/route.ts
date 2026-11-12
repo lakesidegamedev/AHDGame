@@ -12,7 +12,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
 import { getConflict, getConflictsCollection } from "@/lib/db/collections/conflicts";
-import type { FederalBudget } from "@/lib/db/types";
 import { getCountryState } from "@/lib/countryState";
 import { maxIndemnityForGdp, loadPartySequentialIds } from "@/lib/military/peaceOffer";
 import { loadTermSettlement } from "@/lib/settlement/queries/termSettlement";
@@ -20,6 +19,7 @@ import { validatePeaceTerm, type PeaceTerm } from "@/lib/military/peaceTerm";
 import { applyPeaceTerm } from "@/lib/military/applyPeaceTerm";
 import { resolveConflict } from "@/lib/military/resolveConflict";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const bodySchema = z.object({
   // The same discriminated union the offer route takes, and `parliamentaryMonarchy`
@@ -69,11 +69,8 @@ export async function POST(
     const db = await getDb();
     const gs = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
-    const currentTurn = gs.currentTurn ?? 0;
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const currentTurn = gs?.currentTurn ?? 0;
 
     // The same seat gate the peace routes use: head of government or the foreign
     // seat holder, either one, no precedence.
@@ -114,9 +111,10 @@ export async function POST(
     // terms would refuse a settlement over a figure it does not contain.
     let maxIndemnity: number | null = null;
     if (term.kind === "indemnity") {
-      const payerBudget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: term.payer }, { projection: { gdp: 1 } });
+      const payerBudget = await federalBudgetCollection(db).findOne(
+        { countryId: term.payer },
+        { projection: { gdp: 1 } }
+      );
       maxIndemnity = maxIndemnityForGdp(payerBudget?.gdp);
       if (maxIndemnity == null) {
         return errorResponse(

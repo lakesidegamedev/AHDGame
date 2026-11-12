@@ -1,9 +1,8 @@
 import type { DesktopNavLink, DesktopNavMenu } from "./desktopNavModel";
 
 /**
- * The Campaign tab, in the slot Actions used to hold: the player's own Actions
- * and the Campaign Manager. Every navbar (classic, experimental, mobile menu,
- * dock) builds its entries here so they cannot drift apart.
+ * The Campaign tab: the player's own Actions and the Campaign Manager. Every
+ * navbar builds its entries here so they cannot drift apart.
  */
 
 type T = (key: string) => string;

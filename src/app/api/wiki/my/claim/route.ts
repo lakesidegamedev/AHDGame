@@ -2,15 +2,13 @@
  * POST /api/wiki/my/claim
  *
  * Create a stub wiki page for the current player or their corporation, using
- * a deterministic slug derived from the target entity's ObjectId. If a page
- * with that slug already exists, returns the existing slug (idempotent).
+ * a deterministic slug derived from the target entity's ObjectId. Idempotent:
+ * if a page with that slug exists, returns the existing slug.
  *
  * Body: { target: "player" | "corporation" | "party", corporationSequentialId?: number }
  * Returns: { slug, created }
  *
- * Auth: requireBasicAuth (+ active character); blocked when wiki is disabled.
- * The "corporation" target additionally requires that the caller is the CEO.
- * Errors: 400, 401, 403, 404, 429
+ * The "corporation" target requires the caller to be the CEO.
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -24,7 +22,7 @@ import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import { checkWikiCreateCooldown, formatCooldownMessage } from "@/lib/wiki/createCooldown";
 import { notifyModeratorsOfWikiSubmission } from "@/lib/wiki/reviewNotifications";
 import { getGameStamp } from "@/lib/wiki/gameConfig";
-import type { WikiPage, Corporation, PoliticalParty } from "@/lib/db/types";
+import type { WikiPage, PoliticalParty } from "@/lib/db/types";
 import {
   corporationWikiSlug,
   corporationWikiStarter,
@@ -33,6 +31,9 @@ import {
   playerWikiSlug,
   playerWikiStarter,
 } from "@/lib/wiki/playerPages";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 const claimSchema = z.object({
   target: z.enum(["player", "corporation", "party"]),
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
     const userObjectId = new ObjectId(user.userId);
     const now = new Date();
 
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       // Corporation: caller must be the active CEO of the requested corp.
       // The optional public ID keeps older callers working while allowing a
       // CEO of several corporations to claim the page they are viewing.
-      const corp = await db.collection<Corporation>("corporations").findOne({
+      const corp = await corporationsCollection(db).findOne({
         ceoId: user.character._id,
         userId: userObjectId,
         ...(parsed.data.corporationSequentialId != null
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
       category = "corporations";
     } else {
       // Party: caller must currently be chair/vice-chair/treasurer of a party.
-      const party = await db.collection<PoliticalParty>("politicalParties").findOne({
+      const party = await politicalPartiesCollection(db).findOne({
         $or: [
           { chairId: user.character._id },
           { viceChairId: user.character._id },

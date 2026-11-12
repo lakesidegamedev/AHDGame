@@ -3,6 +3,7 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { allRegionCodes } from "./regionManifest";
 import type { WorldEntityId } from "@/lib/world/worldEntityManifest";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Of the requested codes with no `states` doc, which have SECEDED into a
@@ -13,9 +14,9 @@ import type { WorldEntityId } from "@/lib/world/worldEntityManifest";
  */
 async function secededCountryCodes(db: Db, codes: string[]): Promise<Set<string>> {
   if (codes.length === 0) return new Set();
-  const owners = await db
-    .collection<State>("states")
-    .distinct("countryId", { countryId: { $in: codes as CountryId[] } });
+  const owners = await statesCollection(db).distinct("countryId", {
+    countryId: { $in: codes as CountryId[] },
+  });
   return new Set(owners.map(String));
 }
 
@@ -29,8 +30,7 @@ export async function getRegionOwnership(
   regionCodes: string[]
 ): Promise<Record<string, CountryId>> {
   if (regionCodes.length === 0) return {};
-  const docs = await db
-    .collection<State>("states")
+  const docs = await statesCollection(db)
     .find({ _id: { $in: regionCodes } })
     .project({ countryId: 1 })
     .toArray();
@@ -57,18 +57,16 @@ export interface RegionDetail {
 }
 
 /**
- * regionCode → live display detail (owner + name + population + lower-chamber
- * seats + province), read straight from `states`. Lets the maps render the
- * preset-correct figures the game actually runs on, instead of a static seed
- * baked for one era.
+ * regionCode → live display detail (owner, name, population, lower-chamber
+ * seats, province) read from `states`, so maps render the live figures the
+ * game runs on rather than a static seed.
  */
 export async function getRegionDetails(
   db: Db,
   regionCodes: string[]
 ): Promise<Record<string, RegionDetail>> {
   if (regionCodes.length === 0) return {};
-  const docs = await db
-    .collection<State>("states")
+  const docs = await statesCollection(db)
     .find({ _id: { $in: regionCodes } })
     .project({ countryId: 1, name: 1, population: 1, houseDistricts: 1, region: 1 })
     .toArray();
@@ -111,8 +109,7 @@ export async function getRegionDetails(
  * back to static features (or to the territory meter).
  */
 export async function regionCodesOfCountry(db: Db, countryId: WorldEntityId): Promise<string[]> {
-  const docs = await db
-    .collection<State>("states")
+  const docs = await statesCollection(db)
     // `State.countryId` is a CountryId; the argument may be any world entity. A
     // non-playable host simply matches nothing, which is the intended result.
     .find({ countryId: countryId as CountryId })

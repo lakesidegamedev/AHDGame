@@ -13,6 +13,8 @@ import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { resolveOrderOfBattle } from "@/lib/seeds/reference/ordersOfBattle";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /**
  * Maximum tech tier seeded per era. Prevents modern precision-guided munitions,
@@ -193,7 +195,10 @@ export async function seedMilitaryUnits(db: Db, preset: string): Promise<void> {
   for (const countryId of Object.keys(COUNTRY_CONFIGS) as CountryId[]) {
     if (getBranches(countryId, startingYear).length === 0) continue;
     if (alreadySeeded.has(countryId)) continue;
-    const regions = await db.collection("states").find({ countryId }).project({ _id: 1 }).toArray();
+    const regions = await statesCollection<Document>(db)
+      .find({ countryId })
+      .project({ _id: 1 })
+      .toArray();
     const regionIds = regions.map((s) => String(s._id));
     const roster = buildCountryRoster(countryId, regionIds, 1, era, startingYear);
     if (roster.length === 0) continue;

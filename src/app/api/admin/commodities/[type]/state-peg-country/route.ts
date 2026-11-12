@@ -14,6 +14,8 @@ import { countryIdSchema } from "@/lib/api/schemas/country";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import type { CommodityPrice } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 const schema = z.object({
   countryId: countryIdSchema,
@@ -32,8 +34,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ typ
     const { countryId, price } = parsed.data;
     const db = await getDb();
 
-    const states = await db
-      .collection<State>("states")
+    const states = await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray();
 
@@ -47,9 +48,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ typ
       setFields[`statePrices.${stateId}`] = price;
     }
 
-    const result = await db
-      .collection<CommodityPrice>("commodityPrices")
-      .updateOne({ commodity: type } as Record<string, unknown>, { $set: setFields });
+    const result = await commodityPricesCollection(db).updateOne(
+      { commodity: type } as Record<string, unknown>,
+      { $set: setFields }
+    );
 
     if (result.matchedCount === 0) return errorResponse(404, "Commodity not found");
 

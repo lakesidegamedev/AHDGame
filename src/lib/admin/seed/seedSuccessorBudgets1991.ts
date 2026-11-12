@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -9,6 +9,11 @@ import {
   getInitialNationalBudgetsForPreset,
 } from "@/lib/seeds/reference/budgets";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const COUNTRY_IDS = [
   "RU",
@@ -29,12 +34,8 @@ export async function seedSuccessorBudgets1991(
 ): Promise<void> {
   if (preset !== "1991-default") return;
   if (reset) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
-    await db
-      .collection<StateBudget>("stateBudgets")
-      .deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
+    await federalBudgetCollection(db).deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
+    await stateBudgetsCollection(db).deleteMany({ countryId: { $in: [...COUNTRY_IDS] } });
   }
   const budgets = getInitialNationalBudgetsForPreset(preset).filter((budget) =>
     (COUNTRY_IDS as readonly string[]).includes(budget.countryId)
@@ -42,13 +43,12 @@ export async function seedSuccessorBudgets1991(
   if (budgets.length !== COUNTRY_IDS.length)
     throw new Error("Missing 1991 transition national budget");
   const now = new Date();
-  await db.collection<FederalBudget>("federalBudget").bulkWrite(
+  await federalBudgetCollection(db).bulkWrite(
     budgets.map(({ _id, ...budget }) => ({
       updateOne: { filter: { _id }, update: { $set: { ...budget, updatedAt: now } }, upsert: true },
     }))
   );
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: { $in: [...COUNTRY_IDS] } })
     .project({ _id: 1, countryId: 1, population: 1, gdp: 1 })
     .toArray();
@@ -63,22 +63,21 @@ export async function seedSuccessorBudgets1991(
   );
   if (stateBudgets.length !== regions.length)
     throw new Error("Missing 1991 transition regional budget");
-  await db.collection<StateBudget>("stateBudgets").bulkWrite(
+  await stateBudgetsCollection(db).bulkWrite(
     stateBudgets.map(({ _id, ...budget }) => ({
       updateOne: { filter: { _id }, update: { $set: budget }, upsert: true },
     }))
   );
-  // RU ownership (issue #2316): seedRuBudgets returns on 1991, so without
-  // this RU gets budgets but no owned producing SOEs. Reuse the RU
-  // generateCountryOwnedSeedData + upsertCountryOwnedCorpEntries path,
-  // limited to RU states and gated on gameConfig.commandEconomyEnabled,
-  // exactly like the RU seeder. Upserts only, so repeat seeding is stable.
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  // seedRuBudgets returns on 1991; seed RU owned producing SOEs
+  // via the RU seeder path (RU states, gated on commandEconomyEnabled).
+  // Upserts only, so repeat seeding is stable.
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
   const ruStatesForCorps = regions
-    .filter((region) => region.countryId === "RU")
+    .filter((region) => countryHasFeature("ruAdmin", region.countryId))
     .map((region) => ({
       id: region._id,
       population: region.population,
@@ -90,7 +89,7 @@ export async function seedSuccessorBudgets1991(
     preset,
     commandEconomyEnabled,
     log
-  ).filter((entry) => entry.corporation.countryOwnerId === "RU");
+  ).filter((entry) => countryHasFeature("ruAdmin", entry.corporation.countryOwnerId));
   await upsertCountryOwnedCorpEntries(db, "RU", ruCorpData);
   const ruSectorCount = ruCorpData.reduce((n, e) => n + e.sectors.length, 0);
   if (ruCorpData.length > 0)

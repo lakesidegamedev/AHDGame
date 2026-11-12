@@ -2,9 +2,6 @@ import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { CURRENCY_ANCHOR_COUNTRY, type CurrencyCode } from "@/lib/constants/currencies";
 import type { Bond } from "@/lib/db/types/bond";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { CountryGameState } from "@/lib/db/types";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { resolveBondCurrency } from "@/lib/bonds/resolveBondCurrency";
@@ -16,16 +13,17 @@ import {
 import { planLegacyBondDue, planLegacyDebtService } from "./rules/legacyService";
 import { planLegacyMacroBudget } from "./rules/legacyMacroBudget";
 import { hashSettlementPayload, type FederationSettlementIntentRecord } from "./settlementIntent";
-import {
-  FEDERATION_FISCAL_ACCOUNTS_COLLECTION,
-  type FederationFiscalAccount,
-} from "./materializeFiscalAccounts";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "./runtimeEntities";
-
-const FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION = "federationLegacyServiceTurns";
+import { type FederationFiscalAccount } from "./materializeFiscalAccounts";
+import { type FederationSettlementApplicationRecord } from "./runtimeEntities";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationSettlementIntentsCollection } from "@/lib/db/repositories/federationSettlementIntents";
+import { federationFiscalAccountsCollection } from "@/lib/db/repositories/federationFiscalAccounts";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { federationLegacyServiceTurnsCollection } from "@/lib/db/repositories/federationLegacyServiceTurns";
 
 export interface FederationLegacyServiceTurn {
   _id: string;
@@ -85,32 +83,28 @@ export async function materializeLegacyFederationServiceTurn(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Legacy service needs a transaction, application, turn and time");
-  const receipts = db.collection<FederationLegacyServiceTurn>(
-    FEDERATION_LEGACY_SERVICE_TURNS_COLLECTION
-  );
+  const receipts = federationLegacyServiceTurnsCollection<FederationLegacyServiceTurn>(db);
   const receiptId = `${applicationId}:${turn}`;
   const existing = await receipts.findOne({ _id: receiptId }, { session });
   if (existing) return existing;
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied", presetId: "1991-default" }, { session });
   if (!application || application.appliedOnTurn > turn)
     throw new Error("Legacy service needs an applied federation settlement");
   const sourceCountryId = application.sourceEntityId as CountryId;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: sourceCountryId }, { session });
-  const intent = await db
-    .collection<FederationSettlementIntentRecord>("federationSettlementIntents")
-    .findOne({ _id: applicationId }, { session });
-  const accounts = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: sourceCountryId },
+    { session }
+  );
+  const intent = await federationSettlementIntentsCollection<FederationSettlementIntentRecord>(
+    db
+  ).findOne({ _id: applicationId }, { session });
+  const accounts = await federationFiscalAccountsCollection<FederationFiscalAccount>(db)
     .find({ applicationId }, { session })
     .toArray();
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ $or: [{ _id: sourceCountryId }, { countryId: sourceCountryId }] }, { session })
     .toArray();
   const bonds = input.bondSnapshot
@@ -118,8 +112,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
         (bond) =>
           bond.issuerType === "sovereign" && bond.countryId === sourceCountryId && !bond.matured
       )
-    : await db
-        .collection<Bond>("bonds")
+    : await bondsCollection(db)
         .find({ issuerType: "sovereign", countryId: sourceCountryId, matured: false }, { session })
         .toArray();
   if (
@@ -151,8 +144,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
   ];
   if (currencyCodes.some((code) => !Object.hasOwn(CURRENCY_ANCHOR_COUNTRY, code)))
     throw new Error("Legacy service has an unsupported issuer currency");
-  const exchangeRows = await db
-    .collection<ExchangeRate>("exchangeRates")
+  const exchangeRows = await exchangeRatesCollection(db)
     .find({ currencyCode: { $in: currencyCodes as CurrencyCode[] } }, { session })
     .toArray();
   const rates: Record<string, number> = {};
@@ -174,8 +166,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
     turn,
     ratesLocalPerAnchor: rates,
   });
-  const macroCountries = await db
-    .collection<MacroCountryState>("macroCountries")
+  const macroCountries = await macroCountriesCollection<MacroCountryState>(db)
     .find(
       { _id: { $in: ids }, presetId: "1991-default", simulationTier: "background-macro" },
       { session }
@@ -271,7 +262,7 @@ export async function materializeLegacyFederationServiceTurn(input: {
       "Successor cash"
     );
     const riskLoss = call > 0 ? Math.min(0.02, (arrears / call) * 0.02) : 0;
-    const updated = await db.collection<MacroCountryState>("macroCountries").updateOne(
+    const updated = await macroCountriesCollection<MacroCountryState>(db).updateOne(
       {
         _id: id,
         federationTreasuryMinor: macro.federationTreasuryMinor,
@@ -298,34 +289,32 @@ export async function materializeLegacyFederationServiceTurn(input: {
       (account.cumulativeArrearsMinor ?? 0) + arrears,
       "Successor cumulative arrears"
     );
-    const accountUpdated = await db
-      .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
-      .updateOne(
-        {
-          _id: `${applicationId}:${id}`,
-          remainingContributionMinor: account.remainingContributionMinor,
+    const accountUpdated = await federationFiscalAccountsCollection<FederationFiscalAccount>(
+      db
+    ).updateOne(
+      {
+        _id: `${applicationId}:${id}`,
+        remainingContributionMinor: account.remainingContributionMinor,
+      },
+      {
+        $set: {
+          remainingContributionMinor: remainingBySuccessor[id],
+          cumulativeContributionMinor,
+          cumulativeArrearsMinor,
         },
-        {
-          $set: {
-            remainingContributionMinor: remainingBySuccessor[id],
-            cumulativeContributionMinor,
-            cumulativeArrearsMinor,
-          },
-        },
-        { session }
-      );
+      },
+      { session }
+    );
     if (accountUpdated.matchedCount !== 1)
       throw new Error("Legacy successor duty changed during service");
   }
   const localCash = (endingCashMinor / 100) * issuerRate;
   if (!Number.isFinite(localCash)) throw new Error("Legacy cash exceeds local precision");
-  const sourceUpdated = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
-      { $set: { treasuryBalance: localCash } },
-      { session }
-    );
+  const sourceUpdated = await federalBudgetCollection(db).updateOne(
+    { _id: budgets[0]._id, treasuryBalance: budgets[0].treasuryBalance },
+    { $set: { treasuryBalance: localCash } },
+    { session }
+  );
   if (sourceUpdated.matchedCount !== 1)
     throw new Error("Legacy administration cash changed during service");
   const receipt: FederationLegacyServiceTurn = {
@@ -352,8 +341,7 @@ export async function processLegacyFederationServiceTurn(
   now: Date,
   bondSnapshot?: readonly Bond[]
 ): Promise<number> {
-  const applications = await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
+  const applications = await federationFiscalAccountsCollection<FederationFiscalAccount>(db)
     .find({ kind: "legacy-administration" }, { projection: { applicationId: 1 } })
     .toArray();
   for (const application of applications) {

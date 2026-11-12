@@ -1,9 +1,4 @@
-import type {
-  DemographicCategory,
-  State,
-  StateDemographics,
-  CategoryWeights,
-} from "@/lib/db/types";
+import type { DemographicCategory, State, CensusGroupView, CategoryWeights } from "@/lib/db/types";
 import { ELECTION_2020_MARGIN, marginToLean } from "@/lib/data/2020ElectionResults";
 import {
   getEconomicPositionName,
@@ -24,7 +19,7 @@ export interface CalculatedLean {
  * Returns values on the same −5..+5 scale as the underlying group leans.
  */
 export function calculateStateLean(
-  demographics: StateDemographics,
+  demographics: CensusGroupView,
   categories: DemographicCategory[]
 ): CalculatedLean {
   if (!demographics?.groups || !Array.isArray(categories) || categories.length === 0) {

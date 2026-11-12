@@ -109,16 +109,11 @@ export async function resolvePolicyProvision(
       : {}),
     effectTargetsWeighted: lt?.effectTargetsWeighted ?? [],
     ...(effects.length ? { effects } : {}),
-    ...(proposedOption?.archetypeApprovals
-      ? { archetypeApprovals: proposedOption.archetypeApprovals }
-      : proposedOption?.groupApprovals
-        ? { archetypeApprovals: proposedOption.groupApprovals }
-        : {}),
-    ...(proposedOption?.groupApprovals ? { groupApprovals: proposedOption.groupApprovals } : {}),
+    ...(proposedOption?.bucketApprovals ? { bucketApprovals: proposedOption.bucketApprovals } : {}),
     // Explicit rate-based approvals must not be recomputed by the client's
     // legacy option-index indicator. It renders these shared-rule values instead.
     ...(approvalPreview !== undefined
-      ? { archetypeApprovals: approvalPreview }
+      ? { bucketApprovals: approvalPreview }
       : lt?.policyDomain
         ? { policyDomain: lt.policyDomain }
         : {}),

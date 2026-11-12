@@ -97,10 +97,10 @@ it.skipIf(!runRealMongo)(
 
     try {
       const [resolution, transition, chamber, eligibility] = await Promise.all([
-        import("@/lib/turn/election/generalResolution"),
+        import("@/lib/elections/resolution/generalResolution"),
         import("@/lib/turn/bgAssemblyTransition"),
         import("@/lib/legislature/lowerChamberSeats"),
-        import("@/lib/turn/election/bgOrdinaryEligibility"),
+        import("@/lib/elections/resolution/bgOrdinaryEligibility"),
       ]);
       await gameState.insertOne({ _id: "current", preset: "1991-default" });
       await countryGameStates.insertOne({ _id: "BG" });

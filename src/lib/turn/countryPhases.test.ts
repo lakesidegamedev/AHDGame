@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { COUNTRY_BILL_PHASES, COUNTRY_ELECTION_PHASES } from "./countryPhases";
-import { ensureIEElections } from "./perpetualElections";
+import { ensureIEElections } from "@/lib/elections/scheduling";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/discordWebhooks", () => ({

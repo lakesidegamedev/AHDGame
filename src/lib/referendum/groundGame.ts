@@ -19,6 +19,7 @@ import { findGroundGamePreset } from "@/lib/constants/groundGamePresets";
 import { applyPresetToModifiers } from "@/lib/referendum/applyPresetToModifiers";
 import { referendumYesShare } from "@/lib/referendum/resolveYesShare";
 import { recordWireEvent } from "@/lib/referendum/wire";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface GroundGameInput {
   referendumId: string;
@@ -80,7 +81,7 @@ async function spendGroundGameInTransaction(
     const turn = await getCurrentTurn(db);
     const spend = await spendPoliticalStrength(
       {
-        countryId: "UK",
+        countryId: ref.countryId,
         partyId: input.partyId,
         scope: "state",
         stateId: ref.regionId,
@@ -96,7 +97,7 @@ async function spendGroundGameInTransaction(
     }
     cost = { ps: spend.effectiveCost ?? preset.ps };
   } else {
-    const res = await db.collection("characters").updateOne(
+    const res = await charactersCollection(db).updateOne(
       {
         _id: input.characterId,
         actions: { $gte: preset.actions },

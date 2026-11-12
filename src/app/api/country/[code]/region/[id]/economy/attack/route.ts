@@ -9,7 +9,7 @@ import { regionUrl } from "@/lib/urls";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { formatFundsCompact, roundMarketingStrength } from "@/lib/utils/formatters";
 import type {
   Corporation,
@@ -70,6 +70,14 @@ import {
   unownedPoolTrailingSet,
 } from "@/lib/market/unownedHeadroom";
 import { attackCostAnchorUnderPlants, resolveWorldYear } from "@/lib/corporations/capacityCapture";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 const splitSchema = z.object({
   sectorType: z.enum(OPERATING_SECTOR_TYPES),
@@ -104,7 +112,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     // Block sector splits when corporation actions are paused by admin
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     if (gameState?.corporationActionsPaused) {
       return errorResponse(403, "Corporation actions are currently paused");
     }
@@ -151,34 +159,35 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { sectorType, industryModel, mediaDiscriminator } = laneIdentity;
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
 
     // Get player's corporation — supports both regular and imperial characters
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
 
     let corporation: Corporation | null = null;
 
     if (userDoc?.activeCharacterType === "imperial" && userDoc.activeImperialCharacterId) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc.activeImperialCharacterId,
         userId: new ObjectId(auth.user.userId),
       });
       if (imperial) {
-        corporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ ceoId: imperial._id, ceoType: "imperial", ceoVacant: { $ne: true } });
+        corporation = await corporationsCollection(db).findOne({
+          ceoId: imperial._id,
+          ceoType: "imperial",
+          ceoVacant: { $ne: true },
+        });
       }
     } else {
       const character = await getCharacterByUserId(db, auth.user.userId);
       if (character) {
-        corporation = await db
-          .collection<Corporation>("corporations")
-          .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+        corporation = await corporationsCollection(db).findOne({
+          ceoId: character._id,
+          ceoVacant: { $ne: true },
+        });
       }
     }
 
@@ -197,11 +206,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Calculate how much is already owned in this sector type and read unowned from DB
     const [existingSectors, unownedDoc] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
+      corporateSectorsCollection(db)
         .find({ stateId, ...laneIdentity })
         .toArray(),
-      db.collection<UnownedSector>("unownedSectors").findOne({ stateId, ...laneIdentity }),
+      unownedSectorsCollection(db).findOne({ stateId, ...laneIdentity }),
     ]);
 
     // Normalize each sector's revenue to ₳ before summing. Sectors in a state
@@ -214,8 +222,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const owningCorpIds = [...new Set(existingSectors.map((s) => s.corporationId))];
     const owningCorps =
       owningCorpIds.length > 0
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({ _id: { $in: owningCorpIds } })
             .project<Pick<Corporation, "_id" | "liquidCurrencyCode" | "countryId">>({
               _id: 1,
@@ -234,20 +241,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       const fx = fxByOwnerCorpId.get(s.corporationId.toString());
       return sum + readCorpEconomicAnchor(s.revenue, fx?.code, fx?.rate ?? 1);
     }, 0);
-    // Market tier: at >= "plants" the unowned pool's AUTHORITATIVE quantity is
-    // `headroomUnits` (units of unmet demand), and its `revenue` is the derived
-    // ₳ view of that — the mirror of the owned side, where `capitalStock` is
-    // authoritative and revenue is restated from it each turn. The capture math
-    // below is left in ₳ untouched; only the size it reads and the pool
-    // drawdown it writes move onto the unit basis.
+    // Market tier: at >= "plants" the unowned pool's authoritative quantity is
+    // `headroomUnits` (units of unmet demand), and `revenue` is the derived view
+    // of that. The capture math below stays in currency; only the size it reads
+    // and the pool drawdown it writes move onto the unit basis.
     // PLANTS-GATED: under plants a split draws `headroomUnits` out of the unowned
-    // pool and grants the attacker `capitalStock`; the pool's `revenue` is re-derived
-    // from the units that remain. The corporateSectors revenue writes are
-    // ternary-gated and run only below plants.
-    // NOTE: always false now — the guard above returns 403 under plants, so
-    // every `plantsEnabled ?` branch below this line is unreachable. Left in
-    // place rather than unpicked here: this route moves money, and stripping
-    // the dead branches out of it deserves its own reviewed pass.
+    // pool and grants the attacker `capitalStock`; the pool's `revenue` is
+    // re-derived from the units that remain. The corporateSectors revenue writes
+    // are ternary-gated and run only below plants.
+    // NOTE: always false now. The guard above returns 403 under plants, so every
+    // `plantsEnabled ?` branch below is unreachable. Left in place until a
+    // reviewed pass can strip them safely.
     const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
     const unitsPerAnchor = unownedHeadroomUnitsPerAnchor(
       sectorType,
@@ -287,7 +291,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Domestic corps splitting into tariffed sectors get a bonus; foreign corps get a penalty.
     const sectorCountry = countryId;
     const [allTariffs, activeFtaPairs] = await Promise.all([
-      db.collection<Tariff>("tariffs").find({ countryId: sectorCountry }).toArray(),
+      tariffsCollection(db).find({ countryId: sectorCountry }).toArray(),
       loadActiveFtaPairs(db),
     ]);
     const corpCountry = corporation.countryId;
@@ -465,7 +469,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (existingOwnSector) {
       // Add to existing sector (capacity under plants, revenue below it)
-      await db.collection<CorporateSector>("corporateSectors").updateOne(
+      await corporateSectorsCollection(db).updateOne(
         { _id: existingOwnSector._id },
         plantsEnabled
           ? { $inc: { capitalStock: capitalStockDelta }, $set: { updatedAt: now } }
@@ -509,27 +513,25 @@ export async function POST(request: Request, { params }: RouteParams) {
         updatedAt: now,
       };
       try {
-        const inserted = await db
-          .collection<CorporateSector>("corporateSectors")
-          .insertOne(newSector as CorporateSector);
+        const inserted = await corporateSectorsCollection(db).insertOne(
+          newSector as CorporateSector
+        );
         capturedSectorId = inserted.insertedId;
       } catch (error) {
         if (isCorporateSectorDuplicateKey(error)) {
-          const recovered = await db
-            .collection<CorporateSector>("corporateSectors")
-            .findOneAndUpdate(
-              {
-                corporationId: corporation._id,
-                stateId,
-                ...laneIdentity,
-              },
-              plantsEnabled
-                ? { $inc: { capitalStock: capitalStockDelta }, $set: { updatedAt: now } }
-                : {
-                    $inc: { revenue: actualCaptureLocal },
-                    $set: { updatedAt: now },
-                  }
-            );
+          const recovered = await corporateSectorsCollection(db).findOneAndUpdate(
+            {
+              corporationId: corporation._id,
+              stateId,
+              ...laneIdentity,
+            },
+            plantsEnabled
+              ? { $inc: { capitalStock: capitalStockDelta }, $set: { updatedAt: now } }
+              : {
+                  $inc: { revenue: actualCaptureLocal },
+                  $set: { updatedAt: now },
+                }
+          );
           capturedSectorId = recovered?._id ?? null;
         } else {
           throw error;
@@ -543,7 +545,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       corporation,
       corpFxRate
     );
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $inc: {
@@ -592,7 +594,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // split. A doc with no `headroomUnits` yet heals from its revenue first.
     if (unownedDoc) {
       if (plantsEnabled) {
-        await db.collection<UnownedSector>("unownedSectors").updateOne({ _id: unownedDoc._id }, [
+        await unownedSectorsCollection(db).updateOne({ _id: unownedDoc._id }, [
           {
             $set: {
               headroomUnits: {
@@ -626,19 +628,15 @@ export async function POST(request: Request, { params }: RouteParams) {
           },
         ]);
       } else {
-        await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateOne(
-            { _id: unownedDoc._id },
-            { $inc: { revenue: -actualCapture }, $set: { updatedAt: now } }
-          );
+        await unownedSectorsCollection(db).updateOne(
+          { _id: unownedDoc._id },
+          { $inc: { revenue: -actualCapture }, $set: { updatedAt: now } }
+        );
         // Clamp to 0 — prevents negative if two concurrent splits race
-        await db
-          .collection<UnownedSector>("unownedSectors")
-          .updateOne(
-            { _id: unownedDoc._id, revenue: { $lt: 0 } },
-            { $set: { revenue: 0, updatedAt: now } }
-          );
+        await unownedSectorsCollection(db).updateOne(
+          { _id: unownedDoc._id, revenue: { $lt: 0 } },
+          { $set: { revenue: 0, updatedAt: now } }
+        );
       }
     }
 

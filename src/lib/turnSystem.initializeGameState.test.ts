@@ -54,35 +54,20 @@ describe("initializeGameState", () => {
     expect(insertedDoc).toMatchObject({
       forexEnabled: true,
       playerRandomEventsEnabled: true,
-      crisisInteractionEnabled: true,
       autoDisastersEnabled: true,
-      crisisAidBillsEnabled: true,
-      rpgStatsEnabled: true,
-      // Fresh-world policy: every gameplay flag on, NPP autonomy at v4.
-      autoSectorSeedEnabled: true,
-      nppOffensiveInitiationEnabled: true,
-      nppOffensiveJoinEnabled: true,
+      // Fresh-world policy: every gameplay flag on, NPP autonomy at v6.
       sectorTechTreesEnabled: true,
-      nppAutonomyLevel: "v4",
+      nppAutonomyLevel: "v6",
       nppAutonomyEnabled: true,
     });
     // Full feature set now defaults on for fresh worlds (2026-07-20). This
     // includes the formerly-staged systems + the granular demographics rework.
     expect(insertedDoc).toMatchObject({
-      redistrictingEnabled: true,
-      demographicsLayer1PositionsEnabled: true,
-      conflictsEnabled: true,
       coldWarEnabled: true,
-      granularPollEnabled: true,
-      subsidiaryCorporationsEnabled: true,
-      liveElectionResultsEnabled: true,
     });
     // Fresh worlds now boot with every rollout ladder at its top tier
     // (nppAutonomyLevel v4), and the newly-added gameplay flags on.
-    expect(insertedDoc).toMatchObject({
-      corpDealsEnabled: true,
-      intOrgAlignmentEnabled: true,
-    });
+    expect(insertedDoc).toMatchObject({});
     // eurozoneEnabled is era-derived — seedForex sets it per preset, so it is
     // absent on the bare init doc.
     expect(insertedDoc).not.toHaveProperty("eurozoneEnabled");

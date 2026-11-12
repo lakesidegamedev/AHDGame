@@ -5,11 +5,14 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GameState, State, StateDemographics, StateDemographicTurnout } from "@/lib/db/types";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import { CAMPAIGN_RULES_VERSION, turnoutForElection } from "./rules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export async function loadCampaignAudience(
   db: Db,
@@ -18,11 +21,11 @@ export async function loadCampaignAudience(
   turnout?: StateDemographicTurnout | null,
   turnoutRulesVersion = CAMPAIGN_RULES_VERSION
 ) {
-  const [state, demographics, defaults, gameState, categories, turnoutData] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: stateId, countryId }),
-    db.collection<StateDemographics>("stateDemographics").findOne({ _id: stateId, countryId }),
-    db.collection<StateDemographics>("demographicDefaults").findOne({ _id: stateId, countryId }),
-    db.collection<GameState>("gameState").findOne(
+  const [state, demographics, defaults, gameState, turnoutData] = await Promise.all([
+    statesCollection(db).findOne({ _id: stateId, countryId }),
+    stateDemographicsCollection(db).findOne({ _id: stateId, countryId }),
+    demographicDefaultsCollection(db).findOne({ _id: stateId, countryId }),
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -30,15 +33,11 @@ export async function loadCampaignAudience(
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
         },
       }
     ),
-    loadDemographicCategories(db),
     turnout === undefined
-      ? db
-          .collection<StateDemographicTurnout>("stateDemographicTurnout")
-          .findOne({ _id: stateId, countryId })
+      ? stateDemographicTurnoutCollection(db).findOne({ _id: stateId, countryId })
       : Promise.resolve(turnout),
   ]);
   if (!state || !demographics) return null;
@@ -54,7 +53,6 @@ export async function loadCampaignAudience(
     stateSocialLean: state.cachedSocialLean,
     votingSystem: state.votingSystem,
     demographics,
-    categories,
     demographicDefaults: defaults,
     enriched: [],
   };
@@ -64,13 +62,6 @@ export async function loadCampaignAudience(
       ...context,
       cache: "bypass",
       turnoutDoc: selected,
-      liveTurnouts: resolveTurnout(
-        context.statePopulation,
-        demographics,
-        categories,
-        selected,
-        context
-      ).byGroup,
     });
   };
   const substrate = build(turnoutData);
@@ -78,20 +69,16 @@ export async function loadCampaignAudience(
   return { context, cells: substrate.campaignCells, build };
 }
 
-export type LoadedCampaignAudience = NonNullable<Awaited<ReturnType<typeof loadCampaignAudience>>>;
-
 /** One batch for every region of a projection; no reads inside candidate loops. */
 export async function loadCampaignProjectionContext(db: Db, regionIds: string[]) {
   const [turnout, defaults, gameState] = await Promise.all([
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
+    stateDemographicTurnoutCollection(db)
       .find({ _id: { $in: regionIds } })
       .toArray(),
-    db
-      .collection<StateDemographics>("demographicDefaults")
+    demographicDefaultsCollection(db)
       .find({ _id: { $in: regionIds } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -99,7 +86,6 @@ export async function loadCampaignProjectionContext(db: Db, regionIds: string[])
           currentYear: 1,
           currentTurn: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
         },
       }
     ),
@@ -123,13 +109,11 @@ export async function loadRegionalCampaignCells(
   legacyRegions: ReadonlySet<string> = new Set()
 ) {
   const ids = states.map((state) => state._id);
-  const [context, demographics, categories] = await Promise.all([
+  const [context, demographics] = await Promise.all([
     loadCampaignProjectionContext(db, ids),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: ids } })
       .toArray(),
-    loadDemographicCategories(db),
   ]);
   const demographicMap = new Map(demographics.map((doc) => [doc._id, doc]));
   const result = new Map<string, import("./rules").CampaignCell[]>();
@@ -151,11 +135,8 @@ export async function loadRegionalCampaignCells(
         stateId: state._id,
         statePopulation: population,
         demographics,
-        categories,
         turnoutDoc,
         enriched: [],
-        liveTurnouts: resolveTurnout(population, demographics, categories, turnoutDoc, context)
-          .byGroup,
         demographicDefaults: context.defaultsByState.get(state._id),
       });
       if (substrate?.campaignCells)
@@ -192,8 +173,7 @@ export async function loadNationalCampaignCells(
   countryId: CountryId,
   version = CAMPAIGN_RULES_VERSION
 ) {
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId, _id: { $ne: countryId } })
     .toArray();
   const cells = await loadRegionalCampaignCells(

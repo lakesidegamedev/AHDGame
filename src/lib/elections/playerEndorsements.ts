@@ -1,19 +1,18 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
-import { applyEndorsementSupportBump } from "@/lib/turn/elections/supportEvents";
+import type { Election, ElectionCandidate, PlayerEndorsement } from "@/lib/db/types";
+import { applyEndorsementSupportBump } from "@/lib/elections/campaigns/supportEvents";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
 
 /**
- * Party-alignment lifecycle for player endorsements (ticket #1179).
+ * Party-alignment lifecycle for player endorsements.
  *
- * Primaries are intra-party contests: the /president/primary/[partyId] surface
- * only ever offered the endorse control to same-party members. A membership
- * change must therefore not leave an active endorsement pointing at another
- * party's primary candidate — the stale row keeps counting in the standings
- * and keeps granting the endorsed campaign its per-turn player-endorsement
- * campaign actions long after the endorser defected.
- *
- * Cross-party endorsements are legal once a race reaches its general phase,
- * so alignment is only enforced while a race's primary is open.
+ * A stale endorsement pointing at another party's primary candidate keeps
+ * counting in standings and keeps granting its per-turn campaign actions.
+ * Cross-party endorsements are legal after the primary phase, so alignment
+ * is enforced only while a race's primary is open.
  */
 
 /** Time inputs for phase checks; `currentTurn` is preferred when present. */
@@ -67,16 +66,13 @@ async function withdrawPrimaryMisalignedRows(
   );
 
   const [elections, candidates, endorsers] = await Promise.all([
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({ _id: { $in: electionIds } })
       .toArray(),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ _id: { $in: candidateIds } })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ _id: { $in: endorserIds } }, { projection: { _id: 1, party: 1 } })
       .toArray(),
   ]);
@@ -128,12 +124,10 @@ async function withdrawPrimaryMisalignedRows(
     await applyEndorsementSupportBump(db, candidate.characterId, true);
   }
 
-  await db
-    .collection<PlayerEndorsement>("playerEndorsements")
-    .updateMany(
-      { _id: { $in: misaligned.map((e) => e._id) } },
-      { $set: { isActive: false, withdrawnAt: now } }
-    );
+  await playerEndorsementsCollection(db).updateMany(
+    { _id: { $in: misaligned.map((e) => e._id) } },
+    { $set: { isActive: false, withdrawnAt: now } }
+  );
 
   return misaligned.length;
 }
@@ -152,8 +146,7 @@ export async function withdrawPlayerEndorsementsOnPartyChange(
   newParty: string,
   clock: EndorsementPhaseClock
 ): Promise<number> {
-  const active = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
+  const active = await playerEndorsementsCollection(db)
     .find({ characterId, isActive: true })
     .toArray();
   if (active.length === 0) return 0;
@@ -183,10 +176,7 @@ export async function sweepPartyMismatchedPlayerEndorsements(
   currentTurn: number,
   now: Date
 ): Promise<number> {
-  const active = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
-    .find({ isActive: true })
-    .toArray();
+  const active = await playerEndorsementsCollection(db).find({ isActive: true }).toArray();
   if (active.length === 0) return 0;
 
   const withdrawn = await withdrawPrimaryMisalignedRows({ db, currentTurn, now }, active);

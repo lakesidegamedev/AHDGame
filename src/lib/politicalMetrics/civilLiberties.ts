@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
 import { DEMOCRATIC_HEALTH_METRIC_IDS } from "@/lib/governanceStyle/score";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const clampMetric = (value: number): number => Math.max(0, Math.min(100, value));
 
@@ -32,17 +33,14 @@ export async function applyCivilLibertiesDelta(
   eventEffectKey?: string
 ): Promise<number> {
   if (delta === 0) return 0;
-  const docs = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
-    .find({ countryId })
-    .toArray();
+  const docs = await politicalMetricsCollection(db).find({ countryId }).toArray();
   if (docs.length === 0) return 0;
 
   if (eventEffectKey) {
     let applied = 0;
     for (const initial of docs) {
       for (let attempt = 0; attempt < 8; attempt++) {
-        const collection = db.collection<PoliticalMetricsDoc>("politicalMetrics");
+        const collection = politicalMetricsCollection(db);
         const current = await collection.findOne({ _id: initial._id });
         if (!current || current.appliedEventEffects?.includes(eventEffectKey)) break;
 
@@ -104,6 +102,6 @@ export async function applyCivilLibertiesDelta(
       },
     };
   });
-  await db.collection<PoliticalMetricsDoc>("politicalMetrics").bulkWrite(operations);
+  await politicalMetricsCollection(db).bulkWrite(operations);
   return operations.length;
 }

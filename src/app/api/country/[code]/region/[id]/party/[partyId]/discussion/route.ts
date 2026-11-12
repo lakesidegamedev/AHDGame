@@ -7,7 +7,9 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, PartyDiscussionPost } from "@/lib/db/types";
+import type { PartyDiscussionPost } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyDiscussionPostsCollection } from "@/lib/db/repositories/partyDiscussionPosts";
 
 // GET /api/country/[code]/region/[id]/party/[partyId]/discussion
 // POST /api/country/[code]/region/[id]/party/[partyId]/discussion
@@ -55,7 +57,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
     const skip = (page - 1) * PAGE_SIZE;
 
-    const col = db.collection<PartyDiscussionPost>("partyDiscussionPosts");
+    const col = partyDiscussionPostsCollection(db);
     const query = {
       partyId,
       countryId,
@@ -133,7 +135,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const now = new Date();
-    const col = db.collection<PartyDiscussionPost>("partyDiscussionPosts");
+    const col = partyDiscussionPostsCollection(db);
     const newPost: Omit<PartyDiscussionPost, "_id"> = {
       partyId,
       countryId,
@@ -146,9 +148,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
     const result = await col.insertOne(newPost as PartyDiscussionPost);
 
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $set: { lastDiscussionPostAt: now } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $set: { lastDiscussionPostAt: now } }
+    );
 
     return NextResponse.json({
       post: {

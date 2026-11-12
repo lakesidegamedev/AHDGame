@@ -2,24 +2,20 @@
  * One party's presidential-primary detail, assembled once for every surface
  * that shows it.
  *
- * Two screens render this material: the Blend primary screen at
- * `/elections/[id]`, which fetches it from
- * `GET /api/elections/[id]/primary/[partyId]`, and the deep dive at
- * `/president/primary/[partyId]`, which calls this module directly. They read
- * the same function rather than one calling the other's HTTP route, so their
- * figures cannot drift and the server page pays no round trip to itself.
+ * Both the Blend primary screen (via
+ * `GET /api/elections/[id]/primary/[partyId]`) and the deep dive at
+ * `/president/primary/[partyId]` read this module, so their figures cannot
+ * drift and the server page pays no round trip to itself.
  *
  * `loadPrimaryPartyData` returns the rich, server-only assembly (Mongo docs and
- * Maps) that the deep-dive page still needs for its choropleth and
- * endorsements. `buildPrimaryPartyDetail` returns the JSON-safe subset the
- * endpoint serves. Both derive `byState` from the same place, which is the
- * point: the carve-up on either screen is the same carve-up.
+ * Maps) for the choropleth and endorsements. `buildPrimaryPartyDetail` returns
+ * the JSON-safe subset the endpoint serves. Both derive `byState` from the same
+ * place, so the carve-up matches on either screen.
  */
 
 import { primaryNightForParty } from "@/lib/elections/liveResults/primaryNight";
 import { primaryWinMomentumFromTally } from "@/lib/elections/primaryRegional/rules";
 import { loadPrimaryFieldOffices } from "@/lib/elections/primaryRegional/fieldOffices";
-import { usesCampaignAds } from "@/lib/campaignTargeting/rules";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 
 import { ObjectId, type Db } from "mongodb";
@@ -35,13 +31,11 @@ import type {
   PoliticalParty,
   State,
   StateDemographics,
-  StateDemographicTurnout,
   StatePartyOrg,
 } from "@/lib/db/types";
 import { projectPrimaryByState, type ProjectionResult } from "@/lib/primaryProjection";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import { getTravelActionCost } from "@/lib/constants/states";
 import {
   TRAVEL_STATE_IDS,
@@ -49,8 +43,6 @@ import {
   travelStateIds,
 } from "@/lib/elections/stateTravelOptions";
 import { buildCandidateColorMap } from "@/lib/campaigns/candidateColor";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
-import { eraYearContextFromGameState } from "@/lib/era/context";
 import { loadLiveStateActions } from "@/lib/elections/primaryStateActions";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
@@ -62,12 +54,25 @@ import {
   PRIMARY_HOME_SURGE_COST_ACTIONS,
   PRIMARY_HOME_SURGE_COST_FUNDS,
   PRIMARY_HOME_SURGE_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import type { PrimaryCandidateInfo } from "@/lib/elections/primaryViewModel";
 import type {
   PrimaryPartyDetail,
   PrimaryViewerCampaign,
 } from "@/lib/elections/dto/primaryPartyDetail";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 export type { PrimaryPartyDetail, PrimaryViewerCampaign };
 
@@ -112,7 +117,9 @@ interface BuildArgs {
  * its caller renders nothing rather than a board of meaningless states.
  */
 function isSupportedRace(election: Election): boolean {
-  return election.electionType === "president" && election.countryId === "US";
+  return (
+    election.electionType === "president" && countryHasFeature("usElections", election.countryId)
+  );
 }
 
 export async function buildPrimaryPartyDetail(
@@ -131,7 +138,7 @@ export async function loadPrimaryPartyData(
 
   const countryId = election.countryId;
   const sequentialId = Number(partyId);
-  const parties = db.collection<PoliticalParty>("politicalParties");
+  const parties = politicalPartiesCollection(db);
   const party =
     (Number.isFinite(sequentialId) ? await parties.findOne({ countryId, sequentialId }) : null) ??
     (await parties.findOne({ countryId, abbreviation: partyId }));
@@ -143,11 +150,10 @@ export async function loadPrimaryPartyData(
   const partyKey = party.sequentialId.toString();
 
   const [candidates, tally] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: election._id, party: partyKey, status: "active" })
       .toArray(),
-    db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId: election._id }),
+    electionVoteTalliesCollection(db).findOne({ electionId: election._id }),
   ]);
 
   // Each candidate's chosen display colour lives on their campaign.
@@ -155,8 +161,7 @@ export async function loadPrimaryPartyData(
     .map((c) => (c.isNPP ? c.nppId : c.characterId))
     .filter((id): id is NonNullable<typeof id> => id != null);
   const campaigns = candidateKeys.length
-    ? await db
-        .collection<Campaign>("campaigns")
+    ? await campaignsCollection(db)
         .find({ electionId: election._id, candidateId: { $in: candidateKeys } })
         .project<{ candidateId: (typeof candidateKeys)[number]; color?: string | null }>({
           candidateId: 1,
@@ -173,8 +178,7 @@ export async function loadPrimaryPartyData(
   const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
   const [chars, npps] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: characterIds } },
             { projection: { homeState: 1, nationalInfluence: 1, favorability: 1 } }
@@ -182,8 +186,7 @@ export async function loadPrimaryPartyData(
           .toArray()
       : [],
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { homeState: 1, favorability: 1 } })
           .toArray()
       : [],
@@ -191,8 +194,7 @@ export async function loadPrimaryPartyData(
   const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
   const nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
 
-  const partyOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const partyOrgs = await statePartyOrgCollection(db)
     .find({ countryId, partyId: partyKey })
     .toArray();
   const orgMap = new Map<string, number>();
@@ -221,21 +223,14 @@ export async function loadPrimaryPartyData(
     };
   });
 
-  const [categoriesDocs, statesDocs, demographicsDocs, enriched, turnoutDocs] = await Promise.all([
-    loadDemographicCategories(db),
-    db
-      .collection<State>("states")
+  const [statesDocs, demographicsDocs, enriched] = await Promise.all([
+    statesCollection(db)
       .find({ _id: { $in: TRAVEL_STATE_IDS } })
       .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: TRAVEL_STATE_IDS } })
       .toArray(),
     fetchEnrichedCandidates(candidates, { includePartyPositions: true, countryId }),
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .find({ _id: { $in: TRAVEL_STATE_IDS } })
-      .toArray(),
   ]);
   const stateMap = new Map(statesDocs.map((s) => [s._id as string, s]));
   const demographicsMap = new Map(demographicsDocs.map((d) => [d._id as string, d]));
@@ -258,43 +253,14 @@ export async function loadPrimaryPartyData(
   // Read before the projection rather than after it: the turnout resolution
   // below needs the preset and the era clock, and the viewer campaign further
   // down needs the preset too.
-  const gameStateDoc = await db
-    .collection<{
-      _id: string;
-      preset?: string;
-      currentYear?: number;
-      currentTurn?: number;
-      startingYear?: number;
-      eraSystemEnabled?: boolean;
-    }>("gameState")
-    .findOne({ _id: "current" });
+  const gameStateDoc = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    currentYear?: number;
+    currentTurn?: number;
+    startingYear?: number;
+  }>(db).findOne({ _id: "current" });
   const apportionmentPreset = gameStateDoc?.preset;
-  const eraYear = eraYearContextFromGameState(gameStateDoc);
-  const turnoutDocMap = new Map(turnoutDocs.map((t) => [t._id as string, t]));
-
-  // The stagger resolves turnout per state and feeds it into distribution; the
-  // board never did, so party GOTV, canvassing and turnout suppression all
-  // moved the wave and left the projection showing the old number. Same
-  // function, same options, so the two read the same modifiers the same way.
-  //
-  // Scope: this makes the projection's GROUP WEIGHTS respond to modifiers. It
-  // does NOT make the pools match — the projection keeps
-  // `population * PRIMARY_TURNOUT_FACTOR` and the stagger keeps resolveTurnout's
-  // weighted total. Reconciling those is a separate change with its own balance
-  // consequences.
-  const liveTurnouts: Record<string, Record<string, number>> = {};
-  for (const stateId of TRAVEL_STATE_IDS) {
-    const stateDoc = stateMap.get(stateId);
-    const demographicsDoc = demographicsMap.get(stateId);
-    if (!stateDoc || !demographicsDoc) continue;
-    liveTurnouts[stateId] = resolveTurnout(
-      stateDoc.population,
-      demographicsDoc,
-      categoriesDocs,
-      turnoutDocMap.get(stateId),
-      { preset: apportionmentPreset, year: eraYear.year, startingYear: eraYear.startingYear }
-    ).byGroup;
-  }
 
   const gameTime = await getGameTime();
   const liveStateActions = await loadLiveStateActions(db, {
@@ -302,12 +268,10 @@ export async function loadPrimaryPartyData(
     currentTurn: gameTime.currentTurn,
   });
 
-  const campaignContext = usesCampaignAds(election, enriched)
-    ? {
-        ...(await loadCampaignProjectionContext(db, TRAVEL_STATE_IDS)),
-        campaignRulesVersion: election.campaignRulesVersion ?? 0,
-      }
-    : undefined;
+  const campaignContext = {
+    ...(await loadCampaignProjectionContext(db, TRAVEL_STATE_IDS)),
+    campaignRulesVersion: election.campaignRulesVersion ?? 0,
+  };
   const projection = projectPrimaryByState({
     // Same seed as the live wave, so the projection sees the same state swing.
     regionalSeed: String(election._id),
@@ -319,9 +283,7 @@ export async function loadPrimaryPartyData(
     stateIds: TRAVEL_STATE_IDS,
     stateMap,
     demographicsMap,
-    categories: categoriesDocs,
     statePartyOrgs: orgMap,
-    liveTurnouts,
     stateActions: liveStateActions,
     currentTurn: gameTime.currentTurn,
     partyPosition: {
@@ -335,16 +297,14 @@ export async function loadPrimaryPartyData(
     countryId,
   });
 
-  const playerEndorsements = await db
-    .collection<PlayerEndorsement>("playerEndorsements")
+  const playerEndorsements = await playerEndorsementsCollection(db)
     .find({ electionId: election._id, isActive: true })
     .project<Pick<PlayerEndorsement, "candidateId" | "characterId">>({
       candidateId: 1,
       characterId: 1,
     })
     .toArray();
-  const nppEndorsements = await db
-    .collection<NPPEndorsement>("nppEndorsements")
+  const nppEndorsements = await nppEndorsementsCollection(db)
     .find({ electionId: election._id, isActive: true })
     .project<Pick<NPPEndorsement, "candidateId" | "nppName" | "source">>({
       candidateId: 1,
@@ -356,8 +316,7 @@ export async function loadPrimaryPartyData(
     ...new Set(playerEndorsements.map((e) => e.characterId.toString())),
   ].map((id) => new ObjectId(id));
   const playerEndorsers = playerEndorserIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: playerEndorserIds } })
         .project<Pick<Character, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray()
@@ -499,16 +458,12 @@ function collectVotedStates(tally: ElectionVoteTally | null): string[] {
 
 /**
  * What each state's bar should show: the count where a contest has happened,
- * the forecast where it has not.
+ * the forecast where it has not. Showing raw projection everywhere keeps a
+ * prediction for decided contests and disagrees with the map above.
  *
- * Feeding the raw projection everywhere would keep showing a prediction for
- * contests that have already been decided, which is how the deep dive's
- * carve-up came to disagree with the map directly above it.
- *
- * Tally rows are scoped to candidates still in the race for the reason the
- * per-state page does it (#974): the tally keeps rows for withdrawn
- * candidates, which otherwise surface as an "Unknown" slice and skew every
- * other share in the state.
+ * Tally rows are scoped to candidates still in the race: the tally keeps
+ * withdrawn candidates, which otherwise surface as an "Unknown" slice and
+ * skew every other share.
  */
 function buildDisplayVotes(input: {
   projection: ProjectionResult;
@@ -571,9 +526,7 @@ async function resolveViewer(
     candidates.find(
       (c) => !c.isNPP && c.characterId && c.characterId.toString() === viewerCharId.toString()
     ) ?? null;
-  const viewerCharacter = await db
-    .collection<Character>("characters")
-    .findOne({ _id: viewerCharId });
+  const viewerCharacter = await charactersCollection(db).findOne({ _id: viewerCharId });
 
   return { viewerCandidate, viewerCharacter };
 }

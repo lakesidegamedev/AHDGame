@@ -1,15 +1,10 @@
 /**
  * Japan's institution facts, in a module with NO value imports.
  *
- * ⚠️ WHY THIS IS SEPARATE FROM `institutions.ts`. That module composes the
- * cabinet, which imports `cabinet/mechanics` (28 KB) and `cabinet/orders`
- * (8 KB) as values. Seven registries forward here, and several of them are
- * imported by client components -- `cabinetEnergy` reads one string,
- * `"environment_minister"`, and would have dragged 47 KB of cabinet mechanics
- * into the browser bundle to get it.
- *
- * Nothing fails when that happens. The page just gets bigger.
- * `clientSafeLeafModules.test.ts` is what makes it fail.
+ * Kept separate from `institutions.ts` because that module composes the
+ * cabinet, which imports large cabinet mechanics/orders modules as values.
+ * Several client-imported registries forward here and would otherwise drag
+ * that payload into the browser bundle.
  *
  * KEEP THIS MODULE FREE OF VALUE IMPORTS.
  */
@@ -19,25 +14,9 @@ import type { Branch } from "@/lib/constants/military";
 import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 
 /**
- * Japan's institutions. Phase D3.
- *
- * ⚠️ GENERATED FROM THE PRE-MOVE SNAPSHOT for the authored tables, and composed
- * by IMPORT for the cabinet data. The difference matters:
- *
- * ORDERS_BY_COUNTRY.JP *is* JP_MINISTERIAL_ORDERS, and MECHANICS_BY_COUNTRY.JP
- * *is* JP_CABINET_MECHANICS. Those files were relocated into ./cabinet/, so the
- * registries that hold them already forward here. Re-emitting their contents as
- * literals would have created a second source of 1,333 lines that nothing keeps
- * in sync.
- *
- * ⚠️ `config` carries Japan's COUNTRY_CONFIGS entry whole. getCountryConfig is a
- * SHALLOW merge, so an era override supplying `legislature` replaces the entire
- * object -- see eras/, and the guard in eraConfigOverrides.test.ts that now pins
- * BOTH of Japan's eras rather than only 1991.
- *
- * ⚠️ Government type is a VALUE in a field, not a subclass. Japan holds
- * `parliamentaryRepublic`. A one-party state collapsing means changing that
- * value at runtime, which composition makes trivial.
+ * Japan's institutions.
+ * Orders and mechanics are imported from ./cabinet/ registries, not re-emitted, to keep one source.
+ * `config` is Japan's COUNTRY_CONFIGS entry whole: getCountryConfig is a shallow merge, so era overrides replace `legislature` entirely.
  */
 
 export const JP_CONFIG: CountryConfig = {
@@ -179,7 +158,6 @@ export const JP_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "jp_archetypes",
   centralBank: {
     name: "Bank of Japan",
     abbreviation: "BoJ",

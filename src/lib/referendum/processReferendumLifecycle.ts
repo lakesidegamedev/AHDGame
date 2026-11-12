@@ -16,12 +16,9 @@ import { GG_TURNOUT_MOD_CAP } from "@/lib/constants/referendum";
  *   polling     → actuating | settled      (resolve the public vote)
  *   actuating   → completed | cancelled    (all required consent bills pass / one fails)
  *
- * Registered as the `referendumLifecycle` turn phase, after
- * `independenceDesireDrift` so a settled No-vote dampens the just-updated
- * desire value. Mirrors the structure of other per-turn processors; the
- * vote math lives in pure helpers in `@/lib/constants/referendum`.
- *
- * See docs/superpowers/specs/2026-06-16-independence-process-design.md §5.1.
+ * Runs after `independenceDesireDrift` so a settled No-vote dampens the
+ * just-updated desire value. Vote math lives in pure helpers in
+ * `@/lib/constants/referendum`.
  */
 import type { Db, Filter, ObjectId } from "mongodb";
 import type { Referendum, ReferendumStatus } from "@/lib/db/types/referendum";
@@ -42,6 +39,11 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { referendumYesShare } from "@/lib/referendum/resolveYesShare";
 import { recordWireEvent, type WireInput } from "@/lib/referendum/wire";
 import { WIRE_SWING_THRESHOLD } from "@/lib/constants/referendum";
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
+import { resolveWestminsterPolicy } from "@/lib/governorOffice/devolution/rules";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /**
  * Snapshot a region's cohort baseline at campaign open, from the Layer-1
@@ -58,9 +60,7 @@ async function buildCohortBaseline(
   regionDesire: number,
   peaceAgreement = false
 ): Promise<ReferendumCohort[]> {
-  const demo = await db
-    .collection<StateDemographics>("stateDemographics")
-    .findOne({ _id: regionId });
+  const demo = await stateDemographicsCollection(db).findOne({ _id: regionId });
   if (!demo?.countryId) {
     return [{ groupId: "_all", share: 1, turnout: 60, yesLean: regionDesire }];
   }
@@ -149,15 +149,36 @@ export async function processReferendumLifecycle(
   const active = await refs.find({ status: { $in: ACTIVE_STATUSES } }).toArray();
   if (active.length === 0) return null;
 
-  const hasRequests = active.some((ref) => ref.status === "requested");
-  const ministry = hasRequests
-    ? await getGovernmentFormationsCollection(db).findOne({ _id: "UK" })
-    : null;
-  const nationalOffice = hasRequests
-    ? await db
-        .collection<GovernorOfficeState>("governorOfficeState")
-        .findOne({ countryId: "UK", stateId: getNationalStateId("UK") })
-    : null;
+  // An NPP Prime Minister decides each pending request for its own country.
+  const requestCountries = [
+    ...new Set(
+      active
+        .filter((ref) => ref.status === "requested" && hostsSovereigntyReferendums(ref.countryId))
+        .map((ref) => ref.countryId)
+    ),
+  ];
+  const [ministries, nationalOffices] = requestCountries.length
+    ? await Promise.all([
+        getGovernmentFormationsCollection(db)
+          .find({ _id: { $in: requestCountries } })
+          .toArray(),
+        governorOfficeStateCollection(db)
+          .find({
+            $or: requestCountries.map((countryId) => ({
+              countryId,
+              stateId: getNationalStateId(countryId),
+            })),
+          })
+          .project<Pick<GovernorOfficeState, "countryId" | "westminsterStances">>({
+            _id: 0,
+            countryId: 1,
+            westminsterStances: 1,
+          })
+          .toArray(),
+      ])
+    : [[], []];
+  const ministryByCountry = new Map(ministries.map((doc) => [String(doc._id), doc]));
+  const officeByCountry = new Map(nationalOffices.map((doc) => [doc.countryId, doc]));
   const transitions: ReferendumLifecycleResult["transitions"] = [];
   const failures: NonNullable<ReferendumLifecycleResult["failures"]> = [];
   const actuate = async (ref: Referendum, from: string) => {
@@ -188,19 +209,15 @@ export async function processReferendumLifecycle(
     const from = ref.status;
 
     if (ref.status === "requested") {
-      if (
-        ref.countryId === "UK" &&
-        ministry?.status === "formed" &&
-        ministry.pmNppId &&
-        !ministry.pmCharacterId
-      ) {
-        const policy =
-          nationalOffice?.westminsterStances?.[ref.regionId as "SCO" | "WAL" | "NIR"]?.policy ??
-          "anti";
+      const ministry = ministryByCountry.get(ref.countryId);
+      if (ministry?.status === "formed" && ministry.pmNppId && !ministry.pmCharacterId) {
+        const policy = resolveWestminsterPolicy(
+          officeByCountry.get(ref.countryId)?.westminsterStances?.[ref.regionId]?.policy
+        );
         const action = nppReferendumDecision(currentTurn, ref.requestedTurn, policy);
         if (action) {
           const decision = await grantReferendum(db, {
-            countryId: "UK",
+            countryId: ref.countryId,
             referendumId: id,
             isPM: true,
             currentTurn,
@@ -351,9 +368,9 @@ export async function processReferendumLifecycle(
       // bill; a dormant Ireland does not block the UK-side process.
       if (ref.kind === "reunification" && ref.westminsterBillId != null) {
         const [westminster, dail] = await Promise.all([
-          db.collection<Bill>("bills").findOne({ _id: ref.westminsterBillId }),
+          billsCollection(db).findOne({ _id: ref.westminsterBillId }),
           ref.dailBillId != null
-            ? db.collection<Bill>("bills").findOne({ _id: ref.dailBillId })
+            ? billsCollection(db).findOne({ _id: ref.dailBillId })
             : Promise.resolve(null),
         ]);
         const dailRequired = ref.dailBillId != null;
@@ -416,9 +433,7 @@ export async function processReferendumLifecycle(
       // Passed → secede via `secedeRegion`; failed/withdrawn/missing → cancel (no
       // cooldown, the popular vote stands); still voting → wait.
       if (ref.kind === "independence" && ref.westminsterBillId != null) {
-        const westminster = await db
-          .collection<Bill>("bills")
-          .findOne({ _id: ref.westminsterBillId });
+        const westminster = await billsCollection(db).findOne({ _id: ref.westminsterBillId });
         const billPassed = (b: Bill | null) =>
           b != null && (b.status === "signed" || b.enactedAt != null);
         const billFailed = (b: Bill | null) =>

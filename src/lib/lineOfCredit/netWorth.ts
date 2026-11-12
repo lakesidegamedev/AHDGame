@@ -1,7 +1,7 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
-import type { Bond, Corporation, BondHolder } from "@/lib/db/types";
+import type { BondHolder } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
 import type { Shareholder } from "@/lib/db/types/corporation";
 import type { CountryId } from "@/lib/constants/countries";
@@ -14,6 +14,10 @@ import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital
 import { getBondCountryId, isCorporateBond } from "@/lib/bonds/sovereign";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { sumObligationInternal, toInternalUnits } from "./locMath";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
  * Total player net worth in internal units: liquid + savings + stocks + bonds.
@@ -31,8 +35,7 @@ export async function computePlayerNetWorthInternal(
   }
 
   const charId = character._id;
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ "shareholders.characterId": charId })
     .project({ sharePrice: 1, shareholders: 1, countryId: 1, liquidCurrencyCode: 1 })
     .toArray();
@@ -50,8 +53,7 @@ export async function computePlayerNetWorthInternal(
     if (rate && rate > 0) stockInternal += toInternalUnits(value, rate);
   }
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ "holders.characterId": charId, matured: false })
     .project({ holders: 1, marketPrice: 1, corporationId: 1, currencyCode: 1, countryId: 1 })
     .toArray();
@@ -61,8 +63,7 @@ export async function computePlayerNetWorthInternal(
     const corpIds = [
       ...new Set(bonds.filter(isCorporateBond).map((b) => b.corporationId.toString())),
     ];
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } })
       .project({ countryId: 1 })
       .toArray();
@@ -127,8 +128,7 @@ export async function computeBankLoanDebtInternal(
   characterId: ObjectId,
   rates: Partial<Record<CurrencyCode, number>>
 ): Promise<number> {
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
+  const loans = await bankLoansCollection(db)
     .find({
       borrowerType: "character",
       borrowerId: characterId,
@@ -165,7 +165,7 @@ export async function computePlayerGrossNetLocInternal(
 }
 
 export async function loadExchangeRatesMap(db: Db): Promise<Partial<Record<CurrencyCode, number>>> {
-  const ratesDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const ratesDocs = await exchangeRatesCollection(db).find({}).toArray();
   return Object.fromEntries(ratesDocs.map((r) => [r.currencyCode, r.rate])) as Partial<
     Record<CurrencyCode, number>
   >;

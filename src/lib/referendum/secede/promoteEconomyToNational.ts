@@ -7,11 +7,12 @@ import { getCountryConfig } from "@/lib/constants/countries";
  * `treasuryBalance` cash by GDP share (a transfer leaves cash with the source;
  * a new sovereign carries its proportional share) and moves the matching share
  * of the sovereign bond stock with it, so each side's stored `debt.principal`
- * still equals its haircut-adjusted active non-defaulted bond face (refs
- * #1975). Cash and debt are separate positions: only the bonds carry
+ * still equals its haircut-adjusted active non-defaulted bond face. Cash and debt are separate positions: only the bonds carry
  * obligations across, never a balance-derived mirror.
  *
- * Sterlingization: the new budget keeps `currencyCode: "GBP"` — no conversion.
+ * Shared currency: the new budget takes the successor's configured currency,
+ * which is its parent's (GBP for Scotland and Wales, CAD for Quebec), so no
+ * conversion runs.
  * Idempotent: a no-op once the new country's `federalBudget` already exists.
  *
  * Run AFTER `expandToSubRegions` (the GDP weight reads the post-expand `states`
@@ -27,6 +28,9 @@ import {
   sovereignDebtTerms,
 } from "@/lib/bonds/sovereignPrincipal";
 import { getPath, setPath, scaleDeep } from "./docScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Extensive (economy-sized) budget fields that split by GDP share. Intensive
@@ -57,15 +61,14 @@ export async function promoteEconomyToNational(
   toCountryId: CountryId,
   conversionTurn = 0
 ): Promise<void> {
-  const budgets = db.collection<FederalBudget>("federalBudget");
+  const budgets = federalBudgetCollection(db);
 
   // Idempotency: the new country already has a national budget.
   const existing = await budgets.findOne({ _id: toCountryId });
   if (existing) return;
 
   // GDP weight from the post-expand states: seceding sub-regions vs the rump-UK.
-  const states = (await db
-    .collection<State>("states")
+  const states = (await statesCollection(db)
     .find({ countryId: { $in: [fromCountryId, toCountryId] } })
     .toArray()) as Array<{ countryId?: string; gdp?: number }>;
   const newGdp = states
@@ -89,8 +92,7 @@ export async function promoteEconomyToNational(
   // bonds that back it. Scaling is linear, so each side's outstanding stock is
   // exactly its weight of the pre-split stock: no re-read, no rounding, and
   // the two principals conserve the pre-split total by construction.
-  const sourceBonds = await db
-    .collection<Bond>("bonds")
+  const sourceBonds = await bondsCollection(db)
     .find({ issuerType: "sovereign", countryId: fromCountryId, matured: false })
     .toArray();
   if (sourceBonds.some((bond) => bond.sovereignMaturityClaim))
@@ -154,7 +156,7 @@ export async function promoteEconomyToNational(
   const newBudget = structuredClone(ukBudget);
   newBudget._id = toCountryId;
   newBudget.countryId = toCountryId;
-  newBudget.currencyCode = "GBP";
+  newBudget.currencyCode = getCountryConfig(toCountryId).currencyCode;
   newBudget.updatedAt = now;
   // Existing international facilities and country-owned commitments stay with their obligor.
   for (const key of Object.keys(newBudget))
@@ -211,7 +213,7 @@ export async function promoteEconomyToNational(
   // already carry the split stocks, and the end-of-turn bond-ledger reconcile
   // heals any bond half that did not land.
   if (sourceBonds.length > 0) {
-    await db.collection<Bond>("bonds").bulkWrite(
+    await bondsCollection(db).bulkWrite(
       sourceBonds.map((bond) => ({
         updateOne: {
           filter: { _id: bond._id, sovereignMaturityClaim: { $exists: false } },
@@ -232,7 +234,7 @@ export async function promoteEconomyToNational(
         },
       }))
     );
-    await db.collection<Omit<Bond, "_id">>("bonds").insertMany(
+    await bondsCollection<Omit<Bond, "_id">>(db).insertMany(
       sourceBonds.map((bond) => {
         const { _id, ...rest } = bond;
         void _id;

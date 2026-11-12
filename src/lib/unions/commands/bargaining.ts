@@ -8,9 +8,7 @@ import type {
   BargainingCampaign,
   Character,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
-  FederalBudget,
   GameConfig,
   State,
   StateMetrics,
@@ -52,6 +50,15 @@ import { rejectIfTurnProcessing, resolveOwnedUnion, type UnionActionResult } fro
 // through `persistBargainingSettlement` here, this one opens a ballot there,
 // and both references are resolved at call time, never at module init.
 import { openSettlementRatification } from "./ratifySettlement";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult, { ok: true }> {
   return {
@@ -75,8 +82,7 @@ export async function costOfLivingByState(
 ): Promise<Map<string, number>> {
   const stateIds = [...new Set(locals.map((local) => local.stateId).filter(Boolean))];
   if (stateIds.length === 0) return new Map();
-  const metrics = await db
-    .collection<StateMetrics>("macroMetrics")
+  const metrics = await macroMetricsCollection(db)
     .find({ _id: { $in: stateIds } }, { projection: { "economic.costOfLiving": 1 } })
     .toArray();
   const byState = new Map<string, number>();
@@ -92,49 +98,44 @@ export async function costOfLivingByState(
 /**
  * National macro inputs for a bargaining mandate.
  *
- * Labor tightness reads the MEASURED market directly (#791): each real state's
- * persisted `economic.labourTightness` (corporate labour demand over the
- * civilian labour force, written by the corporation turn), aggregated to one
- * national ratio weighted by state labour force — which equals total national
- * demand over total national supply — then mapped onto the 0-100 score. This
- * breaks the old round-trip where tightness was derived FROM the national
- * unemployment rate while unemployment now derives FROM tightness.
+ * Labor tightness reads the MEASURED market: each real state's persisted
+ * `economic.labourTightness` (corporate labour demand over civilian labour
+ * force, written by the corporation turn), aggregated to one national ratio
+ * weighted by state labour force, then mapped onto the 0-100 score. This avoids
+ * the old round-trip where tightness was derived FROM national unemployment
+ * while unemployment now derives FROM tightness.
  *
- * COLD-START FALLBACK: when no state has a usable measured reading yet, the
- * score falls back to `laborTightnessFromUnemployment` off the national
- * unemployment rate — exactly today's behaviour.
+ * COLD-START FALLBACK: with no usable measured reading, fall back to
+ * `laborTightnessFromUnemployment` off national unemployment.
  *
- * MODE GATE: the measured path is gated on `labourSystemMode` >= "macro",
- * the same tier that gates the unemployment node's tightness channel in the
- * metric engine. Below that tier the fallback applies even when measured
- * readings exist (the corporation turn writes telemetry ungated), so a world
- * with the labour macro loop switched off behaves exactly as before.
+ * MODE GATE: the measured path requires `labourSystemMode` >= "macro", the tier
+ * that gates the unemployment node's tightness channel. Below that the fallback
+ * applies even if measured readings exist, so a disabled labour macro loop
+ * behaves exactly as before.
  */
 export async function bargainingMacroInputs(db: Db, countryId: Union["countryId"]) {
   const nationalDocId = getNationalDocId(countryId);
   const [metrics, budget, states, labourConfig] = await Promise.all([
     nationalDocId
-      ? db
-          .collection<StateMetrics>("macroMetrics")
-          .findOne({ _id: nationalDocId }, { projection: { "economic.unemploymentRate": 1 } })
+      ? macroMetricsCollection(db).findOne(
+          { _id: nationalDocId },
+          { projection: { "economic.unemploymentRate": 1 } }
+        )
       : null,
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) }, { projection: { unionLawBias: 1 } }),
-    db
-      .collection<State>("states")
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) },
+      { projection: { unionLawBias: 1 } }
+    ),
+    statesCollection(db)
       .find({ countryId }, { projection: { _id: 1 } })
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } }),
   ]);
   const unemploymentFallback = metrics?.economic?.unemploymentRate?.value ?? 5;
   let laborTightness = laborTightnessFromUnemployment(unemploymentFallback);
   const stateIds = states.map((state) => state._id);
   if (stateIds.length > 0 && (await isLabourMacroEnabled(labourConfig))) {
-    const stateDocs = await db
-      .collection<StateMetrics>("macroMetrics")
+    const stateDocs = await macroMetricsCollection(db)
       .find(
         { _id: { $in: stateIds } },
         { projection: { "economic.labourTightness.value": 1, "economic.laborForce.value": 1 } }
@@ -204,18 +205,17 @@ export function mandateFromLocals(args: {
 
 /** Shared campaign opening used by authorized players and autonomous NPPs. */
 /**
- * Per-phase memo for the reads that depend only on country or state (#2690).
- * The NPP union phase opens many campaigns per turn and writes none of the
- * macro, budget, state or config documents these come from, so one read per
- * country (or state set) serves the whole phase. Player commands pass none.
+ * Per-phase memo for reads that depend only on country or state.
+ * The NPP union phase opens many campaigns per turn and writes none of
+ * the macro, budget, state or config documents these come from, so one
+ * read per country (or state set) serves the whole phase.
  */
 export type BargainingReadCache = Map<string, Promise<unknown>>;
 
 /**
  * Facts the NPP union phase already holds from its bulk loads, so the per-union
- * opener does not re-read them (#2690). `lastEndedAtTurn` is keyed by
- * `bargainingPairKey` and must cover every withdrawn or lapsed campaign of the
- * unions in the phase; a missing key means "never ended".
+ * opener does not re-read them. `lastEndedAtTurn` is keyed by
+ * `bargainingPairKey`; a missing key means "never ended".
  */
 export interface BargainingPhasePreload {
   employerKnownToExist: boolean;
@@ -234,8 +234,7 @@ export async function loadBargainingLastEnded(
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (unionIds.length === 0) return out;
-  const rows = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const rows = await bargainingCampaignsCollection(db)
     .aggregate<{
       _id: { unionId: ObjectId; employerCorporationId: ObjectId };
       endedAtTurn: number;
@@ -351,11 +350,8 @@ export async function openBargainingCampaignFromLiveConditions(
   const [employer, sectors, activeAgreement, macro, lastEndedAtTurn] = await Promise.all([
     preloaded?.employerKnownToExist
       ? Promise.resolve({ _id: employerId })
-      : db
-          .collection<Corporation>("corporations")
-          .findOne({ _id: employerId }, { projection: { _id: 1 } }),
-    db
-      .collection<CorporateSector>("corporateSectors")
+      : corporationsCollection(db).findOne({ _id: employerId }, { projection: { _id: 1 } }),
+    corporateSectorsCollection(db)
       .find(
         {
           corporationId: employerId,
@@ -367,7 +363,7 @@ export async function openBargainingCampaignFromLiveConditions(
       .toArray(),
     preloaded?.noActiveAgreement
       ? Promise.resolve(null)
-      : db.collection<CollectiveAgreement>("collectiveAgreements").findOne({
+      : collectiveAgreementsCollection(db).findOne({
           unionId: union._id,
           employerCorporationId: employerId,
           status: "active",
@@ -380,8 +376,7 @@ export async function openBargainingCampaignFromLiveConditions(
       ? Promise.resolve(
           preloaded.lastEndedAtTurn.get(bargainingPairKey(union._id, employerId)) ?? null
         )
-      : db
-          .collection<BargainingCampaign>("bargainingCampaigns")
+      : bargainingCampaignsCollection(db)
           .findOne(
             {
               unionId: union._id,
@@ -442,7 +437,7 @@ export async function openBargainingCampaignFromLiveConditions(
   campaign.mandateUpdatedAtTurn = currentTurn;
 
   try {
-    await db.collection<BargainingCampaign>("bargainingCampaigns").insertOne(campaign);
+    await bargainingCampaignsCollection(db).insertOne(campaign);
   } catch (error) {
     if (isDuplicateKeyError(error)) {
       return {
@@ -493,7 +488,7 @@ export async function persistBargainingCounter(
     now: new Date(),
   });
   if ("ok" in next) return { ...next, status: 400 };
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     {
       _id: campaign._id,
       status: campaign.status,
@@ -529,7 +524,7 @@ async function persistBargainingDispute(
 ): Promise<UnionActionResult> {
   const next = moveCampaignToDispute(campaign, currentTurn, new Date());
   if ("ok" in next) return { ...next, status: 400 };
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     { _id: campaign._id, status: campaign.status },
     {
       $set: {
@@ -560,7 +555,7 @@ export async function restoreEscalationExpectations(
 ): Promise<number> {
   const recorded = campaign.escalationExpectations ?? [];
   if (recorded.length === 0) return 0;
-  const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+  const result = await corporateSectorsCollection(db).bulkWrite(
     recorded.map((entry) => ({
       updateOne: {
         filter: { _id: entry.sectorId },
@@ -585,7 +580,7 @@ async function persistSettlementOutcome(
   currentTurn: number
 ): Promise<UnionActionResult> {
   const claimCampaign = async (session?: ClientSession) => {
-    const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+    const result = await bargainingCampaignsCollection(db).updateOne(
       {
         _id: campaign._id,
         status: campaign.status,
@@ -607,9 +602,7 @@ async function persistSettlementOutcome(
     if (result.modifiedCount === 0) throw new Error("CAMPAIGN_CHANGED");
   };
   const insertAgreement = (session?: ClientSession) =>
-    db
-      .collection<CollectiveAgreement>("collectiveAgreements")
-      .insertOne(settled.agreement, { session });
+    collectiveAgreementsCollection(db).insertOne(settled.agreement, { session });
   // The agreement is the wage floor; it is NOT written into `sector.wageLevel`.
   // Writing it there makes the raise permanent, because nothing lowers the
   // field again when the agreement expires — the union would ratchet pay up
@@ -629,10 +622,8 @@ async function persistSettlementOutcome(
         try {
           await insertAgreement();
         } catch (error) {
-          await db
-            .collection<CollectiveAgreement>("collectiveAgreements")
-            .deleteOne({ _id: settled.agreement._id });
-          await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+          await collectiveAgreementsCollection(db).deleteOne({ _id: settled.agreement._id });
+          await bargainingCampaignsCollection(db).updateOne(
             { _id: campaign._id, settledAgreementId: settled.agreement._id },
             {
               $set: {
@@ -710,7 +701,7 @@ export async function persistBargainingMediationAction(
   const mediationFilter = campaign.mediation
     ? { "mediation.updatedAt": campaign.mediation.updatedAt }
     : { mediation: { $exists: false } };
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     {
       _id: campaign._id,
       status: "dispute",
@@ -742,8 +733,7 @@ export async function persistUnionBargainingEscalation(
   readCache?: BargainingReadCache
 ): Promise<UnionActionResult> {
   const now = new Date();
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { _id: { $in: campaign.sectorIds } },
       {
@@ -780,11 +770,10 @@ export async function persistUnionBargainingEscalation(
   const next = escalateBargainingCampaign(refreshed, currentTurn, now);
   if ("ok" in next) return { ...next, status: 400 };
 
-  // The plan is the single rule: it decides what the escalation does, what it
-  // costs, and whether it is allowed. The union-level strike cooldown (which
-  // the retired direct-strike route enforced, and which stops a union striking
-  // a different employer every turn) used to live only here, so the preview
-  // offered escalations this gate then refused.
+  // The plan is the single rule: it decides what the escalation does, what
+  // it costs, and whether it is allowed. Keep the union-level strike cooldown
+  // in the plan, not only in this gate, or the preview offers escalations the
+  // gate then refuses.
   const plan = buildBargainingEscalationPlan(campaign, sectors, currentTurn, union);
   const targets = plan.newStrikeLocals;
   if (plan.blockedReason) {
@@ -794,9 +783,9 @@ export async function persistUnionBargainingEscalation(
   }
   const cost = plan.cashCost;
 
-  const campaignCollection = db.collection<BargainingCampaign>("bargainingCampaigns");
-  const unionCollection = db.collection<Union>("unions");
-  const sectorCollection = db.collection<CorporateSector>("corporateSectors");
+  const campaignCollection = bargainingCampaignsCollection(db);
+  const unionCollection = unionsCollection(db);
+  const sectorCollection = corporateSectorsCollection(db);
   const claimCampaign = async (session?: ClientSession) => {
     const result = await campaignCollection.updateOne(
       {
@@ -1006,9 +995,9 @@ export async function actOnBargainingCampaignAsUnion(
   if (!ObjectId.isValid(campaignId)) {
     return { ok: false, status: 400, error: "Invalid campaign ID." };
   }
-  const campaign = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ _id: new ObjectId(campaignId) });
+  const campaign = await bargainingCampaignsCollection(db).findOne({
+    _id: new ObjectId(campaignId),
+  });
   if (!campaign) return { ok: false, status: 404, error: "Bargaining campaign not found." };
   if (!ObjectId.isValid(unionRouteId) || !campaign.unionId.equals(new ObjectId(unionRouteId))) {
     return { ok: false, status: 404, error: "Bargaining campaign not found for this union." };
@@ -1042,7 +1031,7 @@ export async function actOnBargainingCampaignAsUnion(
   if (campaign.status !== "negotiating" && campaign.status !== "dispute") {
     return { ok: false, status: 400, error: "This campaign can no longer be withdrawn." };
   }
-  const result = await db.collection<BargainingCampaign>("bargainingCampaigns").updateOne(
+  const result = await bargainingCampaignsCollection(db).updateOne(
     { _id: campaign._id, status: campaign.status },
     {
       $set: {
@@ -1084,20 +1073,18 @@ export async function actOnBargainingCampaignAsEmployer(
   if (!ObjectId.isValid(campaignId)) {
     return { ok: false, status: 400, error: "Invalid campaign ID." };
   }
-  const campaign = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
-    .findOne({ _id: new ObjectId(campaignId) });
+  const campaign = await bargainingCampaignsCollection(db).findOne({
+    _id: new ObjectId(campaignId),
+  });
   if (!campaign) return { ok: false, status: 404, error: "Bargaining campaign not found." };
   const employerRouteQuery = corporationQueryFromParamId(employerRouteId);
   if (!employerRouteQuery) {
     return { ok: false, status: 400, error: "Invalid employer corporation ID." };
   }
-  const employer = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { $and: [{ _id: campaign.employerCorporationId }, employerRouteQuery] },
-      { projection: { userId: 1, ceoVacant: 1 } }
-    );
+  const employer = await corporationsCollection(db).findOne(
+    { $and: [{ _id: campaign.employerCorporationId }, employerRouteQuery] },
+    { projection: { userId: 1, ceoVacant: 1 } }
+  );
   if (employer?.ceoVacant || !employer?.userId || employer.userId.toString() !== userId) {
     return { ok: false, status: 403, error: "Only the employer's CEO can answer this campaign." };
   }

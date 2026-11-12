@@ -1,15 +1,13 @@
 import type { CommodityType } from "@/lib/constants/commodities";
 
 /**
- * Shadow commodity inventory — Tier 2 of the structural market rework
- * (audit t806, Fix 3; see docs/plans/2026-07-03-market-structural-plan.md).
+ * Shadow commodity inventory.
  *
  * Each price turn (marketSystemMode >= "ledger") the global stock of every
- * storable commodity accumulates its net flow: `stock += supply − demand`,
+ * storable commodity accumulates its net flow: `stock += supply - demand`,
  * floored at 0, then decays by the commodity's per-turn carry/spoilage rate.
- * SHADOW ONLY: stock and days-of-cover are recorded on the flow ledger and
- * shown to players, but do NOT feed prices yet — the stock-to-flow price
- * curve lands with the "clearing" tier, where behaviour changes are expected.
+ * SHADOW ONLY: stock and days-of-cover are recorded and shown to players,
+ * but do NOT feed prices.
  */
 
 /**
@@ -80,31 +78,22 @@ export function isStorable(commodity: CommodityType): boolean {
  * Returns the new stock plus the spoilage taken, both in units.
  * Non-storable commodities always return stock 0.
  *
- * When `coverCapEnabled` (gameConfig.stockCoverCapEnabled), stock left above
- * STOCK_COVER_CAP_TURNS × demand after base spoilage takes an ADDITIONAL
- * EXCESS_STOCK_SPOILAGE_RATE hit on the excess only. The extra loss is folded
- * into `spoiledUnits` (so total write-down stays in one place) and also broken
- * out as `excessSpoiledUnits` so the flow ledger records the write-down
- * explicitly. Skipped when demand is 0: cover is undefined there, and a
- * transient demand blackout must not vaporise the whole stockpile.
+ * When `coverCapEnabled`, stock left above STOCK_COVER_CAP_TURNS × demand after
+ * base spoilage takes an ADDITIONAL EXCESS_STOCK_SPOILAGE_RATE hit on the excess
+ * only. That loss is folded into `spoiledUnits` and also broken out as
+ * `excessSpoiledUnits` so the flow ledger records it explicitly. Skipped when
+ * demand is 0: cover is undefined there, and a transient demand blackout must not
+ * vaporise the whole stockpile.
  *
- * PLANTS (`producedUnits`/`soldUnits` both supplied): the flow is stated in
- * terms of physical goods rather than the supply/demand aggregate —
+ * PLANTS (`producedUnits`/`soldUnits` both supplied): the flow is stated in terms
+ * of physical goods rather than the supply/demand aggregate:
  *
  *   netFlow = unsold − unmetDemand
  *           = (produced − sold) − max(0, demand − sold)
  *
- * i.e. goods that were made but did not clear go INTO the pile (this is where
- * unsold output used to simply vanish), and demand that no producer met is
- * drawn OUT of it. Sign convention is unchanged: positive flow raises stock.
- *
- * Because clearing can never sell more than was produced nor more than was
- * demanded, this is arithmetically identical to `supply − demand` whenever the
- * produced figure equals the ledger's supply figure — which, once the world
- * ledger reads real production, it does. Magnitudes therefore do not move; the
- * value of stating it this way is that the stock account now names the physical
- * quantity it is tracking, so a future tier that lets sellers withhold output
- * from the book gets the right answer without another rewrite.
+ * Unsold output goes INTO the pile; unmet demand is drawn OUT of it. Positive
+ * flow raises stock. Arithmetically identical to `supply − demand` whenever
+ * produced equals the ledger's supply.
  */
 export function advanceStock(args: {
   commodity: CommodityType;

@@ -11,45 +11,18 @@ import type {
   NationalCommitteeElection,
   GameState,
 } from "@/lib/db/types";
-
-interface StateElectionIssue {
-  _id: string;
-  type: "state";
-  stateId: string;
-  partyId: string;
-  position: string;
-  status: string;
-  hasStartTurn: boolean;
-  hasEndTurn: boolean;
-  hasDurationTurns: boolean;
-}
-
-interface NationalElectionIssue {
-  _id: string;
-  type: "national";
-  partyId: string;
-  countryId: string;
-  position: string;
-  status: string;
-  hasStartTurn: boolean;
-  hasEndTurn: boolean;
-  hasDurationTurns: boolean;
-  hasCountryId: boolean;
-}
-
-interface CommitteeElectionIssue {
-  _id: string;
-  type: "committee";
-  partyId: string;
-  countryId: string;
-  status: string;
-  hasStartTurn: boolean;
-  hasEndTurn: boolean;
-  hasDurationTurns: boolean;
-  hasCountryId: boolean;
-}
-
-type ElectionIssue = StateElectionIssue | NationalElectionIssue | CommitteeElectionIssue;
+import type {
+  CommitteeElectionIssue,
+  ElectionIssue,
+  NationalElectionIssue,
+  StateElectionIssue,
+} from "@/lib/admin/partyElectionIssues";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 /**
  * GET /api/admin/heal/party-elections
@@ -63,8 +36,7 @@ export async function GET() {
     const db = await getDb();
 
     // Find state elections missing fields
-    const stateElectionsWithIssues = (await db
-      .collection("statePartyElections")
+    const stateElectionsWithIssues = (await statePartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -78,8 +50,7 @@ export async function GET() {
       .toArray()) as unknown as StatePartyElection[];
 
     // Find national elections missing fields (including countryId)
-    const nationalElectionsWithIssues = (await db
-      .collection("nationalPartyElections")
+    const nationalElectionsWithIssues = (await nationalPartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -120,8 +91,7 @@ export async function GET() {
     }));
 
     // Find committee elections missing fields (including countryId)
-    const committeeElectionsWithIssues = (await db
-      .collection("nationalCommitteeElections")
+    const committeeElectionsWithIssues = (await nationalCommitteeElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -150,7 +120,7 @@ export async function GET() {
 
     const allIssues: ElectionIssue[] = [...stateIssues, ...nationalIssues, ...committeeIssues];
 
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
     return NextResponse.json({
       status: allIssues.length === 0 ? "ok" : "needs_fix",
@@ -180,7 +150,7 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const defaultDuration = 96;
@@ -188,8 +158,7 @@ export async function POST() {
     let nationalFixed = 0;
 
     // Fix state elections
-    const stateElectionsToFix = (await db
-      .collection("statePartyElections")
+    const stateElectionsToFix = (await statePartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -208,7 +177,7 @@ export async function POST() {
       let durationTurns: number = defaultDuration;
 
       // Try to find a sibling election with valid turn fields
-      const siblingElection = (await db.collection("statePartyElections").findOne({
+      const siblingElection = (await statePartyElectionsCollection<Document>(db).findOne({
         stateId: election.stateId,
         partyId: election.partyId,
         position: { $ne: election.position },
@@ -230,7 +199,7 @@ export async function POST() {
         }
       }
 
-      await db.collection<StatePartyElection>("statePartyElections").updateOne(
+      await statePartyElectionsCollection(db).updateOne(
         { _id: election._id },
         {
           $set: {
@@ -245,8 +214,7 @@ export async function POST() {
     }
 
     // Fix national elections
-    const nationalElectionsToFix = (await db
-      .collection("nationalPartyElections")
+    const nationalElectionsToFix = (await nationalPartyElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -276,9 +244,9 @@ export async function POST() {
         endTurn: { $exists: true, $ne: null },
       };
       if (election.countryId) siblingQuery.countryId = election.countryId;
-      const siblingElection = (await db
-        .collection("nationalPartyElections")
-        .findOne(siblingQuery)) as NationalPartyElection | null;
+      const siblingElection = (await nationalPartyElectionsCollection<Document>(db).findOne(
+        siblingQuery
+      )) as NationalPartyElection | null;
 
       if (siblingElection && siblingElection.startTurn != null && siblingElection.endTurn != null) {
         startTurn = siblingElection.startTurn;
@@ -303,8 +271,7 @@ export async function POST() {
         const partySeqId = Number.parseInt(election.partyId, 10);
         if (!Number.isNaN(partySeqId)) {
           // Find all parties with this sequentialId to handle cross-country cases
-          const parties = await db
-            .collection("politicalParties")
+          const parties = await politicalPartiesCollection<Document>(db)
             .find({ sequentialId: partySeqId })
             .toArray();
           if (parties.length === 1 && parties[0].countryId) {
@@ -324,7 +291,7 @@ export async function POST() {
         }
       }
 
-      await db.collection<NationalPartyElection>("nationalPartyElections").updateOne(
+      await nationalPartyElectionsCollection(db).updateOne(
         { _id: election._id },
         {
           $set: {
@@ -340,8 +307,7 @@ export async function POST() {
     }
 
     // Fix committee elections
-    const committeeElectionsToFix = (await db
-      .collection("nationalCommitteeElections")
+    const committeeElectionsToFix = (await nationalCommitteeElectionsCollection<Document>(db)
       .find({
         $or: [
           { startTurn: { $exists: false } },
@@ -378,8 +344,7 @@ export async function POST() {
         const partySeqId = Number.parseInt(election.partyId, 10);
         if (!Number.isNaN(partySeqId)) {
           // Find all parties with this sequentialId to handle cross-country cases
-          const parties = await db
-            .collection("politicalParties")
+          const parties = await politicalPartiesCollection<Document>(db)
             .find({ sequentialId: partySeqId })
             .toArray();
           if (parties.length === 1 && parties[0].countryId) {
@@ -399,7 +364,7 @@ export async function POST() {
         }
       }
 
-      await db.collection<NationalCommitteeElection>("nationalCommitteeElections").updateOne(
+      await nationalCommitteeElectionsCollection(db).updateOne(
         { _id: election._id },
         {
           $set: {

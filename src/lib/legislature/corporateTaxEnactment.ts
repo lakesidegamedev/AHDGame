@@ -1,7 +1,7 @@
 /** Corporate tax rate, voter reactions and receipt commit together. */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import type { FederalBudget, StateBudget, GameState } from "@/lib/db/types";
+import type { StateBudget, GameState } from "@/lib/db/types";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { boundSession, withSessionDb } from "@/lib/db/sessionDb";
 import { corporateTaxApprovalForCountry } from "@/lib/resetLegislation/rules/voterReactions";
@@ -10,6 +10,10 @@ import {
   type V2BillBallots,
 } from "@/lib/resetLegislation/voterReactions";
 import type { ResetLawEnactmentReceipt } from "@/lib/resetLegislation/program";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { resetLawEnactmentReceiptsCollection } from "@/lib/db/repositories/resetLawEnactmentReceipts";
 
 export interface CorporateTaxVoteInput {
   billId: string;
@@ -30,24 +34,18 @@ export async function applyCorporateTaxBillChange(
 ): Promise<void> {
   const receiptId = `${input.billId}:corporate-tax:${input.legislationTypeId}`;
   await withSessionDb(db, async (transactionDb) => {
-    const receipts = transactionDb.collection<ResetLawEnactmentReceipt>(
-      "resetLawEnactmentReceipts"
-    );
+    const receipts = resetLawEnactmentReceiptsCollection<ResetLawEnactmentReceipt>(transactionDb);
     if (await receipts.findOne({ _id: receiptId })) return;
     const budget =
       input.scope === "federal"
-        ? await transactionDb
-            .collection<FederalBudget>("federalBudget")
-            .findOne(
-              { _id: getNationalBudgetId(input.countryId) },
-              { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
-            )
-        : await transactionDb
-            .collection<StateBudget>("stateBudgets")
-            .findOne(
-              { _id: input.stateId, countryId: input.countryId },
-              { projection: { taxRates: 1 } }
-            );
+        ? await federalBudgetCollection(transactionDb).findOne(
+            { _id: getNationalBudgetId(input.countryId) },
+            { projection: { taxRates: 1, taxRatePhaseIn: 1 } }
+          )
+        : await stateBudgetsCollection(transactionDb).findOne(
+            { _id: input.stateId, countryId: input.countryId },
+            { projection: { taxRates: 1 } }
+          );
     // Preserve the existing no-op for an uninitialized budget. No tax change
     // means no political reward and no completed receipt.
     if (!budget?.taxRates) return;
@@ -71,9 +69,10 @@ export async function applyCorporateTaxBillChange(
       impacts,
       session
     );
-    const state = await transactionDb
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { resetWorldId: 1, iteration: 1 } });
+    const state = await gameStateCollection(transactionDb).findOne(
+      { _id: "current" },
+      { projection: { resetWorldId: 1, iteration: 1 } }
+    );
     // Existing world-scoped receipts are also used for tax-only bills. A distinct
     // key cannot collide with a mixed bill's law-program receipt.
     await receipts.insertOne({

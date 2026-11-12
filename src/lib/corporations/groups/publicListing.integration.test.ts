@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import type { GameState } from "@/lib/db/types";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 vi.mock("@/lib/currency/corporationCapital", async (original) => ({
   ...(await original<typeof import("@/lib/currency/corporationCapital")>()),
@@ -31,7 +30,7 @@ let db: ReturnType<typeof createInMemoryDb>;
 beforeEach(() => {
   vi.clearAllMocks();
   db = createInMemoryDb();
-  db.seed("gameState", [{ _id: "current", subsidiaryCorporationsEnabled: true }]);
+  db.seed("gameState", [{ _id: "current" }]);
   db.seed("corporations", [
     {
       _id: a,
@@ -203,14 +202,6 @@ describe("public subsidiary-group APIs", () => {
     expect(top.members).toHaveLength(3);
     expect(top.equityValueAnchor).toBe(1000);
   });
-  it("returns no groups when the system is disabled without reading corporations", async () => {
-    await (db as unknown as Db)
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { subsidiaryCorporationsEnabled: false } });
-    const find = vi.spyOn(db.collection("corporations"), "find");
-    expect(await (await list()).json()).toEqual({ groups: [] });
-    expect(find).not.toHaveBeenCalled();
-  });
   it("does not turn a standalone corporation into a group", async () => {
     const standalone = new ObjectId();
     db.seed("corporations", [
@@ -295,23 +286,6 @@ describe("public subsidiary-group APIs", () => {
     expect(body.group.members).toHaveLength(3);
     expect(body.group.managementAvailable).toBe(false);
     expect(body.canViewManagement).toBe(false);
-  });
-  it("preserves bookmarked group reads when the subsidiary system is disabled", async () => {
-    await (db as unknown as Db)
-      .collection<GameState>("gameState")
-      .updateOne({ _id: "current" }, { $set: { subsidiaryCorporationsEnabled: false } });
-    vi.mocked(requireBasicAuth).mockResolvedValue({
-      ok: true,
-      user: { userId: user.toString() },
-    } as never);
-    const response = await overview(new Request("https://game.test"), {
-      params: Promise.resolve({ id: "1" }),
-    });
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.group.id).toBe(a.toString());
-    expect(body.canViewManagement).toBe(true);
-    expect(await (await list()).json()).toEqual({ groups: [] });
   });
   it("resolves sequential ID zero and ObjectId links identically", async () => {
     await (db as unknown as Db)

@@ -10,20 +10,6 @@ import {
   getSocialPositionName,
   interpolateLeanHex,
 } from "@/lib/utils/politics";
-import type { StateDemographicGroup } from "@/lib/db/types";
-
-interface RegionDemographicsResponse {
-  stateId: string;
-  stateName: string;
-  groups: Record<string, StateDemographicGroup>;
-  calculatedEconomicLean: number;
-  calculatedSocialLean: number;
-  categories: {
-    id: string;
-    name: string;
-    groups: { id: string; name: string; defaultTurnout?: number }[];
-  }[];
-}
 
 interface GroupRow {
   id: string;
@@ -34,12 +20,13 @@ interface GroupRow {
   turnout: number | null;
 }
 
-/**
- * Census dimensions only. Voter-group (archetype) categories are legacy and
- * share group ids across countries, so a US state's doc matches the UK and
- * Ireland catalogs too; none of them belong in this breakdown.
- */
-const CENSUS_CATEGORY_IDS = new Set(["race", "age", "education", "wealth", "ideology"]);
+interface RegionDemographicsResponse {
+  stateId: string;
+  stateName: string;
+  calculatedEconomicLean: number;
+  calculatedSocialLean: number;
+  sections: { id: string; name: string; rows: GroupRow[] }[];
+}
 
 const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
 
@@ -65,9 +52,8 @@ function LeanValue({
 
 /**
  * Demographic breakdown behind a state's political lean, opened by clicking a
- * state on the lean map. Groups are the same records `calculateStateLean`
- * averages (share × turnout × category weight), so the panel shows which blocs
- * pull the state where.
+ * state on the lean map. Rows are the census buckets the vote counts, so the
+ * panel shows which blocs pull the state where.
  */
 export function StateLeanPanel({
   countryCode,
@@ -100,36 +86,17 @@ export function StateLeanPanel({
     };
   }, [countryCode, stateId]);
 
-  // Per-category rows for groups this state actually carries, largest first.
+  // Census buckets this region carries, largest first.
   const sections = useMemo(() => {
     if (!data) return [];
-    return data.categories
-      .filter((cat) => CENSUS_CATEGORY_IDS.has(cat.id))
-      .map((cat) => {
-        const rows: GroupRow[] = cat.groups
-          .map((g) => {
-            const sg = data.groups[g.id];
-            if (!sg) return null;
-            const turnout =
-              typeof sg.turnout === "number"
-                ? sg.turnout
-                : typeof g.defaultTurnout === "number"
-                  ? g.defaultTurnout
-                  : null;
-            return {
-              id: g.id,
-              name: g.name,
-              population: Number(sg.population) || 0,
-              economicLean: Number(sg.economicLean) || 0,
-              socialLean: Number(sg.socialLean) || 0,
-              turnout,
-            };
-          })
-          .filter((r): r is GroupRow => r !== null && r.population > 0)
-          .sort((a, b) => b.population - a.population);
-        return { id: cat.id, name: cat.name, rows };
-      })
-      .filter((s) => s.rows.length > 0);
+    return data.sections
+      .map((section) => ({
+        ...section,
+        rows: section.rows
+          .filter((r) => r.population > 0)
+          .sort((a, b) => b.population - a.population),
+      }))
+      .filter((section) => section.rows.length > 0);
   }, [data]);
 
   // One shared colour domain across all group chips so shades are comparable.
@@ -232,8 +199,8 @@ export function StateLeanPanel({
 
       {data && (
         <p className="mt-3 text-[10px] text-muted">
-          State lean is the turnout-weighted average of these groups (share × turnout × category
-          weight), on the −5…+5 position ruler.
+          State lean is the turnout-weighted average of these census groups, on the −5…+5 position
+          ruler.
         </p>
       )}
     </div>

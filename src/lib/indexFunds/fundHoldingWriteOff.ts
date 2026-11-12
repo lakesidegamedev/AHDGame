@@ -8,6 +8,8 @@ import {
   insertFundTransactionsBulk,
   updateFundHoldings,
 } from "@/lib/indexFunds/fundQueries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export interface DeadHoldingWriteOffResult {
   /** Holdings removed at zero because the corporation no longer exists. */
@@ -28,18 +30,16 @@ const EMPTY: DeadHoldingWriteOffResult = {
 /**
  * Remove holdings in dead corporations that the sale path silently refused.
  *
- * Divestment was only ever implemented as a sale, and
- * `sellFundHoldingsForRedemptionCash` skips any holding whose corporation
- * document is gone (`if (!corp) continue`). So a corp that died left its
- * position in the book forever: flagged for removal every rebalance, never
- * sold, and still marked at `lastValueAnchor` from whenever it last traded.
- * NAV counted that stale mark as backing, so it drifted up as the world aged
- * and corps died. On 2026-09-03 this had accumulated to 5.89B across 34 funds.
+ * Divestment is only implemented as a sale, and
+ * `sellFundHoldingsForRedemptionCash` skips holdings whose corporation
+ * document is gone. A dead corp left its position in the book forever:
+ * flagged every rebalance, never sold, still marked at `lastValueAnchor`,
+ * inflating NAV as stale backing.
  *
  * A dead corporation's shares are worth zero, so the correct exit is a
  * write-off, not a sale. Holdings whose corporation is still alive are only
- * counted and reported: the corp may get a bid next turn, and zeroing a live
- * position would destroy real holder value to fix a bookkeeping problem.
+ * counted and reported: zeroing a live position would destroy real holder
+ * value to fix a bookkeeping problem.
  */
 export async function writeOffDeadConstituentHoldings(
   db: Db,
@@ -58,8 +58,7 @@ export async function writeOffDeadConstituentHoldings(
 
   const liveIds = new Set(
     (
-      await db
-        .collection("corporations")
+      await corporationsCollection(db)
         .find({ _id: { $in: stillHeld.map((h) => h.corporationId) } }, { projection: { _id: 1 } })
         .toArray()
     ).map((c) => String(c._id))
@@ -109,26 +108,22 @@ export function selectDeadHoldingIds(
 }
 
 /**
- * Write off every index-fund holding in a corporation that is being wound
- * down, at the moment it is wound down.
+ * Write off every index-fund holding in a corporation being wound down,
+ * at wind-down time.
  *
- * `payFundShareholderRows` only pulls a fund's holding when that fund is paid
- * a positive slice, and `allocateShareholderPool` emits no fund rows at all
- * when the shareholder pool is empty. So an insolvent wind-down (NPP
- * insolvency, zero-equity dissolution) deleted the corporation but left its
- * holdings in every fund, still marked at `lastValueAnchor`. NAV overstated
- * that backing until the fund's next constituent rebalance found the corp
- * gone and wrote it off. Call this after any payout and before deleting the
- * corporation: funds that were already paid no longer hold it and are not
- * touched, so it never double-counts a settled position.
+ * `payFundShareholderRows` only pulls a fund's holding when the fund is paid
+ * a positive slice, and `allocateShareholderPool` emits no fund rows when the
+ * shareholder pool is empty, so an insolvent wind-down would otherwise leave
+ * holdings in every fund at `lastValueAnchor`, overstating NAV until the next
+ * rebalance writes them off. Call after any payout and before deleting the
+ * corporation: paid funds no longer hold it, so no double-count.
  */
 export async function writeOffFundHoldingsInDissolvedCorporation(
   db: Db,
   corporationId: ObjectId,
   now: Date
 ): Promise<{ fundCount: number; writtenOffValueAnchor: number }> {
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find(
       { "holdings.corporationId": corporationId },
       { projection: { _id: 1, quotedNav: 1, holdings: 1 } }
@@ -159,7 +154,7 @@ export async function writeOffFundHoldingsInDissolvedCorporation(
   }
 
   if (fundIds.length > 0) {
-    await db.collection<IndexFund>("indexFunds").updateMany({ _id: { $in: fundIds } }, {
+    await indexFundsCollection(db).updateMany({ _id: { $in: fundIds } }, {
       $pull: { holdings: { corporationId } },
       $set: { updatedAt: now },
     } as unknown as UpdateFilter<IndexFund>);

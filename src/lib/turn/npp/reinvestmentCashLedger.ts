@@ -14,6 +14,9 @@ import { deriveLedgerEntry } from "@/lib/ledger/deriveFromTx";
 import { isAnchorBalanced } from "@/lib/ledger/epsilon";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { NppCorpUpdateOp } from "./nppCashWrite";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
 
 export interface NppReinvestmentCashWitness {
   corporationId: ObjectId;
@@ -68,8 +71,10 @@ export async function flushNppReinvestmentCashWitnesses(
 ): Promise<void> {
   if (pending.length === 0) return;
   try {
-    const corporations = await db
-      .collection<{ _id: ObjectId; nppReinvestmentCashWitnessKey?: string }>("corporations")
+    const corporations = await corporationsCollection<{
+      _id: ObjectId;
+      nppReinvestmentCashWitnessKey?: string;
+    }>(db)
       .find(
         {
           _id: { $in: pending.map((row) => row.corporationId) },
@@ -84,7 +89,7 @@ export async function flushNppReinvestmentCashWitnesses(
     const landed = pending.filter((row) => keys.get(row.corporationId.toHexString()) === row.key);
     const transactions = landed.flatMap((row) => row.transactions);
     if (transactions.length === 0) return;
-    const result = await db.collection<FinancialTxLogEntry>("financialTxLog").bulkWrite(
+    const result = await financialTxLogCollection(db).bulkWrite(
       transactions.map((doc) => ({
         updateOne: { filter: { _id: doc._id }, update: { $setOnInsert: doc }, upsert: true },
       })),
@@ -108,7 +113,7 @@ export async function flushNppReinvestmentCashWitnesses(
         : []
     );
     if (entries.length > 0) {
-      await db.collection<LedgerEntry>("ledgerEntries").bulkWrite(
+      await ledgerEntriesCollection(db).bulkWrite(
         entries.map((entry) => ({
           updateOne: { filter: { _id: entry._id }, update: { $setOnInsert: entry }, upsert: true },
         })),

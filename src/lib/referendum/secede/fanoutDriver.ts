@@ -1,12 +1,11 @@
 /**
  * Applies one `FanoutScope` policy: redistributes a single-region aggregate's
- * documents across the seeded sub-regions when a UK nation-region secedes.
+ * documents across the seeded sub-regions when a registered region secedes.
  *
  * Tasks 4 implements the `_id`-keyed policies (cloneIdentical / scaleCounts /
  * copyDoc / scaleNumeric). Task 5 adds the bulk/composite/re-home policies.
  */
 import { BSON, ObjectId } from "mongodb";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { splitExtractionFields } from "./rules/extraction";
 import { splitRegionalFinance } from "./rules/regionalFinance";
 import { ENERGY_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetEnergy";
@@ -15,14 +14,18 @@ import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
 import type { RegionCollectionName } from "../transfer/regionScopedCollections";
 import type { FanoutScope } from "./fanoutPolicy";
-import { CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
+import { CAPITAL_SUBREGION, secessionSource, type SecedingCountryId } from "./subRegions";
 import { gdpWeights, partitionByGdp, populationWeights, splitCountVector } from "./apportion";
 import { getPath, setPath, scaleDeep } from "./docScale";
-import { apportionDemographicShares, type DemographicGroups } from "./apportionDemographics";
-import { getSecededDemographicPattern } from "./secededDemographicPatterns";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export interface FanoutContext {
+  /** The successor country every fanned-out document joins. */
   countryId: SecedingCountryId;
+  /** The parent country the region leaves. */
+  fromCountryId: string;
+  /** The live aggregate region id the documents are read from. */
+  regionId: string;
   seeds: State[];
   popWeights: Record<string, number>;
   gdpWeights: Record<string, number>;
@@ -40,6 +43,7 @@ export function buildFanoutContext(
 ): FanoutContext {
   return {
     countryId,
+    ...secessionSource(countryId),
     seeds,
     popWeights: populationWeights(seeds),
     gdpWeights: gdpWeights(seeds),
@@ -53,11 +57,11 @@ type AggDoc = Record<string, unknown>;
 async function readAggregate(
   db: Db,
   collection: RegionCollectionName,
-  countryId: string
+  regionId: string
 ): Promise<AggDoc | null> {
   return (await db
     .collection<AggDoc>(collection)
-    .findOne({ _id: countryId } as AggDoc)) as AggDoc | null;
+    .findOne({ _id: regionId } as AggDoc)) as AggDoc | null;
 }
 
 /** Clone the aggregate into one doc per sub-region, applying `mutate` to each. */
@@ -67,21 +71,21 @@ async function clonePerSubRegion(
   ctx: FanoutContext,
   mutate: (clone: AggDoc, subId: string) => void
 ): Promise<number> {
-  const agg = await readAggregate(db, scope.collection, ctx.countryId);
+  const agg = await readAggregate(db, scope.collection, ctx.regionId);
   if (!agg) return 0;
   const now = new Date();
   const docs = ctx.seeds.map((s) => {
     const clone = BSON.EJSON.parse(BSON.EJSON.stringify(agg)) as AggDoc;
     clone._id = s._id;
     clone.countryId = ctx.countryId;
-    if (clone.stateId === ctx.countryId) clone.stateId = s._id;
-    if (clone.regionId === ctx.countryId) clone.regionId = s._id;
+    if (clone.stateId === ctx.regionId) clone.stateId = s._id;
+    if (clone.regionId === ctx.regionId) clone.regionId = s._id;
     clone.updatedAt = now;
     mutate(clone, s._id);
     return clone;
   });
   await db.collection<AggDoc>(scope.collection).insertMany(docs);
-  await db.collection<AggDoc>(scope.collection).deleteOne({ _id: ctx.countryId } as AggDoc);
+  await db.collection<AggDoc>(scope.collection).deleteOne({ _id: ctx.regionId } as AggDoc);
   return docs.length;
 }
 
@@ -94,33 +98,8 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
         if (scope.collection === "politicalMetrics") delete clone.residuals;
       });
 
-    case "apportionShares": {
-      // Voter-archetype split: replace each sub-region's `groups` with a
-      // per-region tilt off the live aggregate (preset pattern). Falls back to a
-      // verbatim copy when no pattern is registered for this nation/preset.
-      const pattern = getSecededDemographicPattern(ctx.countryId, ctx.preset);
-      const agg = await readAggregate(db, scope.collection, ctx.countryId);
-      if (!pattern || !agg || agg.groups == null) {
-        return clonePerSubRegion(db, scope, ctx, () => {});
-      }
-      const apportioned = apportionDemographicShares(
-        agg.groups as DemographicGroups,
-        pattern,
-        ctx.popWeights
-      );
-      return clonePerSubRegion(db, scope, ctx, (clone, subId) => {
-        if (apportioned[subId]) {
-          clone.groups = apportioned[subId];
-          // The differentiated groups no longer match the aggregate's cached
-          // doc-level leans — drop them so any reader recomputes from groups.
-          delete clone.cachedEconomicLean;
-          delete clone.cachedSocialLean;
-        }
-      });
-    }
-
     case "scaleCounts": {
-      const agg = await readAggregate(db, scope.collection, ctx.countryId);
+      const agg = await readAggregate(db, scope.collection, ctx.regionId);
       if (!agg) return 0;
       // Pre-split each count vector once (conserving per index).
       const splits: Record<string, Record<string, number[]>> = {};
@@ -138,7 +117,7 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
       return clonePerSubRegion(db, scope, ctx, (clone, subId) => {
         const w =
           (scope.collection === "regionalBudgets" ? ctx.popWeights : ctx.gdpWeights)[subId] ?? 0;
-        Object.assign(clone, splitRegionalFinance(clone, ctx.countryId, subId, w));
+        Object.assign(clone, splitRegionalFinance(clone, ctx, subId, w));
         for (const field of scope.scaleFields ?? []) {
           const v = getPath(clone, field);
           if (v !== undefined) setPath(clone, field, scaleDeep(v, w));
@@ -151,7 +130,7 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
       const field = scope.key === "regionIdField" ? "regionId" : "stateId";
       const docs = (await coll
         .find(
-          { [field]: ctx.countryId },
+          { [field]: ctx.regionId },
           { projection: { _id: 1, revenue: 1, capacityBase: 1, outputBase: 1 } }
         )
         .toArray()) as Array<{
@@ -204,7 +183,7 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
     case "splitCapacity":
     case "splitContracts": {
       const coll = db.collection<AggDoc>(scope.collection);
-      const docs = await coll.find({ stateId: ctx.countryId }).toArray();
+      const docs = await coll.find({ stateId: ctx.regionId }).toArray();
       if (!docs.length) return 0;
       if (scope.policy === "splitContracts") {
         const keys = docs.flatMap((doc) =>
@@ -213,12 +192,11 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
             : []
         );
         if (keys.length) {
-          const receipts = await db
-            .collection<{
-              _id: string;
-              status: string;
-              projections?: Array<{ applied?: boolean }>;
-            }>(MONEY_MOVE_COLLECTION)
+          const receipts = await bankMoneyMovesCollection<{
+            _id: string;
+            status: string;
+            projections?: Array<{ applied?: boolean }>;
+          }>(db)
             .find({ _id: { $in: keys } }, { projection: { status: 1, projections: 1 } })
             .toArray();
           if (
@@ -270,14 +248,14 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
           }))
       );
       await coll.insertMany(rows);
-      await coll.deleteMany({ stateId: ctx.countryId });
+      await coll.deleteMany({ stateId: ctx.regionId });
       return rows.length;
     }
 
     case "rekeyCopyShares": {
       // Composite-keyed pool (`UK_SCO`): re-key per sub-region, copy the shares.
       const coll = db.collection<AggDoc>(scope.collection);
-      const oldId = `UK_${ctx.countryId}`; // pre-secession owner is the UK
+      const oldId = `${ctx.fromCountryId}_${ctx.regionId}`;
       const agg = (await coll.findOne({ _id: oldId } as AggDoc)) as AggDoc | null;
       if (!agg) return 0;
       const now = new Date();
@@ -305,7 +283,7 @@ export async function applyFanout(db: Db, scope: FanoutScope, ctx: FanoutContext
       const res = await db
         .collection<AggDoc>(scope.collection)
         .updateMany(
-          { [field]: ctx.countryId },
+          { [field]: ctx.regionId },
           { $set: { [field]: ctx.capital, countryId: ctx.countryId, updatedAt: new Date() } }
         );
       return res.modifiedCount ?? 0;

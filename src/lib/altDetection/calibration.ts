@@ -2,49 +2,37 @@ import type { Db } from "mongodb";
 import type { AltCluster, AltClusterStatus, AltSignal } from "@/lib/db/types/altDetection";
 import type { GameConfig } from "@/lib/db/types";
 import { DEFAULT_ALT_SCORING_WEIGHTS, resolveAltScoringConfig } from "./config";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { altClustersCollection } from "@/lib/db/repositories/altClusters";
 
 /**
- * Confidence calibration (forensics-v2 Wave 3).
+ * Confidence calibration.
  *
- * `tuning.ts` already asks "which SIGNALS discriminate?". This module asks
- * the prior question, about the number the whole system is built on: **when
- * we say a ring is 80% likely to be alts, is it?**
+ * `tuning.ts` asks which SIGNALS discriminate. This module asks whether the
+ * aggregate score is calibrated: when a ring scores 0.8, is it confirmed
+ * about 80% of the time? An uncalibrated noisy-OR score makes every
+ * downstream threshold (e.g. the 0.6 auto-open gate) mis-set.
  *
- * A noisy-OR score is only meaningful if it is calibrated. If rings scored
- * 0.8 turn out to be confirmed 40% of the time, the model is systematically
- * overconfident and every threshold downstream of it — the 0.6 auto-open
- * gate, the moderator's own read of "very high" — is mis-set. Nothing in the
- * system surfaced that before this module: dispositions were used to tune
- * individual weights but never to score the aggregate.
+ * Ground truth: moderator dispositions on `altClusters`, `confirmed` for a
+ * true alt ring, `dismissed` for a false positive. Both are noisy (a
+ * moderator can be wrong; `dismissed` may mean real-but-harmless).
+ * `open`/`reviewed` are unlabeled and excluded. Every number here inherits
+ * that noise, so the report is advisory and carries explicit
+ * `lowConfidence` flags rather than driving anything automatically.
  *
- * ## Ground truth and its limits
- * The only labels available are moderator dispositions on `altClusters`:
- * `status: "confirmed"` (treated as a true alt ring) and `"dismissed"`
- * (treated as a false positive). Both are noisy — a moderator can be wrong,
- * and "dismissed" sometimes means "real but harmless" rather than "not
- * alts". `"open"`/`"reviewed"` rings are unlabeled and excluded entirely.
- * Every number here inherits that noise, which is why the report is
- * advisory and carries explicit `lowConfidence` flags rather than driving
- * anything automatically.
+ * Computed:
+ *  - Reliability bins: dispositioned rings bucketed by prediction, bin mean
+ *    vs observed confirmed rate.
+ *  - Brier score: mean squared error of the probability, lower is better.
+ *  - Expected / maximum calibration error: sample-weighted and worst-case
+ *    gap across bins.
+ *  - Threshold sweep: precision/recall/F1 at each candidate auto-open
+ *    threshold, plus the F1-maximizing recommendation.
+ *  - Per-signal precision: share of rings with a signal that were confirmed.
+ *    Complements `tuning.ts`'s discrimination score (separation vs
+ *    precision-when-fired).
  *
- * ## What is computed
- *  - **Reliability bins** — dispositioned rings bucketed by predicted
- *    confidence, each bin's mean prediction against its observed confirmed
- *    rate. The classic calibration plot, as data.
- *  - **Brier score** — mean squared error of the probability, in [0,1],
- *    lower is better. The single headline number for "is the confidence
- *    any good".
- *  - **Expected / maximum calibration error** — sample-weighted mean and
- *    worst-case gap between predicted and observed across bins.
- *  - **Threshold sweep** — precision/recall/F1 if the auto-open cluster
- *    threshold were set at each candidate value, plus the F1-maximizing
- *    recommendation. Answers "should the 0.6 gate move?" with evidence.
- *  - **Per-signal precision** — of dispositioned rings containing a signal,
- *    what share were confirmed. Complements `tuning.ts`'s discrimination
- *    score: discrimination says "does this signal separate the classes",
- *    precision says "how often is it right when it fires".
- *
- * Report-only, like the rest of `altDetection/` — pure reads, no writes.
+ * Report-only: pure reads, no writes.
  */
 
 /** Number of equal-width reliability bins over [0,1]. Ten 0.1-wide buckets
@@ -387,16 +375,13 @@ export function computeCalibration(
  */
 export async function computeCalibrationReport(db: Db): Promise<CalibrationReport> {
   const [clusters, gameConfig] = await Promise.all([
-    db
-      .collection<AltCluster>("altClusters")
+    altClustersCollection(db)
       .find(
         { status: { $in: ["confirmed", "dismissed"] as AltClusterStatus[] } },
         { projection: { status: 1, confidence: 1, signalSummary: 1 } }
       )
       .toArray(),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
+    gameConfigCollection(db).findOne({ _id: "default" }, { projection: { altScoring: 1 } }),
   ]);
 
   const { thresholds } = resolveAltScoringConfig(gameConfig?.altScoring);

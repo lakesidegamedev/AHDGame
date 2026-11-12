@@ -4,7 +4,7 @@
  * Below v6 an autonomous chair's rate target is a closed-economy Taylor rule:
  * inflation and growth only. A currency could fall 30% in a month and the bank
  * would not move until the inflation it imports showed up in the data (owner
- * note 2026-10-02, kanban 190898).
+ * note).
  *
  * At v6 the target carries an exchange-rate term for a floating currency: the
  * currency's move over `FX_LOOKBACK_TURNS`, past a dead band, raises the target

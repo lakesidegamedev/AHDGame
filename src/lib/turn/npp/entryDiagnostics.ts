@@ -14,10 +14,8 @@ import type {
   NppMarketEntryFunnel,
   NppMarketEntryReason,
 } from "@/lib/db/types/marketFormation";
-import {
-  NPP_MARKET_ENTRY_FUNNEL_COLLECTION,
-  NPP_MARKET_ENTRY_FUNNEL_RETENTION_TURNS,
-} from "./entryFunnelSnapshot";
+import { NPP_MARKET_ENTRY_FUNNEL_RETENTION_TURNS } from "./entryFunnelSnapshot";
+import { nppMarketEntryFunnelsCollection } from "@/lib/db/repositories/nppMarketEntryFunnels";
 
 export type {
   NppMarketEntryDiagnostic,
@@ -57,19 +55,12 @@ export function blankNppCandidateExclusions(): NppCandidateExclusions {
 }
 
 /**
- * One reproducible primary reason per NPP entry candidate, in the same
- * evaluation order as the founding gates (see FOUNDING_GATE_PRECEDENCE in
- * capacityDecisionTelemetry/rules, mirrored here for the entry funnel):
- * strategy, profitability, margin, candidacy, logistics, cohort, retail pause,
- * glut, per-turn cap, then the pre-pricing cash floor. Priced outcomes
- * (entered, founding cost, credit, facility size) overwrite this afterwards
- * via `resolveFoundingShortfallReason`.
- *
- * Frontier matching and corporation-type coverage are preferences with
- * country-pool fallbacks, never hard gates, so they are reported as the
- * `frontierFallback` / `openMarketTypeFallback` flags rather than reasons.
- * Planned-economy restriction arrives as the state-controlled filter on
- * nationalized buckets and reports as `state_controlled`.
+ * One reproducible primary reason per NPP entry candidate, in founding gate
+ * precedence order (mirrors FOUNDING_GATE_PRECEDENCE): strategy, profitability,
+ * margin, candidacy, logistics, cohort, retail pause, glut, per-turn cap, then
+ * the pre-pricing cash floor. Priced outcomes overwrite this later via
+ * `resolveFoundingShortfallReason`; frontier and type fallbacks are flags, not
+ * reasons.
  */
 export function initialNppMarketEntryReason(args: {
   strategyAllowsExpansion: boolean;
@@ -307,7 +298,7 @@ export async function persistNppMarketEntryFunnel(
 ): Promise<NppMarketEntryFunnel> {
   const turnDoc = summarizeNppMarketEntryFunnel({ turn, now, diagnostics });
   const currentDoc = { ...turnDoc, _id: "current" };
-  const collection = db.collection<NppMarketEntryFunnel>(NPP_MARKET_ENTRY_FUNNEL_COLLECTION);
+  const collection = nppMarketEntryFunnelsCollection<NppMarketEntryFunnel>(db);
   await collection.bulkWrite([
     { replaceOne: { filter: { _id: turnDoc._id }, replacement: turnDoc, upsert: true } },
     { replaceOne: { filter: { _id: "current" }, replacement: currentDoc, upsert: true } },

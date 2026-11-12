@@ -2,6 +2,9 @@ import type { Db } from "mongodb";
 import type { Campaign, Election, ElectionCandidate } from "@/lib/db/types";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { ensureCampaignForCandidate } from "@/lib/campaigns/createInitialCampaign";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 /**
  * Standing backstop: guarantee every active player candidate in a
@@ -21,8 +24,7 @@ import { ensureCampaignForCandidate } from "@/lib/campaigns/createInitialCampaig
  * Returns the number of candidates created or reactivated.
  */
 export async function selfHealMissingCampaigns(db: Db, now: Date = new Date()): Promise<number> {
-  const activeCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeCandidates = await electionCandidatesCollection(db)
     .find({ status: "active" })
     .toArray();
   if (activeCandidates.length === 0) return 0;
@@ -30,8 +32,7 @@ export async function selfHealMissingCampaigns(db: Db, now: Date = new Date()): 
   const electionIds = [...new Set(activeCandidates.map((c) => c.electionId.toString()))].map(
     (id) => activeCandidates.find((c) => c.electionId.toString() === id)!.electionId
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       { _id: { $in: electionIds } },
       { projection: { _id: 1, countryId: 1, electionType: 1, russianPresidentialRound: 1 } }
@@ -48,8 +49,7 @@ export async function selfHealMissingCampaigns(db: Db, now: Date = new Date()): 
       eligibleElectionIds.has(candidate.electionId.toString())
   );
   if (eligibleCandidates.length === 0) return 0;
-  const existing = await db
-    .collection<Campaign>("campaigns")
+  const existing = await campaignsCollection(db)
     .find(
       {
         $or: eligibleCandidates.map((candidate) => ({

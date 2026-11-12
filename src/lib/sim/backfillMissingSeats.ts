@@ -11,23 +11,25 @@ import {
   getHouseSeats,
   isUsElectoralState,
 } from "@/lib/constants/states";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 /**
- * True when `stateId` is eligible for the US federal seat backfill (House,
- * Senate) under the given era's apportionment map. Mirrors the gate
- * `initializeOfficials.ts` and `seedSeats.ts` apply at world-bootstrap time:
- * DC is never electoral (`isUsElectoralState`), and AK/HI are excluded before
- * their preset's apportionment map lists them (pre-statehood eras — a
- * post-1959 world legitimately gains them once the era's `houseSeatsByState`
- * includes them).
+ * True when `stateId` is eligible for US federal seat backfill (House,
+ * Senate) under the era's apportionment map. Mirrors the gate applied at
+ * world-bootstrap time: DC is never electoral, and states are excluded
+ * before their era's apportionment map lists them.
  *
- * Without this gate, `backfillChamber`/`backfillSubNationalChamber` — which
- * iterate the `states` collection directly rather than the era-scoped `seats`
- * slot collection — apportion federal seats by raw population across EVERY US
- * `states` row, fabricating a DC Senate seat and DC/HI House `seatsHeld` from
- * population alone. Measured in the sandbox world: a DC Senate seat plus
- * DC(2)/HI(1) House seatsHeld, inflating the nominal House to 438 against the
- * real 435 (`congressionalDistricts` has zero DC/HI docs).
+ * Without this gate, callers that iterate the `states` collection directly
+ * (rather than era-scoped `seats`) apportion federal seats by raw population
+ * across every US state, fabricating a DC Senate seat and DC/HI House
+ * `seatsHeld` from population alone.
  */
 export function isUsBackfillEligibleState(
   stateId: string,
@@ -71,48 +73,25 @@ const SEATS_HELD_OFFICE_TYPES = new Set([
   "senator",
   "member",
   "procurador",
+  "caCommons",
 ]);
 
 /**
- * Backfills a legislative chamber up to its CONFIGURED seat count
+ * Backfills a legislative chamber up to its configured seat count
  * (COUNTRY_CONFIGS[countryId].legislature.{upper,lower}Chamber.seats) when the
- * authored historical seat data falls short — generating synthetic NPPs via
- * the SAME seedFromSeats() pipeline the real historical rosters use, not a
- * bespoke generator.
+ * authored historical seat data falls short. Uses the same seedFromSeats()
+ * pipeline as real historical rosters, not a bespoke generator.
  *
- * Root cause this exists to cover: seedHistoricalOfficials only seats what's
- * in the authored HistoricalSeat[] dataset for the preset (historicalSeats.ts)
- * — real historical rosters for less-researched countries/eras are
- * incomplete (documented project convention: "deliberately not estimated"),
- * so some chambers start with FEWER real seats than the country's own config
- * says should exist. Found via the headless sim: Nigeria's entire 1991
- * legislature (House: 360 configured seats, Senate: 109) had ZERO seeded
- * officials of any kind — only the presidency was seeded — and the UK
- * Commons was short by 14 of 665 configured seats.
+ * Only runs from the headless sim harness, never the live game bootstrap or
+ * admin reset. A genuinely vacant real seat is legitimate game state, not
+ * something to paper over with a synthetic name.
  *
- * NOT wired into the live game's bootstrap/reset path — this only runs from
- * the headless sim harness (scripts/sim/runWorld.ts), which needs a fully
- * populated world for balance-testing "every seat active" scenarios. The
- * live game's admin reset flow is left untouched: a genuinely vacant real
- * seat is legitimate game state (a player or NPP wins it through the normal
- * election pipeline over time), not something to silently paper over with a
- * name that has no real-world basis.
- *
- * The generated NPPs are explicitly synthetic, not historical — distributed
- * across the country's ALREADY-SEEDED regions (proportional to population,
- * largest-remainder rounding) and parties (proportional to that chamber's
- * EXISTING seat share if any exists, so a backfill never distorts an
- * already-established political balance). When the chamber starts from ZERO
- * (UK Commons "democracies start vacant", Nigeria 1991), parties are weighted
- * by their SEEDED per-region strength from statePartyOrg — organization,
- * scaled by the seeded registration share where present — so a 2.5%-polling
- * party gets a sliver, and a party with NO statePartyOrg row (or
- * hasPresence: false) in a region gets NOTHING there. A party sitting on the
- * seed-floor org with no registered support is likewise weightless, which is
- * what now keeps the UK regional parties out of chambers they have no support
- * in — they hold a row everywhere since the home-nation ballot gate was
- * removed, but org x zero registration is zero. Only regions with no
- * statePartyOrg data at all fall back to the legacy even split.
+ * Generated NPPs are synthetic and distributed across already-seeded regions
+ * (proportional to population, largest-remainder rounding) and parties. Parties
+ * are weighted by seeded statePartyOrg strength (organization times registration
+ * share where present), so a party with no support in a region gets nothing
+ * there. With zero existing seat share, only regions with no statePartyOrg data
+ * at all fall back to an even split.
  */
 /** Minimal statePartyOrg row shape consumed by the zero-state weighting. */
 export interface SeedStrengthRow {
@@ -127,18 +106,12 @@ export interface SeedStrengthRow {
 /**
  * Zero-state party weights for ONE region, from seeded statePartyOrg rows.
  *
- * - A party with no row in the region isn't in the result at all (weight 0):
- *   no seeded presence → no synthetic incumbents. A row on the seed-floor org
- *   with a zero registration share resolves to weight 0 the same way, so the
- *   SNP still never seats in London off a backfill.
- * - `hasPresence: false` rows are likewise excluded.
- * - Weight = organization, scaled by the seeded registration share
- *   (`registrationShare` preferred, `registration` fallback) when EVERY
- *   present row in the region carries one — org alone over-weights tiny
- *   parties because seeded org has a floor (e.g. UK MIN_ORG=5) and a
- *   compressed scale; org × regShare puts a 2.5%-polling party at a sliver.
- *   Mixing org-only and org×reg scales within one region would skew
- *   proportions by orders of magnitude, hence the all-or-nothing rule.
+ * - A party with no row, or a `hasPresence: false` row, is absent (weight 0):
+ *   no seeded presence, no synthetic incumbents.
+ * - Weight = organization, scaled by seeded registration share when EVERY
+ *   present row in the region has one. Org alone over-weights tiny parties
+ *   because org has a floor; mixing scales within a region would skew
+ *   proportions, hence the all-or-nothing rule.
  */
 export function computeZeroStateRegionWeights(rows: SeedStrengthRow[]): Map<string, number> {
   const present = rows.filter((r) => r.hasPresence !== false);
@@ -200,10 +173,8 @@ export async function backfillMissingSeats(
   // population-proportional apportionment below.
   const houseSeatsByState =
     // eslint-disable-next-line local/no-country-literals -- DC/AK/HI federal apportionment quirks are a US-only structural concept, not config-driven
-    countryId === "US"
-      ? getHouseSeats(
-          (await db.collection<GameState>("gameState").findOne({ _id: "current" }))?.preset
-        )
+    countryHasFeature("usTurn", countryId)
+      ? getHouseSeats((await gameStateCollection(db).findOne({ _id: "current" }))?.preset)
       : null;
 
   const lower = legislature.lowerChamber
@@ -257,14 +228,14 @@ type SubNatStateDoc = { _id: string; stateSenateSeats?: number | null };
  * RU's republic Supreme Soviets (`republicSupremeSoviet`) are the one-party
  * analog of CN's provincial People's Congress: each republic authors its own
  * chamber size in the seed doc's `stateSenateSeats`, so a vacant-legislature
- * preset (1953/1979) starts them un-seeded — no incumbents to defend, no
+ * preset (1953/1979) starts them un-seeded, with no incumbents and no
  * challenger supply, so `ensureRURepublicSovietElections` resolves with ZERO
  * candidates and the chamber never seats. Backfilling both parties' authored
- * delegations gives every republic soviet contested/seated cycles, exactly the
- * CN People's Congress fix (#3388) applied to the USSR (#3386). The national
- * Supreme Soviet chambers (`supremeSovietDeputy` / `nationalitiesDeputy`) are
- * the RU legislature's lower/upper chambers, so they are already covered by the
- * generic `backfillChamber` loop above.
+ * delegations gives every republic soviet contested/seated cycles, mirroring
+ * the CN People's Congress fix for the USSR. The national Supreme Soviet
+ * chambers (`supremeSovietDeputy` / `nationalitiesDeputy`) are the RU
+ * legislature's lower/upper chambers, already covered by the generic
+ * `backfillChamber` loop above.
  */
 export const SUB_NATIONAL_CHAMBERS: Partial<
   Record<CountryId, { officeType: string; seatsForState: (s: SubNatStateDoc) => number }>
@@ -301,14 +272,16 @@ async function backfillSubNationalChamber(
   const { officeType, seatsForState } = spec;
 
   const states = (
-    await db
-      .collection<State>("states")
+    await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, stateSenateSeats: 1 } })
       .toArray()
-  ).filter((s) => countryId !== "US" || isUsBackfillEligibleState(s._id, houseSeatsByState ?? {}));
+  ).filter(
+    (s) =>
+      !countryHasFeature("usTurn", countryId) ||
+      isUsBackfillEligibleState(s._id, houseSeatsByState ?? {})
+  );
   if (states.length === 0) return 0;
-  const parties = await db
-    .collection("politicalParties")
+  const parties = await politicalPartiesCollection<Document>(db)
     .find({ countryId }, { projection: { sequentialId: 1, name: 1 } })
     .sort({ sequentialId: 1 })
     .toArray();
@@ -319,8 +292,7 @@ async function backfillSubNationalChamber(
 
   // Currently filled seats per state for this office (respecting seatsHeld).
   const currentByState = new Map<string, number>();
-  const existing = await db
-    .collection("electedOfficials")
+  const existing = await electedOfficialsCollection<Document>(db)
     .aggregate<{ _id: string; total: number }>([
       { $match: { countryId, officeType } },
       { $group: { _id: "$state", total: { $sum: { $ifNull: ["$seatsHeld", 1] } } } },
@@ -331,8 +303,7 @@ async function backfillSubNationalChamber(
   // Seeded regional org presence → both-party split (a party with no presence in
   // a region gets no synthetic incumbents there — same rule as backfillChamber).
   const knownPartyIds = new Set(nameBySequentialId.keys());
-  const orgRows = await db
-    .collection<SeedStrengthRow>("statePartyOrg")
+  const orgRows = await statePartyOrgCollection<SeedStrengthRow>(db)
     .find(
       { countryId },
       {
@@ -420,8 +391,7 @@ async function backfillChamber(
   // in the largest states to reach 100. Each slot doc counts as its `totalSeats`
   // (multi-member house) or 1 (per-seat senate). Falls back to the config target if
   // no slots are found (defensive — slots are always seeded before backfill runs).
-  const slotDocs = await db
-    .collection<{ totalSeats?: number }>("seats")
+  const slotDocs = await seatsCollection<{ totalSeats?: number }>(db)
     .find({ countryId, electionType: officeType }, { projection: { totalSeats: 1 } })
     .toArray();
   const slotCapacity = slotDocs.reduce(
@@ -430,8 +400,7 @@ async function backfillChamber(
   );
   const effectiveTarget = slotCapacity > 0 ? Math.min(targetSeats, slotCapacity) : targetSeats;
 
-  const [current] = await db
-    .collection("electedOfficials")
+  const [current] = await electedOfficialsCollection<Document>(db)
     .aggregate<{ total: number }>([
       { $match: { countryId, officeType } },
       { $group: { _id: null, total: { $sum: { $ifNull: ["$seatsHeld", 1] } } } },
@@ -445,13 +414,15 @@ async function backfillChamber(
   // apportionment below — see `isUsBackfillEligibleState`. Every other country
   // passes through unfiltered.
   const states = (
-    await db
-      .collection<State>("states")
+    await statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, population: 1 } })
       .toArray()
-  ).filter((s) => countryId !== "US" || isUsBackfillEligibleState(s._id, houseSeatsByState ?? {}));
-  const parties = await db
-    .collection("politicalParties")
+  ).filter(
+    (s) =>
+      !countryHasFeature("usTurn", countryId) ||
+      isUsBackfillEligibleState(s._id, houseSeatsByState ?? {})
+  );
+  const parties = await politicalPartiesCollection<Document>(db)
     .find({ countryId }, { projection: { sequentialId: 1, name: 1 } })
     .sort({ sequentialId: 1 })
     .toArray();
@@ -469,8 +440,7 @@ async function backfillChamber(
   // "incumbents" in England who then auto-defended their seats (1953 sim
   // forensics). Even split survives only for regions with no statePartyOrg
   // data at all.
-  const existingByParty = await db
-    .collection("electedOfficials")
+  const existingByParty = await electedOfficialsCollection<Document>(db)
     .aggregate<{ _id: string; total: number }>([
       { $match: { countryId, officeType } },
       { $group: { _id: "$party", total: { $sum: { $ifNull: ["$seatsHeld", 1] } } } },
@@ -491,8 +461,7 @@ async function backfillChamber(
   let weightsByState: Map<string, Map<string, number>> | null = null;
   if (existingByParty.length === 0) {
     const knownPartyIds = new Set(nameBySequentialId.keys());
-    const orgRows = await db
-      .collection<SeedStrengthRow>("statePartyOrg")
+    const orgRows = await statePartyOrgCollection<SeedStrengthRow>(db)
       .find(
         { countryId },
         {

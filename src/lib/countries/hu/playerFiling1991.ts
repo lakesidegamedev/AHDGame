@@ -4,16 +4,23 @@
  * withdrawal and re-entry reuse the original person and their recorded ballots.
  */
 import { MongoServerError, ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  Election,
-  ElectionCandidate,
-  GameState,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { chooseHu1991PlayerDistrict } from "./rules/playerFiling1991";
 import { isHu1991AssemblyCampaign } from "./rules/assemblyCampaign1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { hu2011ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu2011ConstituencyByElections";
+import { hu2011AssemblyCountsCollection } from "@/lib/db/repositories/hu2011AssemblyCounts";
+import { hu1991ConstituencyByElectionsCollection } from "@/lib/db/repositories/hu1991ConstituencyByElections";
+import { hu1991AssemblyFilingLocksCollection } from "@/lib/db/repositories/hu1991AssemblyFilingLocks";
 export const HU_1991_FILING_LOCKS_COLLECTION = "hu1991AssemblyFilingLocks";
 export type Hu1991FilingFailure =
   | "invalid-ballot"
@@ -70,15 +77,11 @@ export async function materializeHu1991PlayerFiling(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian filing needs an active transaction and time");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: electionId }, { session });
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, currentTurn: 1, huAssemblyReformedAtYear: 1 } }
-    );
+  const election = await electionsCollection(db).findOne({ _id: electionId }, { session });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, currentTurn: 1, huAssemblyReformedAtYear: 1 } }
+  );
   const modern = election?.hungarianModernByElection;
   if (
     !election ||
@@ -97,7 +100,7 @@ export async function materializeHu1991PlayerFiling(input: {
       : !election.primaryEndTime || now >= election.primaryEndTime)
   )
     return reject("filing-closed");
-  const character = await db.collection<Character>("characters").findOne(
+  const character = await charactersCollection(db).findOne(
     { _id: candidate.characterId },
     {
       session,
@@ -125,7 +128,7 @@ export async function materializeHu1991PlayerFiling(input: {
     return reject("incompatible-office");
   if (
     (modern || election.hungarianAssemblyRound!.byElection) &&
-    (await db.collection("electedOfficials").findOne(
+    (await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "HU",
         officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] },
@@ -139,7 +142,7 @@ export async function materializeHu1991PlayerFiling(input: {
     const sequence = Number(candidate.party);
     if (!Number.isSafeInteger(sequence) || sequence < 1 || String(sequence) !== candidate.party)
       return reject("unregistered-party");
-    const party = await db.collection<PoliticalParty>("politicalParties").findOne(
+    const party = await politicalPartiesCollection(db).findOne(
       {
         countryId: "HU",
         sequentialId: sequence,
@@ -155,17 +158,15 @@ export async function materializeHu1991PlayerFiling(input: {
   const receiptId = modern?.receiptId ?? election.hungarianAssemblyRound!.receiptId;
   let byElection = election.hungarianAssemblyRound?.byElection;
   if (modern) {
-    const job = await db
-      .collection<import("./constituencyByElections2011").HuModernByElectionRecord>(
-        "hu2011ConstituencyByElections"
-      )
-      .findOne({ _id: receiptId }, { session });
-    const parent = await db
-      .collection<import("./assemblyCount2011").Hu2011AssemblyRecord>("hu2011AssemblyCounts")
-      .findOne(
-        { seatedAtTurn: { $exists: true } },
-        { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
-      );
+    const job = await hu2011ConstituencyByElectionsCollection<
+      import("./constituencyByElections2011").HuModernByElectionRecord
+    >(db).findOne({ _id: receiptId }, { session });
+    const parent = await hu2011AssemblyCountsCollection<
+      import("./assemblyCount2011").Hu2011AssemblyRecord
+    >(db).findOne(
+      { seatedAtTurn: { $exists: true } },
+      { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
+    );
     if (
       !job ||
       game.huAssemblyReformedAtYear == null ||
@@ -179,9 +180,10 @@ export async function materializeHu1991PlayerFiling(input: {
       Math.max(turn, game.currentTurn) >= job.termEndTurn
     )
       return reject("invalid-ballot");
-    const chamberLock = await db
-      .collection<{ _id: string; hu1991MandateGeneration?: number }>("governmentFormations")
-      .updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
+    const chamberLock = await governmentFormationsCollection<{
+      _id: string;
+      hu1991MandateGeneration?: number;
+    }>(db).updateOne({ _id: "HU" }, { $inc: { hu1991MandateGeneration: 1 } }, { session });
     if (chamberLock.matchedCount !== 1)
       throw new Error("Hungarian filing lost its chamber authority");
     districts = job.constituencies;
@@ -200,17 +202,15 @@ export async function materializeHu1991PlayerFiling(input: {
     )
       return reject("invalid-ballot");
     if (byElection) {
-      const job = await db
-        .collection<import("./constituencyByElections1991").Hu1991ByElectionRecord>(
-          "hu1991ConstituencyByElections"
-        )
-        .findOne({ _id: receiptId }, { session });
-      const parent = await db
-        .collection<import("./assemblyCount1991").Hu1991AssemblyRecord>("hu1991AssemblyCounts")
-        .findOne(
-          { seatedAtTurn: { $exists: true } },
-          { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
-        );
+      const job = await hu1991ConstituencyByElectionsCollection<
+        import("./constituencyByElections1991").Hu1991ByElectionRecord
+      >(db).findOne({ _id: receiptId }, { session });
+      const parent = await hu1991AssemblyCountsCollection<
+        import("./assemblyCount1991").Hu1991AssemblyRecord
+      >(db).findOne(
+        { seatedAtTurn: { $exists: true } },
+        { session, sort: { seatedAtTurn: -1 }, projection: { _id: 1 } }
+      );
       if (
         !job ||
         job.round !== 1 ||
@@ -223,7 +223,7 @@ export async function materializeHu1991PlayerFiling(input: {
         return reject("invalid-ballot");
     }
   }
-  const locks = db.collection<FilingLock>(HU_1991_FILING_LOCKS_COLLECTION);
+  const locks = hu1991AssemblyFilingLocksCollection<FilingLock>(db);
   const ownerId = candidate.characterId.toHexString();
   const ownerKey = `${receiptId}:player:${ownerId}`;
   const saved = await locks.findOne({ _id: ownerKey }, { session });
@@ -234,15 +234,13 @@ export async function materializeHu1991PlayerFiling(input: {
       (requestedDistrictId && requestedDistrictId !== saved.constituencyId)
     )
       return reject("party-changed");
-    const prior = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .findOne(
-        { _id: saved.candidateId, characterId: candidate.characterId, electionId },
-        { session }
-      );
+    const prior = await electionCandidatesCollection(db).findOne(
+      { _id: saved.candidateId, characterId: candidate.characterId, electionId },
+      { session }
+    );
     if (!prior) throw new Error("Hungarian filing reservation has lost its original candidate");
     if (prior.status === "active") return reject("already-filed");
-    await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    await electionCandidatesCollection(db).updateOne(
       { _id: prior._id, status: "withdrawn" },
       {
         $set: { status: "active" },
@@ -252,8 +250,7 @@ export async function materializeHu1991PlayerFiling(input: {
     );
     return { allowed: true, insertedId: prior._id };
   }
-  const legacy = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const legacy = await electionCandidatesCollection(db)
     .find(
       { electionId, characterId: candidate.characterId, isNPP: { $ne: true } },
       {
@@ -308,7 +305,7 @@ export async function materializeHu1991PlayerFiling(input: {
   if (candidate.party !== "independent")
     await locks.insertOne({ ...reservation, _id: partyKey }, { session });
   if (prior) {
-    await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    await electionCandidatesCollection(db).updateOne(
       { _id: prior._id, status: "withdrawn" },
       {
         $set: {
@@ -321,7 +318,7 @@ export async function materializeHu1991PlayerFiling(input: {
     );
     return { allowed: true, insertedId: prior._id };
   }
-  await db.collection<ElectionCandidate>("electionCandidates").insertOne(
+  await electionCandidatesCollection(db).insertOne(
     {
       ...candidate,
       _id: candidateId,

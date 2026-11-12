@@ -8,7 +8,7 @@ import { fetchExchangeRateMap } from "@/lib/world/forex";
 import { resolveStartingPartiesMode, type StartingPartiesMode } from "./startingParties";
 import { MongoServerError, ObjectId, type Db } from "mongodb";
 import { randomUUID } from "node:crypto";
-import type { Character, GameState, ImperialCharacter, User } from "@/lib/db/types";
+import type { GameState, ImperialCharacter, User } from "@/lib/db/types";
 import type { Counter } from "@/lib/db/types/counter";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
@@ -35,14 +35,39 @@ import {
 import { buildSeasonRecaps } from "@/lib/recap/buildSeasonRecaps";
 import type { CharacterRecap } from "@/lib/recap/types";
 import type { GameIteration } from "@/lib/db/types/gameState";
-import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
+import { assertKnownSeedPreset } from "@/lib/seeds/presetSelector";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
+import { planGameStateRebuild } from "@/lib/admin/resetContract/rules/gameStateRebuild";
+import { applyPreservedFieldContracts } from "@/lib/admin/resetContract/applyPreservedFieldContracts";
+import { purgeOldCatalogueOverrides } from "@/lib/admin/resetContract/purgeOldCatalogueOverrides";
+import { PRESERVED_ACTIVITY_LOG_TYPES } from "@/lib/admin/resetContract/rules/preservedFields";
 import {
   resetSelectionPreflight,
   resetSystemSelectionsFrom,
   type ResetVersionState,
 } from "@/lib/resetVersions/rules";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { countersCollection } from "@/lib/db/repositories/counters";
 
 /**
  * Runtime collections that `resetGameWorld` handles with bespoke logic instead
@@ -75,24 +100,7 @@ export const RUNTIME_WIPE_SPECIAL_CASES: ReadonlySet<string> = new Set<string>([
   "activityLog",
 ]);
 
-/**
- * `activityLog` rows that describe the ACCOUNT rather than the world, and so
- * survive a reset. Login/logout rows carry the IP, user agent, fingerprint and
- * tracking id that alt detection (`altDetection/run.ts`) and the moderation
- * dossier read, and `character_deleted` is the moderator marker written before
- * a hard delete. Dropping them let an account rotate its address across a
- * reset with no trail left behind.
- *
- * Every other type is world state and must go: `suspiciousDetection` reads
- * `turn_summary` by `turnNumber`, which restarts at 1, and NPP party capacity
- * counts recent `game_action`/`turn_summary` rows per user, so a surviving
- * world row would be read as the new world's activity.
- */
-export const PRESERVED_ACTIVITY_LOG_TYPES: readonly string[] = Object.freeze([
-  "login",
-  "logout",
-  "character_deleted",
-]);
+export { PRESERVED_ACTIVITY_LOG_TYPES };
 
 /**
  * Accounts a full reset (`deleteProfiles: true`) deletes: everyone except
@@ -104,17 +112,13 @@ export const PRESERVED_ACTIVITY_LOG_TYPES: readonly string[] = Object.freeze([
  */
 const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
   isAdmin: { $ne: true },
-  role: { $nin: ["admin", "moderator"] },
+  role: { $nin: ["admin", "moderator", "junior_dev"] },
   isBanned: { $ne: true },
 });
 
 const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "playerRandomEventsEnabledBy",
   "playerRandomEventsEnabledAt",
-  "worldEventsEnabledBy",
-  "worldEventsEnabledAt",
-  "crisisInteractionEnabledBy",
-  "crisisInteractionEnabledAt",
   "autoDisastersEnabledBy",
   "autoDisastersEnabledAt",
   "nppAutonomyEnabledBy",
@@ -123,52 +127,20 @@ const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "nppForeignPolicyModeAt",
   "nppForeignPolicyStageBy",
   "nppForeignPolicyStageAt",
-  "nppOffensiveInitiationEnabledBy",
-  "nppOffensiveInitiationEnabledAt",
-  "nppOffensiveJoinEnabledBy",
-  "nppOffensiveJoinEnabledAt",
-  "intelligenceMilitarySabotageEnabledBy",
-  "intelligenceMilitarySabotageEnabledAt",
-  "nppIntelligenceOperationsEnabledBy",
-  "nppIntelligenceOperationsEnabledAt",
-  "crisisAidBillsEnabledBy",
-  "crisisAidBillsEnabledAt",
-  "demographicsLayer1PositionsEnabledBy",
-  "demographicsLayer1PositionsEnabledAt",
-  "conflictsEnabledBy",
-  "conflictsEnabledAt",
   "livingConflictsEnabledBy",
   "livingConflictsEnabledAt",
   "defenceProcurementPausedBy",
   "defenceProcurementPausedAt",
   "coldWarEnabledBy",
   "coldWarEnabledAt",
-  "corpDealsEnabledBy",
-  "corpDealsEnabledAt",
-  "rpgStatsEnabledBy",
-  "rpgStatsEnabledAt",
-  "autoSectorSeedEnabledBy",
-  "autoSectorSeedEnabledAt",
-  "extractionAutoStrategyEnabledBy",
-  "extractionAutoStrategyEnabledAt",
   "nppEntryViabilityModeBy",
   "nppEntryViabilityModeAt",
   "frontierEntryExperimentEnabledBy",
   "frontierEntryExperimentEnabledAt",
   "nppCorpStrategyEnabledBy",
   "nppCorpStrategyEnabledAt",
-  "redistrictingEnabledBy",
-  "redistrictingEnabledAt",
   "sectorTechTreesEnabledBy",
   "sectorTechTreesEnabledAt",
-  "subsidiaryCorporationsEnabledBy",
-  "subsidiaryCorporationsEnabledAt",
-  "embargoTradeExposureEnabledBy",
-  "embargoTradeExposureEnabledAt",
-  "liveElectionResultsEnabledBy",
-  "liveElectionResultsEnabledAt",
-  "legislationDemographicEffectsV2EnabledBy",
-  "legislationDemographicEffectsV2EnabledAt",
   "metricsSystemVersionBy",
   "metricsSystemVersionAt",
   "legislationSystemVersionBy",
@@ -177,30 +149,8 @@ const GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS = [
   "cabinetSystemVersionAt",
   "demographicsSystemVersionBy",
   "demographicsSystemVersionAt",
-  "onboardingChecklistEnabledBy",
-  "onboardingChecklistEnabledAt",
-  "seasonRecapEnabledBy",
-  "seasonRecapEnabledAt",
-  "intOrgAlignmentEnabledBy",
-  "intOrgAlignmentEnabledAt",
-  "departmentProgramSliceEnabledBy",
-  "departmentProgramSliceEnabledAt",
-  "departmentFinanceEnabledBy",
-  "departmentFinanceEnabledAt",
-  "lawAdministrationEnabledBy",
-  "lawAdministrationEnabledAt",
-  "regionalLegislationFinanceEnabledBy",
-  "regionalLegislationFinanceEnabledAt",
-  "canonicalPoliticalMetricsEnabledBy",
-  "canonicalPoliticalMetricsEnabledAt",
-  "settlementCrisisEnabledBy",
-  "settlementCrisisEnabledAt",
   "eraSystemEnabledBy",
   "eraSystemEnabledAt",
-  "macroGrowthV1By",
-  "macroGrowthV1At",
-  "granularPollEnabledBy",
-  "granularPollEnabledAt",
 ] as const;
 
 /**
@@ -339,7 +289,8 @@ interface ResetGameWorldOptions {
   /** 1991 only: leave political offices vacant for player-created parties. */
   startingParties?: StartingPartiesMode;
   deleteProfiles: boolean;
-  preset?: string;
+  /** Required: a reset never assumes a preset. */
+  preset: string;
   seedHistorical?: boolean;
   adminUsername?: string;
   iteration?: import("@/lib/db/types/gameState").GameIteration;
@@ -370,6 +321,8 @@ interface ResetGameWorldOptions {
 export interface ResetGameWorldResult {
   success: true;
   message: string;
+  /** The identity and turn this teardown stamped on the new world. */
+  world?: { resetWorldId: string; currentTurn: number };
   details: {
     officialsDeleted: number;
     officialsSeeded: number;
@@ -395,7 +348,8 @@ export async function resetGameWorld(
   db: Db,
   options: ResetGameWorldOptions
 ): Promise<ResetGameWorldResult> {
-  const preset = options.preset ?? DEFAULT_SEED_PRESET;
+  assertKnownSeedPreset(options.preset);
+  const preset = options.preset;
   const startingParties = resolveStartingPartiesMode(preset, options.startingParties);
   const seedHistorical = startingParties !== "none" && options.seedHistorical !== false;
   const preIteration = options.preIteration === true;
@@ -403,7 +357,7 @@ export async function resetGameWorld(
   const selectedState =
     options.versionSelectionSnapshot !== undefined
       ? options.versionSelectionSnapshot
-      : await db.collection<GameState>("gameState").findOne(
+      : await gameStateCollection(db).findOne(
           { _id: "current" },
           {
             projection: {
@@ -435,29 +389,27 @@ export async function resetGameWorld(
   // destroys actionLogs/bills/ranking snapshots (they're gone by the deleteMany
   // block that starts a few lines down). Held in memory and stamped onto each
   // RetiredCharacter as the retire loop runs. Skipped on a full reset (the
-  // retiredCharacters archive is discarded anyway) and when the gate is off.
+  // retiredCharacters archive is discarded anyway).
   // The recap season is the OUTGOING gameState.iteration, still valid here — it
   // isn't advanced until the gameState update near the end of this function.
   let seasonRecaps: Map<string, CharacterRecap> | null = null;
   let recapIteration: GameIteration | undefined;
   if (!options.deleteProfiles) {
-    const gsForRecap = await db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { iteration: 1, currentTurn: 1, seasonRecapEnabled: 1 } }
-      );
-    if (isSeasonRecapEnabled(gsForRecap)) {
-      recapIteration = gsForRecap?.iteration;
+    const gsForRecap = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { iteration: 1, currentTurn: 1 } }
+    );
+    if (gsForRecap) {
+      recapIteration = gsForRecap.iteration;
       // A recap is a keepsake, not a precondition: if the build fails the reset
       // proceeds and characters retire without one.
       try {
-        const charsForRecap = await db.collection<Character>("characters").find({}).toArray();
+        const charsForRecap = await charactersCollection(db).find({}).toArray();
         log(`building season recaps for ${charsForRecap.length} characters`);
         seasonRecaps = await buildSeasonRecaps(
           db,
           charsForRecap,
-          { iteration: recapIteration, currentTurn: gsForRecap?.currentTurn ?? 1 },
+          { iteration: recapIteration, currentTurn: gsForRecap.currentTurn ?? 1 },
           { log, requireComplete: true }
         );
         log(`built ${seasonRecaps.size} season recaps`);
@@ -478,7 +430,7 @@ export async function resetGameWorld(
   // before the sweep and while the outgoing anchor and parties still exist.
   // Freezing after the sweep stamped empty collections, so every reset since
   // the sweep became manifest-driven erased the finished world's office history.
-  const outgoing = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const outgoing = await gameStateCollection(db).findOne({ _id: "current" });
   if (outgoing?.iteration) {
     const outgoingAnchor = {
       currentTurn: outgoing.currentTurn ?? 1,
@@ -500,29 +452,30 @@ export async function resetGameWorld(
   let usersDeleted = 0;
 
   if (options.deleteProfiles) {
-    const deleteResult = await db.collection("characters").deleteMany({});
+    const deleteResult = await charactersCollection(db).deleteMany({});
     charactersDeleted = deleteResult.deletedCount;
 
     // Staff and banned accounts survive; see FULL_RESET_DELETABLE_USERS_FILTER.
-    const usersResult = await db
-      .collection("users")
-      .deleteMany({ ...FULL_RESET_DELETABLE_USERS_FILTER });
+    const usersResult = await usersCollection<Document>(db).deleteMany({
+      ...FULL_RESET_DELETABLE_USERS_FILTER,
+    });
     usersDeleted = usersResult.deletedCount;
     // Every surviving account just lost all of its characters. Settle the
     // fields `retireCharacter` settles on a soft reset, or the one-character
     // limit (`activeCharacterCount >= 1`) refuses a kept moderator a new one.
-    await db
-      .collection<User>("users")
-      .updateMany({}, { $set: { hasCompletedSetup: false, activeCharacterCount: 0 } });
+    await usersCollection(db).updateMany(
+      {},
+      { $set: { hasCompletedSetup: false, activeCharacterCount: 0 } }
+    );
 
-    await db.collection("retiredCharacters").deleteMany({});
-    await db.collection("characterAchievements").deleteMany({});
+    await retiredCharactersCollection<Document>(db).deleteMany({});
+    await characterAchievementsCollection<Document>(db).deleteMany({});
     log(
       `Deleted ${charactersDeleted} character(s) and ${usersDeleted} player account(s); ` +
         `staff and banned accounts kept`
     );
   } else {
-    const allCharacters = await db.collection<Character>("characters").find({}).toArray();
+    const allCharacters = await charactersCollection(db).find({}).toArray();
     charactersReset = allCharacters.length;
 
     // `retireCharacter` is ~25 sequential writes per character, so on a
@@ -558,17 +511,19 @@ export async function resetGameWorld(
   //
   // These counts are surfaced in the result + adminLog, so we delete them
   // explicitly to capture deletedCount (and exclude them from the sweep).
-  const officialsResult = await db.collection("electedOfficials").deleteMany({});
-  const electionsResult = await db.collection("elections").deleteMany({});
-  const candidatesResult = await db.collection("electionCandidates").deleteMany({});
-  const nppsResult = await db.collection("npps").deleteMany({});
-  const logsResult = await db.collection("actionLogs").deleteMany({});
-  const billsResult = await db.collection("bills").deleteMany({});
-  const stateBillsResult = await db.collection("stateBills").deleteMany({});
-  const statePartyElectionsResult = await db.collection("statePartyElections").deleteMany({});
-  await db
-    .collection("activityLog")
-    .deleteMany({ type: { $nin: [...PRESERVED_ACTIVITY_LOG_TYPES] } });
+  const officialsResult = await electedOfficialsCollection<Document>(db).deleteMany({});
+  const electionsResult = await electionsCollection<Document>(db).deleteMany({});
+  const candidatesResult = await electionCandidatesCollection<Document>(db).deleteMany({});
+  const nppsResult = await nppsCollection<Document>(db).deleteMany({});
+  const logsResult = await actionLogsCollection<Document>(db).deleteMany({});
+  const billsResult = await billsCollection<Document>(db).deleteMany({});
+  const stateBillsResult = await stateBillsCollection<Document>(db).deleteMany({});
+  const statePartyElectionsResult = await statePartyElectionsCollection<Document>(db).deleteMany(
+    {}
+  );
+  await activityLogCollection<Document>(db).deleteMany({
+    type: { $nin: [...PRESERVED_ACTIVITY_LOG_TYPES] },
+  });
 
   const sweepCollections = getRuntimeCollectionNames().filter(
     (name) => !RUNTIME_WIPE_SPECIAL_CASES.has(name)
@@ -612,7 +567,7 @@ export async function resetGameWorld(
   // only in runSeed's reset branch, which a `resetReference: false` run skips.
   // Ops keys (maintenance, sandbox tester access, webhooks) are in neither list
   // and survive.
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: { ...FRESH_WORLD_GAME_CONFIG_FLAGS },
@@ -634,35 +589,18 @@ export async function resetGameWorld(
       `${nppsResult.deletedCount} NPPs, ${billsResult.deletedCount} bills counted separately)`
   );
 
-  // Clear imperial-character references on admin accounts, but preserve the
-  // characters themselves so head-of-state NPPs survive across resets.
-  await db
-    .collection<User>("users")
-    .updateMany(
-      { activeImperialCharacterId: { $exists: true } },
-      { $unset: { activeImperialCharacterId: "", activeCharacterType: "" } }
-    );
+  // Account and imperial fields follow the preserved-field contract: pointers
+  // to retired characters, old-world turn cooldowns and wallets are cleared,
+  // identity and preferences survive. Runs after every character is gone.
+  const contractModified = await applyPreservedFieldContracts(db);
+  log(
+    `Applied preserved-field contracts: ${Object.entries(contractModified)
+      .map(([name, count]) => `${name} ${count}`)
+      .join(", ")}`
+  );
 
-  // Clear regular-character pointers too — both reset modes either delete or
-  // retire all characters, so any `activeCharacterId` still pointing at one
-  // of those rows is stale. Leaving it set causes a redirect loop on /profile
-  // (findOne returns null → "Authentication required" → /login → repeat).
-  // Admin users survive the wipe but still need this cleared.
-  await db
-    .collection<User>("users")
-    .updateMany({ activeCharacterId: { $exists: true } }, { $unset: { activeCharacterId: "" } });
-
-  // Clear the turn-based corporation refounding cooldown on every (preserved)
-  // user. The legacy-named field stores the last corporation-end turn,
-  // and currentTurn resets to 1 below, so a stale high value would block
-  // founding for the whole new game. `lastRetiredAt` is intentionally left
-  // alone — it's a wall-clock anti-abuse cooldown, not game-turn state.
-  await db
-    .collection<User>("users")
-    .updateMany(
-      { lastCorporationFoundedTurn: { $exists: true } },
-      { $unset: { lastCorporationFoundedTurn: "" } }
-    );
+  const purgedOverrides = await purgeOldCatalogueOverrides(db);
+  log(`Removed ${purgedOverrides} saved electorate priorities naming retired law types`);
 
   // ⚠️ LEGACY BRANCH — dead on every real path, and it does NOT seed the world.
   //
@@ -714,7 +652,7 @@ export async function resetGameWorld(
     playerTransfersPaused: false,
     updatedAt: now,
     // A reset is a fresh world: every gameplay flag takes the fresh-world preset
-    // (all on, NPP autonomy at v4), whatever the outgoing world ran with.
+    // (all on, NPP autonomy at v6), whatever the outgoing world ran with.
     ...DEFAULT_GAME_STATE_FLAGS,
     startingPartiesMode: startingParties,
     metricsSystemVersion: selectedVersions.metrics,
@@ -757,15 +695,23 @@ export async function resetGameWorld(
     gameStateUnset.preIteration = "";
   }
 
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      Object.keys(gameStateUnset).length > 0
-        ? { $set: gameStateUpdate, $unset: gameStateUnset }
-        : { $set: gameStateUpdate },
-      { upsert: true }
-    );
+  // Rebuild rather than patch: every outgoing field that is neither written
+  // above nor on the keep list goes, including fields no type declares.
+  const outgoingState = await gameStateCollection(db).findOne({ _id: "current" });
+  const rebuild = planGameStateRebuild(
+    Object.keys(outgoingState ?? {}),
+    Object.keys(gameStateUpdate),
+    Object.keys(GAME_STATE_RESET_PRESERVED_FIELD_REASONS),
+    Object.keys(gameStateUnset)
+  );
+  const rebuildUnset = Object.fromEntries(rebuild.unset.map((field) => [field, ""] as const));
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    rebuild.unset.length > 0
+      ? { $set: gameStateUpdate, $unset: rebuildUnset }
+      : { $set: gameStateUpdate },
+    { upsert: true }
+  );
 
   // `gameState` is exempt from the manifest-driven sweep (it is re-initialized in
   // place), and the update above is filtered to `_id: "current"` — so ANY other
@@ -776,8 +722,7 @@ export async function resetGameWorld(
   // only non-`current` id written to this collection anywhere in `src/`, but the
   // filter is deliberately generic so a future squatter can't reintroduce the
   // same class of bug. Runs AFTER the upsert so `current` always exists first.
-  await db
-    .collection("gameState")
+  await gameStateCollection<Document>(db)
     // Untyped collection — GameState's `_id` is the literal "current", which
     // doesn't type-check against a `$ne` filter.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -797,51 +742,35 @@ export async function resetGameWorld(
   // resetPartyCounters() after wiping every party, so it's covered too.
   // Untyped collection — the default `_id: ObjectId` inference doesn't fit
   // our string counter ids, so cast the filter through `any`.
-  await db
-    .collection("counters")
+  await countersCollection<Document>(db)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .deleteMany({ _id: { $not: { $regex: /^party_/ } } } as any);
-
-  // Imperial characters are account identities, so preserve their documents,
-  // but a new world starts their personal wallets empty. Reset the legacy
-  // scalar and forex wallet together so either read path observes zero wealth.
-  await db.collection<ImperialCharacter>("imperialCharacters").updateMany({}, [
-    {
-      $set: {
-        cashOnHand: 0,
-        "currencyBalances.personal": {},
-        incomeTaxBatchReceipt: null,
-        incomeTaxStartTurn: 1,
-        pendingStockTaxReceipts: [],
-        incomeTier: { $ifNull: ["$initialIncomeTier", "high"] },
-      },
-    },
-  ]);
 
   // The imperial roll also survives the reset. Restore its sequential counter
   // from the preserved roster after the generic counter sweep, so a new
   // country's imperial profile cannot reuse an existing profile URL.
-  const imperialCounterRows = await db
-    .collection<ImperialCharacter>("imperialCharacters")
+  const imperialCounterRows = await imperialCharactersCollection(db)
     .aggregate<{ _id: null; maxSeq: number }>([
       { $group: { _id: null, maxSeq: { $max: "$sequentialId" } } },
     ])
     .toArray();
   const maxImperialId = imperialCounterRows[0]?.maxSeq;
   if (typeof maxImperialId === "number") {
-    await db
-      .collection<Counter>("counters")
-      .updateOne({ _id: "imperial" }, { $set: { seq: maxImperialId } }, { upsert: true });
+    await countersCollection(db).updateOne(
+      { _id: "imperial" },
+      { $set: { seq: maxImperialId } },
+      { upsert: true }
+    );
   }
 
   // Reference collections that runtime seeders re-populate with $setOnInsert (so
   // they won't overwrite stale accumulated state) must be wiped explicitly — the
   // manifest-driven sweep only touches `runtime` collections. statePolicies is
   // re-seeded by seedStatePolicies below; commodity/forex by their seeders.
-  await db.collection("statePolicies").deleteMany({});
-  await db.collection("commodityPrices").deleteMany({});
-  await db.collection("exchangeRates").deleteMany({});
-  await db.collection("centralBanks").deleteMany({});
+  await statePoliciesCollection<Document>(db).deleteMany({});
+  await commodityPricesCollection<Document>(db).deleteMany({});
+  await exchangeRatesCollection<Document>(db).deleteMany({});
+  await centralBanksCollection(db).deleteMany({});
 
   log("Teardown complete — bootstrap builds the new world, then finalize cleans up");
 
@@ -850,6 +779,10 @@ export async function resetGameWorld(
   // rows deleted) are only knowable after the new world exists.
   return {
     success: true,
+    world: {
+      resetWorldId: gameStateUpdate.resetWorldId as string,
+      currentTurn: resetDate.currentTurn,
+    },
     message: options.deleteProfiles
       ? "Game fully reset - all data deleted"
       : "Game reset successfully",

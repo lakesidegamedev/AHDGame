@@ -89,8 +89,8 @@ export interface CommodityDetail {
   /** Per-country funded market, present only when the source is "funded_book". */
   fundedCountryBooks?: Record<string, FundedCountryMarket>;
   /**
-   * Per-country reachable market book for this commodity (ticket #1077): own
-   * production against the demand that country's sellers can actually serve.
+   * Per-country reachable market book for this commodity: own production
+   * against the demand that country's sellers can actually serve.
    * Absent until a world has run a turn on 1.1.2 or later, which hides the
    * map's Reachable lens rather than painting every market empty.
    */
@@ -141,9 +141,9 @@ export interface CommodityDetail {
   topProducersByCountry?: Partial<Record<CountryId, CorpVolume[]>>;
   topConsumersByCountry?: Partial<Record<CountryId, CorpVolume[]>>;
   /**
-   * Documented realized physical-unit basis shared with corporation commodity
-   * pages (issue #1999). Top Consumers excludes marketing-budget demand for
-   * advertising; current budgets are separate from recorded demand.
+   * Realized physical-unit basis shared with corporation commodity
+   * pages. Top Consumers excludes marketing-budget demand for advertising;
+   * current budgets are separate from recorded demand.
    */
   volumeBasis?: {
     basis: "realized_physical_units";

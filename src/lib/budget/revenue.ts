@@ -43,6 +43,8 @@ import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
+import { BACKGROUND_NATION_PRESET } from "@/lib/world/macro/rules/backgroundConstitution";
+import { backgroundBudgetRefresh, loadBackgroundBudgetSources } from "./backgroundBudget";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import {
   NON_LAW_CALIBRATION_VERSION,
@@ -62,38 +64,21 @@ const REVENUE_CAP_COMPRESS = 0.4;
 
 /**
  * Per-country knee override for 1953 Stalinist command economies (BG/CS/HU/
- * PL/RO/YU — the `makeEasternBlocBudget1953` factory in seeds/reference/
- * budgets.ts). The 40%-of-GDP knee above is calibrated for modern mixed
- * economies where >40% GDP tax take is already a Laffer-curve extreme; Soviet
- * -type fiscal budgets of this era routinely ran 45–70% of national income
- * (turnover tax + enterprise-surplus remittance the bulk — Holzman / CIA NMP
- * -to-budget series, cited alongside these countries' authored tax bases in
- * budgets.ts). Their AUTHORED day-one default (Total Surplus Remittance 70% +
- * Maximal Turnover Tax 26%, the bloc's Stalinist maximum) computes to ≈52% of
- * GDP raw — already above the generic 40% knee — so without this override the
- * cap compressed every authored default down to ~41–45%, turning the
- * countries' own documented "small planned deficit" (spending ≈54% GDP vs
- * ≈52% revenue, a ~2% gap) into a ~13% GDP deficit that was never seeded or
- * intended (fiscal-scale audit, 2026-07-28). 55% keeps the full authored
- * default AND every reachable in-game lever setting uncompressed (raw revenue
- * tops out ≈60% GDP even with every remaining lever — income tax, social
- * insurance — maxed; enterprise levy and turnover tax are already at their
- * ceiling options), while still guarding against a future added lever pushing
- * materially past the bloc's real historical range.
+ * PL/RO/YU, plus DD and the union republics; see `makeEasternBlocBudget1953`).
+ * The 40%-of-GDP knee is calibrated for modern mixed economies; Soviet-type
+ * budgets routinely ran 45-70% of national income. Their authored day-one
+ * default computes to ~52% of GDP, above the generic knee, so without this
+ * override the cap compresses authored defaults and turns a documented small
+ * planned deficit into a large unintended one. 55% keeps every authored
+ * default and reachable in-game lever uncompressed (raw revenue tops out around
+ * 60% GDP) while still guarding against future levers pushing past the bloc's
+ * historical range.
  */
-// The union republics belong here for a stronger reason than the satellites do:
-// a republican budget in the USSR ran turnover tax and enterprise profit
-// deductions at all-Union rates, with revenue shares set by Moscow, so its
-// revenue-to-GDP ratio sat at the top of the bloc's range by construction.
-// DD was the one Warsaw Pact economy missing from this list, and nothing about
-// it justified the omission: `MARKETIZATION_SCHEDULE.DD` is level 10 through
-// 1990, its live `economicFactors.marketizationLevel` is 0, and its
-// `stateOwnershipConcentration` is 100 across 52 state-owned enterprises. It was
-// therefore compressed against the 40% MARKET knee for its whole life —
-// DDM 22.7B clawed back in fy1963 and DDM 27.6B in fy1964 while East Germany, then
-// DDM 51.8B/yr once it became the unified Germany (#1323). Reunification does not
-// change the classification: the surviving state is still centrally planned, so
-// it belongs on the same knee as the bloc it never left.
+// Union republics belong here: republican budgets ran turnover tax and
+// enterprise profit deductions at all-Union rates with shares set by Moscow,
+// so revenue-to-GDP sat at the top of the bloc's range by construction.
+// Reunified Germany stays on the same knee: the surviving state is still
+// centrally planned.
 const COMMAND_ECONOMY_REVENUE_CAP_COUNTRIES = new Set([
   "BG",
   "CS",
@@ -125,6 +110,13 @@ export function applyEraRevenueCap(
 }
 
 import { initializeCapitalGainsTaxRates } from "./rules/capitalGainsTax";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 type LegacyFederalTaxRates = Partial<FederalTaxRates> & {
   corporateTax?: number;
@@ -230,8 +222,7 @@ export async function loadLatestSourcedImportAggregates(
   db: Db,
   upToTurn: number
 ): Promise<Map<string, { tariffPaid: number; importValue: number }>> {
-  const docs = await db
-    .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+  const docs = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
     .find({ turn: { $lte: upToTurn } })
     .sort({ turn: -1 })
     .limit(1)
@@ -249,7 +240,7 @@ export async function calculateNationalGDP(db: Db, budgetId: string = "federal")
   // A1 SSOT (design §5.4): national GDP = Σ regional `state.gdp` — the per-turn
   // grown truth (the metric engine compounds each region's level every turn).
   // `state.gdp` is stored in MILLIONS; the national figure is in full units.
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   const countryId = budget?.countryId ?? (budgetId === "federal" ? "US" : budgetId);
 
   // Scope the query to this country up front — the previous global
@@ -258,8 +249,7 @@ export async function calculateNationalGDP(db: Db, budgetId: string = "federal")
   // today since all federalBudget docs carry taxBases so this GDP-fallback
   // path rarely fires, but a real scan when it does). NATIONAL_SCOPE_IDS
   // synthetic docs are still excluded in JS since they'd double-count.
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: countryId as State["countryId"] })
     .toArray();
   const totalFromStates = states
@@ -325,7 +315,7 @@ export async function calculateFederalRevenue(
   const federalBudget =
     prefetchedBudget && prefetchedBudget._id === budgetId
       ? prefetchedBudget
-      : await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+      : await federalBudgetCollection(db).findOne({ _id: budgetId });
 
   // Spec B revenue ceiling: non-null year (flag on) ⇒ Laffer soft-cap on the total.
   // Defensive: a mock db without a gameState collection ⇒ flag off (legacy).
@@ -447,9 +437,7 @@ export async function calculateFederalRevenue(
   // once at seed time. `otherRevenueGdpShareBaseline` holds the share; absent, it
   // self-heals from the persisted amount so an untouched budget is byte-identical
   // (see the field doc on FederalBudget). Without this the line decays as a share
-  // of any growing economy, and breaks outright on a discontinuous GDP change:
-  // DD's DDM 4.0B survived reunification unchanged and went from 6.4% of the old
-  // economy to 1.5% of the new one (#1323).
+  // of any growing economy and breaks on a discontinuous GDP change.
   const otherShare = federalBudget?.otherRevenueGdpShareBaseline;
   const budgetGdp = federalBudget?.gdp;
   const other =
@@ -463,30 +451,15 @@ export async function calculateFederalRevenue(
       : persistedOther;
   const otherWithPublicEnterprise = other + (publicEnterpriseRevenue.other ?? 0);
 
-  // Political-legislation v2 (spec §5.1): Σ revenue over unrepealed national
-  // enacted laws, recomputed FROM SCRATCH on every call — mirrors the spending
-  // side's full byCategory recompute, so syncs/heals never compound. Never
-  // folded into `other`. These are legislated fiscal extractions, not
-  // enterprise income, so they are tax-like and face the same base-erosion cap
-  // as ordinary tax receipts. Persisted `other` and public-enterprise income
-  // remain outside that cap: a Laffer curve must not erase hospital fees,
-  // dividends, or unrelated non-tax receipts.
-  //
-  // "Recomputed from scratch" is what this comment always CLAIMED, but the code
-  // summed the persisted `annualRevenueV2` field — a stored number, frozen at
-  // whatever base it was last written against, while the cost half of the very
-  // same `costModelV2` was being re-derived from live GDP every turn. The two
-  // halves of one law drifted apart: DD's national book reported DDM 0.725B of law
-  // revenue against DDM 3.07B of `gdpRevenueFraction`, because the stored figures
-  // were computed when DD was East Germany on a DDM 70.27B GDP and reunification
-  // nearly quadrupled the base without rewriting them (#1323).
-  //
-  // Recompute through the same engine the cost side uses, on the same
-  // regional-rollup base, so a law's revenue and its cost can no longer be
-  // priced off different economies. Laws with no `costModelV2` are legacy and
-  // keep their persisted value — there is nothing to recompute them from.
-  const lawRevenueDocs = await db
-    .collection<EnactedLaw>("enactedLaws")
+  // Sum revenue over unrepealed national enacted laws, recomputed from scratch
+  // on every call through the same engine and regional-rollup base the cost
+  // side uses, so a law's revenue and cost cannot be priced off different
+  // economies. Recomputing also prevents syncs/heals from compounding. Never
+  // folded into `other`: these are tax-like legislated extractions and face the
+  // same base-erosion cap as ordinary tax receipts. Persisted `other` and
+  // public-enterprise income stay outside that cap. Laws with no `costModelV2`
+  // are legacy and keep their persisted value.
+  const lawRevenueDocs = await enactedLawsCollection(db)
     .find(
       {
         scope: "national",
@@ -563,6 +536,7 @@ export async function calculateFederalRevenue(
     propertyTax,
     healthcareIncome,
     lawRevenue,
+    automationLevy: (federalBudget?.automationLevyReceiptsLocal ?? 0) * TURNS_PER_YEAR,
     taxLikeRevenue,
     taxLikeRevenueAfterCap,
     revenueCapReduction,
@@ -572,8 +546,7 @@ export async function calculateFederalRevenue(
 }
 
 export async function refreshNationalBudgetRevenue(db: Db, budgetIds?: string[]): Promise<number> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(budgetIds?.length ? { _id: { $in: budgetIds } } : {})
     .toArray();
 
@@ -607,21 +580,41 @@ export async function refreshNationalBudgetRevenue(db: Db, budgetIds?: string[])
     loadPlantsBudgetContext(db),
     getEraContext(db).catch(() => null),
     loadFxRatesByCurrency(db),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { interstateMoneyWiringEnabled: 1 } }
+    ),
     // All countries share this projected obligation load; never one per budget.
     loadRefugeeServiceCosts(db),
     loadCapacityRepairSpending(db),
-    // Debt interest on the coupons the stock carries (#2089), one read per pass.
+    // Debt interest on the coupons the stock carries, one read per pass.
     loadSovereignCouponBooks(db),
   ]);
   const moneyWiringEnabled = moneyWiringConfig?.interstateMoneyWiringEnabled === true;
   const sourcedImportsByCountry = moneyWiringEnabled
     ? await loadLatestSourcedImportAggregates(db, await getCurrentTurn(db))
     : new Map<string, { tariffPaid: number; importValue: number }>();
+  // 2027 background countries derive their budget from their macro economy
+  //. Only the 2027 preset has them, so other worlds pay no read.
+  const backgroundSources =
+    eraContext?.preset === BACKGROUND_NATION_PRESET ? await loadBackgroundBudgetSources(db) : null;
   const results = await Promise.all(
     budgets.map(async (budget) => {
+      const background = backgroundSources?.get(String(budget.countryId ?? budget._id));
+      if (background && budget.debt) {
+        const refresh = backgroundBudgetRefresh(
+          budget,
+          background,
+          sovereignStockAnnualService({
+            principal: budget.debt.principal,
+            book: couponBooks.get(background.countryId) ?? null,
+            marginalRate: budget.debt.interestRate,
+            imfBailoutActive: budget.imfSovereignBailoutActive,
+          }),
+          now
+        );
+        if (refresh) return refresh;
+      }
       // Skip budgets missing taxRates (e.g. incompletely seeded countries) —
       // one bad document must not crash the entire corporation turn phase.
       if (!budget.taxRates) return null;
@@ -709,7 +702,7 @@ export async function refreshNationalBudgetRevenue(db: Db, budgetIds?: string[])
   const ops = results.filter((op): op is NonNullable<typeof op> => op !== null);
   if (ops.length === 0) return 0;
 
-  await db.collection<FederalBudget>("federalBudget").bulkWrite(ops);
+  await federalBudgetCollection(db).bulkWrite(ops);
   return ops.length;
 }
 
@@ -732,9 +725,7 @@ export async function calculateStateRevenue(
   };
 
   // Get the current state budget to read tax bases
-  const stateBudget = await db
-    .collection<StateBudget>("stateBudgets")
-    .findOne({ _id: stateId, countryId });
+  const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
 
   // Use stored tax bases if available, otherwise derive from state data
   let bases: StateTaxBases;
@@ -742,12 +733,13 @@ export async function calculateStateRevenue(
     bases = stateBudget.taxBases;
   } else {
     // Fallback: derive bases from state GDP
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     // SP5: medianIncome lives on macroMetrics. (Also fixes the legacy filter,
     // which queried a nonexistent stateId field and always fell to the default.)
-    const metrics = await db
-      .collection<MacroMetricsDoc>("macroMetrics")
-      .findOne({ _id: stateId, countryId });
+    const metrics = await macroMetricsCollection<MacroMetricsDoc>(db).findOne({
+      _id: stateId,
+      countryId,
+    });
 
     const population = state?.population || 1000000;
     const medianIncome = metrics?.economic?.medianIncome?.value || 50000;
@@ -833,51 +825,28 @@ const TAX_BASE_GDP_SHARE_GRAVITY_ANNUAL = 0.08;
  * Ceiling on how far a tax base's growth rate may exceed the growth of the GDP
  * it is anchored to, in percentage points per year.
  *
- * The gravity above is a SPRING, and a spring can be outpulled. Writing the
- * per-year step out, with pull `p`, base growth `w` and GDP growth `g`, the
- * base/target ratio has fixed point
+ * The gravity is a SPRING, and a spring can be outpulled. With pull `p`, base
+ * growth `w` and GDP growth `g`, the base/target ratio has fixed point
  *
  *     x = p / ((1 + g) − (1 + w)(1 − p))
  *
- * which is finite only while `(1 + w)(1 − p) < (1 + g)`. Past that the
- * denominator goes negative and there is NO equilibrium: the base diverges from
- * GDP without bound, and no value of `p` short of 1 recovers it. That is not a
- * hypothetical. Measured over turns 480-576, every country runs a large,
- * permanent wedge between the rates that grow the bases and the rate that grows
- * their target:
+ * finite only while `(1 + w)(1 − p) < (1 + g)`. Past that the denominator goes
+ * negative, there is NO equilibrium, and the base diverges from GDP without
+ * bound. A base that outgrows GDP can then exceed 100% of GDP and have the
+ * Laffer cap silently discard the excess.
  *
- *     country   gdpGrowth   wageGrowth   tradeGrowth
- *     DD          3.55        16.47         24.06
- *     DE         −2.72         9.53          4.17
- *     RU          1.16        13.67         30.00   (pinned at its +30 bound)
- *     US         −2.91         4.46          2.65
+ * The upstream rate wedge (wage/productivity growth, trade growth pinned at a
+ * registry bound) is NOT fixed here; this makes the budget arithmetic sound
+ * regardless. A base may still outgrow GDP, but only by a bounded premium,
+ * which keeps the denominator positive and the equilibrium finite. At 2pp the
+ * fixed point sits near 1.25x baseline, inside a defensible real-world band
+ * (wages ~50% of GDP, consumption ~56%, imports ~20%) and keeps the revenue
+ * cap a rare backstop rather than a standing haircut.
  *
- * DD's denominator is negative, which is why its taxableIncome climbed 35% →
- * 103% OF GDP across 1953-64 — a base larger than the economy that produced it —
- * and why the Laffer cap was quietly discarding a quarter of its revenue every
- * year to hide it (#1323).
+ * The premium is measured against NOMINAL GDP growth, see `nominalGrowthCeiling`.
  *
- * The wedge itself is upstream and is NOT fixed here: `wageGrowth` tracks
- * `productivityGrowth`, which reads 9.9-12%/yr in DD's regions against ~3% in
- * the UK's, and `tradeGrowth` sits pinned at its registry bound for RU and DD
- * with `forexStrength` at 0, so the bound is not being reached through the
- * formula's own terms. Both are separate defects with their own blast radius.
- *
- * What this constant does is make the budget system's arithmetic sound
- * regardless: a base may still outgrow GDP — genuine wage or trade policy held
- * up for years should move its share — but only by a bounded premium, which
- * keeps the denominator positive and the equilibrium finite. At 2pp the fixed
- * point sits near 1.25x baseline, which is where the countries with coherent
- * inputs already sit (PL 1.23x, DE 1.33x) and which puts every ratio inside a
- * defensible real-world band: wages ~50% of GDP, consumption ~56%, imports ~20%.
- * It also returns the revenue cap to the rare backstop it was designed to be
- * rather than a standing 27% haircut.
- *
- * The premium is measured against NOMINAL GDP growth — see
- * `nominalGrowthCeiling`, which is where the inflation term is reasoned about.
- *
- * Deliberately a cap on the RATE, not on the level: a level clamp would snap
- * bases discontinuously, and the gravity is what closes an existing gap.
+ * Deliberately a cap on the RATE, not the level: a level clamp would snap bases
+ * discontinuously, and the gravity is what closes an existing gap.
  */
 export const TAX_BASE_GROWTH_PREMIUM_CAP = 2.0;
 
@@ -913,19 +882,14 @@ function pullTowardGdpShare(
 /**
  * The fastest a tax base may grow: NOMINAL GDP growth plus the premium.
  *
- * Nominal, not real, because the two sides carry inflation differently.
- * `wageGrowth` adds `WAGE_INFLATION_PASSTHROUGH x laggedInflation` on top of its
- * real component, so the bases are nominal quantities, while `compoundGdpLevel`
- * moves `state.gdp` by `gdpGrowth` alone. Capping a nominal rate against a real
- * one would freeze the base exactly when it must move most: BR-1991 runs ~480%
- * inflation and ~50%/yr nominal wage growth against ~2.5% real GDP growth, and
- * a real-only ceiling would have pinned its income-tax base near zero growth
- * through a hyperinflation (see fiscalGrowthFactors.test.ts, which pins that
- * band).
+ * Nominal, not real: `wageGrowth` includes inflation passthrough, so bases are
+ * nominal, while `compoundGdpLevel` moves `state.gdp` by real `gdpGrowth` alone.
+ * Capping a nominal rate against a real one would freeze the base when it must
+ * move most: under hyperinflation (high inflation and nominal wage growth vs.
+ * low real GDP growth) a real-only ceiling pins the tax base near zero growth.
  *
- * Deflation cannot tighten the ceiling below real growth — a negative inflation
- * reading floors at 0 — so a deflationary year does not quietly turn this into a
- * base cut.
+ * Deflation cannot tighten the ceiling below real growth (negative inflation
+ * floors at 0), so a deflationary year does not become a base cut.
  */
 function nominalGrowthCeiling(factors: EconomicGrowthFactors): number {
   const inflation = Number.isFinite(factors.inflationRate) ? Math.max(0, factors.inflationRate) : 0;
@@ -1083,24 +1047,20 @@ function growStateBases(
 }
 
 /**
- * Replace any non-finite state tax base with the GDP-derived figure the revenue
- * path already falls back to when bases are absent.
+ * Replace any non-finite state tax base with the GDP-derived figure the
+ * revenue path already falls back to when bases are absent.
  *
- * A NaN base is ABSORBING: every growth step multiplies it, so once one appears
- * it survives every turn and spreads — Berlin's live `stateBudgets` doc carries
- * NaN in `taxBases.{taxableIncome,taxableSales,propertyValue}`, and from there
- * in `revenue.{incomeTax,salesTax,propertyTax,total}`, `balance` and `surplus`
- * (#1323). Nothing detected it, because NaN fails every comparison silently
- * rather than throwing.
+ * A NaN base is ABSORBING: every growth step multiplies it, so once one
+ * appears it survives every turn and spreads into `revenue`, `balance` and
+ * `surplus`. Nothing throws, because NaN fails every comparison silently.
  *
  * Re-deriving from regional GDP is the same treatment an ABSENT base already
- * gets, which is the honest reading: a base that is not a number is not a
- * measurement. Zeroing instead would silently delete the region's revenue, and
- * leaving it would keep the region permanently unbudgetable.
+ * gets: a base that is not a number is not a measurement. Zeroing would
+ * silently delete the region's revenue; keeping it would leave the region
+ * permanently unbudgetable.
  *
  * `stateGdp` is the region's GDP in full units. A non-finite or non-positive
- * GDP leaves the bases untouched — there is nothing to re-derive from, and
- * inventing zeroes would be worse than the NaN.
+ * GDP leaves the bases untouched, since there is nothing to re-derive from.
  */
 export function sanitizeStateTaxBases(
   bases: StateTaxBases,

@@ -2,9 +2,9 @@ import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import type { Metadata } from "next";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character } from "@/lib/db/types/character";
 import { getSiteUrl } from "@/lib/siteMetadata";
 import { parseCharacterId } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,13 +24,12 @@ export async function generateMetadata({
   const projection = { name: 1, avatarUrl: 1 } as const;
   const character =
     parsed.type === "sequential"
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ sequentialId: parsed.value }, { projection })
+      ? await charactersCollection(db).findOne({ sequentialId: parsed.value }, { projection })
       : ObjectId.isValid(parsed.value)
-        ? await db
-            .collection<Character>("characters")
-            .findOne({ _id: new ObjectId(parsed.value) }, { projection })
+        ? await charactersCollection(db).findOne(
+            { _id: new ObjectId(parsed.value) },
+            { projection }
+          )
         : null;
   if (!character) return {};
 

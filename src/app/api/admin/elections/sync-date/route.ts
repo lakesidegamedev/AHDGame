@@ -1,37 +1,13 @@
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/elections/sync-date
- *
- * Re-initializes elections with a fresh start date using zero-gap timing:
- * - Resets currentTurn to 1, currentYear to STARTING_YEAR (2020)
- * - Deletes ALL elections, candidates, vote tallies, and campaigns
- * - Creates new elections anchored to their next real-world election year.
- *   All elections start as "active" (primaries open immediately — no "upcoming" gap).
- *   NO elections occur in 2020. Each type bootstraps to:
- *   - House: cycle 1 active now, ends turn 144 (LARP year 2022). Standard 48h general.
- *   - Senate Class 2: active now, ends turn 336 (LARP year 2026). Standard 48h general.
- *   - Senate Class 3: active now, ends turn 144 (LARP year 2022). Standard 48h general.
- *   - Senate Class 1: active now, ends turn 240 (LARP year 2024). Standard 48h general.
- *   - Governor (all): active now, ends turn 240 (LARP year 2024). Standard 48h general.
- *   - State Senate: active now, ends turn 240 (LARP year 2024). Standard 48h general.
- *   - President: active now, ends turn 240 (LARP year 2024). Full primary + 24h general.
- *   - UK Commons: ACTIVE — starts now, cycle 1 ends turn 219 (July 2024 general election)
- *   - UK Regional Council: ACTIVE transition cycle 0 synchronized with Commons;
- *     five annual cohorts begin after it resolves
- *   - JP Shugiin: ACTIVE — starts now, cycle 1 ends turn 240 (LARP year 2024)
- *   - JP Sangiin: ACTIVE — Class 1 ends turn 123 (Jul 2022), Class 2 ends turn 267 (Jul 2025)
- *   - JP Governor: ACTIVE — starts now, cycle 1 ends turn 240 (LARP year 2024)
- *   - DE Bundestag: ACTIVE — starts now, cycle 1 ends turn 240 (LARP year 2024)
- *
- * All elections store full DEFAULT_DURATIONS metadata so ensurePerpetualElections
- * correctly inherits full cycle lengths from cycle 2 onward.
- *
- * GameState reset: currentTurn→1, currentYear→2020, lastTurnProcessed→now,
- *   pausedAt→null, nextScheduledTurn→null (prevents stale pause from shifting
- *   newly-created election timestamps when the game restarts).
- *
- * Election-linked data cleared: elections, electionCandidates, electionVoteTallies,
- *   campaigns, primarySnapshot, nppEndorsements, playerEndorsements.
+ * Re-initializes the game with zero-gap election timing: resets GameState
+ * (currentTurn→1, currentYear→2020, clears stale pause fields), wipes all
+ * election-linked data (elections, candidates, vote tallies, campaigns,
+ * endorsements, primarySnapshot), and recreates each election anchored to its
+ * next real-world year with full DEFAULT_DURATIONS metadata so
+ * ensurePerpetualElections inherits correct cycle lengths from cycle 2 on.
+ * All types start active now; none occur in 2020.
  */
 
 import { withCampaignRules } from "@/lib/campaignTargeting/rules";
@@ -63,11 +39,23 @@ import {
   cycleAnchorContextFromGameState,
   getCycleAnchors,
 } from "@/lib/elections/cycleAnchorContext";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getSeatIdFromElection } from "@/lib/seats/seatId";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { primarySnapshotCollection } from "@/lib/db/repositories/primarySnapshot";
 
 // Sync-date bootstrap anchors are now derived from the active preset's
 // `getCycleAnchors(ctx)` inside the POST handler (see ctx-build below).
@@ -101,9 +89,9 @@ export const POST = withAdminRoute(async (_auth) => {
   // active preset's startingYear + cycle-anchor context. Without this,
   // the reset would clobber a 1991 game back to the global STARTING_YEAR
   // (2019) and seed elections with 2019-era cycle anchors.
-  const existingGameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" } as Filter<GameState>);
+  const existingGameState = await gameStateCollection(db).findOne({
+    _id: "current",
+  } as Filter<GameState>);
   const startingYear = existingGameState?.startingYear ?? STARTING_YEAR;
   const preset = existingGameState?.preset ?? DEFAULT_SEED_PRESET;
   const ctx = cycleAnchorContextFromGameState(existingGameState);
@@ -113,9 +101,9 @@ export const POST = withAdminRoute(async (_auth) => {
   // We MUST verify the update matched so that election timestamps (anchored to lastTurnProcessed)
   // and the year-label calculation (which uses lastTurnProcessed as reference) stay in sync.
   // If the document is missing, throw — a missing gameState is a fundamental DB error.
-  const updateResult = await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" } as Filter<GameState>, {
+  const updateResult = await gameStateCollection(db).updateOne(
+    { _id: "current" } as Filter<GameState>,
+    {
       $set: {
         currentTurn: 1,
         currentYear: startingYear,
@@ -124,7 +112,8 @@ export const POST = withAdminRoute(async (_auth) => {
         nextScheduledTurn: null, // clear stale scheduler state
         updatedAt: now,
       },
-    });
+    }
+  );
   if (updateResult.matchedCount === 0) {
     return errorResponse(
       500,
@@ -145,33 +134,33 @@ export const POST = withAdminRoute(async (_auth) => {
   //    that a failed insertMany leaves the existing data untouched. A failed deleteMany
   //    after a successful insert is recoverable — a retry of sync-date will include the
   //    old elections in oldElectionIds and clean them up correctly.
-  const oldElectionIds = await db
-    .collection<Election>("elections")
+  const oldElectionIds = await electionsCollection(db)
     .find({}, { projection: { _id: 1 } })
     .toArray()
     .then((docs) => docs.map((d) => d._id));
 
   // 3. Get states and elected officials to determine what to create
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1, houseDistricts: 1, stateSenateSeats: 1 } })
     .toArray();
   const stateIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "US")
+    .filter((s) => countryHasFeature("usApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const ukRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "UK")
+    .filter((s) => countryHasFeature("ukApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const jpRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "JP")
+    .filter((s) => countryHasFeature("jpApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const deRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "DE")
+    .filter((s) => countryHasFeature("deApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
   const cnRegionIds = states
-    .filter((s) => (s as { countryId?: string }).countryId === "CN")
+    .filter((s) => countryHasFeature("cnApi", (s as { countryId?: string }).countryId))
     .map((s) => s._id as string);
-  const ruRegions = states.filter((s) => (s as { countryId?: string }).countryId === "RU") as {
+  const ruRegions = states.filter((s) =>
+    countryHasFeature("ruApi", (s as { countryId?: string }).countryId)
+  ) as {
     _id: string;
     houseDistricts?: number;
     stateSenateSeats?: number;
@@ -179,21 +168,18 @@ export const POST = withAdminRoute(async (_auth) => {
 
   const stateSenateStates = new Set(
     (
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
+      await electedOfficialsCollection(db)
         .find({ officeType: "stateSenate" }, { projection: { state: 1 } })
         .toArray()
     ).map((o) => o.state)
   );
 
   // Live (census-updated) House apportionment. `state.houseDistricts` is what
-  // the decennial census rewrites, so the frozen preset map goes stale the
-  // moment a world reapportions and these races would be stood up at the old
-  // size — the drift #1190 fixes everywhere else. Prefer the live value and
-  // keep the preset map as the fallback for a state that carries none.
+  // the decennial census rewrites, so the frozen preset map goes stale once a
+  // world reapportions. Prefer the live value; fall back to the preset map.
   const liveHouseDistricts = new Map(
     states
-      .filter((s) => (s as { countryId?: string }).countryId === "US")
+      .filter((s) => countryHasFeature("usApi", (s as { countryId?: string }).countryId))
       .map((s) => [s._id as string, (s as { houseDistricts?: number }).houseDistricts])
   );
   const presetHouseSeats = getHouseSeats(ctx.preset);
@@ -794,9 +780,7 @@ export const POST = withAdminRoute(async (_auth) => {
   //    admin can safely retry. Any partial inserts from a prior failed attempt will be
   //    treated as "old" elections and cleaned up by the delete step that follows.
   if (toInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toInsert.map(withCampaignRules) as Election[]);
   }
 
   // 4. Delete old elections and all their linked data (candidates, tallies, etc.).
@@ -804,19 +788,25 @@ export const POST = withAdminRoute(async (_auth) => {
   let deletedCount = 0;
   if (oldElectionIds.length > 0) {
     await Promise.all([
-      db.collection("electionCandidates").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("electionVoteTallies").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("campaigns").deleteMany({ electionId: { $in: oldElectionIds } }),
+      electionCandidatesCollection<Document>(db).deleteMany({
+        electionId: { $in: oldElectionIds },
+      }),
+      electionVoteTalliesCollection<Document>(db).deleteMany({
+        electionId: { $in: oldElectionIds },
+      }),
+      campaignsCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
       // Clear election-linked data that persists beyond the elections collection:
       // primary snapshots captured at primary close, and NPP/player endorsements tied
       // to specific races — all become orphaned when elections are deleted.
-      db.collection("primarySnapshot").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("nppEndorsements").deleteMany({ electionId: { $in: oldElectionIds } }),
-      db.collection("playerEndorsements").deleteMany({ electionId: { $in: oldElectionIds } }),
+      primarySnapshotCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
+      nppEndorsementsCollection<Document>(db).deleteMany({ electionId: { $in: oldElectionIds } }),
+      playerEndorsementsCollection<Document>(db).deleteMany({
+        electionId: { $in: oldElectionIds },
+      }),
     ]);
-    const deleteResult = await db
-      .collection("elections")
-      .deleteMany({ _id: { $in: oldElectionIds } });
+    const deleteResult = await electionsCollection<Document>(db).deleteMany({
+      _id: { $in: oldElectionIds },
+    });
     deletedCount = deleteResult.deletedCount;
   }
 
@@ -834,16 +824,18 @@ export const POST = withAdminRoute(async (_auth) => {
     sangiin: toInsert.filter((e) => e.electionType === "sangiin").length,
     bundestag: toInsert.filter((e) => e.electionType === "bundestag").length,
     landtag: toInsert.filter((e) => e.electionType === "landtag").length,
-    jpGovernor: toInsert.filter((e) => e.electionType === "governor" && e.countryId === "JP")
-      .length,
+    jpGovernor: toInsert.filter(
+      (e) => e.electionType === "governor" && countryHasFeature("jpApi", e.countryId)
+    ).length,
     npcDelegate: toInsert.filter((e) => e.electionType === "npcDelegate").length,
     peoplesCongress: toInsert.filter((e) => e.electionType === "peoplesCongress").length,
     supremeSovietDeputy: toInsert.filter((e) => e.electionType === "supremeSovietDeputy").length,
     nationalitiesDeputy: toInsert.filter((e) => e.electionType === "nationalitiesDeputy").length,
     republicSupremeSoviet: toInsert.filter((e) => e.electionType === "republicSupremeSoviet")
       .length,
-    ruGovernor: toInsert.filter((e) => e.electionType === "governor" && e.countryId === "RU")
-      .length,
+    ruGovernor: toInsert.filter(
+      (e) => e.electionType === "governor" && countryHasFeature("ruApi", e.countryId)
+    ).length,
   };
 
   return NextResponse.json({

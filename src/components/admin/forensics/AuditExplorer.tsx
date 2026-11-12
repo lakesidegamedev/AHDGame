@@ -228,7 +228,7 @@ export default function AuditExplorer({
     if (onPivotToAlts) {
       onPivotToAlts(userId);
     } else if (typeof window !== "undefined") {
-      window.location.assign(`?tab=players&sub=alts&focusUser=${encodeURIComponent(userId)}`);
+      window.location.assign(`/control/safety/alts?focusUser=${encodeURIComponent(userId)}`);
     }
   };
 

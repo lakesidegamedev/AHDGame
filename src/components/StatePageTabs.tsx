@@ -10,6 +10,7 @@ import { partiesUrl } from "@/lib/urls";
 import { makeUSPartyFlavor, compareUSParties } from "@/components/region/regionPartiesUSFlavor";
 import { TabFallback } from "@/components/state/TabFallback";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const OverviewTab = dynamic(
   () => import("./state/StatePageTabsOverview").then((m) => ({ default: m.OverviewTab })),
@@ -69,7 +70,6 @@ export function StatePageTabs({
   players,
   npps,
   demographics,
-  categories,
   censusData,
   calculatedLeans,
   partyOrg,
@@ -154,7 +154,7 @@ export function StatePageTabs({
             regionName={state.name}
             partyOrg={partyOrg}
             config={
-              stateCountryId === "US"
+              countryHasFeature("usUi", stateCountryId)
                 ? {
                     ...sharedConfig,
                     headingLabel: `State Party Organizations in ${state.name}`,
@@ -231,12 +231,12 @@ export function StatePageTabs({
           <DemographicsAndTurnoutTab
             stateId={state._id}
             demographics={demographics}
-            categories={categories}
             censusData={censusData}
             turnoutData={turnoutData ?? null}
             countryId={state.countryId}
             regionParties={regionParties}
             bucketProfile={bucketProfile}
+            population={state.population}
             isAdmin={isAdmin}
           />
         );

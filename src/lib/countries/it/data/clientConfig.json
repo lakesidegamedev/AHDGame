@@ -1,0 +1,128 @@
+{
+  "config": {
+    "id": "IT",
+    "name": "Italy",
+    "code": "IT",
+    "status": "coming-soon",
+    "flagEmoji": "🇮🇹",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "Italy",
+    "executiveLabel": "Palazzo Chigi",
+    "executivePath": "/country/it/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where a Prime Minister governs at the confidence of a 630-seat Chamber and a 315-seat Senate, amid the unstable DC-led coalitions of the historic-compromise era.",
+    "heroImage": "https://flagcdn.com/w640/it.png",
+    "overviewPath": "/country/it",
+    "mapPath": "/country/it/map",
+    "currencyCode": "ITL",
+    "centralGovernmentLabel": "State Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["it_dc", "it_pci"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Parliament",
+      "path": "/country/it/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "cameraDeputati",
+        "name": "Chamber of Deputies",
+        "shortName": "Camera",
+        "seats": 630,
+        "description": "630 deputies elected by proportional representation for five-year terms."
+      },
+      "upperChamber": {
+        "key": "senato",
+        "name": "Senate of the Republic",
+        "shortName": "Senato",
+        "seats": 315,
+        "description": "315 elected senators (plus a few senators-for-life), elected on a regional basis for five-year terms.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "chamberKey": "cameraDeputati",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "senator",
+        "label": "Senator",
+        "chamberKey": "senato",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Senators"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Banca d'Italia",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Banca d'Italia"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Banca d'Italia",
+      "abbreviation": "BdI",
+      "heroImage": "https://flagcdn.com/w640/it.png",
+      "defaultPrimeRate": 12
+    },
+    "usdExchangeRate": 0.0012
+  },
+  "eraOverrides": {
+    "2027-default": { "usdExchangeRate": 1.0869565217391304 },
+    "1991-default": { "usdExchangeRate": 0.0008060529200610472 },
+    "1953-default": {
+      "legislature": {
+        "name": "Parliament",
+        "path": "/country/it/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "cameraDeputati",
+          "name": "Chamber of Deputies",
+          "shortName": "Camera",
+          "seats": 590,
+          "description": "590 deputies elected by proportional representation (Camera size in force 1948–1963)."
+        },
+        "upperChamber": {
+          "key": "senato",
+          "name": "Senate of the Republic",
+          "shortName": "Senato",
+          "seats": 280,
+          "description": "280 elected senators on a regional basis for five-year terms (1953 First Republic apportionment).",
+          "elected": true
+        }
+      },
+      "usdExchangeRate": 1
+    }
+  }
+}

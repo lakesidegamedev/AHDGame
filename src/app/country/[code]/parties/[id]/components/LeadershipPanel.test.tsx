@@ -37,6 +37,7 @@ function makeState(overrides: Record<string, unknown> = {}) {
       isCommitteeMember: true,
       isPartyMp: true,
       canInitiate: true,
+      canBack: true,
     },
     history: [],
     ...overrides,
@@ -117,6 +118,7 @@ describe("LeadershipPanel", () => {
           isCommitteeMember: false,
           isPartyMp: true,
           canInitiate: true,
+          canBack: true,
         },
       })
     );
@@ -168,6 +170,7 @@ describe("LeadershipPanel", () => {
           isCommitteeMember: false,
           isPartyMp: false,
           canInitiate: false,
+          canBack: false,
         },
       })
     );
@@ -242,6 +245,7 @@ describe("LeadershipPanel", () => {
           isCommitteeMember: false,
           isPartyMp: false,
           canInitiate: false,
+          canBack: false,
         },
         activeChallenge: {
           challengeId: "abc123",
@@ -265,7 +269,7 @@ describe("LeadershipPanel", () => {
     const retain = screen.getByRole("button", { name: "Retain" });
     expect((remove as HTMLButtonElement).disabled).toBe(true);
     expect((retain as HTMLButtonElement).disabled).toBe(true);
-    expect(remove.getAttribute("title")).toMatch(/Only party members vote/);
+    expect(remove.getAttribute("title")).toMatch(/Only this party's MPs vote/);
   });
 
   it("surfaces server action errors in the live status region", async () => {

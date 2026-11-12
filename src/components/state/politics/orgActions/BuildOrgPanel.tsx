@@ -9,7 +9,7 @@ import {
   BUILD_ORG_BASE_PS_COST,
   STATE_PS_CAP_DEFAULT,
 } from "@/lib/politicalStrength/strengthConstants";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { orgBuildCashPrice } from "@/lib/politicalStrength/buildOrgFunding";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { EstimateBox } from "./EstimateBox";

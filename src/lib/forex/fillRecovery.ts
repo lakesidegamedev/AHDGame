@@ -1,28 +1,21 @@
 /**
  * Durable peer-fill for forex limit orders on standalone Mongo.
  *
- * The transactional fill path is atomic and needs nothing here. The
- * sequential fallback (standalone Mongo, no multi-document transactions) used
- * to claim the order with a bare `processing` flip and compensate only
- * caught errors: a process crash between two confirmed writes left the filler
- * debited, the poster possibly credited, and the order stuck in `processing`
- * with no retry possible and no record of what landed.
+ * The sequential fallback (no multi-document transactions) can crash between
+ * two confirmed writes, leaving the filler debited, the poster possibly
+ * credited, and the order stuck in `processing` with no retry. This module
+ * makes that path recoverable without duplicating the banking journal:
  *
- * This module fixes the crash path without duplicating the banking journal:
- *
- * 1. The claim carries the full intent (`ProcessingFillIntent`, written in
- *    the same findOneAndUpdate as the status flip), so a later attempt can
- *    finish or undo without recomputing from moved balances.
- * 2. Every forward money leg is stamped (the banking `settledKeys` pattern,
- *    forex-owned stamps): a resumed leg that already landed matches nothing
- *    and verifies as applied, so resume never double-debits or double-credits.
- * 3. Spread distribution reuses `distributeSpreadFee` with per-write stamps;
- *    the trade-history row is keyed by the stable claim key, so its insert is
- *    a no-op on replay.
- * 4. Only a stale claim is recoverable. Fresh claims (a live attempt, or a
- *    recovery already running) are never stolen.
- * 5. Rollback inverts landed legs only and restores open/partial. Anything
- *    that can be neither completed nor rolled back stays `processing` and is
+ * 1. The claim carries the full intent (`ProcessingFillIntent`), written in the
+ *    same findOneAndUpdate as the status flip, so a later attempt can finish or
+ *    undo without recomputing from moved balances.
+ * 2. Every forward money leg is stamped: a resumed leg that already landed
+ *    verifies as applied, so resume never double-debits or double-credits.
+ * 3. Spread distribution reuses `distributeSpreadFee` with per-write stamps; the
+ *    trade-history row is keyed by the stable claim key, so replay is a no-op.
+ * 4. Only a stale claim is recoverable; fresh claims are never stolen.
+ * 5. Rollback inverts landed legs only and restores open/partial. Anything that
+ *    can be neither completed nor rolled back stays `processing` and is
  *    reported, never force-completed.
  *
  * Stable idempotency key: `forex-fill:{orderId}:{filledAmountBefore}`.
@@ -47,6 +40,9 @@ import type {
   ProcessingFillIntent,
 } from "@/lib/db/types/currencyOrder";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 /** A claim older than this with no live owner may be finished or undone. */
 export const FILL_CLAIM_STALE_MS = 5 * 60 * 1000;
@@ -182,7 +178,7 @@ export async function claimFillWithIntent(
   intent: ProcessingFillIntent,
   now: Date
 ): Promise<CurrencyOrder | null> {
-  return db.collection<CurrencyOrder>("currencyOrders").findOneAndUpdate(
+  return currencyOrdersCollection(db).findOneAndUpdate(
     claimFilter,
     {
       $set: {
@@ -280,7 +276,7 @@ export async function applyFillLegs(
   // Filler settlement: guarded debit plus fromCurrency credit, one stamped
   // write. The $gte guard refuses an overdraw; the stamp refuses a replay.
   const fillerBalancePath = `currencyBalances.personal.${intent.toCurrency}`;
-  const fillerRes = await db.collection("characters").updateOne(
+  const fillerRes = await charactersCollection(db).updateOne(
     {
       _id: fillerOid,
       [fillerBalancePath]: { $gte: intent.fillerTotalCost },
@@ -304,13 +300,14 @@ export async function applyFillLegs(
   }
 
   // Poster credit: unconditional amount, stamped so replay is a no-op.
-  const posterRes = await db
-    .collection("characters")
-    .updateOne({ _id: posterOid, [SETTLED_KEYS_FIELD]: { $ne: posterStamp } }, {
+  const posterRes = await charactersCollection(db).updateOne(
+    { _id: posterOid, [SETTLED_KEYS_FIELD]: { $ne: posterStamp } },
+    {
       $inc: buildPersonalBalanceInc(intent.toCurrencyAmount, intent.toCurrency, true),
       $set: { updatedAt: now },
       $push: { [SETTLED_KEYS_FIELD]: { $each: [posterStamp], $slice: -SETTLED_KEYS_CAP } },
-    } as Document);
+    } as Document
+  );
   if (posterRes.matchedCount !== 1) {
     if (!(await hasStamp(db, "characters", { _id: posterOid }, posterStamp))) {
       return { ok: false, leg: "poster", message: "Order owner not found", status: 404 };
@@ -336,7 +333,7 @@ export async function applyFillLegs(
 
   // History: keyed by the stable claim key, so a replay insert is a no-op.
   try {
-    await db.collection<{ _id: string } & Document>("tradeHistory").insertOne({
+    await tradeHistoryCollection<{ _id: string } & Document>(db).insertOne({
       _id: intent.key,
       buyerCharacterId: new ObjectId(intent.trade.buyerCharacterId),
       sellerCharacterId: new ObjectId(intent.trade.sellerCharacterId),
@@ -367,7 +364,7 @@ export async function applyFillLegs(
   // Final flip, guarded on the pre-fill state. Clearing the intent in the
   // same write makes replay-after-success a no-op: the order is no longer
   // `processing` with this key.
-  const flipRes = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+  const flipRes = await currencyOrdersCollection(db).updateOne(
     { _id: orderOid, status: "processing", filledAmount: intent.filledAmountBefore },
     {
       $set: { status: intent.newStatus, updatedAt: now },
@@ -419,9 +416,10 @@ async function verifyFillLegs(db: Db, intent: ProcessingFillIntent): Promise<Fil
     spread.push(revenueLanded && reserveLanded);
   }
   const history =
-    (await db
-      .collection<{ _id: string } & Document>("tradeHistory")
-      .findOne({ _id: intent.key }, { projection: { _id: 1 } })) !== null;
+    (await tradeHistoryCollection<{ _id: string } & Document>(db).findOne(
+      { _id: intent.key },
+      { projection: { _id: 1 } }
+    )) !== null;
   return { filler, poster, spread, history };
 }
 
@@ -482,7 +480,7 @@ async function takeRecoveryOwnership(
           "processingFill.recoveryKey": { $exists: false },
         }
   ) as Filter<CurrencyOrder>;
-  const res = await db.collection<CurrencyOrder>("currencyOrders").updateOne(filter, {
+  const res = await currencyOrdersCollection(db).updateOne(filter, {
     $set: { "processingFill.recoveryKey": token, "processingFill.recoveryAt": now },
   });
   return res.matchedCount === 1 ? token : null;
@@ -524,7 +522,7 @@ export async function recoverFillClaim(
   orderId: ObjectId,
   now: Date = new Date()
 ): Promise<RecoverFillOutcome> {
-  const order = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+  const order = await currencyOrdersCollection(db).findOne({ _id: orderId });
   if (
     !order ||
     order.status !== "processing" ||
@@ -568,7 +566,7 @@ export async function recoverFillClaim(
     auditFillRecovery(intent, "completed");
     return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
   }
-  const reread = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+  const reread = await currencyOrdersCollection(db).findOne({ _id: orderId });
   if (orderCompleted(reread, intent)) {
     return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
   }
@@ -580,7 +578,7 @@ export async function recoverFillClaim(
     // retry the guarded flip once under ownership instead of undoing.
     const owned = await takeRecoveryOwnership(db, reread ?? order, intent, now);
     if (!owned) return { outcome: "recovery-in-progress" };
-    const flip = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+    const flip = await currencyOrdersCollection(db).updateOne(
       { _id: orderId, status: "processing", filledAmount: intent.filledAmountBefore },
       {
         $set: { status: intent.newStatus, updatedAt: now },
@@ -592,7 +590,7 @@ export async function recoverFillClaim(
       auditFillRecovery(intent, "completed");
       return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
     }
-    const settled = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+    const settled = await currencyOrdersCollection(db).findOne({ _id: orderId });
     if (orderCompleted(settled, intent)) {
       return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
     }
@@ -603,13 +601,13 @@ export async function recoverFillClaim(
   const owned = await takeRecoveryOwnership(db, reread ?? order, intent, now);
   if (!owned) return { outcome: "recovery-in-progress" };
   // Re-verify under ownership: a concurrent recoverer may have finished.
-  const current = await db.collection<CurrencyOrder>("currencyOrders").findOne({ _id: orderId });
+  const current = await currencyOrdersCollection(db).findOne({ _id: orderId });
   if (orderCompleted(current, intent)) {
     return { outcome: "completed", fillAmount: intent.fillAmount, orderStatus: intent.newStatus };
   }
   const ownedState = await verifyFillLegs(db, intent);
   if (allLegsApplied(ownedState)) {
-    const flip = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+    const flip = await currencyOrdersCollection(db).updateOne(
       { _id: orderId, status: "processing", filledAmount: intent.filledAmountBefore },
       {
         $set: { status: intent.newStatus, updatedAt: now },
@@ -652,18 +650,16 @@ export async function reverseLandedFillLegs(
   const errors: unknown[] = [];
   const state = await verifyFillLegs(db, intent);
   if (state.filler) {
-    const res = await db
-      .collection("characters")
-      .updateOne(
-        { _id: new ObjectId(intent.fillerId) },
-        { $inc: fillerRollbackInc(intent), $set: { updatedAt: now } }
-      );
+    const res = await charactersCollection(db).updateOne(
+      { _id: new ObjectId(intent.fillerId) },
+      { $inc: fillerRollbackInc(intent), $set: { updatedAt: now } }
+    );
     if (res.matchedCount !== 1) {
       errors.push(new Error("filler debit landed but the filler is gone"));
     }
   }
   if (state.poster) {
-    const res = await db.collection("characters").updateOne(
+    const res = await charactersCollection(db).updateOne(
       { _id: new ObjectId(intent.posterId) },
       {
         $inc: buildPersonalBalanceInc(-intent.toCurrencyAmount, intent.toCurrency, true),
@@ -694,7 +690,7 @@ export async function reverseLandedFillLegs(
     }
   }
   try {
-    await db.collection<{ _id: string } & Document>("tradeHistory").deleteOne({ _id: intent.key });
+    await tradeHistoryCollection<{ _id: string } & Document>(db).deleteOne({ _id: intent.key });
   } catch (error) {
     errors.push(error);
   }
@@ -712,7 +708,7 @@ export async function restoreFillClaim(
   intent: ProcessingFillIntent,
   now: Date = new Date()
 ): Promise<void> {
-  const restored = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+  const restored = await currencyOrdersCollection(db).updateOne(
     { _id: new ObjectId(intent.orderId), status: "processing", processingFillKey: intent.key },
     {
       $set: { status: intent.statusBefore, updatedAt: now },
@@ -746,8 +742,7 @@ export async function recoverStaleFillClaims(
     rolledBack: [],
     unresolvable: [],
   };
-  const stuck = await db
-    .collection<CurrencyOrder>("currencyOrders")
+  const stuck = await currencyOrdersCollection(db)
     .find({ status: "processing", processingFillKey: { $exists: true } })
     .limit(FILL_RECOVERY_SCAN_LIMIT)
     .toArray();
@@ -786,13 +781,14 @@ export async function applyCancelRefund(
 ): Promise<boolean> {
   if (amount <= 0) return true;
   const stamp = `${cancelKey}#refund`;
-  const res = await db
-    .collection("characters")
-    .updateOne({ _id: characterId, [SETTLED_KEYS_FIELD]: { $ne: stamp } }, {
+  const res = await charactersCollection(db).updateOne(
+    { _id: characterId, [SETTLED_KEYS_FIELD]: { $ne: stamp } },
+    {
       $inc: buildPersonalBalanceInc(amount, currency, true),
       $set: { updatedAt: now },
       $push: { [SETTLED_KEYS_FIELD]: { $each: [stamp], $slice: -SETTLED_KEYS_CAP } },
-    } as Document);
+    } as Document
+  );
   return res.matchedCount === 1;
 }
 

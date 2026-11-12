@@ -12,7 +12,6 @@ import type { Db, ObjectId } from "mongodb";
 import type {
   BargainingCampaign,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   Union,
 } from "@/lib/db/types";
@@ -39,6 +38,12 @@ import {
   decideNppBargainingAction,
   industrialActionPressure,
 } from "./nppBargainingPolicy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 /**
  * Minimum worker-weighted `unionization` (0-100) across an NPP union's scope
@@ -132,8 +137,7 @@ export async function processNppUnionBehavior(
   if (!nppAutonomyLevelAtLeast(autonomy, "v3")) return { ...EMPTY };
   if (!labourAtLeast(await getLabourSystemMode(), "full")) return { ...EMPTY };
 
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ suspended: { $ne: true } })
     .toArray();
   if (unions.length === 0) return { ...EMPTY };
@@ -144,8 +148,7 @@ export async function processNppUnionBehavior(
   const vacant = unions.filter((union) => union.ownerId == null);
   if (vacant.length > 0) {
     const countries = [...new Set(vacant.map((union) => union.countryId))];
-    const candidates = await db
-      .collection<NPP>("npps")
+    const candidates = await nppsCollection(db)
       .find(
         { countryId: { $in: countries }, retiredAt: null },
         { projection: { _id: 1, countryId: 1, personality: 1 } }
@@ -196,7 +199,7 @@ export async function processNppUnionBehavior(
       union.ownerType = "npp";
     }
     if (electionOps.length > 0) {
-      await db.collection<Union>("unions").bulkWrite(electionOps);
+      await unionsCollection(db).bulkWrite(electionOps);
       result.leadersElected = electionOps.length;
     }
   }
@@ -207,8 +210,7 @@ export async function processNppUnionBehavior(
   );
 
   steps.mark("vacancyElections");
-  const leaders = await db
-    .collection<NPP>("npps")
+  const leaders = await nppsCollection(db)
     .find(
       { _id: { $in: led.map((union) => union.ownerId) }, retiredAt: null },
       { projection: { _id: 1, personality: 1 } }
@@ -242,14 +244,12 @@ export async function processNppUnionBehavior(
     }
   }
   if (orphaned.length > 0) {
-    await db
-      .collection<Union>("unions")
-      .updateMany(
-        { _id: { $in: orphaned } },
-        { $set: { ownerId: null, updatedAt: now }, $unset: { ownerType: "" } }
-      );
+    await unionsCollection(db).updateMany(
+      { _id: { $in: orphaned } },
+      { $set: { ownerId: null, updatedAt: now }, $unset: { ownerType: "" } }
+    );
   }
-  if (clearOps.length > 0) await db.collection<Union>("unions").bulkWrite(clearOps);
+  if (clearOps.length > 0) await unionsCollection(db).bulkWrite(clearOps);
 
   steps.mark("leadershipCleanup");
   const activeLed = led.filter((union) => !orphaned.some((id) => id.equals(union._id)));
@@ -258,8 +258,7 @@ export async function processNppUnionBehavior(
     // bargaining signals below. A broad exclusion projection decodes unrelated
     // plant and market telemetry for every sector, even though this phase only
     // reads these eight fields.
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         {},
         {
@@ -276,19 +275,16 @@ export async function processNppUnionBehavior(
         }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { isDefunct: { $ne: true } },
         { projection: { _id: 1, ceoId: 1, ceoType: 1, caretakerCeo: 1 } }
       )
       .toArray(),
-    db
-      .collection<BargainingCampaign>("bargainingCampaigns")
+    bargainingCampaignsCollection(db)
       .find({ status: { $in: ["negotiating", "dispute"] } })
       .toArray(),
-    db
-      .collection<CollectiveAgreement>("collectiveAgreements")
+    collectiveAgreementsCollection(db)
       .find({
         ...activeCollectiveAgreementFilter(currentTurn),
       })

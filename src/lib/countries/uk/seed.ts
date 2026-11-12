@@ -4,7 +4,6 @@ import { ObjectId, type Db } from "mongodb";
 import type {
   State,
   PoliticalParty,
-  DemographicCategory,
   StateDemographics,
   StateDemographicTurnout,
   StatePartyOrg,
@@ -23,6 +22,18 @@ import { UK_REGIONAL_COUNCIL_SEATS } from "@/lib/constants";
 import { getSeatIdFromElection } from "@/lib/seats";
 import { electionToLarpYear } from "@/lib/utils/formatters";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 export async function seedUKRegions(
   db: Db,
@@ -31,31 +42,11 @@ export async function seedUKRegions(
   preset: string
 ) {
   if (reset) {
-    await db.collection("states").deleteMany({ countryId: "UK" });
+    await statesCollection<Document>(db).deleteMany({ countryId: "UK" });
   }
-  const { ukRegions } = await import("@/lib/seeds/uk/ukRegions");
-  const { ukRegions1953 } = await import("@/lib/seeds/uk/ukRegions1953");
-  const { ukRegions1979 } = await import("@/lib/seeds/uk/ukRegions1979");
-  const { ukRegions1991 } = await import("@/lib/seeds/uk/ukRegions1991");
-  const { ukRegions1999 } = await import("@/lib/seeds/uk/ukRegions1999");
-  const { ukRegions2007 } = await import("@/lib/seeds/uk/ukRegions2007");
-  const { ukRegions2023 } = await import("@/lib/seeds/uk/ukRegions2023");
-  const { ukRegions2027 } = await import("@/lib/seeds/uk/ukRegions2027");
+  const { regionTableFor } = await import("@/lib/seeds/contract/regionTables");
   const { selectPresetBundle } = await import("@/lib/seeds/presetSelector");
-  const bundle = selectPresetBundle(
-    preset,
-    {
-      "1953-default": ukRegions1953,
-      "2019-default": ukRegions,
-      "1979-default": ukRegions1979,
-      "1991-default": ukRegions1991,
-      "1999-default": ukRegions1999,
-      "2007-default": ukRegions2007,
-      "2023-default": ukRegions2023,
-      "2027-default": ukRegions2027,
-    },
-    "seedUK:ukRegions1953"
-  );
+  const bundle = selectPresetBundle(preset, regionTableFor("UK"), "regions:UK");
   const regionOps = bundle.map((region) => {
     const { _id, ...regionData } = region;
     return {
@@ -66,8 +57,7 @@ export async function seedUKRegions(
       },
     };
   });
-  if (regionOps.length > 0)
-    await db.collection<State>("states").bulkWrite(regionOps, { ordered: false });
+  if (regionOps.length > 0) await statesCollection(db).bulkWrite(regionOps, { ordered: false });
   log(`Seeded ${bundle.length} UK regions (${preset})`);
 }
 
@@ -95,15 +85,17 @@ export async function seedUKParties(db: Db, log: (msg: string) => void, preset?:
     void _seedOrder;
     void _validForPresets;
     // Check if party already exists by name + country
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
       // Update existing party (preserve _id and sequentialId)
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
     } else {
       // Insert new party with generated _id and sequentialId
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
@@ -116,7 +108,7 @@ export async function seedUKParties(db: Db, log: (msg: string) => void, preset?:
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
     }
   }
   log(`Seeded ${eligibleParties.length} UK parties (preset: ${activePreset})`);
@@ -141,14 +133,16 @@ export async function seedNIParties(db: Db, log: (msg: string) => void) {
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     void _seedOrder;
     void _validForPresets;
-    const existing = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ name: party.name, countryId: party.countryId });
+    const existing = await politicalPartiesCollection(db).findOne({
+      name: party.name,
+      countryId: party.countryId,
+    });
 
     if (existing) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: existing._id }, { $set: { ...partyData, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: existing._id },
+        { $set: { ...partyData, updatedAt: now } }
+      );
       log(`Updated existing party: ${party.name}`);
     } else {
       const sequentialId = await getNextSequentialId(db, "party", party.countryId);
@@ -161,7 +155,7 @@ export async function seedNIParties(db: Db, log: (msg: string) => void) {
         createdAt: now,
         updatedAt: now,
       };
-      await db.collection<PoliticalParty>("politicalParties").insertOne(doc);
+      await politicalPartiesCollection(db).insertOne(doc);
       log(`Created party: ${party.name} (sequentialId: ${sequentialId})`);
     }
   }
@@ -175,67 +169,53 @@ export async function seedUKDemographics(
   preset: string
 ) {
   if (reset) {
-    await db.collection("stateDemographics").deleteMany({ countryId: "UK" });
-    await db.collection("demographicDefaults").deleteMany({ countryId: "UK" });
-    await db.collection("stateDemographicTurnout").deleteMany({ countryId: "UK" });
+    await stateDemographicsCollection<Document>(db).deleteMany({ countryId: "UK" });
+    await demographicDefaultsCollection<Document>(db).deleteMany({ countryId: "UK" });
+    await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId: "UK" });
   }
-  const { ukDemographicCategories } = await import("@/lib/seeds/uk/ukDemographicCategories");
   const { default: ukRegionDemographicsStatic } =
     await import("@/lib/seeds/uk/ukRegionDemographics");
   const { ukDemographicTurnout } = await import("@/lib/seeds/uk/ukDemographicTurnout");
-  const { calculateStateLean } = await import("@/lib/utils/demographics");
+  const { calculateStateLeanForCache } = await import("@/lib/demographics/cachedStateLean");
   const is1991 = preset === "1991-default";
   const { ukRegionDemographics1991 } = is1991
     ? await import("./data/ukRegionDemographics1991")
     : { ukRegionDemographics1991: ukRegionDemographicsStatic };
 
-  const { isLayer1PositionsEnabled } = await import("@/lib/seeds/layer1PositionsFlag");
-  const useLayer1 = await isLayer1PositionsEnabled();
   let ukRegionDemographics: typeof ukRegionDemographicsStatic = ukRegionDemographics1991;
-  if (useLayer1) {
-    const { getCountryLayer1Model, buildModelRegionDemographics } =
-      await import("@/lib/seeds/international");
-    const { eraForPreset } = await import("@/lib/seeds/presetSelector");
-    const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-    const era = eraForPreset(preset);
-    const model = getCountryLayer1Model("UK", era);
-    if (model) {
-      const full = await loadFullOverride("UK", era);
-      if (full) log(`[UK] Applying model override for era ${era}`);
-      ukRegionDemographics = buildModelRegionDemographics(
-        model,
-        full?.positions ?? undefined,
-        full ? { turnout: full.turnout } : undefined
-      );
-      log(
-        `[UK] Using Layer-1-derived demographics (${ukRegionDemographics.length} regions, era ${era})`
-      );
-    }
+  const { getCountryLayer1Model, buildModelRegionDemographics } =
+    await import("@/lib/seeds/international");
+  const { strictEraForPreset } = await import("@/lib/seeds/presetSelector");
+  const { loadFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
+  const era = strictEraForPreset(preset);
+  const model = getCountryLayer1Model("UK", era);
+  if (model) {
+    const full = await loadFullOverride("UK", era);
+    if (full) log(`[UK] Applying model override for era ${era}`);
+    ukRegionDemographics = buildModelRegionDemographics(
+      model,
+      full?.positions ?? undefined,
+      full ? { turnout: full.turnout } : undefined
+    );
+    log(
+      `[UK] Using Layer-1-derived demographics (${ukRegionDemographics.length} regions, era ${era})`
+    );
   }
 
-  for (const category of ukDemographicCategories) {
-    const { _id, ...categoryData } = category;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id }, { $set: categoryData }, { upsert: true });
-  }
   // Both the authored 1991 fallback and the Layer-1 bundle already describe
   // their selected era. Reapplying a modern-to-1991 transform distorts shares
   // and rounds away population, so persist the selected bundle directly.
   for (const sd of ukRegionDemographics) {
-    const { _id, ...sdData } = sd;
-    await db
-      .collection<StateDemographics>("stateDemographics")
-      .updateOne({ _id }, { $set: sdData }, { upsert: true });
-    await db
-      .collection<StateDemographics>("demographicDefaults")
-      .updateOne({ _id }, { $set: sdData }, { upsert: true });
-    const allCategories = await db
-      .collection<DemographicCategory>("demographicCategories")
-      .find({})
-      .toArray();
-    const lean = calculateStateLean(sd, allCategories);
-    await db.collection<State>("states").updateOne(
+    const { _id, groups: _groups, ...sdData } = sd;
+    await stateDemographicsCollection(db).updateOne({ _id }, { $set: sdData }, { upsert: true });
+    await demographicDefaultsCollection(db).updateOne({ _id }, { $set: sdData }, { upsert: true });
+    const lean = calculateStateLeanForCache(sd, [], {
+      countryId: "UK",
+      stateId: sd._id,
+      preset,
+      demographicDefaults: sd,
+    });
+    await statesCollection(db).updateOne(
       { _id: sd._id },
       {
         $set: {
@@ -248,12 +228,14 @@ export async function seedUKDemographics(
   }
   for (const doc of ukDemographicTurnout) {
     const { _id, ...turnoutData } = doc;
-    await db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
-      .updateOne({ _id }, { $set: turnoutData }, { upsert: true });
+    await stateDemographicTurnoutCollection(db).updateOne(
+      { _id },
+      { $set: turnoutData },
+      { upsert: true }
+    );
   }
   log(
-    `Seeded UK demographics (preset: ${preset}): ${ukDemographicCategories.length} categories, ${ukRegionDemographics.length} region demographics, ${ukDemographicTurnout.length} turnout`
+    `Seeded UK demographics (preset: ${preset}): ${ukRegionDemographics.length} region demographics, ${ukDemographicTurnout.length} turnout`
   );
 }
 
@@ -264,7 +246,7 @@ export async function seedUKStatePartyOrg(
   preset?: string
 ) {
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "UK" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "UK" });
   }
 
   // Resolve preset: explicit arg wins, otherwise read from gameState
@@ -279,28 +261,23 @@ export async function seedUKStatePartyOrg(
   const orgs = await calculateUKStatePartyOrgs(db, activePreset);
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne(
-        { _id },
-        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
   }
   log(`Seeded ${orgs.length} UK state party org entries (preset: ${activePreset})`);
 }
 
 /**
- * Reconcile UK statePartyOrg rows with the calculated seed set, used during
- * world reset: inserts polling-derived rows for (region, party) pairs that
- * don't already exist (e.g. UUP's NIR row when a 1991 reset coming from a
- * 2019 game). Player-modified org values on existing rows are preserved —
- * never overwrites a row that's there.
+ * Reconcile UK statePartyOrg rows with the calculated seed set during world
+ * reset: insert polling-derived rows for (region, party) pairs that don't
+ * already exist. Player-modified org values on existing rows are preserved;
+ * this never overwrites a row that's there.
  *
- * This used to also sweep away rows for the regional parties (SNP/Plaid/DUP/
- * SF/UUP) outside their home nations. Those parties now stand UK-wide, so the
- * rows are legitimate and the sweep is gone — deleting them here would have
- * silently undone the org a party built up outside its historic home.
+ * Regional parties (SNP/Plaid/DUP/SF/UUP) now stand UK-wide, so their
+ * out-of-nation rows are legitimate and must not be swept.
  */
 export async function ensureMissingUKStatePartyOrgRows(
   db: Db,
@@ -319,8 +296,7 @@ export async function ensureMissingUKStatePartyOrgRows(
 
   // ── Insert missing expected rows ──────────────────────────────────────────
   const ids = orgs.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     // _id is a string composite ("REGION_partyId") — cast for the typed filter.
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
@@ -332,9 +308,7 @@ export async function ensureMissingUKStatePartyOrgRows(
   let inserted = 0;
   for (const org of orgs) {
     if (existingIds.has(org._id)) continue;
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .insertOne({ ...org, createdAt: now, updatedAt: now });
+    await statePartyOrgCollection(db).insertOne({ ...org, createdAt: now, updatedAt: now });
     inserted++;
   }
   if (inserted > 0) {
@@ -379,7 +353,7 @@ export async function seedUKStateMetrics(
     // UK_REGION_IDS is string[] — MongoDB filter $in accepts string[] but the typed collection's
     // _id infers as ObjectId in the UpdateFilter, requiring a cast here
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    await db.collection("macroMetrics").deleteMany({ _id: { $in: UK_REGION_IDS as any } });
+    await macroMetricsCollection<Document>(db).deleteMany({ _id: { $in: UK_REGION_IDS as any } });
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
@@ -443,7 +417,7 @@ export async function seedUKBaselines(
   if (reset) {
     // UK_REGION_IDS is string[] — untyped collection filter requires cast for string _id array
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.collection("stateBaselines").deleteMany({ _id: { $in: UK_REGION_IDS as any } });
+    await stateBaselinesCollection<Document>(db).deleteMany({ _id: { $in: UK_REGION_IDS as any } });
   }
   const { ukStateBaselines } = await import("@/lib/seeds/uk/ukStateBaselines");
   const { getRegionMetricPresets, applyMetricPresetToBaseline } =
@@ -474,9 +448,11 @@ export async function seedUKBaselines(
     const { _id, ...baselineData } = baseline;
     // _id is a string region key — untyped collection filter requires cast
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    await db
-      .collection("stateBaselines")
-      .updateOne({ _id: _id as any }, { $set: baselineData }, { upsert: true });
+    await stateBaselinesCollection<Document>(db).updateOne(
+      { _id: _id as any },
+      { $set: baselineData },
+      { upsert: true }
+    );
     /* eslint-enable @typescript-eslint/no-explicit-any */
   }
   log(`Seeded ${ukStateBaselines.length} UK region baselines (preset: ${preset})`);
@@ -516,25 +492,24 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
   if (reset) {
     const regionIds = Object.keys(UK_REGIONAL_COUNCIL_SEATS);
     // Delete Regional Council elections
-    const delElections = await db
-      .collection("elections")
-      .deleteMany({ electionType: "regionalCouncil", stateId: { $in: regionIds } });
+    const delElections = await electionsCollection<Document>(db).deleteMany({
+      electionType: "regionalCouncil",
+      stateId: { $in: regionIds },
+    });
     // Delete Regional Council elected officials
-    const delOfficials = await db
-      .collection("electedOfficials")
-      .deleteMany({ officeType: "regionalCouncil", state: { $in: regionIds } });
+    const delOfficials = await electedOfficialsCollection<Document>(db).deleteMany({
+      officeType: "regionalCouncil",
+      state: { $in: regionIds },
+    });
     // Retire NPPs that only held Regional Council office
-    const rcNpps = await db
-      .collection<NPP>("npps")
+    const rcNpps = await nppsCollection(db)
       .find({ "currentOffice.type": "regionalCouncil", countryId: "UK", retiredAt: null })
       .toArray();
     if (rcNpps.length > 0) {
-      await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: rcNpps.map((n) => n._id) } },
-          { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
-        );
+      await nppsCollection(db).updateMany(
+        { _id: { $in: rcNpps.map((n) => n._id) } },
+        { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
+      );
     }
     log(
       `Reset: deleted ${delElections.deletedCount} elections, ${delOfficials.deletedCount} officials, retired ${rcNpps.length} NPPs`
@@ -544,9 +519,10 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
   // ── Step 1: Update seat counts ──────────────────────────────────────────
   let seatUpdates = 0;
   for (const [regionId, seats] of Object.entries(UK_REGIONAL_COUNCIL_SEATS)) {
-    const result = await db
-      .collection<State>("states")
-      .updateOne({ _id: regionId }, { $set: { stateSenateSeats: seats } });
+    const result = await statesCollection(db).updateOne(
+      { _id: regionId },
+      { $set: { stateSenateSeats: seats } }
+    );
     if (result.modifiedCount > 0 || result.upsertedCount > 0) seatUpdates++;
   }
   log(`Updated stateSenateSeats on ${seatUpdates} UK regions`);
@@ -555,13 +531,15 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
   let electionsCreated = 0;
   for (const regionId of Object.keys(UK_REGIONAL_COUNCIL_SEATS)) {
     // Check if a regionalCouncil election already exists for this region
-    const existingRC = await db
-      .collection<Election>("elections")
-      .findOne({ countryId: "UK", electionType: "regionalCouncil", state: regionId });
+    const existingRC = await electionsCollection(db).findOne({
+      countryId: "UK",
+      electionType: "regionalCouncil",
+      state: regionId,
+    });
     if (existingRC) continue;
 
     // Find the current active or upcoming Commons election for this region
-    const commonsElection = await db.collection<Election>("elections").findOne(
+    const commonsElection = await electionsCollection(db).findOne(
       {
         countryId: "UK",
         electionType: "commons",
@@ -609,22 +587,21 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
       updatedAt: now,
     };
 
-    await db.collection<Election>("elections").insertOne(withCampaignRules(rcElection));
+    await electionsCollection(db).insertOne(withCampaignRules(rcElection));
     electionsCreated++;
   }
   log(`Created ${electionsCreated} Regional Council transition elections (synced to Commons)`);
 
   // ── Step 3: Populate NPP officials ──────────────────────────────────────
   // Load all UK regions to get parentRegionId for party lookups
-  const ukRegions = await db.collection<State>("states").find({ countryId: "UK" }).toArray();
+  const ukRegions = await statesCollection(db).find({ countryId: "UK" }).toArray();
   const regionMap = new Map(ukRegions.map((r) => [r._id, r]));
 
   // Cache for party slug → sequentialId lookups
   const partyCache = new Map<string, string>();
 
   // Get existing NPP names to avoid duplicates
-  const existingNPPs = await db
-    .collection<NPP>("npps")
+  const existingNPPs = await nppsCollection(db)
     .find({ retiredAt: null })
     .project({ name: 1 })
     .toArray();
@@ -637,8 +614,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
 
   for (const [regionId, totalSeats] of Object.entries(UK_REGIONAL_COUNCIL_SEATS)) {
     // Check how many seats are currently filled
-    const existingOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const existingOfficials = await electedOfficialsCollection(db)
       .find({ officeType: "regionalCouncil", state: regionId })
       .toArray();
     const filledSeats = existingOfficials.reduce((sum, o) => sum + (o.seatsHeld ?? 1), 0);
@@ -668,14 +644,16 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
         const info = SLUG_TO_PARTY[slug];
         if (info) {
           // Try by name first
-          let party = await db
-            .collection<PoliticalParty>("politicalParties")
-            .findOne({ name: info.name, countryId: "UK" });
+          let party = await politicalPartiesCollection(db).findOne({
+            name: info.name,
+            countryId: "UK",
+          });
           // Fallback: try by abbreviation
           if (!party) {
-            party = await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ abbreviation: info.abbr, countryId: "UK" });
+            party = await politicalPartiesCollection(db).findOne({
+              abbreviation: info.abbr,
+              countryId: "UK",
+            });
           }
           if (party) {
             seqId = String(party.sequentialId);
@@ -685,7 +663,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
       }
       if (!seqId) {
         // Final fallback: use Labour or Conservative
-        const fallback = await db.collection<PoliticalParty>("politicalParties").findOne({
+        const fallback = await politicalPartiesCollection(db).findOne({
           countryId: "UK",
           abbreviation: { $in: ["LAB", "CON"] },
         });
@@ -792,15 +770,13 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
         (o) => o.party === seqId && o.isNPP && o.nppId
       );
       if (existingOfficial) {
-        await db
-          .collection<ElectedOfficial>("electedOfficials")
-          .updateOne(
-            { _id: existingOfficial._id },
-            { $inc: { seatsHeld: newSeats }, $set: { updatedAt: now } }
-          );
+        await electedOfficialsCollection(db).updateOne(
+          { _id: existingOfficial._id },
+          { $inc: { seatsHeld: newSeats }, $set: { updatedAt: now } }
+        );
         // Also update the NPP's currentOffice
         if (existingOfficial.nppId) {
-          await db.collection<NPP>("npps").updateOne(
+          await nppsCollection(db).updateOne(
             { _id: existingOfficial.nppId },
             {
               $inc: { "currentOffice.seatsHeld": newSeats },
@@ -863,7 +839,7 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
         donorBaseLevel: 0,
         actionPoints: 0,
         lastActionProcessedTurn: 0,
-        archetypeApprovals: {},
+        bucketApprovals: {},
         electionCooldowns: {},
         createdAt: now,
         updatedAt: now,
@@ -891,11 +867,11 @@ export async function seedUKRegionalCouncil(db: Db, reset: boolean, log: (msg: s
     }
 
     if (nppsToInsert.length > 0) {
-      await db.collection<NPP>("npps").insertMany(nppsToInsert);
+      await nppsCollection(db).insertMany(nppsToInsert);
       nppsCreated += nppsToInsert.length;
     }
     if (officialsToInsert.length > 0) {
-      await db.collection<ElectedOfficial>("electedOfficials").insertMany(officialsToInsert);
+      await electedOfficialsCollection(db).insertMany(officialsToInsert);
       officialsCreated += officialsToInsert.length;
     }
   }
@@ -908,7 +884,7 @@ export async function removeLegacyUKCeremonialIdentity(
   db: Db,
   log: (msg: string) => void
 ): Promise<void> {
-  const result = await db.collection("npps").deleteMany({
+  const result = await nppsCollection<Document>(db).deleteMany({
     _id: new ObjectId("6770000000000000000000a1"),
     countryId: "UK",
     name: "King Charles III",
@@ -923,36 +899,27 @@ export async function removeLegacyUKCeremonialIdentity(
 
 /**
  * Admin-only destructive re-seed of UK devolved-executive NPP officials
- * for the 2020 preset:
- *   - First Ministers of Scotland (SNP), Wales (Labour), Northern Ireland (DUP)
- *   - Mayor of London (Labour)
- *
- * Uses the recycled `governor` officeType — see
- * `docs/design/uk-jp-devolved-executives.md`. English non-London regions
- * (SEE/SWE/EAE/EMI/WMI/YHU/NWE/NEE) have no devolved executive and are
- * skipped. Mirrors `seedDEMinisterPresidents2020`.
- *
- * NOT called from `bootstrapGameWorld` — the bootstrap path seeds these
- * officials via the `UK_FIRST_MINISTERS_2020` historical-seat array
- * embedded in `getPresetSeats("2019-default")`. This function exists
- * only as the `/api/admin/seed` target `"ukGovernors2020"` for
- * destructive re-seed operations.
+ * for the 2020 preset. Uses the recycled `governor` officeType;
+ * English non-London regions have no devolved executive and are skipped.
+ * Not called from bootstrapGameWorld, which seeds via UK_FIRST_MINISTERS_2020.
+ * Exists only as the `/api/admin/seed` target "ukGovernors2020".
  */
 export async function seedUKGovernors2020(db: Db, reset: boolean, log: (msg: string) => void) {
   if (reset) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId: "UK", officeType: "governor", isNPP: true })
       .project<{ nppId?: ObjectId }>({ nppId: 1 })
       .toArray();
     const nppIds = officials.map((o) => o.nppId).filter((id): id is ObjectId => id != null);
 
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ countryId: "UK", officeType: "governor", isNPP: true });
+    await electedOfficialsCollection(db).deleteMany({
+      countryId: "UK",
+      officeType: "governor",
+      isNPP: true,
+    });
 
     if (nppIds.length > 0) {
-      await db.collection<NPP>("npps").updateMany(
+      await nppsCollection(db).updateMany(
         { _id: { $in: nppIds }, "currentOffice.type": "governor" },
         {
           $set: {

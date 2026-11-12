@@ -4,6 +4,10 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Character, Election, ElectionCandidate, PoliticalParty } from "@/lib/db/types";
 import { officeLabelFor } from "@/lib/utils/officeLabel";
 import { raceLabel } from "@/components/state/overview/raceLabel";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -97,8 +101,7 @@ export async function getStateRoster(
   const page = Math.max(1, Math.floor(args.page) || 1);
   const skip = (page - 1) * pageSize;
 
-  const [facet] = await db
-    .collection<Character>("characters")
+  const [facet] = await charactersCollection(db)
     .aggregate<{ rows: RosterFacetRow[]; total: [{ n: number }] | [] }>([
       { $match: { countryId, homeState: stateId } },
       {
@@ -147,10 +150,7 @@ export async function getStateRoster(
   }
 
   // Party names/colors: one bounded fetch (a handful of parties per country).
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .toArray();
+  const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
   const partyBySequentialId = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
   // Active-candidacy lookup, scoped to just this page's characters that
@@ -159,15 +159,13 @@ export async function getStateRoster(
   const needsRaceLookup = rows.filter((r) => !r.currentOffice).map((r) => r._id);
   const raceLabelByCharacterId = new Map<string, string>();
   if (needsRaceLookup.length > 0) {
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ characterId: { $in: needsRaceLookup }, status: "active" })
       .sort({ enteredAt: -1 })
       .toArray();
     if (candidates.length > 0) {
       const electionIds = candidates.map((c) => c.electionId);
-      const elections = await db
-        .collection<Election>("elections")
+      const elections = await electionsCollection(db)
         .find({ _id: { $in: electionIds } })
         .toArray();
       const electionById = new Map(elections.map((e) => [e._id.toString(), e]));

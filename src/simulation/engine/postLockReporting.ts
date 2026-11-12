@@ -2,24 +2,24 @@ import type { Db } from "mongodb";
 import type { GameState, TurnLog, TurnPhaseTelemetryMap } from "@/lib/db/types";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import type { TurnExecutionContext, TurnPhaseRuntime } from "@/simulation/engine/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Reporting phases that run after the turn commits and releases its lock.
  *
  * These phases only write their own history and snapshot records, and nothing
- * in the turn or in the next turn's simulation reads those records (see
- * `postLockReportingPhases.ts` for the per-phase reasoning). Running them
- * inside the lock only kept players waiting on routes that reject during a
- * turn. They now run in the same worker straight after the commit:
+ * in the turn or next turn's simulation reads them. Running them in-lock only
+ * kept players waiting on routes that reject during a turn. Running them
+ * straight after commit is safe because:
  *
  * - every phase is stamped with the turn it snapshots, passed in explicitly,
  *   never read back from `gameState`, so a late or retried run cannot land on
  *   the wrong turn;
  * - before each step the world is checked: if a newer turn has started or
- *   committed, the remaining steps are skipped and logged instead of recording
- *   the next turn's world under this turn's number;
- * - phase timings are recorded with the same telemetry as in-lock phases and
- *   merged into the turn's log, so turn diagnostics still list them.
+ *   committed, the remaining steps are skipped and logged rather than recorded
+ *   under this turn's number;
+ * - phase timings use the same telemetry as in-lock phases and merge into the
+ *   turn's log.
  */
 
 /** Turn context handed to a post-lock step, plus what only exists after the commit. */
@@ -56,9 +56,10 @@ export const NEWER_TURN_STARTED_MESSAGE =
  * snapshot taken now would describe that turn instead.
  */
 export async function isWorldStillOnTurn(db: Pick<Db, "collection">, turn: number) {
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, isProcessing: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isProcessing: 1 } }
+  );
   return state != null && state.currentTurn === turn && state.isProcessing !== true;
 }
 

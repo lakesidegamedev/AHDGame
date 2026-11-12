@@ -8,9 +8,15 @@ export interface DisasterEffectEntry {
   strategyId: string | null;
   /** See CrisisEffect.physicality. Absent = financial (margin-only). */
   physicality?: "physical" | "financial";
+  /**
+   * A standing condition rebuilt every turn (climate pressure) rather than an
+   * event: applies at full `value` with no decay or expiry.
+   */
+  persistent?: boolean;
 }
 
-type DecayCrisis = Pick<Crisis, "effects" | "startTurn" | "durationTurns" | "regionIds">;
+type DecayCrisis = Pick<Crisis, "effects" | "startTurn" | "durationTurns" | "regionIds"> &
+  Partial<Pick<Crisis, "v2Output">>;
 
 /**
  * Index every active crisis's decaying `profitMargin` effects by the stateId they
@@ -28,14 +34,31 @@ export function buildDisasterEffectsByState<T extends DecayCrisis>(
     const decayEffects = crisis.effects.filter(
       (e) => e.effectType === "decay" && e.targetType === "profitMargin"
     );
-    if (decayEffects.length === 0 || crisis.durationTurns == null) continue;
+    const cuts = crisis.v2Output?.productionCuts ?? [];
+    const hasDecay = decayEffects.length > 0 && crisis.durationTurns != null;
+    if (!hasDecay && cuts.length === 0) continue;
     for (const stateId of resolveStateIds(crisis)) {
       const list = result.get(stateId) ?? [];
+      for (const cut of cuts) {
+        list.push({
+          value: cut.points,
+          startTurn: crisis.startTurn,
+          durationTurns: 0,
+          sectorType: cut.sectorType,
+          strategyId: null,
+          physicality: "physical",
+          persistent: true,
+        });
+      }
+      if (!hasDecay) {
+        result.set(stateId, list);
+        continue;
+      }
       for (const eff of decayEffects) {
         list.push({
           value: eff.value,
           startTurn: crisis.startTurn,
-          durationTurns: crisis.durationTurns,
+          durationTurns: crisis.durationTurns as number,
           sectorType: eff.sectorType,
           strategyId: eff.strategyId,
           physicality: eff.physicality,
@@ -109,12 +132,15 @@ export function computeDisasterPenaltySplit(
   for (const entry of entries) {
     if (entry.sectorType && entry.sectorType !== sector.sectorType) continue;
     if (entry.strategyId && entry.strategyId !== sector.strategyId) continue;
-    if (entry.durationTurns <= 0) continue;
-    const expiryTurn = entry.startTurn + entry.durationTurns;
-    const turnsRemaining = expiryTurn - currentTurn;
-    if (turnsRemaining <= 0) continue;
-    const clamped = Math.min(turnsRemaining, entry.durationTurns);
-    const decayed = entry.value * (clamped / entry.durationTurns);
+    let decayed = entry.value;
+    if (!entry.persistent) {
+      if (entry.durationTurns <= 0) continue;
+      const expiryTurn = entry.startTurn + entry.durationTurns;
+      const turnsRemaining = expiryTurn - currentTurn;
+      if (turnsRemaining <= 0) continue;
+      const clamped = Math.min(turnsRemaining, entry.durationTurns);
+      decayed = entry.value * (clamped / entry.durationTurns);
+    }
     if (plantsEnabled && entry.physicality === "physical") {
       productionPenalty += decayed;
     } else {

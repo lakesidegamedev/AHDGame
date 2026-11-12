@@ -2,22 +2,16 @@ import type { StateMetrics } from "@/lib/db/types";
 import { ukStateMetrics } from "@/lib/countries/uk/data/ukStateMetrics";
 
 /**
- * Per-region, per-era HAND-AUTHORED values for the UK's new overhaul ROOT metrics.
- * Consumed via `getRegionMetricPresets` and overlaid by `seedUKStateMetrics` /
- * `seedUKBaselines` AFTER `applyEra1991Adjustments`. The preset is the SINGLE SOURCE OF
- * TRUTH for these metrics in both eras; `uniformMetricDefault` is a fallback only.
+ * Per-region, per-era hand-authored values for the UK's root metrics.
+ * Consumed via `getRegionMetricPresets`, overlaid by `seedUKStateMetrics` /
+ * `seedUKBaselines` AFTER `applyEra1991Adjustments`. The preset is the single
+ * source of truth for these metrics in both eras; `uniformMetricDefault` is a
+ * fallback only.
  *
- * Like JP, the UK seed (`ukStateMetrics`) already hand-authors many of these metrics per
- * region (propertyValueIndex, gcseAttainment, nhsWaitingTime, mentalHealthAccess,
- * socialCareQuality, antiSocialBehaviourRate, knifeCrimeRate, floodRisk, childPoverty,
- * housingAffordability, roughSleeping, devolutionSatisfaction, bbcTrust, …). The 2019 bundle
- * PRESERVES those (read from the seed) and authors only the metrics the seed left to the
- * uniform formula. 1991 is fully authored.
- *
- * The UK is the one country that natively uses `nhsWaitingTime`, `gcseAttainment` and
- * `bbcTrust` (the others exclude those UK-coined metrics). `housingAffordability` follows the
- * UK seed's price-to-income RATIO convention (≈4–16), not the 0–100 pressure index the other
- * countries use — preserved as-is so it stays consistent with the seed.
+ * 2019 preserves the metrics the seed already authors and fills in only the
+ * rest; 1991 is fully authored. The UK natively uses `nhsWaitingTime`,
+ * `gcseAttainment` and `bbcTrust`. `housingAffordability` follows the seed's
+ * price-to-income ratio convention (≈4-16), not the 0-100 pressure index.
  */
 
 /** A per-region map of metricPath → numeric value (only the metrics the UK authors). */

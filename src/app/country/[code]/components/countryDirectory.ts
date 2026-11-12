@@ -298,7 +298,7 @@ function nationRows(input: DirectoryInput, config: CountryClientConfig): Directo
       ? [
           {
             label: "Cold War",
-            href: "/world/conflicts",
+            href: "/world/crises?view=conflicts",
             available: true,
             figure: defcon.figure,
             figureTone: defcon.tone,

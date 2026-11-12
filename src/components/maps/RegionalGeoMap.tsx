@@ -316,14 +316,12 @@ export function featureCentroid(geo: GeoFeature): [number, number] {
 }
 
 /**
- * Generic regional map: renders ONLY the regions in `regionCodes` from a
- * combined region-code-keyed GeoJSON, auto-fitting the projection to them. A
- * region appears here purely because its code is in the live roster — so a
- * transferred region follows its owner with no geometry change.
+ * Renders ONLY the regions in `regionCodes` from a region-code-keyed GeoJSON,
+ * auto-fitting the projection to them. A region appears because its code is in
+ * the live roster, so transfers need no geometry change.
  *
- * Opt-in extensions (all default-off, so parliamentary maps are unaffected):
- * `projection`/`projectionConfig` (e.g. AlbersUsa), `splitMode`/`splitData`
- * (two-colour Senate splits), and `zoomable` (pan/zoom). Used by the US map.
+ * Opt-in, default-off extensions: `projection`/`projectionConfig`,
+ * `splitMode`/`splitData`, and `zoomable`.
  */
 export function RegionalGeoMap({
   sourceUrl,

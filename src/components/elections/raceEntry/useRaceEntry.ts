@@ -7,6 +7,7 @@ import { buildWithdrawalConfirmMessage } from "@/lib/elections/withdrawalWarning
 import { huDistrictIds } from "@/lib/countries/hu/rules/constituencies2014";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { canEnter, canWithdraw, type EntryRuleRace } from "./entryRules";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** The parts of an election (full view) the entry flow reads. */
 export interface RaceEntryElection extends EntryRuleRace {
@@ -64,7 +65,7 @@ export function useRaceEntry(
     let japanShugiinListOrder: number | undefined;
     const japanMixed = election.japanShugiinRules?.ruleVersion === "mixed-1994-v1";
     if (
-      election.countryId === "HU" &&
+      countryHasFeature("huUi", election.countryId) &&
       election.electionType === "nationalAssembly" &&
       election.hungarianModernAssembly?.ruleVersion === "mixed-2011-v1"
     ) {

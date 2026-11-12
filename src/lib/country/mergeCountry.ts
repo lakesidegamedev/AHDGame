@@ -53,6 +53,19 @@ import {
   INTERNATIONAL_ORGANIZATIONS,
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 export interface MergeCountryArgs {
   /** The country being absorbed. Retired when this completes. */
@@ -90,7 +103,7 @@ export async function mergeCountry(db: Db, args: MergeCountryArgs): Promise<Merg
     return { ok: false, error: "A country cannot absorb itself.", ...empty };
   }
 
-  const gameStates = db.collection<CountryGameState>("countryGameStates");
+  const gameStates = countryGameStatesCollection(db);
   const already = await gameStates.findOne({ _id: fromCountryId });
   // Idempotent: a merge that already ran is a no-op, not an error. The turn
   // phase may see the same resolved crisis more than once.
@@ -104,8 +117,7 @@ export async function mergeCountry(db: Db, args: MergeCountryArgs): Promise<Merg
     return { ok: false, error: "The absorbing country has itself been dissolved.", ...empty };
   }
 
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find(
       { countryId: fromCountryId },
       { projection: { _id: 1, name: 1, region: 1, votingSystem: 1 } }
@@ -246,10 +258,9 @@ async function transferOrRetireOrgMemberships(
   toCountryId: CountryId,
   currentTurn: number
 ): Promise<void> {
-  const memberships = (await db
-    .collection("organizationMemberships")
-    .find({ countryId: fromCountryId })
-    .toArray()) as unknown as Array<{ organizationId: string }>;
+  const memberships = await organizationMembershipsCollection<Document>(db)
+    .find<{ organizationId: string }>({ countryId: fromCountryId })
+    .toArray();
   if (memberships.length === 0) return;
 
   const preset = await getGameStatePresetOrDefault(db);
@@ -296,16 +307,18 @@ async function sweepNationalStrays(
   absorbedTariffsWin: boolean
 ): Promise<void> {
   const now = new Date();
-  await db
-    .collection("npps")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  await nppsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
   // NATIONAL-scope subsidies: the region-scoped rows crossed with their regions
   // (the `subsidies` collection is in REGION_SCOPED_COLLECTIONS by stateId), so
   // whatever still carries the old countryId here is a national programme — the
   // unified treasury inherits the obligation.
-  await db
-    .collection("subsidies")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  await subsidiesCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
   // Tariffs are collision-aware IN THE WINNER'S FAVOUR: where BOTH states
   // legislated a tariff on the same scope (same sector, same origin country,
   // same corporation, or both economy-wide), one record has to go, because two
@@ -327,20 +340,19 @@ async function sweepNationalStrays(
   // policy, colliding or not.
   const tariffWinner = absorbedTariffsWin ? fromCountryId : toCountryId;
   const tariffLoser = absorbedTariffsWin ? toCountryId : fromCountryId;
-  const winningTariffs = (await db
-    .collection("tariffs")
-    .find({ countryId: tariffWinner })
-    .toArray()) as unknown as Array<{
-    scopeType: string;
-    targetSectorType?: unknown;
-    targetOriginCountryId?: unknown;
-    targetCorporationId?: unknown;
-  }>;
+  const winningTariffs = await tariffsCollection<Document>(db)
+    .find<{
+      scopeType: string;
+      targetSectorType?: unknown;
+      targetOriginCountryId?: unknown;
+      targetCorporationId?: unknown;
+    }>({ countryId: tariffWinner })
+    .toArray();
   if (winningTariffs.length > 0) {
     // One $or delete for every colliding scope, not a round trip per tariff.
     // An explicit null in each key matches both a missing and a null field, so
     // "economy_wide vs economy_wide" collides exactly like a shared sector.
-    await db.collection("tariffs").deleteMany({
+    await tariffsCollection<Document>(db).deleteMany({
       countryId: tariffLoser,
       $or: winningTariffs.map((tariff) => ({
         scopeType: tariff.scopeType,
@@ -350,18 +362,18 @@ async function sweepNationalStrays(
       })),
     });
   }
-  await db
-    .collection("tariffs")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
-  await db
-    .collection("bills")
-    .updateMany(
-      { countryId: fromCountryId, status: { $in: NON_TERMINAL_BILL_STATUSES } },
-      { $set: { status: "failed", failedAt: now, updatedAt: now } }
-    );
-  await db
-    .collection("bills")
-    .updateMany({ countryId: fromCountryId }, { $set: { countryId: toCountryId, updatedAt: now } });
+  await tariffsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
+  await billsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId, status: { $in: NON_TERMINAL_BILL_STATUSES } },
+    { $set: { status: "failed", failedAt: now, updatedAt: now } }
+  );
+  await billsCollection<Document>(db).updateMany(
+    { countryId: fromCountryId },
+    { $set: { countryId: toCountryId, updatedAt: now } }
+  );
 
   // Intelligence is PURGED, not transferred.
   //
@@ -422,7 +434,7 @@ async function mergeNationalCorporations(
   toCountryId: CountryId,
   now: Date
 ): Promise<void> {
-  const corps = db.collection("corporations");
+  const corps = corporationsCollection<Document>(db);
 
   const incumbentId = (
     await corps.findOne(
@@ -490,9 +502,7 @@ async function mergeNationalCorporations(
   if (strandedIds.length > 0) {
     const pair = await loadFxScalePair(db, fromCountryId, toCountryId);
     if (pair.kind === "convert") {
-      const stranded = (await corps
-        .find({ _id: { $in: strandedIds } })
-        .toArray()) as unknown as Corporation[];
+      const stranded = await corps.find<Corporation>({ _id: { $in: strandedIds } }).toArray();
       for (const corp of stranded) {
         await convertCorpCurrency(db, corp, pair.newCurrency, pair.fxByCurrency, now, true);
       }
@@ -513,8 +523,7 @@ async function mergeNationalCorporations(
   const survivor = await corps.findOne({ _id: survivorId });
   if (!survivor) return;
   const absorbed = await corps.find({ _id: { $in: absorbedIds } }).toArray();
-  const absorbedSectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const absorbedSectors = await corporateSectorsCollection(db)
     .find({ corporationId: { $in: absorbedIds } })
     .toArray();
   const transitionKeys = await reserveSectorsForTransition(
@@ -541,7 +550,7 @@ async function mergeNationalCorporations(
     )) {
       const transitionKey = transitionKeyBySectorId.get(sector._id.toHexString());
       if (!transitionKey) throw new Error("A secured sector reservation was lost");
-      const moved = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const moved = await corporateSectorsCollection(db).updateOne(
         {
           _id: sector._id,
           corporationId: shell._id,
@@ -553,12 +562,10 @@ async function mergeNationalCorporations(
         throw new Error("A sector changed during National Corporation consolidation");
       movedSectorIds.push(sector._id);
     }
-    await db
-      .collection("bonds")
-      .updateMany(
-        { corporationId: shell._id },
-        { $set: { corporationId: survivor._id, issuerName: survivor.name, updatedAt: now } }
-      );
+    await bondsCollection(db).updateMany(
+      { corporationId: shell._id },
+      { $set: { corporationId: survivor._id, issuerName: survivor.name, updatedAt: now } }
+    );
     await repointShareholderEntries(db, shell._id, survivor._id, now);
 
     const cash = Number(shell.liquidCapital ?? 0);
@@ -626,7 +633,7 @@ async function repointShareholderEntries(
   toCorpId: unknown,
   now: Date
 ): Promise<void> {
-  const corps = db.collection("corporations");
+  const corps = corporationsCollection<Document>(db);
   const issuers = await corps.find({ "shareholders.corporationId": fromCorpId }).toArray();
 
   for (const issuer of issuers) {
@@ -712,11 +719,10 @@ async function cancelAbsorbedElections(
   const live = { status: { $in: ["active", "upcoming"] as const } };
 
   // 1. Every live race still keyed to the country being absorbed.
-  const strays = (await db
-    .collection<{ _id: import("mongodb").ObjectId }>("elections")
+  const strays = await electionsCollection<{ _id: import("mongodb").ObjectId }>(db)
     .find({ countryId: fromCountryId, ...live })
-    .project({ _id: 1 })
-    .toArray()) as unknown as Array<{ _id: import("mongodb").ObjectId }>;
+    .project<{ _id: import("mongodb").ObjectId }>({ _id: 1 })
+    .toArray();
 
   // 2. Live races on the SURVIVOR whose electionType belongs to the dissolved
   //    constitution — they arrived through the region re-key. The office remap
@@ -728,18 +734,20 @@ async function cancelAbsorbedElections(
   //    machinery would not re-run.
   const table = officeRemapFor(fromCountryId, toCountryId);
   const absorbedTypes = new Set(table ? Object.keys(table) : []);
-  const survivorLive = (await db
-    .collection<{ _id: import("mongodb").ObjectId; electionType: string }>("elections")
+  const survivorLive = await electionsCollection<{
+    _id: import("mongodb").ObjectId;
+    electionType: string;
+  }>(db)
     .find({ countryId: toCountryId, ...live })
-    .project({ _id: 1, electionType: 1 })
-    .toArray()) as unknown as Array<{ _id: import("mongodb").ObjectId; electionType: string }>;
+    .project<{ _id: import("mongodb").ObjectId; electionType: string }>({ _id: 1, electionType: 1 })
+    .toArray();
   const foreign = survivorLive.filter((e) => absorbedTypes.has(e.electionType));
 
   const ids = [...strays, ...foreign].map((e) => e._id);
   if (ids.length === 0) return 0;
 
-  await db.collection("electionCandidates").deleteMany({ electionId: { $in: ids } });
-  const res = await db.collection("elections").deleteMany({ _id: { $in: ids } });
+  await electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: ids } });
+  const res = await electionsCollection<Document>(db).deleteMany({ _id: { $in: ids } });
   if ((res?.deletedCount ?? 0) > 0) {
     console.log(
       `[mergeCountry] ${fromCountryId}->${toCountryId}: cancelled ${res.deletedCount} in-flight ` +

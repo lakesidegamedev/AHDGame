@@ -25,6 +25,16 @@ import { populationWeights } from "./apportion";
 import { SUB_REGION_SEEDS, CAPITAL_SUBREGION, type SecedingCountryId } from "./subRegions";
 import { planPartyRemap, type RegionParty } from "./partyRemap";
 import { remapRecruitmentSlates } from "./remapRecruitmentSlates";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { countersCollection } from "@/lib/db/repositories/counters";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 /** Region-party ledger collections dissolved on secession (the new country reseeds). */
 const REGION_PARTY_LEDGERS = [
@@ -53,14 +63,10 @@ export async function splitParties(
   const majorPartyIds = getCountryConfig(toCountryId).majorPartyIds ?? [];
 
   // ── Gather the region's parties + classify region-homed vs UK-wide ──────────
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId: fromCountryId })
     .toArray();
-  const orgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .find({ countryId: fromCountryId })
-    .toArray();
+  const orgs = await statePartyOrgCollection(db).find({ countryId: fromCountryId }).toArray();
 
   const regionSeqIds = new Set<number>();
   for (const o of officials)
@@ -85,8 +91,7 @@ export async function splitParties(
         (g.organization ?? 0) >= TIER_LOSE_REGION_ORG_PCT
     );
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: fromCountryId })
     .toArray()
     .then((rows) => rows.map((row) => ({ ...row })));
@@ -100,8 +105,7 @@ export async function splitParties(
     regionParties.push({ sequentialId: seqId, isRegionHomed: !hasOutsidePresence(seqId) });
   }
 
-  const residentLeaders = await db
-    .collection("characters")
+  const residentLeaders = await charactersCollection<Document>(db)
     .find(
       { countryId: { $in: [fromCountryId, toCountryId] } },
       { projection: { _id: 1, countryId: 1, party: 1 } }
@@ -110,8 +114,7 @@ export async function splitParties(
     .then((rows) => rows.map((row) => ({ ...row })));
 
   // Next free sequentialId in the new country (stood up fresh — usually 1).
-  const existingNew = await db
-    .collection<PoliticalParty>("politicalParties")
+  const existingNew = await politicalPartiesCollection(db)
     .find({ countryId: toCountryId })
     .toArray();
   const nextSequentialId = existingNew.reduce((m, p) => Math.max(m, p.sequentialId ?? 0), 0) + 1;
@@ -121,21 +124,16 @@ export async function splitParties(
   if (!plan.wholesale.length && !plan.independentized.length)
     return { wholesale: 0, independentized: 0, idMap: {} };
 
-  const successorStates = await db
-    .collection<State>("states")
-    .find({ countryId: toCountryId })
-    .toArray();
+  const successorStates = await statesCollection(db).find({ countryId: toCountryId }).toArray();
   const regions = successorStates.length ? successorStates : SUB_REGION_SEEDS[toCountryId];
   const shares = populationWeights(regions);
 
   // ── Wholesale: flip the region-homed major's doc to the new country ─────────
   for (const oldSeq of plan.wholesale) {
-    await db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { sequentialId: oldSeq, countryId: fromCountryId },
-        { $set: { countryId: toCountryId, sequentialId: plan.idMap[oldSeq], updatedAt: now } }
-      );
+    await politicalPartiesCollection(db).updateOne(
+      { sequentialId: oldSeq, countryId: fromCountryId },
+      { $set: { countryId: toCountryId, sequentialId: plan.idMap[oldSeq], updatedAt: now } }
+    );
   }
 
   // Snapshot both actor rosters before any party id changes can collide.
@@ -196,13 +194,15 @@ export async function splitParties(
       },
     };
   });
-  if (leadershipOps.length)
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(leadershipOps);
+  if (leadershipOps.length) await politicalPartiesCollection(db).bulkWrite(leadershipOps);
 
   const movedOrgs: StatePartyOrg[] = [];
   const refunds = new Map<number, number>();
-  const pools = await db
-    .collection<{ _id: string; stateId: string; independent: number }>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection<{
+    _id: string;
+    stateId: string;
+    independent: number;
+  }>(db)
     .find({ countryId: toCountryId })
     .toArray();
   const removedRegistration = orgs
@@ -265,8 +265,8 @@ export async function splitParties(
       refunds.set(oldSeq, (refunds.get(oldSeq) ?? 0) + (org.treasury ?? 0));
     }
   }
-  if (movedOrgs.length) await db.collection<StatePartyOrg>("statePartyOrg").insertMany(movedOrgs);
-  await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({
+  if (movedOrgs.length) await statePartyOrgCollection(db).insertMany(movedOrgs);
+  await statePartyOrgCollection(db).deleteMany({
     countryId: fromCountryId,
     $or: [{ stateId: regionId }, { partyId: { $in: plan.wholesale.map(String) } }],
   });
@@ -280,10 +280,9 @@ export async function splitParties(
       },
     };
   });
-  if (refundOps.length)
-    await db.collection<PoliticalParty>("politicalParties").bulkWrite(refundOps);
+  if (refundOps.length) await politicalPartiesCollection(db).bulkWrite(refundOps);
   if (pools.length && removedRegistration > 0)
-    await db.collection<{ _id: string; independent: number }>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection<{ _id: string; independent: number }>(db).bulkWrite(
       pools.map((pool) => ({
         updateOne: {
           filter: { _id: pool._id },
@@ -298,7 +297,7 @@ export async function splitParties(
     (org) => org.stateId !== regionId && wholesaleIds.includes(org.partyId)
   );
   if (outside.length)
-    await db.collection<{ _id: string; independent: number }>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection<{ _id: string; independent: number }>(db).bulkWrite(
       outside.map((org) => ({
         updateOne: {
           filter: { _id: `${fromCountryId}_${org.stateId}` },
@@ -308,14 +307,13 @@ export async function splitParties(
     );
   const outsideMembers = { countryId: fromCountryId, party: { $in: wholesaleIds } };
   const independentize = { $set: { party: "independent", updatedAt: now } };
-  await db.collection("characters").updateMany(outsideMembers, independentize);
-  await db.collection("npps").updateMany(outsideMembers, independentize);
-  const budgets = await db
-    .collection("partyBudget")
+  await charactersCollection<Document>(db).updateMany(outsideMembers, independentize);
+  await nppsCollection<Document>(db).updateMany(outsideMembers, independentize);
+  const budgets = await partyBudgetCollection<Document>(db)
     .find({ countryId: fromCountryId, scope: "national", partyId: { $in: wholesaleIds } })
     .toArray();
   if (budgets.length)
-    await db.collection("partyBudget").bulkWrite(
+    await partyBudgetCollection<Document>(db).bulkWrite(
       budgets.map((row) => ({
         updateOne: {
           filter: { _id: row._id },
@@ -388,13 +386,11 @@ export async function splitParties(
   // Advance the new country's party counter past the assigned ids.
   const assigned = Object.values(plan.idMap);
   if (assigned.length > 0) {
-    await db
-      .collection<Counter>("counters")
-      .updateOne(
-        { _id: `party_${toCountryId}` },
-        { $set: { seq: Math.max(nextSequentialId - 1, ...assigned) } },
-        { upsert: true }
-      );
+    await countersCollection(db).updateOne(
+      { _id: `party_${toCountryId}` },
+      { $set: { seq: Math.max(nextSequentialId - 1, ...assigned) } },
+      { upsert: true }
+    );
   }
 
   return {

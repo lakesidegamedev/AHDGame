@@ -29,6 +29,11 @@ export type ShippingPreset = (typeof SHIPPING_PRESETS)[number];
  *
  * - `player` / `econ` / `npp` — registered (in `COUNTRY_ORDER`) and seeded,
  *   differing only in what a player may do with it.
+ * - `background`: registered, with its country document, currency and
+ *   exchange rate, but NOT run by the full simulation: no corporations,
+ *   sectors, NPP politicians or full-engine elections are seeded, and every
+ *   per-country turn phase skips it. The cheap aggregate model for these
+ *   countries arrives separately.
  * - `latent` — **seeded but deliberately not registered.** The bootstrap writes
  *   its regions, parties and budgets, and it renders on the world map, but it is
  *   absent from `COUNTRY_ORDER` so nothing offers it to players. UKR/BLR/BAL in
@@ -49,7 +54,7 @@ export type ShippingPreset = (typeof SHIPPING_PRESETS)[number];
  * everywhere else, where "does not apply" and "not done yet" are
  * indistinguishable and so neither can be checked.
  */
-export type CountryEraTier = "player" | "econ" | "npp" | "latent" | "absent";
+export type CountryEraTier = "player" | "econ" | "npp" | "background" | "latent" | "absent";
 
 export interface EraRosterSpec {
   /** Tier for every country not named below. */
@@ -57,6 +62,8 @@ export interface EraRosterSpec {
   player?: readonly CountryId[];
   econ?: readonly CountryId[];
   npp?: readonly CountryId[];
+  /** Registered, but outside the full simulation. See `CountryEraTier`. */
+  background?: readonly CountryId[];
   /** Seeded, rendered on the map, deliberately NOT in `COUNTRY_ORDER`. */
   latent?: readonly CountryId[];
   /**
@@ -68,21 +75,11 @@ export interface EraRosterSpec {
    */
   vacantChambers?: readonly `${CountryId}.${string}`[];
   /**
-   * Seats a seated chamber deliberately leaves unfilled, as `{ "US.house": 5 }`.
-   *
-   * `vacantChambers` says "nobody is seated here yet"; this says "this many
-   * seats inside a seated chamber are genuinely empty". The February 2020 US
-   * House had five vacancies pending special elections, so a roster seating 435
-   * would be inventing five members, while one seating 430 with nothing declared
-   * is indistinguishable from a roster somebody truncated. Declaring the gap is
-   * what lets S4 assert `seated + vacant == chamber size` and still fail when a
-   * roster is genuinely short.
-   *
-   * ⚠️ This does NOT drive gameplay. The running game derives vacancy itself as
-   * `chamber size - filled seats` (see the congress and legislature members
-   * routes), so the five empty House seats reach players without anything
-   * reading this field. It exists so a CHECK can tell a deliberate vacancy from
-   * a short roster, which is a question the runtime never has to ask.
+   * Seats in a seated chamber that are deliberately empty, e.g. `{ "US.house": 5 }`.
+   * This distinguishes a genuine vacancy from a short or truncated roster, so a
+   * CHECK can assert `seated + vacant == chamber size` and still fail on a
+   * genuinely short roster. The runtime does NOT read this: gameplay derives
+   * vacancy from `chamber size - filled seats`.
    */
   vacantSeats?: Partial<Record<`${CountryId}.${string}`, number>>;
 }
@@ -94,7 +91,7 @@ const ERA_ROSTER_LITERAL = {
     // The Warsaw Pact six are economy-preview here, NOT npp. Every spawner
     // behind them (ensureEasternBlocAssemblyElections, BLOC_CHAMBERS_1953) is
     // gated on countryGameStates.status in {beta, active}; demoting them to
-    // coming-soon makes all of it silently no-op, which is the pre-#3747
+    // coming-soon makes all of it silently no-op, which is the pre-
     // production bug. ES is absent from this list on purpose: the 1953 manifest
     // demotes Franco's Spain to a US-sphere macro entity (outside the UN until
     // 1955), so it is npp here and econ only from 1979.
@@ -236,31 +233,41 @@ const ERA_ROSTER_LITERAL = {
     vacantSeats: { "US.house": 5 },
   },
   /**
-   * The 2027 preset (#1687). Five player countries, not three: Germany, Japan
-   * and China are PLAYABLE here and therefore leave the econ list.
+   * The 2027 preset. Three kinds of country:
    *
-   * ⚠ THE TIERS MIRROR 2023, they do not mirror upstream's accessMap.
-   * Upstream builds 2027 from `POST_COLD_WAR_ECONOMY`, which would make France,
-   * Italy, Spain, Sweden, Turkey, Austria, Finland and Greece economy-preview
-   * here while they are `npp` in 2023 and 1999/2007. Nothing promotes them to
-   * a full-autonomous economy in 2027, so calling them economy-preview would
-   * advertise an economy the world does not build -- exactly the landing-page
-   * drift the roster was introduced to end. `countryTiers.test.ts` is what
-   * catches it: it re-derives the landing tables from the manifest.
+   * - player: the US and Canada, the countries players can join at launch.
+   * - npp: full simulation run by NPPs; each can be opened to players later
+   *   via `enabledForPlayers` without a reseed.
+   * - background: outside the full simulation to avoid turning them.
    *
-   * ⚠ NO `vacantSeats`. The 2019 entry carries five because February 2020
-   * really had five pending special elections; 2027 is a future world with a
-   * full authored roster, so a vacancy here would be invented rather than
-   * recorded.
+   * No `vacantSeats`: this is a future world with a full authored roster, so a
+   * vacancy would be invented rather than recorded. (2019 carries five because
+   * Feb 2020 really had five pending special elections.)
    */
   "2027-default": {
     default: "absent",
-    player: ["US", "UK", "DE", "JP", "CN"],
-    econ: ["IE", "BR", "NG"],
-    // The five modern successor countries are part of the effective 2027
-    // world. They remain hidden from players while their seed qualification
-    // and first election cycle are completed (#2289).
-    npp: ["RU", "PL", "HU", "RO", "BG", "FR", "IT", "ES", "SE", "TR", "AT", "FI", "GR"],
+    player: ["US", "CA"],
+    npp: ["UK", "DE", "JP", "CN"],
+    // Canada's Premiers and provincial legislatures fill at their first elections.
+    vacantChambers: ["CA.governor", "CA.provincialLegislature"],
+    background: [
+      "IE",
+      "BR",
+      "NG",
+      "RU",
+      "PL",
+      "HU",
+      "RO",
+      "BG",
+      "FR",
+      "IT",
+      "ES",
+      "SE",
+      "TR",
+      "AT",
+      "FI",
+      "GR",
+    ],
   },
 } satisfies Record<ShippingPreset, EraRosterSpec>;
 
@@ -289,6 +296,7 @@ export function tierFor(preset: ShippingPreset, countryId: CountryId): CountryEr
   if (spec.player?.includes(countryId)) return "player";
   if (spec.econ?.includes(countryId)) return "econ";
   if (spec.npp?.includes(countryId)) return "npp";
+  if (spec.background?.includes(countryId)) return "background";
   if (spec.latent?.includes(countryId)) return "latent";
   return spec.default;
 }
@@ -311,7 +319,29 @@ export function countriesByTier(preset: ShippingPreset, tier: CountryEraTier): C
 
 /** True when the roster says this country is registered in this preset. */
 export function isRegisteredTier(tier: CountryEraTier): boolean {
-  return tier === "player" || tier === "econ" || tier === "npp";
+  return tier === "player" || tier === "econ" || tier === "npp" || tier === "background";
+}
+
+/**
+ * True when this preset holds the country outside the full simulation.
+ *
+ * Takes a plain preset string because seeders receive one: a special or
+ * unknown preset has no roster and therefore no background countries, so
+ * every preset other than one that names a background list behaves exactly
+ * as before.
+ */
+export function isBackgroundInPreset(
+  preset: string | null | undefined,
+  countryId: string
+): boolean {
+  if (!preset || !isShippingPreset(preset)) return false;
+  return ERA_ROSTER[preset].background?.includes(countryId as CountryId) ?? false;
+}
+
+/** Countries this preset holds outside the full simulation, in roster order. */
+export function backgroundCountriesFor(preset: string | null | undefined): CountryId[] {
+  if (!preset || !isShippingPreset(preset)) return [];
+  return [...(ERA_ROSTER[preset].background ?? [])];
 }
 
 /** Seats this preset deliberately leaves unfilled inside a seated chamber. */

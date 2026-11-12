@@ -27,10 +27,21 @@ import { reconcileNorthernIrelandRatification } from "./northernIrelandRatificat
 import {
   allParticipants,
   driveConflictTurn,
+  nationsForRoles,
   type ConflictParticipants,
   type DrivenEvent,
 } from "./driver";
 import { GLOBAL_FINANCIAL_CRISIS_KEY, loadFinancialCrisisSignal } from "./financialCrisisPressure";
+import { isFutureConflictFamily, planFutureConflictTurn } from "./futureConflicts";
+import type { WaveSignalCache } from "./waveSignalLoader";
+import { severeConflictLoad, type SevereMembership } from "./rules/futureConflicts";
+import { loadActiveSevereCrisisRows } from "@/lib/crises/severeCrisisLoad";
+import { syncCampaignCrises, type CampaignTurnState } from "./campaignCrisis";
+import { mergeSevereLoads, severeLoadByCountry } from "@/lib/crises/rules/severeLoad";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { referendumsCollection } from "@/lib/db/repositories/referendums";
+import { coldWarTensionCollection } from "@/lib/db/repositories/coldWarTension";
 
 function roleMapForEvent(
   def: ReturnType<typeof allLivingConflictDefs>[number],
@@ -96,23 +107,20 @@ export async function materializeLivingConflictEvent(
   driven: DrivenEvent,
   currentTurn: number
 ): Promise<{ opened: boolean; blockedByActiveWindow: boolean }> {
-  const existing = await db
-    .collection<Crisis>("crises")
-    .findOne({ livingConflictEventId: driven.fired.id }, { projection: { _id: 1 } });
+  const existing = await crisesCollection(db).findOne(
+    { livingConflictEventId: driven.fired.id },
+    { projection: { _id: 1 } }
+  );
   if (existing) return { opened: false, blockedByActiveWindow: false };
-  const activeGlobalWindow = await db
-    .collection<Crisis>("crises")
-    .findOne(
-      { "globalResponse.conflictKey": def.key, status: "active" },
-      { projection: { _id: 1, startTurn: 1, durationTurns: 1 }, sort: { startTurn: -1 } }
-    );
+  const activeGlobalWindow = await crisesCollection(db).findOne(
+    { "globalResponse.conflictKey": def.key, status: "active" },
+    { projection: { _id: 1, startTurn: 1, durationTurns: 1 }, sort: { startTurn: -1 } }
+  );
   const activeNegotiationWindow = driven.fired.event.negotiation
-    ? await db
-        .collection<Crisis>("crises")
-        .findOne(
-          { livingConflictEventId: { $regex: `^${def.key}:` }, status: "active" },
-          { projection: { _id: 1, startTurn: 1, durationTurns: 1 }, sort: { startTurn: -1 } }
-        )
+    ? await crisesCollection(db).findOne(
+        { livingConflictEventId: { $regex: `^${def.key}:` }, status: "active" },
+        { projection: { _id: 1, startTurn: 1, durationTurns: 1 }, sort: { startTurn: -1 } }
+      )
     : null;
   const activeWindow = activeGlobalWindow ?? activeNegotiationWindow;
   // Crisis lifecycle closure happens later in the same turn. Do not let a
@@ -182,18 +190,15 @@ export interface LivingConflictTurnResult {
 export async function processLivingConflictsTurn(
   db: Db,
   currentTurn: number,
-  currentYear: number | null | undefined,
-  enabled: boolean
+  currentYear: number | null | undefined
 ): Promise<LivingConflictTurnResult> {
-  if (!enabled) return { conflictsProcessed: 0, eventsOpened: 0 };
   await migrateLegacyVietnamState(db);
   const [tension, activeWars] = await Promise.all([
-    db.collection<{ _id: string; value?: number }>("coldWarTension").findOne({ _id: "current" }),
+    coldWarTensionCollection<{ _id: string; value?: number }>(db).findOne({ _id: "current" }),
     getConflictsCollection(db).find({ status: "active" }).toArray(),
   ]);
   const [countryRows, macroCountries] = await Promise.all([
-    db
-      .collection<{ countryId?: string }>("states")
+    statesCollection<{ countryId?: string }>(db)
       .find({}, { projection: { countryId: 1, _id: 0 } })
       .toArray(),
     getMacroCountriesCollection(db).then((collection) =>
@@ -202,8 +207,11 @@ export async function processLivingConflictsTurn(
         .toArray()
     ),
   ]);
+  const regionCountryIds = new Set(
+    countryRows.map((row) => row.countryId).filter((id): id is string => Boolean(id))
+  );
   const availableCountryIds = new Set([
-    ...countryRows.map((row) => row.countryId).filter((id): id is string => Boolean(id)),
+    ...regionCountryIds,
     ...macroCountries.map((country) => country.entityId),
   ]);
   const vietnamExternalPressure = vietnamWorldPressure(tension?.value ?? 0, activeWars);
@@ -211,9 +219,18 @@ export async function processLivingConflictsTurn(
   const defs = allLivingConflictDefs().filter((def) => def.autoOpen !== false);
   let nuclearPrograms: Awaited<ReturnType<typeof listNuclearPrograms>> | null = null;
   let conflictsProcessed = 0;
+  // Severe conflicts already holding each country this turn, in registry
+  // order, so a later family can respect the stacking limit.
+  const severe: SevereMembership[] = [];
+  // Active crisis templates count against the same limit, so a country held by
+  // two severe crises is not hit by a new conflict wave either. Read once, only
+  // when a wave family is reached.
+  let crisisLoad: Map<string, number> | null = null;
+  const waveSignalCache: WaveSignalCache = {};
+  const campaigns: CampaignTurnState[] = [];
   for (const def of defs) {
     if (def.key === "northern_ireland") {
-      const reunified = await db.collection<Referendum>("referendums").findOne(
+      const reunified = await referendumsCollection(db).findOne(
         {
           countryId: "UK",
           regionId: "NIR",
@@ -263,6 +280,21 @@ export async function processLivingConflictsTurn(
       externalPressure = signal.pressure;
       openingTrackDeltas = signal.openingTrackDeltas;
     }
+    if (isFutureConflictFamily(def.key)) {
+      crisisLoad ??= severeLoadByCountry(await loadActiveSevereCrisisRows(db), []);
+      const plan = await planFutureConflictTurn(db, def, {
+        turn: currentTurn,
+        year: currentYear,
+        availableCountryIds,
+        regionCountryIds,
+        tension: tension?.value ?? 0,
+        load: mergeSevereLoads(severeConflictLoad(severe, def.key), crisisLoad),
+        signalCache: waveSignalCache,
+      });
+      participants = plan.participants;
+      externalPressure = plan.externalPressure;
+      observedTrackValues = plan.observedTrackValues;
+    }
     const result = await driveConflictTurn(
       db,
       def,
@@ -273,6 +305,13 @@ export async function processLivingConflictsTurn(
       openingTrackDeltas,
       observedTrackValues
     );
+    campaigns.push({ def, state: result.state, participants });
+    if (result.state.hasOpened && result.state.status === "active") {
+      severe.push({
+        defKey: def.key,
+        countryIds: nationsForRoles(participants, def.severeRoles ?? ["belligerent"]),
+      });
+    }
     if (def.key === "northern_ireland") {
       result.state = await reconcileNorthernIrelandRatification(
         db,
@@ -301,5 +340,6 @@ export async function processLivingConflictsTurn(
       await saveConflictState(db, { ...result.state, emitPhaseEntryNextTurn: true });
     }
   }
+  await syncCampaignCrises(db, currentTurn, campaigns);
   return { conflictsProcessed, eventsOpened };
 }

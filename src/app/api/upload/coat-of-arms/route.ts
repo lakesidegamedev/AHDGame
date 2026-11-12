@@ -9,6 +9,8 @@ import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { optimizeImage, IMAGE_PRESETS } from "@/lib/imageOptimize";
 import { isR2Enabled, uploadFile, deleteByPrefix } from "@/lib/r2";
 import { parseFormData } from "@/lib/api/validate";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -45,15 +47,16 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: new ObjectId(authUser.userId) });
+    const user = await usersCollection(db).findOne({ _id: new ObjectId(authUser.userId) });
 
     if (!user?.activeImperialCharacterId) {
       return errorResponse(400, "No imperial character found for this account");
     }
 
-    const imperial = await db
-      .collection<ImperialCharacter>("imperialCharacters")
-      .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(authUser.userId) });
+    const imperial = await imperialCharactersCollection(db).findOne({
+      _id: user.activeImperialCharacterId,
+      userId: new ObjectId(authUser.userId),
+    });
 
     if (!imperial) {
       return errorResponse(400, "Imperial character not found");
@@ -103,9 +106,10 @@ export async function POST(request: Request) {
       url = `/api/uploads/coat-of-arms/${filename}`;
     }
 
-    await db
-      .collection<ImperialCharacter>("imperialCharacters")
-      .updateOne({ _id: imperial._id }, { $set: { coatOfArmsUrl: url, updatedAt: new Date() } });
+    await imperialCharactersCollection(db).updateOne(
+      { _id: imperial._id },
+      { $set: { coatOfArmsUrl: url, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ url });
   } catch (error) {

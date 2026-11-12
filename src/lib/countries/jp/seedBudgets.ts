@@ -1,6 +1,13 @@
 import type { AnyBulkWriteOperation, Db, Document } from "mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { FederalBudget, EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import type { CorporateSector, State } from "@/lib/db/types";
+import type { EnactedLaw, StateBudget } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /**
  * Seeds only JP budget data: national budget, enacted laws, regional budgets,
@@ -14,16 +21,17 @@ export async function seedJpBudgets(
 ) {
   if (reset) {
     // Only delete JP-specific budget data, not US/UK
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId: "JP" });
+    await federalBudgetCollection(db).deleteMany({ countryId: "JP" });
     const jpStateIds = (
-      await db.collection("states").find({ countryId: "JP" }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId: "JP" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (jpStateIds.length > 0) {
-      await db
-        .collection<StateBudget>("stateBudgets")
-        .deleteMany({ stateId: { $in: jpStateIds }, countryId: "JP" });
+      await stateBudgetsCollection(db).deleteMany({
+        stateId: { $in: jpStateIds },
+        countryId: "JP",
+      });
     }
-    await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "JP" });
+    await enactedLawsCollection(db).deleteMany({ countryId: "JP" });
     log("Reset: deleted JP budget data");
   }
 
@@ -44,9 +52,11 @@ export async function seedJpBudgets(
   const jpNationalBudget = presetBudgets.find((b) => b.countryId === "JP");
   if (jpNationalBudget) {
     const { _id, ...budgetData } = jpNationalBudget;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
+      { upsert: true }
+    );
     log("Seeded 1 JP national budget");
   }
 
@@ -71,7 +81,7 @@ export async function seedJpBudgets(
       update.$unset = unsetFields;
     }
 
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
+    await enactedLawsCollection(db).updateOne(
       {
         legislationTypeId: law.legislationTypeId,
         scope: law.scope,
@@ -85,7 +95,7 @@ export async function seedJpBudgets(
   log(`Seeded ${jpEnactedLaws.length} JP default enacted laws`);
 
   // Seed JP regional budgets
-  const states = await db.collection<State>("states").find({ countryId: "JP" }).toArray();
+  const states = await statesCollection(db).find({ countryId: "JP" }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,
     population: s.population,
@@ -95,9 +105,7 @@ export async function seedJpBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, jpFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} JP regional budgets`);
 
@@ -108,13 +116,15 @@ export async function seedJpBudgets(
   );
   for (const entry of jpCorpData) {
     const { _id: corpId, ...corpData } = entry.corporation;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corpId }, { $set: corpData }, { upsert: true });
+    await corporationsCollection(db).updateOne(
+      { _id: corpId },
+      { $set: corpData },
+      { upsert: true }
+    );
 
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;
-      await db.collection<CorporateSector>("corporateSectors").updateOne(
+      await corporateSectorsCollection(db).updateOne(
         {
           corporationId: corpId,
           stateId: sector.stateId,
@@ -189,7 +199,7 @@ export async function seedJpBudgets(
   // Interleaved + ordered: the backfill and the upsert hit the same document,
   // so their relative order is the behaviour, not an implementation detail.
   if (policyOps.length > 0) {
-    await db.collection("statePolicies").bulkWrite(policyOps, { ordered: true });
+    await statePoliciesCollection<Document>(db).bulkWrite(policyOps, { ordered: true });
   }
   if (regionalPoliciesSeeded > 0) {
     log(`Seeded ${regionalPoliciesSeeded} JP regional policies with policyOptionId`);

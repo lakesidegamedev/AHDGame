@@ -10,12 +10,11 @@
  * the table is far larger than those projections.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
+import type { MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProductAdvertisingDenominationWitness } from "@/lib/products/rules/productAdvertising";
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
 import { oid } from "@/lib/banking/rules/boundary";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import {
@@ -38,6 +37,8 @@ import {
   type ProductAdvertisingPayable,
   type ProductAdvertisingPayableAllocation,
 } from "@/lib/products/productAdvertisingClearing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type { ProductAdvertisingFamily } from "@/lib/products/productAdvertisingClearing";
 
@@ -340,8 +341,7 @@ export async function settleProductAdvertisingObligations(
   const rows =
     corporationIds.length === 0
       ? []
-      : await db
-          .collection<Corporation>("corporations")
+      : await corporationsCollection(db)
           .find(
             {
               _id: { $in: [...corporationIds] },
@@ -359,7 +359,7 @@ export async function settleProductAdvertisingObligations(
             }
           )
           .toArray();
-  const journal = db.collection<{ _id: string }>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<{ _id: string }>(db);
   const pools = new Set<string>();
 
   const parsed = rows.map((row) => {
@@ -414,7 +414,7 @@ export async function settleProductAdvertisingObligations(
     obligation: ProductAdvertisingObligation
   ): Promise<void> => {
     await Promise.all([
-      db.collection<Corporation>("corporations").updateOne(
+      corporationsCollection(db).updateOne(
         { _id: corporationId },
         {
           $pull: {

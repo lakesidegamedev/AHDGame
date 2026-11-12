@@ -1,5 +1,5 @@
 /**
- * Bug #0728: CEO salary may not exceed 1.25x daily gross revenue at set time,
+ * CEO salary may not exceed 1.25x daily gross revenue at set time,
  * and the check must run even when gross revenue is zero (a zero-revenue shell
  * cannot set any positive salary). Guards the bond→salary→abandon mint exploit.
  */

@@ -9,6 +9,7 @@ import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { CountryId } from "@/lib/constants/countries";
 import { budgetKeyForLaw } from "./budgetKeys";
 import type { PoliticalLaw } from "./types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 type ProgramCostScaleBaselines = Pick<
   FederalBudget,
@@ -37,11 +38,9 @@ export async function loadProgramCostScale(
   db: Db,
   countryId: string
 ): Promise<(law: PoliticalLaw) => number> {
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne(
-      { _id: getNationalBudgetId(countryId as CountryId) },
-      { projection: { programCostScaleBaseline: 1, programCostScaleByCategoryBaseline: 1 } }
-    );
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId(countryId as CountryId) },
+    { projection: { programCostScaleBaseline: 1, programCostScaleByCategoryBaseline: 1 } }
+  );
   return (law) => programCostScaleForLaw(budget, law);
 }

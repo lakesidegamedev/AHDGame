@@ -58,7 +58,6 @@ const unit = {
 
 const props = {
   canAct: true,
-  conflictsEnabled: true,
   commands: [command],
   units: [unit],
   commanders: [{ id: "char_9", name: "Gen. Real", spec: "armor", level: 2, fit: 70 }],
@@ -101,19 +100,8 @@ describe("CommandsTab", () => {
     expect(link).toBe("/country/us/navair");
   });
 
-  it("keeps administration available but hides conflict posting while conflicts is off", () => {
-    render(<CommandsTab {...props} conflictsEnabled={false} />);
-
-    expect(screen.getByRole("button", { name: /create command/i })).toBeTruthy();
-    expect(screen.getByText("General corps")).toBeTruthy();
-    expect(screen.queryByLabelText("Post Gen. Real to a conflict")).toBeNull();
-    expect(
-      screen.getByText(/Conflict postings are unavailable while Conflicts is disabled/)
-    ).toBeTruthy();
-  });
-
   it("keeps the tab read-only for a viewer who cannot act", () => {
-    render(<CommandsTab {...props} canAct={false} conflictsEnabled={false} />);
+    render(<CommandsTab {...props} canAct={false} />);
 
     expect(screen.queryByRole("button", { name: /create command/i })).toBeNull();
     expect(screen.queryByRole("button", { name: "Commission" })).toBeNull();

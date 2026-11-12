@@ -11,7 +11,7 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
  */
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api/errors";
-import { SPAWN_ELECTIONS_REGISTRY } from "@/lib/turn/perpetualElections";
+import { SPAWN_ELECTIONS_REGISTRY } from "@/lib/elections/scheduling";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
 interface RouteParams {

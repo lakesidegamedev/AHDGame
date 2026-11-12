@@ -1,6 +1,8 @@
 import type { ElectionDisplay } from "@/lib/db/types";
+import { isPresidentialElectionType } from "@/lib/elections/nationwideExecutive";
 import { getMappableRegions, type RegionMapData } from "@/components/CountryMapPaths";
 import { isCompetitiveElection, leaderColor } from "../electionsHelpers";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface MapRegionGroup {
   stateId: string;
@@ -53,7 +55,8 @@ export function filterElections(
       }
     }
     if (hideUpcoming && e.status === "upcoming") return false;
-    if (competitive && e.electionType !== "president" && !isCompetitiveElection(e)) return false;
+    if (competitive && !isPresidentialElectionType(e.electionType) && !isCompetitiveElection(e))
+      return false;
     if (primary === "in" && !e.inPrimary) return false;
     if (primary === "out" && e.inPrimary) return false;
     if (contest === "uncontested" && !isUncontestedElection(e)) return false;
@@ -68,7 +71,7 @@ export function filterElections(
  */
 export function filterByRegion(elections: ElectionDisplay[], region: string): ElectionDisplay[] {
   if (!region) return elections;
-  return elections.filter((e) => e.state === region || e.electionType === "president");
+  return elections.filter((e) => e.state === region || isPresidentialElectionType(e.electionType));
 }
 
 /** Group elections by region, dropping empties and floating the national group first. */
@@ -79,7 +82,9 @@ export function buildRegionGroups(
   return regionIds
     .map((stateId) => ({ stateId, elections: elections.filter((e) => e.state === stateId) }))
     .filter((g) => g.elections.length > 0)
-    .sort((a, b) => (a.stateId === "US" ? -1 : b.stateId === "US" ? 1 : 0));
+    .sort((a, b) =>
+      countryHasFeature("usUi", a.stateId) ? -1 : countryHasFeature("usUi", b.stateId) ? 1 : 0
+    );
 }
 
 export interface ElectionSelection {

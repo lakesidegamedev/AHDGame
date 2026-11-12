@@ -10,6 +10,12 @@ import type { ActivityLog, ActivityLogAuth, SuspiciousCharacter } from "@/lib/db
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { AltCluster, AltLink } from "@/lib/db/types/altDetection";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 const DOSSIER_MAX_SESSIONS = 25;
 const DOSSIER_MAX_FINANCIAL_ROWS = 50;
@@ -331,8 +337,8 @@ function maskSessionRow(row: DossierSessionRow, isAdmin: boolean): DossierSessio
 
 async function loadCharacterSubjectIds(db: Db, userId: ObjectId): Promise<ObjectId[]> {
   const [characters, imperial] = await Promise.all([
-    db.collection("characters").find({ userId }).project({ _id: 1 }).toArray(),
-    db.collection("imperialCharacters").find({ userId }).project({ _id: 1 }).toArray(),
+    charactersCollection(db).find({ userId }).project({ _id: 1 }).toArray(),
+    imperialCharactersCollection<Document>(db).find({ userId }).project({ _id: 1 }).toArray(),
   ]);
   return [...characters, ...imperial].map((doc) => doc._id as ObjectId);
 }
@@ -342,7 +348,7 @@ export async function queryDossier(
   userId: ObjectId,
   isAdmin: boolean
 ): Promise<DossierResponse | null> {
-  const user = await db.collection<User>("users").findOne({ _id: userId });
+  const user = await usersCollection(db).findOne({ _id: userId });
   if (!user) return null;
 
   const categoryGuard = categoryGuardFor(isAdmin);
@@ -361,8 +367,7 @@ export async function queryDossier(
     recentActions,
     flaggedAuditRows,
   ] = await Promise.all([
-    db
-      .collection<ActivityLog>("activityLog")
+    activityLogCollection(db)
       .find({
         userId,
         type: { $in: ["login", "logout"] },
@@ -391,16 +396,14 @@ export async function queryDossier(
       return col.find({ userId }).sort({ lastUpdated: -1 }).limit(50).toArray();
     })(),
     subjectIds.length
-      ? db
-          .collection<FinancialTxLogEntry>("financialTxLog")
+      ? financialTxLogCollection(db)
           .find({ subjectType: "character", subjectId: { $in: subjectIds } })
           .sort({ _id: -1 })
           .limit(DOSSIER_MAX_FINANCIAL_ROWS)
           .toArray()
       : Promise.resolve([] as FinancialTxLogEntry[]),
     subjectIds.length
-      ? db
-          .collection<FinancialTxLogEntry>("financialTxLog")
+      ? financialTxLogCollection(db)
           .aggregate<{ creditsIn: number; debitsOut: number }>([
             { $match: { subjectType: "character", subjectId: { $in: subjectIds } } },
             {
@@ -461,8 +464,7 @@ export async function queryDossier(
   }
 
   const linkedUsers = otherUserIds.size
-    ? await db
-        .collection<User>("users")
+    ? await usersCollection(db)
         .find({ _id: { $in: [...otherUserIds].map((id) => new ObjectId(id)) } })
         .project({ username: 1 })
         .toArray()

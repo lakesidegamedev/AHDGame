@@ -1,27 +1,25 @@
 /**
  * Policy Effects Processing Module
  *
- * Processes active policies for states and applies their effects to state metrics
- * using exponential decay toward target values.
+ * Processes active policies for states and applies their effects to state
+ * metrics using exponential decay toward target values.
  *
  * KEY DESIGN DECISIONS:
  *
- * 1. Federal multiplier (country-aware): US federal policies apply at 1/50 strength
- *    per state; UK national policies apply at 1/12 strength per region. The multiplier
- *    is chosen so the sum of per-region effects equals the intended national total.
- *    Prevents a single federal bill from dominating state/region metrics.
+ * 1. Federal multiplier (country-aware): US federal policies apply at 1/50
+ *    strength per state; UK national policies at 1/12 per region. Sum of
+ *    per-region effects equals the intended national total.
  *
- * 2. Exponential decay toward target: Policies don't apply flat deltas; they move
- *    metrics toward a target value with exponential decay. This creates smooth,
- *    asymptotic change rather than jarring step functions.
+ * 2. Exponential decay toward target: policies move metrics toward a target
+ *    with exponential decay rather than flat deltas (smooth asymptotic
+ *    change, not step functions).
  *
- * 3. Per-turn additive effects: policyOptions[].metricEffects apply direct additive
- *    changes each turn the policy is active. Scaled for ~10-year full reversal:
- *    extreme ≈ ±0.06/turn, center = 0.
+ * 3. Per-turn additive effects: policyOptions[].metricEffects apply direct
+ *    additive changes each active turn. Scaled for ~10-year full reversal:
+ *    extreme \u2248 \u00b10.06/turn, center = 0.
  *
- * 4. Natural metric decay: All metrics decay naturally toward baseline at 0.25%/turn
- *    when no active policy is pushing them. This prevents metrics from permanently
- *    deviating after extreme legislation passes and expires.
+ * 4. Natural metric decay: metrics decay toward baseline at 0.25%/turn
+ *    when no active policy pushes them.
  */
 
 import type { Db } from "mongodb";
@@ -60,6 +58,12 @@ import {
 import { clampRatio } from "@/lib/governmentFinance/rules/implementation";
 import { RESET_V2_COUNTRIES } from "@/lib/resetVersions/rules";
 import { incomeTaxEffectOptionId } from "@/lib/budget/rules/incomeTaxPolicy";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 
 /**
  * Map of legislation type IDs to their documents
@@ -102,7 +106,7 @@ export async function getActivePoliciesForState(
   stateId: string,
   countryId: string = "US"
 ): Promise<ActivePolicy[]> {
-  const statePolicies = db.collection<StatePolicy>("statePolicies");
+  const statePolicies = statePoliciesCollection(db);
 
   // Get state-specific policies
   const statePoliciesArray = await statePolicies.find({ stateId }).toArray();
@@ -188,13 +192,10 @@ export function calculateMetricTarget(
   // anachronistic pre-window level (e.g. a 1991 world's broadband seed of 0 in
   // 2010). Decay toward the era-band `best` so it settles at the era-normal.
   // Non-windowed metrics (getEraBand → null), in-band seeds, large-range metrics,
-  // and flag-off (eraYear === null) are all untouched — legacy behavior.
-  // DIRECTION-AWARE (#3238): "out of era" means the seed sits on the WRONG side
-  // of the band's worst bound. The old direction-blind `baseline < band.worst`
-  // was satisfied by any GOOD value on a lower-is-better metric (being below
-  // "worst" is being good), silently rewriting decay targets to band.best —
-  // e.g. povertyRate baselines were dragged toward the era BEST in flag-on
-  // worlds (#2547-class free-improvement drift).
+  // and flag-off (eraYear === null) are all untouched.
+  // "Out of era" means the seed sits on the WRONG side of the band's worst bound;
+  // a direction-blind comparison would drag good values on lower-is-better
+  // metrics (e.g. povertyRate) toward the era best.
   if (eraYear != null && !useCurrentValueAsBaseline) {
     const band = getEraBand(metricId, countryId, eraYear);
     const outOfEra =
@@ -203,7 +204,7 @@ export function calculateMetricTarget(
       baseline = band.best;
     }
   }
-  // Per-metric magnitude scale (Bug #0962 #1): policy effects are 0-100-index sized,
+  // Per-metric magnitude scale: policy effects are 0-100-index sized,
   // so a large-range metric (educationSpending ~£13k, capped at 10M) needs the contribution
   // scaled to its OPERATING value or the movement is imperceptible. `baseline` is that value
   // (currentValue for large metrics via useCurrentValueAsBaseline). Index metrics → 1.0.
@@ -222,7 +223,7 @@ export function calculateMetricTarget(
 
     if (!legType) continue;
 
-    // Graded intensity from the option ladder (Bug #0962): "Maximum" beats "Moderate"
+    // Graded intensity from the option ladder: "Maximum" beats "Moderate"
     // even on the same side. Falls back to the 3-valued effectDirection sign only when
     // the option can't be resolved. Center option → 0 → no-op (unchanged for neutral laws).
     const options = legType.policyOptions ?? [];
@@ -238,7 +239,7 @@ export function calculateMetricTarget(
     const intensity =
       optIdx >= 0 ? optionIntensity(options, optIdx) : Math.sign(policy.effectDirection);
     const strength = effectiveIntensity(intensity) * 3; // calculatePolicyContribution normalizes /3
-    // Normalized decay scope (#0962): national laws use a region-count-independent
+    // Normalized decay scope: national laws use a region-count-independent
     // multiplier so their decay effect is uniform across countries; state laws (scope 1)
     // are unchanged. The tick path (computeTickRates) keeps the per-country multiplier.
     const decayScope = nationalDecayScope(policy.scopeMultiplier);
@@ -356,11 +357,11 @@ export async function processStateMetrics(
   legTypeMap: LegislationTypeMap,
   currentTurn: number = 0
 ): Promise<void> {
-  const statePoliciesCollection = db.collection<StatePolicy>("statePolicies");
-  const stateBaselinesCollection = db.collection<StateMetricBaseline>("stateBaselines");
+  const statePoliciesCollectionHandle = statePoliciesCollection(db);
+  const stateBaselinesCollectionHandle = stateBaselinesCollection(db);
 
   // Get state-specific policies (federal policies are passed in)
-  const statePoliciesArray = await statePoliciesCollection.find({ stateId }).toArray();
+  const statePoliciesArray = await statePoliciesCollectionHandle.find({ stateId }).toArray();
 
   const stateWithMultiplier: ActivePolicy[] = statePoliciesArray.map((policy) => ({
     ...policy,
@@ -373,7 +374,7 @@ export async function processStateMetrics(
   // Get current state metrics (SP5: merged two-store view) and baseline in parallel
   const [currentMetrics, baselineDoc] = await Promise.all([
     findMergedRegionMetrics(db, { _id: stateId }),
-    stateBaselinesCollection.findOne({ _id: stateId }),
+    stateBaselinesCollectionHandle.findOne({ _id: stateId }),
   ]);
 
   if (!currentMetrics) {
@@ -483,9 +484,10 @@ export async function processStateMetrics(
     const writes: Promise<unknown>[] = [];
     if (Object.keys(macroSet).length > 0) {
       writes.push(
-        db
-          .collection<StateMetrics>("macroMetrics")
-          .updateOne({ _id: stateId }, { $set: { ...macroSet, lastUpdated: now } })
+        macroMetricsCollection(db).updateOne(
+          { _id: stateId },
+          { $set: { ...macroSet, lastUpdated: now } }
+        )
       );
     }
     await Promise.all(writes);
@@ -500,28 +502,27 @@ export async function processStatePolicyEffects(
   db: Db,
   knownLegislationTypes?: readonly LegislationType[]
 ): Promise<void> {
-  const gameStateCollection = db.collection<GameState>("gameState");
+  const gameStates = gameStateCollection(db);
 
   // Get game state for current turn (needed for time-based effect decay)
   const gameState =
-    (await gameStateCollection.findOne({ _id: "current" })) ??
-    (await gameStateCollection.findOne({ _id: "main" }));
+    (await gameStates.findOne({ _id: "current" })) ?? (await gameStates.findOne({ _id: "main" }));
   const currentTurn = gameState?.currentTurn ?? 0;
   // Era gate year (reuses the already-fetched gameState — no extra read). Null
   // when the flag is off, so every isMetricActive check below returns true.
-  const eraYear = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
+  const eraYear = gameState ? resolveGameYear(gameState) : null;
 
   // Bulk-fetch ALL data upfront in parallel (eliminates per-state queries)
   const [states, allStatePolicies, allLegTypes, allStateMetrics, allStateBaselines] =
     await Promise.all([
-      db.collection<State>("states").find({}).toArray(),
-      db.collection<StatePolicy>("statePolicies").find({}).toArray(),
+      statesCollection(db).find({}).toArray(),
+      statePoliciesCollection(db).find({}).toArray(),
       knownLegislationTypes
         ? Promise.resolve(knownLegislationTypes)
-        : db.collection<LegislationType>("legislationTypes").find({}).toArray(),
+        : legislationTypesCollection(db).find({}).toArray(),
       // SP5: merged two-store view — economic/population inputs live on macroMetrics.
       findMergedRegionMetricsMany(db, {}),
-      db.collection<StateMetricBaseline>("stateBaselines").find({}).toArray(),
+      stateBaselinesCollection(db).find({}).toArray(),
     ]);
 
   // Build legislation type map for O(1) lookups
@@ -541,18 +542,13 @@ export async function processStatePolicyEffects(
   const legacyFinanceCountryIds = [...new Set(legacyFinanceStates.map((state) => state.countryId))];
   const [nationalDeliveryByCountry, regionalDeliveryByRegion] = await Promise.all([
     legacyFinanceCountryIds.length > 0
-      ? loadDepartmentDeliveryMultipliersByCountry(
-          db,
-          currentTurn,
-          gameState?.departmentFinanceEnabled === true,
-          legacyFinanceCountryIds
-        )
+      ? loadDepartmentDeliveryMultipliersByCountry(db, currentTurn, true, legacyFinanceCountryIds)
       : Promise.resolve(new Map<string, Map<string, number>>()),
     legacyFinanceStates.length > 0
       ? loadRegionalDeliveryMultipliersByRegion(
           db,
           currentTurn,
-          gameState?.regionalLegislationFinanceEnabled === true,
+          true,
           legacyFinanceStates.map((state) => String(state._id))
         )
       : Promise.resolve(new Map<string, Map<string, number>>()),
@@ -572,44 +568,32 @@ export async function processStatePolicyEffects(
   const federalPolicies: ActivePolicy[] = (policiesByState.get("federal") ?? []).map((p) => ({
     ...p,
     scopeMultiplier: getFederalMultiplier("US"),
-    ...(gameState?.departmentFinanceEnabled === true
-      ? {
-          deliveryMultiplier: resolvePolicyDeliveryMultiplier(
-            p,
-            legTypeMap,
-            nationalDeliveryByCountry.get("US")
-          ),
-        }
-      : {}),
+    deliveryMultiplier: resolvePolicyDeliveryMultiplier(
+      p,
+      legTypeMap,
+      nationalDeliveryByCountry.get("US")
+    ),
   }));
   const ukNationalPolicies: ActivePolicy[] = (policiesByState.get("uk_national") ?? []).map(
     (p) => ({
       ...p,
       scopeMultiplier: getFederalMultiplier("UK"),
-      ...(gameState?.departmentFinanceEnabled === true
-        ? {
-            deliveryMultiplier: resolvePolicyDeliveryMultiplier(
-              p,
-              legTypeMap,
-              nationalDeliveryByCountry.get("UK")
-            ),
-          }
-        : {}),
+      deliveryMultiplier: resolvePolicyDeliveryMultiplier(
+        p,
+        legTypeMap,
+        nationalDeliveryByCountry.get("UK")
+      ),
     })
   );
   const jpNationalPolicies: ActivePolicy[] = (policiesByState.get("jp_national") ?? []).map(
     (p) => ({
       ...p,
       scopeMultiplier: getFederalMultiplier("JP"),
-      ...(gameState?.departmentFinanceEnabled === true
-        ? {
-            deliveryMultiplier: resolvePolicyDeliveryMultiplier(
-              p,
-              legTypeMap,
-              nationalDeliveryByCountry.get("JP")
-            ),
-          }
-        : {}),
+      deliveryMultiplier: resolvePolicyDeliveryMultiplier(
+        p,
+        legTypeMap,
+        nationalDeliveryByCountry.get("JP")
+      ),
     })
   );
   const deNationalPolicies: ActivePolicy[] = (policiesByState.get("de_national") ?? []).map(
@@ -646,15 +630,11 @@ export async function processStatePolicyEffects(
     const stateWithMultiplier: ActivePolicy[] = statePoliciesArray.map((p) => ({
       ...p,
       scopeMultiplier: 1.0,
-      ...(gameState?.regionalLegislationFinanceEnabled === true
-        ? {
-            deliveryMultiplier: resolvePolicyDeliveryMultiplier(
-              p,
-              legTypeMap,
-              regionalDeliveryByRegion.get(String(state._id))
-            ),
-          }
-        : {}),
+      deliveryMultiplier: resolvePolicyDeliveryMultiplier(
+        p,
+        legTypeMap,
+        regionalDeliveryByRegion.get(String(state._id))
+      ),
     }));
     const policies = [...stateWithMultiplier, ...nationalPolicies];
 
@@ -769,6 +749,6 @@ export async function processStatePolicyEffects(
 
   // One bulkWrite instead of N individual updateOne calls
   if (macroBulkOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(macroBulkOps);
+    await macroMetricsCollection(db).bulkWrite(macroBulkOps);
   }
 }

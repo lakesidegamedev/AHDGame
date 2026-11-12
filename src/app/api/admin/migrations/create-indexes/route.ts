@@ -8,6 +8,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { CreateIndexesOptions, IndexSpecification } from "mongodb";
 import { ALL_WRITE_GUARD_INDEXES } from "@/lib/admin/seed/indexes/writeGuardSpecs";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { migrationsCollection } from "@/lib/db/repositories/migrations";
 
 const MIGRATION_ID = "create-indexes-v3";
 
@@ -45,8 +48,8 @@ export const INDEX_DEFINITIONS: [string, IndexSpecification, CreateIndexesOption
   ...ALL_WRITE_GUARD_INDEXES,
   // At most one ACTIVE nomination per (role, nominee) — backstops the idempotent
   // incumbent auto-nomination against the non-transactional multi-call-site race
-  // that produced duplicate nominations (ticket #959). Partial so the many
-  // historical failed/confirmed duplicates don't block the build.
+  // that can produce duplicate nominations. Partial so historical
+  // failed/confirmed duplicates don't block the build.
   [
     "houseLeadershipNominations",
     { role: 1, nomineeId: 1 },
@@ -84,9 +87,7 @@ export const INDEX_DEFINITIONS: [string, IndexSpecification, CreateIndexesOption
     },
   ],
 
-  // Personal trade history (suggestion #38). The per-owner lookups the
-  // /api/portfolio/trade-history route runs; the collection is append-only and
-  // grows without bound, so an unindexed scan here would get worse every turn.
+  // Personal trade history lookups. Collection is append-only and unbounded, so scans would degrade over time.
   ["shareTradeHistory", { "from.characterId": 1, turn: 1 }],
   ["shareTradeHistory", { "to.characterId": 1, turn: 1 }],
   ["shareTradeHistory", { "from.corporationId": 1, turn: 1 }],
@@ -117,9 +118,7 @@ export async function POST() {
     const db = await getDb();
 
     // Idempotent guard
-    const existing = await db
-      .collection<MigrationRecord>("migrations")
-      .findOne({ _id: MIGRATION_ID });
+    const existing = await migrationsCollection<MigrationRecord>(db).findOne({ _id: MIGRATION_ID });
 
     if (existing) {
       return errorResponse(400, "Migration already completed", {
@@ -129,8 +128,7 @@ export async function POST() {
 
     // Pre-flight: check for duplicate (countryId, sequentialId) pairs in politicalParties
     // before attempting the unique index, which would hard-fail on duplicates.
-    const dupes = await db
-      .collection("politicalParties")
+    const dupes = await politicalPartiesCollection<Document>(db)
       .aggregate([
         {
           $group: {
@@ -191,7 +189,7 @@ export async function POST() {
       });
     }
 
-    await db.collection<MigrationRecord>("migrations").insertOne({
+    await migrationsCollection<MigrationRecord>(db).insertOne({
       _id: MIGRATION_ID,
       completedAt: new Date(),
       result,

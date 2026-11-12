@@ -33,6 +33,7 @@ import {
   undergroundSectorKey,
 } from "@/lib/unions/undergroundEffects";
 import { servicesStrikeSoftening } from "@/lib/unions/unionServices";
+import { displacedWorkers } from "@/lib/societyPressures/rules/automation";
 import {
   accumulateLabourDemand,
   filledWorkers,
@@ -138,18 +139,16 @@ export function resolveSectorLabourProductionEffects(
  * Resolve a sector's headcount for the turn: what it WANTS at its current
  * revenue, and what its state's labour market lets it actually STAFF.
  *
- * Owns the workforce-skill resolution too, because skill only exists here to
- * size headcount. SP4: playable regions resolve skill from the political board
- * (`education.adultSkills`, same 0-100 higher-better scale) when the state has
- * no metric-engine reading.
+ * Owns workforce-skill resolution because skill only exists here to size
+ * headcount. Playable regions resolve skill from the political board
+ * (`education.adultSkills`, 0-100 higher-better) when the state has no
+ * metric-engine reading.
  *
  * Records DESIRED headcount into the per-state demand accumulator, never the
- * staffed figure. Next turn's tightness sums that accumulator, so recording the
- * rationed result would drive the reading toward 1 and silently switch
- * rationing back off one turn later. Accumulation happens here rather than in
- * `resolveSectorLabourEconomics` because that function early-returns when
- * `labour.wagesEnabled` is off, and how many jobs a sector wants is a fact
- * about the sector rather than about whether the wage system is switched on.
+ * staffed figure: next turn's tightness sums that accumulator, so recording the
+ * rationed result would drive the reading toward 1 and switch rationing back
+ * off. Accumulation happens here, not in `resolveSectorLabourEconomics`, because
+ * that function early-returns when `labour.wagesEnabled` is off.
  */
 export function resolveSectorHeadcount(args: {
   revenue: number;
@@ -166,16 +165,34 @@ export function resolveSectorHeadcount(args: {
    * workers the plan actually employs rather than nameplate staffing.
    */
   fundedHeadcount?: { desiredWorkers: number; workers: number };
+  /**
+   * 2027 world: crew per unit relative to a conventional plant, below 1 for
+   * automation methods. A funded headcount already carries it.
+   */
+  labourPerUnitFactor?: number;
+  /** 2027 world: per-state workers automation no longer employs. */
+  automationDisplacedByState?: Map<string, number>;
 }): { desiredWorkers: number; workers: number; referenceDesiredWorkers: number } {
   const rawSkill =
     args.rawWorkforceSkillByState.get(args.stateId) ??
     args.politicalBoard?.["education.adultSkills"] ??
     null;
-  const referenceDesiredWorkers = calculateWorkers(args.revenue, rawSkill);
+  const factor = args.labourPerUnitFactor ?? 1;
+  const conventionalWorkers = calculateWorkers(args.revenue, rawSkill);
+  // The method-adjusted crew, so a funded automated plant is compared like for like.
+  const referenceDesiredWorkers =
+    factor < 1 ? Math.max(1, Math.round(conventionalWorkers * factor)) : conventionalWorkers;
   const desiredWorkers = args.fundedHeadcount
     ? args.fundedHeadcount.desiredWorkers
     : referenceDesiredWorkers;
   accumulateLabourDemand(args.labourDemandByState, args.stateId, desiredWorkers);
+  if (args.automationDisplacedByState) {
+    accumulateLabourDemand(
+      args.automationDisplacedByState,
+      args.stateId,
+      displacedWorkers(desiredWorkers, factor)
+    );
+  }
   if (args.labourDemandWageIndexByState) {
     let wageDemand = args.labourDemandWageIndexByState.get(args.stateId);
     if (!wageDemand) {
@@ -222,6 +239,8 @@ export interface SectorLabourEconomicsInput {
   marketRecoveryStage?: number;
   computedWorkers: number;
   techLaborCostMultiplier: number;
+  /** 2027 world: wage bill multiplier from the hiring subsidy; absent is 1. */
+  employerWageCostMultiplier?: number;
   costOfLivingIndex?: number;
   unemploymentRate?: number;
   wageIndexByState: SectorTurnEnv["wageIndexByState"];
@@ -237,20 +256,11 @@ export interface SectorLabourEconomicsResult {
    * and services are priced against (`annualWageFromDaily` in
    * `src/lib/unions/unionServices.ts`).
    *
-   * This exists because the dues model had no producer at all: `wagePerWorker`
-   * was read by `unionDues`/`unionActions`/`processUnionsTurn` and written by
-   * nothing, so every union's `averageAnnualWage` was 0. That made the dues
-   * ceiling 0 (dues could not be set at all), the approval dues penalty 0 (so
-   * approval sat at the 55 base for every union in the world), and the service
-   * bill 0 (services ran free and never lapsed).
-   *
-   * Derivation: `sectorLaborCost` is this sector's whole labour bill for one
-   * turn, so the per-worker per-turn figure is that over the headcount, and a
-   * day is {@link TURNS_PER_DAY} turns. Read back as an annual figure this is
-   * `perTurn × TURNS_PER_YEAR`, which is the same basis the labour bill itself
-   * is charged on, so dues are a true share of pay rather than a scale
-   * mismatch. Undefined when the sector has no workers, so a headcount-less
-   * sector contributes no wage rather than an Infinity.
+   * `sectorLaborCost` is this sector's labour bill for one turn, so per-worker
+   * per-turn is that over headcount, and a day is {@link TURNS_PER_DAY} turns.
+   * Read back annually (`perTurn * TURNS_PER_YEAR`) it matches the labour bill's
+   * own basis, so dues are a true share of pay. Undefined when the sector has
+   * no workers, so it contributes no wage rather than Infinity.
    */
   wagePerWorker?: number;
   newUnionization?: number;
@@ -276,6 +286,7 @@ export function resolveSectorLabourEconomics({
   explicitPlantCostsEnabled,
   computedWorkers,
   techLaborCostMultiplier,
+  employerWageCostMultiplier = 1,
   costOfLivingIndex,
   unemploymentRate,
   wageIndexByState,
@@ -309,7 +320,11 @@ export function resolveSectorLabourEconomics({
   const unionPremiumPercent =
     labour.unionsEnabled && !unionsBanned ? unionPremium(sector.unionization ?? 0) : 0;
   const wageMultiplier =
-    wageLevel * floorMultiplier * techLaborCostMultiplier * (1 + unionPremiumPercent / 100);
+    wageLevel *
+    floorMultiplier *
+    techLaborCostMultiplier *
+    employerWageCostMultiplier *
+    (1 + unionPremiumPercent / 100);
 
   let wageAccumulator = wageIndexByState.get(sector.stateId);
   if (!wageAccumulator) {
@@ -361,9 +376,11 @@ export function resolveSectorLabourEconomics({
     sectorLaborCost: split.laborCost,
     // Per-worker daily pay, the basis union dues and services are priced
     // against. See the field docs on SectorLabourEconomicsResult.
+    // Taken before the hiring-subsidy multiplier: the subsidy lowers what the
+    // employer pays, not what the worker earns.
     wagePerWorker:
-      computedWorkers > 0 && Number.isFinite(split.laborCost)
-        ? (split.laborCost / computedWorkers) * TURNS_PER_DAY
+      computedWorkers > 0 && Number.isFinite(split.laborCost) && employerWageCostMultiplier > 0
+        ? (split.laborCost / employerWageCostMultiplier / computedWorkers) * TURNS_PER_DAY
         : undefined,
   };
 
@@ -372,11 +389,9 @@ export function resolveSectorLabourEconomics({
   const unionLawBias = labour.fullEnabled
     ? labour.unionLawBiasByCountry?.get(sectorCountryId)
     : undefined;
-  // Union dues v1: resolve the representing union DIRECTLY off the sector's own
-  // `representingUnionId`, never by (countryId, sectorType), players can found
-  // rivals in the same industry, so the industry pair no longer identifies one
-  // union, and a sector with no `representingUnionId` must not inherit some
-  // other union's approval.
+  // Resolve the union via the sector's own `representingUnionId`, never by
+  // (countryId, sectorType): rival unions can share an industry, and a sector
+  // without an id must not inherit another union's approval.
   const representingUnion =
     labour.fullEnabled && sector.representingUnionId
       ? labour.unionsById?.get(sector.representingUnionId.toString())

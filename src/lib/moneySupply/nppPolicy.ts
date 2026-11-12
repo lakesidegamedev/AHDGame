@@ -10,11 +10,6 @@ import { currentMoneyGrowth } from "./rules/growthSignal";
 import { MONEY_ACCOUNTING_VERSION } from "./calculate";
 import type { Db } from "mongodb";
 import type {
-  Bond,
-  CentralBank,
-  FederalBudget,
-  GameConfig,
-  GameState,
   MonetaryPolicyDecision,
   MonetaryPolicyEvaluation,
   MoneySupplySnapshot,
@@ -31,8 +26,13 @@ import { getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { executeMonetaryOperation, MONETARY_OPERATION_COOLDOWN_TURNS } from "./operations";
 import { LiquidityAdvanceRejected } from "./liquidityAdvance";
 import { MonetaryOperationRejected } from "./monetaryOperationJournal";
-import { MONEY_SUPPLY_SNAPSHOTS_COLLECTION } from "./snapshot";
 import { isMoneySupplyEnabledFromConfig } from "./featureFlag";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
 
 interface NppMonetaryConditions {
   inflation: number;
@@ -124,13 +124,13 @@ export async function processNppMonetaryOperations(
   turn: number,
   currentYear?: number | null
 ): Promise<{ banksProcessed: number; evaluationsRecorded: number; operationsExecuted: number }> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { moneySupplyEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { moneySupplyEnabled: 1 } }
+  );
   if (!isMoneySupplyEnabledFromConfig(config))
     return { banksProcessed: 0, evaluationsRecorded: 0, operationsExecuted: 0 };
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find(
       {},
       {
@@ -148,18 +148,15 @@ export async function processNppMonetaryOperations(
   // Era START year for the government-control gate below, resolved once for the
   // whole sweep — `isBankGovernmentControlledLive` costs an uncached gameState
   // read per call.
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
-    );
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
+  );
   const startingYear =
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
   const union = gameState?.euroMonetaryUnion;
   const bankById = new Map(banks.map((bank) => [bank._id, bank]));
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       {},
       {
@@ -186,8 +183,7 @@ export async function processNppMonetaryOperations(
   const commonMoneyGrowth = union
     ? euroMoneyGrowth(
         union,
-        await db
-          .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
+        await moneySupplySnapshotsCollection<MoneySupplySnapshot>(db)
           .find(
             {
               currencyCode: {
@@ -239,8 +235,7 @@ export async function processNppMonetaryOperations(
       : getSeedCurrencyCode(countryId, gameState?.preset ?? DEFAULT_SEED_PRESET);
     const budget = budgetById.get(getNationalBudgetId(countryId));
     const [bond, moneySupply] = await Promise.all([
-      db
-        .collection<Bond>("bonds")
+      bondsCollection(db)
         .find({
           issuerType: "sovereign",
           countryId,
@@ -253,12 +248,10 @@ export async function processNppMonetaryOperations(
         .next(),
       member
         ? Promise.resolve(null)
-        : db
-            .collection<MoneySupplySnapshot>(MONEY_SUPPLY_SNAPSHOTS_COLLECTION)
-            .findOne(
-              { currencyCode, turn: { $lte: turn } },
-              { sort: { turn: -1 }, projection: { accountingVersion: 1, annualizedM2GrowthPct: 1 } }
-            ),
+        : moneySupplySnapshotsCollection<MoneySupplySnapshot>(db).findOne(
+            { currencyCode, turn: { $lte: turn } },
+            { sort: { turn: -1 }, projection: { accountingVersion: 1, annualizedM2GrowthPct: 1 } }
+          ),
     ]);
     if (!budget) continue;
     const inflation =
@@ -329,9 +322,10 @@ export async function processNppMonetaryOperations(
         });
       }
     }
-    await db
-      .collection<CentralBank>("centralBanks")
-      .updateOne({ _id: bank._id }, { $set: { lastMonetaryPolicyEvaluation: evaluation } });
+    await centralBanksCollection(db).updateOne(
+      { _id: bank._id },
+      { $set: { lastMonetaryPolicyEvaluation: evaluation } }
+    );
     evaluationsRecorded++;
   }
   return { banksProcessed, evaluationsRecorded, operationsExecuted };

@@ -1,12 +1,15 @@
 import { isSingleplayer } from "@/lib/singleplayer";
 import { prepareManagedMongo } from "@/lib/singleplayer/prepareManagedMongo";
 import { MongoClient, Db, type WriteConcernSettings } from "mongodb";
-import { getValidatedEnv } from "@/lib/env";
+import { getValidatedEnv } from "@/lib/config/validatedEnv";
 import {
   attachMongoCommandMonitor,
   mongoCommandMonitoringWanted,
 } from "@/lib/observability/mongoMonitor";
 import { isTurnWorkerProcess } from "@/lib/turn/turnWorkerHandoff";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { serverEnv } from "@/lib/config/read";
+import { databaseConfig } from "@/lib/config/database";
 
 declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
@@ -43,10 +46,10 @@ const MIN_SOCKET_TIMEOUT_MS = 10_000;
 const MAX_SOCKET_TIMEOUT_MS = 15 * 60_000;
 
 /**
- * Per-operation socket timeout. 60s suits the web server: a player request should
- * fail fast rather than hang. Turn phases are different: a single aggregation on
- * a busy disk can legitimately run past a minute, and with the driver's one read
- * retry a 60s timeout aborts the phase at ~120s (turn 373's bankingTurn, 2026-10-22).
+ * Per-operation socket timeout. 60s suits the web server: a player request
+ * should fail fast rather than hang. Turn phases are different: a single
+ * aggregation on a busy disk can legitimately run past a minute, and with the
+ * driver's one read retry a 60s timeout aborts the phase at ~120s.
  * MONGODB_SOCKET_TIMEOUT_MS lets the turn worker raise it; clamped to 10s-15min.
  */
 export function resolveMongoSocketTimeoutMs(env: Record<string, string | undefined>): number {
@@ -56,25 +59,18 @@ export function resolveMongoSocketTimeoutMs(env: Record<string, string | undefin
 }
 
 /**
- * Client write concern. Unset keeps the server default (w:majority, which waits
- * for the journal fsync on every write). On the production disk that wait is
- * ~11 ms per write and a turn issues ~30k sequential writes, so it is about a
- * third of the turn.
+ * Client write concern. Unset keeps the server default (w:majority, waits for
+ * journal fsync per write, roughly a third of a turn's write time).
  *
- * TURN_WRITE_CONCERN=w1 makes the turn worker acknowledge writes once applied,
- * without waiting for the journal. Mongo is a single node, and its journal
- * recovers a prefix in log order, so a mongod crash leaves the state an earlier
- * worker death would have left; turn crash-resume already handles that. Only
- * the process marked as the turn worker honors it; the web server keeps the
- * default whatever its environment says. Explicit write concerns (transactions,
- * index builds) are unaffected.
+ * TURN_WRITE_CONCERN=w1 makes the turn worker ack on apply, skipping the
+ * journal wait. Single node in log order, so a crash leaves the state an
+ * earlier worker death would have; turn crash-resume already handles that.
+ * Only the turn worker honors it; the web server keeps the default.
+ * Explicit write concerns are unaffected.
  *
- * A singleplayer world always takes w:1: its database is one local node, so
- * "majority" is the same node, and the journal wait per write is pure latency
- * on a player's disk (about a third of a turn's database time on a fast SSD,
- * more on a slower one). Mongo still journals every 100 ms, so a power cut
- * loses the last instants of play and leaves the state a crashed turn would,
- * which turn crash-resume already handles.
+ * Singleplayer always takes w:1: one local node, so the per-write journal
+ * wait is pure latency. Mongo still journals every 100 ms, so a power cut
+ * loses the last instants, which crash-resume handles.
  */
 export function resolveMongoWriteConcern(
   env: Record<string, string | undefined>
@@ -87,7 +83,7 @@ export function resolveMongoWriteConcern(
 
 function getClientPromise(): Promise<MongoClient> {
   const uri =
-    process.env.NODE_ENV === "test" ? process.env.MONGODB_URI : getValidatedEnv().MONGODB_URI;
+    process.env.NODE_ENV === "test" ? databaseConfig.mongoUri() : getValidatedEnv().MONGODB_URI;
   if (!uri) {
     throw new Error(
       "MONGODB_URI is not set. Add it to .env.local for local development or your deployment environment variables."
@@ -106,14 +102,14 @@ function getClientPromise(): Promise<MongoClient> {
       maxIdleTimeMS: 0, // Never idle-timeout pooled connections; proxy handles its own lifecycle
       serverSelectionTimeoutMS: 10_000, // Fail fast in serverless rather than blocking for 30 s
       // Prevent individual operations from hanging indefinitely; the turn worker raises it.
-      socketTimeoutMS: resolveMongoSocketTimeoutMs(process.env),
-      writeConcern: resolveMongoWriteConcern(process.env),
+      socketTimeoutMS: resolveMongoSocketTimeoutMs(serverEnv()),
+      writeConcern: resolveMongoWriteConcern(serverEnv()),
       monitorCommands: mongoCommandMonitoringWanted(),
     });
     // Instrument every query (breadcrumbs + slow-query/failure capture) centrally.
     attachMongoCommandMonitor(client);
     global._mongoClientPromise = (async () => {
-      if (process.env.SINGLEPLAYER === "1" && process.env.SINGLEPLAYER_MANAGED_MONGO === "1")
+      if (runtimeConfig.singleplayer() && runtimeConfig.singleplayerManagedMongo())
         await prepareManagedMongo(uri);
       return client.connect();
     })().catch((err) => {
@@ -127,7 +123,7 @@ function getClientPromise(): Promise<MongoClient> {
 export async function getDb(): Promise<Db> {
   const dbName =
     process.env.NODE_ENV === "test"
-      ? resolveMongoDbName(process.env as MongoDbNameEnv)
+      ? resolveMongoDbName(serverEnv() as MongoDbNameEnv)
       : resolveMongoDbName(getValidatedEnv());
 
   try {

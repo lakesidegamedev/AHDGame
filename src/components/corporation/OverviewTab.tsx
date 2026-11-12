@@ -14,7 +14,7 @@ import {
   scaleMoney,
   type MoneyPeriod,
 } from "@/lib/constants/moneyTimescale";
-import { STATE_FLAGS } from "@/lib/constants";
+import { STATE_FLAGS } from "@/lib/constants/flags";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { formatMarketingStrength } from "@/lib/utils/formatters";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";

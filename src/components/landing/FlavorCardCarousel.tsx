@@ -119,14 +119,14 @@ function StaticCard({ card, index }: { card: FlavorCard; index: number }) {
       </div>
       <div className="p-4">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-mono text-body-xs text-primary">
+          <span className="font-mono text-body-xs text-red-300">
             {String(index + 1).padStart(2, "0")}
           </span>
           <span className="text-body-xs text-muted">{card.year}</span>
         </div>
         <h3 className="text-heading-sm font-semibold text-foreground">{card.name}</h3>
         <p className="mt-0.5 text-body-xs text-muted">{card.title}</p>
-        <p className="mt-2 text-body-sm italic leading-relaxed text-muted/80">
+        <p className="mt-2 text-body-sm italic leading-relaxed text-muted">
           &ldquo;{card.quote}&rdquo;
         </p>
       </div>
@@ -163,7 +163,7 @@ function DynamicCardItem({ card, index }: { card: DynamicCard; index: number }) 
       </div>
       <div className="p-4">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-mono text-body-xs text-primary">
+          <span className="font-mono text-body-xs text-red-300">
             {String(index + 4).padStart(2, "0")}
           </span>
         </div>

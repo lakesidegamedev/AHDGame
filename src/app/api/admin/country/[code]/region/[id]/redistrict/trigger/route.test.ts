@@ -4,7 +4,6 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
-vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
 vi.mock("@/lib/redistricting/regenerate", () => ({
   regenerateCongressionalDistricts: vi.fn(),
 }));
@@ -30,21 +29,12 @@ describe("POST admin redistrict trigger", () => {
       ok: true,
       admin: { username: "testadmin" },
     } as never);
-    const { getGameState } = await import("@/lib/gameState");
-    vi.mocked(getGameState).mockResolvedValue({ redistrictingEnabled: true } as never);
     const { regenerateCongressionalDistricts } = await import("@/lib/redistricting/regenerate");
     vi.mocked(regenerateCongressionalDistricts).mockResolvedValue({ regenerated: 7 });
   });
 
   it("rejects non-US countries", async () => {
     const res = await callPost("uk", "ENG");
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects when redistricting flag is off", async () => {
-    const { getGameState } = await import("@/lib/gameState");
-    vi.mocked(getGameState).mockResolvedValue({ redistrictingEnabled: false } as never);
-    const res = await callPost("us", "TX");
     expect(res.status).toBe(400);
   });
 

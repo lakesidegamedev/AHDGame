@@ -1,3 +1,4 @@
+import { assumeExtractionContracts } from "@/lib/extraction/assumeExtractionContracts";
 import { referenceValuation } from "./referenceValuation";
 import { controllerTransferBarrierError } from "./controllerTransferBarrier";
 import type { Db } from "mongodb";
@@ -8,19 +9,8 @@ import {
 import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
-import type {
-  Bond,
-  Character,
-  Corporation,
-  CorporateSector,
-  ImperialCharacter,
-} from "@/lib/db/types";
-import type { IndexFund } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import {
-  EQUITY_MARKET_POOLS_COLLECTION,
-  type EquityMarketPool,
-} from "@/lib/db/types/equityMarketPool";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import { type EquityMarketPool } from "@/lib/db/types/equityMarketPool";
 import { equityPoolCurrency } from "@/lib/equities/marketPool";
 import type { AcquisitionOffer, AcquisitionOutcome } from "@/lib/db/types/acquisitionOffer";
 import {
@@ -54,7 +44,6 @@ import { assertMergerClearance } from "@/lib/corporations/mergerReview/gate";
 import { attachMergerRemedy } from "@/lib/corporations/mergerReview/lifecycle";
 import type { AcquisitionSettlement } from "@/lib/db/types/acquisitionSettlement";
 import type { MergerReview } from "@/lib/db/types/mergerReview";
-import { MERGER_REVIEWS } from "@/lib/corporations/mergerReview/gate";
 import {
   bankTransferConflict,
   hasFundedSovereignEscrow,
@@ -78,6 +67,17 @@ import {
   markAcquisitionApplied,
   markAcquisitionProgress,
 } from "./acquisitionSettlement";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
+import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 
 export interface ExecuteAgreedAcquisitionParams {
   db: Db;
@@ -103,29 +103,24 @@ export type ExecuteAgreedAcquisitionResult =
  * the agreed price.
  *
  * Money flow (conserved): the acquirer pays the agreed price to the target's
- * shareholders (public-float slice → the equity market pool that paid for
- * it, or the country treasury in a world without pools), then the target's own liquid cash relocates to the acquirer and
- * every sector re-parents to the acquirer; the target shell is deleted.
+ * shareholders (public-float slice → the equity market pool that paid for it, or
+ * the country treasury), then the target's liquid cash relocates to the acquirer
+ * and every sector re-parents; the target shell is deleted.
  *
- * Crash safety: every amount and recipient is pinned once per offer in an
- * `acquisitionSettlements` record claimed before money moves, and each leg
- * applies as an atomic credit-plus-stamp write. A retry resumes from the
- * record: landed legs are skipped, unlanded legs apply, and a completed
- * settlement returns its recorded result. Only a permanently unpayable leg
- * (recipient gone) ends in terminal compensation — refund of exactly the
- * undelivered remainder, never a full refund over paid holders — and the offer
- * goes to `failed`, never back to `pending`.
+ * Crash safety: amounts and recipients are pinned once per offer in an
+ * `acquisitionSettlements` record claimed before money moves; each leg is an
+ * atomic credit-plus-stamp write. A retry resumes from the record. Only a
+ * permanently unpayable leg ends in terminal compensation (refund of the exact
+ * undelivered remainder) and the offer goes to `failed`, never `pending`.
  *
- * v1 scope: the target must have NO outstanding bonds and hold NO equity in other
- * corporations (bond assumption and cross-holding transfer are deferred). Both
- * are blocked with a clear error rather than mishandled.
+ * The target must have NO outstanding bonds and hold NO equity in other
+ * corporations; both are blocked with a clear error.
  *
- * Subsidiary outcome (`offer.outcome === "subsidiary"`): the same pinned debit and
- * holder payouts, but the target is not dissolved. Its sectors, cash, bonds,
- * charter, identity and CEO stay put; the last step makes the acquirer its only
- * shareholder and formalizes it as the acquirer's subsidiary. Because the target
- * survives, its bonds and minority cross-holdings are no obstacle; chaining,
- * ownership cycles, the one-person rule and the subsidiary feature gate are.
+ * Subsidiary outcome (`offer.outcome === "subsidiary"`): same pinned debit and
+ * holder payouts, but the target survives with its sectors, cash, bonds, charter,
+ * identity and CEO intact; the acquirer becomes its only shareholder. Bonds and
+ * minority cross-holdings are no obstacle, but chaining, ownership cycles, the
+ * one-person rule and the subsidiary feature gate are.
  */
 export async function executeAgreedAcquisition(
   params: ExecuteAgreedAcquisitionParams
@@ -161,14 +156,15 @@ async function runAgreedAcquisition(
   params: ExecuteAgreedAcquisitionParams
 ): Promise<ExecuteAgreedAcquisitionResult> {
   const { db, offer, currentTurn } = params;
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   const [acquirer, target, stockTaxState] = await Promise.all([
     corps.findOne({ _id: offer.acquirerCorporationId }),
     corps.findOne({ _id: offer.targetCorporationId }),
-    db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } }),
+    gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { stockHoldingTaxStartTurn: 1 } }
+    ),
   ]);
   if (!acquirer || !target) {
     return handleMissingParty(db, offer, currentTurn, acquirer, target);
@@ -237,9 +233,10 @@ async function runAgreedAcquisition(
     if (!eligibility.ok) return { ok: false, error: eligibility.error, status: eligibility.status };
   } else {
     // v1 scope guards — defer bond assumption + cross-holding transfer.
-    const openBonds = await db
-      .collection<Bond>("bonds")
-      .countDocuments({ corporationId: target._id, matured: false });
+    const openBonds = await bondsCollection(db).countDocuments({
+      corporationId: target._id,
+      matured: false,
+    });
     if (openBonds > 0)
       return {
         ok: false,
@@ -259,15 +256,11 @@ async function runAgreedAcquisition(
       };
   }
 
-  // Banked target (ticket-1267): the charter is a sub-document on the target,
-  // so deleting the shell would delete its bank with it. Blocked up front,
-  // before any money moves. Exception: a retry whose earlier attempt claimed
-  // the slot and then crashed before releasing the target (dual-charter
-  // state). That window belongs to the transfer recovery protocol in #2016;
-  // this pre-check must not veto its resume, so it stands aside exactly when
-  // the slot charter is this target's own charter by identity and a live
-  // settlement for this offer owns the run. (Identity compare mirrors
-  // #2016's; the protocol itself is not duplicated here.)
+  // The charter is a sub-document on the target, so deleting the shell would
+  // delete its bank with it. Blocked up front, before any money moves.
+  // Exception: an interrupted retry whose earlier attempt claimed the slot and
+  // crashed before releasing the target. A live settlement owning the run is
+  // allowed to resume.
   const bankConflict = subsidiary ? null : bankTransferConflict(target, acquirer);
   if (
     bankConflict &&
@@ -332,10 +325,7 @@ async function runAgreedAcquisition(
     // A subsidiary keeps its sectors where they are.
     subsidiary
       ? Promise.resolve<CorporateSector[]>([])
-      : db
-          .collection<CorporateSector>("corporateSectors")
-          .find({ corporationId: target._id })
-          .toArray(),
+      : corporateSectorsCollection(db).find({ corporationId: target._id }).toArray(),
     loadFxRatesByCurrency(db),
     getCorpFxRate(db, acquirer),
     getCorpFxRate(db, target),
@@ -391,41 +381,47 @@ async function runAgreedAcquisition(
   const fundIds = (allocation?.fundRows ?? [])
     .filter((r) => r.payout > 0)
     .map((r) => new ObjectId(r.fundId));
+  const nppIds = (allocation?.nppRows ?? [])
+    .filter((r) => r.payout > 0)
+    .map((r) => new ObjectId(r.nppId));
   const floatPaid = Boolean(allocation?.publicFloatRow && allocation.publicFloatRow.payout > 0);
-  const [chars, imperials, creditors, funds, treasury, equityPool] = await Promise.all([
+  const [chars, imperials, creditors, funds, npps, treasury, equityPool] = await Promise.all([
     charIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charIds } })
           .toArray()
       : [],
     imperialIds.length > 0
-      ? db
-          .collection<ImperialCharacter>("imperialCharacters")
+      ? imperialCharactersCollection(db)
           .find({ _id: { $in: imperialIds } })
           .toArray()
       : [],
     creditorIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: creditorIds } })
           .toArray()
       : [],
     fundIds.length > 0
-      ? db
-          .collection<IndexFund>("indexFunds")
+      ? indexFundsCollection(db)
           .find({ _id: { $in: fundIds } })
           .toArray()
       : [],
+    nppIds.length > 0
+      ? getNppsCollection(db).then((npps) =>
+          npps.find({ _id: { $in: nppIds } }, { projection: { _id: 1 } }).toArray()
+        )
+      : [],
     floatPaid
-      ? db
-          .collection<FederalBudget>("federalBudget")
-          .findOne({ countryId: target.countryId }, { projection: { _id: 1 } })
+      ? federalBudgetCollection(db).findOne(
+          { countryId: target.countryId },
+          { projection: { _id: 1 } }
+        )
       : null,
     floatPaid
-      ? db
-          .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-          .findOne({ _id: equityPoolCurrency(target) }, { projection: { _id: 1 } })
+      ? equityMarketPoolsCollection<EquityMarketPool>(db).findOne(
+          { _id: equityPoolCurrency(target) },
+          { projection: { _id: 1 } }
+        )
       : null,
   ]);
   const currencyByHolderHex: Record<string, string> = {};
@@ -508,11 +504,13 @@ async function runAgreedAcquisition(
       characterRows: [],
       corporationRows: [],
       fundRows: [],
+      nppRows: [],
       publicFloatRow: null,
     },
     currencyByHolderHex,
     creditorByHolderHex,
     fundsPresentHex: funds.map((f) => f._id.toString()),
+    nppsPresentHex: npps.map((n) => n._id.toString()),
     treasuryPresent: treasury != null,
     equityPoolPresent: equityPool != null,
     fxByCurrency: fxRecord,
@@ -667,12 +665,7 @@ async function runAgreedAcquisition(
       return finishCommitTail(db, settlement, currentTurn);
     }
 
-    // 3. Move the bank charter BEFORE any payout: a conflict still unwinds
-    // cleanly (nothing paid yet). A retry that already completed the transfer
-    // (persisted flag) skips the call outright, so the recorded result keeps
-    // reporting the transfer and no second move is ever attempted. Crash
-    // windows INSIDE the transfer (claim/release, satellite re-keys) belong
-    // to its own recovery protocol in #2016; this caller only depends on it.
+    // 3. Move the bank charter before any payout: a conflict unwinds cleanly (nothing paid yet). Skip if already transferred so retries don't move twice; crash windows inside the transfer are its own recovery concern.
     const bankTransfer = settlement.bankCharterTransferred
       ? { ok: true as const, transferred: true }
       : await transferBankCharterToAcquirer(db, target._id, acquirer._id, now);
@@ -695,12 +688,7 @@ async function runAgreedAcquisition(
     // company, cash included). Stamped like any other leg.
     await applyStep("shell-cash");
 
-    // 6. Move every sector into the acquirer (haircut-free, currency
-    // re-denominated). Resumable by re-read: moved sectors no longer belong
-    // to the target, so a retry only sees what is left. The recorded total
-    // derives from the pinned claim-time count minus the sectors still on
-    // the target, so moves landed by an attempt that crashed before marking
-    // are still counted: ground truth, not an accumulation.
+    // 6. Move each sector to the acquirer (haircut-free, re-denominated). Resumable by re-read: moved sectors no longer belong to target. Total derives from pinned claim-time count minus remaining, so crashed attempts still count.
     for (const sector of targetSectors) {
       await moveSectorToCorp(
         db,
@@ -715,9 +703,9 @@ async function runAgreedAcquisition(
       );
     }
     await settleConstructionBorrowerTransfers(db, constructionTransfers);
-    const sectorsRemain = await db
-      .collection<CorporateSector>("corporateSectors")
-      .countDocuments({ corporationId: target._id });
+    const sectorsRemain = await corporateSectorsCollection(db).countDocuments({
+      corporationId: target._id,
+    });
     if (sectorsRemain > 0) {
       throw new Error(
         `Acquisition cannot delete target while ${sectorsRemain} sector property row(s) remain`
@@ -731,6 +719,7 @@ async function runAgreedAcquisition(
     // every step that can fail and before the delete, so a retry still finds
     // any that are left on the target.
     await assumeCorporateLoans(db, { fromId: target._id, toId: acquirer._id });
+    await assumeExtractionContracts(db, { fromId: target._id, toId: acquirer._id, now });
 
     // 8. Tear down the target shell.
     const forexEnabledNow = await isForexEnabled();
@@ -864,12 +853,10 @@ async function releaseAcquisitionTarget(
   targetId: ObjectId,
   offerId: ObjectId
 ): Promise<void> {
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: targetId, acquisitionSettlementId: offerId },
-      { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
-    );
+  await corporationsCollection(db).updateOne(
+    { _id: targetId, acquisitionSettlementId: offerId },
+    { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
+  );
 }
 
 /**
@@ -910,9 +897,7 @@ async function handleMissingParty(
     );
     const moneyDone = moneyLegs.every((leg) => leg.applied);
     const sectorsRemain = target
-      ? await db
-          .collection<CorporateSector>("corporateSectors")
-          .countDocuments({ corporationId: target._id })
+      ? await corporateSectorsCollection(db).countDocuments({ corporationId: target._id })
       : 0;
     // Target gone, money fully delivered, nothing left to move: the crash
     // landed between the shell delete and its flag. Finish the tail.
@@ -955,9 +940,9 @@ async function finishCommitTail(
   currentTurn: number
 ): Promise<ExecuteAgreedAcquisitionResult> {
   if (settlement.remedyReviewId) {
-    const review = await db
-      .collection<MergerReview>(MERGER_REVIEWS)
-      .findOne({ _id: new ObjectId(settlement.remedyReviewId) });
+    const review = await mergerReviewsCollection<MergerReview>(db).findOne({
+      _id: new ObjectId(settlement.remedyReviewId),
+    });
     if (review) {
       await attachMergerRemedy(db, review, settlement.acquirerCorporationId, currentTurn);
     }

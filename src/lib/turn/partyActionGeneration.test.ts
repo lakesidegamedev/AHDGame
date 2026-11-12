@@ -8,6 +8,10 @@ import {
   PS_INVESTMENT_MAX_TIERS,
   psInvestmentRate,
 } from "./politicalStrength/strengthConstants";
+import {
+  effectivePsInvestmentBudget,
+  nppTreasuryReserve,
+} from "@/lib/parties/rules/nppTreasurySpendDown";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -538,5 +542,36 @@ describe("processPartyActionGeneration — NPP Action Points regen", () => {
     const calls = db.collectionMocks.statePartyOrg!.bulkWrite.mock.calls;
     expect(apSetFor(calls, (id) => id === "NIR_8")).toBe(13); // 9 + 4 (major)
     expect(apSetFor(calls, (id) => id === "SP_8")).toBe(12); // 9 + 3 (minor)
+  });
+});
+
+describe("NPP party treasury spend-down through PS investment", () => {
+  const rate = 1_000;
+  const reserve = nppTreasuryReserve(rate, PS_INVESTMENT_MAX_TIERS);
+
+  it("draws a rich NPP party's treasury down turn after turn", () => {
+    let treasury = reserve * 3;
+    let strength = 0;
+    for (let turn = 0; turn < 12; turn++) {
+      const gain = computePartyPsGain({
+        current: strength,
+        cap: 10_000,
+        treasury,
+        passivePerTurn: 0,
+        psInvestmentBudget: effectivePsInvestmentBudget({
+          party: {},
+          chairBudget: 0,
+          treasury,
+          ratePerPs: rate,
+          maxPsPerTurn: PS_INVESTMENT_MAX_TIERS,
+        }),
+        psInvestmentRatePerPs: rate,
+      });
+      treasury -= gain.investmentDebit;
+      strength = gain.clampedTo;
+    }
+    expect(treasury).toBeLessThan(reserve * 3);
+    expect(treasury).toBeGreaterThanOrEqual(reserve);
+    expect(strength).toBeGreaterThan(0);
   });
 });

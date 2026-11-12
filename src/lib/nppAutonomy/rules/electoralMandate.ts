@@ -1,21 +1,11 @@
 /**
- * Electoral mandate: what the governing party ran on, as bounded domain
- * emphasis for the governing agenda (#2321).
+ * Electoral mandate: the governing party's manifesto pledges and platform
+ * positions, as signed domain emphasis in [-1, 1] for `computeGoverningAgenda`.
  *
- * `computeGoverningAgenda` already accepts a `mandate` map (domain to signed
- * emphasis in [-1, 1]); this rule produces it. Two sources, both owned by the
- * party rather than by the sitting head of government:
- *
- *   - **Locked manifesto pledges** (countries with a manifesto system). Each
- *     pledge names a concrete domain the party promised to act on.
- *   - **The party platform** (every country). The party's own economic and
- *     social positions, as voters saw them at the election.
- *
- * Both are scaled by mandate strength, which grows with the governing party's
- * share of the elected chamber: a landslide carries a firmer mandate than a
- * narrow minority. The head-of-government's personal ideology is a separate
- * agenda input, so two governments led by identical heads still diverge when
- * their parties won on opposing platforms.
+ * Emphasis scales with mandate strength (the governing party's share of the
+ * elected chamber), not with the head of government's personal ideology, so
+ * two governments led by identical heads diverge when their parties ran on
+ * opposing platforms.
  *
  * Pure: no database, clock, randomness or environment.
  */

@@ -1,20 +1,18 @@
 /**
- * Shell for the research securities panel (#2332).
+ * Research securities panel.
  *
- * One row per (world, turn) carrying every listed equity and every live bond,
- * written from `stateEffectsPhase` after the turn's trades and snapshots have
- * landed. Seven batched reads, one upsert. Nothing here changes market rules:
- * it observes quotes, executions and holdings exactly as stored, labels how
- * each price was produced, and aggregates holders to classes (no identities).
+ * One row per (world, turn) with every listed equity and live bond, written
+ * from stateEffectsPhase after the turn's trades and snapshots land. Batched
+ * reads, one upsert. Read-only: observes quotes, executions and holdings as
+ * stored, labels how each price was produced, and aggregates holders to classes
+ * without identities.
  */
 import type { Db } from "mongodb";
 import { BOND_UNIT_FACE_VALUE, perTurnCouponPayment } from "@/lib/constants/bonds";
 import { getSecurityTelemetryCollection } from "@/lib/db/collections/researchTelemetry";
 import type { Bond } from "@/lib/db/types/bond";
-import { BOND_MARKET_POOLS_COLLECTION, type BondMarketPool } from "@/lib/db/types/bondMarketPool";
-import type { Corporation, ShareOrder } from "@/lib/db/types/corporation";
-import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+import { type BondMarketPool } from "@/lib/db/types/bondMarketPool";
+import type { ShareOrder } from "@/lib/db/types/corporation";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import type { LongHorizonContext } from "@/lib/telemetry/longHorizon/telemetry";
 import {
@@ -28,6 +26,13 @@ import {
   type SecurityTelemetryRow,
   type SecurityTurnRow,
 } from "./rules";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /** Trade kinds that are price-forming executions between two parties. */
 const EXECUTION_KINDS = ["market_buy", "market_sell", "limit_fill", "peer_fill", "listing_fill"];
@@ -39,8 +44,7 @@ export async function buildSecurityTelemetryRowForTurn(
   observedAt: Date
 ): Promise<SecurityTelemetryRow> {
   const [corporations, history, trades, orders, bonds, pools, rates] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { hiddenFromExchange: { $ne: true }, isPrivate: { $ne: true } },
         {
@@ -57,8 +61,7 @@ export async function buildSecurityTelemetryRowForTurn(
         }
       )
       .toArray(),
-    db
-      .collection<CorporationHistory>("corporationHistory")
+    corporationHistoryCollection(db)
       .find(
         { turn },
         {
@@ -73,15 +76,13 @@ export async function buildSecurityTelemetryRowForTurn(
         }
       )
       .toArray(),
-    db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    shareTradeHistoryCollection(db)
       .find(
         { turn, kind: { $in: EXECUTION_KINDS as ShareTradeHistory["kind"][] } },
         { projection: { corporationId: 1, shares: 1, totalAnchor: 1 } }
       )
       .toArray(),
-    db
-      .collection<ShareOrder>("shareOrders")
+    shareOrdersCollection(db)
       .find(
         { status: "open", sharesRemaining: { $gt: 0 } },
         {
@@ -95,8 +96,7 @@ export async function buildSecurityTelemetryRowForTurn(
         }
       )
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: { $ne: true } })
       .project<Bond>({
         issuerType: 1,
@@ -114,8 +114,8 @@ export async function buildSecurityTelemetryRowForTurn(
         holders: 1,
       })
       .toArray(),
-    db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).find({}).toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    bondMarketPoolsCollection<BondMarketPool>(db).find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
   ]);
 
   const fxByCurrency = new Map<string, number>(

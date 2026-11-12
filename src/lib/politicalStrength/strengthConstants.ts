@@ -29,13 +29,14 @@ import { WAL_ECONOMY } from "@/lib/countries/wal/economy";
 import { BLR_ECONOMY } from "@/lib/countries/blr/economy";
 import { UKR_ECONOMY } from "@/lib/countries/ukr/economy";
 import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
+import { CA_ECONOMY } from "@/lib/countries/ca/economy";
+import { QC_ECONOMY } from "@/lib/countries/qc/economy";
 
 /**
  * Political Strength reserve and pressure-ladder constants for Phase 3.
  *
  * See plan §"Phase 3 — Recommended default PS reserve / pressure model"
- * for the canonical model. Values sourced from user direction 2026-05-03;
- * tuning lands in the plan's Balance Appendix, not here.
+ * for the canonical model. Tuning lands in the plan's Balance Appendix, not here.
  *
  * Phase 3 consumers:
  *  - `partyActionGeneration` reads passive trickle, treasury rates, cap formulas
@@ -46,12 +47,10 @@ import { BAL_ECONOMY } from "@/lib/countries/bal/economy";
 // ─── Passive PS gain ────────────────────────────────────────────────────────
 
 /**
- * Per-turn flat passive PS, by scope (2026-06-25 rebalance). Applied by
- * `partyActionGeneration` every turn regardless of treasury — the baseline
- * reserve growth even an idle (or broke) party experiences. This replaced the
- * old uniform `1/turn` trickle plus the removed "% of treasury" phantom stream:
- * passive is now a meaningful, treasury-independent flat amount. Like every
- * stream it is still clamped at the hard cap (`NATIONAL_PS_CAP`).
+ * Per-turn flat passive PS, by scope. Applied by `partyActionGeneration`
+ * every turn regardless of treasury, the baseline reserve growth even an
+ * idle (or broke) party experiences. Like every stream it is still clamped
+ * at the hard cap (`NATIONAL_PS_CAP`).
  */
 export const NATIONAL_PASSIVE_PS_PER_TURN = 20 as const;
 export const STATE_PASSIVE_PS_PER_TURN = 5 as const;
@@ -61,19 +60,12 @@ export const STATE_PASSIVE_PS_PER_TURN = 5 as const;
 /**
  * Treasury cost per `+1 PS` of treasury-driven generation, by country.
  *
- * National rates from plan §"Recommended starting baselines for `+1 national PS`".
- * State / regional rates are 50% of national per Phase 0.5 §"Recommended" #2
- * (state cost is half of national → state generation is twice as efficient
- * per unit treasury).
+ * National rates per plan baselines; state rates are 50% of national (state
+ * generation is twice as efficient per unit treasury). Normalizes country
+ * economic scale so PS-per-treasury-hour stays comparable across countries.
  *
- * The structure normalizes country economic scale (JPY ¥5M ≈ USD $33k under
- * arbitrary parity, but treasury sizes scale to local currency in this game),
- * so the number-of-PS-per-hour-of-treasury-investment ends up roughly
- * comparable across countries.
- *
- * Inactive countries (BR / CN / IE / NG) get placeholder rates parallel to
- * their seed scale; the actual values aren't load-bearing until those
- * countries activate.
+ * Inactive countries (BR / CN / IE / NG) get placeholder rates; not load-bearing
+ * until those countries activate.
  */
 export const TREASURY_PS_RATE_BY_COUNTRY: Record<CountryId, { national: number; state: number }> = {
   US: US_ECONOMY.tax.treasuryPsRate,
@@ -105,6 +97,8 @@ export const TREASURY_PS_RATE_BY_COUNTRY: Record<CountryId, { national: number; 
   DD: DD_ECONOMY.tax.treasuryPsRate,
   SCO: SCO_ECONOMY.tax.treasuryPsRate, // mirrors UK (sterling zone)
   WAL: WAL_ECONOMY.tax.treasuryPsRate, // mirrors UK (sterling zone)
+  CA: CA_ECONOMY.tax.treasuryPsRate,
+  QC: QC_ECONOMY.tax.treasuryPsRate,
 } as const;
 
 // ─── Pressure ladder ────────────────────────────────────────────────────────
@@ -139,19 +133,13 @@ export const PRESSURE_LADDER_MAX_COST = 8 as const;
 /**
  * Hard ceiling on the STORED per-(party, geography) pressure value.
  *
- * The cost ladder saturates at `PRESSURE_LADDER_MAX_COST` once
- * `baseCost + pressure` reaches it, so pressure stored beyond the point that
- * already maxes the cheapest action (base cost `1` → pressure `7`) has ZERO
- * further effect on cost. Left unbounded, however, `$inc`-per-spend let the
- * stored value run away (observed 219 in one geography). Because decay is only
- * `PRESSURE_DECAY_PER_TURN` (3) per turn, such a value stays pinned at max cost
- * for ~70 turns after the party stops spending — a heavy builder's cost never
- * visibly recovers (ticket #945: "Florida PS cost is always 8, for days").
- *
- * Capping the stored value at `PRESSURE_LADDER_MAX_COST` (8) keeps the ladder
- * fully punishing while active (still enough to saturate every action's cost)
- * but lets it decay back to `0` within a few turns of inactivity, as the decay
- * model intends.
+ * The cost ladder saturates at `PRESSURE_LADDER_MAX_COST`, so pressure beyond
+ * the point that already maxes the cheapest action (base cost 1, pressure 7)
+ * has no further effect on cost. Left unbounded, per-spend `$inc` lets the
+ * stored value run away, and with decay of only `PRESSURE_DECAY_PER_TURN` (3)
+ * it stays pinned at max cost for dozens of turns. Capping at
+ * `PRESSURE_LADDER_MAX_COST` keeps the ladder fully punishing while active
+ * but lets it decay back to 0 within a few turns of inactivity.
  */
 export const PRESSURE_LADDER_MAX_VALUE = PRESSURE_LADDER_MAX_COST;
 
@@ -167,17 +155,12 @@ export function effectivePsCost(baseCost: number, pressure: number): number {
 // ─── Cap formulas ───────────────────────────────────────────────────────────
 
 /**
- * Flat national PS cap — the full cap a **Major** party may accumulate, identical
- * in every country (2026-06-25). Replaces the former region-scaled formula
- * (`max(100, round(80 + 4 * regionCount))`) which gave smaller countries tiny
- * caps (UK 128, JP 112) so close to the Minor base cap (100) that the
- * Major/Minor tier gap was meaningless. A uniform cap restores a real gap: a
- * Minor party still climbs from `MINOR_PARTY_BASE_PS_CAP` (100) via earned
- * regions, while graduating to Major unlocks the full `NATIONAL_PS_CAP`.
+ * Flat national PS cap, identical in every country. A uniform cap keeps a
+ * real gap between a Minor party (climbing from MINOR_PARTY_BASE_PS_CAP via
+ * earned regions) and a Major one, which unlocks this full cap.
  *
- * Note: `REGION_COUNT_BY_COUNTRY` is retained — it still drives the tier
- * graduation/demotion thresholds (`⌈regions/3⌉`), which are unaffected by this
- * cap change.
+ * Note: REGION_COUNT_BY_COUNTRY is retained; it still drives the tier
+ * graduation/demotion thresholds (⌈regions/3⌉).
  */
 export const NATIONAL_PS_CAP = 280 as const;
 
@@ -213,19 +196,13 @@ export function effectiveStatePsCap(hasPlayerMember: boolean): number {
 }
 
 /**
- * Region count by country, as used by the cap formula. Hardcoded here
- * because the plan locks Japan to 8 regions (not the 47 prefectures the
- * map data carries) — relying on the seed file row count would silently
- * drift if the map were re-cut later.
+ * Region count by country, used by the cap formula. Hardcoded rather than
+ * derived from the seeded map so it survives a re-cut without drifting.
  *
- * **MUST match the actual seeded region count** for `regionCount`-derived
- * thresholds (party tier graduation, demotion) to be reachable. IE and CN
- * previously used the real-world county / province count (26 / 33), which
- * made the graduation threshold (`⌈regions/3⌉`) larger than the actual
- * number of seeded regions — graduation was mathematically impossible.
- * Aligned both to the seed in 2026-06-20 (IE 26 → 8, CN 33 → 7) so a party
- * with strong cross-region Org can graduate to Major; the CN case had been
- * masked by `regimeStatus: "ruling"` pinning CCP Major regardless.
+ * MUST match the actual seeded region count for region-derived thresholds
+ * (party tier graduation, demotion) to be reachable: graduation requires
+ * ⌈regions/3⌉, so a value larger than the seeded count makes it impossible.
+ * Authored regions, not real-world subdivisions (IE, CN, JP).
  */
 export const REGION_COUNT_BY_COUNTRY: Record<CountryId, number> = {
   US: 50,
@@ -259,6 +236,8 @@ export const REGION_COUNT_BY_COUNTRY: Record<CountryId, number> = {
   DD: 6, // 6 seeded regions (5 Länder + East Berlin)
   SCO: 7, // 7 authored sub-regions (seeded at secession)
   WAL: 6, // 6 authored sub-regions (seeded at secession)
+  CA: 13, // 13 provinces and territories
+  QC: 8, // 8 authored regions (seeded at independence)
 } as const;
 
 /**
@@ -290,9 +269,7 @@ export const PRIORITY_REGION_MAX_STATES = 3 as const;
  * it holds the state-level executive (US governor / DE Land Minister-
  * President / JP prefectural governor / UK devolved First Minister) in
  * at least one of the cluster's states. Evaluated at SET time only —
- * losing the anchor mid-lockout doesn't shrink the cluster. See the
- * 2026-05-23 priority-region wiring spec (item #13 of the things-left
- * walkthrough).
+ * losing the anchor mid-lockout doesn't shrink the cluster.
  */
 export const PRIORITY_REGION_GOVERNOR_ANCHOR_BONUS = 1 as const;
 
@@ -308,7 +285,7 @@ export const PRIORITY_REGION_GOVERNOR_ANCHOR_BONUS = 1 as const;
 const PS_INVESTMENT_PREMIUM_VS_PHANTOM = 250_000 / 75_000;
 
 /**
- * Spend-rate discount (2026-06-25 rebalance). The explicit `+1 PS` cost is `5%`
+ * Spend-rate discount. The explicit `+1 PS` cost is `5%`
  * of the legacy per-country rate — UK national `£200,000 → £10,000`, US
  * `£250,000 → £12,500`, etc. Applied uniformly so each country keeps its own
  * (different) base rate, just 20× cheaper. Makes the spend lever materially
@@ -317,10 +294,9 @@ const PS_INVESTMENT_PREMIUM_VS_PHANTOM = 250_000 / 75_000;
 const PS_INVESTMENT_RATE_FRACTION = 0.05 as const;
 
 /**
- * Maximum PS/turn from the explicit investment budget. Raised `4 → 20`
- * (2026-06-25): combined with the cheaper rate, a party draining its whole
- * treasury at the new `5%` rate buys up to 20 PS/turn (the flat passive stacks
- * on top of this).
+ * Maximum PS/turn from the explicit investment budget. At the 5% rate, a party
+ * draining its whole treasury buys up to this many PS/turn (flat passive
+ * stacks on top).
  */
 export const PS_INVESTMENT_MAX_TIERS = 20 as const;
 
@@ -329,7 +305,7 @@ export const PS_INVESTMENT_MAX_TIERS = 20 as const;
  * country-scaled. Used by `partyActionGeneration` and the `/ps-investment`
  * routes when validating the chair-set budget.
  *
- * Equals `5%` of the legacy per-country rate (2026-06-25 rebalance). Examples
+ * Equals `5%` of the legacy per-country rate. Examples
  * (national): US `£12,500`, UK `£10,000`, DE `≈€11,667`, JP `≈¥833,333`.
  * State rate is half (matching the convention in `TREASURY_PS_RATE_BY_COUNTRY`).
  */
@@ -359,22 +335,14 @@ export const BUILD_ORG_BASE_PS_COST = 1 as const;
  * Build Org click, per point of EFFECTIVE PS cost. Price is therefore
  * `TREASURY_PS_RATE_BY_COUNTRY[country][scope] × this × effectivePsCost`, which
  * (a) normalizes across currencies via the same table the PS streams use and
- * (b) makes the pressure ladder bite in cash as well as in PS — a party
+ * (b) makes the pressure ladder bite in cash as well as in PS: a party
  * grinding one state at the ladder's cap pays 8× per click.
  *
- * Calibrated 2026-09-02 against the live ledger rather than against a
- * plausible-looking sticker price: the 168-turn window before the change saw
- * 23,451 build-org spends totalling ~10k PS for the busiest party alone, so a
- * rate that reads cheap per click is not cheap in aggregate. At `0.075` that
- * window's building would have cost each of the top twelve builders between
- * 17% and 124% of its 168-turn treasury inflow (median ~60%), making org
- * building the largest discretionary spend line in the game without shutting
- * anyone out. The single party over 100% (US MON) averaged 6.0 PS/click — i.e.
- * it built almost exclusively at a saturated pressure ladder, which is exactly
- * the pattern the ×`effectivePsCost` term is meant to price.
- *
- * Those figures assume behaviour unchanged, so they are an upper bound; real
- * spend settles lower as parties spread clicks to let pressure decay.
+ * Calibrated against the live ledger rather than a plausible-looking sticker
+ * price: at 0.075, top builders would spend roughly 17-124% of their treasury
+ * inflow (median ~60%), making org building the largest discretionary line
+ * without shutting anyone out. Assumes behaviour unchanged, so an upper bound;
+ * real spend settles lower as parties spread clicks to let pressure decay.
  */
 export const ORG_BUILD_TREASURY_FRACTION = 0.075 as const;
 
@@ -397,35 +365,21 @@ export const ORG_BUILD_MIN_FUNDED_FRACTION = 0.25 as const;
 /**
  * Band the per-state size multiplier is clamped into (see `orgBuildSizeMultiplier`).
  *
- * Build Org's price scales with the size of the state being organized, because
- * Org is consumed as a normalized SHARE of its state: a point of Org in New York
- * (20.8M) carries about 64× the absolute electoral weight of a point in Alaska
- * (326k), and charging both the same systematically underprices exactly the
- * states worth winning.
+ * Build Org's price scales with state size because Org is consumed as a
+ * normalized SHARE of its state, so a flat price underprices the states worth
+ * winning.
  *
- * Two deliberate limits on how far that goes:
+ * Two deliberate limits:
+ *  - The curve is a SQUARE ROOT, not linear. Linear on the live US spread would
+ *    make tiny-state Org nearly free and turn farming it into the dominant
+ *    strategy.
+ *  - The result is clamped into this band, so the widest real spread (US, 63.7x
+ *    population) resolves to a 4x price range rather than 8x raw.
  *
- *  - The curve is a SQUARE ROOT, not linear. Linear on the live US spread puts
- *    Alaska at 0.07× the country mean — roughly $200 a click, which is close
- *    enough to free that farming cheap Org in tiny states (they still count
- *    toward party tier, and cheap Org is cheap to defend against decay) becomes
- *    the dominant strategy.
- *  - The result is clamped into this band, so the widest real spread (US, 63.7×
- *    population) resolves to a 4× price range rather than 8× raw.
- *
- * The multiplier is normalized against a per-country figure so its average is 1
- * ACROSS REGIONS. That is not the same as an average of 1 across CLICKS, and the
- * difference is the interesting part: players organize where it matters, so 74%
- * of live US clicks land in above-average states and the click-weighted mean
- * comes out at 1.349. Replaying a real week (`scripts/sim/orgBuildStateScaling2026-09-02.ts`)
- * puts the true effect at **+13.5% total spend**, not the neutral reshuffle the
- * per-region arithmetic suggests — up to +44% for the heaviest US builders,
- * while UK and Soviet parties barely move (1.048 / 1.038).
- *
- * That rise was reviewed and accepted rather than compensated for: paying more
- * IS the mechanic, since the clicks that got dearer are exactly the ones buying
- * the most valuable Org. Anyone re-tuning `ORG_BUILD_TREASURY_FRACTION` should
- * know its effective level is ~13.5% above where it was calibrated.
+ * The multiplier averages 1 ACROSS REGIONS, not across clicks. Players organize
+ * where it matters, so the click-weighted mean is ~1.35 and the effective
+ * `ORG_BUILD_TREASURY_FRACTION` level runs ~13.5% above where it was calibrated.
+ * Paying more IS the mechanic: the dearer clicks buy the most valuable Org.
  */
 export const ORG_BUILD_SIZE_MULTIPLIER_MIN = 0.5 as const;
 export const ORG_BUILD_SIZE_MULTIPLIER_MAX = 2.0 as const;

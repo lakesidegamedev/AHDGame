@@ -32,6 +32,8 @@ import { COMMODITY_TYPES } from "../commodities";
  * and the larger of the two.
  */
 export const TECH_PLANT_OUTPUT_CAP = 0.12;
+/** Cap on the plant-output bonus from held frontier race methods, applied on top of the node cap. */
+export const TECH_METHOD_OUTPUT_CAP = 0.15;
 /** Total tech input-efficiency bonus is capped (every input rate floored at 1 − this). */
 export const TECH_INPUT_EFFICIENCY_CAP = 0.3;
 /** Total tech growth-cost reduction is capped (multiplier floored at 1 − this). */
@@ -58,6 +60,13 @@ export const CORP_LANE_EFFECT_SCALE = 0.5;
 export interface PlantOutputEffect {
   kind: "plantOutput";
   pct: number;
+  /**
+   * A held frontier race method. It counts as its own term, capped separately by
+   * TECH_METHOD_OUTPUT_CAP, instead of competing with nodes for the shared
+   * TECH_PLANT_OUTPUT_CAP: a corporation racing in the 2040s is already near
+   * that cap, so a method inside it would add nothing.
+   */
+  method?: boolean;
 }
 
 /** Lowers every input rate of the sector's plants (0.03 = 3% fewer inputs). */
@@ -219,6 +228,8 @@ export function collectUnlockedStrategyIds(effects: TechEffect[]): string[] {
 export interface AggregatedTechEffects {
   /** Capped plant-output bonus folded into every `outputRateMult` entry. */
   plantOutputBonus: number;
+  /** Capped bonus from held frontier race methods, folded in on top of `plantOutputBonus`. */
+  methodOutputBonus: number;
   /** Capped input-efficiency bonus folded into every `inputRateMult` entry. */
   inputEfficiencyBonus: number;
   /** Combined growth-cost multiplier in [1−cap, 1]; 1 = no reduction. */
@@ -240,6 +251,7 @@ export interface AggregatedTechEffects {
 /** Neutral aggregate (no tech effects) — used when the feature gate is off. */
 export const NEUTRAL_TECH_EFFECTS: AggregatedTechEffects = {
   plantOutputBonus: 0,
+  methodOutputBonus: 0,
   inputEfficiencyBonus: 0,
   growthCostMultiplier: 1,
   laborCostMultiplier: 1,
@@ -274,6 +286,7 @@ export function scaleEffect(effect: TechEffect, scale: number): TechEffect {
 /** Reduce a flat list of effects to the per-turn scalars the turn engine applies. */
 export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffects {
   let plantOutputPct = 0;
+  let methodOutputPct = 0;
   let inputEfficiencyPct = 0;
   let growthCostReductionPct = 0;
   let laborCostReductionPct = 0;
@@ -284,7 +297,8 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
   const outputRateMult: Record<string, number> = {};
   for (const effect of effects) {
     if (effect.kind === "plantOutput") {
-      plantOutputPct += effect.pct;
+      if (effect.method) methodOutputPct += effect.pct;
+      else plantOutputPct += effect.pct;
     } else if (effect.kind === "inputEfficiency") {
       inputEfficiencyPct += effect.pct;
     } else if (effect.kind === "growthCostReduction") {
@@ -316,11 +330,13 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
   // needs a second code path. Applied to every commodity: a rate a recipe does
   // not use is never read.
   const plantOutputBonus = Math.min(TECH_PLANT_OUTPUT_CAP, Math.max(0, plantOutputPct));
+  const methodOutputBonus = Math.min(TECH_METHOD_OUTPUT_CAP, Math.max(0, methodOutputPct));
   const inputEfficiencyBonus = Math.min(TECH_INPUT_EFFICIENCY_CAP, Math.max(0, inputEfficiencyPct));
-  if (plantOutputBonus > 0 || inputEfficiencyBonus > 0) {
+  if (plantOutputBonus > 0 || methodOutputBonus > 0 || inputEfficiencyBonus > 0) {
     for (const commodity of COMMODITY_TYPES) {
-      if (plantOutputBonus > 0) {
-        outputRateMult[commodity] = (outputRateMult[commodity] ?? 1) * (1 + plantOutputBonus);
+      if (plantOutputBonus > 0 || methodOutputBonus > 0) {
+        outputRateMult[commodity] =
+          (outputRateMult[commodity] ?? 1) * (1 + plantOutputBonus) * (1 + methodOutputBonus);
       }
       if (inputEfficiencyBonus > 0) {
         inputRateMult[commodity] = (inputRateMult[commodity] ?? 1) * (1 - inputEfficiencyBonus);
@@ -329,6 +345,7 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
   }
   return {
     plantOutputBonus,
+    methodOutputBonus,
     inputEfficiencyBonus,
     growthCostMultiplier: 1 - clampedReduction,
     laborCostMultiplier: 1 - clampedLaborReduction,

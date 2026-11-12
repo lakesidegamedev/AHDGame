@@ -1,15 +1,14 @@
 import { ObjectId, type Db } from "mongodb";
-import type {
-  Corporation,
-  CorporationHistory,
-  ExchangeRate,
-  MarketCapHistory,
-} from "@/lib/db/types";
+import type { CorporationHistory, ExchangeRate, MarketCapHistory } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { isStockMarketCorporation } from "@/lib/turn/corporation/marketCapSnapshot";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
 type HistoryRow = MarketCapHistory & { _id: ObjectId };
 
@@ -100,13 +99,12 @@ export function removeUnlistedCaps(
 
 async function survey(db: Db): Promise<Survey> {
   const [rows, corporations, rates] = await Promise.all([
-    db
-      .collection<HistoryRow>("marketCapHistory")
+    marketCapHistoryCollection<HistoryRow>(db)
       .find({ listingUniverse: { $ne: "public-only" } })
       .sort({ turn: 1 })
       .toArray(),
-    db.collection<Corporation>("corporations").find({}).toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
+    corporationsCollection(db).find({}).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
   ]);
   const unlisted = corporations.filter((corp) => !isStockMarketCorporation(corp));
   if (rows.length === 0 || unlisted.length === 0) {
@@ -124,8 +122,7 @@ async function survey(db: Db): Promise<Survey> {
 
   const corpById = new Map(unlisted.map((corp) => [corp._id.toString(), corp]));
   const currentRate = new Map(rates.map((rate) => [rate.currencyCode, rate.rate]));
-  const histories = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const histories = await corporationHistoryCollection(db)
     .find({
       corporationId: { $in: unlisted.map((corp) => corp._id) },
       turn: { $in: rows.map((row) => row.turn) },
@@ -193,7 +190,7 @@ async function plan(db: Db): Promise<HealPlan> {
 async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
   const result = healPlan.payload as Survey;
   if (result.rows.length === 0) return { documentsScanned: 0, documentsUpdated: 0 };
-  const write = await db.collection<HistoryRow>("marketCapHistory").bulkWrite(
+  const write = await marketCapHistoryCollection<HistoryRow>(db).bulkWrite(
     result.rows.map((row) => ({
       updateOne: {
         filter: { _id: new ObjectId(row.id), listingUniverse: { $ne: "public-only" } },
@@ -215,9 +212,9 @@ async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
 }
 
 async function verify(db: Db): Promise<VerifyResult> {
-  const remaining = await db
-    .collection<MarketCapHistory>("marketCapHistory")
-    .countDocuments({ listingUniverse: { $ne: "public-only" } });
+  const remaining = await marketCapHistoryCollection(db).countDocuments({
+    listingUniverse: { $ne: "public-only" },
+  });
   return {
     ok: remaining === 0,
     remaining,

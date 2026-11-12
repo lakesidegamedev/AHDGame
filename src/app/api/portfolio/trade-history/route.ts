@@ -11,8 +11,10 @@ import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, badRequest, forbidden } from "@/lib/api/errors";
-import type { Corporation, ShareTradeHistory } from "@/lib/db/types";
+import type { ShareTradeHistory } from "@/lib/db/types";
 import { computeRealizedPnlByCorporation, type LedgerViewer } from "@/lib/corporations/tradeLedger";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const querySchema = z.object({
   /** Read a corporation's book instead of the character's. Must be its CEO. */
@@ -50,9 +52,10 @@ async function handleGET(request: Request) {
     if (corporationId) {
       if (!ObjectId.isValid(corporationId)) throw badRequest("Invalid corporation id");
       const corpId = new ObjectId(corporationId);
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: corpId }, { projection: { ceoId: 1, userId: 1 } });
+      const corp = await corporationsCollection(db).findOne(
+        { _id: corpId },
+        { projection: { ceoId: 1, userId: 1 } }
+      );
       if (!corp) throw badRequest("Corporation not found");
       // Only the sitting CEO may read a corp's own book. Its trades are its
       // owner's private business; the public tape is the other endpoint.
@@ -74,8 +77,7 @@ async function handleGET(request: Request) {
       };
     }
 
-    const ownRows = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const ownRows = await shareTradeHistoryCollection(db)
       .find(match)
       .sort({ turn: 1, createdAt: 1 })
       .limit(limit)
@@ -89,8 +91,7 @@ async function handleGET(request: Request) {
       (id) => new ObjectId(id)
     );
     const splitRows = corpIds.length
-      ? await db
-          .collection<ShareTradeHistory>("shareTradeHistory")
+      ? await shareTradeHistoryCollection(db)
           .find({
             corporationId: { $in: corpIds },
             kind: { $in: ["stock_split", "reverse_split"] },
@@ -107,8 +108,7 @@ async function handleGET(request: Request) {
 
     // Name the corporations so the client does not need a second round trip.
     const corpNames = corpIds.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corpIds } }, { projection: { name: 1, tickerSymbol: 1 } })
           .toArray()
       : [];

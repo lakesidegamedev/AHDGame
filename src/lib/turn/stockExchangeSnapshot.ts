@@ -14,11 +14,9 @@ import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type {
   Bond,
-  Character,
   Corporation,
   CorporateSector,
   CorporationHistory,
-  FederalBudget,
   StateBudget,
   State,
   StockExchangeSnapshot,
@@ -77,6 +75,21 @@ import {
   getOperatingSectorType,
   STRATEGY_TRANSITION_TURNS,
 } from "@/lib/constants/sectorStrategies";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
@@ -102,13 +115,11 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const now = new Date();
 
       // Fetch all data needed for snapshots
-      const corporationsCollection = database.collection<Corporation>("corporations");
-      // Compatibility repair for auction shells that later completed an IPO.
-      // The late-IPO path used to clear isPrivate without clearing the auction's
-      // hiddenFromExchange marker, leaving a public corporation absent from every
-      // exchange forever. Future IPOs clear it in goPublic; this repairs existing
-      // public rows before each idempotent snapshot build.
-      await corporationsCollection.updateMany(
+      const corporationsHandle = corporationsCollection(database);
+      // Repairs public corporations left with hiddenFromExchange set by a
+      // late IPO that cleared isPrivate but not the auction marker, which
+      // hides them from every exchange. New IPOs clear it in goPublic.
+      await corporationsHandle.updateMany(
         {
           isPrivate: { $ne: true },
           hiddenFromExchange: true,
@@ -116,7 +127,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         },
         { $set: { hiddenFromExchange: false } }
       );
-      const corporations = await corporationsCollection
+      const corporations = await corporationsHandle
         .find(
           { hiddenFromExchange: { $ne: true }, isPrivate: { $ne: true } },
           {
@@ -168,8 +179,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
 
       const [characters, imperialChars, nppChars] = await Promise.all([
         regularCeoIds.length > 0
-          ? database
-              .collection<Character>("characters")
+          ? charactersCollection(database)
               .find({ _id: { $in: regularCeoIds } })
               .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
                 _id: 1,
@@ -180,8 +190,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               .toArray()
           : Promise.resolve([]),
         imperialCeoIds.length > 0
-          ? database
-              .collection("imperialCharacters")
+          ? imperialCharactersCollection<Document>(database)
               .find({ _id: { $in: imperialCeoIds } })
               .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
                 _id: 1,
@@ -192,8 +201,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               .toArray()
           : Promise.resolve([]),
         nppCeoIds.length > 0
-          ? database
-              .collection("npps")
+          ? nppsCollection<Document>(database)
               .find({ _id: { $in: nppCeoIds } })
               .project<{ _id: ObjectId; name: string; avatarUrl?: string; sequentialId?: number }>({
                 _id: 1,
@@ -303,8 +311,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       });
 
       const [allSectors, historyRows] = await Promise.all([
-        database
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(database)
           .find(
             { corporationId: { $in: corpIds } },
             {
@@ -331,8 +338,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             }
           )
           .toArray(),
-        database
-          .collection<CorporationHistory>("corporationHistory")
+        corporationHistoryCollection(database)
           .aggregate<{
             _id: ObjectId;
             h1?: RawHistorySlot;
@@ -459,8 +465,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         await Promise.all([
           // Legacy-shaped view for the margin engine's stored reads.
           findMergedRegionMetricsMany(database, {}),
-          database
-            .collection<State>("states")
+          statesCollection(database)
             .find({})
             .project<Pick<State, "_id" | "countryId" | "sectorSpecializations">>({
               countryId: 1,
@@ -468,8 +473,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             })
             .toArray(),
           getActiveSubsidies(database),
-          database
-            .collection<FederalBudget>("federalBudget")
+          federalBudgetCollection(database)
             .find(
               {},
               {
@@ -481,8 +485,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
               }
             )
             .toArray(),
-          database
-            .collection<StateBudget>("stateBudgets")
+          stateBudgetsCollection(database)
             .find(
               {},
               {
@@ -521,10 +524,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const stateCountryMap = new Map(allStates.map((s) => [s._id, s.countryId]));
 
       // SP4 §4a: political margin overlays for playable regions.
-      const politicalDocs = await database
-        .collection<PoliticalMetricsDoc>("politicalMetrics")
-        .find({})
-        .toArray();
+      const politicalDocs = await politicalMetricsCollection(database).find({}).toArray();
       const politicalBaseModifiersByState = new Map(
         politicalDocs.map((doc) => [String(doc._id), buildPoliticalBaseModifiers(doc.values)])
       );
@@ -545,7 +545,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const imfFacilityReceiptsDailyByCorpId = new Map<string, number>();
 
       // Fetch outstanding bonds for interest cost calculation + coupon income from held bonds
-      const allBonds = await database.collection<Bond>("bonds").find({ matured: false }).toArray();
+      const allBonds = await bondsCollection(database).find({ matured: false }).toArray();
       const bondsByCorpId = new Map<string, Bond[]>();
       for (const bond of allBonds) {
         if (!bond.corporationId) continue;
@@ -555,24 +555,22 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         bondsByCorpId.set(corpKey, corpBonds);
       }
 
-      // Live era year for the metric existence gate on margin signals; null
-      // while eraSystemEnabled is off (legacy behavior). Fetched AFTER the main
+      // Live era year for the metric existence gate on margin signals. Fetched AFTER the main
       // corp/sector fetches so call-order-sensitive test harnesses keep their
       // queued collection mocks aligned.
-      const eraGameState = await database
-        .collection<import("@/lib/db/types").GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          {
-            projection: {
-              currentYear: 1,
-              currentTurn: 1,
-              startingYear: 1,
-              eraSystemEnabled: 1,
-            },
-          }
-        );
-      const eraYear = eraGameState?.eraSystemEnabled ? resolveGameYear(eraGameState) : null;
+      const eraGameState = await gameStateCollection<import("@/lib/db/types").GameState>(
+        database
+      ).findOne(
+        { _id: "current" },
+        {
+          projection: {
+            currentYear: 1,
+            currentTurn: 1,
+            startingYear: 1,
+          },
+        }
+      );
+      const eraYear = eraGameState ? resolveGameYear(eraGameState) : null;
 
       // FX rates — needed for anchor-normalizing cross-currency bond cash flows below.
       // Loaded once, reused by the coupon-income accumulation, the per-corp interest
@@ -616,13 +614,13 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const bailoutCorps = corporations.filter((c) => c.imfBailoutActive === true);
       if (bailoutCorps.length > 0) {
         const bailoutCorpIds = bailoutCorps.map((c) => c._id);
-        const bailoutIncomeRows = await database
-          .collection<{ corporationId: ObjectId; income?: number }>("corporationHistory")
+        const bailoutIncomeRows = await corporationHistoryCollection<{
+          corporationId: ObjectId;
+          income?: number;
+        }>(database)
           .aggregate<{ _id: ObjectId; income: number }>([
             { $match: { corporationId: { $in: bailoutCorpIds } } },
-            // Sort on the group key first so the {corporationId, turn} index serves
-            // match, sort and $first as a DISTINCT_SCAN (one entry per corporation)
-            // instead of walking the whole history by turn (#2693).
+            // Sort by group key first so the {corporationId, turn} index serves the pipeline as a DISTINCT_SCAN instead of walking the full history.
             { $sort: { corporationId: 1, turn: -1 } },
             { $group: { _id: "$corporationId", income: { $first: "$income" } } },
           ])
@@ -927,8 +925,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
 
       // Resolve state names
       const hqIds = [...new Set(corporations.map((c) => c.headquartersState))];
-      const states = await database
-        .collection<State>("states")
+      const states = await statesCollection(database)
         .find({ _id: { $in: hqIds } })
         .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
         .toArray();
@@ -1079,9 +1076,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           })(),
           publicFloat: corp.publicFloat ?? 0,
           exchange: getExchange(corp),
-          // Canonical tradability flag (#2033): zero-share / zero-float
-          // rows stay visible as operating firms but leave every
-          // tradable denominator and numerator.
+          // Canonical tradability: zero-share or zero-float rows stay visible but leave all tradable denominators and numerators.
           isTradable: isTradableListing({
             totalShares,
             publicFloat: corp.publicFloat ?? 0,
@@ -1124,8 +1119,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           [h.h1?.turn, h.h24?.turn, h.h48?.turn].filter((t): t is number => t != null)
         )
       );
-      const splitRows = await database
-        .collection<ShareTradeHistory>("shareTradeHistory")
+      const splitRows = await shareTradeHistoryCollection(database)
         .find({
           corporationId: { $in: corpIds },
           kind: { $in: ["stock_split", "reverse_split"] },
@@ -1170,8 +1164,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       // privacy, then land on an exchange that only lists public corps.
       const privateCorpCountByExchange = new Map<string, number>();
       let totalPrivateCorpCount = 0;
-      const privateCorpRows = await database
-        .collection<Corporation>("corporations")
+      const privateCorpRows = await corporationsCollection(database)
         .aggregate<{ _id: string | null; count: number }>([
           { $match: { hiddenFromExchange: { $ne: true }, isPrivate: true } },
           { $group: { _id: "$countryId", count: { $sum: 1 } } },
@@ -1208,7 +1201,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       });
 
       // Upsert all snapshots
-      const collection = database.collection<StockExchangeSnapshot>("stockExchangeSnapshots");
+      const collection = stockExchangeSnapshotsCollection(database);
       await Promise.all(
         snapshots.map((snapshot) =>
           collection.updateOne({ _id: snapshot._id }, { $set: snapshot }, { upsert: true })

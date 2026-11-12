@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { ownRouteIdentity, resolveSupplyPolicies } from "@/lib/market/internalSupply/rules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
 type CoveredByState = NonNullable<SourcingNetworkDoc["ownFreightCoveredTeuByState"]>;
 
@@ -33,9 +35,10 @@ export async function loadOwnTruckTeuByState(
   db: Db,
   corporation: Pick<Corporation, "_id">
 ): Promise<Record<string, number>> {
-  const doc = await db
-    .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
-    .findOne({}, { sort: { turn: -1 }, projection: { ownFreightCoveredTeuByState: 1 } });
+  const doc = await sourcingNetworkLoadCollection<SourcingNetworkDoc>(db).findOne(
+    {},
+    { sort: { turn: -1 }, projection: { ownFreightCoveredTeuByState: 1 } }
+  );
   const covered = doc?.ownFreightCoveredTeuByState;
   if (!covered) return {};
   const id = corporation._id.toString();
@@ -44,8 +47,7 @@ export async function loadOwnTruckTeuByState(
     Object.keys(r).some((k) => k !== id && k.startsWith("group:"))
   );
   if (anyGroup) {
-    const owners = await db
-      .collection<Corporation>("corporations")
+    const owners = await corporationsCollection(db)
       .find(
         {},
         { projection: { _id: 1, totalShares: 1, shareholders: 1, internalSupplyPolicy: 1 } }

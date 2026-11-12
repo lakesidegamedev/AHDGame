@@ -23,6 +23,10 @@ import { getCountryState } from "@/lib/countryState";
 import { ObjectId, type Db } from "mongodb";
 import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function proposePmAppointment(
   db: Db,
@@ -109,15 +113,18 @@ export async function proposePmAppointment(
     }
 
     const nomineeId = new ObjectId(nomineeCharacterId);
-    const nomineeChar = await db
-      .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
-      .findOne({ _id: nomineeId, userId: { $exists: true } });
+    const nomineeChar = await charactersCollection<{
+      _id: ObjectId;
+      name: string;
+      party?: string;
+      userId?: ObjectId;
+    }>(db).findOne({ _id: nomineeId, userId: { $exists: true } });
     if (!nomineeChar) {
       throw notFound("Nominee not found or is not a player character");
     }
 
     const lowerChamberKey = offices.lowerOfficeType;
-    const nomineeOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const nomineeOfficial = await electedOfficialsCollection(db).findOne({
       characterId: nomineeId,
       countryId,
       officeType: lowerChamberKey,
@@ -244,13 +251,13 @@ export async function proposeHosAppointment(
   let nomineePartyStr: string;
   if (nomineeNppId) {
     nomineeNppOid = new ObjectId(nomineeNppId);
-    const nomineeNpp = await db
-      .collection<{ _id: ObjectId; name: string; party?: string }>("npps")
-      .findOne({ _id: nomineeNppOid });
+    const nomineeNpp = await nppsCollection<{ _id: ObjectId; name: string; party?: string }>(
+      db
+    ).findOne({ _id: nomineeNppOid });
     if (!nomineeNpp) {
       throw notFound("Nominee NPP not found");
     }
-    const nomineeOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const nomineeOfficial = await electedOfficialsCollection(db).findOne({
       nppId: nomineeNppOid,
       countryId,
       officeType: { $in: jointOffices },
@@ -262,15 +269,18 @@ export async function proposeHosAppointment(
     nomineePartyStr = nomineeOfficial.party ?? nomineeNpp.party ?? "";
   } else {
     nomineeId = new ObjectId(nomineeCharacterId);
-    const nomineeChar = await db
-      .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
-      .findOne({ _id: nomineeId, userId: { $exists: true } });
+    const nomineeChar = await charactersCollection<{
+      _id: ObjectId;
+      name: string;
+      party?: string;
+      userId?: ObjectId;
+    }>(db).findOne({ _id: nomineeId, userId: { $exists: true } });
     if (!nomineeChar) {
       throw notFound("Nominee not found or is not a player character");
     }
 
     // Joint sitting: the nominee may sit in either Supreme Soviet chamber.
-    const nomineeOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const nomineeOfficial = await electedOfficialsCollection(db).findOne({
       characterId: nomineeId,
       countryId,
       officeType: { $in: jointOffices },
@@ -361,7 +371,7 @@ export async function castPmAppointmentVote(
   // Head-of-state votes are a JOINT sitting — members of either chamber vote.
   const voterOfficeTypes =
     voteDoc.office === "headOfState" ? offices.jointSittingOfficeTypes : [offices.lowerOfficeType];
-  const voterOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const voterOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     countryId,
     officeType: { $in: voterOfficeTypes },
@@ -421,7 +431,7 @@ export async function proposeNoConfidence(
     throw badRequest("A no-confidence vote is already in progress");
   }
 
-  const proposerOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const proposerOfficial = await electedOfficialsCollection(db).findOne({
     characterId: proposer._id,
     countryId,
     officeType: offices.lowerOfficeType,
@@ -438,9 +448,10 @@ export async function proposeNoConfidence(
   // reaching this command, but the gate protects future one-party
   // states that opt into confidence votes from non-ruling-party VONCs.
   const proposerPartySeqId = parseInt(proposerOfficial.party ?? "0", 10);
-  const proposerParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId, sequentialId: proposerPartySeqId });
+  const proposerParty = await politicalPartiesCollection(db).findOne({
+    countryId,
+    sequentialId: proposerPartySeqId,
+  });
   // Runtime governmentType so a post-Stage-4 conversion immediately
   // changes the ruling-party VONC gate.
   const vonRuntime = await getCountryState(db, countryId);
@@ -466,9 +477,9 @@ export async function proposeNoConfidence(
 
   let targetPmName = govFormation.pmName ?? "Unknown";
   if (!govFormation.pmName) {
-    const pmChar = await db
-      .collection<{ _id: ObjectId; name: string }>("characters")
-      .findOne({ _id: govFormation.pmCharacterId });
+    const pmChar = await charactersCollection<{ _id: ObjectId; name: string }>(db).findOne({
+      _id: govFormation.pmCharacterId,
+    });
     targetPmName = pmChar?.name ?? "Unknown";
   }
 
@@ -548,7 +559,7 @@ export async function castNoConfidenceVote(
     throw badRequest("The voting window has closed");
   }
 
-  const voterOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const voterOfficial = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     countryId,
     officeType: offices.lowerOfficeType,
@@ -636,9 +647,8 @@ async function notifyNoConfidenceParticipants(
   executiveTitle: string
 ): Promise<void> {
   const [pmChar, allLowerMps] = await Promise.all([
-    db.collection<Character>("characters").findOne({ _id: pmCharacterId }),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    charactersCollection(db).findOne({ _id: pmCharacterId }),
+    electedOfficialsCollection(db)
       .find({ officeType: lowerChamberKey, countryId, isNPP: { $ne: true } })
       .toArray(),
   ]);
@@ -665,8 +675,7 @@ async function notifyNoConfidenceParticipants(
     return;
   }
 
-  const mpCharacters = await db
-    .collection<Character>("characters")
+  const mpCharacters = await charactersCollection(db)
     .find({ _id: { $in: mpCharacterIds } })
     .toArray();
   const notifications = mpCharacters

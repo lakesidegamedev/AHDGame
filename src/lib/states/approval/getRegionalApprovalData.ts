@@ -16,6 +16,9 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 export interface RegionalApprovalData {
   approval: number;
@@ -37,7 +40,10 @@ export async function getRegionalApprovalData(
   if (!metrics) return null;
 
   const countryStateIds = (
-    await db.collection("states").find({ countryId }).project<{ _id: string }>({ _id: 1 }).toArray()
+    await statesCollection<Document>(db)
+      .find({ countryId })
+      .project<{ _id: string }>({ _id: 1 })
+      .toArray()
   ).map((s) => s._id);
 
   if (countryStateIds.length === 0) return null;
@@ -50,7 +56,7 @@ export async function getRegionalApprovalData(
   if (allMetrics.length === 0) return null;
 
   const nationalAverages = computeNationalAveragesFromMetrics(allMetrics);
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -58,14 +64,13 @@ export async function getRegionalApprovalData(
         currentYear: 1,
         preset: 1,
         startingYear: 1,
-        eraSystemEnabled: 1,
       },
     }
   );
   const currentTurn = gameState?.currentTurn ?? 0;
   const preset = gameState?.preset ?? null;
   // Live year for era-aware scoring; null while the flag is off (legacy path).
-  const year = gameState?.eraSystemEnabled ? resolveGameYear(gameState ?? {}) : null;
+  const year = gameState ? resolveGameYear(gameState) : null;
 
   const addressModifiers = await getActiveAddressApprovalModifiers(
     db,

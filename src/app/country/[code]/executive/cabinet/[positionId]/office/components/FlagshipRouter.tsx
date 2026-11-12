@@ -48,6 +48,7 @@ type MonetaryData = {
   debtPrincipal: number;
   sovereignBondsOutstanding: number;
   sovereignBondProfile: Record<number, number> | null;
+  sovereignBondMaturities?: number[];
   currentTurn: number;
 } | null;
 
@@ -192,6 +193,7 @@ export function FlagshipRouter({
       debtPrincipal={monetary.debtPrincipal}
       sovereignBondsOutstanding={monetary.sovereignBondsOutstanding}
       sovereignBondProfile={monetary.sovereignBondProfile}
+      sovereignBondMaturities={monetary.sovereignBondMaturities}
       onUpdate={onUpdate}
     />
   ) : null;

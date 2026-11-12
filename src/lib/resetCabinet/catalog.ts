@@ -1,6 +1,7 @@
 /** Authored Cabinet action menu for the reset. Live v1 orders remain separate. */
 import actions from "./actionCatalog.json";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type ActionCostClass = "Ops" | "Staff" | "Surge";
 export type ActionScope = "Nat" | "Vet" | "NI" | "SCT" | "WAL";
@@ -21,7 +22,7 @@ export interface ResetCabinetAction {
 }
 
 const authored = actions as ResetCabinetAction[];
-const ukActions = authored.filter((action) => action.country === "UK");
+const ukActions = authored.filter((action) => countryHasFeature("ukSeeds", action.country));
 
 const ieSeatSources: Readonly<Record<string, string>> = {
   taoiseach: "deputy_prime_minister",

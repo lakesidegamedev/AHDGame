@@ -1,5 +1,5 @@
 /**
- * Cross-state extraction opportunity finder (#3002 sibling / Track 2 signpost).
+ * Cross-state extraction opportunity finder.
  *
  * A capacity-bound extraction sector is limited by the deposits in ITS OWN
  * state — output above the state's per-resource capacity is clamped. Globally
@@ -21,6 +21,10 @@ import type { ExtractableResource } from "@/lib/constants/commodities";
 import { extractionDesiredUnits } from "@/lib/extraction/capacityHaircut";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { getExtractionOutputScaleEnabled } from "@/lib/market/featureFlag";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export interface OpportunityState {
   stateId: string;
@@ -51,25 +55,23 @@ export async function computeResourceOpportunities(
   if (resources.length === 0) return [];
 
   const [capDocs, extractionSectors, states, eraUnitScale, gameConfig] = await Promise.all([
-    db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
+    stateResourceCapacityCollection(db)
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { sectorType: "extraction" },
         { projection: { stateId: 1, revenue: 1, strategyId: 1, corporationId: 1, countryId: 1 } }
       )
       .toArray(),
-    db
-      .collection<{ _id: string; countryId: string }>("states")
+    statesCollection<{ _id: string; countryId: string }>(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray(),
     loadWorldEraUnitScale(db),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { extractionOutputScaleEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { extractionOutputScaleEnabled: 1 } }
+    ),
   ]);
   const extractionOutputScaleEnabled = await getExtractionOutputScaleEnabled(gameConfig);
   const revenueAnchorOf = await loadExtractionRevenueAnchorOf(db, extractionSectors);

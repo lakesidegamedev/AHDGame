@@ -1,9 +1,11 @@
 import type { ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { CorporationPrivatizationVote } from "@/lib/db/types/corporationPrivatizationVote";
 import { corporationPathIdFromDoc } from "@/lib/api/corporations/resolveQuery";
 import type { DueSoonContext, DueSoonItem } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 const HOLDING_LIMIT = 50;
 
@@ -12,8 +14,7 @@ const HOLDING_LIMIT = 50;
  * shares and has not voted yet. A CEO cannot vote on their own privatization.
  */
 export async function corporateVotes(ctx: DueSoonContext): Promise<DueSoonItem[]> {
-  const holdings = await ctx.db
-    .collection<Corporation>("corporations")
+  const holdings = await corporationsCollection(ctx.db)
     .find(
       { "shareholders.characterId": ctx.characterId },
       {
@@ -33,12 +34,10 @@ export async function corporateVotes(ctx: DueSoonContext): Promise<DueSoonItem[]
   const corporationId = { $in: voting.map((corp) => corp._id) };
   const projection = { corporationId: 1, deadlineAtTurn: 1, "votes.characterId": 1 };
   const [shareholderVotes, privatizationVotes] = await Promise.all([
-    ctx.db
-      .collection<CorporationVote>("corporationVotes")
+    corporationVotesCollection(ctx.db)
       .find({ corporationId, status: "open" }, { projection })
       .toArray(),
-    ctx.db
-      .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
+    corporationPrivatizationVotesCollection(ctx.db)
       .find({ corporationId, status: "open" }, { projection })
       .toArray(),
   ]);

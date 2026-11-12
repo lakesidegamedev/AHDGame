@@ -1,4 +1,5 @@
 import { ProducerSupplyPool } from "./supplyPoolRules";
+import { bookKey } from "./bookKey";
 import type { FundedCountryBookRow } from "./fundedBookRules";
 import { sortFundedCountryBookRows } from "./fundedBookRules";
 import { nextAutoAsk } from "./autoAskRules";
@@ -30,9 +31,7 @@ export interface ProducerOffer {
   /** State the selling site is in; freight clears against local demand first. */
   stateId?: string;
   /**
-   * The owner's opt-in (suggestion 427): this site sells to outside buyers
-   * before the company's own plants. Own-sites-first skips the offer; whatever
-   * outside buyers leave still reaches the own plants free, in the ordinary pass.
+   * This site sells to outside buyers before the company's own plants. Own-sites-first skips the offer; whatever outside buyers leave still reaches the own plants free, in the ordinary pass.
    */
   sellOutsideFirst?: true;
 }
@@ -63,14 +62,12 @@ export interface PurchaseOrder {
   /** State the buying site is in; a freight order takes local sellers first. */
   stateId?: string;
   /**
-   * A lower step of a household demand curve (#5451). It buys only when a
-   * seller asks that little, so it counts as demand only for what it buys.
+   * A lower step of a household demand curve. It buys only when a seller asks
+   * that little, so it counts as demand only for what it buys.
    */
   demandStep?: number;
   /**
-   * Orders sharing a spend group draw on one budget (#5451): together they never
-   * spend more than `maximumSpend`, at any mix of fill prices. Every order in a
-   * group must carry the same limit.
+   * Orders sharing a spend group draw on one budget: together they never spend more than `maximumSpend`, at any mix of fill prices. Every order in a group must carry the same limit.
    */
   spendGroup?: { id: string; maximumSpend: number };
   /**
@@ -354,8 +351,6 @@ function unique<T extends { id: string }>(rows: readonly T[], label: string): vo
 }
 
 const compareId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-const bookKey = (commodity: string, book: string) => JSON.stringify([commodity, book]);
-
 /** One pure clearing pass. Seller receipts, buyer charges and observed prices share the same trades. */
 export function settleProducerMarket(input: {
   /** Host-owned deadline, checked within a clearing before any persistent writes. */
@@ -1086,6 +1081,7 @@ export function settleProducerMarket(input: {
         eligible: eligibleSetOf(order),
         quantityGroup,
         wanted,
+        orderLimitId: JSON.stringify(["order", order.id]),
         accountLimitId: JSON.stringify(["account", order.accountId]),
         spendLimitId: order.spendGroup && JSON.stringify(["spend", order.spendGroup.id]),
         quantityLimitId:
@@ -1203,7 +1199,7 @@ export function settleProducerMarket(input: {
         const shares = capSharedShares(
           proposals.map((p) => p.units),
           proposals.map(({ m }) => [
-            { id: JSON.stringify(["order", m.order.id]), units: capOf(m) },
+            { id: m.orderLimitId, units: capOf(m) },
             {
               id: m.accountLimitId,
               units: price > 0 ? budgets.get(m.order.accountId)! / price : Infinity,
@@ -1487,15 +1483,14 @@ const compareOrders = (a: PurchaseOrder, b: PurchaseOrder) =>
   compareId(a.id, b.id);
 
 /**
- * Requested and budget-backed units per buyer country (#5450). Measurement
- * only: it reads opening budgets and never changes a fill.
+ * Requested and budget-backed units per buyer country. Measurement only:
+ * reads opening budgets and never changes a fill.
  *
  * Requested counts a reservation group once, at most its target. Funded walks
  * orders in settlement order against one shared budget per account (opening
  * cash plus intra-turn credit), each order paying its contract or limit
  * price, capped by its own spending limit and its group's remaining target.
- * A buyer that could pay less than the limit could afford more, so funded is
- * a lower bound at the prices buyers bid.
+ * Funded is a lower bound at the prices buyers bid.
  */
 function fundedDemandByCountry(
   orders: readonly PurchaseOrder[],
@@ -1683,12 +1678,10 @@ export function quoteProducer(input: {
   if (!Number.isFinite(markup) || markup < -1) throw new Error("Invalid target markup");
   if (input.policy.kind === "costPlus") return estimate((breakEven ?? reference) * (1 + markup));
   // An automatic seller prices off the market, never above what buyers paid last
-  // turn plus its markup. The estimate below treats every bid in the book as one this
-  // seller can reach, so in a short world book the highest far-away ceiling looked
-  // like the best ask; the plant posted it and sold nothing (ticket 1728). The
-  // reference price alone is not enough either: it can sit well above the clearing,
-  // and a plant asking it sold nothing while the book traded below. A plant whose
-  // costs are above the market sells at the market and takes the loss.
+  // turn plus its markup. The estimate treats every bid as reachable, so a
+  // far-away ceiling in a short book looked like the best ask. The reference
+  // price alone can sit above the clearing. A plant whose costs exceed the
+  // market sells at the market and takes the loss.
   const clearing = input.clearingUnitPrice;
   const anchor =
     clearing != null && Number.isFinite(clearing) && clearing > 0 ? clearing : reference;

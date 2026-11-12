@@ -5,7 +5,6 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { resolveGameYear } from "@/lib/era/era";
 import { getGameState } from "@/lib/gameState";
 import {
@@ -18,6 +17,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { setResetDepartmentAllocations } from "@/lib/resetCabinet/setDepartmentAllocations";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const schema = z.object({
   departmentId: z.string().min(1),
@@ -73,13 +73,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         status: result.ok ? 200 : result.status,
       });
     }
-    if (gameState?.departmentFinanceEnabled !== true) {
-      return errorResponse(404, "Department finance is not enabled");
-    }
     const definition = getDepartmentDefinitions(
       countryId as DepartmentCountryId,
-      resolveGameYear(gameState),
-      new Set(gameState.manuallyEnabledSeats ?? [])
+      resolveGameYear(gameState ?? {}),
+      new Set(gameState?.manuallyEnabledSeats ?? [])
     ).find(
       (candidate) =>
         candidate.id === parsed.data.departmentId &&
@@ -99,9 +96,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const accountPath = `departmentAccounts.${definition.id}`;
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId }, { projection: { [accountPath]: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { [accountPath]: 1 } }
+    );
     const account = budget?.departmentAccounts?.[definition.id];
     if (!account) {
       return errorResponse(404, "This department has no settled account yet");
@@ -120,12 +118,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, validation.error);
     }
 
-    const currentTurn = gameState.currentTurn ?? 1;
+    const currentTurn = gameState?.currentTurn ?? 1;
     if ((account.lastAllocationChangedTurn ?? 0) >= currentTurn) {
       return errorResponse(400, "Department allocations can only be updated once per turn");
     }
     const lastChangedPath = `${accountPath}.lastAllocationChangedTurn`;
-    const result = await db.collection<FederalBudget>("federalBudget").updateOne(
+    const result = await federalBudgetCollection(db).updateOne(
       {
         countryId,
         [accountPath]: { $exists: true },

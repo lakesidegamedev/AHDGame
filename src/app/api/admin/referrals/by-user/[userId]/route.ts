@@ -8,6 +8,9 @@ import { schemas } from "@/lib/api/validate";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import type { GameConfig } from "@/lib/db/types";
 import type { User } from "@/lib/db/types/user";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Minimal character fields for referral list (aligned with referral credit on character creation). */
 type ReferralCharacterDoc = {
@@ -47,18 +50,20 @@ export const GET = withAdminRoute(
 
     const db = await getDb();
 
-    const referrer = await db
-      .collection<User>("users")
-      .findOne({ _id: referrerId }, { projection: { _id: 1 } });
+    const referrer = await usersCollection(db).findOne(
+      { _id: referrerId },
+      { projection: { _id: 1 } }
+    );
     if (!referrer) {
       return errorResponse(404, "User not found");
     }
 
     let contestStartedAt: Date | null = null;
     if (mode === "contest") {
-      const config = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { referralContestStartedAt: 1 } });
+      const config = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { referralContestStartedAt: 1 } }
+      );
       contestStartedAt = config?.referralContestStartedAt ?? null;
       if (!(contestStartedAt instanceof Date) || Number.isNaN(contestStartedAt.getTime())) {
         return NextResponse.json({ referees: [], contestMode: false });
@@ -70,8 +75,7 @@ export const GET = withAdminRoute(
       hasCompletedSetup: true,
     };
 
-    const refereeDocs = await db
-      .collection<User>("users")
+    const refereeDocs = await usersCollection(db)
       .find(refereeFilter)
       .project({ _id: 1, username: 1, displayName: 1 })
       .sort({ username: 1 })
@@ -81,8 +85,7 @@ export const GET = withAdminRoute(
     const refereeIds = refereeDocs.map((u) => u._id);
     const chars: ReferralCharacterDoc[] =
       refereeIds.length > 0
-        ? ((await db
-            .collection("characters")
+        ? ((await charactersCollection(db)
             .find({ userId: { $in: refereeIds } })
             .project({ userId: 1, sequentialId: 1, createdAt: 1 })
             .toArray()) as ReferralCharacterDoc[])

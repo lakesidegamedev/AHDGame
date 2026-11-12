@@ -1,44 +1,29 @@
 /**
- * Scarcity drift — persistent-imbalance price integrator (clearing+capital
- * week-1 balance pass, t900; see /reports/clearing-capital-live-t899).
+ * Scarcity drift, persistent-imbalance price integrator.
  *
- * `computeMarketPrice` is memoryless: price is a LEVEL function of the
- * current supply/demand ratio, so a chronic shortage produces a constant
- * elevated price rather than a rising one. Three turns into full clearing,
- * 47% of global demand went unmet every turn while no commodity price moved
- * more than ~2% — the price signal the whole behavioural layer (posture
- * choices, cartels, re-strategizing into scarce resources) depends on was
- * flat.
- *
- * The drift multiplier gives prices memory. Per commodity, per turn the
- * multiplier takes one small clamped step toward an imbalance-proportional
+ * The base price formula is memoryless: a chronic shortage yields a constant
+ * elevated price, never a rising one, so the price signal behavioural logic
+ * depends on goes flat. The drift multiplier gives prices memory. Per commodity
+ * per turn it takes one small clamped step toward an imbalance-proportional
  * TARGET:
  *   - unmet share  > threshold → step UP toward a target scaled by how far the
- *     shortage exceeds the threshold (severe shortage → cap; mild → mid-range)
+ *     shortage exceeds the threshold
  *   - surplus share > threshold → step DOWN toward a target scaled the same way
  *   - otherwise → multiplier decays geometrically back toward 1
  *
+ * The severity-scaled target matters: a fixed-cap ratchet marches to the hard
+ * cap for ANY imbalance above threshold, and over many turns every
+ * persistently-imbalanced commodity pins at its extreme with no middle ground,
+ * crushing margins. Anchoring to a target that grows with severity means only
+ * genuinely severe scarcity/glut reaches the cap; moderate imbalance settles at
+ * a proportional mid-range.
+ *
  * The multiplier scales the commodity's base price before the usual level
- * formula, so global/national/state legs all inherit it consistently and
- * price-realization ratios (price/base) rise with it — which is exactly the
- * revenue incentive that makes a scarce resource worth mining without
- * forcing anyone's hand.
+ * formula, so all geographic legs inherit it consistently and price/base ratios
+ * rise with it, the revenue incentive to mine scarce resources.
  *
- * Steps are small and clamped (±0.4%/turn) — this is the increment-based
- * movement the gameplay-advisors channel asked for, not free-fall repricing.
- *
- * The severity-scaled target is the fix for the "structural margin vise"
- * (#3297): the original ratchet marched to the hard cap for ANY imbalance
- * above the 15% threshold, so a 16% shortage and a 90% shortage both railed at
- * 2.5×. Over ~200 turns every persistently-imbalanced commodity pinned at its
- * extreme (inputs at 2.5×, service outputs at 0.6×) with no middle ground,
- * crushing corp margins from both sides. Anchoring the step to a target that
- * grows with imbalance severity means only genuinely severe scarcity/glut
- * reaches the cap; moderate imbalance settles at a proportional mid-range and a
- * commodity whose imbalance eases drifts back down off the rail. The step
- * formulas (prev·(1+step) / prev÷(1+step)) are unchanged — only their
- * destination moved from the cap to the target — so tested edge behaviour
- * (severe imbalance still reaches the cap, dead band still decays) is preserved.
+ * Steps are small and clamped (±0.4%/turn): increment-based movement, not
+ * free-fall repricing.
  */
 
 /** Unmet-demand share (of demand) above which prices ratchet up. */
@@ -257,16 +242,11 @@ function decayToward1(prev: number): number {
 }
 
 /**
- * Funded market pricing. On a funded producer turn the supply and demand in
- * the ledger are real: units offered by producers and units ordered by buyers
- * with money. Neither brake above fits that book. The level integrator steps
- * 0.4% a turn toward a 2.5x cap, and momentum mode reads a steady real
- * shortage as no signal at all, so a market short two to one for a dozen turns
- * barely moved its price (fresh-economy proof, 2026-10-25: food +11% over 14
- * turns). This is the funded market's own reference rule
- * (producerMarket/referencePriceRules.ts) applied to the multiplier: it moves
- * by half the signed imbalance, at most FUNDED_SCARCITY_MAX_MOVE a turn, inside
- * wide bounds so a deep shortage can show in the price.
+ * Funded market pricing. On a funded producer turn supply and demand in the
+ * ledger are real, so the brakes above misread them: the integrator moves too
+ * slowly and momentum reads a steady shortage as no signal. Applies the
+ * funded reference rule to the multiplier: half the signed imbalance, capped
+ * per turn, inside wide bounds so a deep shortage shows in the price.
  */
 export const FUNDED_SCARCITY_MAX_MOVE = 0.06;
 const FUNDED_SCARCITY_IMBALANCE_GAIN = 0.5;

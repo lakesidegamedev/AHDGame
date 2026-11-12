@@ -23,6 +23,7 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import type { CorpSnapshot } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface DevelopmentCashRow {
   _id: ObjectId;
@@ -100,13 +101,12 @@ export async function settleManufacturingDevelopmentCash(
   if (uniqueIds.length === 0) return { paidReceipts: 0, paidAmountAnchor: 0 };
 
   if (args.operations.length > 0) {
-    await args.db.collection<Corporation>("corporations").bulkWrite(args.operations, {
+    await corporationsCollection(args.db).bulkWrite(args.operations, {
       ordered: false,
     });
   }
 
-  const rows = (await args.db
-    .collection<Corporation>("corporations")
+  const rows = (await corporationsCollection(args.db)
     .find(
       { _id: { $in: uniqueIds } },
       {
@@ -195,7 +195,7 @@ export async function settleManufacturingDevelopmentCash(
   }
 
   if (creditOps.length > 0) {
-    await args.db.collection<Corporation>("corporations").bulkWrite(creditOps, { ordered: false });
+    await corporationsCollection(args.db).bulkWrite(creditOps, { ordered: false });
   }
 
   return { paidReceipts, paidAmountAnchor };

@@ -3,6 +3,9 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
 import { getGameState } from "@/lib/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Promise<{
   resolved: number;
@@ -15,8 +18,7 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
 
   // Find coalitions with expired disband votes. Prefer the game-clock turn
   // deadline; fall back to date for legacy coalitions pre-dating the turn migration.
-  const expiredCoalitions = await db
-    .collection<Coalition>("coalitions")
+  const expiredCoalitions = await coalitionsCollection(db)
     .find({
       disbandVote: { $ne: null },
       $or: [
@@ -46,22 +48,18 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
       // points at *this* coalition. Pre-fix data could have a party listed here while
       // their coalitionId points elsewhere — unconditional clear would orphan them.
       const memberPartyIds = coalition.members.map((m) => m.partyId);
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateMany(
-          { _id: { $in: memberPartyIds }, coalitionId: coalition._id },
-          { $set: { coalitionId: null } }
-        );
+      await politicalPartiesCollection(db).updateMany(
+        { _id: { $in: memberPartyIds }, coalitionId: coalition._id },
+        { $set: { coalitionId: null } }
+      );
 
       // Notify all member chairs
-      const memberParties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const memberParties = await politicalPartiesCollection(db)
         .find({ _id: { $in: memberPartyIds } })
         .project({ chairId: 1 })
         .toArray();
       const chairCharIds = memberParties.map((p) => p.chairId).filter(Boolean);
-      const chairChars = await db
-        .collection("characters")
+      const chairChars = await charactersCollection(db)
         .find({ _id: { $in: chairCharIds } })
         .project({ _id: 1, userId: 1 })
         .toArray();
@@ -81,13 +79,14 @@ export async function resolveExpiredDisbandVotes(referenceNow = new Date()): Pro
         });
       }
 
-      await db.collection<Coalition>("coalitions").deleteOne({ _id: coalition._id });
+      await coalitionsCollection(db).deleteOne({ _id: coalition._id });
       disbanded++;
     } else {
       // Vote failed — clear the disbandVote
-      await db
-        .collection<Coalition>("coalitions")
-        .updateOne({ _id: coalition._id }, { $set: { disbandVote: null, updatedAt: now } });
+      await coalitionsCollection(db).updateOne(
+        { _id: coalition._id },
+        { $set: { disbandVote: null, updatedAt: now } }
+      );
     }
   }
 

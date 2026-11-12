@@ -1,5 +1,5 @@
 /**
- * Player handoff for mid-world Tier-1 takeover and constitutional replacement (#3725).
+ * Player handoff for mid-world Tier-1 takeover and constitutional replacement.
  *
  * Deep module, small surface:
  *   - classify claimable vs systemic roles
@@ -7,15 +7,15 @@
  *   - close player access while vacating only claimable player-held roles
  *   - describe how vacancies refill and what caretaker mode may do
  *
- * Locked product rules (epic #3712):
+ * Locked product rules:
  *   - Mid-world entry preserves economy, government, diplomacy, relationships,
  *     and sphere state (no reset / reseed / wipe).
  *   - Only claimable roles transfer to player control; systemic roles stay on
  *     their own pipelines.
- *   - Player exit does not summon an instant NPP replacement — vacancies persist
+ *   - Player exit does not summon an instant NPP replacement; vacancies persist
  *     for election, appointment, succession, and government formation.
  *   - Caretaker mode is technical continuity only (no new strategic or sphere
- *     choices). Country-level strategy remains gated by #3724's player rail.
+ *     choices). Country-level strategy remains gated by the player rail.
  */
 
 import type { Db, ObjectId } from "mongodb";
@@ -27,7 +27,7 @@ import {
   type GovernmentType,
 } from "@/lib/constants/countries";
 import type { CountryGameState, GameState } from "@/lib/db/types/gameState";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
@@ -38,6 +38,10 @@ import {
   resolvePresetIdFromGameState,
   type CountryReadinessReport,
 } from "@/lib/world/countryReadinessContract";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 // ─── Role taxonomy ───────────────────────────────────────────────────────────
 
@@ -165,8 +169,8 @@ export function systemicRolesRetained(): SystemicRoleKind[] {
 }
 
 /**
- * Which constitutional process refills a vacant claimable role. Pure — used to
- * verify exit wires into existing vacancy machinery rather than instant NPP fill.
+ * Which constitutional process refills a vacant claimable role. Pure; used to
+ * verify exit wires into vacancy machinery, not instant NPP fill.
  */
 export function refillProcessForClaimableVacancy(
   role: ClaimableRoleKind,
@@ -192,7 +196,7 @@ export function refillProcessForClaimableVacancy(
 }
 
 /**
- * Country-level caretaker contract after player control / departure (#3724+#3725).
+ * Country-level caretaker contract after player control / departure.
  * Technical continuity (markets, contracts, budget settlement) is allowed;
  * new strategic policy and sphere choices are not.
  *
@@ -235,23 +239,25 @@ export interface PlayerHandoffExitResult {
 
 async function resolvePresetId(db: Db, explicit?: string): Promise<string> {
   if (explicit?.trim()) return explicit.trim();
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   return resolvePresetIdFromGameState(gameState);
 }
 
 async function currentTurn(db: Db): Promise<number> {
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
   return gs?.currentTurn ?? 1;
 }
 
 /**
  * Open a ready Tier-1 country to players mid-world.
  *
- * Gates on the #3722 player-readiness verdict. Flips `enabledForPlayers` only —
+ * Gates on the player-readiness verdict. Flips `enabledForPlayers` only -
  * does not reseed or wipe economy, government, diplomacy, relationships, or
  * sphere state. Claimable role *authority* transfers to the player loop; live
  * NPP/player officeholders are left in place.
@@ -284,9 +290,11 @@ export async function enterCountryForPlayers(
     updateFields.status = "active";
   }
 
-  await db
-    .collection<CountryGameState>("countryGameStates")
-    .updateOne({ _id: countryId }, { $set: updateFields }, { upsert: true });
+  await countryGameStatesCollection(db).updateOne(
+    { _id: countryId },
+    { $set: updateFields },
+    { upsert: true }
+  );
 
   return {
     countryId,
@@ -324,16 +332,14 @@ export async function exitCountryForPlayers(
   const refill = new Set<ConstitutionalRefillProcess>();
   const governmentType = getCountryConfig(countryId).governmentType;
 
-  const playerChars = await db
-    .collection<Character>("characters")
+  const playerChars = await charactersCollection(db)
     .find({ countryId, userId: { $exists: true } })
     .project({ _id: 1 })
     .toArray();
   const playerIds = playerChars.map((c) => c._id);
 
   if (playerIds.length > 0) {
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ countryId, characterId: { $in: playerIds }, isNPP: { $ne: true } })
       .toArray();
 
@@ -346,7 +352,7 @@ export async function exitCountryForPlayers(
         classified.role === "head-of-government" || classified.role === "head-of-state";
 
       if (isExecutiveSlot) {
-        await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+        await electedOfficialsCollection(db).updateOne(
           { _id: official._id },
           {
             $set: {
@@ -363,7 +369,7 @@ export async function exitCountryForPlayers(
           }
         );
       } else {
-        await db.collection<ElectedOfficial>("electedOfficials").deleteOne({ _id: official._id });
+        await electedOfficialsCollection(db).deleteOne({ _id: official._id });
       }
 
       vacatedOffices.push({
@@ -398,7 +404,7 @@ export async function exitCountryForPlayers(
       refill.add(refillProcessForClaimableVacancy("cabinet-minister", governmentType));
     }
 
-    await db.collection<Character>("characters").updateMany(
+    await charactersCollection(db).updateMany(
       { _id: { $in: playerIds }, countryId },
       {
         $set: { currentOffice: null, updatedAt: now },
@@ -417,7 +423,7 @@ export async function exitCountryForPlayers(
     );
   }
 
-  await db.collection<CountryGameState>("countryGameStates").updateOne(
+  await countryGameStatesCollection(db).updateOne(
     { _id: countryId },
     {
       $set: {
@@ -430,8 +436,7 @@ export async function exitCountryForPlayers(
 
   if (transitions.length > 0) {
     // One context read for the whole handoff, never a query for each holder.
-    const context = await db
-      .collection<GameState>("gameState")
+    const context = await gameStateCollection(db)
       .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
       .catch(() => null);
     for (const [index, transition] of transitions.entries()) {

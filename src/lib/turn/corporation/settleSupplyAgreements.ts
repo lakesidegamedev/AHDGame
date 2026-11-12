@@ -1,42 +1,29 @@
 /**
  * Bilateral supply-agreement settlement (supplyAgreementsEnabled).
  *
- * The clearing pre-pass already sells each supplier's contracted units at MARKET
- * price into the anonymous demand pool (the money-conserving baseline — those
- * units clear and land in `liquidCapital` via the normal revenue→income path).
- * A supply agreement additionally locks the price at `market × (1 + premium)`.
- * We settle that lock as a **contract-for-difference**: a discrete cash transfer
- * of the premium delta between buyer and supplier, layered on top of the market
- * baseline. This conserves total corp cash exactly (equal-and-opposite ₳ legs)
- * and never touches the fragile revenue/margin/tax/share-price legs.
+ * The clearing pre-pass sells each supplier's contracted units at MARKET price
+ * into the anonymous demand pool. A supply agreement locks the price at
+ * market * (1 + premium); we settle the lock as a contract-for-difference, a
+ * discrete cash transfer of the premium delta between buyer and supplier layered
+ * on the market baseline. Equal-and-opposite legs conserve total corp cash
+ * exactly and never touch revenue, margin, tax, or share price. The base sale is
+ * taxed as ordinary revenue; this side-payment is not taxed again.
  *
  * Per settled agreement:
- *   qty        = the supplier's contracted units that actually cleared, split
- *                across its agreements for that commodity pro-rata by volumeCap
- *   unitPriceₐ = COMMODITY_BASE_PRICES[commodity] × priceRealizationFactor(laggedRatio)
- *                ÷ TURNS_PER_DAY  (₳ per daily-basis unit, per turn)
- *   premiumₐ   = qty × unitPriceₐ × pricePremium
- *   supplier `liquidCapital` += premiumₐ (→ its currency); buyer -= premiumₐ.
+ *   qty        = supplier's contracted units that cleared, split across its
+ *                agreements for that commodity pro-rata by volumeCap
+ *   unitPrice  = COMMODITY_BASE_PRICES[commodity] * priceRealizationFactor(laggedRatio)
+ *                / TURNS_PER_DAY  (per daily-basis unit, per turn)
+ *   premium    = qty * unitPrice * pricePremium
  *
- * A positive premium ⇒ the buyer pays the supplier above market (guaranteed
- * supply at a locked, higher price); a negative premium ⇒ the supplier subsidises
- * the buyer (a discount). The base commodity sale is already taxed as ordinary
- * corp revenue; this side-payment is not taxed again.
+ * A positive premium means the buyer pays above market; negative means a discount.
  *
- * SHORTFALL (plants tier). A contract is a promise about physical goods, so a
- * supplier that PRODUCED less than it contracted owes the buyer damages:
+ * SHORTFALL: a supplier that PRODUCED less than it contracted owes damages,
+ * pro-rated across its agreements for that commodity:
+ *   penalty = shortfallUnits * unitPrice * CONTRACT_SHORTFALL_PENALTY
  *
- *   shortfallUnits = contracted − produced   (pro-rated across the supplier's
- *                                             agreements for that commodity)
- *   penaltyₐ       = shortfallUnits × unitPriceₐ × CONTRACT_SHORTFALL_PENALTY
- *   supplier `liquidCapital` −= penaltyₐ; buyer += penaltyₐ.
- *
- * The test is deliberately PRODUCTION, not delivery: units the supplier made
- * but could not move because the market did not want them are a demand problem,
- * not a breach, and the supplier already eats that loss as unsold inventory.
- * Same cash-conserving, equal-and-opposite shape as the premium leg above, and
- * the same `corp_supply_agreement` tx type, so nothing downstream needs to
- * learn a new ledger row.
+ * The test is PRODUCTION, not delivery: units made but not bought are a demand
+ * problem, not a breach. Same tx type (corp_supply_agreement) as the premium leg.
  */
 
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
@@ -78,6 +65,8 @@ import {
   type SupplyAgreementSettlements,
   type ByCorpScope,
 } from "./settleSupplyAgreementsAllocation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 export {
   addCorpToCorpSettlement,
   allocateDeliveriesToBuyers,
@@ -145,42 +134,35 @@ export function computeSupplyAgreementSettlements(args: {
    */
   producedByCorpCommodity?: ByCorpScope;
   /**
-   * Ticket #1147: what each supplier COULD have produced, given only the
-   * constraints it does not control (input throughput, capital utilization, the
-   * demand throttle, strike, disaster, nationalization transition, extraction
-   * hard-min). The operator's own levers, the production-policy slider and
-   * mothballing, are deliberately excluded, so choosing to cut output keeps
-   * owing damages on the full contracted volume.
+   * What each supplier COULD have produced, given only the constraints it does
+   * not control (input throughput, capital utilization, the demand throttle,
+   * strike, disaster, nationalization transition, extraction hard-min). The
+   * operator's own levers, the production-policy slider and mothballing, are
+   * deliberately excluded, so choosing to cut output keeps owing damages on
+   * the full contracted volume.
    *
    * The damages leg clamps the contracted obligation to this ceiling. Without
-   * it, `volumeCap` is validated at signing against NAMEPLATE capacity while
-   * the sink measures ACTUAL production, and every leg in between bills the
-   * supplier 50% of a gap it was never physically able to close. That is what
-   * drained a live logistics corp's entire balance every turn: legal at
-   * signing, unreachable in practice, penalized forever.
+   * it, `volumeCap` is validated at signing against nameplate capacity while
+   * the sink measures actual production, and every leg in between bills the
+   * supplier 50% of a gap it was never physically able to close.
    *
-   * A MISSING (supplier, commodity) entry means "no ceiling known" and leaves
-   * the obligation unclamped, i.e. the pre-fix behaviour. That is the state on
-   * the first turn after deploy, before any sector has persisted the field.
-   * It is NOT read as a zero ceiling, which would forgive every contract in
-   * the world for one turn.
+   * A missing (supplier, commodity) entry means no ceiling known and leaves
+   * the obligation unclamped. It is not read as a zero ceiling, which would
+   * forgive every contract in the world for one turn.
    */
   achievableByCorpCommodity?: AchievableByCorpCommodity;
   /**
-   * Plants gate, required whenever `producedByCorpCommodity` is supplied.
+   * Plants gate: required whenever `producedByCorpCommodity` is supplied.
    *
    * The production sink is filled from each sector's measured `producedUnits`,
-   * scaled through `plantsSupplyScaledUnits`. That field only exists under
-   * plants; below plants the only comparable figure is the revenue nameplate
-   * after the lagged-supply normalization, which is not production at all and
-   * would assess damages off a bookkeeping figure. Today the only caller gates
-   * the sink on plants, but that gate lives far from here, so this function
-   * refuses the sink itself rather than trusting a distant condition.
+   * which only exists under plants. Below plants the only comparable figure is
+   * the revenue nameplate; assessing damages off it would use a bookkeeping
+   * figure, not production. Refuse the sink here rather than trust a distant
+   * caller gate.
    *
-   * It is deliberately NOT fed from clearing's offered `s.units`: extraction is
-   * excluded from the plants offer and stays on the nameplate there, so routing
-   * the sink through clearing would hand this guard a nameplate for the world's
-   * dominant commodity supplier while still passing the plants check.
+   * Do not feed this from clearing's offered `s.units`: extraction is excluded
+   * from the plants offer and stays on the nameplate, so that path would still
+   * pass the plants check while handing the guard a nameplate.
    */
   plantsEnabled?: boolean;
   turn: number;
@@ -386,22 +368,19 @@ export function computeSupplyAgreementSettlements(args: {
     }
 
     // Shortfall damages: the supplier under-PRODUCED against its contracted
-    // volume. The sink as a whole is undefined outside plants ⇒ no penalty.
+    // volume. No sink entry means no penalty.
     //
     // A MISSING entry inside a supplied sink is ZERO produced, never "unknown".
     // Clearing only records sellers with units > 0, so a corp that mothballed
-    // its plants (or made exactly 0 of the contracted commodity) has no entry.
-    // Reading that as "no data ⇒ no damages" made mothballing strictly cheaper
-    // than under-producing: make 1 unit and pay near-full damages, make 0 and
-    // pay nothing. The whole contracted volume is the shortfall instead.
+    // its plants has no entry. Reading that as no damages made mothballing
+    // cheaper than under-producing, so the whole contracted volume is the
+    // shortfall instead.
     //
-    // `shortfallEligible === false` grandfathers a contract out of the damages
-    // leg entirely: its `volumeCap` was never validated against anything the
-    // plants could physically make, so a penalty on it would be arbitrary.
-    // Compute damages once for the supplier's whole commodity book, then split
-    // that one gap across eligible agreements. Delivery remains a max-flow
-    // problem, but production is a supplier-level fact. Mixing max-flow output
-    // with a pro-rata ceiling charged 50 units on a real 20-unit group gap.
+    // `shortfallEligible === false` grandfathers a contract out of damages: its
+    // `volumeCap` was never validated against plant capacity. Compute damages
+    // once per supplier commodity book, then split the gap across eligible
+    // agreements: production is a supplier-level fact, delivery is max-flow.
+    // Mixing max-flow output with a pro-rata ceiling overcharged real gaps.
     const damage = damageByAgreement.get(agreementIndex);
     const shortfallUnits = damage?.shortfallUnits ?? 0;
     // Tell the supplier what happened. Written even when the shortfall is zero
@@ -487,9 +466,9 @@ export function computeSupplyAgreementSettlements(args: {
       }
     }
 
-    // Ticket #1147: report assessed damages even when the premium nets them
-    // away on this agreement — the CEO still owes capacity against a signed
-    // volume and the next turn will charge it again.
+    // Report assessed damages even when the premium nets them away: the CEO
+    // still owes capacity against a signed volume and the next turn charges it
+    // again.
     if (shortfallUnits > 0 && penaltyAnchor >= MIN_SETTLE_ANCHOR) {
       damages.push({
         agreementId: a.agreementId,
@@ -634,8 +613,9 @@ export async function settleSupplyAgreements(args: {
   ].filter(ObjectId.isValid);
   const freshCapitalByCorpId = new Map<string, number>();
   if (participantIds.length > 0) {
-    const currentBalances = await db
-      .collection<Pick<Corporation, "_id" | "liquidCapital">>("corporations")
+    const currentBalances = await corporationsCollection<
+      Pick<Corporation, "_id" | "liquidCapital">
+    >(db)
       .find(
         { _id: { $in: participantIds.map((id) => new ObjectId(id)) } },
         { projection: { liquidCapital: 1 } }
@@ -709,7 +689,7 @@ export async function settleSupplyAgreements(args: {
       // Keep the in-memory snapshot consistent for any later same-turn reader.
       corp.liquidCapital = (freshCapitalByCorpId.get(corpId) ?? corp.liquidCapital ?? 0) + delta;
     }
-    if (ops.length > 0) await db.collection<Corporation>("corporations").bulkWrite(ops);
+    if (ops.length > 0) await corporationsCollection(db).bulkWrite(ops);
   }
   step.mark("settle.corpWrites");
   if (deliveries.length > 0) {
@@ -778,7 +758,7 @@ export async function settleSupplyAgreements(args: {
     }
     // One op per live agreement (~27k on a mature world), each keyed by its
     // own `_id`, so the batches can be applied side by side.
-    await partitionedBulkWrite(db.collection<SupplyAgreement>("supplyAgreements"), deliveryOps);
+    await partitionedBulkWrite(supplyAgreementsCollection(db), deliveryOps);
   }
   step.mark("settle.deliveryWrites");
   if (txEntries.length > 0) await emitTxBulk(db, txEntries, args.thresholds);
@@ -792,23 +772,19 @@ export async function settleSupplyAgreements(args: {
 /**
  * Turns between damages notices for the SAME agreement.
  *
- * Damages are a LEVEL condition, not an edge: a contract whose volume cap sits
- * above what the plants can achieve is charged every single turn until the
- * owner resizes it. Notifying on every charge would put the same line in the
- * inbox daily, per agreement, forever — the `extraction_capacity_bound`
- * precedent this follows only fires on sectors that NEWLY bind. A cooldown
- * keeps the first charge loud and the reminder periodic.
+ * Damages are a level condition, not an edge: a contract whose volume cap sits
+ * above what the plants can achieve is charged every turn until the owner
+ * resizes it. Notifying on every charge would put the same line in the inbox
+ * daily, per agreement, forever. The `extraction_capacity_bound` precedent only
+ * fires on sectors that NEWLY bind, so a cooldown keeps the first charge loud
+ * and the reminder periodic.
  */
 const DAMAGES_NOTICE_COOLDOWN_TURNS = 12;
 
-/**
- * Ticket #1147: tell a player-owned supplier's owner when its contract charged
- * shortfall damages. The penalty leg settles silently while the income
- * statement still shows a healthy per-turn profit — the reporting player's
- * cash sat flat for days with no signal anywhere that a signed volume cap was
- * eating the entire profit every turn. NPP/state corps (no real user) are
- * skipped; best-effort like every other notification in the turn pipeline.
- */
+/* Notify a player-owned supplier when its contract charged shortfall damages.
+ * The penalty settles silently and profit stays healthy, so without this the
+ * owner sees flat cash with no signal. NPP/state corps are skipped.
+ * Best-effort like other turn notifications. */
 async function notifySupplyAgreementDamages(args: {
   db: Db;
   damages: readonly SupplyAgreementDamages[];
@@ -882,12 +858,10 @@ async function notifySupplyAgreementDamages(args: {
   const stampIds = notifiedAgreementIds.filter((id) => ObjectId.isValid(id));
   if (stampIds.length === 0) return;
   try {
-    await args.db
-      .collection<SupplyAgreement>("supplyAgreements")
-      .updateMany(
-        { _id: { $in: stampIds.map((id) => new ObjectId(id)) } },
-        { $set: { lastDamagesNoticeTurn: args.turn } }
-      );
+    await supplyAgreementsCollection(args.db).updateMany(
+      { _id: { $in: stampIds.map((id) => new ObjectId(id)) } },
+      { $set: { lastDamagesNoticeTurn: args.turn } }
+    );
   } catch (err) {
     console.error("[settleSupplyAgreements] damage notice cooldown stamp failed:", err);
   }

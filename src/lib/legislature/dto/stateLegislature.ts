@@ -81,9 +81,7 @@ export interface LegislationPolicyOption {
   effectDirection: -1 | 0 | 1;
   economic: number;
   social: number;
-  /** @deprecated Use archetypeApprovals instead */
-  groupApprovals?: Record<string, number>;
-  archetypeApprovals?: Record<string, number>;
+  bucketApprovals?: Record<string, number>;
 }
 
 export interface EffectTargetWeighted {

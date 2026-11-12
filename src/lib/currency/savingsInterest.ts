@@ -6,7 +6,7 @@ export const SAVINGS_CREDIT_INTERVAL_TURNS = TURNS_PER_YEAR / 4;
 
 /**
  * Max share of a national savings pool a single account earns interest on
- * (carry-trade fix, #3064 Phase 3). Interest accrues only on the lesser of the
+ * (carry-trade fix Phase 3). Interest accrues only on the lesser of the
  * account's balance and this fraction of the whole pool, so one actor cannot
  * become ~100% of a currency's savings and farm the entire pool's interest.
  * Only binds on accounts above the share; ordinary savers are unaffected.

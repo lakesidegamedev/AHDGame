@@ -1,22 +1,18 @@
 import type { EuroMonetaryUnion } from "./euro/rules";
 /**
- * Corporate wallet-spend estimators — the CLIENT-SAFE half of
+ * Corporate wallet-spend estimators: the CLIENT-SAFE half of
  * `corporationCapital`.
  *
  * ⚠️ This file exists to keep `mongodb` out of the browser bundle. These two
- * helpers are pure, but they used to live in `corporationCapital.ts`, which also
- * holds the DB-backed FX loaders and therefore imports
- * `@/lib/db/collections/gameState` → `@/lib/mongodb` → `mongodb`. Two client
- * components import them, so the whole driver was dragged into the client graph
- * and `next build` failed with a module-not-found on mongodb's node-only deps:
- *
- *   mongodb → lib/mongodb.ts → db/collections/gameState.ts
- *           → currency/corporationCapital.ts → BondTradeModal.tsx [client]
+ * helpers are pure, but they used to live in `corporationCapital.ts`, which
+ * holds the DB-backed FX loaders and imports `@/lib/db/collections/gameState`
+ * → `@/lib/mongodb` → `mongodb`. Client components import these, so placing
+ * them here keeps the driver out of the client graph.
  *
  * ⚠️ NOTHING in this file may import from `corporationCapital.ts`, or from any
  * module that reaches `@/lib/mongodb` or `@/lib/db/*`. The dependency runs one
- * way: `corporationCapital.ts` re-exports these for its ~135 server-side
- * callers, so their imports are unchanged. Pinned by `corpWalletSpend.test.ts`.
+ * way: `corporationCapital.ts` re-exports these for its server-side callers,
+ * so their imports are unchanged. Pinned by `corpWalletSpend.test.ts`.
  */
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {

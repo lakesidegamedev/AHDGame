@@ -1,0 +1,92 @@
+{
+  "config": {
+    "id": "FI",
+    "name": "Finland",
+    "code": "FI",
+    "status": "coming-soon",
+    "flagEmoji": "🇫🇮",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "Prime Minister",
+    "executiveRealmPhrase": "Finland",
+    "executiveLabel": "Government Palace",
+    "executivePath": "/country/fi/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where a Prime Minister governs at the confidence of the unicameral 200-seat Eduskunta, under a strong presidency that steers foreign policy between East and West.",
+    "heroImage": "https://flagcdn.com/w640/fi.png",
+    "overviewPath": "/country/fi",
+    "mapPath": "/country/fi/map",
+    "currencyCode": "FIM",
+    "centralGovernmentLabel": "State Budget",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["fi_sdp", "fi_kesk"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Eduskunta",
+      "path": "/country/fi/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "eduskunta",
+        "name": "Eduskunta",
+        "shortName": "Eduskunta",
+        "seats": 200,
+        "description": "200 members elected by open-list proportional representation for four-year terms — the unicameral parliament Finland has kept since 1906."
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Prime Ministers"
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "deputy",
+        "label": "Member of Parliament",
+        "chamberKey": "eduskunta",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of Parliament"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of Finland",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Bank of Finland"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Bank of Finland",
+      "abbreviation": "BoF",
+      "heroImage": "https://flagcdn.com/w640/fi.png",
+      "defaultPrimeRate": 8.5
+    },
+    "usdExchangeRate": 0.256
+  },
+  "eraOverrides": {
+    "2027-default": { "usdExchangeRate": 1.085217391304348 },
+    "1991-default": { "usdExchangeRate": 0.2472811947803059 },
+    "1953-default": {
+      "descriptor": "A parliamentary republic where a Prime Minister governs at the confidence of the unicameral 200-seat Eduskunta, under a presidency that owns the delicate relationship with the Soviet Union.",
+      "majorPartyIds": ["fi_ml", "fi_sdp"],
+      "usdExchangeRate": 0.004347826086956522
+    }
+  }
+}

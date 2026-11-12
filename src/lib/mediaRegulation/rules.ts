@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 /**
  * Media regulation changes how much advertising a private outlet can deliver.
  * Censorship and ownership laws limit audience access before clearing. The
@@ -171,7 +172,7 @@ export function isMediaOwnershipBillAvailable(outlets: readonly MediaOutletDeliv
   const deliveredByCountry = new Map<string, Map<string, number>>();
   const incompleteCountries = new Set<string>();
   for (const outlet of outlets) {
-    if (outlet.countryId !== "US") continue;
+    if (!countryHasFeature("usLib", outlet.countryId)) continue;
     if (
       outlet.deliveredAdvertisingUnits == null ||
       !Number.isFinite(outlet.deliveredAdvertisingUnits) ||
@@ -213,15 +214,12 @@ export interface MediaOwnershipMarket {
 
 /**
  * Bound each owner's delivered advertising in a state by a share of that
- * state's advertising audience. The audience is the larger of the state's own
- * lagged advertising demand and the clearing-book demand its regulated outlets
- * competed for (`demandUnits`, each seller's slice of its book's demand).
- * Advertising clears in a reachable book, so a state's outlets can serve far
- * more buyers than sit in the state; the ledger state demand alone reads zero
- * in states with no local ad buyers. The limit is measured against demand,
- * not against what competitors delivered, so a sole or dominant broadcaster
- * can serve up to the cap share of its audience. Delivery is reduced, never
- * invented or moved between owners.
+ * state's audience: the larger of its lagged demand and the clearing-book
+ * demand its outlets competed for. Books are reachable, so outlets can serve
+ * more buyers than sit in the state, and ledger demand alone reads zero in
+ * states with no local buyers. Measured against demand, not competitors'
+ * delivery, so a sole broadcaster can serve up to the cap share. Delivery is
+ * reduced, never invented or moved between owners.
  */
 export function capDeliveredMediaUnits(
   rows: readonly {

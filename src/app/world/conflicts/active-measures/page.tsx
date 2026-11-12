@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { requireConflictsEnabled } from "../_coldwar/gate";
 
 /**
  * Retired alongside its Western twin — see `../alignment/page.tsx`. Both sides of
@@ -7,6 +6,5 @@ import { requireConflictsEnabled } from "../_coldwar/gate";
  * alignment for every nation rather than 16 hardcoded ones per side.
  */
 export default async function ActiveMeasuresPage() {
-  await requireConflictsEnabled();
   redirect("/world/cold-war-ledger");
 }

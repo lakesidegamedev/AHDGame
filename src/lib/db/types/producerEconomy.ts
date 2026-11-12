@@ -10,7 +10,15 @@ export interface ProducerEconomyAccount {
   /** Stable identity within a world, including the world's epoch. */
   _id: string;
   worldEpoch: string;
-  kind: "households" | "publicBuyer" | "investmentBuyer" | "operatingPayee";
+  kind:
+    | "households"
+    | "publicBuyer"
+    | "investmentBuyer"
+    | "operatingPayee"
+    /** A background country's macro economy trading in the funded market. */
+    | "backgroundEconomy"
+    /** Import tariffs collected for one country this turn, swept to its treasury (producerTariffStage). */
+    | "tariffCollector";
   countryId: string;
   stateId?: string;
   currency: string;

@@ -4,6 +4,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { withAdminAuth } from "@/lib/api/withAdminAuth";
 import { getDb } from "@/lib/mongodb";
 import { parseBoundedIntParam } from "@/lib/api/validate";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { userApiKeysCollection } from "@/lib/db/repositories/userApiKeys";
 
 interface UserApiKeyRow {
   _id: string;
@@ -40,16 +44,14 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     // 1) Find matching user IDs, 2) Add to filter
     let matchingUserIds: ObjectId[] | null = null;
     if (search) {
-      const users = await db
-        .collection("users")
+      const users = await usersCollection<Document>(db)
         .find({ username: { $regex: search, $options: "i" } })
         .project({ _id: 1 })
         .limit(100)
         .toArray();
       matchingUserIds = users.map((u) => u._id);
       // Also match keys by name
-      const keysByName = await db
-        .collection("userApiKeys")
+      const keysByName = await userApiKeysCollection<Document>(db)
         .find({ name: { $regex: search, $options: "i" } })
         .project({ userId: 1 })
         .limit(100)
@@ -60,29 +62,26 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     }
 
     const [keys, total] = await Promise.all([
-      db
-        .collection("userApiKeys")
+      userApiKeysCollection<Document>(db)
         .find(filter)
         .project({ tokenHash: 0 })
         .sort({ createdAt: -1 })
         .skip(offset)
         .limit(limit)
         .toArray(),
-      db.collection("userApiKeys").countDocuments(filter),
+      userApiKeysCollection<Document>(db).countDocuments(filter),
     ]);
 
     // Resolve user info
     const userIds = [...new Set(keys.map((k) => k.userId.toString()))];
-    const users = await db
-      .collection("users")
+    const users = await usersCollection<Document>(db)
       .find({ _id: { $in: userIds.map((id) => new ObjectId(id)) } })
       .project({ _id: 1, username: 1 })
       .toArray();
     const userMap = new Map(users.map((u) => [u._id.toString(), u.username]));
 
     // Resolve character names
-    const characters = await db
-      .collection("characters")
+    const characters = await charactersCollection(db)
       .find({ userId: { $in: userIds.map((id) => new ObjectId(id)) } })
       .project({ userId: 1, name: 1 })
       .toArray();
@@ -118,12 +117,10 @@ export const DELETE = withAdminAuth(async (_auth, request: Request) => {
     }
 
     const db = await getDb();
-    const result = await db
-      .collection("userApiKeys")
-      .updateOne(
-        { _id: new ObjectId(keyId), revokedAt: null },
-        { $set: { revokedAt: new Date(), updatedAt: new Date() } }
-      );
+    const result = await userApiKeysCollection<Document>(db).updateOne(
+      { _id: new ObjectId(keyId), revokedAt: null },
+      { $set: { revokedAt: new Date(), updatedAt: new Date() } }
+    );
 
     if (result.matchedCount === 0) {
       return errorResponse(404, "Key not found or already revoked");

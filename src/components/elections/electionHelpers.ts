@@ -3,6 +3,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryOfficesClient";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { raceHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Static 2020 electoral vote allocation per state
 export const STATE_EV: Record<string, number> = {
@@ -89,7 +90,9 @@ export function electionRaceTitle(
   // its own executive resolver and must not be folded in here.)
   const usesSubregionalGovernorTitle =
     election.electionType === "governor" &&
-    (election.countryId === "IE" || election.countryId === "SCO" || election.countryId === "WAL");
+    (countryHasFeature("ieUi", election.countryId) ||
+      countryHasFeature("scoUi", election.countryId) ||
+      countryHasFeature("walUi", election.countryId));
   const base = usesSubregionalGovernorTitle
     ? getRegionalBillAssentTitleForState(election.countryId as CountryId, election.state ?? null)
     : formatElectionTypeLabel(election.electionType, election.countryId as CountryId | undefined);

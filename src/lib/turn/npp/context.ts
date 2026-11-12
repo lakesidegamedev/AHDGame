@@ -35,6 +35,20 @@ import { resolveBillVoteField } from "@/lib/congress/billVoteField";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
 import { loadCabinetDiscipline, type CabinetDiscipline } from "@/lib/resetCabinet/loadDiscipline";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
@@ -88,7 +102,7 @@ export interface NPPContext {
   // runtime; the full type is preserved here so consumers don't need narrower
   // signatures. Read-only fields actually present:
   //   legislationTypeMap → _id, policyOptions
-  //   stateDemographicsMap → _id, groups
+  //   stateDemographicsMap → _id, countryId
   //   statesById → _id, countryId
   // Adding field accesses elsewhere requires extending the projection in
   // loadNPPContext or moving to a separate (unprojected) load.
@@ -182,12 +196,10 @@ export function buildActiveBillFilter(opts: {
  * Attach `policies.domainPositions` to the NPPs that vote this turn, for the
  * legislation types actually on the floor.
  *
- * Every NPP carries a stance on every legislation type, ~950 entries and 30 KB
- * per document, and the shared context used to load all of it for every NPP
- * on every read: 50 MB of BSON per load, twice a turn, of which bill voting
- * read a handful of entries for a few hundred officials. The stance keys are
- * dotted legislation ids, which a find() projection cannot address, so the
- * subset is cut server-side with $objectToArray/$filter.
+ * Loading all ~950 stances per NPP costs 50 MB of BSON per load, twice a turn,
+ * for only a handful of entries read. Stance keys are dotted legislation ids,
+ * which find() projections cannot address, so the subset is cut server-side
+ * with $objectToArray/$filter.
  */
 async function hydrateDomainPositions(
   db: Db,
@@ -205,8 +217,7 @@ async function hydrateDomainPositions(
   }
   if (legislationTypeIds.size === 0 || voterIds.length === 0) return;
 
-  const rows = await db
-    .collection<NPP>("npps")
+  const rows = await nppsCollection(db)
     .aggregate<{ _id: ObjectId; domainPositions: Record<string, number> | null }>([
       { $match: { _id: { $in: voterIds } } },
       {
@@ -349,8 +360,8 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
   // NPP projection: enumerated from grepping `npp\.<field>` across every NPP
   // behavior phase + nppBehavior.ts. Drops avatarUrl, gender, ethnicity,
   // currentOffice, generatedAt, createdAt,
-  // updatedAt, influenceState, archetypeApprovals, sequentialId — none of
-  // which are referenced by the behavior pipeline. archetypeApprovals on
+  // updatedAt, influenceState, bucketApprovals, sequentialId — none of
+  // which are referenced by the behavior pipeline. bucketApprovals on
   // NPPs is the biggest potential drop (Record<string, number> per NPP, can
   // grow with more archetypes). Adding new field accesses requires extending
   // this projection or the next turn quietly reads undefined.
@@ -366,8 +377,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
     allStateDemographics,
     allStates,
   ] = await Promise.all([
-    db
-      .collection<NPP>("npps")
+    nppsCollection(db)
       .find(
         // Technocrat NPPs (e.g. autonomous central-bank chairs) are hard-excluded
         // from the shared NPP context so they never enter political loops
@@ -391,6 +401,8 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
             // (nppAutonomy/v6/rules/candidatePlacement.ts).
             politicalInfluence: 1,
             favorability: 1,
+            // Executive term limits on NPP entry (executiveTermLimits.ts).
+            executiveTermsServed: 1,
             // The ideology pair only. `policies.domainPositions` is a map of
             // ~950 legislation stances (30 KB of a 31 KB NPP document) and
             // only bill voting reads it, so it is hydrated below for the
@@ -402,13 +414,11 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
         }
       )
       .toArray() as Promise<NPP[]>,
-    db.collection<Election>("elections").find(electionFilter).toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electionsCollection(db).find(electionFilter).toArray(),
+    electedOfficialsCollection(db)
       .find({ isNPP: true, nppId: { $exists: true } })
       .toArray(),
-    db
-      .collection<Bill>("bills")
+    billsCollection(db)
       .find(
         buildActiveBillFilter({
           currentTurn: optionsCurrentTurn,
@@ -416,8 +426,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
         }) as Filter<Bill>
       )
       .toArray(),
-    db
-      .collection<StateBill>("stateBills")
+    stateBillsCollection(db)
       .find({
         $or: [
           { status: "active", ...billStillOpen("votingEndsOnTurn", "votingEndsAt") },
@@ -428,30 +437,27 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
         ],
       })
       .toArray(),
-    db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+    statePartyOrgCollection(db).find({}).toArray(),
+    politicalPartiesCollection(db).find({}).toArray(),
     // Phase 4: cross-pressure inputs. Projected to only the fields NPP
     // behavior actually reads (see NPPContext comment) — `legislationTypes`
     // averages 3.9 KB/doc unprojected vs <200 bytes for the policyOptions
     // subset, cutting ~50 MB of in-memory overhead per turn on a 200-doc
     // collection at typical JS object expansion ratios.
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find({}, { projection: { _id: 1, policyOptions: 1 } })
       .toArray() as Promise<LegislationType[]>,
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .find({}, { projection: { _id: 1, groups: 1 } })
+    stateDemographicsCollection(db)
+      .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray() as Promise<StateDemographics[]>,
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({}, { projection: { _id: 1, countryId: 1 } })
       .toArray() as Promise<State[]>,
   ]);
 
   // Read the current turn for vote-prediction snapshots. Tests that don't seed
   // gameState fall through to 0 — the field is purely informational.
-  const gameStateDoc = await db.collection<GameState>("gameState").findOne(
+  const gameStateDoc = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -475,7 +481,9 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
   const billStatesById = new Map(allStates.map((state) => [state._id, state]));
   if (
     preset === "1991-default" &&
-    activeBills.some((bill) => resolveNppBillCountryId(bill, billStatesById) === "RU")
+    activeBills.some((bill) =>
+      countryHasFeature("ruTurn", resolveNppBillCountryId(bill, billStatesById))
+    )
   ) {
     runtimeCountryOffices.set("RU", await loadRuntimeCountryOffices(db, "RU", preset));
   }
@@ -537,8 +545,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
 
   const [allCandidates, allActiveNPPCandidacies, whips, stateBillWhipsArr] = await Promise.all([
     primaryIds.length > 0
-      ? db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? electionCandidatesCollection(db)
           .find({ electionId: { $in: primaryIds }, status: "active" })
           .toArray()
       : Promise.resolve([]),
@@ -548,14 +555,12 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
     // mirror that global invariant, or incumbent-defense / generic fill will
     // attempt a second active insert and throw a duplicate-key error that
     // aborts the whole election-entry pass.
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ isNPP: true, status: "active" })
       .project<{ nppId: import("mongodb").ObjectId }>({ nppId: 1 })
       .toArray(),
     billIds.length > 0
-      ? db
-          .collection<BillWhip>("billWhips")
+      ? billWhipsCollection(db)
           .find({
             targetType: "bill",
             targetId: { $in: billIds },
@@ -565,8 +570,7 @@ export async function loadNPPContext(now: Date, options?: NPPContextOptions): Pr
           .toArray()
       : Promise.resolve([]),
     stateBillIds.length > 0
-      ? db
-          .collection<BillWhip>("billWhips")
+      ? billWhipsCollection(db)
           .find({
             targetType: "bill",
             targetId: { $in: stateBillIds },

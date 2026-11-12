@@ -23,8 +23,8 @@ import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_ACTION_COST,
   SUPPORT_RALLY_TOUR_TICK_ACTION_COST,
-} from "@/lib/electionEngine/electionFormulaFactors";
-import { buildRallyAccrualEntry } from "@/lib/turn/elections/supportAccrual";
+} from "@/lib/elections/engine/electionFormulaFactors";
+import { buildRallyAccrualEntry } from "@/lib/elections/campaigns/supportAccrual";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { ObjectId, type Db } from "mongodb";
 import { getGameTime } from "@/lib/time/gameTime";
@@ -37,6 +37,14 @@ import {
 } from "@/lib/campaigns/campaignStrength";
 import { emitRallyWire } from "@/lib/elections/raceWireEmit";
 import { CAMPAIGN_ACTIVITY_HISTORY_CAP } from "@/lib/campaigns/constants/activityHistory";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
 
 export async function appointCampaignManager(params: {
   db: Db;
@@ -61,7 +69,7 @@ export async function appointCampaignManager(params: {
   const existing = campaign.managers ?? legacyManagersAsList(campaign);
 
   if (managerCharacterId === null) {
-    await db.collection<Campaign>("campaigns").updateOne(
+    await campaignsCollection(db).updateOne(
       { _id: campaign._id },
       {
         $set: { managerId: null, managerCharacterId: null, managers: [], updatedAt: now },
@@ -80,16 +88,18 @@ export async function appointCampaignManager(params: {
     throw badRequest("The candidate cannot also be their own campaign manager");
   }
 
-  const managerChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: managerOid }, { projection: { _id: 1, name: 1, userId: 1, countryId: 1 } });
+  const managerChar = await charactersCollection(db).findOne(
+    { _id: managerOid },
+    { projection: { _id: 1, name: 1, userId: 1, countryId: 1 } }
+  );
   if (!managerChar) {
     throw notFound("Proposed manager character not found");
   }
 
-  const managerElection = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+  const managerElection = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1 } }
+  );
   if (!managerElection) {
     throw notFound("Election not found");
   }
@@ -118,7 +128,7 @@ export async function appointCampaignManager(params: {
   // Mirror the first manager onto the legacy pair so un-migrated readers and
   // the existing UI still resolve someone, and no backfill is needed.
   const head = next[0] ?? null;
-  await db.collection<Campaign>("campaigns").updateOne(
+  await campaignsCollection(db).updateOne(
     { _id: campaign._id },
     {
       $set: {
@@ -159,7 +169,7 @@ export async function contributeCampaignStrength(params: {
   const priceLevel = await loadCampaignPriceLevel(db);
   const now = new Date();
   const campaign = await getCampaignOrThrow(db, campaignId);
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   const forexEnabled = await isForexEnabled();
 
   // Campaign Manager eligibility is the single source of truth and admits only
@@ -182,12 +192,10 @@ export async function contributeCampaignStrength(params: {
     throw badRequest("You have no national influence to contribute");
   }
 
-  const character = await db
-    .collection<Character>("characters")
-    .findOne(
-      { _id: user.character._id },
-      { projection: { actions: 1, funds: 1, countryId: 1, currencyBalances: 1, name: 1 } }
-    );
+  const character = await charactersCollection(db).findOne(
+    { _id: user.character._id },
+    { projection: { actions: 1, funds: 1, countryId: 1, currencyBalances: 1, name: 1 } }
+  );
   if (!character) {
     throw notFound("Character not found");
   }
@@ -249,11 +257,11 @@ export async function contributeCampaignStrength(params: {
     );
   }
 
-  // Guard on the canonical local balance — see in-game bug #0553 background.
+  // Guard on the canonical local balance.
   const csCampaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
   const targetCandidateId = campaign.candidateId?.toString?.() ?? null;
   const targetCandidate = campaign.candidateId
-    ? await db.collection<ElectionCandidate>("electionCandidates").findOne(
+    ? await electionCandidatesCollection(db).findOne(
         {
           electionId: campaign.electionId,
           characterId: campaign.candidateId,
@@ -264,7 +272,7 @@ export async function contributeCampaignStrength(params: {
   const targetName = targetCandidate?.characterName ?? targetCandidateId ?? campaignId.toString();
   const auditTurn = await getCurrentTurn(db);
 
-  const charUpdate = await db.collection<Character>("characters").updateOne(
+  const charUpdate = await charactersCollection(db).updateOne(
     {
       _id: character._id,
       actions: { $gte: costActions },
@@ -282,7 +290,7 @@ export async function contributeCampaignStrength(params: {
     throw badRequest("Insufficient resources — may have changed since page load");
   }
 
-  const campaignUpdate = await db.collection<Campaign>("campaigns").updateOne(
+  const campaignUpdate = await campaignsCollection(db).updateOne(
     { _id: campaignId },
     {
       $inc: { campaignStrength: strengthAdded },
@@ -290,7 +298,7 @@ export async function contributeCampaignStrength(params: {
     }
   );
   if (campaignUpdate.matchedCount === 0) {
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id },
       {
         $inc: {
@@ -309,7 +317,7 @@ export async function contributeCampaignStrength(params: {
   // say how many clicks it stood in for or the ledger reads as a single
   // implausibly large donation.
   const batchSuffix = clicks > 1 ? ` (x${clicks})` : "";
-  void db.collection("activityLog").insertOne({
+  void activityLogCollection<Document>(db).insertOne({
     type: "game_action",
     timestamp: now,
     userId: new ObjectId(user.userId),
@@ -365,13 +373,10 @@ export async function contributeCampaignStrength(params: {
 }
 
 /**
- * Notify a character that a rival campaign has begun opposition research on
- * them. Opposition research silently drains the target's favorability
- * (-0.5%/level/turn in campaignTurn.ts) with no other signal — players saw
- * their favorability slide with no idea who or why (support ticket #946). This
- * fires once at targeting time (retarget is cooldown-gated, so no per-turn
- * spam). NPP / unowned targets have no player to notify. Names the source
- * campaign per the ticket's explicit ask to see who is attacking.
+ * Notify a character that a rival campaign began opposition research on them.
+ * Research silently drains the target's favorability each turn, so this is the
+ * only signal the player gets; it names the attacker. Fires once at targeting
+ * time. NPP / unowned targets have no player to notify.
  */
 export async function notifyOppositionResearchTarget(
   db: Db,
@@ -399,9 +404,10 @@ export async function retargetOppositionResearch(params: {
   await assertCampaignManagerOrNominee(db, campaign, user);
 
   if (!user.isAdmin) {
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -429,10 +435,8 @@ export async function retargetOppositionResearch(params: {
   }
 
   const targetOid = new ObjectId(targetId);
-  const targetChar = await db.collection<Character>("characters").findOne({ _id: targetOid });
-  const targetNpp = !targetChar
-    ? await db.collection<NPP>("npps").findOne({ _id: targetOid })
-    : null;
+  const targetChar = await charactersCollection(db).findOne({ _id: targetOid });
+  const targetNpp = !targetChar ? await nppsCollection(db).findOne({ _id: targetOid }) : null;
   const target = targetChar || targetNpp;
   if (!target) {
     throw notFound("Target not found");
@@ -446,9 +450,7 @@ export async function retargetOppositionResearch(params: {
   // money and actions spent to drain somebody the buyer is not running
   // against. The list the picker offers comes from this same function, so the
   // two cannot disagree about who is fair game.
-  const raceElection = await db
-    .collection<Election>("elections")
-    .findOne({ _id: campaign.electionId });
+  const raceElection = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!raceElection) {
     throw notFound("Election not found");
   }
@@ -466,7 +468,7 @@ export async function retargetOppositionResearch(params: {
   const OPPOSITION_RESEARCH_COOLDOWN_TURNS = 6; // 6 turns = 6h at standard cadence
   const cooldownUntil = new Date(now.getTime() + 6 * 60 * 60 * 1000);
   const cooldownUntilTurn = currentTurn + OPPOSITION_RESEARCH_COOLDOWN_TURNS;
-  await db.collection<Campaign>("campaigns").updateOne(
+  await campaignsCollection(db).updateOne(
     { _id: campaignId },
     {
       $set: {
@@ -512,9 +514,10 @@ export async function resetOppositionResearch(params: {
   // must be from the same country as the campaign's election. Closes the
   // post-relocation gap where a manager keeps their role across countries.
   if (!isAdmin && user.character) {
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -546,7 +549,7 @@ export async function resetOppositionResearch(params: {
     turnNumber,
   };
 
-  await db.collection<Campaign>("campaigns").updateOne(
+  await campaignsCollection(db).updateOne(
     { _id: campaignId },
     {
       $set: {
@@ -593,9 +596,10 @@ export async function setCampaignColor(params: {
   // Defense-in-depth: even with a manager/nominee role, the actor's character
   // must be from the same country as the campaign's election.
   if (!isAdmin && user.character) {
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: campaign.electionId }, { projection: { countryId: 1 } });
+    const election = await electionsCollection(db).findOne(
+      { _id: campaign.electionId },
+      { projection: { countryId: 1 } }
+    );
     if (!election) {
       throw notFound("Election not found");
     }
@@ -605,14 +609,12 @@ export async function setCampaignColor(params: {
   }
 
   const now = new Date();
-  await db
-    .collection<Campaign>("campaigns")
-    .updateOne(
-      { _id: campaign._id },
-      color === null
-        ? { $unset: { color: "" }, $set: { updatedAt: now } }
-        : { $set: { color, updatedAt: now } }
-    );
+  await campaignsCollection(db).updateOne(
+    { _id: campaign._id },
+    color === null
+      ? { $unset: { color: "" }, $set: { updatedAt: now } }
+      : { $set: { color, updatedAt: now } }
+  );
 
   return {
     message:
@@ -622,7 +624,7 @@ export async function setCampaignColor(params: {
 }
 
 export async function getCampaignOrThrow(db: Db, campaignId: ObjectId): Promise<Campaign> {
-  const campaign = await db.collection<Campaign>("campaigns").findOne({ _id: campaignId });
+  const campaign = await campaignsCollection(db).findOne({ _id: campaignId });
   if (!campaign) {
     throw notFound("Campaign not found");
   }
@@ -640,7 +642,7 @@ async function assertCampaignActiveForManagement(db: Db, campaign: Campaign): Pr
   }
 
   if (!campaign.candidateIsNPP) {
-    const candidateRow = await db.collection<ElectionCandidate>("electionCandidates").findOne(
+    const candidateRow = await electionCandidatesCollection(db).findOne(
       {
         electionId: campaign.electionId,
         characterId: campaign.candidateId,
@@ -710,9 +712,9 @@ export async function assertCampaignActorForSurrogate(
 }
 
 export async function getCurrentTurn(db: Db): Promise<number> {
-  const gameState = await db
-    .collection<{ _id: string; currentTurn?: number }>("gameState")
-    .findOne({ _id: "current" });
+  const gameState = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({
+    _id: "current",
+  });
   return gameState?.currentTurn ?? 0;
 }
 
@@ -736,7 +738,7 @@ export async function fireRallyOneShot(params: {
   const campaign = await getCampaignOrThrow(db, campaignId);
 
   const now = new Date();
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) {
     throw notFound("Election not found");
   }
@@ -766,7 +768,7 @@ export async function fireRallyOneShot(params: {
 
   // Lookup the candidate row so we can read prior `support` and
   // `lastRallyTurn` to enforce the one-per-turn throttle.
-  const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const candidate = await electionCandidatesCollection(db).findOne({
     electionId: campaign.electionId,
     characterId: campaign.candidateId,
     status: "active",
@@ -792,7 +794,7 @@ export async function fireRallyOneShot(params: {
       ? { lastRallyTurn: candidate.lastRallyTurn }
       : { lastRallyTurn: { $exists: false } };
 
-  const campaignResult = await db.collection<Campaign>("campaigns").updateOne(
+  const campaignResult = await campaignsCollection(db).updateOne(
     { _id: campaignId, actions: { $gte: actionCost } },
     {
       $inc: { actions: -actionCost },
@@ -803,7 +805,7 @@ export async function fireRallyOneShot(params: {
     throw new ApiError(409, "Campaign actions changed since page load. Please refresh.");
   }
 
-  const candidateResult = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+  const candidateResult = await electionCandidatesCollection(db).updateOne(
     { _id: candidate._id, ...lastRallyMatch },
     {
       $set: { support: nextSupport, lastRallyTurn: currentTurn },
@@ -812,9 +814,7 @@ export async function fireRallyOneShot(params: {
   );
   if (candidateResult.modifiedCount === 0) {
     // Roll back the campaign action deduction.
-    await db
-      .collection<Campaign>("campaigns")
-      .updateOne({ _id: campaignId }, { $inc: { actions: actionCost } });
+    await campaignsCollection(db).updateOne({ _id: campaignId }, { $inc: { actions: actionCost } });
     throw new ApiError(409, "Rally state changed since page load. Please refresh.");
   }
 
@@ -846,7 +846,7 @@ export async function setRallyTourActive(params: {
   const campaign = await getCampaignOrThrow(db, campaignId);
   await assertCampaignManagerOrNominee(db, campaign, user);
 
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) {
     throw notFound("Election not found");
   }
@@ -859,7 +859,7 @@ export async function setRallyTourActive(params: {
     throw badRequest("Rallies are not available for this race");
   }
 
-  const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const candidate = await electionCandidatesCollection(db).findOne({
     electionId: campaign.electionId,
     characterId: campaign.candidateId,
     status: "active",
@@ -869,13 +869,15 @@ export async function setRallyTourActive(params: {
   }
 
   if (active) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .updateOne({ _id: candidate._id }, { $set: { rallyTourActive: true } });
+    await electionCandidatesCollection(db).updateOne(
+      { _id: candidate._id },
+      { $set: { rallyTourActive: true } }
+    );
   } else {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .updateOne({ _id: candidate._id }, { $unset: { rallyTourActive: "" } });
+    await electionCandidatesCollection(db).updateOne(
+      { _id: candidate._id },
+      { $unset: { rallyTourActive: "" } }
+    );
   }
 
   return { active };

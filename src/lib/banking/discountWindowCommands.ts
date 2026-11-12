@@ -10,7 +10,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { CentralBank, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -21,18 +21,17 @@ import { decideBankCommand } from "@/lib/banking/rules/decide";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { charterMay } from "@/lib/banking/rules/capabilities";
 import { discountWindowRatePercent, quoteDiscountWindow } from "./discountWindow";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type WindowResult =
   | { ok: false; error: string; status: number }
   | { ok: true; outstanding: number; ratePercent: number };
 
 async function primeRateFor(db: Db, currency: CurrencyCode): Promise<number> {
-  const cb = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne(
-      { _id: getBankId(getCountryIdForCurrency(currency)) },
-      { projection: { primeRate: 1 } }
-    );
+  const cb = await centralBanksCollection(db).findOne(
+    { _id: getBankId(getCountryIdForCurrency(currency)) },
+    { projection: { primeRate: 1 } }
+  );
   return typeof cb?.primeRate === "number" && Number.isFinite(cb.primeRate) ? cb.primeRate : 0;
 }
 

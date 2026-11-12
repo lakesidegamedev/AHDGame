@@ -1,16 +1,12 @@
-/**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's region data. All values are authored for 1953 directly.
- * Type-only imports are allowed.
+/* SEED INDEPENDENCE: each era seed is self-contained. Do not import and
+ * transform another era's region data; type-only imports are fine.
  *
- * Brazil IBGE macro-regions for the 1953-default preset (Vargas's second
- * government 1951–54 — Petrobras founded 1953; getulismo vs UDN opposition).
- * The 5 macro-regions are structurally stable; era-specific values are 1950-IBGE-
- * census population, ~1953 regional GDP (BRL/cruzeiro millions, nominal), and
- * the **304-seat** Chamber of Deputies distribution of the 1950 legislature.
+ * Brazil IBGE macro-regions for the 1953-default preset. The 5 macro-regions
+ * are structurally stable; values are 1950-IBGE-census population, ~1953
+ * regional GDP (nominal), and the 304-seat Chamber of Deputies distribution
+ * of the 1950 legislature.
  *
- * NOTE: illiterates (~52%) were barred from voting under the 1946 Constitution,
+ * Illiterates (~52%) were barred from voting under the 1946 Constitution,
  * effectively halving the electorate vs population figures.
  */
 import type { State } from "@/lib/db/types";

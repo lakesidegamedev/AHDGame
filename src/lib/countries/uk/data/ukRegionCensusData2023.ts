@@ -1,19 +1,12 @@
 /**
- * United Kingdom Region Census Profiles — 2023 era.
+ * United Kingdom Region Census Profiles , 2023 era.
  *
  * 2023-default companion to {@link ukRegionCensusData} (the 2019 profiles).
  * Anchored to Census 2021 (England & Wales), Scotland's Census 2022, and ONS
  * mid-2023 population estimates / Annual Population Survey.
  *
- * Era anchors (post-Brexit / post-pandemic): London well under half White
- * British; graduate share around a third nationally and over half in London;
- * pronounced ageing in coastal and rural regions (South West, Wales, East of
- * England); record net migration in 2022–23 lifting "other" shares broadly;
- * cost-of-living squeeze widening the low-income tier in the North East and
- * Wales.
- *
  * All values independently authored from historical knowledge of each region
- * in 2023 — NOT scaled or derived from any other era's data. Income uses
+ * in 2023, NOT scaled or derived from any other era's data. Income uses
  * era-neutral relative tiers (no £ thresholds).
  */
 

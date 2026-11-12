@@ -17,6 +17,11 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import type { Db, ObjectId } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface BanPartyInput {
   countryId: CountryId;
@@ -39,8 +44,7 @@ export async function processBanPartyEffects(
   const { countryId, partyId, partySeqId, reason, currentTurn } = input;
   const now = new Date();
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId, party: String(partySeqId) })
     .toArray();
 
@@ -51,10 +55,10 @@ export async function processBanPartyEffects(
 
     // Mirror the existing resign pattern (docs/design/vacancy-handling.md):
     // delete the ElectedOfficial doc; clear currentOffice on the holder.
-    await db.collection("electedOfficials").deleteOne({ _id: official._id });
+    await electedOfficialsCollection<Document>(db).deleteOne({ _id: official._id });
 
     if (official.characterId) {
-      await db.collection("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: official.characterId },
         {
           $set: {
@@ -77,14 +81,15 @@ export async function processBanPartyEffects(
       });
     }
     if (official.nppId) {
-      await db
-        .collection("npps")
-        .updateOne({ _id: official.nppId }, { $set: { currentOffice: null, updatedAt: now } });
+      await nppsCollection<Document>(db).updateOne(
+        { _id: official.nppId },
+        { $set: { currentOffice: null, updatedAt: now } }
+      );
     }
   }
 
   // Flip the party doc with audit fields.
-  await db.collection("politicalParties").updateOne(
+  await politicalPartiesCollection<Document>(db).updateOne(
     { _id: partyId },
     {
       $set: {
@@ -112,7 +117,7 @@ export async function processUnbanPartyEffects(db: Db, input: UnbanPartyInput): 
   const { partyId, reason } = input;
   const now = new Date();
 
-  await db.collection("politicalParties").updateOne(
+  await politicalPartiesCollection<Document>(db).updateOne(
     { _id: partyId },
     {
       $set: {

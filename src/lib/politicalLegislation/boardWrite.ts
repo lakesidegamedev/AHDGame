@@ -29,6 +29,7 @@
 import type { AnyBulkWriteOperation, Db, Filter } from "mongodb";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const clampScore = (v: number) => Math.max(0, Math.min(100, v));
 
@@ -52,7 +53,7 @@ export async function applyBoardDelta(
 ): Promise<BoardDeltaResult> {
   if (!Number.isFinite(scoreDelta) || scoreDelta === 0) return { regionsUpdated: 0 };
 
-  const docs = await db.collection<PoliticalMetricsDoc>("politicalMetrics").find(filter).toArray();
+  const docs = await politicalMetricsCollection(db).find(filter).toArray();
   if (docs.length === 0) return { regionsUpdated: 0 };
 
   const id = familyId as PoliticalMetricId;
@@ -91,7 +92,7 @@ export async function applyBoardDelta(
   }
 
   if (ops.length === 0) return { regionsUpdated: 0 };
-  await db.collection<PoliticalMetricsDoc>("politicalMetrics").bulkWrite(ops);
+  await politicalMetricsCollection(db).bulkWrite(ops);
   return { regionsUpdated: ops.length };
 }
 
@@ -115,8 +116,7 @@ export async function applyBoardValueDeltasByRegion(
   const regionIds = [...deltasByRegion.keys()];
   if (regionIds.length === 0) return { regionsUpdated: 0 };
 
-  const docs = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const docs = await politicalMetricsCollection(db)
     .find({ _id: { $in: regionIds } } as Filter<PoliticalMetricsDoc>)
     .toArray();
   if (docs.length === 0) return { regionsUpdated: 0 };
@@ -148,6 +148,6 @@ export async function applyBoardValueDeltasByRegion(
   }
 
   if (ops.length === 0) return { regionsUpdated: 0 };
-  await db.collection<PoliticalMetricsDoc>("politicalMetrics").bulkWrite(ops);
+  await politicalMetricsCollection(db).bulkWrite(ops);
   return { regionsUpdated: ops.length };
 }

@@ -1,37 +1,17 @@
 /**
  * Sovereign coupon arrears kept as one claim per bond per unpaid turn.
  *
- * WHAT WENT WRONG
+ * Per-bond claims pile up for large debtors and every Treasury pass groups
+ * the whole open queue. This folds existing per-bond claims into one claim
+ * per budget, currency and payee group, each payee owed the sum of its legs
+ * under the same frozen quote. No money moves.
  *
- * The funded coupon accrual froze one claim per coupon-bearing sovereign bond
- * per turn, and a claim leaves the queue only when its Treasury has the cash.
- * The large debtors never do, so their queues only grow: on the live world the
- * store held about 1.5 million open claims, roughly 31,000 more a turn, and
- * every Treasury pass groups the whole open queue several times.
- *
- * THE CODE HALF
- *
- * `sovereignCouponGroupedAccrualEnabled` freezes each turn's coupons as one
- * claim per budget, currency and payee group (players apart from the bond
- * pool, index funds and NPPs), summing each payee's legs.
- *
- * THIS HEAL
- *
- * Folds the per-bond claims already open into that shape: for every budget,
- * due turn and currency, one claim per payee group, each payee owed exactly
- * what its per-bond legs summed to, under the same frozen quote. The folded
- * claims carry a `:heal` suffix so they never collide with an accrual id.
- * No money moves; only the number of claim documents changes.
- *
- * Left alone: any claim a journal receipt owns (a per-claim attempt or a
- * grouped receipt that was not rejected names it), any claim the journal is
- * still publishing to (`pendingSettlementProjection`), and any group whose
- * claims were frozen under more than one native quote.
+ * Left alone: claims owned by a journal receipt, claims still being published
+ * to (pendingSettlementProjection), and groups frozen under more than one
+ * native quote.
  *
  * Each group commits in one transaction that re-reads its members and aborts
- * if any of them changed since they were backed up. Backups go to
- * `healBackups` under the run id, so the runner's rollback restores them and
- * deletes the folded claims. Roll back only before the next Treasury pass:
+ * if any changed since backup. Roll back only before the next Treasury pass:
  * once a folded claim is paid, restoring its members would owe them again.
  */
 import type { Db } from "mongodb";
@@ -43,7 +23,6 @@ import {
   type SovereignCouponClaimRecord,
 } from "@/lib/banking/fundedSovereignCoupons";
 import { groupSovereignCouponClaims } from "@/lib/banking/rules/sovereignCoupons";
-import { HEAL_BACKUPS_COLLECTION } from "../backup";
 import type {
   Defect,
   DetectResult,
@@ -53,6 +32,10 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { healBackupsCollection } from "@/lib/db/repositories/healBackups";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 export const DEFECT_ID = "AHD-sovereign-coupon-arrears";
 
@@ -95,13 +78,12 @@ function foldableFilter(owned: readonly string[]): Record<string, unknown> {
   };
 }
 
-const claims = (db: Db) =>
-  db.collection<SovereignCouponClaimRecord>(SOVEREIGN_COUPON_CLAIMS_COLLECTION);
+const claims = (db: Db) => sovereignCouponClaimsCollection<SovereignCouponClaimRecord>(db);
 
 async function currentTurn(db: Db): Promise<number> {
-  const state = await db
-    .collection<{ _id: string; currentTurn?: number; turn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
+  const state = await gameStateCollection<{ _id: string; currentTurn?: number; turn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
   return state?.currentTurn ?? state?.turn ?? 0;
 }
 
@@ -111,11 +93,11 @@ async function currentTurn(db: Db): Promise<number> {
  * moved no money and owns nothing). Read-only.
  */
 export async function ownedOpenCouponClaimIds(db: Db): Promise<string[]> {
-  const moves = db.collection<{
+  const moves = bankMoneyMovesCollection<{
     _id: string;
     status?: string;
     event?: { meta?: { claimIds?: unknown } };
-  }>("bankMoneyMoves");
+  }>(db);
   const named = new Set<string>();
   for (const move of await moves
     .find(
@@ -348,7 +330,7 @@ async function applyGroup(
   )
     return null;
   const ids = members.map((member) => member._id);
-  const backups = db.collection<HealBackup>(HEAL_BACKUPS_COLLECTION);
+  const backups = healBackupsCollection<HealBackup>(db);
   await backups.insertMany(
     members.map((member) => ({
       runId: ctx.runId ?? "",

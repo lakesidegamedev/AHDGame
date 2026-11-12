@@ -6,7 +6,9 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export const DEFAULT_TEMP_SP_ACCESS_DAYS = 30;
 export const MAX_TEMP_SP_ACCESS_DAYS = 90;
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
     const days = parsed.data.days ?? DEFAULT_TEMP_SP_ACCESS_DAYS;
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ discordId });
+    const user = await usersCollection(db).findOne({ discordId });
     if (!user) {
       return statusResponse(404, {
         found: false,
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+    const character = await charactersCollection(db).findOne({ userId: user._id });
 
     if (user.singleplayerEntitledAt) {
       return NextResponse.json({
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
     const expiresAt = keepCurrent ? current : requested;
 
     if (!keepCurrent) {
-      await db.collection<User>("users").updateOne(
+      await usersCollection(db).updateOne(
         { _id: user._id },
         {
           $set: {

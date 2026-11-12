@@ -14,11 +14,15 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isActiveCabinetNominationDuplicateKey } from "@/lib/elections/duplicateKey";
 import { getGameTime } from "@/lib/time/gameTime";
-import type { CabinetNomination, ElectedOfficial, Character, NPP } from "@/lib/db/types";
+import type { CabinetNomination, ElectedOfficial, NPP } from "@/lib/db/types";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear, getManuallyEnabledSeats } from "@/lib/cabinet/liveGameYear";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -78,14 +82,16 @@ export async function POST(request: Request) {
     }
 
     // Must be President (player character only — no NPP)
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -105,7 +111,7 @@ export async function POST(request: Request) {
       } catch {
         return errorResponse(400, "Invalid nomineeCharacterId");
       }
-      const nominee = await db.collection<Character>("characters").findOne({ _id: nomineeOid });
+      const nominee = await charactersCollection(db).findOne({ _id: nomineeOid });
       if (!nominee) {
         return errorResponse(404, "Nominee character not found");
       }
@@ -133,7 +139,7 @@ export async function POST(request: Request) {
       } catch {
         return errorResponse(400, "Invalid nomineeNppId");
       }
-      const npp = await db.collection<NPP>("npps").findOne({ _id: nomineeNppOid });
+      const npp = await nppsCollection(db).findOne({ _id: nomineeNppOid });
       if (!npp) {
         return errorResponse(404, "Nominee NPP not found");
       }
@@ -145,12 +151,10 @@ export async function POST(request: Request) {
     }
 
     // Withdraw any existing active/proposed nomination for this position
-    await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .updateMany(
-        { positionId, status: { $in: ["active", "proposed", "awaiting_choice"] } },
-        { $set: { status: "withdrawn", updatedAt: now } }
-      );
+    await cabinetNominationsCollection(db).updateMany(
+      { positionId, status: { $in: ["active", "proposed", "awaiting_choice"] } },
+      { $set: { status: "withdrawn", updatedAt: now } }
+    );
 
     // Anchor votingEndsAt to the game clock so it agrees with votingEndsOnTurn
     // and with the readers (lifecycle + vote routes) that compare against game time.
@@ -192,9 +196,9 @@ export async function POST(request: Request) {
 
     let result;
     try {
-      result = await db
-        .collection<CabinetNomination>("cabinetNominations")
-        .insertOne(nomination as unknown as CabinetNomination);
+      result = await cabinetNominationsCollection(db).insertOne(
+        nomination as unknown as CabinetNomination
+      );
     } catch (error) {
       if (isActiveCabinetNominationDuplicateKey(error)) {
         return errorResponse(409, "An active nomination for this cabinet position already exists");
@@ -225,13 +229,11 @@ export async function POST(request: Request) {
     }
 
     // Notify senators (player characters only)
-    const senators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const senators = await electedOfficialsCollection(db)
       .find({ countryId, officeType: "senate", characterId: { $ne: null }, isNPP: { $ne: true } })
       .toArray();
     const senatorCharIds = senators.map((s) => s.characterId!).filter(Boolean);
-    const senatorChars = await db
-      .collection<Character>("characters")
+    const senatorChars = await charactersCollection(db)
       .find({ _id: { $in: senatorCharIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
     const posName = positionDef.name;

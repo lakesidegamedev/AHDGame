@@ -6,6 +6,7 @@ import {
   unclaimedConstructionFilter,
 } from "@/lib/banking/rules/constructionProperty";
 import type { ConstructionBorrowerTransferPlan } from "@/lib/banking/constructionBorrowerTransfer";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export {
   hasProtectedConstructionClaim,
   hasProtectedConstructionProperty,
@@ -38,7 +39,7 @@ export async function acquireConstructionPropertyTransition(
   )
     return false;
 
-  const result = await db.collection<CorporateSector>("corporateSectors").updateOne(
+  const result = await corporateSectorsCollection(db).updateOne(
     {
       _id: sector._id,
       corporationId: sector.corporationId,
@@ -162,10 +163,8 @@ export async function releaseConstructionPropertyTransition(
   sectorId: CorporateSector["_id"],
   key: string
 ): Promise<void> {
-  await db
-    .collection<CorporateSector>("corporateSectors")
-    .updateOne(
-      { _id: sectorId, "constructionPropertyTransition.key": key },
-      { $unset: { constructionPropertyTransition: "" } }
-    );
+  await corporateSectorsCollection(db).updateOne(
+    { _id: sectorId, "constructionPropertyTransition.key": key },
+    { $unset: { constructionPropertyTransition: "" } }
+  );
 }

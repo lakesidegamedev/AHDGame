@@ -1,21 +1,17 @@
 /**
- * USSR Region Census Profiles — Layer 1 demographic breakdown per region (1979).
- * Mirrors the structure of the CN/UK/JP census files; the USSR only exists in
- * the 1979 preset, so there is a single era table.
+ * USSR Region Census Profiles: Layer 1 demographic breakdown per region,
+ * authored for the 1979 Soviet census. The USSR only exists in the 1979
+ * preset, so there is a single era table.
  *
- * SEED INDEPENDENCE — authored for ~1979 directly (1979 Soviet census).
- *
- * Ethnicity uses the broad Soviet nationality groupings used in the region model
- * (Russian, Ukrainian, Central-Asian, Caucasian, and an aggregated `other`
- * covering Tatar/Bashkir/Baltic-adjacent/Moldovan/Siberian peoples). Belarus and
- * the Baltics are separate countries and not represented here.
+ * Ethnicity uses broad Soviet groupings; Belarus and the Baltics are
+ * separate countries and not represented.
  *
  * Fields (% of adult population, each dimension sums to 100):
- *   ethnicity    — Soviet nationality groupings
- *   age          — adult (18+) distribution
- *   education    — highest level completed (USSR had near-universal secondary)
- *   income       — relative household tiers (compressed planned economy)
- *   urbanization — urban / suburban / rural split
+ *   ethnicity    Soviet nationality groupings
+ *   age          adult (18+) distribution
+ *   education    highest level completed
+ *   income       relative household tiers
+ *   urbanization urban / suburban / rural split
  */
 
 export interface SURegionLayer1 {

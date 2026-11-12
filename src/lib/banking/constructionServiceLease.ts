@@ -1,10 +1,12 @@
 /** Hold the lender's epoch while a construction instalment is in flight. */
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { completeRefusedDebitBatch } from "./constructionBatchCompletion";
 import { resumeSettlement } from "./settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export async function acquireConstructionServiceLease(
   db: Db,
@@ -16,7 +18,7 @@ export async function acquireConstructionServiceLease(
   batchLoanIds?: string[]
 ): Promise<boolean> {
   if (!loan.constructionCollateral || loan.charteredTurn === undefined) return false;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const identity = {
     _id: loan.bankCorporationId,
     "bankCharter.charteredTurn": loan.charteredTurn,
@@ -83,26 +85,18 @@ export async function releaseConstructionServiceLease(
   if (batchLoanIds.length > 0) {
     // Locks first: recovery reaches a batch's locks only through its lease,
     // so the lease must outlive them.
-    await db
-      .collection<BankLoan>("bankLoans")
-      .updateMany(
-        { _id: { $in: [loanId, ...batchLoanIds] }, constructionSettlementOwner: key },
-        { $unset: { constructionSettlementOwner: "" } }
-      );
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(lease, { $unset: { bankConstructionFunding: "" } });
-    return;
-  }
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne(lease, { $unset: { bankConstructionFunding: "" } });
-  await db
-    .collection<BankLoan>("bankLoans")
-    .updateOne(
-      { _id: loanId, constructionSettlementOwner: key },
+    await bankLoansCollection(db).updateMany(
+      { _id: { $in: [loanId, ...batchLoanIds] }, constructionSettlementOwner: key },
       { $unset: { constructionSettlementOwner: "" } }
     );
+    await corporationsCollection(db).updateOne(lease, { $unset: { bankConstructionFunding: "" } });
+    return;
+  }
+  await corporationsCollection(db).updateOne(lease, { $unset: { bankConstructionFunding: "" } });
+  await bankLoansCollection(db).updateOne(
+    { _id: loanId, constructionSettlementOwner: key },
+    { $unset: { constructionSettlementOwner: "" } }
+  );
 }
 
 /** Includes a crash after application but before admission cleanup. */
@@ -110,8 +104,7 @@ export async function recoverConstructionServiceLeases(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error: string }>> {
-  const banks = await db
-    .collection<Corporation>("corporations")
+  const banks = await corporationsCollection(db)
     .find(
       {
         "bankConstructionFunding.kind": { $in: ["servicing", "recovery"] },
@@ -134,12 +127,10 @@ export async function recoverConstructionServiceLeases(
         });
         continue;
       }
-      const sector = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne(
-          { _id: new ObjectId(lease.service.sectorId) },
-          { projection: { constructionFinancing: 1 } }
-        );
+      const sector = await corporateSectorsCollection(db).findOne(
+        { _id: new ObjectId(lease.service.sectorId) },
+        { projection: { constructionFinancing: 1 } }
+      );
       const quote = sector?.constructionFinancing?.cancellation;
       if (quote && `${quote.key}:payout` === key && !quote.aborted) {
         // The property quote owns refund recovery, including a crash before
@@ -156,7 +147,7 @@ export async function recoverConstructionServiceLeases(
         key,
         "recovery"
       );
-      await db.collection<BankLoan>("bankLoans").updateOne(
+      await bankLoansCollection(db).updateOne(
         {
           _id: new ObjectId(lease.loanId),
           constructionSettlementOwner: key.slice(0, -":payout".length),
@@ -165,9 +156,10 @@ export async function recoverConstructionServiceLeases(
       );
       continue;
     }
-    const record = await db
-      .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const record = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     if (record) {
       let result = await resumeSettlement(db, key);
       // A refused borrower debit is final. Each pass drops one refusal and

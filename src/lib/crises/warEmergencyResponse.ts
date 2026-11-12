@@ -9,6 +9,8 @@ import { applyCivilLibertiesDelta } from "@/lib/politicalMetrics/civilLiberties"
 import { logWireEvent } from "@/lib/wireEvent";
 import type { CrisisActionContext } from "./optionActions";
 import { CIVIL_DEFENSE_SECTOR_SHIFTS, type WarEmergencySectorShift } from "./warEmergencyBalance";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import type { Document } from "mongodb";
 
 export type WarEmergencyResponseId = Extract<
   CrisisOptionAction,
@@ -127,12 +129,10 @@ export async function applyWarEmergencyResponse(
   const countryId = ctx.countryId as CountryId;
 
   if (effects.approval) {
-    await ctx.db
-      .collection("governmentApprovals")
-      .updateOne(
-        { _id: countryId as unknown as import("mongodb").ObjectId },
-        { $inc: { approvalRating: effects.approval } }
-      );
+    await governmentApprovalsCollection<Document>(ctx.db).updateOne(
+      { _id: countryId as unknown as import("mongodb").ObjectId },
+      { $inc: { approvalRating: effects.approval } }
+    );
   }
   if (effects.treasuryCost) {
     await applyCountryTreasuryDelta(

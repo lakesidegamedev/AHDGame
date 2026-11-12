@@ -1,21 +1,12 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's region data. All values are authored for 1979 directly.
+ * SEED INDEPENDENCE: do not derive from another era's data.
  * Type-only imports are allowed.
  *
- * Nigeria's 6 geopolitical zones for the 1979-default preset (the Second
- * Republic — Shagari's election, the return to civilian rule under the 1979
- * constitution). The 6 zones are structurally stable; the era-specific values
- * are ~1979 population and zone GDP (NGN millions, tunable scale; a small
- * pre-devaluation oil economy).
+ * Nigeria's 6 geopolitical zones for the 1979 Second Republic preset.
+ * gdp is in NGN millions, tunable scale.
  *
- * SCOPE NOTE: this file supplies the era-scaled REGIONS only. The deeper Second-
- * Republic fidelity — the historical 19-state structure and the NPN/UPN/NPP/PRP/
- * GNPP five-party system with 1979 vote shares — is a separate, larger task
- * (NG parties + calibration, per the seed-completion handoff) and is NOT modelled
- * here; the 6-zone playable structure and `houseDistricts`/`stateSenateSeats`
- * remain the era-invariant Fourth-Republic NASS scaling.
+ * Only era-scaled regions are modelled here. The historical 19-state
+ * structure and five-party system are out of scope.
  */
 import type { State } from "@/lib/db/types";
 

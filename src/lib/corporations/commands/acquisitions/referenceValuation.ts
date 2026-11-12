@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Bond, CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Bond, Corporation, CorporateSector } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
@@ -24,6 +24,10 @@ import {
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { loadLiveCorporateLoans } from "@/lib/banking/corporateLoanAssumption";
 import { acquisitionBalanceSheet } from "./rules";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export interface ReferenceValuation {
   /** Canonical whole-corp reference valuation (₳). */
@@ -49,11 +53,8 @@ export async function referenceValuationAnchor(db: Db, target: Corporation): Pro
 export async function referenceValuation(db: Db, target: Corporation): Promise<ReferenceValuation> {
   const [sectors, centralBanks, fxByCurrency, targetFxRate, marketMode, gameState] =
     await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: target._id })
-        .toArray(),
-      db.collection<CentralBank>("centralBanks").find({}).toArray(),
+      corporateSectorsCollection(db).find({ corporationId: target._id }).toArray(),
+      centralBanksCollection(db).find({}).toArray(),
       loadFxRatesByCurrency(db),
       getCorpFxRate(db, target),
       getMarketSystemModeForDb(db),
@@ -77,15 +78,13 @@ export async function referenceValuation(db: Db, target: Corporation): Promise<R
     targetFxRate
   );
   const [bonds, heldCorps, funds, receivables, bankLoans] = await Promise.all([
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({
         matured: false,
         $or: [{ corporationId: target._id }, { "holders.corporationId": target._id }],
       })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { "shareholders.corporationId": target._id },
         { projection: { shareholders: 1, sharePrice: 1, countryId: 1, liquidCurrencyCode: 1 } }

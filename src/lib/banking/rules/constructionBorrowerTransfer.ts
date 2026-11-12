@@ -2,13 +2,9 @@ import type { BankLoan } from "@/lib/db/types/bank";
 import type { ConstructionBuildClaim } from "./constructionBuild";
 
 /**
- * A secured construction loan is owed by whoever owns its site. When a site
- * changes owner (an acquisition, a takeover, a spin-off, a nationalization or
- * a privatization), the claim and the loan travel with it: the new owner
- * becomes the borrower and keeps servicing from its own cash, and the lender
- * keeps both the debt and the pledge. No money moves, so nothing has to
- * balance except the one rule that the borrower on the loan and the borrower
- * on the claim always name the site's owner.
+ * The borrower on a secured construction loan is always the site's owner.
+ * When the site changes owner, the loan and claim both follow the site with
+ * no money moved, so only the borrower identity has to stay consistent.
  */
 
 /** Loan lock owner for one site's borrower transfer, stamped with its turn. */

@@ -1,7 +1,7 @@
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
 /**
- * v3 observation boundary (issue #2021): bond-market-pool settlement
+ * v3 observation boundary: bond-market-pool settlement
  * inventory sits OUTSIDE observed M2, except QE-created money still parked
  * at the dealer.
  *

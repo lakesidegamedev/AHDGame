@@ -13,6 +13,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumePasswordReset } from "@/lib/passwordReset";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/reset-password - Sets a new password using a single-use reset token from forgot-password.
 // Auth: public (token-bearing)
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: reset.userId });
+    const user = await usersCollection(db).findOne({ _id: reset.userId });
     // Fenced accounts never consume a reset token via legacy reset. Same
     // generic 400 body as an expired token so fenced is not an oracle.
     if (user && isAuthMigrationFenced(user)) {
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 12);
     const changedAt = new Date();
     // Update password in database and invalidate all existing sessions
-    const updated = await db.collection<User>("users").updateOne(
+    const updated = await usersCollection(db).updateOne(
       {
         _id: reset.userId,
         password: user.password ?? null,

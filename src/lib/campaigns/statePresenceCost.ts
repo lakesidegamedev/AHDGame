@@ -15,7 +15,7 @@
  * the ones already built in) runs this with the rate the view carries.
  */
 
-import { stateOrgLevelCost } from "@/lib/electionEngine/constants";
+import { stateOrgLevelCost } from "@/lib/elections/engine/constants";
 
 /**
  * Cost of the level that takes a state from `currentLevel` to `currentLevel + 1`,

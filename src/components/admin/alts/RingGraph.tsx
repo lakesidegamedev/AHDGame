@@ -1,10 +1,5 @@
 "use client";
 
-// RingGraph: node-link diagram of the cluster. Edges stay SVG; nodes are
-// in-game PFPs with names that open the suspect peek (username / email / IP /
-// cookie / ban / profile). Clicking a portrait still selects its strongest
-// incident edge for the evidence panel.
-
 import { useMemo } from "react";
 import { SuspectMugshot } from "./SuspectPortrait";
 import { SuspectNameButton } from "./SuspectPeek";

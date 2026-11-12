@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Union } from "@/lib/db/types";
 import { UNIONIZATION_BAN_DECAY_STEP_PER_TURN } from "@/lib/labour/unionization";
 import { undergroundStrength } from "./underground";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /** Cells cannot create more than low, informal workplace density under a ban. */
 export const UNDERGROUND_DENSITY_CAP = 35;
@@ -23,8 +24,7 @@ export async function loadUndergroundStrengthByCountrySector(
   bannedCountryIds: ReadonlySet<string>
 ): Promise<Map<string, number>> {
   if (bannedCountryIds.size === 0) return new Map();
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find(
       {
         countryId: { $in: Array.from(bannedCountryIds) as CountryId[] },

@@ -419,4 +419,86 @@ export const DEFENSE_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Robotic Munitions Cells",
+      description: "Robot cells hold output through labor shortages.",
+      effects: [{ kind: "laborCostReduction", pct: 0.06 }],
+    },
+    {
+      name: "Combat-Proven Marketing",
+      description: "Field data from allies backs every sales claim.",
+      effects: [{ kind: "marketingStrength", flat: 20 }],
+    },
+    {
+      name: "Allied Supply Mandates",
+      description: "Trusted supplier status shields the order book from foreign rivals.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Mass Drone Production",
+      description: "Lights-out plants turn out drones by the thousand with a skeleton crew.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "ordnance", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Space Defense Demonstrations",
+      description: "On-orbit demonstrations set the price ceiling for the industry.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 38 },
+      ],
+    },
+    {
+      name: "Alliance Production Treaties",
+      description: "Treaty production deals make partner capacity cheap and duty-free.",
+      effects: [
+        { kind: "tariffShield", pct: 0.23 },
+        { kind: "expansionDiscount", pct: 0.19 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Self-Running Munitions Plants",
+      description: "Plants hold full output with almost no staff.",
+      effects: [{ kind: "laborCostReduction", pct: 0.065 }],
+    },
+    {
+      name: "Simulation-Proven Systems",
+      description: "Millions of simulated battles back every sales claim.",
+      effects: [{ kind: "marketingStrength", flat: 22 }],
+    },
+    {
+      name: "Sovereign Supplier Status",
+      description: "Cleared supplier status locks foreign rivals out of the order book.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Autonomous Arsenal Lines",
+      description: "Robot lines build uncrewed craft and munitions around the clock.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "ordnance", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Cislunar Defense Showcases",
+      description: "Live demonstrations beyond orbit set the price ceiling for the industry.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "marketingStrength", flat: 40 },
+      ],
+    },
+    {
+      name: "Alliance Arsenal Compacts",
+      description: "Shared arsenals across allies make partner capacity cheap and duty-free.",
+      effects: [
+        { kind: "tariffShield", pct: 0.24 },
+        { kind: "expansionDiscount", pct: 0.2 },
+      ],
+    },
+  ],
 };

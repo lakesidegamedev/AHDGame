@@ -1,18 +1,13 @@
 "use client";
 
 /**
- * The site name beside the logo. On a 1991 world it types itself in, a nod to
- * the dot-com era: a cursor blinks on an empty field for a moment, the name
- * arrives a key at a time, and the cursor blinks twice more and goes.
- *
- * There is one run per page load, shared by every mounted copy of the
- * wordmark. The loading navbar starts it, and the real navbar, mounting a beat
- * later, picks it up from the keys already typed instead of an empty field.
+ * The site name beside the logo, typed in once per page load on a 1991 world
+ * as a dot-com era nod. One run is shared by every mounted copy: the loading
+ * navbar starts it and the real navbar picks up from keys already typed.
  * Client-side navigation keeps the navbar mounted, so it does not retype.
- * The run advances one key per animation frame at most and commits it in that
- * frame, so a busy main thread (the landing globe hydrating) stalls the typist
- * rather than skipping keys. Reduced motion shows the name at once, and screen
- * readers always get the whole name.
+ * Advances at most one key per animation frame and commits it in that frame,
+ * so a busy main thread stalls the typist rather than skipping keys. Reduced
+ * motion shows the name at once; screen readers always get the whole name.
  */
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";

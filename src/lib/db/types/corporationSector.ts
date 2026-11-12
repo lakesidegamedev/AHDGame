@@ -21,17 +21,16 @@ export interface SectorBuildOrder {
   /** Capacity units (output units/day) this order delivers when it lands. */
   unitsOrdered: number;
   /**
-   * The strategy this order was PRICED at, stamped when it was placed.
+   * The strategy this order was PRICED at, stamped when placed.
    *
    * Capacity is priced at the RPU of the product it will make, so an order
    * bought while the sector ran a cheap strategy must not silently become
    * capacity for an expensive one. The D9 queue rescale
-   * (`rescaleBuildQueueForStrategyChange`) already scales `unitsOrdered` on a
-   * retool so the paid basis is preserved; this field is what makes that
-   * defence auditable after the fact rather than merely assumed.
+   * (`rescaleBuildQueueForStrategyChange`) scales `unitsOrdered` on a retool
+   * so the paid basis is preserved; this field makes that auditable.
    *
-   * Absent on orders placed before 2026-09-07, which readers treat as the
-   * sector's current strategy.
+   * Absent on legacy orders, which readers treat as the sector's current
+   * strategy.
    */
   strategyId?: string | null;
   /**
@@ -69,8 +68,36 @@ export interface SectorBuildOrder {
   constructionClaimId?: string;
 }
 
+/** One recorded taking of a sector, kept so a court reversal can undo it. */
+export interface NationalizationTaking {
+  /** The corporation that held this sector immediately before the taking. */
+  formerCorporationId: ObjectId;
+  /** The sector's home country before the taking (usually the taking country). */
+  formerCountryId?: string;
+  /** Revenue (donor currency) before the transition haircut. */
+  formerRevenue?: number;
+  /** Capital stock before the transition haircut (plants mode). */
+  formerCapitalStock?: number;
+  /** Turn the taking occurred. */
+  takenAtTurn: number;
+  /** What the treasury paid the former owner, in ₳, until a reversal recovers it. */
+  compensationAnchor?: number;
+  /** The country whose treasury paid the compensation. */
+  compensationCountryId?: string;
+  /**
+   * Set when the taking was folded into a holding the state already had: the
+   * row then mixes earlier holdings with this taking, and a reversal returns
+   * only the folded amounts below.
+   */
+  mergedIntoExisting?: boolean;
+  foldedRevenue?: number;
+  foldedWorkers?: number;
+  foldedGrowthCost?: number;
+  foldedCapitalStock?: number;
+}
+
 export interface CorporateSector {
-  /** Unified producer market (#4322): written only once the new market settles a turn. */
+  /** Unified producer market: written only once the new market settles a turn. */
   producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
   /**
    * Funded-market cutover transition package: the classification frozen into
@@ -128,15 +155,13 @@ export interface CorporateSector {
   /** Current revenue this sector generates per turn */
   revenue: number;
   /**
-   * Realized revenue this sector actually earned last turn (#3001/#3002): the
-   * nameplate `revenue` after every realization leg the turn processor applies
+   * Realized revenue this sector actually earned last turn: the nameplate
+   * `revenue` after every realization leg the turn processor applies
    * (production policy, capacity haircut, market clearing/soldFraction,
    * throughput, capital utilization, strikes, total-embargo suspension). Same
    * DAILY basis and home currency as `revenue`. Written every turn so the corp
-   * Financials query reads it directly instead of reverse-engineering a single
-   * blended corp-wide ratio and smearing it uniformly across sectors. Absent
-   * only on sectors not yet reprocessed since this field shipped (fallback
-   * behavior in corporationDetail). Never read back into the economy.
+   * Financials query reads it directly rather than smearing a blended
+   * corp-wide ratio across sectors. Never read back into the economy.
    */
   realizedRevenue?: number;
   /**
@@ -260,11 +285,7 @@ export interface CorporateSector {
    */
   labourStaffingFactor?: number;
   /**
-   * Labour system (labourSystemMode ≥ "wages"): wage-level multiplier on the
-   * sector's baseline labor cost. 1.0 = baseline, which is profit-invariant
-   * (the labor slice is carved out of existing maintenance, not added on top).
-   * Player-editable from Phase 2; absent/undefined is treated as 1.0.
-   * See docs/plans/2026-06-30-labour-system.md.
+   * Labour system (labourSystemMode ≥ "wages"): wage-level multiplier on the sector's baseline labor cost. 1.0 = baseline, which is profit-invariant (the labor slice is carved out of existing maintenance, not added on top). Player-editable; absent/undefined treated as 1.0.
    */
   wageLevel?: number;
   /**
@@ -384,14 +405,11 @@ export interface CorporateSector {
   /** Cargo class of the output leg with the largest delivery-limited share. */
   deliveryLimitedFreightClass?: "bulk" | "special" | "grid" | null;
   /**
-   * Canonical freight billing v1 (issue #897,
-   * gameConfig.canonicalFreightBillingEnabled, default off): the shipping cost
-   * this sector was charged last turn for its state's inbound hauls of the
-   * commodities it consumes. Named cost line on the same daily basis and host
-   * currency as `revenue` / `laborCost`, persisted so a later financials
-   * bridge can show "freight" instead of a blended haircut. The amount also
-   * rides the sector's cost leg into corp income, so it is real money while
-   * the flag is on. Absent on worlds that never billed.
+   * Canonical freight billing v1 (gameConfig.canonicalFreightBillingEnabled,
+   * default off): shipping cost this sector was charged last turn for its
+   * state's inbound hauls. Same daily basis and host currency as `revenue` /
+   * `laborCost`; rides the sector's cost leg into corp income. Absent on worlds
+   * that never billed.
    */
   freightBillingCharge?: number;
   /**
@@ -423,7 +441,7 @@ export interface CorporateSector {
   /** Optional industrial input-indexed pricing; ignored while explicit plant costs are off. */
   pricingMode?: "market" | "costPlus";
   /**
-   * Owner opt-in (suggestion 427): this sector's output goes to outside buyers
+   * Owner opt-in: this sector's output goes to outside buyers
    * before the company's own plants. The own plants then get what is left, free.
    * Unset/false = the company's own plants are served first.
    */
@@ -505,6 +523,12 @@ export interface CorporateSector {
    * output-gating factor (telemetry).
    */
   capitalStock?: number;
+  /**
+   * Capacity-weighted build year of the sector's plants, blended as new
+   * capacity lands (energy transition worlds only). Absent means the opening
+   * fleet's assumed age for its type and method (energyTransition/rules).
+   */
+  capacityVintageYear?: number;
   /** Last turn's physical capacity in its blended recipe units during retooling. */
   operatingCapacityUnits?: number;
   operatingCapacityTurn?: number | null;
@@ -560,7 +584,7 @@ export interface CorporateSector {
    * corporation turn in the same update as the deliveries. The next run
    * delivers every slice due after it, so an economy pause defers builds
    * instead of dropping them, and a replayed turn delivers nothing twice
-   * (#5169). Absent until the sector's first run.
+   * Absent until the sector's first run.
    */
   buildDeliverySettledTurn?: number;
   /** Frozen funded build claim and its cash escrow; absent on legacy sectors. */
@@ -570,7 +594,7 @@ export interface CorporateSector {
     key: string;
     kind: string;
     /**
-     * Abandon resume bookkeeping (#4190). Records the last durable step so a
+     * Abandon resume bookkeeping. Records the last durable step so a
      * retry resumes instead of repeating a brand hit or a build refund.
      */
     stage?: "reserved" | "brandApplied" | "refunded";
@@ -594,32 +618,26 @@ export interface CorporateSector {
   constructionInProgressAnchor?: number;
   /**
    * Plants tier (P5): the PAID BASIS of the capacity in `capitalStock`, in ₳
-   * (anchor), cumulative cash actually spent to acquire the units the sector
-   * still owns, after depreciation.
+   * (anchor): cumulative cash actually spent on the units the sector still owns,
+   * after depreciation.
    *
-   * This exists because exits settle at BOOK, and book used to be
-   * `capitalStock × capacityPricePerUnit`, the RAW list price. Builds are
-   * charged that list price times a stack of discounts (founding 0.1×, CEO
-   * acumen down to 0.5×, tech 0.7×, a cheap host state 0.6×), so a founding
-   * build cost 3M ₳ and booked at 30M ₳: restructuring at the 0.85 salvage
-   * fraction CREDITED 8.5× the cash spent. That is money creation, not a
-   * transfer.
+   * Exits settle at BOOK, so book must be the paid basis, not
+   * `capitalStock × capacityPricePerUnit`. Builds are charged list price times
+   * stacked discounts, so raw list price would credit far more than was spent on
+   * restructuring: money creation, not a transfer.
    *
-   * Maintenance rules (the turn processor owns the first three):
-   *   - a build order that lands moves its `costPaidAnchor` out of CIP and INTO
-   *     this field;
-   *   - depreciation scales this field by exactly the factor it scales
-   *     `capitalStock` by, so the PER-UNIT basis is preserved;
-   *   - the flip turn seeds it at `capacity × capacityPricePerUnit × 1.0` for
-   *     capacity that predates the plants tier (that capacity was bought
-   *     through the legacy growth stack at that price).
-   * Transfers (merge/carve/attack/shed/haircut) move it PRO-RATA with the
-   * capacity. Free capacity (R&D breakthroughs, world grants) carries NO basis:
-   * it dilutes the per-unit book rather than adding to it.
+   * Maintenance (the turn processor owns the first three):
+   *   - a build order that lands moves its `costPaidAnchor` out of CIP into this;
+   *   - depreciation scales this field by the same factor as `capitalStock`, so
+   *     per-unit basis is preserved;
+   *   - the flip turn seeds pre-P5 capacity at `capacity × capacityPricePerUnit`
+   *     (that capacity was bought through the legacy growth stack).
+   * Transfers (merge/carve/attack/shed/haircut) move it pro-rata with capacity.
+   * Free capacity (R&D, world grants) carries NO basis: it dilutes per-unit book.
    *
-   * ABSENT ⇒ the readers fall back to `capitalStock × capacityPricePerUnit`,
-   * i.e. exactly the pre-P5 behaviour, so no legacy or seeded row crashes or
-   * silently books at zero. See `sectorCapacityBookAnchor`.
+   * ABSENT => readers fall back to `capitalStock × capacityPricePerUnit` (pre-P5
+   * behaviour), so legacy rows neither crash nor book at zero. See
+   * `sectorCapacityBookAnchor`.
    */
   capacityBookAnchor?: number;
   /**
@@ -659,27 +677,22 @@ export interface CorporateSector {
    */
   plantsUpkeepMarginBasisAnchor?: number;
   /**
-   * Plants tier (ticket 1122): the assembled physical P&L the turn ACTUALLY
-   * booked for this sector, persisted so read surfaces stop rebuilding it out
-   * of `effectiveProfitMargin`.
+   * The assembled physical P&L the turn actually booked for this sector,
+   * persisted so read surfaces stop rebuilding it from `effectiveProfitMargin`.
    *
-   * `effectiveProfitMargin` is an OUTPUT of this P&L, and a capped one:
+   * `effectiveProfitMargin` is an OUTPUT of this P&L and is capped:
    * `derivedMarginPct = min(100, 100 x (1 - operatingCost / revenue))`. The cap
-   * is right for a display percentage and wrong as a source of money. When a
-   * sector's policy credit outruns its operating bill the operating cost goes
-   * NEGATIVE and the booked profit legitimately exceeds revenue, but a reader
-   * inverting the capped percentage recovers an operating cost of exactly zero
-   * and reports profit == revenue. Nine prod media sectors sat at the cap.
-   * Inverting the percentage also silently drops upkeep and compliance, which
-   * are outside the margin's scope but inside the profit.
+   * is right for display but wrong as a source of money: a negative operating
+   * cost (policy credit outrunning the operating bill) makes booked profit
+   * exceed revenue, and inverting the capped percentage reports profit ==
+   * revenue. Inversion also drops upkeep and compliance, which sit inside the
+   * profit but outside the margin's scope.
    *
    * Every field is on the DAILY basis and in the same stored currency as
-   * `revenue` and `laborCost`. The NPP decision engine reads the persisted
-   * revenue, profit, and margin as its lagged profitability signal; the values
-   * never feed physical settlement itself. Written on every physical-P&L turn,
-   * absent below plants and on sectors that have not run a plants turn since
-   * this shipped, and readers keep their old margin-inversion path as the
-   * fallback.
+   * `revenue` and `laborCost`. The NPP decision engine reads this as its lagged
+   * profitability signal; it never feeds physical settlement. Written on every
+   * physical-P&L turn; absent below plants and on sectors that have not run one
+   * since this shipped, where readers fall back to the old margin inversion.
    */
   plantsPnl?: {
     /** Absent on older snapshots, which use the legacy residual. */
@@ -754,44 +767,21 @@ export interface CorporateSector {
    * Owned capacity and paid basis are unchanged. Only capacity commands write this field. */
   activeCapacityPercent?: number;
   /**
-   * ROLLBACK SAFETY: capital-mode restore point. Remove after the rollback
-   * drill passes. (Plants tier, D13.)
+   * Capital-mode restore point. Under plants the nameplate `revenue` stops
+   * compounding and is RESTATED each turn from plant output, so the pre-plants
+   * series would otherwise be lost. This stores what the pre-plants chain WOULD
+   * have written for `revenue` (`preFlipNameplateRevenue`), same daily basis and
+   * host currency. Flipping `marketSystemMode` back to "capital" restores from
+   * it. Nothing reads this in the simulation.
    *
-   * Under plants the nameplate `revenue` stops compounding and is RESTATED each
-   * turn from what the sector's plants produce and sell. That restatement is
-   * destructive: once plants has run for a few turns the pre-plants revenue
-   * series no longer exists anywhere, so flipping `marketSystemMode` back down
-   * to "capital" would resume compounding from a plants-derived number and
-   * silently rebase every corp's income.
-   *
-   * This field is the shadow of the series we stopped writing: each turn under
-   * plants it stores what the pre-plants compounding chain WOULD have written
-   * for `revenue` (`preFlipNameplateRevenue`, the exact figure capital mode
-   * would have produced, which is also what the launch-safety governor clamps
-   * against). Same DAILY basis and same host currency as `revenue`.
-   *
-   * NOTHING READS THIS IN THE SIMULATION. It exists so a rollback is a data
-   * operation instead of an archaeology project, see
-   * `restoreCapitalModeFromShadow` and
-   * `scripts/migrations/2026-08-01-restore-capital-mode-from-shadow.ts`.
-   *
-   * Nullable, like `plantsStartTurn`: the transfer folds in
-   * `sectorTransferCapex` write an explicit `null` when NEITHER side of a merge
-   * carried a restore point, which readers treat identically to absent.
+   * Nullable: the transfer and `sectorTransferCapex` write `null` when neither
+   * side of a merge carried a restore point; readers treat that as absent.
    */
   legacyRevenueShadow?: number | null;
   /**
-   * The pre-plants growth chain that drives {@link legacyRevenueShadow}, kept
-   * alongside it for the same reason.
-   *
-   * Under plants `targetGrowthRate` is forced to 0 and `currentGrowthRate`
-   * trends down to meet it, so the LIVE growth fields stop describing the
-   * counterfactual within a few turns of the flip. These two are stamped from
-   * the live values on the flip turn and then trended on their own, so the
-   * shadow revenue series can compound at the rate capital mode would have
-   * used rather than at the zeroed plants rate. A rollback restores the live
-   * growth fields from these, otherwise capital mode would resume compounding
-   * a correct nameplate at a growth rate of zero.
+   * Pre-plants growth chain frozen on the mode flip, so {@link legacyRevenueShadow}
+   * compounds at capital rates instead of the zeroed plants rate. A rollback
+   * restores the live growth fields from these.
    *
    * NOTHING READS THESE IN THE SIMULATION.
    */
@@ -812,21 +802,18 @@ export interface CorporateSector {
   /** Turn when the current strategy transition began */
   transitionStartTurn?: number | null;
   /**
-   * D9: did the retool that opened this transition actually apply the RPU
+   * Did the retool that opened this transition actually apply the RPU
    * `capitalStock` rescale? Written alongside `transitionFromStrategyId` by
    * `setSectorStrategy`, read by `cancelSectorStrategy`.
    *
    * The rescale is plants-gated and each command resolves the gate at its own
    * call time, so a retool committed under capital mode and cancelled after a
    * flip to plants would apply the INVERSE ratio to a stock that was never
-   * scaled: a permanent mint or burn of the whole RPU ratio, which reaches
-   * 327x for a coal to rare-earth pair. Persisting the decision makes the
-   * inverse conditional on the forward step having happened, so the pair can
-   * never come apart across a mode change. Absent on legacy rows: the sector
-   * turn converts a provably unconverted stock (committed before the sector's
-   * first plants turn, issue #2009) and stamps true; a legacy row committed
-   * under plants converted its stock at the boundary and only ever needs the
-   * opex-anchor heal.
+   * scaled: a permanent mint or burn of the whole RPU ratio. Persisting the
+   * decision makes the inverse conditional on the forward step having happened.
+   * Absent on legacy rows: the sector turn converts a provably unconverted stock
+   * and stamps true; a legacy row committed under plants converted its stock at
+   * the boundary and only needs the opex-anchor heal.
    */
   retoolRescaleApplied?: boolean;
   /**
@@ -872,24 +859,13 @@ export interface CorporateSector {
    */
   absorbedAtTurn?: number;
   /**
-   * Prior-owner provenance stamped at taking time so an executive/emergency
-   * nationalization can be UNDONE (e.g. a Supreme Court strike-down of the
-   * emergency taking). Records who held the sector and its pre-haircut economics
-   * before the state absorbed it. Absent on seeded / never-nationalized sectors,
-   * and on takings that predate this field. On a NatCorp merge this reflects the
-   * MOST RECENT taking folded into the surviving row.
+   * Prior-owner data stamped at taking time so a nationalization can be undone.
+   * Absent on seeded sectors and takings that predate this field. On a NatCorp
+   * merge this reflects the most recent taking folded into the surviving row.
    */
-  nationalizationProvenance?: {
-    /** The corporation that held this sector immediately before the taking. */
-    formerCorporationId: ObjectId;
-    /** The sector's home country before the taking (usually the taking country). */
-    formerCountryId?: string;
-    /** Revenue (donor currency) before the transition haircut. */
-    formerRevenue?: number;
-    /** Capital stock before the transition haircut (plants mode). */
-    formerCapitalStock?: number;
-    /** Turn the taking occurred. */
-    takenAtTurn: number;
+  nationalizationProvenance?: NationalizationTaking & {
+    /** Takings this row was folded onto before the latest one, oldest first. */
+    earlierTakings?: NationalizationTaking[];
   };
   /**
    * Turn this sector was nationalized, anchor for the transition productivity

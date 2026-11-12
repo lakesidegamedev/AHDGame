@@ -22,8 +22,12 @@ import {
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { isCampaignUpgradeGeneralPhase } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
-import type { Campaign, ElectionCandidate, Character, GameState } from "@/lib/db/types";
+import type { Campaign, ElectionCandidate, GameState } from "@/lib/db/types";
 import { z } from "zod";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
 
 const schema = z.object({
   stateId: z.string().min(1),
@@ -55,9 +59,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { id: electionId } = await params;
 
     const db = await getDb();
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } });
+    const gameState = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     const validStates = new Set(getElectoralVoteUnits(gameState?.preset).map((u) => u.stateId));
     if (!validStates.has(stateId)) {
       return errorResponse(400, "Invalid US state code");
@@ -100,7 +105,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Resolve the ticket by the running-mate link: the mate has no candidate row
     // of their own; they act on the nominee's row.
-    const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const candidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       runningMateId: character._id,
       status: "active",
@@ -115,7 +120,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // The ticket's Campaign holds the shared per-day surrogate pool.
-    const campaign = await db.collection<Campaign>("campaigns").findOne(
+    const campaign = await campaignsCollection(db).findOne(
       {
         electionId: election._id,
         candidateId: candidate.characterId,
@@ -162,9 +167,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const freshChar = recovering
       ? null
-      : await db
-          .collection<Character>("characters")
-          .findOne({ _id: character._id }, { projection: { actions: 1 } });
+      : await charactersCollection(db).findOne(
+          { _id: character._id },
+          { projection: { actions: 1 } }
+        );
 
     if (!recovering && (!freshChar || freshChar.actions < actionCost)) {
       return errorResponse(
@@ -187,19 +193,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     // double-counted a pool action.)
     const poolAvailable = recovering
       ? null
-      : await db
-          .collection<Campaign>("campaigns")
-          .findOne(
-            { _id: campaign._id, runningMateSurrogateActionsRemaining: { $gte: 1 } },
-            { projection: { _id: 1 } }
-          );
+      : await campaignsCollection(db).findOne(
+          { _id: campaign._id, runningMateSurrogateActionsRemaining: { $gte: 1 } },
+          { projection: { _id: 1 } }
+        );
     if (!recovering && !poolAvailable) {
       return errorResponse(409, "No running-mate surrogate actions remaining today.");
     }
 
-    const characters = db.collection<Character>("characters");
-    const campaigns = db.collection<Campaign>("campaigns");
-    const candidates = db.collection<ElectionCandidate>("electionCandidates");
+    const characters = charactersCollection(db);
+    const campaigns = campaignsCollection(db);
+    const candidates = electionCandidatesCollection(db);
     const mapRmTravelError = (step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Error => {
       if (step.index === 0) return new Error("SURROGATE_POOL_EMPTY");
       if (step.index === 1) return new Error("INSUFFICIENT_ACTIONS");

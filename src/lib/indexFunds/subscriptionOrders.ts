@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, IndexFund } from "@/lib/db/types";
+import type { IndexFund } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { withSessionDb } from "@/lib/db/sessionDb";
 import { errorResponse, statusResponse, badRequest } from "@/lib/api/errors";
@@ -18,6 +18,11 @@ import {
 import { autoConvertForPurchase, convertForExplicitPay } from "@/lib/currency/autoConvert";
 import { quoteIndexFundSubscription } from "./unitAccounting";
 import { witnessSubscription, type BankSubscription } from "./subscriptions";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { indexFundCommandsCollection } from "@/lib/db/repositories/indexFundCommands";
 
 export async function queueBankFundSubscription(
   db: Db,
@@ -40,7 +45,7 @@ export async function queueBankFundSubscription(
     ...(input.corporationId ? { corporationId: input.corporationId } : {}),
   };
   const replay = async (tx: Db): Promise<Response | null> => {
-    const prior = await tx.collection<BankSubscription>("indexFundCommands").findOne({ _id: key });
+    const prior = await indexFundCommandsCollection<BankSubscription>(tx).findOne({ _id: key });
     if (!prior) return null;
     if (JSON.stringify(prior.request) !== JSON.stringify(request))
       return errorResponse(409, "This order ID belongs to a different fund order.");
@@ -55,23 +60,22 @@ export async function queueBankFundSubscription(
     return await withSessionDb(db, async (tx) => {
       const prior = await replay(tx);
       if (prior) return prior;
-      const fund = await tx
-        .collection<IndexFund>("indexFunds")
-        .findOne({ _id: input.fund._id }, { projection: { floatSettlementPlan: 0 } });
+      const fund = await indexFundsCollection(tx).findOne(
+        { _id: input.fund._id },
+        { projection: { floatSettlementPlan: 0 } }
+      );
       if (
         !fund ||
         fund.mandate?.mode !== "picked_stocks" ||
         !(await bankFundAcceptsSubscriptions(tx, fund))
       )
         return errorResponse(403, "This fund is not accepting investments.");
-      const character = await tx
-        .collection<Character>("characters")
-        .findOne({ _id: input.characterId });
+      const character = await charactersCollection(tx).findOne({ _id: input.characterId });
       if (!character || String(character.userId) !== input.userId)
         return errorResponse(403, "An active character is required.");
       const corporationId = input.corporationId ? new ObjectId(input.corporationId) : undefined;
       const corporation = corporationId
-        ? await tx.collection<Corporation>("corporations").findOne({ _id: corporationId })
+        ? await corporationsCollection(tx).findOne({ _id: corporationId })
         : null;
       if (corporationId && (!corporation || String(corporation.userId) !== input.userId))
         return errorResponse(403, "Only the CEO can invest for a corporation.");
@@ -112,9 +116,10 @@ export async function queueBankFundSubscription(
         : await atomicallyDebitCharacterCash(tx, input.characterId, currency, amountNative, forex);
       if (!debit.ok) throw badRequest(debit.error);
       // Touch the fund so enqueue conflicts with concurrent closure and redemption.
-      const reserved = await tx
-        .collection("indexFunds")
-        .updateOne({ _id: fund._id, status: "active" }, { $set: { updatedAt: new Date() } });
+      const reserved = await indexFundsCollection<Document>(tx).updateOne(
+        { _id: fund._id, status: "active" },
+        { $set: { updatedAt: new Date() } }
+      );
       if (!reserved.matchedCount) throw badRequest("The fund is no longer accepting investments.");
       const body = {
         success: true,
@@ -143,7 +148,7 @@ export async function queueBankFundSubscription(
           status: "queued",
         },
       };
-      await tx.collection<BankSubscription>("indexFundCommands").insertOne(order);
+      await indexFundCommandsCollection<BankSubscription>(tx).insertOne(order);
       await witnessSubscription(tx, fund, order, "reserve", turn);
       return statusResponse(200, body);
     });

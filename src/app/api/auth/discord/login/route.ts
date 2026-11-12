@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth/lakesideLoginReturn";
 import { randomBytes } from "crypto";
 import { consentStateFor } from "@/lib/discordAppHandback";
+import { authConfig } from "@/lib/config/auth";
 
 // GET /api/auth/discord/login — Initiates the Discord OAuth flow for login by redirecting to Discord's authorization page.
 // Auth: public
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const limit = checkRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
   if (!limit.ok) return rateLimitResponse(limit.retryAfter);
   try {
-    const clientId = process.env.DISCORD_CLIENT_ID;
+    const clientId = authConfig.discordClientId();
     const redirectUri = discordRedirectUri();
 
     if (!clientId || !redirectUri) {

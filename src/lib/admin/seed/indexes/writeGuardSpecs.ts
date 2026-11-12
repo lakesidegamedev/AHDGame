@@ -3,21 +3,13 @@ import { BOUNDED_NPC_CANDIDATE_GUARDS } from "./boundedNpcCandidates";
 import { JAPAN_SHUGIIN_FILING_INDEXES } from "@/lib/countries/jp/elections/shugiinFilingIndexes";
 
 /**
- * THE write-guard index specs. One definition, two consumers.
- *
- * These partial-unique indexes are the race-free guards behind double-submit /
- * double-vote protection on election entry, endorsements, governance ballots,
- * cabinet nominations and corporate votes. They are created from two live
- * paths: `seedWriteGuardIndexes` at bootstrap, and the on-demand
+ * THE write-guard index specs. One definition, two consumers:
+ * `seedWriteGuardIndexes` at bootstrap and the on-demand
  * `/api/admin/migrations/create-indexes` route.
  *
- * Both used to carry their own copy of the same ~15 specs (#591). Nothing had
- * drifted yet, but the failure mode is not hypothetical — #570 was exactly
- * this, realized: `embargoCooldowns` ended up with the seed's name in one place
- * and an auto-generated name in the other, and every embargo attempt 500'd on
- * `IndexOptionsConflict`. A rename or a tightened `partialFilterExpression`
- * applied to one file and not the other splits bootstrap-seeded environments
- * from route-repaired ones, and the symptom surfaces far from the edit.
+ * Splitting the specs lets a rename or tightened `partialFilterExpression`
+ * land in one path but not the other, splitting bootstrap-seeded environments
+ * from route-repaired ones with failures far from the edit.
  *
  * Ordering is preserved from the original seeder so bootstrap logs read the
  * same. Each entry is `[collection, keys, options]`.

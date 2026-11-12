@@ -51,6 +51,7 @@ import {
 } from "@/lib/nppAutonomy/selectNppBill";
 import { loadPoliticalConditionsDomains } from "@/lib/politicalLegislation/conditionsSignal";
 import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
+import { isUnseededEraLaw } from "@/lib/politicalLegislation/catalog";
 import type { PoliticalMetricsCountryId } from "@/lib/politicalMetrics/types";
 import { proposeNppNationalBill } from "@/lib/nppAutonomy/proposeNppNationalBill";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
@@ -77,12 +78,23 @@ import {
 } from "@/lib/nppAutonomy/v6/rules/whipCount";
 import { nppGovernmentWhipFor } from "@/lib/nppAutonomy/v6/rules/governmentWhip";
 import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionBattles";
-import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable } from "@/lib/era/legislationCatalog";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { isMediaOwnershipBillAvailable } from "@/lib/mediaRegulation/rules";
 import { loadUSMediaOutletDelivery } from "@/lib/mediaRegulation/turnData";
 import type { Bill } from "@/lib/db/types";
 import type { NPP } from "@/lib/db/types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import type { Document } from "mongodb";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /**
  * Conservative catalog of legislation types that are clearly market-liberalizing
@@ -95,7 +107,7 @@ export function isMarketLiberalLegislationType(lt: { _id: string; subCategory?: 
   const id = lt._id.toLowerCase();
   if (id.endsWith("_economic_system")) return true;
   if (id.endsWith("_price_controls")) return true;
-  if (id === "cn_state_enterprises" || id.endsWith("_state_enterprises")) return true;
+  if (id.endsWith("_state_enterprises")) return true;
   // SU / eastern-bloc farm decollectivization lever.
   if ((lt.subCategory ?? "").toLowerCase() === "farm organization") return true;
   return false;
@@ -115,7 +127,7 @@ async function countActiveNppSponsoredBills(
   sponsorParty?: string
 ): Promise<number> {
   const TERMINAL_STATUSES: Bill["status"][] = ["failed", "withdrawn", "signed", "override_failed"];
-  const count = await db.collection<Bill>("bills").countDocuments({
+  const count = await billsCollection(db).countDocuments({
     countryId,
     nppSponsored: true,
     // Foreign-policy calls use their own diplomatic cadence. Counting them
@@ -139,7 +151,7 @@ async function lastNppSponsoredBillTurn(
   countryId: CountryId,
   sponsorParty?: string
 ): Promise<number | null> {
-  const doc = await db.collection<Bill>("bills").findOne(
+  const doc = await billsCollection(db).findOne(
     {
       countryId,
       nppSponsored: true,
@@ -171,8 +183,7 @@ async function recentNppSponsoredLegislationTypeIds(
 ): Promise<Set<string>> {
   const earliestVotingEnd =
     currentTurn - NPP_SPONSOR_TYPE_REPEAT_COOLDOWN_TURNS + NPP_BILL_VOTING_DURATION_HOURS;
-  const recent = await db
-    .collection<Bill>("bills")
+  const recent = await billsCollection(db)
     .find(
       {
         countryId,
@@ -203,8 +214,7 @@ async function loadActiveProposalKeys(db: Db, countryId: CountryId): Promise<Set
     countryId,
     NATIONAL_TERMINAL_STATUSES as BillStatus[]
   );
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(filter as import("mongodb").Filter<Bill>, { projection: { provisions: 1 } })
     .toArray();
   const keys = new Set<string>();
@@ -309,16 +319,19 @@ export async function loadConditionsSignal(
   const [budgetDoc, stateMetricsDoc, politicalDomains] = await Promise.all([
     // inflationRate lives on federalBudget.economicFactors.inflationRate for US/UK/etc.
     // For other countries we use the same field (budget docs share the shape).
-    db
-      .collection("federalBudget")
-      .findOne({ countryId }, { projection: { "economicFactors.inflationRate": 1 } }),
+    federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { "economicFactors.inflationRate": 1 } }
+    ),
     nationalDocId && !political
       ? // A country with no board (SCO/WAL, latent until the independence
         // process activates them) has only the economic half to scan. The
         // political half of this read is gone with the store it came from, so
         // their weak-domain signal is economic-only rather than partly stale.
         (
-          db.collection("macroMetrics") as import("mongodb").Collection<Record<string, unknown>>
+          macroMetricsCollection<Document>(db) as import("mongodb").Collection<
+            Record<string, unknown>
+          >
         ).findOne(
           { _id: nationalDocId } as unknown as import("mongodb").Filter<Record<string, unknown>>,
           { projection: { economic: 1 } }
@@ -353,8 +366,7 @@ export async function loadConditionsSignal(
  * semi-presidential world has no parliamentary GovernmentFormation row. A
  * player-held presidency never triggers autonomous treaty sponsorship. */
 export async function loadFrenchEuropeanExecutiveParty(db: Db): Promise<string | undefined> {
-  const presidents = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const presidents = await electedOfficialsCollection(db)
     .find(
       { countryId: "FR", officeType: "president" },
       { projection: { characterId: 1, nppId: 1, party: 1 } }
@@ -362,9 +374,10 @@ export async function loadFrenchEuropeanExecutiveParty(db: Db): Promise<string |
     .toArray();
   if (presidents.length !== 1 || presidents[0].characterId || !presidents[0].nppId)
     return undefined;
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: presidents[0].nppId }, { projection: { party: 1 } });
+  const npp = await nppsCollection(db).findOne(
+    { _id: presidents[0].nppId },
+    { projection: { party: 1 } }
+  );
   if (!npp?.party || (presidents[0].party && presidents[0].party !== npp.party)) return undefined;
   return npp.party;
 }
@@ -408,7 +421,7 @@ async function loadGovernmentDirectives(
     }
   );
   if (!gov)
-    return countryId === "FR"
+    return countryHasFeature("frTurn", countryId)
       ? { europeanGovernmentParty: await loadFrenchEuropeanExecutiveParty(db) }
       : {};
   if (gov.status !== "formed") return {};
@@ -478,30 +491,26 @@ async function loadNationalLegislationTypes(
     "policyOptions.0": { $exists: true },
   };
 
-  return (
-    db
-      // Selection scores every option, but not their large downstream effect payloads.
-      .collection<LegislationType>("legislationTypes")
-      .find(query as import("mongodb").Filter<LegislationType>, {
-        projection: {
-          _id: 1,
-          name: 1,
-          subCategory: 1,
-          policyDomain: 1,
-          taxSlider: 1,
-          "policyOptions.id": 1,
-          "policyOptions.name": 1,
-          "policyOptions.stance": 1,
-          "policyOptions.effectDirection": 1,
-          "policyOptions.economic": 1,
-          "policyOptions.social": 1,
-          "policyOptions.gdpCostFraction": 1,
-          "policyOptions.annualCostPerCapita": 1,
-          "policyOptions.gdpPerCapitaMultiplier": 1,
-        },
-      })
-      .toArray()
-  );
+  return legislationTypesCollection(db)
+    .find(query as import("mongodb").Filter<LegislationType>, {
+      projection: {
+        _id: 1,
+        name: 1,
+        subCategory: 1,
+        policyDomain: 1,
+        taxSlider: 1,
+        "policyOptions.id": 1,
+        "policyOptions.name": 1,
+        "policyOptions.stance": 1,
+        "policyOptions.effectDirection": 1,
+        "policyOptions.economic": 1,
+        "policyOptions.social": 1,
+        "policyOptions.gdpCostFraction": 1,
+        "policyOptions.annualCostPerCapita": 1,
+        "policyOptions.gdpPerCapitaMultiplier": 1,
+      },
+    })
+    .toArray();
 }
 
 // ── Per-party sponsorship attempt ────────────────────────────────────────────
@@ -777,13 +786,11 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
   // drop market-liberalization / privatization levers from the candidate set.
   // Fail-safe: flag off → isPlannedEconomy is false → filter is a no-op.
   const [cmdConfig, cmdGameState] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { commandEconomyEnabled: 1, mediaRegulationEnabled: 1, marketSystemMode: 1 } }
-      ),
-    db.collection<GameState>("gameState").findOne(
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1, mediaRegulationEnabled: 1, marketSystemMode: 1 } }
+    ),
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -817,11 +824,10 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
     ? await loadEuropeanTreatyContext(db, currentTurn)
     : null;
 
-  // v3 full-agency: scales the deterministic sponsor's personal cooldown by
-  // their own legislativeActivityMult (see PartySponsorshipAttempt.v3Active).
-  // Below v3, cooldown stays the fixed NPP_SPONSOR_COOLDOWN_TURNS.
-  // v3 AND ABOVE — a strict `=== "v3"` here used to drop the archetype-scaled
-  // cooldown back to the flat one the moment the level was raised to v4.
+  // v3+: scale the deterministic sponsor's cooldown by their own
+  // legislativeActivityMult (see PartySponsorshipAttempt.v3Active). Below v3,
+  // cooldown stays the fixed NPP_SPONSOR_COOLDOWN_TURNS. Use at-least-v3, not
+  // equality, so raising the level keeps the archetype-scaled cooldown.
   const autonomyLevel = await getNppAutonomyLevel(db);
   const v3Active = nppAutonomyLevelAtLeast(autonomyLevel, "v3");
 
@@ -930,8 +936,7 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
           loadNationalLegislationTypes(db, countryId),
           loadConditionsSignal(db, countryId),
           loadGovernmentDirectives(db, countryId),
-          db
-            .collection<StatePolicy>("statePolicies")
+          statePoliciesCollection(db)
             .find(
               { stateId: nationalPolicyStoreId },
               { projection: { legislationTypeId: 1, policyOptionId: 1 } }
@@ -956,7 +961,7 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
       // Planned economies also drop clearly market-liberalizing scenario levers.
       const planned = isPlannedEconomy(countryId, currentYear, commandEconomyEnabled);
       const legTypes = legTypesRaw.filter((lt) => {
-        if (!isLegislationTypeActive(lt._id, eraYear)) return false;
+        if (!isLegislationTypeFileable(lt._id, eraYear)) return false;
         if (
           countryId === COUNTRY_CONFIGS.US.id &&
           lt._id === "us_media_communications" &&
@@ -967,6 +972,13 @@ export async function processNppBillSponsorship(ctx: NPPContext): Promise<number
         if (planned && isMarketLiberalLegislationType(lt)) return false;
         return true;
       });
+      // A later-era law has no seeded row until its first bill; it sits at level
+      // 0, so an NPP must not sponsor "no statute" for it.
+      for (const lt of legTypes) {
+        if (!currentPolicyOptionIds.has(lt._id) && isUnseededEraLaw(lt._id)) {
+          currentPolicyOptionIds.set(lt._id, "l0");
+        }
+      }
 
       // Engine 6.5 (v6): who votes in the lower chamber, for the sponsor's count.
       // Player seats are the live chamber tally (directives) less NPP seats; with

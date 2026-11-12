@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import {
   getLowerChamberOfficeType,
@@ -9,38 +10,30 @@ import type { HistoricalSeat } from "@/lib/constants/historicalSeats";
 import type { PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { buildProportionalChamberSeats } from "@/lib/seeds/proportionalChamberSeats";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
- * Economy-tier ("ECON") democracies that are enabled for live economy + NPP
- * politics (their legislative election cycles spawn — see #3239) but whose
- * chambers `historicalSeats.ts` deliberately leaves unauthored: FR/IT/ES/SE/TR.
+ * Economy-tier ("ECON") democracies enabled for live economy + NPP politics but
+ * whose chambers `historicalSeats.ts` leaves unauthored: FR/IT/ES/SE/TR.
  *
- * Root cause (#3253): with no seeded NPPs/officials AND no statePartyOrg
- * presence rows, their election cycles resolve EMPTY — a multi-seat PR chamber
- * fields candidates through incumbent defense, so a chamber that starts with
- * zero incumbents has no one to defend and the primary window closes with no
- * candidate supply. The admin NPP generator also skips their office types
- * (`deputy`/`senator`/`member`), so nothing backfills the field at runtime.
+ * Without seeded NPPs/officials or `statePartyOrg` presence rows, their election
+ * cycles resolve EMPTY: a multi-seat PR chamber fields candidates via incumbent
+ * defense, and the admin NPP generator skips their office types, so nothing
+ * backfills the field.
  *
- * This seeder gives each of the five a minimal, principled starting roster:
- *   1. `statePartyOrg` presence rows for every (region × default party) so the
- *      region Party Organizations page renders and downstream presence gates
- *      (`canPartyFieldInState`) resolve — mirrors the US
- *      `generateStatePartyOrg` "major parties have presence in every state"
- *      convention (organization + hasPresence only; no fabricated
- *      registration, so general-election weighting stays byte-identical to
- *      pre-seed worlds).
- *   2. One seated incumbent NPP per (region × MAJOR party × chamber) via the
- *      canonical `seedFromSeats` pipeline — enough that both major parties hold
- *      a seat to defend in every region, so the next cycle has a contested
- *      field. Minor parties get presence (org rows) but no fabricated
- *      incumbents.
+ * This seeder gives each a minimal roster:
+ *   1. `statePartyOrg` presence rows for every (region × default party), mirroring
+ *      the US "major parties present in every state" convention (org + hasPresence
+ *      only, no fabricated registration, so weighting stays unchanged).
+ *   2. One seated incumbent NPP per (region × MAJOR party × chamber) via
+ *      `seedFromSeats` so every region has a contested field next cycle. Minor
+ *      parties get presence but no incumbents.
  *
  * Preset-agnostic: only default parties VALID for the active preset are seeded
- * (loaded from the DB after `ensureDefaultParties`). Today FR/IT/ES/SE/TR
- * default parties are authored for `1979-default` only, so this is a no-op for
- * presets without their parties — it self-extinguishes rather than fabricating
- * a roster with no parties behind it.
+ * (loaded from the DB after `ensureDefaultParties`), so it self-extinguishes
+ * rather than fabricating rosters with no parties behind them.
  */
 export const ECON_TIER_ROSTER_COUNTRIES: readonly CountryId[] = [
   "FR",
@@ -137,23 +130,17 @@ export function buildEconTierChamberSeats(
  * country. No-op (returns zeroes) when the country has no default parties for
  * the active preset or no seeded regions.
  *
- * `seedMode === "priors"` (pre-iteration founding reset) seeds ONLY presence
- * rows and leaves chambers vacant for the founding elections to fill — same
- * contract as `seedFromSeats("priors")`.
+ * `seedMode === "priors"` seeds ONLY presence rows and leaves chambers vacant
+ * for the founding elections to fill, same contract as `seedFromSeats("priors")`.
  *
- * `opts.seedOrgRows` (default `true`) gates step 1 (the blanket
- * every-region-× -every-party `statePartyOrg` presence rows). Callers for a
- * country that already has a bespoke, regionally-calibrated org calculator
- * (e.g. UK's `calculateUKStatePartyOrgs`) MUST pass `false` here — this
+ * `opts.seedOrgRows` (default `true`) gates the blanket every-region-by-party
+ * `statePartyOrg` presence rows. Callers for a country with a bespoke,
+ * regionally-calibrated org calculator (e.g. UK) MUST pass `false`: this
  * step's flat `MAJOR_ORG`/`BASELINE_ORG` values and always-`hasPresence:true`
- * rows are a blunt fallback for countries with NO org data at all (the five
- * econ-tier democracies), and upserting them on top of real per-region data
- * silently overwrites it back to a uniform grid and re-adds `hasPresence`
- * rows for regionally-confined parties outside their home region — exactly
- * the #3895 bug (SNP/Plaid/Sinn Féin fielding nationwide because the UK call
- * below used to run this step unconditionally after `seedUKStatePartyOrg`
- * had already done the real calibration). Step 2 (incumbent seats) is
- * unaffected — that's the actual reason UK reuses this seeder at all.
+ * rows are a blunt fallback for countries with NO org data, and upserting them
+ * over real per-region data silently flattens it to a uniform grid and
+ * re-adds `hasPresence` for regionally-confined parties outside their home
+ * region. Step 2 (incumbent seats) is unaffected.
  */
 export async function seedEconTierRostersForCountry(
   db: Db,
@@ -176,15 +163,13 @@ export async function seedEconTierRostersForCountry(
   // Default parties actually seeded for this preset, in ascending sequentialId
   // (≈ seed order, so the first two are the majors — same convention as
   // challengerSupply's top-2 default parties).
-  const parties = (await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = (await politicalPartiesCollection(db)
     .find({ countryId, isDefault: true }, { projection: { sequentialId: 1, name: 1 } })
     .sort({ sequentialId: 1 })
     .toArray()) as unknown as RosterParty[];
   if (parties.length === 0) return empty;
 
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, houseDistricts: 1, stateSenateSeats: 1 } })
     .toArray();
   if (regions.length === 0) return empty;
@@ -197,7 +182,7 @@ export async function seedEconTierRostersForCountry(
   const now = new Date();
   const orgRows = seedOrgRows ? buildEconTierStatePartyOrgRows(countryId, regionIds, parties) : [];
   if (orgRows.length > 0) {
-    await db.collection<StatePartyOrg>("statePartyOrg").bulkWrite(
+    await statePartyOrgCollection(db).bulkWrite(
       orgRows.map((row) => {
         const { _id, ...rest } = row;
         return {
@@ -282,22 +267,19 @@ export async function seedEconTierRostersForCountry(
  * run on every reset/bootstrap AND safe to re-run after a partial failure:
  * presence rows upsert, and incumbent seats are skipped for any chamber that
  * already holds seated NPPs (`skipAlreadySeatedChambers`).
- *
- * This docstring previously claimed incumbents were "only added when the chamber
- * office type has no incumbents behind it" — that contract was documented but
- * never implemented. `seedFromSeats` was called unconditionally with a full
- * chamber roster, so a re-run appended a second parallel legislature. The claim
- * is now true.
  */
 export async function seedEconTierRosters(
   db: Db,
   seedMode: SeedMode = "winners",
-  log: (msg: string) => void = () => {}
+  log: (msg: string) => void = () => {},
+  /** World preset. Background countries in it get no NPP roster. */
+  preset?: string
 ): Promise<{ nppsCreated: number; officialsCreated: number; orgRows: number }> {
   let nppsCreated = 0;
   let officialsCreated = 0;
   let orgRows = 0;
   for (const countryId of ECON_TIER_ROSTER_COUNTRIES) {
+    if (isBackgroundInPreset(preset, countryId)) continue;
     const r = await seedEconTierRostersForCountry(db, countryId, seedMode, log);
     nppsCreated += r.nppsCreated;
     officialsCreated += r.officialsCreated;
