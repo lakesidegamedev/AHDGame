@@ -142,6 +142,11 @@ export const PRESERVED: CollectionEntry[] = [
       "Scheduled-job leases are operational concurrency guards, not world state. Preserve an active lease across reset so another reconciliation cannot overlap it; expired leases are replaced on acquisition.",
   },
   { name: "ipGeoCache", category: "preserved", notes: "IP-geo lookup cache." },
+  {
+    name: "vpnIpLists",
+    category: "preserved",
+    notes: "Cached public VPN and Private Relay range lists for the VPN gate.",
+  },
   { name: "playerBannerAds", category: "preserved", notes: "Banner-ad infra/content." },
   {
     name: "manualOfficeHistory",

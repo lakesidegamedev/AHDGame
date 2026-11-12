@@ -72,6 +72,16 @@ export default function PrivacyPolicyPage() {
                 </p>
               </div>
               <div>
+                <p className="font-semibold text-foreground mb-1">IP address and VPN check</p>
+                <p>
+                  We store the IP addresses you sign in and play from, and use them to detect
+                  multi-account abuse. We also check whether a connection comes from a VPN by
+                  comparing your IP address against public lists kept on our own servers. Your IP
+                  address is not sent to any outside service for this check. Players on a VPN can
+                  view their account but cannot take game actions unless staff have allowed it.
+                </p>
+              </div>
+              <div>
                 <p className="font-semibold text-foreground mb-1">Usage and performance data</p>
                 <p>
                   We record first-party page views on our own servers (path, timestamp, and an
@@ -208,7 +218,10 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted leading-relaxed">
               <li>To create and operate your account and in-game character</li>
               <li>To run and simulate the game world</li>
-              <li>To detect and prevent multi-account abuse using browser fingerprinting</li>
+              <li>
+                To detect and prevent multi-account abuse using browser fingerprinting, IP addresses
+                and VPN checks
+              </li>
               <li>
                 To display advertisements, including player-run banners and ads served by Google
               </li>

@@ -29,6 +29,7 @@ interface UsersTableProps {
   onDeleteUser: (userId: string, username: string) => void;
   onSetSingleplayerEntitlement: (userId: string, username: string, entitled: boolean) => void;
   onSetSandboxAccess: (userId: string, username: string, granted: boolean) => void;
+  onSetVpnWhitelist?: (userId: string, username: string, whitelisted: boolean) => void;
 }
 
 export function UsersTable({
@@ -52,6 +53,7 @@ export function UsersTable({
   onDeleteUser,
   onSetSingleplayerEntitlement,
   onSetSandboxAccess,
+  onSetVpnWhitelist,
 }: UsersTableProps) {
   const columns: ResponsiveTableColumn<UserData>[] = [
     {
@@ -344,6 +346,16 @@ export function UsersTable({
                           onSetSandboxAccess(user.id, user.username, !user.sandboxAccessGranted);
                         }}
                       />
+                      {onSetVpnWhitelist && !user.isAdmin && (
+                        <MenuItem
+                          label={user.vpnWhitelisted ? "Revoke VPN access" : "Allow VPN"}
+                          title="Let this player take game actions while connected through a VPN"
+                          onClick={() => {
+                            setMenuUserId(null);
+                            onSetVpnWhitelist(user.id, user.username, !user.vpnWhitelisted);
+                          }}
+                        />
+                      )}
                       <MenuItem
                         label="View retired"
                         disabled={retiredLoading}
