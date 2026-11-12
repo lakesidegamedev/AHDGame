@@ -179,6 +179,10 @@ export interface User {
   enableExperimentalUI?: boolean;
   /** Opt-in to experimental features (Settings). Off unless explicitly true. */
   experimentalFeatures?: boolean;
+  /** Staff-granted VPN access: a whitelisted account is never VPN-gated. */
+  vpnWhitelisted?: boolean;
+  vpnWhitelistedAt?: Date;
+  vpnWhitelistedBy?: string;
   /** Account presentation preference, preserved across world resets. Defaults to cards. */
   desktopNavigationLayout?: DesktopNavigationLayout;
   /** Account presentation preference, preserved across world resets. Defaults to dock. */

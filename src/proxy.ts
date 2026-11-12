@@ -18,6 +18,14 @@ import {
   serializeAcquisition,
 } from "@/lib/analytics/acquisition";
 import { authConfig } from "@/lib/config/auth";
+import { clientIpFromRequest } from "@/lib/utils/network";
+import { classifyIp } from "@/lib/vpn/detection";
+import {
+  VPN_BLOCKED_CODE,
+  VPN_BLOCKED_MESSAGE,
+  isVpnGateAllowedWritePath,
+  shouldBlockVpnRequest,
+} from "@/lib/vpn/gate";
 
 // Well-known root files that must never be rewritten under /wiki on the
 // subdomain — /robots.txt would otherwise hit the wiki [slug] route and serve
@@ -79,8 +87,9 @@ function apiPassthrough(request: NextRequest): NextResponse {
  */
 async function handleApiReadGate(request: NextRequest): Promise<NextResponse> {
   const method = request.method.toUpperCase();
-  // Only reads are gated here — mutating routes already enforce their own auth.
-  if (method !== "GET" && method !== "HEAD") return apiPassthrough(request);
+  // Only reads are gated here. Mutating routes enforce their own auth; the
+  // VPN gate is the one write check that runs centrally.
+  if (method !== "GET" && method !== "HEAD") return handleApiWriteGate(request);
 
   // Default-on flag: a DB blip fails open (never 401 every read on a hiccup).
   let publicViewing = true;
@@ -111,6 +120,33 @@ async function handleApiReadGate(request: NextRequest): Promise<NextResponse> {
   return errorResponse(401, "Public viewing is disabled. Sign in to view this content.", {
     headers: { "Cache-Control": "private, no-store" },
   });
+}
+
+/**
+ * VPN gate for writes. A signed-in player connecting through a VPN who has not
+ * been whitelisted by staff may sign in and change account settings, but every
+ * game action is refused. Cheap checks run first: allowed paths and non-VPN
+ * connections never touch the session. Fails open on any lookup error.
+ */
+async function handleApiWriteGate(request: NextRequest): Promise<NextResponse> {
+  const { pathname } = request.nextUrl;
+  if (!request.cookies.has(AUTH_COOKIE_NAME) || isVpnGateAllowedWritePath(pathname)) {
+    return apiPassthrough(request);
+  }
+  try {
+    const classification = await classifyIp(clientIpFromRequest(request));
+    if (classification !== "vpn") return apiPassthrough(request);
+    const user = await getSessionUser(request);
+    if (shouldBlockVpnRequest({ method: request.method, pathname, user, classification })) {
+      return errorResponse(403, VPN_BLOCKED_MESSAGE, {
+        code: VPN_BLOCKED_CODE,
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+  } catch (err) {
+    console.warn("[proxy] VPN gate check failed; allowing write", err);
+  }
+  return apiPassthrough(request);
 }
 
 /**
