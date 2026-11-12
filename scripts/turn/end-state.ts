@@ -1,14 +1,10 @@
 /**
- * End-state snapshot and diff for turn rehearsals.
- *
+ * End-state snapshot and diff for turn rehearsals:
  *   npx tsx scripts/turn/end-state.ts snapshot --out clean.json
- *   npx tsx scripts/turn/end-state.ts snapshot --out failed.json
  *   npx tsx scripts/turn/end-state.ts diff clean.json failed.json
- *
- * The snapshot hashes every document of every collection (canonical JSON, volatile
- * fields removed) and records per-collection sums of top-level numeric fields, so a
- * double-applied money move shows up as a sum drift and a per-document hash change.
- * Sandbox databases only: the database name must start with `ahdspeed_` or `sandbox`.
+ * Hashes every document (canonical JSON, volatile fields removed) and sums top-level
+ * numeric fields per collection, so a double-applied money move shows as sum drift.
+ * Sandbox only: database name must start with `ahdspeed_` or `sandbox`.
  * Connection comes from MONGODB_URI and MONGODB_DB.
  */
 import { createHash } from "node:crypto";
