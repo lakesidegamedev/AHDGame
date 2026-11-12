@@ -183,7 +183,7 @@ export class CorporationTurnStepRefusedError extends Error {
 const outputId = (key: string, name: string) => `${key}:out:${name}`;
 
 async function setPhase(ctx: JournalContext, name: string, status: "started" | "done") {
-  await corporationTurnJournalCollection<Document>(ctx.db).updateOne(
+  await rows(ctx.db).updateOne(
     { _id: journalKey(ctx) },
     {
       $set: { [`phases.${name}`]: status },
@@ -227,7 +227,7 @@ export async function runJournaledStepWithOutput<T>(
   fn: () => Promise<T>
 ): Promise<T> {
   if (ctx.stage < 2) return fn();
-  const journal = corporationTurnJournalCollection<Document>(ctx.db);
+  const journal = rows(ctx.db);
   const key = journalKey(ctx);
   const existing = await readJournal(ctx);
   const action = stepAction(existing?.phases?.[name], onStarted);
