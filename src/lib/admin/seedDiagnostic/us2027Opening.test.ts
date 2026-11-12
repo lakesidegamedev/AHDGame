@@ -4,6 +4,30 @@ import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { checkUS2027Opening } from "./us2027Opening";
 
 describe("US 2027 opening diagnostic regressions", () => {
+  it("detects the audited coupon mismatch and accepts a reconciled opening stock", async () => {
+    const db = createInMemoryDb() as unknown as Db;
+    await db.collection("federalBudget").insertOne({
+      countryId: "US",
+      gdp: 32.8e12,
+      debt: { principal: 39e12 },
+      spending: { byCategory: {}, debtInterest: 1.326e12 },
+    });
+    await db.collection("bonds").insertOne({
+      countryId: "US",
+      issuerType: "sovereign",
+      matured: false,
+      defaulted: false,
+      totalIssued: 39e12,
+      couponRate: 3.8875,
+    });
+    const debtCheck = async () =>
+      (await checkUS2027Opening(db, "2027-default")).find(
+        (c) => c.metric === "sovereign-debt-interest"
+      );
+    expect((await debtCheck())?.severity).toBe("critical");
+    await db.collection("bonds").updateMany({ countryId: "US" }, { $set: { couponRate: 3.4 } });
+    expect((await debtCheck())?.severity).toBe("ok");
+  });
   it("detects the audited world failures instead of accepting arithmetic reconciliation", async () => {
     const db = createInMemoryDb() as unknown as Db;
     await db.collection("states").insertOne({

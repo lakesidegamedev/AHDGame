@@ -40,3 +40,5 @@ areas: [engine]
 - Prevents legacy House rosters from aborting resets when district counts differ.
   Compatible delegations keep their declared vacancies; incompatible states are
   explicitly reported as unmapped without inventing incumbents.
+- Matches the US 2027 opening sovereign bond coupons to budgeted debt interest
+  and checks both principal and annual coupons during reset qualification.

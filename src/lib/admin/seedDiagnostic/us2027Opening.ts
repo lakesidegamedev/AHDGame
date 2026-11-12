@@ -1,6 +1,12 @@
 /** Qualify the modeled US 2027 opening beyond simple record presence. */
 import type { Db } from "mongodb";
-import type { State, FederalBudget, ElectedOfficial, CongressionalDistrict } from "@/lib/db/types";
+import type {
+  State,
+  FederalBudget,
+  ElectedOfficial,
+  CongressionalDistrict,
+  Bond,
+} from "@/lib/db/types";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import { totalPopulation } from "@/lib/demographics/cohortVector";
@@ -24,6 +30,7 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
     world,
     senators,
     shares,
+    bonds,
   ] = await Promise.all([
     db
       .collection<State>("states")
@@ -93,6 +100,13 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       .collection("stateDemographics")
       .find({ countryId: "US" }, { projection: { _id: 1, groups: 1 } })
       .toArray(),
+    db
+      .collection<Bond>("bonds")
+      .find(
+        { countryId: "US", issuerType: "sovereign", matured: false, defaulted: false },
+        { projection: { totalIssued: 1, couponRate: 1 } }
+      )
+      .toArray(),
   ]);
   const checks: SeedDiagnosticCheck[] = [];
   const assert = (
@@ -105,6 +119,20 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       check(`opening.US.2027.${metric}`, "US", metric, expected, actual, valid ? "ok" : "critical")
     );
   const regionalGdp = states.reduce((sum, s) => sum + (s.gdp ?? 0) * 1e6, 0);
+  const face = bonds.reduce((sum, b) => sum + b.totalIssued, 0);
+  const coupons = bonds.reduce((sum, b) => sum + (b.totalIssued * b.couponRate) / 100, 0);
+  assert(
+    "sovereign-principal",
+    !!budget && Math.abs(face - budget.debt?.principal) < 1,
+    face,
+    budget?.debt?.principal ?? "missing budget"
+  );
+  assert(
+    "sovereign-debt-interest",
+    !!budget && Math.abs(coupons - budget.spending.debtInterest) < 1,
+    coupons,
+    budget?.spending.debtInterest ?? "missing budget"
+  );
   const senateById = new Map(senators.map((n) => [String(n._id), n.currentOffice]));
   const wrongClasses = officials
     .filter((o) => o.officeType === "senate" && o.nppId)
