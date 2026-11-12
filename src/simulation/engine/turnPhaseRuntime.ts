@@ -41,7 +41,13 @@ import {
   type ResumeResultOutcome,
 } from "./turnPhaseResumeResults";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
-import { turnLockFenceFilter } from "@/lib/turn/turnLockHolder";
+import {
+  TurnLockLostError,
+  isTurnLockLost,
+  markTurnLockLost,
+  turnLockFenceActive,
+  turnLockFenceFilter,
+} from "@/lib/turn/turnLockHolder";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
@@ -284,6 +290,10 @@ export function createTurnPhaseRuntime(input: {
       { $set: setFields }
     );
     if (status === "running" && persisted.matchedCount === 0) {
+      if (turnLockFenceActive()) {
+        markTurnLockLost();
+        throw new TurnLockLostError(`phase "${phase}" could not start`);
+      }
       throw new Error(`Cannot start phase "${phase}": processing lock no longer matches`);
     }
     if (stagedCompletion) phaseStatuses[phase] = next;
@@ -299,6 +309,7 @@ export function createTurnPhaseRuntime(input: {
 
   async function runPhase<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
     const timeoutMs = phaseTimeoutMs(name);
+    if (isTurnLockLost()) throw new TurnLockLostError(`before phase "${name}"`);
     if (stopError) throw stopError;
     // A combined predicate can reject an ordinary cadence or singleplayer
     // phase as well as a simulation profile. Record the known conditional
@@ -387,6 +398,21 @@ export function createTurnPhaseRuntime(input: {
         reject(new Error(`Phase "${name}" timed out after ${timeoutMs / 1000}s`));
       }, timeoutMs);
     });
+    // A heartbeat that matches nothing means another process took the lock (or
+    // marked it abandoned). Stop the turn now; its phase function cannot be
+    // cancelled, but no further phase, status or completion write follows.
+    let rejectLockLost: (e: Error) => void = () => {};
+    const lockLostPromise = new Promise<never>((_, reject) => {
+      rejectLockLost = reject;
+    });
+    lockLostPromise.catch(() => {});
+    const onHeartbeatResult = (res: { matchedCount: number }) => {
+      if (turnLockFenceActive() && res.matchedCount === 0) {
+        markTurnLockLost();
+        console.error(`[Turn] Heartbeat found the turn lock gone during phase "${name}"`);
+        rejectLockLost(new TurnLockLostError(`heartbeat during phase "${name}"`));
+      }
+    };
     let heartbeatTimer = setInterval(() => {
       // Heartbeats renew the lock only. An in-flight heartbeat may finish after
       // a terminal status write and must never revive that phase as running.
@@ -405,6 +431,7 @@ export function createTurnPhaseRuntime(input: {
           { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
           { $set: setFields }
         )
+        .then(onHeartbeatResult)
         .catch((err) => {
           console.warn(`[Turn] Failed to refresh heartbeat for phase "${name}"`, err);
           Sentry.captureException(err, {
@@ -440,6 +467,7 @@ export function createTurnPhaseRuntime(input: {
             { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
             { $set: setFields }
           )
+          .then(onHeartbeatResult)
           .catch((err) => {
             console.warn(`[Turn] Failed to refresh heartbeat for draining phase "${name}"`, err);
             Sentry.captureException(err, {
@@ -602,8 +630,13 @@ export function createTurnPhaseRuntime(input: {
     }
 
     try {
-      return await completePhase(await Promise.race([work, timeoutPromise]));
+      return await completePhase(await Promise.race([work, timeoutPromise, lockLostPromise]));
     } catch (err) {
+      if (err instanceof TurnLockLostError) {
+        discardPhaseSubsteps(name);
+        stopError = err;
+        throw err;
+      }
       if (err instanceof TurnPhaseCompletionPersistError) {
         // Writes landed, so this is not a phase failure to log and continue past.
         // The in-memory status stays "running"; the turn aborts and a resume

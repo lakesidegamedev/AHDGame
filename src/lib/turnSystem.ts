@@ -58,7 +58,13 @@ import {
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import type { TurnFailureInfo } from "@/lib/turn/rules/retryPolicy";
 import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
-import { TURN_HOLDER_ID, setTurnLockFence, turnLockFenceFilter } from "@/lib/turn/turnLockHolder";
+import {
+  TURN_HOLDER_ID,
+  TurnLockLostError,
+  setTurnLockFence,
+  turnLockFenceActive,
+  turnLockFenceFilter,
+} from "@/lib/turn/turnLockHolder";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
@@ -757,7 +763,7 @@ async function processTurnImpl(
       })
       .sort((a, b) => b.durationMs - a.durationMs)
       .slice(0, 5);
-    await (
+    const completionWrite = await (
       await getGameStateCollection(db)
     ).updateOne(
       { _id: "current", ...turnLockFenceFilter() },
@@ -799,6 +805,9 @@ async function processTurnImpl(
         },
       }
     );
+    if (turnLockFenceActive() && completionWrite.matchedCount === 0) {
+      throw new TurnLockLostError("completion write found the lock gone");
+    }
     localTurnLockHeld = false;
     markServerTurnAnalyticsCommitted({ emit: !localSingleplayer && config?.simSandbox !== true });
 
@@ -955,6 +964,8 @@ async function processTurnImpl(
     console.error("[Turn System] Critical error processing turn:", error);
     Sentry.captureException(error, { tags: { component: "turnSystem" } });
     const failureTime = new Date();
+    // Another process owns the turn now: write nothing about it, retry nothing.
+    const lockLost = error instanceof TurnLockLostError;
     const failureMessage =
       error instanceof Error ? error.message : "Unknown error during turn processing";
 
@@ -1026,6 +1037,7 @@ async function processTurnImpl(
 
       if (
         !isSingleplayer() &&
+        !lockLost &&
         finalizedPhaseStatuses &&
         phaseResultsForFailure &&
         activeTurn > 0 &&
@@ -1053,6 +1065,7 @@ async function processTurnImpl(
 
       if (
         !isSingleplayer() &&
+        !lockLost &&
         finalizedPhaseStatuses &&
         phaseResultsForFailure &&
         activeTurn > 0 &&
@@ -1097,7 +1110,7 @@ async function processTurnImpl(
       });
     }
 
-    if (!isSingleplayer()) {
+    if (!isSingleplayer() && !lockLost) {
       void publishPlatformEvent({
         type: "turn:failed",
         source: "ahd",
@@ -1125,6 +1138,7 @@ async function processTurnImpl(
         target: resumedFromCrash?.targetTurn ?? (activeTurn > 0 ? activeTurn : null),
         retryable:
           resilienceStage >= 1 &&
+          !lockLost &&
           !(
             currentPhaseRef.current != null &&
             phaseBlocksResumeWhenInterrupted(currentPhaseRef.current) &&

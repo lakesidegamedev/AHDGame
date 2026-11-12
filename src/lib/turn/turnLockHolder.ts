@@ -6,20 +6,47 @@ import { shouldFastTakeOverStaleLock } from "@/lib/turn/rules/staleLock";
 import { workerConfig } from "@/lib/config/worker";
 
 const BOOT_ID = randomUUID();
+const HOST = workerConfig.replicaId() ?? hostname();
 
 /** Worker instance, pid and boot id: unique per process lifetime. */
-export const TURN_HOLDER_ID = `${workerConfig.replicaId() ?? hostname()}:${process.pid}:${BOOT_ID}`;
+export const TURN_HOLDER_ID = `${HOST}:${process.pid}:${BOOT_ID}`;
+const SELF = { host: HOST, bootId: BOOT_ID };
 
 let fencedHolderId: string | null = null;
+let lockLost = false;
+
+/** Raised when this process no longer holds the turn lock. Never retried. */
+export class TurnLockLostError extends Error {
+  constructor(detail: string) {
+    super(`Turn lock lost: ${detail}. This process stops writing for the turn.`);
+    this.name = "TurnLockLostError";
+  }
+}
+
+export function markTurnLockLost(): void {
+  lockLost = true;
+}
+
+export function isTurnLockLost(): boolean {
+  return lockLost;
+}
 
 /** While set, this process's lock writes only apply if it still holds the lock. */
 export function setTurnLockFence(holderId: string | null): void {
   fencedHolderId = holderId;
+  lockLost = false;
+}
+
+export function turnLockFenceActive(): boolean {
+  return fencedHolderId !== null;
 }
 
 /** Extra filter fields for any gameState write that belongs to the lock holder. */
-export function turnLockFenceFilter(): { processingHolderId?: string } {
-  return fencedHolderId ? { processingHolderId: fencedHolderId } : {};
+export function turnLockFenceFilter(): {
+  processingHolderId?: string;
+  processingAbandonedAt?: null;
+} {
+  return fencedHolderId ? { processingHolderId: fencedHolderId, processingAbandonedAt: null } : {};
 }
 
 /**
@@ -48,7 +75,7 @@ export async function tryFastStaleLockTakeover(
     }
   );
   if (lock?.processingHolderId === TURN_HOLDER_ID) return false;
-  if (!shouldFastTakeOverStaleLock(lock, now, stage)) return false;
+  if (!shouldFastTakeOverStaleLock(lock, now, stage, SELF)) return false;
   const res = await col.updateOne(
     {
       _id: "current",
