@@ -6,6 +6,7 @@ import {
   checkIncomePlausibility,
   checkMoney,
   checkParties,
+  checkReferenceFigures,
   checkRegionalGrowth,
   checkSeats,
   checkStartingCompanies,
@@ -43,6 +44,7 @@ function world(over: Partial<RehearsalWorld> = {}): RehearsalWorld {
       { id: "d", ceoType: "npp", countryId: "US", isNpcBank: true },
     ],
     seatTotalByCountry: { US: 5 },
+    localPerUsd: { US: 1, IT: 0.9 },
     ...over,
   };
 }
@@ -187,5 +189,73 @@ describe("assertRehearsalTarget", () => {
       assertRehearsalTarget("mongodb://127.0.0.1,db.example.com/rehearsal-a", "rehearsal-a")
     ).toThrow();
     expect(() => assertRehearsalTarget(ok, "ahd")).toThrow();
+  });
+});
+
+describe("reference figures", () => {
+  const range = {
+    gdpPerHeadUsd: [50, 150],
+    primeRate: [1, 6],
+    inflation: [0, 5],
+    debtToGdp: [0.2, 1.5],
+  } as const;
+  const ref = (over: Partial<RehearsalWorld> = {}) =>
+    world({
+      reference: { US: range, IT: { ...range, gdpPerHeadUsd: [40, 80], primeRate: [0.5, 4] } },
+      budgets: [
+        { countryId: "US", gdp: 1000, inflationRate: 2, debtPrincipal: 800 },
+        { countryId: "IT", gdp: 500, inflationRate: 2, debtPrincipal: 400 },
+      ],
+      ...over,
+    });
+
+  it("passes figures inside their ranges and skips a preset with no table", () => {
+    expect(checkReferenceFigures(ref())).toEqual([]);
+    expect(checkReferenceFigures(world())).toEqual([]);
+  });
+
+  it("converts gdp per head through the exchange rate", () => {
+    const failures = checkReferenceFigures(ref({ localPerUsd: { US: 1, IT: 5 } }));
+    expect(failures.map((f) => f.scope)).toEqual(["IT"]);
+    expect(failures[0].message).toContain("gdp per head");
+  });
+
+  it("flags inflation, debt and prime rate outside range", () => {
+    const failures = checkReferenceFigures(
+      ref({
+        budgets: [
+          { countryId: "US", gdp: 1000, inflationRate: 9, debtPrincipal: 5000 },
+          { countryId: "IT", gdp: 500, inflationRate: 2, debtPrincipal: 400 },
+        ],
+        centralBanks: [
+          { id: "US", countryId: "US", primeRate: 12 },
+          { id: "ECB", countryId: "DE", primeRate: 2 },
+        ],
+      })
+    );
+    expect(failures.map((f) => f.message.split(" ")[0] + f.scope).sort()).toEqual([
+      "debtUS",
+      "inflationUS",
+      "primeUS",
+    ]);
+  });
+
+  it("checks a euro member without its own row against the ECB", () => {
+    const failures = checkReferenceFigures(
+      ref({
+        centralBanks: [
+          { id: "US", countryId: "US", primeRate: 3 },
+          { id: "ECB", countryId: "DE", primeRate: 9 },
+        ],
+      })
+    );
+    expect(failures.map((f) => f.scope)).toEqual(["IT"]);
+  });
+
+  it("fails a rostered country with no reference row", () => {
+    const failures = checkReferenceFigures(ref({ reference: { US: range } }));
+    expect(failures).toEqual([
+      expect.objectContaining({ scope: "IT", message: "no reference row for a rostered country" }),
+    ]);
   });
 });

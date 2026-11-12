@@ -179,6 +179,7 @@ export default function LoginPageClient({
           fingerprint: captured.hash,
           fingerprintComponents: captured.hash ? captured.components : undefined,
           deviceKey: deviceKey || undefined,
+          returnTo: readReturnTo() || undefined,
         }),
       });
 
@@ -195,6 +196,11 @@ export default function LoginPageClient({
 
       if (typeof data.unifiedRedirect === "string") {
         window.location.assign(data.unifiedRedirect);
+        return;
+      }
+
+      if (typeof data.lakesideHop === "string") {
+        window.location.assign(data.lakesideHop);
         return;
       }
 
