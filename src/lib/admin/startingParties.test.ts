@@ -9,12 +9,16 @@ import {
   STARTING_POLITICAL_COLLECTIONS,
 } from "./startingParties";
 
-it("supports only an explicit 1991 empty start, with legacy default unchanged", () => {
+it("supports an explicit empty start for 1991 and 2027, with legacy default unchanged", () => {
   expect(resolveStartingPartiesMode("1991-default")).toBe("default");
   expect(resolveStartingPartiesMode("2019-default")).toBe("default");
   expect(resolveStartingPartiesMode("1991-default", "none")).toBe("none");
   expect(resolveStartingPartiesMode("2019-no-parties")).toBe("none");
-  expect(() => resolveStartingPartiesMode("2019-default", "none")).toThrow("1991-default");
+  expect(resolveStartingPartiesMode("2027-default")).toBe("default");
+  expect(resolveStartingPartiesMode("2027-default", "none")).toBe("none");
+  expect(() => resolveStartingPartiesMode("2019-default", "none")).toThrow(
+    "not supported for 2019-default"
+  );
 });
 
 describe("reset political cleanup", () => {

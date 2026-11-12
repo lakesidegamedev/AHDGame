@@ -3,6 +3,7 @@
  * draftCharter protects existing names and abbreviations, while an explicit
  * empty 1991 player start permits absent historical party identities.
  */
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { isSoloCharterTestingEnabled } from "@/lib/deploymentIdentity";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
@@ -215,7 +216,8 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
       { projection: { preset: 1, startingPartiesMode: 1, currentTurn: 1 } }
     );
     const emptyStart =
-      reservationGame?.preset === "1991-default" && reservationGame.startingPartiesMode === "none";
+      supportsNoStartingParties(reservationGame?.preset) &&
+      reservationGame?.startingPartiesMode === "none";
     const playerCountry =
       emptyStart && (await getEnabledCountryIdsFromDb(db)).includes(input.countryId);
     if (

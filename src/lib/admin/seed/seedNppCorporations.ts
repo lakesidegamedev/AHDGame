@@ -50,7 +50,7 @@ export interface NppCorpCountryPlan {
  * simulation report.
  *
  * "2019-default" is included per upstream's "make every seed complete"
- * decision; 2023 and 2027 stay out until an explicit call is made for them.
+ * decision; 2023 stays out until an explicit call is made for it.
  */
 const NPP_CORP_SPAWN_PRESETS = new Set<string>([
   "1953-default",
@@ -59,7 +59,11 @@ const NPP_CORP_SPAWN_PRESETS = new Set<string>([
   "1999-default",
   "2007-default",
   "2019-default",
+  "2027-default",
 ]);
+
+/** Presets whose NPP-run countries also open with one competitor per market. */
+const NPP_RUN_COUNTRY_SPAWN_PRESETS = new Set<string>(["2027-default"]);
 
 /**
  * The per-country NPP market-corp spawn policy for a preset. Pure — no DB
@@ -87,7 +91,13 @@ export function nppCorpSpawnPlan(preset: string, startingYear: number): NppCorpC
     } else {
       const tier = getPresetEnablementTier(preset, countryId);
       if (!tier) continue;
-      perSectorCount = tier.enabledForPlayers ? 1 : tier.economyPreview ? 2 : 0;
+      perSectorCount = tier.enabledForPlayers
+        ? 1
+        : tier.economyPreview
+          ? 2
+          : NPP_RUN_COUNTRY_SPAWN_PRESETS.has(preset)
+            ? 1
+            : 0;
     }
     if (perSectorCount === 0) continue;
 

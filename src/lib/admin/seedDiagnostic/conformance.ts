@@ -3,6 +3,7 @@
  * Epsilon-level tolerances; nothing has run yet at post-reset turn 1.
  */
 
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
   STARTING_POLITICAL_COLLECTIONS,
@@ -1087,7 +1088,9 @@ export async function runConformanceChecks(
   const worldsimBootstrap = opts?.trigger === "worldsim-post-bootstrap";
   const noStartingParties =
     preset === "2019-no-parties" ||
-    (preset === "1991-default" && gs?.preset === preset && gs?.startingPartiesMode === "none");
+    (supportsNoStartingParties(preset) &&
+      gs?.preset === preset &&
+      gs?.startingPartiesMode === "none");
 
   const countries = noStartingParties ? await startingPoliticalCountries(db, preset) : [];
   const emptyCountries = countries === null ? null : new Set(countries);
