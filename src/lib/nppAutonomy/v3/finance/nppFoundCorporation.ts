@@ -120,6 +120,7 @@ export async function nppFoundCorporation(
   try {
     spawnResult = await spawnNppCorporation(db, {
       name,
+      realName: "sector",
       type: identity.sectorType,
       industryModel: identity.industryModel,
       mediaDiscriminator: identity.mediaDiscriminator,
