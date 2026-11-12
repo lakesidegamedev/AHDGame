@@ -123,9 +123,11 @@ export function resetSystemVersionsForCountry(
     return { metrics: "v1", legislation: "v1", cabinet: "v1", demographics: "v1" };
   }
   const versions = resetSystemVersionsFrom(state, v2Ready);
-  const legacyCore = (["US", "UK", "JP"] as const).includes(countryId as "US" | "UK" | "JP");
+  if ((["US", "UK", "JP"] as const).includes(countryId as "US" | "UK" | "JP")) {
+    return versions;
+  }
   const included = (system: ResetSystem) =>
-    state?.resetVersionSeeds?.[system]?.countries?.includes(countryId) ?? legacyCore;
+    state?.resetVersionSeeds?.[system]?.countries?.includes(countryId) === true;
   return {
     metrics: versions.metrics === "v2" && included("metrics") ? "v2" : "v1",
     legislation:
