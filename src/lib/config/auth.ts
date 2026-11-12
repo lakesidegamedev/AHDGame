@@ -38,4 +38,6 @@ export const authConfig = {
   accountBridgeClientId: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_CLIENT_ID,
   accountBridgeClientSecret: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_CLIENT_SECRET,
   accountBridgeTimeoutMs: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_TIMEOUT_MS,
+  accountBridgeBreakerFailures: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_BREAKER_FAILURES,
+  accountBridgeBreakerOpenMs: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_BREAKER_OPEN_MS,
 } as const;
