@@ -48,6 +48,21 @@ describe("region metrics route — approvalHistory", () => {
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });
 
+  it.each([
+    ["us", "ca_national"],
+    ["ca", "federal"],
+  ])("rejects another country's national scope: %s/%s", async (code, id) => {
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(`http://localhost/api/country/${code}/region/${id}/metrics`),
+      {
+        params: Promise.resolve({ code, id }),
+      }
+    );
+    expect(response.status).toBe(404);
+    expect(db.collectionMocks.macroMetrics!.findOne).not.toHaveBeenCalled();
+  });
+
   it("returns the region's approval history", async () => {
     const { GET } = await import("./route");
     const res = await GET(new Request("http://localhost/api/country/us/region/CA/metrics"), {

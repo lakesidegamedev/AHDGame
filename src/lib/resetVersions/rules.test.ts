@@ -9,6 +9,7 @@ import {
   resetVersionSelectionEligibility,
   resolveResetSystemVersion,
   RESET_V2_SEED_REVISION,
+  type ResetSystemSeedReceipt,
 } from "./rules";
 
 describe("reset-era system versions", () => {
@@ -139,6 +140,30 @@ describe("reset-era system versions", () => {
       });
     }
     for (const country of ["DE", "CN", "IE", "BR", "RU"]) {
+      expect(resetSystemVersionsForCountry(state, ready, country)).toEqual({
+        metrics: "v1",
+        legislation: "v1",
+        cabinet: "v1",
+        demographics: "v1",
+      });
+    }
+  });
+
+  it("honors explicit reset coverage when an era lacks other countries' authored boards", () => {
+    const state = {
+      ...seeded,
+      metricsSystemVersion: "v2",
+      legislationSystemVersion: "v2",
+      cabinetSystemVersion: "v2",
+      resetVersionSeeds: Object.fromEntries(
+        Object.entries(seeded.resetVersionSeeds).map(([system, receipt]) => [
+          system,
+          { ...(receipt as ResetSystemSeedReceipt), countries: ["US"] },
+        ])
+      ),
+    };
+    expect(resetSystemVersionsForCountry(state, ready, "US").metrics).toBe("v2");
+    for (const country of ["UK", "JP", "IE", "CA"]) {
       expect(resetSystemVersionsForCountry(state, ready, country)).toEqual({
         metrics: "v1",
         legislation: "v1",

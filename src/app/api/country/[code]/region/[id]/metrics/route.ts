@@ -50,6 +50,9 @@ export async function GET(
 
     // Accept region codes (e.g. "PA", "LON", "ON") or national scope IDs
     const isNational = NATIONAL_SCOPE_IDS.has(stateId);
+    if (isNational && NATIONAL_SCOPE[stateId] !== countryId) {
+      return errorResponse(404, "Region not found for this country");
+    }
 
     const db = await getDb();
 

@@ -61,3 +61,9 @@ areas: [engine]
   been funded, preserving cash conservation and genuinely unfunded advances.
 - Integrates the current development seed and census architecture, preserves
   called US House races, and labels unsupported modeled openings explicitly.
+- Rejects national metric requests under another country's URL, keeping US
+  and Canadian metric summaries and drilldowns isolated.
+- Uses v2 systems only where the reset verified country coverage, retaining
+  legacy receipt compatibility and the existing paths elsewhere.
+- Recalibrates the optional 2027 campaign price factor to the corrected US GDP
+  baseline while preserving the default flag-off behavior.

@@ -71,14 +71,16 @@ describe("2027 US roster from the November 2026 results", () => {
     );
   });
 
-  it("fills every partisan state senate to its modeled size", () => {
+  it("fills every state senate and preserves Nebraska's nonpartisan allocation", () => {
     const stateSenate = ofType("stateSenate");
     expect(stateSenate).toEqual(US_STATE_SENATE_2027);
     for (const state of STATES) {
       const total = held(stateSenate.filter((seat) => seat.state === state._id));
-      // Nebraska's unicameral legislature is nonpartisan and is not seeded.
-      expect(total, state._id).toBe(state._id === "NE" ? 0 : state.stateSenateSeats);
+      expect(total, state._id).toBe(state.stateSenateSeats);
     }
+    expect(stateSenate.filter((seat) => seat.state === "NE")).toEqual([
+      { state: "NE", officeType: "stateSenate", party: "independent", seatsHeld: 49 },
+    ]);
   });
 
   it("keeps the 2027 executive as authored", () => {
