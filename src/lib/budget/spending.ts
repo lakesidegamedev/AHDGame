@@ -48,6 +48,8 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { formulaGrantPool } from "./rules/formulaGrants";
+import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
 
 // Re-exported so existing importers of `./spending` keep working.
 export { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
@@ -217,6 +219,7 @@ export async function calculateFederalLawAnnualCosts(
   activeLaws: EnactedLaw[];
   eraYear: number | null;
   commandEconomyEnabled: boolean;
+  preset?: string | null;
 }> {
   const budgetCountryId = (budget.countryId ||
     (budget._id === COUNTRY_CONFIGS.UK.id
@@ -269,6 +272,7 @@ export async function calculateFederalLawAnnualCosts(
     activeLaws,
     eraYear,
     commandEconomyEnabled: gameConfig?.commandEconomyEnabled === true,
+    preset: eraContext.preset,
   };
 }
 
@@ -287,7 +291,7 @@ export async function calculateFederalSpending(
     (budget._id === COUNTRY_CONFIGS.UK.id
       ? COUNTRY_CONFIGS.UK.id
       : COUNTRY_CONFIGS.US.id)) as CountryId;
-  const { items, eraYear, commandEconomyEnabled } = await calculateFederalLawAnnualCosts(
+  const { items, eraYear, commandEconomyEnabled, preset } = await calculateFederalLawAnnualCosts(
     db,
     budget,
     hoistedEraContext
@@ -317,6 +321,11 @@ export async function calculateFederalSpending(
       stateGrants = budget.baselineStateGrants;
     }
   }
+
+  // The 2027 US opening uses the same standing formula pool as annual rollover.
+  // Keep it booked through ordinary revenue/law refreshes, not only on January's turn.
+  if (budgetCountryId === "US" && preset === "2027-default")
+    stateGrants = formulaGrantPool(budget.revenue.total, formulaGrants);
 
   // The 1991 Russian law catalog covers only a portion of the observed
   // general-government envelope. Keep the calibrated non-law portion alongside

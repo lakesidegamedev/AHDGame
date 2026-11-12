@@ -42,3 +42,6 @@ areas: [engine]
   explicitly reported as unmapped without inventing incumbents.
 - Matches the US 2027 opening sovereign bond coupons to budgeted debt interest
   and checks both principal and annual coupons during reset qualification.
+- Reconciles US 2027 federal and regional grants using the existing formula,
+  loads the correct state poverty records, and preserves valid zero rates.
+  Saved law boards now omit absent restrictions and accept older BSON nulls.

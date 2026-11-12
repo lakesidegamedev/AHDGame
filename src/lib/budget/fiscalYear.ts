@@ -540,8 +540,8 @@ export async function processFiscalYear(
       // The department-delivered pool is already charged in byCategory through
       // its enacted law. Only the legacy formula-grant line is added here.
       const totalStateGrants = Object.values(formulaGrantDistribution).reduce((a, b) => a + b, 0);
+      federalSpending.total += totalStateGrants - federalSpending.stateGrants;
       federalSpending.stateGrants = totalStateGrants;
-      federalSpending.total += totalStateGrants;
     }
 
     const surplus = federalRevenue.total - federalSpending.total;

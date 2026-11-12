@@ -35,6 +35,8 @@ import {
 import { LAW_COUNTRY_IDS, type LawCountryId } from "@/lib/politicalLegislation/types";
 import { DD_LAND_STATE_IDS } from "@/lib/politicalLegislation/laws/ddLandLaws";
 import { refreshNationalBudgetRevenue } from "@/lib/budget/revenue";
+import { formulaGrantPool } from "@/lib/budget/rules/formulaGrants";
+import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
 import { openingNonLawResidual } from "@/lib/budget/rules/nonLawSpending";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { NATIONAL_POLICY_STATE_IDS } from "@/lib/policy/nationalStateId";
@@ -370,7 +372,8 @@ async function calibratePlayerOpeningPrograms(
       ? modeledOpeningDeficitShare(
           modeledBudget.spending.total -
             modeledBudget.spending.debtInterest +
-            budget.spending.debtInterest,
+            budget.spending.debtInterest +
+            formulaGrantPool(budget.revenue.total, formulaGrants),
           budget.revenue.total,
           budget.gdp
         )
@@ -382,10 +385,9 @@ async function calibratePlayerOpeningPrograms(
       gdp: budget.gdp,
       annualRevenue: budget.revenue.total,
       annualDebtService: budget.spending.debtInterest,
-      fixedOperatingCost: Math.max(
-        0,
-        budget.spending.total - budget.spending.debtInterest - bookProgramCost
-      ),
+      fixedOperatingCost: modeledBudget
+        ? formulaGrantPool(budget.revenue.total, formulaGrants)
+        : Math.max(0, budget.spending.total - budget.spending.debtInterest - bookProgramCost),
       programCost: bookProgramCost,
       maximumDeficitGdpShare,
     });
@@ -407,10 +409,11 @@ async function calibratePlayerOpeningPrograms(
         gdp: budget.gdp,
         annualRevenue: budget.revenue.total,
         annualDebtService: budget.spending.debtInterest,
-        fixedOperatingCost: Math.max(
-          0,
-          budget.spending.total - budget.spending.debtInterest - programCost
-        ),
+        // Replaying after v2 activation can change the raw pricing base. That
+        // difference is not a fixed expense; the modeled grant pool is.
+        fixedOperatingCost: modeledBudget
+          ? formulaGrantPool(budget.revenue.total, formulaGrants)
+          : Math.max(0, budget.spending.total - budget.spending.debtInterest - programCost),
         programCostByCategory,
         targetByCategory: authored,
         maximumDeficitGdpShare,

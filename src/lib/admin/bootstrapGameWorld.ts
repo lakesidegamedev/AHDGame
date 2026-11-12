@@ -832,6 +832,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // Materialize scalar debt.principal into tradeable sovereign bond series.
   // Must run after every national-budget + NatCorp seeder so surplus countries
   // open with a bond float matching their debt rather than orphaned principal.
+  if (preset === "2027-default")
+    await (await import("./seed/seedUS2027Grants")).seedUS2027Grants(db);
   await guarded("seedSovereignBondInstruments", () => seedSovereignBondInstruments(db, log, 0));
   await seedCountryGameStates(db, preset, getStartingYearForPreset(preset), log);
   await worldEntityStatesCollection<Document>(db).deleteMany({});

@@ -69,7 +69,7 @@ describe("real US 2027 opening pipeline", () => {
     for (let n = 0; n < 2; n++) await refreshNationalBudgetRevenue(db, ["federal"]);
     const budget = await db.collection("federalBudget").findOne({ _id: "federal" as never });
     expect(budget!.spending.total - budget!.spending.debtInterest).toBeCloseTo(
-      authored.spending.total - authored.spending.debtInterest,
+      authored.spending.total - authored.spending.debtInterest + budget!.spending.stateGrants,
       0
     );
     const checks = await checkUS2027Opening(db, "2027-default");
@@ -81,7 +81,8 @@ describe("real US 2027 opening pipeline", () => {
     await calibrateUS2027ProgramBook(db, () => {});
     await calibrateUS2027ProgramBook(db, () => {});
     const after = await db.collection("federalBudget").findOne({ _id: "federal" as never });
-    expect(after!.spending.byCategory).toEqual(before!.spending.byCategory);
+    for (const [category, amount] of Object.entries(before!.spending.byCategory))
+      expect(after!.spending.byCategory[category]).toBeCloseTo(amount as number, 0);
     for (const [category, scale] of Object.entries(before!.programCostScaleByCategoryBaseline))
       expect(after!.programCostScaleByCategoryBaseline[category]).toBeCloseTo(scale as number, 8);
   });

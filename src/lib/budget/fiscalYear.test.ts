@@ -653,33 +653,36 @@ describe("processFiscalYear", () => {
     expect(surplus).toBeCloseTo(-1_700_000_000_000, -6);
   });
 
-  it("adds state grant total to federal spending before computing surplus", async () => {
-    // Grants distributed: TX gets 50B, CA gets 100B → total 150B added to spending
-    vi.mocked(processFormulaGrants).mockResolvedValue({
-      "US-TX": 50_000_000_000,
-      "US-CA": 100_000_000_000,
-    } as never);
-    // spending mock returns 6.2T (no stateGrants included yet)
-    vi.mocked(calculateFederalSpending).mockResolvedValue({
-      total: 6_200_000_000_000,
-      byCategory: {},
-      stateGrants: 0,
-    } as never);
+  it.each([0, 150_000_000_000])(
+    "books grants once with %i already included in spending",
+    async (alreadyBooked) => {
+      // Grants distributed: TX gets 50B, CA gets 100B → total 150B added to spending
+      vi.mocked(processFormulaGrants).mockResolvedValue({
+        "US-TX": 50_000_000_000,
+        "US-CA": 100_000_000_000,
+      } as never);
+      // spending mock returns 6.2T (no stateGrants included yet)
+      vi.mocked(calculateFederalSpending).mockResolvedValue({
+        total: 6_200_000_000_000 + alreadyBooked,
+        byCategory: {},
+        stateGrants: alreadyBooked,
+      } as never);
 
-    const db = makeDb({});
-    await processFiscalYear(db as unknown as Db, 2026, 600);
+      const db = makeDb({});
+      await processFiscalYear(db as unknown as Db, 2026, 600);
 
-    const call = db._federalBudgetUpdateOne.mock.calls.find(
-      (c: unknown[]) =>
-        typeof c[1] === "object" &&
-        c[1] !== null &&
-        "$set" in (c[1] as object) &&
-        "surplus" in ((c[1] as { $set: object }).$set as object)
-    );
-    const surplus = (call![1] as { $set: { surplus: number } }).$set.surplus;
-    // revenue 4.5T - (spending 6.2T + grants 150B) = -1.85T
-    expect(surplus).toBeCloseTo(-1_850_000_000_000, -6);
-  });
+      const call = db._federalBudgetUpdateOne.mock.calls.find(
+        (c: unknown[]) =>
+          typeof c[1] === "object" &&
+          c[1] !== null &&
+          "$set" in (c[1] as object) &&
+          "surplus" in ((c[1] as { $set: object }).$set as object)
+      );
+      const surplus = (call![1] as { $set: { surplus: number } }).$set.surplus;
+      // revenue 4.5T - (spending 6.2T + grants 150B) = -1.85T
+      expect(surplus).toBeCloseTo(-1_850_000_000_000, -6);
+    }
+  );
 
   it("raises the US ceiling and clears the crisis flag when the stock breaches it", async () => {
     vi.mocked(processAnnualDebt).mockResolvedValue({

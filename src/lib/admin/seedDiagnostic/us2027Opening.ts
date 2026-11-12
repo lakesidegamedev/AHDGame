@@ -6,7 +6,19 @@ import type {
   ElectedOfficial,
   CongressionalDistrict,
   Bond,
+  StateBudget,
 } from "@/lib/db/types";
+import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
+import {
+  allocateFormulaGrants,
+  formulaGrantPool,
+  grantPovertyRate,
+} from "@/lib/budget/rules/formulaGrants";
+import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
+import {
+  buildResetLawOpeningBoard,
+  type ResetLawOpeningBoard,
+} from "@/lib/resetLegislation/rules/openingBoard";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import { totalPopulation } from "@/lib/demographics/cohortVector";
@@ -31,6 +43,10 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
     senators,
     shares,
     bonds,
+    regionalBudgets,
+    poverty,
+    continuity,
+    lawBoards,
   ] = await Promise.all([
     db
       .collection<State>("states")
@@ -83,6 +99,7 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       {
         projection: {
           cabinetSystemVersion: 1,
+          legislationSystemVersion: 1,
           resetWorldId: 1,
           startingYear: 1,
           preIterationTurns: 1,
@@ -107,6 +124,19 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
         { projection: { totalIssued: 1, couponRate: 1 } }
       )
       .toArray(),
+    db
+      .collection<StateBudget>("stateBudgets")
+      .find({ countryId: "US" }, { projection: { stateId: 1, "revenue.federalGrants": 1 } })
+      .toArray(),
+    db
+      .collection<MacroMetricsDoc>("macroMetrics")
+      .find({ countryId: "US" }, { projection: { _id: 1, "economic.povertyRate.value": 1 } })
+      .toArray(),
+    db.collection("resetDepartmentContinuity").findOne({ countryId: "US" }),
+    db
+      .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
+      .find({ countryId: "US" })
+      .toArray(),
   ]);
   const checks: SeedDiagnosticCheck[] = [];
   const assert = (
@@ -119,6 +149,75 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       check(`opening.US.2027.${metric}`, "US", metric, expected, actual, valid ? "ok" : "critical")
     );
   const regionalGdp = states.reduce((sum, s) => sum + (s.gdp ?? 0) * 1e6, 0);
+  const grantPool = budget ? formulaGrantPool(budget.revenue?.total ?? 0, formulaGrants) : NaN;
+  const receipts = regionalBudgets.reduce((sum, b) => sum + b.revenue.federalGrants, 0);
+  const reserves =
+    accounts.reduce((sum, a) => sum + a.grantReservation, 0) + (continuity?.grantReservation ?? 0);
+  assert(
+    "grant-federal-pool",
+    !!budget && Math.abs(budget.spending.stateGrants - grantPool) < 1,
+    budget?.spending.stateGrants ?? "missing budget",
+    grantPool
+  );
+  assert(
+    "grant-regional-receipts",
+    !!budget && Math.abs(receipts - grantPool) < 1,
+    receipts,
+    grantPool
+  );
+  if (world?.cabinetSystemVersion === "v2")
+    assert("grant-reservations", Math.abs(reserves - grantPool) < 1, reserves, grantPool);
+  const povertyById = new Map(poverty.map((p) => [String(p._id), p.economic?.povertyRate?.value]));
+  const distribution = allocateFormulaGrants(
+    budget?.revenue?.total ?? 0,
+    formulaGrants,
+    states.map((s) => ({
+      id: s._id,
+      population: s.population,
+      povertyRate: grantPovertyRate(povertyById.get(s._id)),
+    }))
+  );
+  const badGrants = regionalBudgets.filter(
+    (b) => Math.abs(b.revenue.federalGrants - (distribution[b.stateId] ?? NaN)) >= 1
+  );
+  assert(
+    "grant-poverty-allocation",
+    badGrants.length === 0 && regionalBudgets.length === states.length,
+    badGrants.length,
+    0
+  );
+  let invalidBoards = 0;
+  for (const board of lawBoards) {
+    try {
+      buildResetLawOpeningBoard({
+        worldId: board.worldId,
+        countryId: board.countryId,
+        regionId: board.regionId,
+        sourceTurn: board.sourceTurn,
+        references: Object.values(board.references),
+        modeled: !!board.modeledOpening,
+        modeledOpening: board.modeledOpening,
+        ukTerritorialTax: board.ukTerritorialTax,
+      });
+      if (
+        Object.values(board.references).some((r) =>
+          r.sourceComponents.some(
+            (s) => Object.hasOwn(s, "replacementRestriction") && s.replacementRestriction == null
+          )
+        )
+      )
+        invalidBoards++;
+    } catch {
+      invalidBoards++;
+    }
+  }
+  if (world?.legislationSystemVersion === "v2" || lawBoards.length)
+    assert(
+      "law-board-persistence",
+      lawBoards.length === states.length + 1 && invalidBoards === 0,
+      invalidBoards,
+      0
+    );
   const face = bonds.reduce((sum, b) => sum + b.totalIssued, 0);
   const coupons = bonds.reduce((sum, b) => sum + (b.totalIssued * b.couponRate) / 100, 0);
   assert(

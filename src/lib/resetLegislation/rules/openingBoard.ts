@@ -71,7 +71,7 @@ export function buildResetLawOpeningBoard(input: {
         sourceIds.has(source.sourceId) ||
         !Number.isFinite(source.annualBooked) ||
         source.annualBooked < 0 ||
-        (source.replacementRestriction !== undefined &&
+        (source.replacementRestriction != null &&
           source.replacementRestriction !== "protected-transfer")
       ) {
         throw new Error(`Invalid ${reference.key} source component`);
@@ -91,7 +91,19 @@ export function buildResetLawOpeningBoard(input: {
     references: Object.fromEntries(
       [...input.references]
         .sort((a, b) => a.familyId.localeCompare(b.familyId))
-        .map((reference) => [reference.familyId, reference])
+        .map((reference) => [
+          reference.familyId,
+          {
+            ...reference,
+            sourceComponents: reference.sourceComponents.map((source) => {
+              const normalized = { ...source };
+              // Older modeled boards serialized explicit undefined as BSON null.
+              if (normalized.replacementRestriction == null)
+                delete normalized.replacementRestriction;
+              return normalized;
+            }),
+          },
+        ])
     ),
   };
 }
