@@ -14,6 +14,14 @@ export interface BudgetRow {
   countryId: string;
   gdp: number;
   inflationRate?: number;
+  debtPrincipal?: number;
+}
+
+export interface ReferenceRange {
+  gdpPerHeadUsd: readonly [number, number];
+  primeRate: readonly [number, number];
+  inflation: readonly [number, number];
+  debtToGdp: readonly [number, number];
 }
 
 export interface CentralBankRow {
@@ -60,6 +68,10 @@ export interface RehearsalWorld {
   operatingIndustryCount: number;
   corporations: CorporationRow[];
   seatTotalByCountry: Record<string, number>;
+  /** Local currency per US dollar, resolved through the currency anchor. */
+  localPerUsd: Record<string, number>;
+  /** Absent when the preset has no reference table, which skips the check. */
+  reference?: Record<string, ReferenceRange>;
 }
 
 export const ECB_ROW_ID = "ECB";
@@ -255,6 +267,75 @@ export function checkMoney(world: RehearsalWorld): RehearsalFailure[] {
   return out;
 }
 
+function outside(value: number, [min, max]: readonly [number, number]): boolean {
+  return !(Number.isFinite(value) && value >= min && value <= max);
+}
+
+export function checkReferenceFigures(world: RehearsalWorld): RehearsalFailure[] {
+  const table = world.reference;
+  if (!table) return [];
+  const out: RehearsalFailure[] = [];
+  const budgets = new Map(world.budgets.map((b) => [b.countryId, b]));
+  const ecb = world.centralBanks.find((b) => b.id === ECB_ROW_ID);
+  const euro = new Set(world.euroMembers);
+  for (const id of world.rosterCountries) {
+    const ref = table[id];
+    if (!ref) {
+      out.push(fail("reference", id, "no reference row for a rostered country"));
+      continue;
+    }
+    const budget = budgets.get(id);
+    if (!budget) continue;
+    const population = world.regions
+      .filter((r) => r.countryId === id)
+      .reduce((s, r) => s + r.population, 0);
+    const rate = world.localPerUsd[id];
+    if (population > 0 && rate > 0) {
+      const perHead = budget.gdp / population / rate;
+      if (outside(perHead, ref.gdpPerHeadUsd))
+        out.push(
+          fail(
+            "reference",
+            id,
+            `gdp per head ${fmt(perHead)} USD outside ${ref.gdpPerHeadUsd[0]} to ${ref.gdpPerHeadUsd[1]}`
+          )
+        );
+    } else {
+      out.push(fail("reference", id, "no population or exchange rate to derive gdp per head"));
+    }
+    if (typeof budget.inflationRate === "number" && outside(budget.inflationRate, ref.inflation))
+      out.push(
+        fail(
+          "reference",
+          id,
+          `inflation ${fmt(budget.inflationRate)} outside ${ref.inflation[0]} to ${ref.inflation[1]}`
+        )
+      );
+    if (typeof budget.debtPrincipal === "number" && budget.gdp > 0) {
+      const ratio = budget.debtPrincipal / budget.gdp;
+      if (outside(ratio, ref.debtToGdp))
+        out.push(
+          fail(
+            "reference",
+            id,
+            `debt to gdp ${fmt(ratio)} outside ${ref.debtToGdp[0]} to ${ref.debtToGdp[1]}`
+          )
+        );
+    }
+    const own = world.centralBanks.find((b) => b.id !== ECB_ROW_ID && b.countryId === id);
+    const prime = own ?? (euro.has(id) ? ecb : undefined);
+    if (prime && outside(prime.primeRate, ref.primeRate))
+      out.push(
+        fail(
+          "reference",
+          id,
+          `prime rate ${fmt(prime.primeRate)} outside ${ref.primeRate[0]} to ${ref.primeRate[1]}`
+        )
+      );
+  }
+  return out;
+}
+
 export const WORLD_CHECKS: ReadonlyArray<{
   name: string;
   run: (world: RehearsalWorld) => RehearsalFailure[];
@@ -267,6 +348,7 @@ export const WORLD_CHECKS: ReadonlyArray<{
   { name: "companies", run: checkStartingCompanies },
   { name: "seats", run: checkSeats },
   { name: "money", run: checkMoney },
+  { name: "reference", run: checkReferenceFigures },
 ];
 
 export interface CheckResult {

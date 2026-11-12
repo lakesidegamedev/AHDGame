@@ -6,22 +6,39 @@ import type { Db } from "mongodb";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { BootstrapMode } from "@/lib/admin/bootstrapGameWorld";
 import { presetDefaultsToFoundingPhase } from "@/lib/seeds/presetSelector";
+import {
+  evaluateRehearsalRecord,
+  settingsFingerprint,
+  type RehearsalRecordLike,
+} from "@/lib/admin/resetRehearsal/gate";
 import { connectDb } from "../utils/db";
 import { closeResetDb } from "./closeResetDb";
 import { resolveResetTarget } from "./resetTarget";
+import { currentTreeHash, readRehearsalRecord } from "./rehearsalRecordFile";
 
 interface ResetAndBootstrapCliDependencies {
   validateEnvironment: () => Env;
   connectDb: (databaseName: string, uri: string) => Promise<Db>;
   closeDb: () => Promise<void>;
   reset: (options: ResetAndBootstrapOptions) => Promise<unknown>;
+  readRecord: (path: string) => RehearsalRecordLike | null;
+  treeHash: () => string;
+  now: () => number;
 }
 
 const defaultDependencies: Omit<ResetAndBootstrapCliDependencies, "reset"> = {
   validateEnvironment: getValidatedEnv,
   connectDb,
   closeDb: closeResetDb,
+  readRecord: readRehearsalRecord,
+  treeHash: currentTreeHash,
+  now: Date.now,
 };
+
+function getArgValue(args: readonly string[], name: string): string | undefined {
+  const arg = args.find((value) => value.startsWith(`${name}=`));
+  return arg?.slice(name.length + 1);
+}
 
 function getMode(args: readonly string[]): BootstrapMode {
   const arg = args.find((value) => value.startsWith("--mode="));
@@ -92,6 +109,40 @@ export async function runResetAndBootstrapCli(
   const foundingEffective =
     mode === "historical" &&
     (preIteration ?? presetDefaultsToFoundingPhase(preset, startingParties ?? "default"));
+
+  const settings = settingsFingerprint({
+    preset,
+    mode,
+    startingParties: startingParties ?? "default",
+    foundingPhase: foundingEffective,
+  });
+  const isRehearsalTarget = databaseName.startsWith("rehearsal-");
+  const skipReason = getArgValue(args, "--skip-rehearsal-gate");
+  const recordPath = getArgValue(args, "--rehearsal-record");
+  if (!hasFlag(args, "--check-target") && !isRehearsalTarget) {
+    if (skipReason !== undefined) {
+      if (skipReason.trim() === "")
+        throw new Error("--skip-rehearsal-gate needs a reason: --skip-rehearsal-gate=<reason>");
+      console.warn(
+        `WARNING: REHEARSAL GATE SKIPPED for ${databaseName}. Reason: ${skipReason}. This reset has no passing rehearsal behind it.`
+      );
+    } else {
+      if (!recordPath)
+        throw new Error(
+          "Refusing to reset: pass --rehearsal-record=<path> from a passing rehearse-reset run, or --skip-rehearsal-gate=<reason>"
+        );
+      const verdict = evaluateRehearsalRecord(deps.readRecord(recordPath), {
+        settingsFingerprint: settings,
+        treeHash: deps.treeHash(),
+        nowMs: deps.now(),
+      });
+      if (!verdict.ok)
+        throw new Error(
+          `Refusing to reset: ${verdict.message} (${verdict.reason}). Rehearse again with the same settings, or pass --skip-rehearsal-gate=<reason>`
+        );
+      console.log(`Rehearsal gate passed using ${recordPath}`);
+    }
+  }
 
   const db = await deps.connectDb(databaseName, applicationEnv.MONGODB_URI);
   try {

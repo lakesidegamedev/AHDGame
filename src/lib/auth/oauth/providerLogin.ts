@@ -33,11 +33,13 @@ import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/aut
 import {
   bridgeAccountFromUser,
   centralRollbackCreate,
+  getCentralLoginMode,
   centralWriteFirst,
   shadowMirrorWrite,
   shadowRecordProviderLogin,
   type BridgeWriteOp,
 } from "@/lib/auth/centralLogin";
+import { startLakesideHop } from "@/lib/auth/centralLogin/hop";
 import type { OAuthCookieStore, OAuthDb, OAuthLoginAdapter } from "./types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -74,7 +76,35 @@ export async function runOAuthLogin(
   if (existingUser) {
     return loginExistingUser(db, adapter, cookieStore, baseUrl, userAgent, cf, existingUser);
   }
-  return registerNewUser(db, adapter, cookieStore, userAgent, cf);
+  return registerNewUser(db, adapter, cookieStore, baseUrl, userAgent, cf);
+}
+
+/**
+ * Central mode only: send the browser through the Lakeside session hop on the
+ * way to the normal result page. Headers of the normal redirect are kept.
+ * Any problem returns the normal redirect untouched.
+ */
+async function withLakesideHop(
+  normal: NextResponse,
+  userId: string,
+  cookieStore: OAuthCookieStore,
+  baseUrl: string
+): Promise<NextResponse> {
+  if (getCentralLoginMode() !== "central") return normal;
+  const destination = normal.headers.get("location");
+  if (!destination) return normal;
+  const hopUrl = await startLakesideHop({
+    userId,
+    destination,
+    cookieStore,
+    fallbackOrigin: new URL(baseUrl).origin,
+  });
+  if (!hopUrl) return normal;
+  const hop = NextResponse.redirect(hopUrl);
+  normal.headers.forEach((value, key) => {
+    if (key.toLowerCase() !== "location") hop.headers.set(key, value);
+  });
+  return hop;
 }
 
 async function loginExistingUser(
@@ -207,13 +237,19 @@ async function loginExistingUser(
     isAdmin: existingUser.isAdmin === true,
     hasCompletedSetup: existingUser.hasCompletedSetup ?? true,
   });
-  return adapter.resultRedirect("login_success", next);
+  return withLakesideHop(
+    adapter.resultRedirect("login_success", next),
+    existingUser._id.toString(),
+    cookieStore,
+    baseUrl
+  );
 }
 
 async function registerNewUser(
   db: OAuthDb,
   adapter: OAuthLoginAdapter,
   cookieStore: OAuthCookieStore,
+  baseUrl: string,
   userAgent: string | null,
   cf: CfFingerprint
 ) {
@@ -472,5 +508,10 @@ async function registerNewUser(
     isAdmin: false,
     hasCompletedSetup: false,
   });
-  return adapter.resultRedirect("login_success", next);
+  return withLakesideHop(
+    adapter.resultRedirect("login_success", next),
+    result.insertedId.toString(),
+    cookieStore,
+    baseUrl
+  );
 }

@@ -10,10 +10,11 @@
  * rules in `resetRehearsal/rules.ts` carry the checks it cannot make.
  * Exit code 0 only when every check passes.
  */
-import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import type { Db } from "mongodb";
 import { getValidatedEnv } from "@/lib/config/validatedEnv";
+import { settingsFingerprint } from "@/lib/admin/resetRehearsal/gate";
+import { presetDefaultsToFoundingPhase } from "@/lib/seeds/presetSelector";
 import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
@@ -25,6 +26,8 @@ import {
   isShippingPreset,
   tierFor,
 } from "@/lib/world/eraRoster";
+import { REFERENCE_FIGURES } from "@/lib/admin/resetRehearsal/referenceFigures";
+import { getRateDoc, rateFromDoc } from "@/lib/world/forex";
 import { nppCorpSpawnPlan } from "@/lib/admin/seed/seedNppCorporations";
 import {
   assertRehearsalTarget,
@@ -37,6 +40,7 @@ import {
 import { connectDb } from "../utils/db";
 import { closeResetDb } from "./closeResetDb";
 import { resolveResetTarget } from "./resetTarget";
+import { currentHead, currentTreeHash } from "./rehearsalRecordFile";
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(name);
@@ -63,6 +67,17 @@ async function loadWorld(
     ...countriesByTier(preset, "npp"),
     ...countriesByTier(preset, "econ"),
   ].filter((id) => roster.has(id));
+
+  const rateDocs = await db
+    .collection("exchangeRates")
+    .find({}, { projection: { countryId: 1, rate: 1, baseRate: 1 } })
+    .toArray();
+  const rateMap = new Map(rateDocs.map((r) => [String(r.countryId), r]));
+  const localPerUsd: Record<string, number> = {};
+  for (const id of rosterCountries) {
+    const doc = getRateDoc(rateMap as never, id);
+    if (doc) localPerUsd[id] = rateFromDoc(doc);
+  }
 
   const [budgets, banks, state, metrics, states, parties, seats, corps] = await Promise.all([
     db.collection("federalBudget").find({}).toArray(),
@@ -123,6 +138,7 @@ async function loadWorld(
       countryId: String(b.countryId),
       gdp: Number(b.gdp),
       inflationRate: b.economicFactors?.inflationRate,
+      debtPrincipal: b.debt?.principal,
     })),
     centralBanks: banks.map((b) => ({
       id: String(b._id),
@@ -158,6 +174,8 @@ async function loadWorld(
       publicFloat: c.publicFloat,
     })),
     seatTotalByCountry: Object.fromEntries(seats.map((s) => [String(s._id), s.n as number])),
+    localPerUsd,
+    reference: REFERENCE_FIGURES[preset],
   };
 }
 
@@ -297,12 +315,18 @@ async function runOneTurn(db: Db): Promise<RehearsalFailure[]> {
   }
 }
 
-function gitHead(): string {
-  try {
-    return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  } catch {
-    return "unknown";
-  }
+function foundingPhaseFor(): boolean {
+  const preset = value("--preset") ?? "";
+  return presetDefaultsToFoundingPhase(preset, flag("--no-starting-parties") ? "none" : "default");
+}
+
+function recordFingerprint(): string {
+  return settingsFingerprint({
+    preset: value("--preset") ?? "",
+    mode: "historical",
+    startingParties: flag("--no-starting-parties") ? "none" : "default",
+    foundingPhase: foundingPhaseFor(),
+  });
 }
 
 main()
@@ -329,8 +353,13 @@ main()
       value("--record") ?? "rehearsal-record.json",
       JSON.stringify(
         {
-          head: gitHead(),
+          head: currentHead(),
+          treeHash: currentTreeHash(),
           preset: value("--preset") ?? null,
+          mode: "historical",
+          startingParties: flag("--no-starting-parties") ? "none" : "default",
+          foundingPhase: foundingPhaseFor(),
+          settingsFingerprint: recordFingerprint(),
           flags: args.filter(
             (a) => a.startsWith("--") && !a.startsWith("--expect-db") && !a.startsWith("--record")
           ),

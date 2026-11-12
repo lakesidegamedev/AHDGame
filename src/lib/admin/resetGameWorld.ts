@@ -38,6 +38,11 @@ import type { GameIteration } from "@/lib/db/types/gameState";
 import { assertKnownSeedPreset } from "@/lib/seeds/presetSelector";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { planGameStateRebuild } from "@/lib/admin/resetContract/rules/gameStateRebuild";
+import {
+  diffSwitches,
+  formatSwitchChange,
+  type SwitchChange,
+} from "@/lib/admin/resetContract/rules/switchChanges";
 import { applyPreservedFieldContracts } from "@/lib/admin/resetContract/applyPreservedFieldContracts";
 import { purgeOldCatalogueOverrides } from "@/lib/admin/resetContract/purgeOldCatalogueOverrides";
 import { PRESERVED_ACTIVITY_LOG_TYPES } from "@/lib/admin/resetContract/rules/preservedFields";
@@ -341,8 +346,29 @@ export interface ResetGameWorldResult {
     customPartiesDeleted: number;
     partyOrgRecordsDeleted: number;
     budgetSeedLog: string[];
+    /** Admin switches whose value this reset changed, for deliberate restoring. */
+    switchChanges?: SwitchChange[];
   };
 }
+
+/** gameState switches an admin can flip; runtime and per-reset fields are excluded. */
+const RESET_SWITCH_EXCLUDED_GAME_STATE_FIELDS: ReadonlySet<string> = new Set([
+  "isActive",
+  "isProcessing",
+  "startingPartiesMode",
+  "eurozoneEnabled",
+]);
+
+const TRACKED_GAME_STATE_SWITCHES: readonly string[] = [
+  ...new Set([
+    ...Object.keys(DEFAULT_GAME_STATE_FLAGS),
+    ...Object.keys(NON_GAMEPLAY_GAME_STATE_FIELDS),
+    "corporationActionsPaused",
+    "playerTransfersPaused",
+  ]),
+].filter((name) => !RESET_SWITCH_EXCLUDED_GAME_STATE_FIELDS.has(name));
+
+const TRACKED_GAME_CONFIG_SWITCHES: readonly string[] = Object.keys(FRESH_WORLD_GAME_CONFIG_FLAGS);
 
 export async function resetGameWorld(
   db: Db,
@@ -567,6 +593,9 @@ export async function resetGameWorld(
   // only in runSeed's reset branch, which a `resetReference: false` run skips.
   // Ops keys (maintenance, sandbox tester access, webhooks) are in neither list
   // and survive.
+  const configBefore = await gameConfigCollection<Record<string, unknown>>(db).findOne({
+    _id: "default",
+  } as never);
   await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
@@ -713,6 +742,27 @@ export async function resetGameWorld(
     { upsert: true }
   );
 
+  const switchChanges: SwitchChange[] = [
+    ...diffSwitches(
+      "gameState",
+      TRACKED_GAME_STATE_SWITCHES,
+      outgoingState as Record<string, unknown> | null,
+      await gameStateCollection<Record<string, unknown>>(db).findOne({ _id: "current" } as never)
+    ),
+    ...diffSwitches(
+      "gameConfig",
+      TRACKED_GAME_CONFIG_SWITCHES,
+      configBefore,
+      await gameConfigCollection<Record<string, unknown>>(db).findOne({ _id: "default" } as never)
+    ),
+  ];
+  if (switchChanges.length > 0) {
+    log(
+      `Reset changed ${switchChanges.length} admin switch(es); restore any that should stay: ` +
+        switchChanges.map(formatSwitchChange).join("; ")
+    );
+  }
+
   // `gameState` is exempt from the manifest-driven sweep (it is re-initialized in
   // place), and the update above is filtered to `_id: "current"` — so ANY other
   // document in this collection is unreachable by every reset path and lives
@@ -807,6 +857,7 @@ export async function resetGameWorld(
       customPartiesDeleted: 0,
       partyOrgRecordsDeleted: 0,
       budgetSeedLog: [],
+      switchChanges,
     },
   };
 }

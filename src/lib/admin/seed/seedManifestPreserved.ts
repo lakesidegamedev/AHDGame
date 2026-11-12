@@ -281,6 +281,12 @@ export const PRESERVED: CollectionEntry[] = [
     notes: "Account ownership evidence survives world resets.",
   },
   {
+    name: "lakesideHopFlows",
+    category: "preserved",
+    notes:
+      "Short-lived Lakeside session hop transactions expire through a TTL index and remain independent of game-world resets.",
+  },
+  {
     name: "centralLoginShadowEvents",
     category: "preserved",
     notes: "Central account login shadow comparison events survive world resets.",

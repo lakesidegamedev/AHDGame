@@ -135,6 +135,7 @@ export const LIVE_WORLD_MANUAL_SEED_INDEXES: Readonly<Record<string, string>> = 
   "financialTxLog.financialTxLog_expiresAt_ttl": TTL_REASON,
   "gameHealthSnapshots.ghs_timestamp_ttl": TTL_REASON,
   "identityObservations.identityObservations_lastSeen_ttl": TTL_REASON,
+  "lakesideHopFlows.lhf_expiresAt_ttl": TTL_REASON,
   "ipGeoCache.ipGeoCache_expiresAt_ttl": TTL_REASON,
   "nonAtomicMoneyFlowReceipts.nonAtomicMoneyFlowReceipts_terminal_updatedAt_ttl": TTL_REASON,
   "rateLimitBuckets.rlb_expiresAt_ttl": TTL_REASON,

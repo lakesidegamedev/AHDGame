@@ -2,11 +2,25 @@ import { getDb } from "@/lib/mongodb";
 import { centralLoginShadowEventsCollection } from "@/lib/db/repositories/centralLoginShadowEvents";
 import { shadowMatches, type LocalPasswordResult, type PasswordCheckOutcome } from "./rules";
 
-export type ShadowEventKind = "password" | "apple" | "google" | "discord" | "write";
+export type ShadowEventKind =
+  "password" | "apple" | "google" | "discord" | "write" | "bridge" | "hop";
 export type ShadowCentralResult = PasswordCheckOutcome | "n/a";
 
 export type ShadowEventReason =
-  "long_password" | "restore" | "restore_unavailable" | "unknown_heal";
+  | "long_password"
+  | "restore"
+  | "restore_unavailable"
+  | "unknown_heal"
+  | "breaker_open"
+  | "hop_ticket_failed"
+  | "hop_no_flow"
+  | "hop_state"
+  | "hop_provider_error"
+  | "hop_exchange"
+  | "hop_token"
+  | "hop_nonce"
+  | "hop_no_session"
+  | "hop_user_mismatch";
 
 export interface ShadowEvent {
   userId: string;
@@ -20,6 +34,8 @@ export interface ShadowEvent {
   reason?: ShadowEventReason;
   /** unknown_heal events: whether the central account was recreated. */
   healed?: boolean;
+  /** Outcome of a Lakeside session hop (`hop` events). */
+  hop?: "ok" | "failed";
   /** Bridge operation for `write` events. */
   op?: "password-set" | "account-upsert" | "account-delete";
   at: Date;
@@ -65,6 +81,12 @@ export interface ShadowSummary {
   longPassword: number;
   /** Central did not know the account; the local copy decided and the account was recreated. */
   unknownHeal: number;
+  /** Bridge calls the circuit breaker skipped. Failed calls are counted in error and timeout. */
+  breakerOpen: number;
+  /** Lakeside session hops that completed. */
+  hopOk: number;
+  /** Lakeside session hops that fell through to the plain destination. */
+  hopFailed: number;
 }
 
 /** Counts for a later admin view. Mismatch excludes failures and skipped (n/a) events. */
@@ -76,7 +98,13 @@ export async function summarizeShadowEvents(
   const db = await getDb();
   const rows = await centralLoginShadowEventsCollection(db)
     .aggregate<{
-      _id: { match: boolean; central: string; fallback: boolean; reason: string };
+      _id: {
+        match: boolean;
+        central: string;
+        fallback: boolean;
+        reason: string;
+        hop: string;
+      };
       count: number;
     }>([
       { $match: { at: { $gte: windowStart, $lte: now } } },
@@ -87,6 +115,7 @@ export async function summarizeShadowEvents(
             central: "$central",
             fallback: { $ifNull: ["$fallback", false] },
             reason: { $ifNull: ["$reason", ""] },
+            hop: { $ifNull: ["$hop", ""] },
           },
           count: { $sum: 1 },
         },
@@ -105,11 +134,17 @@ export async function summarizeShadowEvents(
     fallback: 0,
     longPassword: 0,
     unknownHeal: 0,
+    breakerOpen: 0,
+    hopOk: 0,
+    hopFailed: 0,
   };
   for (const { _id, count } of rows) {
     summary.total += count;
     if (_id.fallback) summary.fallback += count;
-    if (_id.reason === "long_password") summary.longPassword += count;
+    if (_id.hop === "ok") summary.hopOk += count;
+    else if (_id.hop === "failed") summary.hopFailed += count;
+    else if (_id.reason === "breaker_open") summary.breakerOpen += count;
+    else if (_id.reason === "long_password") summary.longPassword += count;
     else if (_id.reason === "unknown_heal") summary.unknownHeal += count;
     else if (_id.central === "error") summary.error += count;
     else if (_id.central === "timeout") summary.timeout += count;

@@ -44,6 +44,10 @@ vi.mock("@/lib/auth/lakesideLoginReturn", () => ({
   takeOAuthReturnUrlCookie: () => undefined,
 }));
 vi.mock("@/lib/auth/userDocCache", () => ({ invalidateCachedUser: vi.fn() }));
+const hopMock = vi.hoisted(() => ({
+  start: vi.fn(async (_input: unknown): Promise<string | null> => null),
+}));
+vi.mock("@/lib/auth/centralLogin/hop", () => ({ startLakesideHop: hopMock.start }));
 vi.mock("@/lib/db/repositories/gameConfig", () => ({
   gameConfigCollection: () => ({ findOne: async () => ({}) }),
 }));
@@ -264,5 +268,57 @@ describe("OAuth provider link", () => {
     setEnv("shadow");
     await link();
     await vi.waitFor(() => expect(log.order).toEqual(["local-update", "bridge:account-upsert"]));
+  });
+});
+
+describe("OAuth login session hop", () => {
+  const redirectAdapter = {
+    ...loginAdapter,
+    resultRedirect: (status: string, next: string) => {
+      const res = NextResponse.redirect(
+        new URL(`/result?s=${status}&n=${next}`, "https://game.example.invalid")
+      );
+      res.headers.set("Cache-Control", "no-store");
+      return res;
+    },
+  } as unknown as OAuthLoginAdapter;
+  const run = () =>
+    runOAuthLogin(
+      db,
+      redirectAdapter,
+      cookieStore,
+      "https://game.example.invalid",
+      null,
+      {} as never
+    );
+
+  beforeEach(() => hopMock.start.mockReset());
+
+  it.each(["off", "shadow"])("%s: never starts a hop", async (mode) => {
+    setEnv(mode);
+    hopMock.start.mockResolvedValue("https://issuer.example.invalid/auth");
+    const res = await run();
+    expect(hopMock.start).not.toHaveBeenCalled();
+    expect(res.headers.get("location")).toContain("/result?s=login_success");
+  });
+
+  it("central: redirects to the hop url and keeps the normal destination for later", async () => {
+    setEnv("central");
+    hopMock.start.mockResolvedValue("https://issuer.example.invalid/auth?x=1");
+    const res = await run();
+    expect(res.headers.get("location")).toBe("https://issuer.example.invalid/auth?x=1");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(hopMock.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: "https://game.example.invalid/result?s=login_success&n=/",
+      })
+    );
+  });
+
+  it("central: a skipped hop leaves the normal redirect", async () => {
+    setEnv("central");
+    hopMock.start.mockResolvedValue(null);
+    const res = await run();
+    expect(res.headers.get("location")).toContain("/result?s=login_success");
   });
 });
