@@ -1158,9 +1158,11 @@ async function processTurnImpl(
       health: lastHealth,
       failure: {
         phase:
-          currentPhaseRef.current && currentPhaseRef.current !== TURN_BOOTSTRAP_PHASE
-            ? currentPhaseRef.current
-            : null,
+          error instanceof TurnMustStopError
+            ? error.phase
+            : currentPhaseRef.current && currentPhaseRef.current !== TURN_BOOTSTRAP_PHASE
+              ? currentPhaseRef.current
+              : null,
         target: resumedFromCrash?.targetTurn ?? (activeTurn > 0 ? activeTurn : null),
         retryable:
           resilienceStage >= 1 &&
