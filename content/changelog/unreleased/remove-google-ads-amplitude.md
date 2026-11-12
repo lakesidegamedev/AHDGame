@@ -4,9 +4,9 @@ title: "Removed Google Analytics, Google ads and Amplitude"
 summary: >-
   The site no longer loads any Google or Amplitude code. PostHog is the only
   analytics tool, and only after you accept the cookie banner.
-tags: [engineering]
+tags: [engineering, privacy]
 badges: [patch]
-areas: [frontend, legal]
+areas: [frontend]
 ---
 
 ## What changed
