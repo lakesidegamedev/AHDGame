@@ -6,10 +6,7 @@ export type ShadowEventKind = "password" | "apple" | "google" | "discord" | "wri
 export type ShadowCentralResult = PasswordCheckOutcome | "n/a";
 
 export type ShadowEventReason =
-  | "long_password"
-  | "restore"
-  | "restore_unavailable"
-  | "unknown_heal";
+  "long_password" | "restore" | "restore_unavailable" | "unknown_heal";
 
 export interface ShadowEvent {
   userId: string;
