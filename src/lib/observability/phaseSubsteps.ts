@@ -20,6 +20,8 @@ import {
   roundTripCountsAvailable,
 } from "@/lib/observability/mongoRoundTrips";
 
+import { maybeInjectTurnFault } from "@/lib/turn/faultInjection";
+
 export type PhaseSubstep = { ms: number; roundTrips?: number; calls: number };
 export type PhaseSubsteps = Record<string, PhaseSubstep>;
 
@@ -43,6 +45,7 @@ export function substepMarker(now: () => number = () => performance.now()): Subs
   let lastRoundTrips = phaseRoundTrips(phase);
   return {
     mark(name: string) {
+      maybeInjectTurnFault(phase, name);
       const at = now();
       // Checked per mark: the monitor may observe its first command after the
       // marker was created, and counts before that are zero, not missing.

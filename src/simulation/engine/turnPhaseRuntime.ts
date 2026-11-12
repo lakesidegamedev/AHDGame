@@ -41,6 +41,7 @@ import {
   type ResumeResultOutcome,
 } from "./turnPhaseResumeResults";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import { describeTurnError, maybeInjectTurnFault } from "@/lib/turn/faultInjection";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
@@ -475,6 +476,7 @@ export function createTurnPhaseRuntime(input: {
         async () => {
           await setPhaseStatus(name, "running");
           beginPhaseProfiling(name);
+          maybeInjectTurnFault(name, null);
           Sentry.addBreadcrumb({
             category: "turn.phase",
             message: `Phase "${name}" started`,
@@ -629,10 +631,11 @@ export function createTurnPhaseRuntime(input: {
           reason: message,
         });
       }
+      const storedMessage = describeTurnError(err);
       const persistFailure = (substeps: TurnPhaseTelemetry["substeps"] | undefined) =>
         setPhaseStatus(name, "failed", {
           reason: err instanceof TurnMustStopError ? "mustStop" : "other",
-          message,
+          message: storedMessage,
           ...(substeps ? { substeps } : {}),
         }).catch((setErr) => console.warn(`[Turn] Failed to mark phase "${name}" failed`, setErr));
       const initialFailureWrite = persistFailure(
