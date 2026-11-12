@@ -6,6 +6,7 @@ const log = vi.hoisted(() => ({
   events: [] as Record<string, unknown>[],
   bridgeBodies: [] as Record<string, unknown>[],
   bridge: "ok" as "ok" | "error" | "timeout",
+  local: "ok" as "ok" | "lost" | "throw",
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -54,7 +55,8 @@ vi.mock("@/lib/mongodb", () => ({
             findOne: mocks.findOne,
             updateOne: async () => {
               log.order.push("local");
-              return { acknowledged: true, matchedCount: 1 };
+              if (log.local === "throw") throw new Error("write failed");
+              return { acknowledged: true, matchedCount: log.local === "lost" ? 0 : 1 };
             },
           },
   }),
@@ -82,6 +84,7 @@ beforeEach(async () => {
   log.events = [];
   log.bridgeBodies = [];
   log.bridge = "ok";
+  log.local = "ok";
   const { resetBridgeTokenCache } = await import("@/lib/auth/centralLogin/bridgeClient");
   resetBridgeTokenCache();
   vi.stubGlobal(
@@ -181,5 +184,100 @@ describe.each(routes)("%s write ordering", (_name, route, password) => {
     setEnv("shadow");
     await route(request());
     await vi.waitFor(() => expect(log.events[0]).toMatchObject({ central: "ok", match: true }));
+  });
+});
+
+describe.each(routes)("%s local failure and long passwords", (_name, route, password) => {
+  beforeEach(() => {
+    mocks.findOne.mockResolvedValue({
+      _id: id,
+      username: "synthetic-user",
+      email: "synthetic@example.invalid",
+      password,
+      authRevokedAt: cutoff,
+    });
+  });
+
+  it("central: restores the previous hash when the local write loses a race", async () => {
+    setEnv("central");
+    log.local = "lost";
+    expect((await route(request())).status).toBe(409);
+    expect(log.order).toEqual(
+      password
+        ? ["bridge:password-set", "local", "bridge:account-upsert"]
+        : ["bridge:password-set", "local"]
+    );
+    if (password) {
+      expect(log.bridgeBodies[1]).toMatchObject({
+        ahdUserId: id.toHexString(),
+        passwordHash: "synthetic-old",
+        email: "synthetic@example.invalid",
+      });
+      expect(log.bridgeBodies[1]).not.toHaveProperty("discordId");
+      expect(JSON.stringify(log.bridgeBodies[1])).not.toContain("synthetic-new-password");
+    }
+    await vi.waitFor(() =>
+      expect(
+        log.events.some((e) => e.reason === (password ? "restore" : "restore_unavailable"))
+      ).toBe(true)
+    );
+  });
+
+  it("central: restores when the local write throws, then surfaces the error", async () => {
+    setEnv("central");
+    log.local = "throw";
+    expect((await route(request())).status).toBe(500);
+    if (password)
+      expect(log.order).toEqual(["bridge:password-set", "local", "bridge:account-upsert"]);
+  });
+
+  it("shadow and off: a failed local write never calls the bridge to restore", async () => {
+    for (const mode of ["off", "shadow"]) {
+      log.order = [];
+      setEnv(mode);
+      log.local = "lost";
+      await route(request());
+      expect(log.order).toEqual(["local"]);
+    }
+  });
+
+  it.each(["shadow", "central"])("%s: refuses a password of 72 bytes or more", async (mode) => {
+    setEnv(mode);
+    const long = "x".repeat(72);
+    mocks.parseJsonBody.mockResolvedValue({
+      success: true,
+      data: { currentPassword: "c", newPassword: long, password: long, token: "t" },
+    });
+    const response = await route(request());
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("Use a password under 72 bytes");
+    expect(log.order).toEqual([]);
+    expect(mocks.consumePasswordReset).not.toHaveBeenCalled();
+  });
+
+  it("counts bytes, not characters, and accepts 71 bytes", async () => {
+    setEnv("central");
+    const multibyte = "é".repeat(36);
+    mocks.parseJsonBody.mockResolvedValue({
+      success: true,
+      data: { currentPassword: "c", newPassword: multibyte, password: multibyte, token: "t" },
+    });
+    expect((await route(request())).status).toBe(400);
+    const ok = "x".repeat(71);
+    mocks.parseJsonBody.mockResolvedValue({
+      success: true,
+      data: { currentPassword: "c", newPassword: ok, password: ok, token: "t" },
+    });
+    expect((await route(request())).status).toBe(200);
+  });
+
+  it("off: keeps today's rule and accepts a long password", async () => {
+    setEnv("off");
+    const long = "x".repeat(100);
+    mocks.parseJsonBody.mockResolvedValue({
+      success: true,
+      data: { currentPassword: "c", newPassword: long, password: long, token: "t" },
+    });
+    expect((await route(request())).status).toBe(200);
   });
 });

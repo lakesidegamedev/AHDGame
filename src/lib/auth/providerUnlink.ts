@@ -14,6 +14,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import {
   CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
   bridgeAccountFromUser,
+  centralRestoreAccount,
   centralWriteFirst,
   getCentralLoginMode,
   shadowMirrorWrite,
@@ -89,6 +90,11 @@ export async function unlinkProviderCredential(
     });
   }
 
+  const restoreUnlink = () =>
+    unlinkWrite
+      ? centralRestoreAccount(account, { overrides: { [providerField]: account[providerField] } })
+      : Promise.resolve();
+
   // Evict before the write so parallel requests re-read the pre-unlink record.
   // The key is canonical: the fresh account id, not the cached grant.
   const cacheKey = account._id.toHexString();
@@ -109,6 +115,7 @@ export async function unlinkProviderCredential(
       }
     );
   } catch {
+    await restoreUnlink();
     return errorResponse(503, "Unlink is temporarily unavailable. Please try again.", {
       headers: { "Cache-Control": "private, no-store" },
     });
@@ -120,11 +127,13 @@ export async function unlinkProviderCredential(
     invalidateCachedUser(cacheKey);
   }
   if (write.acknowledged !== true) {
+    await restoreUnlink();
     return errorResponse(503, "Unlink is temporarily unavailable. Please try again.", {
       headers: { "Cache-Control": "private, no-store" },
     });
   }
   if (write.matchedCount !== 1) {
+    await restoreUnlink();
     // A concurrent provider, password, ban, or revocation write won the
     // snapshot race. Never report success without a confirmed write.
     return errorResponse(

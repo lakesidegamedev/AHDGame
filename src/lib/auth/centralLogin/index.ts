@@ -15,7 +15,12 @@ import {
   type LocalPasswordResult,
   type PasswordCheckOutcome,
 } from "./rules";
-import { passwordShadowEvent, recordShadowEvent, type ShadowEventKind } from "./shadowEvents";
+import {
+  passwordShadowEvent,
+  recordShadowEvent,
+  type ShadowEventKind,
+  type ShadowEventReason,
+} from "./shadowEvents";
 
 export { decideCentralLogin } from "./rules";
 export type { CentralLoginMode, PasswordCheckOutcome } from "./rules";
@@ -29,6 +34,34 @@ export function getCentralLoginMode(): CentralLoginMode {
 
 export const CENTRAL_WRITE_UNAVAILABLE_MESSAGE =
   "Account services are busy right now. Please try again shortly.";
+
+/** bcrypt cannot hold a password of this many UTF-8 bytes or more, so the central copy cannot either. */
+export const CENTRAL_PASSWORD_MAX_BYTES = 72;
+
+export const CENTRAL_PASSWORD_TOO_LONG_MESSAGE = "Use a password under 72 bytes";
+
+export function isLongPasswordForCentral(password: string): boolean {
+  return Buffer.byteLength(password, "utf8") >= CENTRAL_PASSWORD_MAX_BYTES;
+}
+
+/** New passwords are refused when too long, but only while the central system is in play. */
+export function newPasswordTooLongForCentral(password: string): boolean {
+  return getCentralLoginMode() !== "off" && isLongPasswordForCentral(password);
+}
+
+/** Shadow and central modes: a login whose password cannot be checked centrally. */
+export function recordLongPasswordLogin(userId: string, local: LocalPasswordResult): void {
+  if (getCentralLoginMode() === "off") return;
+  void recordShadowEvent({
+    userId,
+    kind: "password",
+    local,
+    central: "n/a",
+    match: false,
+    reason: "long_password",
+    at: new Date(),
+  });
+}
 
 export type BridgeWriteOp =
   | { op: "password-set"; ahdUserId: string; password: string }
@@ -50,7 +83,10 @@ function runWrite(write: BridgeWriteOp): Promise<BridgeResult<null>> {
   }
 }
 
-async function runAndRecordWrite(write: BridgeWriteOp): Promise<boolean> {
+async function runAndRecordWrite(
+  write: BridgeWriteOp,
+  reason?: ShadowEventReason
+): Promise<boolean> {
   const result = await runWrite(write);
   await recordShadowEvent({
     userId: opUserId(write),
@@ -59,6 +95,7 @@ async function runAndRecordWrite(write: BridgeWriteOp): Promise<boolean> {
     local: "n/a",
     central: result.ok ? "ok" : result.kind,
     match: result.ok,
+    ...(reason ? { reason } : {}),
     at: new Date(),
   });
   return result.ok;
@@ -72,6 +109,41 @@ async function runAndRecordWrite(write: BridgeWriteOp): Promise<boolean> {
 export async function centralWriteFirst(write: BridgeWriteOp): Promise<boolean> {
   if (getCentralLoginMode() !== "central") return true;
   return runAndRecordWrite(write);
+}
+
+/**
+ * Central mode: the local write failed after the central write landed, so put
+ * the central account back to the previous local state. `password` also
+ * restores the previous hash; an account that had none cannot be restored.
+ * Best effort, recorded, never throws.
+ */
+export async function centralRestoreAccount(
+  previous: AccountSource & { password?: unknown },
+  options: { password?: boolean; overrides?: Partial<BridgeAccount> } = {}
+): Promise<void> {
+  if (getCentralLoginMode() !== "central") return;
+  const hash =
+    options.password && typeof previous.password === "string" && previous.password
+      ? previous.password
+      : undefined;
+  if (options.password && !hash) {
+    await recordShadowEvent({
+      userId: previous._id.toHexString(),
+      kind: "write",
+      op: "account-upsert",
+      local: "n/a",
+      central: "n/a",
+      match: false,
+      reason: "restore_unavailable",
+      at: new Date(),
+    });
+    return;
+  }
+  const account = bridgeAccountFromUser(previous, {
+    ...(hash ? { passwordHash: hash } : {}),
+    ...options.overrides,
+  });
+  await runAndRecordWrite({ op: "account-upsert", account }, "restore").catch(() => {});
 }
 
 /** Central mode: undo a central create whose local insert failed. Best effort. */
@@ -137,16 +209,13 @@ interface AccountSource {
   username?: unknown;
   email?: unknown;
   emailVerifiedAt?: unknown;
-  discordId?: unknown;
-  googleId?: unknown;
-  appleId?: unknown;
 }
 
-function idOrNull(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
-/** Account payload for `account-upsert`, built from a local user document. */
+/**
+ * Account payload for `account-upsert`. An absent field means unchanged
+ * centrally and an explicit null clears it, so provider ids are sent only when
+ * the caller names them in `overrides`.
+ */
 export function bridgeAccountFromUser(
   user: AccountSource,
   overrides: Partial<BridgeAccount> = {}
@@ -156,9 +225,6 @@ export function bridgeAccountFromUser(
     username: typeof user.username === "string" ? user.username : "",
     email: typeof user.email === "string" ? user.email : "",
     emailVerified: user.emailVerifiedAt != null,
-    discordId: idOrNull(user.discordId),
-    googleId: idOrNull(user.googleId),
-    appleId: idOrNull(user.appleId),
     ...overrides,
   };
 }

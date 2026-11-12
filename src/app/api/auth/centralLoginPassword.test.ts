@@ -246,3 +246,39 @@ describe("password login, central mode", () => {
     expect(state.bridgeCalls).toEqual([]);
   });
 });
+
+describe("password login, long passwords", () => {
+  const longPassword = "p".repeat(72);
+
+  beforeEach(() => {
+    state.user = { ...state.user, password: bcrypt.hashSync(longPassword.slice(0, 72), 4) };
+  });
+
+  it.each(["shadow", "central"])(
+    "%s: local decides, no bridge call, long_password event",
+    async (mode) => {
+      setMode(mode);
+      setBridge("wrong");
+      expect((await login(loginRequest(longPassword))).status).toBe(200);
+      expect((await login(loginRequest("q".repeat(72)))).status).toBe(401);
+      await vi.waitFor(() => expect(state.events).toHaveLength(2));
+      expect(state.bridgeCalls).toEqual([]);
+      expect(state.events[0]).toMatchObject({
+        kind: "password",
+        local: "ok",
+        central: "n/a",
+        match: false,
+        reason: "long_password",
+      });
+      expect(state.events[1]).toMatchObject({ local: "wrong", reason: "long_password" });
+      expect(state.events[0]).not.toHaveProperty("fallback");
+    }
+  );
+
+  it("off: no event and no bridge call", async () => {
+    setMode("off");
+    expect((await login(loginRequest(longPassword))).status).toBe(200);
+    expect(state.events).toEqual([]);
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+});

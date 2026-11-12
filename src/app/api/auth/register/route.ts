@@ -40,9 +40,11 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import {
   CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
   bridgeAccountFromUser,
   centralRollbackCreate,
   centralWriteFirst,
+  newPasswordTooLongForCentral,
   shadowMirrorWrite,
 } from "@/lib/auth/centralLogin";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -104,6 +106,9 @@ export async function POST(request: Request) {
       termsAccepted,
       turnstileToken,
     } = parsed.data;
+    if (newPasswordTooLongForCentral(password)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
 
     // Read (not minted) here so every rejection/acceptance path below shares
     // one masked/hashed `net` snapshot — mirrors the login route.

@@ -14,8 +14,11 @@ import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumePasswordReset } from "@/lib/passwordReset";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
 import {
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
   CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralRestoreAccount,
   centralWriteFirst,
+  newPasswordTooLongForCentral,
   shadowMirrorWrite,
 } from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
@@ -34,6 +37,10 @@ export async function POST(request: Request) {
       return errorResponse(parsed.status, parsed.error);
     }
     const { token, password } = parsed.data;
+    // Checked before the token is consumed so the link stays usable.
+    if (newPasswordTooLongForCentral(password)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
 
     const reset = await consumePasswordReset(token);
     if (!reset) {
@@ -95,22 +102,29 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 12);
     const changedAt = new Date();
     // Update password in database and invalidate all existing sessions
-    const updated = await usersCollection(db).updateOne(
-      {
-        _id: reset.userId,
-        password: user.password ?? null,
-        ...authRevocationSnapshotFilter(user.authRevokedAt),
-        ...authMigrationFenceAbsentFilter(),
-      },
-      {
-        $set: {
-          password: hashedPassword,
+    let updated;
+    try {
+      updated = await usersCollection(db).updateOne(
+        {
+          _id: reset.userId,
+          password: user.password ?? null,
+          ...authRevocationSnapshotFilter(user.authRevokedAt),
+          ...authMigrationFenceAbsentFilter(),
         },
-        $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
-      }
-    );
+        {
+          $set: {
+            password: hashedPassword,
+          },
+          $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
+        }
+      );
+    } catch (error) {
+      await centralRestoreAccount(user, { password: true });
+      throw error;
+    }
 
     if (updated.matchedCount !== 1) {
+      await centralRestoreAccount(user, { password: true });
       return errorResponse(
         409,
         "Your account changed during this request. Please sign in and try again.",

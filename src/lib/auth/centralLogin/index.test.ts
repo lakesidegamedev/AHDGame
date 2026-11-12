@@ -130,18 +130,19 @@ describe("write helpers", () => {
 });
 
 describe("bridgeAccountFromUser", () => {
-  it("carries provider ids and clears them with null overrides", () => {
-    const account = bridgeAccountFromUser(
-      { _id: uid, username: "a", email: "a@example.invalid", discordId: "d1", appleId: "" },
-      { discordId: null }
-    );
-    expect(account).toMatchObject({
+  it("sends no provider ids unless named, and clears one with a null override", () => {
+    const user = { _id: uid, username: "a", email: "a@example.invalid" };
+    const plain = bridgeAccountFromUser(user);
+    expect(plain).toEqual({
       ahdUserId: uid.toHexString(),
-      discordId: null,
-      googleId: null,
-      appleId: null,
+      username: "a",
+      email: "a@example.invalid",
       emailVerified: false,
     });
+    expect(plain).not.toHaveProperty("discordId");
+    expect(plain).not.toHaveProperty("googleId");
+    expect(plain).not.toHaveProperty("appleId");
+    expect(bridgeAccountFromUser(user, { discordId: null })).toMatchObject({ discordId: null });
   });
 });
 
@@ -154,16 +155,18 @@ describe("summarizeShadowEvents", () => {
       { _id: { match: false, central: "error", fallback: true }, count: 3 },
       { _id: { match: false, central: "timeout", fallback: false }, count: 4 },
       { _id: { match: false, central: "n/a", fallback: false }, count: 7 },
+      { _id: { match: false, central: "n/a", fallback: false, reason: "long_password" }, count: 6 },
     ];
     const now = new Date("2026-01-02T00:00:00Z");
     const summary = await summarizeShadowEvents(3600_000, now);
     expect(summary).toMatchObject({
-      total: 22,
+      total: 28,
       match: 5,
       mismatch: 3,
       error: 3,
       timeout: 4,
       fallback: 3,
+      longPassword: 6,
     });
     expect(summary.windowStart).toEqual(new Date("2026-01-01T23:00:00Z"));
     expect(JSON.stringify(state.pipeline)).toContain("$match");

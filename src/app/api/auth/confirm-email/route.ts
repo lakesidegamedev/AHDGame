@@ -16,6 +16,7 @@ import { sendEmail } from "@/lib/email";
 import {
   CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
   bridgeAccountFromUser,
+  centralRestoreAccount,
   centralWriteFirst,
   getCentralLoginMode,
   shadowMirrorWrite,
@@ -95,10 +96,7 @@ export async function POST(request: Request) {
       matched = updated.matchedCount;
     } catch (error) {
       if (accountBefore) {
-        await centralWriteFirst({
-          op: "account-upsert",
-          account: bridgeAccountFromUser(accountBefore),
-        });
+        await centralRestoreAccount(accountBefore);
       }
       if (isDuplicateKey(error)) {
         return errorResponse(409, "That email is already used by another account.", NO_STORE);
@@ -108,10 +106,7 @@ export async function POST(request: Request) {
 
     if (matched !== 1) {
       if (accountBefore) {
-        await centralWriteFirst({
-          op: "account-upsert",
-          account: bridgeAccountFromUser(accountBefore),
-        });
+        await centralRestoreAccount(accountBefore);
       }
       recordAudit({
         source: "api",

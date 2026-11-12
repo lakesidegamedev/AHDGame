@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { Filter, ObjectId, WithId } from "mongodb";
+import { ObjectId, type Filter, type WithId } from "mongodb";
 import { randomBytes, randomUUID } from "crypto";
 import { SignJWT } from "jose";
 import { captureIntakeEvent } from "@/lib/analytics/intakeEvents";
@@ -30,7 +30,14 @@ import { lakesideAccountFields } from "@/lib/auth/lakesideAccount";
 import { loginDestination, takeOAuthReturnUrlCookie } from "@/lib/auth/lakesideLoginReturn";
 import { resolveReauthIssuedAt } from "@/lib/auth/sessionIssue";
 import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/auth/sourceFence";
-import { shadowRecordProviderLogin } from "@/lib/auth/centralLogin";
+import {
+  bridgeAccountFromUser,
+  centralRollbackCreate,
+  centralWriteFirst,
+  shadowMirrorWrite,
+  shadowRecordProviderLogin,
+  type BridgeWriteOp,
+} from "@/lib/auth/centralLogin";
 import type { OAuthCookieStore, OAuthDb, OAuthLoginAdapter } from "./types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -290,42 +297,61 @@ async function registerNewUser(
   const newUserObservedAt = new Date();
 
   const acquisition = parseAcquisition(cookieStore.get(ACQUISITION_COOKIE)?.value);
-  const result = await usersCollectionHandle.insertOne({
-    ...(acquisition ? { acquisition } : {}),
-    email: account.email,
-    username,
-    displayName: account.displayName(username),
-    password: "", // No password for provider-only accounts: the login route rejects empty-password accounts
-    role: "player",
-    isAdmin: false,
-    hasCompletedSetup: false,
-    ...account.fields(newUserObservedAt),
-    // Normalized so the IP-collision check matches consistently across
-    // header variants (see registrationGate.ts).
-    registrationIp: normalizeIp(clientIp) ?? clientIp,
-    lastKnownIp: clientIp,
-    lastKnownIpAt: newUserObservedAt,
-    // Persist the fingerprint carried via the OAuth cookie so the registration
-    // gate can match a later alt from the same device immediately (not only after
-    // the post-auth record-fingerprint backfill).
-    registrationFingerprint: oauthFingerprint || null,
-    lastFingerprint: oauthFingerprint || null,
-    ...(oauthFingerprint
-      ? { registrationFingerprintAt: newUserObservedAt, lastFingerprintAt: newUserObservedAt }
-      : {}),
-    fingerprintHistory: oauthFingerprint ? [oauthFingerprint] : [],
-    ...(isEmptyCfFingerprint(cf) ? {} : { registrationCf: cf, lastCf: cf }),
-    trackingId,
-    trackingIdAt: newUserObservedAt,
-    deviceKey: oauthDeviceKey || null,
-    ...(oauthDeviceKey ? { deviceKeyAt: newUserObservedAt } : {}),
-    lastDevice: device,
-    ...(referredByObjectId ? { referredBy: referredByObjectId } : {}),
-    referralCount: 0,
-    ...lakesideAccountFields(`ahd-${adapter.provider}`),
-    createdAt: newUserObservedAt,
-    updatedAt: newUserObservedAt,
-  } as unknown as User);
+  const newUserId = new ObjectId();
+  // Central mode creates the central account first; refuse if it is unreachable.
+  const createWrite: BridgeWriteOp = {
+    op: "account-upsert",
+    account: bridgeAccountFromUser(
+      { _id: newUserId, username, email: account.email },
+      { emailVerified: false, [adapter.idField]: adapter.externalId }
+    ),
+  };
+  if (!(await centralWriteFirst(createWrite))) {
+    return adapter.resultRedirect("error", "/login", "exchange_failed");
+  }
+  const result = await usersCollectionHandle
+    .insertOne({
+      _id: newUserId,
+      ...(acquisition ? { acquisition } : {}),
+      email: account.email,
+      username,
+      displayName: account.displayName(username),
+      password: "", // No password for provider-only accounts: the login route rejects empty-password accounts
+      role: "player",
+      isAdmin: false,
+      hasCompletedSetup: false,
+      ...account.fields(newUserObservedAt),
+      // Normalized so the IP-collision check matches consistently across
+      // header variants (see registrationGate.ts).
+      registrationIp: normalizeIp(clientIp) ?? clientIp,
+      lastKnownIp: clientIp,
+      lastKnownIpAt: newUserObservedAt,
+      // Persist the fingerprint carried via the OAuth cookie so the registration
+      // gate can match a later alt from the same device immediately (not only after
+      // the post-auth record-fingerprint backfill).
+      registrationFingerprint: oauthFingerprint || null,
+      lastFingerprint: oauthFingerprint || null,
+      ...(oauthFingerprint
+        ? { registrationFingerprintAt: newUserObservedAt, lastFingerprintAt: newUserObservedAt }
+        : {}),
+      fingerprintHistory: oauthFingerprint ? [oauthFingerprint] : [],
+      ...(isEmptyCfFingerprint(cf) ? {} : { registrationCf: cf, lastCf: cf }),
+      trackingId,
+      trackingIdAt: newUserObservedAt,
+      deviceKey: oauthDeviceKey || null,
+      ...(oauthDeviceKey ? { deviceKeyAt: newUserObservedAt } : {}),
+      lastDevice: device,
+      ...(referredByObjectId ? { referredBy: referredByObjectId } : {}),
+      referralCount: 0,
+      ...lakesideAccountFields(`ahd-${adapter.provider}`),
+      createdAt: newUserObservedAt,
+      updatedAt: newUserObservedAt,
+    } as unknown as User)
+    .catch(async (error: unknown) => {
+      await centralRollbackCreate(newUserId.toHexString());
+      throw error;
+    });
+  shadowMirrorWrite(createWrite);
 
   await createAdminLog({
     category: "account",

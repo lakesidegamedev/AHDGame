@@ -33,7 +33,9 @@ import {
   centralCheckPassword,
   decideCentralLogin,
   getCentralLoginMode,
+  isLongPasswordForCentral,
   recordLoginFallback,
+  recordLongPasswordLogin,
   shadowCheckPassword,
 } from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
@@ -171,7 +173,7 @@ export async function POST(request: Request) {
     const centralMode = getCentralLoginMode();
     const userKey = user._id.toString();
     let isValidPassword: boolean;
-    if (centralMode === "central" && user.password) {
+    if (centralMode === "central" && user.password && !isLongPasswordForCentral(password)) {
       const central = await centralCheckPassword(userKey, password);
       const decision = decideCentralLogin(central);
       if (decision.action === "fallback-local") {
@@ -182,8 +184,11 @@ export async function POST(request: Request) {
       }
     } else {
       isValidPassword = Boolean(user.password && (await bcrypt.compare(password, user.password)));
-      if (centralMode === "shadow" && user.password) {
-        shadowCheckPassword(userKey, password, isValidPassword ? "ok" : "wrong");
+      if (centralMode !== "off" && user.password) {
+        const local = isValidPassword ? "ok" : "wrong";
+        // Too long to hold centrally: the local copy decides and no bridge call is made.
+        if (isLongPasswordForCentral(password)) recordLongPasswordLogin(userKey, local);
+        else shadowCheckPassword(userKey, password, local);
       }
     }
 
