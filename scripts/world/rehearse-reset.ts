@@ -10,10 +10,11 @@
  * rules in `resetRehearsal/rules.ts` carry the checks it cannot make.
  * Exit code 0 only when every check passes.
  */
-import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import type { Db } from "mongodb";
 import { getValidatedEnv } from "@/lib/config/validatedEnv";
+import { settingsFingerprint } from "@/lib/admin/resetRehearsal/gate";
+import { presetDefaultsToFoundingPhase } from "@/lib/seeds/presetSelector";
 import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
@@ -37,6 +38,7 @@ import {
 import { connectDb } from "../utils/db";
 import { closeResetDb } from "./closeResetDb";
 import { resolveResetTarget } from "./resetTarget";
+import { currentHead, currentTreeHash } from "./rehearsalRecordFile";
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(name);
@@ -297,12 +299,18 @@ async function runOneTurn(db: Db): Promise<RehearsalFailure[]> {
   }
 }
 
-function gitHead(): string {
-  try {
-    return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  } catch {
-    return "unknown";
-  }
+function foundingPhaseFor(): boolean {
+  const preset = value("--preset") ?? "";
+  return presetDefaultsToFoundingPhase(preset, flag("--no-starting-parties") ? "none" : "default");
+}
+
+function recordFingerprint(): string {
+  return settingsFingerprint({
+    preset: value("--preset") ?? "",
+    mode: "historical",
+    startingParties: flag("--no-starting-parties") ? "none" : "default",
+    foundingPhase: foundingPhaseFor(),
+  });
 }
 
 main()
@@ -329,8 +337,13 @@ main()
       value("--record") ?? "rehearsal-record.json",
       JSON.stringify(
         {
-          head: gitHead(),
+          head: currentHead(),
+          treeHash: currentTreeHash(),
           preset: value("--preset") ?? null,
+          mode: "historical",
+          startingParties: flag("--no-starting-parties") ? "none" : "default",
+          foundingPhase: foundingPhaseFor(),
+          settingsFingerprint: recordFingerprint(),
           flags: args.filter(
             (a) => a.startsWith("--") && !a.startsWith("--expect-db") && !a.startsWith("--record")
           ),
