@@ -9,6 +9,8 @@ export type AdminLogAction =
   | "freight_settlement_activated"
   | "freight_settlement_shadowed"
   | "sandbox_access_granted"
+  | "vpn_whitelist_granted"
+  | "vpn_whitelist_revoked"
   | "sandbox_access_revoked"
   | "sandbox_tester_access_enabled"
   | "sandbox_tester_access_disabled"

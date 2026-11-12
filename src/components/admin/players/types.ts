@@ -10,6 +10,7 @@ export interface UserData {
   /** Optional while older admin bundles or test fixtures are in circulation. */
   singleplayerEntitled?: boolean;
   sandboxAccessGranted?: boolean;
+  vpnWhitelisted?: boolean;
   characterId: string | null;
   characterName: string | null;
   party: string | null;
