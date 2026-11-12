@@ -32,13 +32,31 @@ interface HeaderDoc extends CorporationTurnJournal {
   kind: "header";
 }
 
-interface ChunkDoc {
+interface ChunkDoc extends Document {
   _id: string;
   kind: "chunk";
   turn: number;
   step: CorporationTurnStep;
   index: number;
   payload: string;
+}
+
+/** Journal rows are keyed by string ids, unlike the default ObjectId document. */
+interface JournalRow extends Document {
+  _id: string;
+}
+
+function rows(db: Db) {
+  return corporationTurnJournalCollection<JournalRow>(db);
+}
+
+async function markChunkApplied(
+  journal: ReturnType<typeof rows>,
+  key: string,
+  step: CorporationTurnStep,
+  index: number
+): Promise<void> {
+  await journal.updateOne({ _id: key }, { $addToSet: { [`steps.${step}.applied`]: index } });
 }
 
 export function journalKey(ctx: Pick<JournalContext, "turn" | "worldEpoch">): string {
@@ -49,7 +67,7 @@ const chunkId = (key: string, step: CorporationTurnStep, index: number) =>
   `${key}:${step}:${index}`;
 
 export async function readJournal(ctx: JournalContext): Promise<CorporationTurnJournal | null> {
-  const header = await corporationTurnJournalCollection<HeaderDoc>(ctx.db).findOne({
+  const header = await corporationTurnJournalCollection<HeaderDoc & JournalRow>(ctx.db).findOne({
     _id: journalKey(ctx),
   });
   return header ? { turn: header.turn, steps: header.steps ?? {} } : null;
@@ -62,35 +80,41 @@ export type JournaledApplyResult = "direct" | "planned" | "replayed" | "unreplay
  * `stamp` adds the per-turn guard to every updateOne; pass false for ops that
  * already carry their own per-turn stamp.
  */
-export async function applyJournaledOps(
+export async function applyJournaledOps<Op extends object>(
   ctx: JournalContext,
   step: CorporationTurnStep,
-  ops: readonly Document[],
-  apply: (chunk: Document[]) => Promise<void>,
+  ops: readonly Op[],
+  apply: (chunk: Op[]) => Promise<void>,
   options: { stamp: boolean } = { stamp: true }
 ): Promise<JournaledApplyResult> {
   if (ctx.stage < 2) {
     if (ops.length > 0) await apply([...ops]);
     return "direct";
   }
-  const journal = corporationTurnJournalCollection<Document>(ctx.db);
+  const journal = rows(ctx.db);
   const key = journalKey(ctx);
   const existing = await readJournal(ctx);
   const stored = existing?.turn === ctx.turn ? existing.steps[step] : undefined;
   if (stored) {
     if (stored.replayable === false) return "unreplayable";
-    for (const index of remainingChunks(existing!, step)) {
-      const doc = await journal.findOne({ _id: chunkId(key, step, index) });
-      if (!doc) throw new Error(`corporation turn plan chunk ${step}:${index} is missing`);
-      await apply(EJSON.parse(String(doc.payload), { relaxed: true }) as Document[]);
-      await journal.updateOne({ _id: key }, { $addToSet: { [`steps.${step}.applied`]: index } });
+    const pending = remainingChunks(existing!, step);
+    const stored_chunks = await journal
+      .find({ _id: { $in: pending.map((index) => chunkId(key, step, index)) } })
+      .toArray();
+    const payloadById = new Map(stored_chunks.map((doc) => [doc._id, String(doc.payload)]));
+    for (const index of pending) {
+      const payload = payloadById.get(chunkId(key, step, index));
+      if (payload === undefined)
+        throw new Error(`corporation turn plan chunk ${step}:${index} is missing`);
+      await apply(EJSON.parse(payload, { relaxed: true }) as Op[]);
+      await markChunkApplied(journal, key, step, index);
     }
     return "replayed";
   }
   if (ops.length === 0) return "direct";
 
   const stamped = options.stamp ? stampPlan(ops, step, ctx.turn) : { ops: [...ops], unstamped: 0 };
-  const encoded = stamped.ops.map((op) => EJSON.stringify(op as Document, { relaxed: false }));
+  const encoded = stamped.ops.map((op) => EJSON.stringify(op, { relaxed: false }));
   const indexed = stamped.ops.map((op, i) => ({ op, size: encoded[i]!.length, text: encoded[i]! }));
   const chunks = chunkBySize(indexed, (x) => x.size, MAX_OPS_PER_CHUNK, MAX_BYTES_PER_CHUNK);
 
@@ -111,7 +135,7 @@ export async function applyJournaledOps(
   }));
   // Chunk documents first, header entry last: a header entry proves every chunk exists.
   await journal.deleteMany({ turn: ctx.turn, step, kind: "chunk" });
-  if (docs.length > 0) await journal.insertMany(docs as unknown as Document[]);
+  if (docs.length > 0) await journal.insertMany(docs);
   await journal.updateOne(
     { _id: key },
     {
@@ -126,8 +150,8 @@ export async function applyJournaledOps(
   );
 
   for (const [index, chunk] of chunks.entries()) {
-    await apply(chunk.map((x) => x.op as Document));
-    await journal.updateOne({ _id: key }, { $addToSet: { [`steps.${step}.applied`]: index } });
+    await apply(chunk.map((x) => x.op));
+    await markChunkApplied(journal, key, step, index);
   }
   return "planned";
 }
@@ -135,7 +159,7 @@ export async function applyJournaledOps(
 /** Drop journals of turns no resume can still need. Cheap: the collection holds a few turns. */
 export async function pruneJournal(ctx: JournalContext): Promise<void> {
   if (ctx.stage < 2) return;
-  await corporationTurnJournalCollection<Document>(ctx.db).deleteMany({
+  await rows(ctx.db).deleteMany({
     turn: { $lt: ctx.turn - TURNS_KEPT },
   });
 }

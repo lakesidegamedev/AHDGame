@@ -3,7 +3,7 @@
  * Its guarded receipt and the resulting live treasury balance refresh the
  * cash and credit values used by this turn's share-price snapshot.
  */
-import { ObjectId, type AnyBulkWriteOperation, type Db, type Document } from "mongodb";
+import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { Bond, Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -111,13 +111,9 @@ export async function settleManufacturingDevelopmentCash(
         .bulkWrite(ops, { ordered: false })
         .then(() => undefined);
     if (args.journal)
-      await applyJournaledOps(
-        args.journal,
-        "developmentCash",
-        args.operations as unknown as Document[],
-        (chunk) => write(chunk as unknown as AnyBulkWriteOperation<Corporation>[]),
-        { stamp: false }
-      );
+      await applyJournaledOps(args.journal, "developmentCash", args.operations, write, {
+        stamp: false,
+      });
     else await write(args.operations);
   }
 

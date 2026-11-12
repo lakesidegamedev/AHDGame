@@ -126,7 +126,7 @@ export function stampPlan<T>(
     const id = String(op.updateOne.filter._id);
     const slot = slots.get(id) ?? 0;
     slots.set(id, slot + 1);
-    return stampOp(op, step, turn, slot) as unknown as T;
+    return stampOp(op, step, turn, slot);
   });
   return { ops: out, unstamped };
 }

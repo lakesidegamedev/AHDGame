@@ -19,6 +19,10 @@ function fakeDb(): Db {
   };
   const collection = {
     findOne: async (f: Document) => rows.get(f._id) ?? null,
+    find: (f: Document) => ({
+      toArray: async () =>
+        (f._id.$in as string[]).map((id) => rows.get(id)).filter((r): r is Document => !!r),
+    }),
     insertMany: async (docs: Document[]) => docs.forEach((d) => rows.set(d._id, d)),
     deleteMany: async (f: Document) => {
       for (const [id, row] of rows) if (matches(row, f)) rows.delete(id);
