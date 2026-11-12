@@ -100,6 +100,7 @@ const pages = only
             path: value,
             name: slug(value),
             group: "custom",
+            signedIn: cohort !== "public",
           }
       )
   : cohortPages.map(resolvePage).filter(Boolean);
