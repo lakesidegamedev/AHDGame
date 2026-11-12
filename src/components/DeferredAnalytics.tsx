@@ -11,8 +11,8 @@ import { useEffect, useState } from "react";
  * Its static import still put ~40 KB gzipped of analytics glue in the first load
  * of every page, where it competed with hydration for the main thread.
  *
- * PostHog and Amplitude themselves are already loaded on demand behind consent;
- * this only moves the wrapper. Nothing is lost by waiting: the tracker reads the
+ * PostHog itself is already loaded on demand behind consent; this only moves
+ * the wrapper. Nothing is lost by waiting: the tracker reads the
  * current route and account on mount, and events raised before it mounts are
  * buffered by the capture helpers (or dropped by design when consent is absent).
  */

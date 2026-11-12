@@ -6,9 +6,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("sends a recovered lock event to both analytics destinations", async () => {
+it("sends a recovered lock event to PostHog", async () => {
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "phc_test");
-  vi.stubEnv("NEXT_PUBLIC_AMPLITUDE_API_KEY", "amp_test");
   const fetchMock = vi.fn().mockResolvedValue({ ok: true });
   vi.stubGlobal("fetch", fetchMock);
 
@@ -18,10 +17,9 @@ it("sends a recovered lock event to both analytics destinations", async () => {
     { turn: 42 }
   );
 
-  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(fetchMock.mock.calls[0][0]).toBe("https://us.i.posthog.com/i/v0/e/");
-  const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body));
-  expect(bodies[0]).toMatchObject({
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
     event: "turn_lock_stuck",
     properties: {
       lock_age_ms: 1200000,
@@ -30,29 +28,15 @@ it("sends a recovered lock event to both analytics destinations", async () => {
       turn_number: 42,
     },
   });
-  expect(bodies[1]).toMatchObject({
-    events: [
-      {
-        event_type: "turn_lock_stuck",
-        event_properties: { phase: "economy", iteration_id: "unknown", turn_number: 42 },
-      },
-    ],
-  });
 });
 
-it("reports a rejected destination without suppressing the other", async () => {
+it("reports a rejected event", async () => {
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "phc_test");
-  vi.stubEnv("NEXT_PUBLIC_AMPLITUDE_API_KEY", "amp_test");
-  const fetchMock = vi
-    .fn()
-    .mockResolvedValueOnce({ ok: false, status: 400 })
-    .mockResolvedValueOnce({ ok: true, status: 200 });
-  vi.stubGlobal("fetch", fetchMock);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }));
   const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
   await captureServerProductEvent("turn_lock_stuck", { lock_age_ms: 1200000 });
 
-  expect(fetchMock).toHaveBeenCalledTimes(2);
   expect(warning).toHaveBeenCalledWith(
     expect.stringContaining("PostHog rejected turn_lock_stuck: 400")
   );

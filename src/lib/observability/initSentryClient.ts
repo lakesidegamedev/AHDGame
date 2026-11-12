@@ -94,14 +94,7 @@ export function initSentryClient(): typeof Sentry.captureRouterTransitionStart {
 
     // Drop anything whose top frame is an extension URL or a known third-party ad
     // host — these stacks contain no frames in our bundles.
-    denyUrls: [
-      /^chrome-extension:\/\//,
-      /^moz-extension:\/\//,
-      /^safari-(web-)?extension:\/\//,
-      /googlesyndication\.com/,
-      /googletagmanager\.com/,
-      /\/pagead\//,
-    ],
+    denyUrls: [/^chrome-extension:\/\//, /^moz-extension:\/\//, /^safari-(web-)?extension:\/\//],
 
     // Filter out errors from browser extensions and third-party scripts
     beforeSend(event: Sentry.ErrorEvent, hint) {

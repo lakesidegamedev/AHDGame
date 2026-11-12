@@ -88,8 +88,8 @@ noise on a loaded host is ±10 performance points.
 
 ### What the audit found
 
-- Google tags (gtag + Ads) were the largest single blocking source on every
-  page: 600–750ms of long tasks, competing with hydration.
+- Third-party advertising and analytics tags were the largest single blocking
+  source on every page: 600–750ms of long tasks, competing with hydration.
 - The cookie-consent banner mounted only after the client store read
   `localStorage`. On anonymous loads it painted ~4s after FCP and became the
   Largest Contentful Paint element (measured on `/world` in production).
