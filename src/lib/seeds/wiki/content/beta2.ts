@@ -1,6 +1,6 @@
-export const beta2Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  **Beta 2** *(concluded)*  ·  [[Iteration 1]] *(concluded)*
+export const beta2Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  **Beta 2** *(concluded)*  ·  [[Iteration 1]] *(concluded)*  ·  [[Iteration 2]] *(concluded)*
 
-*Alpha 1 ran before this wiki existed and was not documented; [[Beta 1]] and Beta 2 are preserved below as they were written. [[Iteration 1]] has also concluded; the live world is now Iteration 2.*
+*Alpha 1 ran before this wiki existed and was not documented; [[Beta 1]] and Beta 2 are preserved below as they were written. [[Iteration 1]] and [[Iteration 2]] have also concluded; the live world now begins in 2027.*
 
 ---
 
