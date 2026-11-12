@@ -96,10 +96,8 @@ describe("S6 — every roster consumer agrees with tierFor", () => {
     // would leave this free to drift in exactly the way S6 exists to prevent.
     for (const preset of SHIPPING_PRESETS) {
       for (const nation of ERA_CONFIGS[eraOf(preset)].nations) {
-        // The landing roster lists a background country the way it lists an
-        // NPP-run one: neither is joinable.
         const tier = tierFor(preset, nation.id as CountryId);
-        expect(nation.tier, `${preset}/${nation.id}`).toBe(tier === "background" ? "npp" : tier);
+        expect(nation.tier, `${preset}/${nation.id}`).toBe(tier);
       }
     }
   });

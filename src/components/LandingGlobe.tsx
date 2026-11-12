@@ -433,7 +433,7 @@ export function LandingGlobe({
   });
   // The loader keys on the roster's contents, so a fresh array of the same ids
   // does not refetch the world.
-  const dissolvedKey = broadcast?.dissolvedStateFeatureIds.join(",") ?? "";
+  const dissolvedKey = broadcast?.dissolvedStateFeatureIds?.join(",") ?? "";
 
   const markInteraction = useCallback((at = performance.now()) => {
     lastInteractionRef.current = at;
