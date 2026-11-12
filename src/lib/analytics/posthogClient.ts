@@ -1,5 +1,6 @@
 "use client";
 
+import { postHogConfigFor, resolvePostHogMode, type PostHogMode } from "./posthogMode";
 import { getAnalyticsAccount, isAnalyticsGenerationCurrent } from "./accountContext";
 import { getStoredConsent } from "@/components/CookieConsent";
 import { ACCOUNT_CREATED_KEY, FIRST_MEANINGFUL_ACTION_KEY, FIRST_TURN_KEY } from "./storageKeys";
@@ -12,91 +13,96 @@ let identifiedAccountId: string | null = null;
  * PostHog transport layer.
  *
  * This module knows about PostHog and nothing else. Product events belong in
- * `captureProductEvent` from `./capture`, which fans out to every destination.
+ * `captureProductEvent` from `./capture`.
  * The funnel helpers and their storage anchors also live in `./capture`; this
  * module only clears those anchors when consent is withdrawn.
  */
 
-/** PostHog never loads until the player has opted in on the hosted site. */
+const IDLE_TIMEOUT_MS = 3_000;
+let activeMode: PostHogMode | null = null;
+
+/** Never initialise during hydration or first paint. */
+function whenIdle(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      window.requestIdleCallback(() => resolve(), { timeout: IDLE_TIMEOUT_MS });
+    } else {
+      setTimeout(resolve, 1_500);
+    }
+  });
+}
+
+function attachSurveyDismissalMirror(posthog: PostHogClient): void {
+  // The hosted PostHog widget owns the close button. Mirror only its
+  // dismissal position through the shared wrapper, without survey answers.
+  posthog.on(
+    "eventCaptured",
+    (captured: { event?: string; properties?: Record<string, unknown> }) => {
+      if (captured.event !== "survey dismissed") return;
+      const questions = captured.properties?.$survey_questions;
+      const questionIndex = Array.isArray(questions)
+        ? questions.filter(
+            (question: { response?: unknown }) =>
+              question?.response !== undefined && question.response !== null
+          ).length
+        : 0;
+      const { generation } = getAnalyticsAccount();
+      void import("./capture").then(({ captureProductEvent }) => {
+        if (isAnalyticsGenerationCurrent(generation)) {
+          return captureProductEvent("survey_dismissed", { question_index: questionIndex });
+        }
+      });
+    }
+  );
+}
+
+function loadPostHog(key: string, mode: PostHogMode): Promise<PostHogClient | null> {
+  activeMode = mode;
+  clientPromise = whenIdle()
+    .then(() => import("posthog-js"))
+    .then(({ default: posthog }) => {
+      if (mode === "full" && getStoredConsent() !== "accepted") return null;
+      posthog.init(key, postHogConfigFor(mode));
+      if (mode === "anonymous") return posthog;
+      posthog.opt_in_capturing();
+      attachSurveyDismissalMirror(posthog);
+      return posthog;
+    })
+    .catch(() => null);
+  void clientPromise.then((client) => {
+    if (!client) {
+      clientPromise = null;
+      activeMode = null;
+    }
+  });
+  return clientPromise;
+}
+
+/**
+ * Starts anonymous page counting for a visitor who has not accepted analytics.
+ * Nothing is stored on the device. A visitor who accepts later in the visit gets
+ * full tracking on the next page load, because the mode is fixed at init.
+ */
+export function startAnonymousPageviews(): void {
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!key || clientPromise) return;
+  if (resolvePostHogMode(getStoredConsent()) !== "anonymous") return;
+  void loadPostHog(key, "anonymous");
+}
+
+/** Full product tracking loads only for a visitor who has accepted analytics. */
 export function getPostHogClient(): Promise<PostHogClient | null> {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key || getStoredConsent() !== "accepted") return Promise.resolve(null);
   if (clientPromise)
     return clientPromise.then((client) => {
-      if (client && getStoredConsent() === "accepted" && client.has_opted_out_capturing()) {
+      if (!client || activeMode !== "full") return null;
+      if (getStoredConsent() === "accepted" && client.has_opted_out_capturing()) {
         client.opt_in_capturing();
       }
       return client;
     });
-
-  clientPromise = import("posthog-js")
-    .then(({ default: posthog }) => {
-      if (getStoredConsent() !== "accepted") return null;
-      posthog.init(key, {
-        api_host: "https://us.i.posthog.com",
-        autocapture: false,
-        capture_exceptions: false,
-        capture_heatmaps: false,
-        capture_dead_clicks: false,
-        capture_pageview: false,
-        capture_pageleave: false,
-        // Session replay is ON (executive decision 2026-09-26, reversal of the
-        // removal-era default). Sampled, masked, and blocked on sensitive
-        // screens; see the privacy policy.
-        // Elements carrying data-replay-block are replaced with placeholders.
-        session_recording: {
-          sampleRate: 0.1,
-          maskAllInputs: true,
-          recordHeaders: false,
-          recordBody: false,
-          blockSelector: "[data-replay-block]",
-        },
-        disable_surveys: true,
-        // Navigation experiment assignment runs only after analytics consent.
-        advanced_disable_feature_flags: false,
-        opt_out_capturing_by_default: true,
-        persistence: "localStorage+cookie",
-        property_denylist: [
-          "$ip",
-          "ip",
-          "email",
-          "$current_url",
-          "$pathname",
-          "$referrer",
-          "$initial_current_url",
-          "$initial_pathname",
-          "$initial_referrer",
-        ],
-      });
-      posthog.opt_in_capturing();
-      // The hosted PostHog widget owns the close button. Mirror only its
-      // dismissal position through the shared wrapper, without survey answers.
-      posthog.on(
-        "eventCaptured",
-        (captured: { event?: string; properties?: Record<string, unknown> }) => {
-          if (captured.event !== "survey dismissed") return;
-          const questions = captured.properties?.$survey_questions;
-          const questionIndex = Array.isArray(questions)
-            ? questions.filter(
-                (question: { response?: unknown }) =>
-                  question?.response !== undefined && question.response !== null
-              ).length
-            : 0;
-          const { generation } = getAnalyticsAccount();
-          void import("./capture").then(({ captureProductEvent }) => {
-            if (isAnalyticsGenerationCurrent(generation)) {
-              return captureProductEvent("survey_dismissed", { question_index: questionIndex });
-            }
-          });
-        }
-      );
-      return posthog;
-    })
-    .catch(() => null);
-  void clientPromise.then((client) => {
-    if (!client) clientPromise = null;
-  });
-  return clientPromise;
+  return loadPostHog(key, "full");
 }
 
 /** Survey loading starts only after the SDK has the authenticated account ID. */
@@ -132,8 +138,7 @@ export function resetPostHogUser(client: PostHogClient): void {
 
 /**
  * PostHog-specific capture. Product events should go through
- * `captureProductEvent` in `./capture`, which fans out to every destination;
- * call this directly only for a PostHog-only concern.
+ * `captureProductEvent` in `./capture`; call this directly only for a PostHog-only concern.
  */
 export async function capturePostHogEvent(
   event: string,
@@ -169,7 +174,7 @@ export async function stopPostHogCapture(): Promise<void> {
     // Analytics storage is optional.
   }
   const client = await clientPromise;
-  if (!client || !isAnalyticsGenerationCurrent(generation)) return;
+  if (!client || activeMode !== "full" || !isAnalyticsGenerationCurrent(generation)) return;
   client.set_config({ disable_surveys: true, advanced_enable_surveys: false });
   client.opt_out_capturing();
   client.reset();
