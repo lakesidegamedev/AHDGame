@@ -50,3 +50,5 @@ areas: [engine]
 - Keeps budget healing from restoring superseded law catalogs or erasing
   regional services and cash. Regional budget views now show cash separately
   from annual surplus and label formula-based grant program estimates.
+- Scores metric summaries and democratic health against the active world year,
+  preserving historical preset calendars and the 2027 opening after reset.

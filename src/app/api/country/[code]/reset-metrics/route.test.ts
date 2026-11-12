@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { buildOpeningMetricSnapshots1991 } from "@/lib/resetMetrics/seedOpening1991";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import type { Db } from "mongodb";
+import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
+import { primaryMetrics } from "@/lib/resetMetrics/catalog";
+import { resetMetricConditionScore } from "@/lib/resetMetrics/conditionScore";
 
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn().mockResolvedValue({
@@ -20,6 +23,74 @@ vi.mock("@/lib/resetMetrics/readGovernanceStyle", () => ({
 }));
 
 describe("v2 metrics API", () => {
+  it.each(
+    [1953, 1979, 1991, 1999, 2007, 2019, 2023, 2027].flatMap((year) =>
+      ["national", "CA"].map((region) => ({ year, region }))
+    )
+  )("scores $region against the $year world calendar", async ({ year, region }) => {
+    const { getDb } = await import("@/lib/mongodb");
+    const { readResetMetricBoard } = await import("@/lib/resetMetrics/readBoard");
+    const { readResetMetricBoard: readActualBoard } = await vi.importActual<
+      typeof import("@/lib/resetMetrics/readBoard")
+    >("@/lib/resetMetrics/readBoard");
+    const { readNationalMetricRollup } = await import("@/lib/resetMetrics/readNationalRollup");
+    const { readResetGovernanceStyle } = await import("@/lib/resetMetrics/readGovernanceStyle");
+    const { GET } = await import("./route");
+    const db = createMockDb();
+    const board = buildOpeningMetricSnapshots1991("world", 1).find(
+      (b) => b._id === `US:${region}`
+    )!;
+    const observations = buildOpeningMetricSnapshots1991("world", 1).find(
+      (b) => b._id === "US:CA"
+    )!.observations;
+    observations["20"] = { ...observations["20"]!, value: 77.5 };
+    if (region !== "national") board.observations = observations;
+    db.collection("gameState").findOne.mockResolvedValue({
+      currentTurn: 1,
+      currentYear: year,
+      startingYear: year,
+      preset: `${year}-default`,
+      metricsSystemVersion: "v2",
+      resetWorldId: "world",
+      resetVersionSeeds: {
+        metrics: {
+          worldId: "world",
+          revision: RESET_V2_SEED_REVISION.metrics,
+          sourceTurn: 1,
+          completedAt: "2026-11-12T00:00:00.000Z",
+          verificationHash: "verified",
+        },
+      },
+    });
+    db.collection("resetMetricSnapshots").findOne.mockResolvedValue(board);
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+    vi.mocked(readResetMetricBoard).mockImplementation(readActualBoard);
+    vi.mocked(readNationalMetricRollup).mockResolvedValue({
+      ...observations,
+      ...board.observations,
+    });
+    const response = await GET(
+      new Request(
+        `http://localhost/api/country/US/reset-metrics${region === "national" ? "" : `?region=${region}`}`
+      ),
+      { params: Promise.resolve({ code: "US" }) }
+    );
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    const life = payload.metrics.find((m: { id: string }) => m.id === "20");
+    const expected = resetMetricConditionScore(
+      primaryMetrics.find((m) => m.id === "20")!,
+      77.5,
+      "US",
+      year
+    );
+    expect(life.conditionScore).toBeCloseTo(expected!);
+    if (year === 2027) expect(life.conditionScore).toBeCloseTo(43.206349);
+    expect(readResetGovernanceStyle).toHaveBeenLastCalledWith(
+      expect.objectContaining({ conditionScores: expect.objectContaining({ "20": expected }) })
+    );
+  });
+
   it("serves adopted units without applying an incompatible legacy income or housing score", async () => {
     const { getDb } = await import("@/lib/mongodb");
     const { readResetMetricBoard } = await import("@/lib/resetMetrics/readBoard");
@@ -33,7 +104,7 @@ describe("v2 metrics API", () => {
       definitionVersion: 2,
       unit: "% disposable income spent on housing",
     };
-    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board });
+    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board, year: 1991 });
     const response = await GET(
       new Request("http://localhost/api/country/us/reset-metrics?region=CA"),
       { params: Promise.resolve({ code: "us" }) }
@@ -52,7 +123,7 @@ describe("v2 metrics API", () => {
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     const board = buildOpeningMetricSnapshots1991("world", 1).find((b) => b._id === "US:CA")!;
     board.asOfTurn = 10;
-    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board });
+    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board, year: 1991 });
     const program = {
       _id: "law",
       country: "US",
@@ -114,7 +185,7 @@ describe("v2 metrics API", () => {
     const boards = buildOpeningMetricSnapshots1991("world-test", 1);
     const board = boards.find((row) => row._id === "US:national")!;
     const regional = boards.find((row) => row.countryId === "US" && row.scope === "regional")!;
-    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board });
+    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board, year: 1991 });
     vi.mocked(readNationalMetricRollup).mockResolvedValue({
       ...regional.observations,
       ...board.observations,
@@ -142,7 +213,7 @@ describe("v2 metrics API", () => {
     const board = buildOpeningMetricSnapshots1991("world-test", 1).find(
       (row) => row._id === "US:national"
     )!;
-    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board });
+    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board, year: 1991 });
     vi.mocked(readNationalMetricRollup).mockResolvedValue(null);
     const { GET } = await import("./route");
     const response = await GET(new Request("http://localhost/api/country/us/reset-metrics"), {
