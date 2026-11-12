@@ -39,6 +39,8 @@ import {
   recordLongPasswordLogin,
   shadowCheckPassword,
 } from "@/lib/auth/centralLogin";
+import { startLakesideHop } from "@/lib/auth/centralLogin/hop";
+import { loginDestination } from "@/lib/auth/lakesideLoginReturn";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { email, password, fingerprint, deviceKey, fingerprintComponents } = parsed.data;
+    const { email, password, fingerprint, deviceKey, fingerprintComponents, returnTo } =
+      parsed.data;
 
     // Built once and reused for every outcome below — masked/hashed IP,
     // pass-through fingerprint/deviceKey (already opaque client-side
@@ -407,8 +410,24 @@ export async function POST(request: Request) {
         .catch(() => {});
     }
 
+    // Central mode only: a successful sign-in also opens a Lakeside session.
+    const lakesideHop =
+      centralMode === "central"
+        ? await startLakesideHop({
+            userId: userKey,
+            destination: loginDestination(returnTo, {
+              role: user.role,
+              isAdmin: user.isAdmin === true,
+              hasCompletedSetup: user.hasCompletedSetup ?? true,
+            }),
+            cookieStore,
+            fallbackOrigin: new URL(request.url).origin,
+          })
+        : null;
+
     return NextResponse.json({
       message: "Login successful",
+      ...(lakesideHop ? { lakesideHop } : {}),
       user: {
         id: user._id.toString(),
         email: user.email,

@@ -1,5 +1,14 @@
 import { authConfig } from "@/lib/config/auth";
 import type { PasswordCheckOutcome } from "./rules";
+import {
+  breakerAdmit,
+  breakerOnAdmit,
+  breakerOnFailure,
+  breakerOnSuccess,
+  newBreakerState,
+  parseBreakerConfig,
+} from "./breaker";
+import { recordShadowEvent } from "./shadowEvents";
 
 /**
  * Client for the central account bridge. Calls authenticate with a cached
@@ -8,7 +17,9 @@ import type { PasswordCheckOutcome } from "./rules";
  */
 
 export type BridgeFailure = "error" | "timeout";
-export type BridgeResult<T> = { ok: true; data: T } | { ok: false; kind: BridgeFailure };
+/** `skipped` marks a call the circuit breaker refused without contacting the bridge. */
+export type BridgeResult<T> =
+  { ok: true; data: T } | { ok: false; kind: BridgeFailure; skipped?: true };
 
 export interface BridgeAccount {
   ahdUserId: string;
@@ -33,8 +44,16 @@ interface CachedToken {
 
 let cachedToken: CachedToken | null = null;
 
+const breaker = newBreakerState();
+
+export function resetBridgeBreaker(): void {
+  Object.assign(breaker, newBreakerState());
+}
+
+/** Clears the cached token and the breaker, so each test starts from a clean client. */
 export function resetBridgeTokenCache(): void {
   cachedToken = null;
+  resetBridgeBreaker();
 }
 
 export function bridgeTimeoutMs(): number {
@@ -115,8 +134,46 @@ async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
   }
 }
 
-/** One bridge POST. The timeout covers the token fetch and the call together. */
+/**
+ * One bridge POST behind the circuit breaker. After enough consecutive
+ * failures calls are skipped for a short window, then a single trial decides
+ * whether the breaker closes.
+ */
 async function post(
+  path: string,
+  payload: Record<string, unknown>
+): Promise<BridgeResult<unknown>> {
+  const decision = breakerAdmit(breaker, Date.now());
+  if (decision === "skip") {
+    void recordShadowEvent({
+      userId: typeof payload.ahdUserId === "string" ? payload.ahdUserId : "",
+      kind: "bridge",
+      local: "n/a",
+      central: "error",
+      match: false,
+      reason: "breaker_open",
+      at: new Date(),
+    });
+    return { ok: false, kind: "error", skipped: true };
+  }
+  breakerOnAdmit(breaker, decision);
+  const result = await rawPost(path, payload);
+  if (result.ok) breakerOnSuccess(breaker);
+  else {
+    breakerOnFailure(
+      breaker,
+      Date.now(),
+      parseBreakerConfig(
+        authConfig.accountBridgeBreakerFailures(),
+        authConfig.accountBridgeBreakerOpenMs()
+      )
+    );
+  }
+  return result;
+}
+
+/** One bridge POST. The timeout covers the token fetch and the call together. */
+async function rawPost(
   path: string,
   payload: Record<string, unknown>
 ): Promise<BridgeResult<unknown>> {
@@ -190,4 +247,14 @@ export async function bridgeAccountDelete(ahdUserId: string): Promise<BridgeResu
   const result = await post("account-delete", { ahdUserId });
   if (!result.ok) return result;
   return { ok: true, data: null };
+}
+
+/** A single-use code that lets the central login page sign this user in. */
+export async function bridgeLoginTicket(ahdUserId: string): Promise<BridgeResult<string>> {
+  const result = await post("login-ticket", { ahdUserId });
+  if (!result.ok) return result;
+  const ticket = (result.data as { ticket?: unknown } | null)?.ticket;
+  return typeof ticket === "string" && ticket.length > 0
+    ? { ok: true, data: ticket }
+    : { ok: false, kind: "error" };
 }

@@ -21,7 +21,10 @@ areas: [backend]
 - Central mode: when the local write fails after the central write landed (race or database error) on change, set and reset password, email confirmation, provider link and unlink, the central account is restored to its previous state and an event is recorded.
 - Account updates send only the fields they change, so provider ids are never cleared by accident.
 - `summarizeShadowEvents` returns match, mismatch, error, timeout, fallback and long-password counts over a window, for a later admin view. No UI added.
-- New collection `centralLoginShadowEvents` with indexes on `at` and on `match`. It is preserved across world resets.
+- Bridge circuit breaker: after 5 consecutive failures (`LAKESIDE_ACCOUNT_BRIDGE_BREAKER_FAILURES`) bridge calls are skipped for 30 s (`LAKESIDE_ACCOUNT_BRIDGE_BREAKER_OPEN_MS`) and report an error immediately, then one trial call decides whether it closes. Skipped calls are recorded with reason `breaker_open`.
+- Central mode only: after a successful sign-in (password, Apple, Google or Discord) AHD asks the bridge for a one-time ticket and sends the browser once through the central issuer so a Lakeside session exists too. The password login response gains an optional `lakesideHop` URL that the login page follows. The new `/api/auth/lakeside-hop/callback` route verifies the ID token and that it names the same account as the AHD session, but never signs anyone in; any failure just continues to the normal destination. Outcomes are recorded as `hop` events.
+- Admin read-only route `GET /api/admin/central-login/summary?window=1h|24h|7d` returns the shadow counts, including breaker skips and hop successes and failures.
+- New collections `lakesideHopFlows` (ten minute TTL, preserved across resets) and `centralLoginShadowEvents` (indexed on `at` and `match`, preserved across resets).
 
 ## Player-facing
 
