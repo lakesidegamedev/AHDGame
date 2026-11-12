@@ -353,9 +353,7 @@ async function processTurnImpl(
         : await gameConfigCollection(db).findOne({ _id: "default" });
       const simSandbox = localSingleplayer || turnConfig?.simSandbox === true;
       armTurnFault(
-        turnConfig?.simSandbox === true
-          ? parseTurnFaultSpec(workerConfig.turnFaultInject())
-          : null
+        turnConfig?.simSandbox === true ? parseTurnFaultSpec(workerConfig.turnFaultInject()) : null
       );
       const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
       if (residueRefusal) {
