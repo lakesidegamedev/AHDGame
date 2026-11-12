@@ -155,3 +155,17 @@ describe("reset and bootstrap CLI preflight", () => {
     expect(closeDb).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("getIteration", () => {
+  it("parses an explicit label and leaves it unset when absent", async () => {
+    const { getIteration } = await import("./resetAndBootstrapCli");
+    expect(getIteration(["--iteration=Iteration:5"])).toEqual({ type: "Iteration", number: 5 });
+    expect(getIteration(["--preset=2027-default"])).toBeUndefined();
+  });
+
+  it("rejects a malformed label", async () => {
+    const { getIteration } = await import("./resetAndBootstrapCli");
+    expect(() => getIteration(["--iteration=Gamma:1"])).toThrow("--iteration must look like");
+    expect(() => getIteration(["--iteration=Iteration:0"])).toThrow("--iteration must look like");
+  });
+});

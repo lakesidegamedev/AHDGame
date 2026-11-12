@@ -122,6 +122,7 @@ import { IE_NATIONAL_BUDGET_1979 } from "@/lib/countries/ie/data/nationalBudget1
 import { NG_NATIONAL_BUDGET_1979 } from "@/lib/countries/ng/data/nationalBudget1979";
 import { SUCCESSOR_NATIONAL_BUDGETS_1991 } from "./successorBudgets1991";
 import { MODERN_NATIONAL_BUDGETS_2019 } from "./modernBudgets2019";
+import { MODERN_NATIONAL_BUDGETS_2027 } from "./modernBudgets2027";
 import { legislationTypes } from "./legislationTypes";
 import { SEED_FISCAL_LEVERS } from "./seedFiscalLadders";
 import { OPENING_PROGRAM_SPENDING } from "./openingProgramSpending";
@@ -2186,6 +2187,7 @@ export const NATIONAL_BUDGET_SEED_CONFIGS_2027: NationalBudgetSeedConfig[] = [
   HU_NATIONAL_BUDGET_2027,
   BG_NATIONAL_BUDGET_2027,
   CA_NATIONAL_BUDGET_2027,
+  ...MODERN_NATIONAL_BUDGETS_2027,
 ];
 
 // Authored independently for FY2007 — not derived from 2019/2023/1991 configs.
@@ -3858,7 +3860,8 @@ export function generateCountryOwnedSeedData(
   const ruStates = states.filter(
     (state) => countryHasFeature("ruSeeds", state.countryId) && state.gdp > 0
   );
-  if (ruStates.length > 0 && preset !== "2019-default") {
+  // Modern Russia is a market economy with no Soviet state enterprise.
+  if (ruStates.length > 0 && preset !== "2019-default" && preset !== "2027-default") {
     // Preset-aware: the ₳→SUR rate is era-specific (1953 = 9 SUR/USD, the
     // Western GNP-estimate basis ruRegions1953 is calibrated on; the base
     // config carries the 1979 administered rate). Reading it era-blind divided
