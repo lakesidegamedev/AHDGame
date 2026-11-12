@@ -1,10 +1,6 @@
 "use client";
 
-/**
- * Shown only while the signed-in player's game actions are blocked because
- * they are connected through a VPN. Tells them the two ways out: turn the VPN
- * off, or ask staff for VPN access in a Discord ticket.
- */
+/** Explains why a VPN-gated player cannot take game actions and how to get access. */
 import { useEffect, useState } from "react";
 import { useSignedIn } from "@/contexts/AuthDataContext";
 import { COMMUNITY_DISCORD_URL } from "@/lib/communityLinks";

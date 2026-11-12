@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/mongodb";
+import { runtimeConfig } from "@/lib/config/runtime";
 import { vpnIpListsCollection, type VpnIpListDoc } from "@/lib/db/repositories/vpnIpLists";
 import {
   buildRangeSet,
@@ -68,21 +69,27 @@ export async function refreshVpnLists(): Promise<void> {
     ["vpn", VPN_LIST_SOURCE],
     ["privateRelay", PRIVATE_RELAY_LIST_SOURCE],
   ];
-  for (const [id, source] of lists) {
-    try {
-      const cidrs = await fetchList(source);
-      // An implausibly small download is treated as a failed fetch so a
-      // truncated response never replaces a good cached list.
-      if (cidrs.length < 100) continue;
-      await col.updateOne(
-        { _id: id },
-        { $set: { cidrs, fetchedAt: new Date(), source } },
-        { upsert: true }
-      );
-    } catch (err) {
-      console.warn(`[vpn] refresh of ${id} list failed`, err);
-    }
-  }
+  const fetched = await Promise.all(
+    lists.map(async ([id, source]) => {
+      // An implausibly small or failed download never replaces a good cached list.
+      const cidrs = await fetchList(source).catch(() => []);
+      return cidrs.length >= 100 ? { id, source, cidrs } : null;
+    })
+  );
+  const writes = fetched.flatMap((f) =>
+    f
+      ? [
+          {
+            updateOne: {
+              filter: { _id: f.id },
+              update: { $set: { cidrs: f.cidrs, fetchedAt: new Date(), source: f.source } },
+              upsert: true,
+            },
+          },
+        ]
+      : []
+  );
+  if (writes.length > 0) await col.bulkWrite(writes);
   loaded = null;
 }
 
@@ -98,15 +105,14 @@ async function loadFromDb(): Promise<void> {
       loadedAt: Date.now(),
     };
     const oldest = Math.min(vpnDoc?.fetchedAt?.getTime() ?? 0, relayDoc?.fetchedAt?.getTime() ?? 0);
-    const isTest = process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+    const isTest = runtimeConfig.nodeEnv() === "test";
     if (Date.now() - oldest > REFRESH_AFTER_MS && !refreshing && !isTest) {
       // Background refresh; the current request never waits on the network.
       refreshing = refreshVpnLists().finally(() => {
         refreshing = null;
       });
     }
-  } catch (err) {
-    console.warn("[vpn] loading lists failed; failing open", err);
+  } catch {
     loaded = { vpn: emptyRangeSet(), privateRelay: emptyRangeSet(), loadedAt: Date.now() };
   }
 }

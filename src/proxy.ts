@@ -143,8 +143,8 @@ async function handleApiWriteGate(request: NextRequest): Promise<NextResponse> {
         headers: { "Cache-Control": "private, no-store" },
       });
     }
-  } catch (err) {
-    console.warn("[proxy] VPN gate check failed; allowing write", err);
+  } catch {
+    // Fail open: a lookup failure must never block writes.
   }
   return apiPassthrough(request);
 }
