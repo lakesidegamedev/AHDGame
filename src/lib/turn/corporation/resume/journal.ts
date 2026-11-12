@@ -11,8 +11,13 @@ import { corporationTurnJournalCollection } from "@/lib/db/repositories/corporat
 import {
   chunkBySize,
   remainingChunks,
+  decodeOutput,
+  encodeOutput,
+  isStorableOutput,
   stampPlan,
+  stepAction,
   type CorporationTurnJournal,
+  type StartedPolicy,
   type CorporationTurnStep,
 } from "./rules";
 
@@ -70,7 +75,9 @@ export async function readJournal(ctx: JournalContext): Promise<CorporationTurnJ
   const header = await corporationTurnJournalCollection<HeaderDoc & JournalRow>(ctx.db).findOne({
     _id: journalKey(ctx),
   });
-  return header ? { turn: header.turn, steps: header.steps ?? {} } : null;
+  return header
+    ? { turn: header.turn, steps: header.steps ?? {}, phases: header.phases ?? {} }
+    : null;
 }
 
 export type JournaledApplyResult = "direct" | "planned" | "replayed" | "unreplayable";
@@ -162,4 +169,92 @@ export async function pruneJournal(ctx: JournalContext): Promise<void> {
   await rows(ctx.db).deleteMany({
     turn: { $lt: ctx.turn - TURNS_KEPT },
   });
+}
+
+export class CorporationTurnStepRefusedError extends Error {
+  constructor(readonly step: string) {
+    super(
+      `corporationTurn step ${step} was interrupted and is not proven safe to repeat; the turn stops for repair`
+    );
+    this.name = "CorporationTurnStepRefusedError";
+  }
+}
+
+const outputId = (key: string, name: string) => `${key}:out:${name}`;
+
+async function setPhase(ctx: JournalContext, name: string, status: "started" | "done") {
+  await corporationTurnJournalCollection<Document>(ctx.db).updateOne(
+    { _id: journalKey(ctx) },
+    {
+      $set: { [`phases.${name}`]: status },
+      $setOnInsert: { kind: "header", turn: ctx.turn, createdAt: new Date() },
+    },
+    { upsert: true }
+  );
+}
+
+/**
+ * Run a whole-call step once per turn. Below stage 2 this is just `fn()`. At stage 2
+ * the step is marked started, then done; a resume skips a done step and applies
+ * `onStarted` to one that was interrupted. Only use for steps whose result the
+ * caller does not need when skipped.
+ */
+export async function runJournaledStep(
+  ctx: JournalContext,
+  name: string,
+  onStarted: StartedPolicy,
+  fn: () => Promise<void>
+): Promise<void> {
+  if (ctx.stage < 2) return fn();
+  const existing = await readJournal(ctx);
+  const action = stepAction(existing?.phases?.[name], onStarted);
+  if (action === "skip") return;
+  if (action === "refuse") throw new CorporationTurnStepRefusedError(name);
+  if (action === "run") await setPhase(ctx, name, "started");
+  await fn();
+  await setPhase(ctx, name, "done");
+}
+
+/**
+ * Like runJournaledStep for a step whose result later steps read. The result is
+ * stored with the done marker and restored on resume. A result that cannot survive
+ * storage (Maps, class instances) is not stored, and a resume then refuses.
+ */
+export async function runJournaledStepWithOutput<T>(
+  ctx: JournalContext,
+  name: string,
+  onStarted: StartedPolicy,
+  fn: () => Promise<T>
+): Promise<T> {
+  if (ctx.stage < 2) return fn();
+  const journal = corporationTurnJournalCollection<Document>(ctx.db);
+  const key = journalKey(ctx);
+  const existing = await readJournal(ctx);
+  const action = stepAction(existing?.phases?.[name], onStarted);
+  if (action === "skip") {
+    const row = await journal.findOne({ _id: outputId(key, name) });
+    if (!row || typeof row.payload !== "string")
+      throw new CorporationTurnStepRefusedError(`${name} (output not stored)`);
+    return decodeOutput(EJSON.parse(row.payload, { relaxed: true })) as T;
+  }
+  if (action === "refuse") throw new CorporationTurnStepRefusedError(name);
+  if (action === "run") await setPhase(ctx, name, "started");
+  const result = await fn();
+  if (isStorableOutput(result)) {
+    await journal.updateOne(
+      { _id: outputId(key, name) },
+      {
+        $set: {
+          kind: "output",
+          turn: ctx.turn,
+          payload: EJSON.stringify(encodeOutput(result) as Document, { relaxed: false }),
+        },
+      },
+      { upsert: true }
+    );
+    await setPhase(ctx, name, "done");
+  }
+  // An unstorable result leaves the step `started`: a resume refuses (or reruns
+  // when the caller declared the step safe to repeat).
+  return result;
 }

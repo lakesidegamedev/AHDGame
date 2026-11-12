@@ -5,6 +5,9 @@ import {
   remainingChunks,
   resilienceStageOf,
   chunkBySize,
+  decodeOutput,
+  encodeOutput,
+  isStorableOutput,
   stampOp,
   stampPlan,
   stepStatus,
@@ -75,5 +78,20 @@ describe("corporation turn resume rules", () => {
   it("chunks by count and bytes", () => {
     expect(chunkBySize([1, 1, 1, 1, 1], () => 1, 2, 100)).toEqual([[1, 1], [1, 1], [1]]);
     expect(chunkBySize([5, 5, 5], (n) => n, 10, 10)).toEqual([[5, 5], [5]]);
+  });
+
+  it("round trips Maps and Sets and rejects class instances", () => {
+    const value = {
+      a: new Map([["x", new Map([["y", 2]])]]),
+      b: new Set([1, 2]),
+      c: [new Date(0)],
+    };
+    expect(isStorableOutput(value)).toBe(true);
+    expect(decodeOutput(JSON.parse(JSON.stringify(encodeOutput(value))))).toEqual({
+      ...value,
+      c: ["1970-01-01T00:00:00.000Z"],
+    });
+    expect(isStorableOutput({ f: () => 1 })).toBe(false);
+    expect(isStorableOutput(new (class X {})())).toBe(false);
   });
 });

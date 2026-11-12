@@ -22,6 +22,8 @@ export interface CorporationTurnJournal {
   steps: Partial<
     Record<CorporationTurnStep, { chunks: number; applied: number[]; replayable?: boolean }>
   >;
+  /** Whole-call steps: started before they run, done after. */
+  phases?: Record<string, StepRunStatus>;
 }
 
 export function resilienceStageOf(
@@ -152,6 +154,93 @@ export function chunkBySize<T>(
     bytes += size;
   }
   if (current.length > 0) out.push(current);
+  return out;
+}
+
+export type StepRunStatus = "started" | "done";
+
+/** What to do when a step is found `started` but not `done`: run it again, or stop the turn. */
+export type StartedPolicy = "rerun" | "refuse";
+
+export type StepAction = "run" | "skip" | "rerun" | "refuse";
+
+/**
+ * Decide how a journaled step proceeds. `done` steps are skipped (their output, if
+ * any, is restored by the shell). A `started` step reruns only when the step is
+ * proven safe to repeat; otherwise the turn stops rather than guess.
+ */
+export function stepAction(
+  status: StepRunStatus | undefined,
+  onStarted: StartedPolicy
+): StepAction {
+  if (status === undefined) return "run";
+  if (status === "done") return "skip";
+  return onStarted === "rerun" ? "rerun" : "refuse";
+}
+
+const MAP_TAG = "$$map";
+const SET_TAG = "$$set";
+
+function isBsonScalar(value: object): boolean {
+  const tag = (value as { _bsontype?: string })._bsontype;
+  return (
+    value instanceof Date ||
+    tag === "ObjectId" ||
+    tag === "Decimal128" ||
+    tag === "Long" ||
+    tag === "Int32" ||
+    tag === "Double"
+  );
+}
+
+/**
+ * True when a value can be stored as a step output: plain data, arrays, Maps and
+ * Sets of such data, dates and ObjectIds. Class instances and functions cannot.
+ */
+export function isStorableOutput(value: unknown, depth = 0): boolean {
+  if (depth > 40) return false;
+  if (value === null || value === undefined) return true;
+  const t = typeof value;
+  if (t === "string" || t === "boolean" || t === "number") return true;
+  if (t !== "object") return false;
+  if (isBsonScalar(value as object)) return true;
+  if (value instanceof Map)
+    return [...value].every(
+      ([k, v]) => isStorableOutput(k, depth + 1) && isStorableOutput(v, depth + 1)
+    );
+  if (value instanceof Set) return [...value].every((v) => isStorableOutput(v, depth + 1));
+  if (Array.isArray(value)) return value.every((v) => isStorableOutput(v, depth + 1));
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return false;
+  return Object.values(value as Record<string, unknown>).every((v) =>
+    isStorableOutput(v, depth + 1)
+  );
+}
+
+/** Turn Maps and Sets into tagged arrays so EJSON can store them. */
+export function encodeOutput(value: unknown): unknown {
+  if (value === undefined) return null;
+  if (value === null || typeof value !== "object" || isBsonScalar(value)) return value;
+  if (value instanceof Map)
+    return { [MAP_TAG]: [...value].map(([k, v]) => [encodeOutput(k), encodeOutput(v)]) };
+  if (value instanceof Set) return { [SET_TAG]: [...value].map(encodeOutput) };
+  if (Array.isArray(value)) return value.map(encodeOutput);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = encodeOutput(v);
+  return out;
+}
+
+export function decodeOutput(value: unknown): unknown {
+  if (value === null || typeof value !== "object" || isBsonScalar(value)) return value;
+  if (Array.isArray(value)) return value.map(decodeOutput);
+  const record = value as Record<string, unknown>;
+  if (MAP_TAG in record)
+    return new Map(
+      (record[MAP_TAG] as [unknown, unknown][]).map(([k, v]) => [decodeOutput(k), decodeOutput(v)])
+    );
+  if (SET_TAG in record) return new Set((record[SET_TAG] as unknown[]).map(decodeOutput));
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(record)) out[k] = decodeOutput(v);
   return out;
 }
 

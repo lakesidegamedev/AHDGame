@@ -19,7 +19,13 @@ import { groupForecastWriteOps } from "./groupSupplyTurn";
 import { deleteDivestedNppSectors } from "../npp/divestmentPersistence";
 import { persistLabourIndices, persistLabourDemand } from "./corporationTurnPhases";
 import { partitionedBulkWrite } from "./partitionedBulkWrite";
-import { applyJournaledOps, type JournalContext } from "./resume/journal";
+import {
+  applyJournaledOps,
+  runJournaledStep,
+  runJournaledStepWithOutput,
+  CorporationTurnStepRefusedError,
+  type JournalContext,
+} from "./resume/journal";
 import { resilienceStageOf } from "./resume/rules";
 import { applyOperatingCashThenDevelopmentCash } from "./manufacturingDevelopmentCashSettlement";
 import { mergeCorporationCashOps } from "./mergeCorporationCashOps";
@@ -181,6 +187,12 @@ export async function runCorporationTurnSideEffects({
       | "resolved_agreement";
   }[];
 }) {
+  const journal: JournalContext = {
+    db,
+    stage: resilienceStageOf(marketGovernorConfig),
+    turn: typeof turn === "number" ? turn : (gameState?.currentTurn ?? 0),
+    worldEpoch: gameState?.worldEpochId,
+  };
   await drainDeferredTurnWork();
   await runProducerMarketShadowPhase(db, {
     // Never measure a shadow beside the live funded market in the same turn.
@@ -214,21 +226,25 @@ export async function runCorporationTurnSideEffects({
     constructionFinanceRequests: nppConstructionFinanceRequests,
     constructionFinanceCandidateCount: nppConstructionFinanceCandidateCount,
     constructionFinanceBacklogCount: nppConstructionFinanceBacklogCount,
-  } = await processNppCorporationDecisions(db, turn ?? 0, now, techTreesEnabled, {
-    groupMembership,
-    corporations: corporationsWithReservedTaxCash(
-      lookups.corporations,
-      corpSnapshots,
-      lookups.exchangeRatesByCurrency,
-      treasuryCashLedgerEnabled
-    ),
-    issuerBondsByCorpId: lookups.bondsByCorpId,
-    heldBondsByCorpId: lookups.bondsHeldByCorpId,
-    ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
-  });
+  } = await runJournaledStepWithOutput(journal, "nppCorporationDecisions", "refuse", () =>
+    processNppCorporationDecisions(db, turn ?? 0, now, techTreesEnabled, {
+      groupMembership,
+      corporations: corporationsWithReservedTaxCash(
+        lookups.corporations,
+        corpSnapshots,
+        lookups.exchangeRatesByCurrency,
+        treasuryCashLedgerEnabled
+      ),
+      issuerBondsByCorpId: lookups.bondsByCorpId,
+      heldBondsByCorpId: lookups.bondsHeldByCorpId,
+      ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
+    })
+  );
   mark("nppCorpDecisions");
 
-  await persistNppManufacturingProjects(db, nppManufacturingProductProjects);
+  await runJournaledStep(journal, "nppManufacturingProjects", "refuse", () =>
+    persistNppManufacturingProjects(db, nppManufacturingProductProjects)
+  );
 
   corpOps.push(...groupForecastWriteOps(market, lookups));
   for (const snapshot of corpSnapshots) {
@@ -295,6 +311,7 @@ export async function runCorporationTurnSideEffects({
     wagesEnabled: labour.wagesEnabled,
     labourWageIndexByState,
     automationIndexByState,
+    journal,
   });
 
   // Record current-turn corporate labour demand for every region. The metric
@@ -308,12 +325,6 @@ export async function runCorporationTurnSideEffects({
     turn,
   });
 
-  const journal: JournalContext = {
-    db,
-    stage: resilienceStageOf(marketGovernorConfig),
-    turn: typeof turn === "number" ? turn : (gameState?.currentTurn ?? 0),
-    worldEpoch: gameState?.worldEpochId,
-  };
   // Phase 3: Bulk write sector and corp updates
   // Every op is keyed by its sector `_id`; ops on one sector (the flip-turn
   // `$push` after the main update) stay together and in order.
@@ -380,46 +391,58 @@ export async function runCorporationTurnSideEffects({
     try {
       // Computer-run companies start their own products first; the debit,
       // events and outcome then run through the same path as a player's.
-      await startNppVentures(db, {
-        turn: typeof turn === "number" ? turn : 1,
-        corporations: lookups.corporations,
-        sectorsByCorp: lookups.sectorsByCorp,
-        exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
-        enabled: productVentureDomainsEnabled,
-        reserveAnchor: getNppCashFloorAnchor(
-          plantsEnabledForMarketShare ? lookups.preset : undefined
-        ),
-        priceRatioOf: (commodity, countryId) =>
-          lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity as never) ??
-          lookups.priceRatioByCommodity.get(commodity as never),
-        currentYear: gameState?.currentYear,
-        techTreesEnabled: true,
-      });
+      await runJournaledStep(journal, "nppVentureStarts", "refuse", () =>
+        startNppVentures(db, {
+          turn: typeof turn === "number" ? turn : 1,
+          corporations: lookups.corporations,
+          sectorsByCorp: lookups.sectorsByCorp,
+          exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
+          enabled: productVentureDomainsEnabled,
+          reserveAnchor: getNppCashFloorAnchor(
+            plantsEnabledForMarketShare ? lookups.preset : undefined
+          ),
+          priceRatioOf: (commodity, countryId) =>
+            lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity as never) ??
+            lookups.priceRatioByCommodity.get(commodity as never),
+          currentYear: gameState?.currentYear,
+          techTreesEnabled: true,
+        })
+      );
     } catch (error) {
+      if (error instanceof CorporationTurnStepRefusedError) throw error;
       console.error("[corporationTurn] NPP product venture start failed", error);
     }
     mark("nppVentureStarts");
     try {
-      await processProductVentures({
-        db,
-        turn: typeof turn === "number" ? turn : 1,
-        corporations: lookups.corporations,
-        sectorsByCorp: lookups.sectorsByCorp,
-        exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
-        enabled: productVentureDomainsEnabled,
-      });
+      await runJournaledStep(journal, "productVentures", "refuse", () =>
+        processProductVentures({
+          db,
+          turn: typeof turn === "number" ? turn : 1,
+          corporations: lookups.corporations,
+          sectorsByCorp: lookups.sectorsByCorp,
+          exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
+          enabled: productVentureDomainsEnabled,
+        })
+      );
     } catch (error) {
+      if (error instanceof CorporationTurnStepRefusedError) throw error;
       // A venture fault must never stop the corporation turn.
       console.error("[corporationTurn] product venture processing failed", error);
     }
     mark("productVentures");
   }
-  const constructionFinance = await attemptNppConstructionFinance({
-    db,
-    turn: turn ?? 0,
-    requests: nppConstructionFinanceRequests,
-    backlogCount: nppConstructionFinanceBacklogCount,
-  });
+  const constructionFinance = await runJournaledStepWithOutput(
+    journal,
+    "nppConstructionFinance",
+    "refuse",
+    () =>
+      attemptNppConstructionFinance({
+        db,
+        turn: turn ?? 0,
+        requests: nppConstructionFinanceRequests,
+        backlogCount: nppConstructionFinanceBacklogCount,
+      })
+  );
   if (nppConstructionFinanceCandidateCount > 0) {
     corpAuditEntries.push({
       source: "turn",
@@ -450,7 +473,9 @@ export async function runCorporationTurnSideEffects({
   // accrual against a collection holding one document per currency. Missing
   // pools are still skipped rather than upserted, preserving the legacy sink
   // on pre-migration worlds.
-  await creditEquityPoolsBatch(db, equityPoolDividendAccruals, "dividendsIn", now);
+  await runJournaledStep(journal, "equityPoolDividends", "refuse", () =>
+    creditEquityPoolsBatch(db, equityPoolDividendAccruals, "dividendsIn", now)
+  );
   mark("sector+corp bulkWrites");
 
   // Advertising agreements attribute the spend this turn already settled across
@@ -545,7 +570,9 @@ export async function runCorporationTurnSideEffects({
         })
       );
     }
-    await persistMediaProductSales(db, attributions);
+    await runJournaledStep(journal, "mediaProductSales", "refuse", () =>
+      persistMediaProductSales(db, attributions)
+    );
   }
 
   if (mediaEditorialEnabled && mediaOperatingModelsEnabled && market.editorialOutletsByState) {
@@ -570,22 +597,30 @@ export async function runCorporationTurnSideEffects({
         ])
       ),
     });
-    await applyMediaEditorialEffects({
-      db,
-      turn: turn ?? gameState?.currentTurn ?? 0,
-      outletsByState,
-    });
+    await runJournaledStep(journal, "mediaEditorialSettled", "refuse", () =>
+      applyMediaEditorialEffects({
+        db,
+        turn: turn ?? gameState?.currentTurn ?? 0,
+        outletsByState,
+      })
+    );
   }
 
   // Contracts read the post-bulkWrite snapshot, so this turn's mothball and
   // production-policy writes are visible to matching.
-  await processNppSupplyAgreements(db, turn ?? 0, now, market.plantsEnabled);
+  await runJournaledStep(journal, "nppSupplyAgreements", "refuse", () =>
+    processNppSupplyAgreements(db, turn ?? 0, now, market.plantsEnabled)
+  );
   mark("nppSupplyAgreements");
 
-  const nppProspects = await processNppProspecting(db, turn ?? 0, now);
+  const nppProspects = await runJournaledStepWithOutput(journal, "nppProspecting", "refuse", () =>
+    processNppProspecting(db, turn ?? 0, now)
+  );
   if (nppProspects > 0) mark("nppProspecting");
 
-  const nppTreasury = await processNppCorpTreasury(db, turn ?? 0, now);
+  const nppTreasury = await runJournaledStepWithOutput(journal, "nppCorpTreasury", "refuse", () =>
+    processNppCorpTreasury(db, turn ?? 0, now)
+  );
   if (nppTreasury > 0) mark("nppCorpTreasury");
 
   // Persist per-commodity output quality for next turn's input pillar (quality
@@ -605,7 +640,9 @@ export async function runCorporationTurnSideEffects({
   // Route the reduced FX spreads skimmed from foreign operating income into the
   // CB system (reserve slice → corp's home CB in the source currency; revenue →
   // source-currency CB). Already deducted from the corp's credited income above.
-  await distributeConversionSpreadsBatch(db, sectorFxSpreadFees);
+  await runJournaledStep(journal, "conversionSpreads", "refuse", () =>
+    distributeConversionSpreadsBatch(db, sectorFxSpreadFees)
+  );
 
   // v3 Phase 6: translate this turn's strike trigger/resolution events into
   // sentiment pulses. Fired after the bulk writes above, on the now-persisted

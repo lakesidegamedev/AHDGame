@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId, type Db, type Document } from "mongodb";
-import { applyJournaledOps, type JournalContext } from "./journal";
+import {
+  applyJournaledOps,
+  CorporationTurnStepRefusedError,
+  runJournaledStep,
+  runJournaledStepWithOutput,
+  type JournalContext,
+} from "./journal";
 
 /** Minimal in-memory stand-in for the journal collection. */
 function fakeDb(): Db {
@@ -108,5 +114,61 @@ describe("applyJournaledOps", () => {
     ).catch(() => undefined);
     const r = await applyJournaledOps(ctx, "sectorWrites", [], async () => undefined);
     expect(r).toBe("unreplayable");
+  });
+
+  describe("whole-call steps", () => {
+    it("runs directly below stage 2", async () => {
+      let n = 0;
+      await runJournaledStep({ db: fakeDb(), stage: 0, turn: 1 }, "s", "refuse", async () => {
+        n++;
+      });
+      expect(n).toBe(1);
+    });
+
+    it("skips a done step and refuses an interrupted one", async () => {
+      const ctx: JournalContext = { db: fakeDb(), stage: 2, turn: 3 };
+      let runs = 0;
+      await runJournaledStep(ctx, "a", "refuse", async () => {
+        runs++;
+      });
+      await runJournaledStep(ctx, "a", "refuse", async () => {
+        runs++;
+      });
+      expect(runs).toBe(1);
+      await runJournaledStep(ctx, "b", "refuse", async () => {
+        throw new Error("crash");
+      }).catch(() => undefined);
+      await expect(
+        runJournaledStep(ctx, "b", "refuse", async () => undefined)
+      ).rejects.toBeInstanceOf(CorporationTurnStepRefusedError);
+      let reran = 0;
+      await runJournaledStep(ctx, "b", "rerun", async () => {
+        reran++;
+      });
+      expect(reran).toBe(1);
+    });
+
+    it("restores a stored output, Maps included, instead of rerunning", async () => {
+      const ctx: JournalContext = { db: fakeDb(), stage: 2, turn: 4 };
+      const first = await runJournaledStepWithOutput(ctx, "o", "refuse", async () => ({
+        paid: new Map([["c1", 5]]),
+        n: 2,
+      }));
+      let reran = false;
+      const second = await runJournaledStepWithOutput(ctx, "o", "refuse", async () => {
+        reran = true;
+        return { paid: new Map(), n: 0 };
+      });
+      expect(reran).toBe(false);
+      expect(second).toEqual(first);
+    });
+
+    it("leaves an unstorable output started so a resume refuses", async () => {
+      const ctx: JournalContext = { db: fakeDb(), stage: 2, turn: 5 };
+      await runJournaledStepWithOutput(ctx, "x", "refuse", async () => ({ f: () => 1 }));
+      await expect(
+        runJournaledStepWithOutput(ctx, "x", "refuse", async () => 1)
+      ).rejects.toBeInstanceOf(CorporationTurnStepRefusedError);
+    });
   });
 });
