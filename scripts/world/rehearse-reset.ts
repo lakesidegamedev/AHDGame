@@ -26,6 +26,8 @@ import {
   isShippingPreset,
   tierFor,
 } from "@/lib/world/eraRoster";
+import { REFERENCE_FIGURES } from "@/lib/admin/resetRehearsal/referenceFigures";
+import { getRateDoc, rateFromDoc } from "@/lib/world/forex";
 import { nppCorpSpawnPlan } from "@/lib/admin/seed/seedNppCorporations";
 import {
   assertRehearsalTarget,
@@ -65,6 +67,17 @@ async function loadWorld(
     ...countriesByTier(preset, "npp"),
     ...countriesByTier(preset, "econ"),
   ].filter((id) => roster.has(id));
+
+  const rateDocs = await db
+    .collection("exchangeRates")
+    .find({}, { projection: { countryId: 1, rate: 1, baseRate: 1 } })
+    .toArray();
+  const rateMap = new Map(rateDocs.map((r) => [String(r.countryId), r]));
+  const localPerUsd: Record<string, number> = {};
+  for (const id of rosterCountries) {
+    const doc = getRateDoc(rateMap as never, id);
+    if (doc) localPerUsd[id] = rateFromDoc(doc);
+  }
 
   const [budgets, banks, state, metrics, states, parties, seats, corps] = await Promise.all([
     db.collection("federalBudget").find({}).toArray(),
@@ -125,6 +138,7 @@ async function loadWorld(
       countryId: String(b.countryId),
       gdp: Number(b.gdp),
       inflationRate: b.economicFactors?.inflationRate,
+      debtPrincipal: b.debt?.principal,
     })),
     centralBanks: banks.map((b) => ({
       id: String(b._id),
@@ -160,6 +174,8 @@ async function loadWorld(
       publicFloat: c.publicFloat,
     })),
     seatTotalByCountry: Object.fromEntries(seats.map((s) => [String(s._id), s.n as number])),
+    localPerUsd,
+    reference: REFERENCE_FIGURES[preset],
   };
 }
 
