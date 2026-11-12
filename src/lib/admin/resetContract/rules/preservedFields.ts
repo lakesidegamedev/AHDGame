@@ -254,6 +254,7 @@ export const PRESERVED_COLLECTION_CONTRACT: Readonly<Record<string, PreservedCol
     unifiedOidcFlows: { kind: "keep-whole", reason: KEEP_ACCOUNT },
     nativePushDevices: { kind: "keep-whole", reason: KEEP_ACCOUNT },
     authSourceOwnershipProofs: { kind: "keep-whole", reason: KEEP_ACCOUNT },
+    centralLoginShadowEvents: { kind: "keep-whole", reason: KEEP_ACCOUNT },
     emailChanges: { kind: "keep-whole", reason: KEEP_ACCOUNT },
     passwordResets: { kind: "keep-whole", reason: KEEP_ACCOUNT },
     sourceFenceConsumptions: { kind: "keep-whole", reason: KEEP_ACCOUNT },
