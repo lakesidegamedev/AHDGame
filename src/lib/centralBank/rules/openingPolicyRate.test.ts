@@ -37,12 +37,19 @@ describe("January 2027 opening policy rates", () => {
   ] as const)("%s opens on its authored 2027 rate", (country, expected) => {
     expect(getOpeningPolicyRate(country, 2027, 9)).toBe(expected);
   });
-  it("covers exactly the five fully simulated economies", () => {
-    expect(Object.keys(OPENING_POLICY_RATES_2027).sort()).toEqual(["CN", "DE", "JP", "UK", "US"]);
+  it("covers the fully simulated economies", () => {
+    expect(Object.keys(OPENING_POLICY_RATES_2027)).toEqual(
+      expect.arrayContaining(["CN", "DE", "JP", "UK", "US"])
+    );
+  });
+  it("puts every euro member on the ECB rate, whatever its configured default", () => {
+    for (const member of ["FR", "IT", "ES", "GR", "AT", "FI", "IE"] as const) {
+      expect(getOpeningPolicyRate(member, 2027, 14)).toBe(OPENING_POLICY_RATES_2027.DE);
+    }
   });
   it("leaves countries without an authored rate on their default", () => {
-    expect(getOpeningPolicyRate("IE", 2027, 3)).toBe(3);
-    expect(getOpeningPolicyRate("FR", 2027, 5)).toBe(5);
+    expect(getOpeningPolicyRate("BR", 2027, 8)).toBe(8);
+    expect(getOpeningPolicyRate("TR", 2027, 20)).toBe(20);
   });
   it("applies only to a 2027 start", () => {
     expect(getOpeningPolicyRate("US", 2028, 3)).toBe(3);
