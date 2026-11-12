@@ -13,6 +13,11 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumePasswordReset } from "@/lib/passwordReset";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralWriteFirst,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/reset-password - Sets a new password using a single-use reset token from forgot-password.
@@ -72,6 +77,21 @@ export async function POST(request: Request) {
         { headers: { "Cache-Control": "private, no-store" } }
       );
     }
+    const passwordWrite = {
+      op: "password-set",
+      ahdUserId: reset.userId.toString(),
+      password,
+    } as const;
+    if (!(await centralWriteFirst(passwordWrite))) {
+      return errorResponse(
+        503,
+        `${CENTRAL_WRITE_UNAVAILABLE_MESSAGE} You may need to request a new reset link.`,
+        {
+          headers: { "Cache-Control": "private, no-store" },
+        }
+      );
+    }
+
     const hashedPassword = await bcrypt.hash(password, 12);
     const changedAt = new Date();
     // Update password in database and invalidate all existing sessions
@@ -100,6 +120,7 @@ export async function POST(request: Request) {
 
     // Token revocation must bite immediately, not after the userDocCache TTL.
     invalidateCachedUser(reset.userId.toString());
+    shadowMirrorWrite(passwordWrite);
 
     recordAudit({
       source: "api",

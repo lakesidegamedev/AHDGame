@@ -13,6 +13,11 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { setPasswordSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralWriteFirst,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/set-password — Sets a password for a social-only account that has no existing password.
@@ -53,6 +58,13 @@ export async function POST(request: Request) {
       return errorResponse(400, "Password already set. Use change password instead.");
     }
 
+    const passwordWrite = { op: "password-set", ahdUserId: userId, password: newPassword } as const;
+    if (!(await centralWriteFirst(passwordWrite))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     const changedAt = new Date();
 
@@ -81,6 +93,7 @@ export async function POST(request: Request) {
     }
 
     invalidateCachedUser(userId);
+    shadowMirrorWrite(passwordWrite);
     return NextResponse.json({ message: "Password set successfully" });
   } catch (error) {
     return handleRouteError(error);

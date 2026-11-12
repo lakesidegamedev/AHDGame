@@ -13,6 +13,11 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { changePasswordSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralWriteFirst,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/change-password — Changes the authenticated user's password after verifying the current one.
@@ -57,6 +62,14 @@ export async function POST(request: Request) {
       return errorResponse(401, "Current password is incorrect");
     }
 
+    // Central mode writes the central credential first; refuse if it is unreachable.
+    const passwordWrite = { op: "password-set", ahdUserId: userId, password: newPassword } as const;
+    if (!(await centralWriteFirst(passwordWrite))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     const changedAt = new Date();
@@ -88,6 +101,7 @@ export async function POST(request: Request) {
 
     // Token revocation must bite immediately, not after the userDocCache TTL.
     invalidateCachedUser(userId);
+    shadowMirrorWrite(passwordWrite);
 
     return NextResponse.json({
       message: "Password changed successfully",

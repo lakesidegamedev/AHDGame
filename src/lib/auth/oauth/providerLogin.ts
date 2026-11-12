@@ -30,6 +30,7 @@ import { lakesideAccountFields } from "@/lib/auth/lakesideAccount";
 import { loginDestination, takeOAuthReturnUrlCookie } from "@/lib/auth/lakesideLoginReturn";
 import { resolveReauthIssuedAt } from "@/lib/auth/sessionIssue";
 import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/auth/sourceFence";
+import { shadowRecordProviderLogin } from "@/lib/auth/centralLogin";
 import type { OAuthCookieStore, OAuthDb, OAuthLoginAdapter } from "./types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -153,6 +154,10 @@ async function loginExistingUser(
   }
 
   cookieStore.set(AUTH_COOKIE_NAME, token, await getAuthCookieOptions());
+  shadowRecordProviderLogin(
+    existingUser._id.toString(),
+    adapter.idField.replace(/Id$/, "") as "apple" | "google" | "discord"
+  );
   await setCharacterGateCookie(
     cookieStore,
     needsCharacterHint({

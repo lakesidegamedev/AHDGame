@@ -276,6 +276,11 @@ export const PRESERVED: CollectionEntry[] = [
     notes: "Account ownership evidence survives world resets.",
   },
   {
+    name: "centralLoginShadowEvents",
+    category: "preserved",
+    notes: "Central account login shadow comparison events survive world resets.",
+  },
+  {
     name: "broadcastDms",
     category: "preserved",
     notes: "Operator broadcast delivery receipts are cross-world accountability records.",

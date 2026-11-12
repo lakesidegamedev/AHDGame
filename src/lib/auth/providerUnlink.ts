@@ -11,6 +11,13 @@ import {
 } from "@/lib/auth/providerCredentialWrite";
 import { errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  bridgeAccountFromUser,
+  centralWriteFirst,
+  getCentralLoginMode,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import type { User } from "@/lib/db/types";
 import { usersCollection } from "@/lib/db/repositories/users";
 
@@ -67,6 +74,21 @@ export async function unlinkProviderCredential(
   const refusal = await beforeWrite?.(db, account);
   if (refusal) return refusal;
 
+  // Central mode clears the provider id centrally first; refuse if it is unreachable.
+  const providerField = `${provider}Id` as const;
+  const unlinkWrite =
+    getCentralLoginMode() === "off"
+      ? null
+      : ({
+          op: "account-upsert",
+          account: bridgeAccountFromUser(account, { [providerField]: null }),
+        } as const);
+  if (unlinkWrite && !(await centralWriteFirst(unlinkWrite))) {
+    return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  }
+
   // Evict before the write so parallel requests re-read the pre-unlink record.
   // The key is canonical: the fresh account id, not the cached grant.
   const cacheKey = account._id.toHexString();
@@ -111,6 +133,8 @@ export async function unlinkProviderCredential(
       { headers: { "Cache-Control": "private, no-store" } }
     );
   }
+
+  if (unlinkWrite) shadowMirrorWrite(unlinkWrite);
 
   return NextResponse.json(
     { success: true },

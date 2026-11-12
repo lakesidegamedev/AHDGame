@@ -29,6 +29,13 @@ import {
 import { issueUnifiedGameSession } from "@/lib/auth/unifiedGameSession";
 import { recordIdentitySignals } from "@/lib/identityHistory/recordObservation";
 import { authConfig } from "@/lib/config/auth";
+import {
+  centralCheckPassword,
+  decideCentralLogin,
+  getCentralLoginMode,
+  recordLoginFallback,
+  shadowCheckPassword,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -161,7 +168,24 @@ export async function POST(request: Request) {
     }
 
     // Verify password — reject OAuth-only accounts that have no password set
-    const isValidPassword = user.password && (await bcrypt.compare(password, user.password));
+    const centralMode = getCentralLoginMode();
+    const userKey = user._id.toString();
+    let isValidPassword: boolean;
+    if (centralMode === "central" && user.password) {
+      const central = await centralCheckPassword(userKey, password);
+      const decision = decideCentralLogin(central);
+      if (decision.action === "fallback-local") {
+        isValidPassword = await bcrypt.compare(password, user.password);
+        recordLoginFallback(userKey, isValidPassword ? "ok" : "wrong", central);
+      } else {
+        isValidPassword = decision.action === "accept";
+      }
+    } else {
+      isValidPassword = Boolean(user.password && (await bcrypt.compare(password, user.password)));
+      if (centralMode === "shadow" && user.password) {
+        shadowCheckPassword(userKey, password, isValidPassword ? "ok" : "wrong");
+      }
+    }
 
     if (!isValidPassword) {
       recordAudit({
