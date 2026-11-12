@@ -102,6 +102,7 @@ import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
 import { serverEnv } from "@/lib/config/read";
+import { workerConfig } from "@/lib/config/worker";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
@@ -356,7 +357,7 @@ async function processTurnImpl(
       resilienceStage = resolveTurnResilienceStage({
         configStage: turnConfig?.turnResilienceStage,
         simSandbox: turnConfig?.simSandbox === true,
-        envStage: process.env.AHD_TURN_RESILIENCE_STAGE,
+        envStage: workerConfig.turnResilienceStage(),
       });
       const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
       if (residueRefusal) {

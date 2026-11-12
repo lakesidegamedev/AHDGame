@@ -11,6 +11,7 @@ import { backupTurnSchedule, resolveTurnCronMinute, turnCronSchedule } from "./c
 import { getProcessingLockState, TURN_LOCK_STALE_MS } from "./turn/processingLock";
 import { recordTurnHeapDelta } from "@/lib/observability/heapWatchdog";
 import { getDb } from "@/lib/mongodb";
+import { workerConfig } from "@/lib/config/worker";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
 import { tryFastStaleLockTakeover } from "@/lib/turn/turnLockHolder";
@@ -477,7 +478,7 @@ export async function initializeCronJobs() {
         const stage = resolveTurnResilienceStage({
           configStage: config?.turnResilienceStage,
           simSandbox: config?.simSandbox === true,
-          envStage: process.env.AHD_TURN_RESILIENCE_STAGE,
+          envStage: workerConfig.turnResilienceStage(),
         });
         if (stage < 1) return;
         if (!(await tryFastStaleLockTakeover(db, stage))) return;
