@@ -44,7 +44,15 @@ declare global {
 
 /** Arm (or clear, with null) the fault for this process. */
 export function armTurnFault(spec: TurnFaultSpec | null): void {
-  globalThis._ahdTurnFault = spec ? { spec, fired: false } : undefined;
+  if (!spec) {
+    globalThis._ahdTurnFault = undefined;
+    return;
+  }
+  // Re-arming with the same spec keeps its fired state, so `once` holds across
+  // the turn attempts of one process.
+  const current = globalThis._ahdTurnFault;
+  if (current && JSON.stringify(current.spec) === JSON.stringify(spec)) return;
+  globalThis._ahdTurnFault = { spec, fired: false };
 }
 
 export function turnFaultArmed(): boolean {
