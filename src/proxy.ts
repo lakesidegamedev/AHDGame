@@ -30,11 +30,7 @@ import {
 // Well-known root files that must never be rewritten under /wiki on the
 // subdomain — /robots.txt would otherwise hit the wiki [slug] route and serve
 // an HTML "Not Found" page instead of the metadata route.
-const WIKI_PASSTHROUGH_PATHS = new Set([
-  "/robots.txt",
-  "/sitemap.xml",
-  "/manifest.webmanifest",
-]);
+const WIKI_PASSTHROUGH_PATHS = new Set(["/robots.txt", "/sitemap.xml", "/manifest.webmanifest"]);
 
 /**
  * Keep the raw Railway host (and any other non-canonical *.up.railway.app host)

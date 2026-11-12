@@ -142,7 +142,6 @@ export default async function FAQPage() {
             </details>
           ))}
         </div>
-
       </div>
 
       <script

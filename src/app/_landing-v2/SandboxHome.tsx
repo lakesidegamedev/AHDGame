@@ -818,9 +818,7 @@ export function SandboxHome({
                     ))}
                     {col.headingKey === "landing.footer.legal" && (
                       <li>
-                        <CookieSettingsLink
-                          className="text-body-sm text-muted transition-colors hover:text-foreground"
-                        />
+                        <CookieSettingsLink className="text-body-sm text-muted transition-colors hover:text-foreground" />
                       </li>
                     )}
                   </ul>

@@ -197,7 +197,6 @@ export default function GuidesHubPage() {
             </Link>
           ))}
         </div>
-
       </div>
     </div>
   );
