@@ -63,7 +63,7 @@ export interface RehearsalWorld {
 }
 
 export const ECB_ROW_ID = "ECB";
-const NORMAL_PRIME_MAX = 15;
+const NORMAL_PRIME_MAX = 20;
 const HIGH_INFLATION_THRESHOLD = 10;
 const HIGH_INFLATION_PRIME_MAX = 60;
 const INCOME_RATIO_MIN = 0.3;

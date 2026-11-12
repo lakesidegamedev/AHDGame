@@ -77,7 +77,7 @@ describe("rehearsal rules", () => {
     expect(checkCentralBanks(missing).map((f) => f.scope)).toEqual(["US"]);
     const tooHigh = world({
       centralBanks: [
-        { id: "US", countryId: "US", primeRate: 20 },
+        { id: "US", countryId: "US", primeRate: 25 },
         { id: "ECB", countryId: "DE", primeRate: 2 },
       ],
     });
@@ -88,7 +88,7 @@ describe("rehearsal rules", () => {
         { countryId: "IT", gdp: 500 },
       ],
       centralBanks: [
-        { id: "US", countryId: "US", primeRate: 20 },
+        { id: "US", countryId: "US", primeRate: 25 },
         { id: "ECB", countryId: "DE", primeRate: 2 },
       ],
     });
