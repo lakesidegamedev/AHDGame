@@ -1,3 +1,4 @@
+import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
 import { corporateGrowthWithPayables } from "./rules/corporateTaxPriority";
 /**
  * Sector operations turn owned capacity into sales, jobs and operating profit.
@@ -32,11 +33,10 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { fundedSizeCostPp } from "@/lib/corporations/rules/fundedSizeCost";
 import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { nationalizationProductivityFactor } from "@/lib/nationalization/transitionShock";
-import {
-  getSectorTechEffects,
-  getSectorTechEffectsForYear,
-  NEUTRAL_TECH_EFFECTS,
-} from "@/lib/constants/techTree";
+import { sectorVintageYear } from "@/lib/energyTransition/policies";
+import { lawAdjustedLabourFactor, lawWageCostMultiplier } from "@/lib/automationPolicy/policies";
+import { resolveSectorTechEffects } from "./sectorTurn/sectorTechEffects";
+import { blendVintageYear } from "@/lib/energyTransition/rules";
 import { getCountryConfig } from "@/lib/constants/countries";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import {
@@ -135,25 +135,15 @@ export function processSector(
     sector.mediaDiscriminator
   );
 
-  // Per-sector tech effects: Corporate-lane bonuses apply to every sector at
-  // reduced strength; Sector-lane bonuses apply only to the corp's primary
-  // sector type, full strength. Neutral when the feature gate is off.
-  const techEffects = techTreesEnabled
-    ? currentYear != null
-      ? getSectorTechEffectsForYear(
-          corp,
-          sector.sectorType,
-          currentYear,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
-      : getSectorTechEffects(
-          corp,
-          sector.sectorType,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
-    : NEUTRAL_TECH_EFFECTS;
+  // Per-sector tech effects (see sectorTurn/sectorTechEffects.ts).
+  const techEffects = resolveSectorTechEffects(
+    corp,
+    sector,
+    lookups,
+    techTreesEnabled,
+    currentYear,
+    operatingSectorType
+  );
   // Normalize host-currency revenue to anchor currency. Recover corrupt values
   // here so NaN cannot spread through corporate totals and tax accruals.
   const rawSectorRevenue = Number.isFinite(sector.revenue) ? sector.revenue : 0;
@@ -826,6 +816,12 @@ export function processSector(
     labourDemandByState,
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: labour.wagesEnabled ? sector.wageLevel : 1,
+    labourPerUnitFactor: lawAdjustedLabourFactor(
+      operatingCrewFactor(sector, currentTurn, env.automationDisplacedByState !== undefined),
+      lookups.automationPolicyByCountry,
+      sector.countryId ?? corp.countryId
+    ),
+    automationDisplacedByState: env.automationDisplacedByState,
     fundedHeadcount: env.fundedHeadcountBySectorId
       ? (env.fundedHeadcountBySectorId.get(sectorId) ?? {
           desiredWorkers: 0,
@@ -897,6 +893,10 @@ export function processSector(
     grossMaintenance: explicitPlantCostsEnabled ? explicitPayrollBasis : payrollBasis,
     computedWorkers,
     techLaborCostMultiplier: techEffects.laborCostMultiplier,
+    employerWageCostMultiplier: lawWageCostMultiplier(
+      lookups.automationPolicyByCountry,
+      sector.countryId ?? corp.countryId
+    ),
     costOfLivingIndex: sectorMetrics?.economic?.costOfLiving?.value,
     unemploymentRate: sectorMetrics?.economic?.unemploymentRate?.value,
     wageIndexByState,
@@ -1549,6 +1549,23 @@ export function processSector(
       // same update so a replay or a later catch-up starts here.
       buildDeliverySettledTurn: currentTurn,
     };
+    // Energy transition worlds: new capacity pulls the fleet's build year
+    // toward this year, so building or replacing plants resets their ageing.
+    const priorVintage =
+      lookups.energyTransition && currentYear != null && landedBuildUnits > 0
+        ? sectorVintageYear(sector, operatingSectorType, lookups.energyTransition.startingYear)
+        : null;
+    if (priorVintage != null && currentYear != null) {
+      sectorUpdateDoc.$set = {
+        ...sectorUpdateDoc.$set,
+        capacityVintageYear: blendVintageYear(
+          priorVintage,
+          sector.capitalStock ?? 0,
+          currentYear,
+          landedBuildUnits
+        ),
+      };
+    }
   }
   sectorOps.push({
     updateOne: {

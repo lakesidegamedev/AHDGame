@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -28,7 +29,6 @@ import {
 } from "@/lib/utils/decayProjections";
 import type {
   Character,
-  Corporation,
   Election,
   ExchangeRate,
   GameConfig,
@@ -37,6 +37,18 @@ import type {
   PoliticalParty,
   StatePartyOrg,
 } from "@/lib/db/types";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
 
 const MIN_BASE_ACTIONS_PER_TURN = 4;
 
@@ -64,12 +76,12 @@ async function handleGET() {
 
     const [gameState, character, forexEnabled] = await Promise.all([
       getGameState(),
-      db.collection<Character>("characters").findOne({ userId: new ObjectId(authUser.userId) }),
+      charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) }),
       isForexEnabled(),
     ]);
     const forexRates: Record<string, number> | undefined = forexEnabled
       ? Object.fromEntries(
-          (await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()).map((r) => [
+          (await exchangeRatesCollection(db).find({}).toArray()).map((r) => [
             r.currencyCode,
             r.rate,
           ])
@@ -112,18 +124,16 @@ async function handleGET() {
       portfolioSnapshots,
       unionContribution,
     ] = await Promise.all([
-      db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
-      db
-        .collection<State>("states")
-        .findOne({ _id: character.homeState, countryId: character.countryId }),
+      gameConfigCollection(db).findOne({ _id: "default" }),
+      statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
       character.party && Number.isFinite(Number(character.party))
-        ? db.collection<PoliticalParty>("politicalParties").findOne({
+        ? politicalPartiesCollection(db).findOne({
             sequentialId: Number(character.party),
             countryId: character.countryId,
           })
         : null,
       character.party
-        ? db.collection<StatePartyOrg>("statePartyOrg").findOne({
+        ? statePartyOrgCollection(db).findOne({
             stateId: character.homeState,
             partyId: character.party,
           })
@@ -131,15 +141,12 @@ async function handleGET() {
       // Find the nearest election the player is a candidate in, or the nearest active election
       findNearestElection(db, character, await getGameTime()),
       // hasCorp: is this character the CEO of an active corporation?
-      db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { ceoId: character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
-          { projection: { _id: 1 } }
-        ),
+      corporationsCollection(db).findOne(
+        { ceoId: character._id, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
+        { projection: { _id: 1 } }
+      ),
       // Two most recent snapshots — used to compute portfolioChangePercent
-      db
-        .collection<PortfolioHistory>("portfolioHistory")
+      portfolioHistoryCollection(db)
         .find({ characterId: character._id })
         .sort({ turn: -1 })
         .limit(2)
@@ -167,9 +174,7 @@ async function handleGET() {
     const stateTaxRate = statePartyOrg?.stateTaxRate ?? 0;
     const nationalTaxRate = party?.nationalTaxRate ?? 0;
 
-    // GDP-baseline era for income math: the world's reset preset, so
-    // historical worlds project in their own denomination (issue #798).
-    // gameState is already loaded above; absent preset falls back to modern.
+    // Income math uses the world's reset preset so historical worlds project in their own denomination; absent preset falls back to modern.
     const fundDistribution: FundDistribution = calculateFullFundDistribution(
       statePopulation,
       donor,
@@ -180,7 +185,10 @@ async function handleGET() {
       character.countryId,
       undefined,
       gameState?.preset,
-      await loadCampaignPriceLevel(db)
+      await loadCampaignPriceLevel(db),
+      homeState?.gdp === undefined
+        ? undefined
+        : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
     );
 
     // --- Decay projections (what happens next turn) ---
@@ -202,9 +210,10 @@ async function handleGET() {
      * Chair bonus is independent of currentOffice: the role lives on
      * centralBanks.chairCharacterId and stacks with any elected seat.
      */
-    const chairBankRow = await db
-      .collection("centralBanks")
-      .findOne({ chairCharacterId: character._id }, { projection: { _id: 1 } });
+    const chairBankRow = await centralBanksCollection(db).findOne(
+      { chairCharacterId: character._id },
+      { projection: { _id: 1 } }
+    );
     const chairActionBonus = chairBankRow ? (config?.chairActionBonus ?? 3) : 0;
     const baseActionsPerTurn = Math.max(config?.baseActionsPerTurn ?? 0, MIN_BASE_ACTIONS_PER_TURN);
     // Chamber leadership and Supreme Court AP, as granted at the last refresh.
@@ -301,12 +310,13 @@ async function findNearestElection(
   isCandidate: boolean;
 } | null> {
   // Check if the player is a candidate in any active election
-  const candidacy = await db
-    .collection("electionCandidates")
-    .findOne({ characterId: character._id, status: "active" });
+  const candidacy = await electionCandidatesCollection<Document>(db).findOne({
+    characterId: character._id,
+    status: "active",
+  });
 
   if (candidacy) {
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: candidacy.electionId,
       status: { $in: ["upcoming", "active"] },
     });
@@ -331,7 +341,7 @@ async function findNearestElection(
   }
 
   // Fallback: nearest active election in the player's home state or nationally
-  const election = await db.collection<Election>("elections").findOne(
+  const election = await electionsCollection(db).findOne(
     {
       status: { $in: ["upcoming", "active"] },
       $or: [{ state: character.homeState }, { state: "National" }],

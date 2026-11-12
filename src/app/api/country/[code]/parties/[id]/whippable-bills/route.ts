@@ -18,6 +18,9 @@ import {
   summarizePlayerWhips,
   type PlayerWhipSummaryEntry,
 } from "@/lib/partyWhips/playerWhipSummary";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -121,8 +124,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       ],
     };
 
-    const activeBills = await db
-      .collection<Bill>("bills")
+    const activeBills = await billsCollection(db)
       .find({
         $and: [
           billCountryFilter,
@@ -167,11 +169,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       chamberKeys.map((key) => [key, getOfficeTypeForChamber(countryId, key, undefined, config)])
     );
 
-    // Union of NPP and character officials so we surface bills for either audience.
-    // Country-scoped because party sequentialIds collide across countries and some
-    // office types (e.g. "senate") are shared between countries (bug #0699).
-    const allOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    // Union of NPP and character officials so bills surface for either audience.
+    // Country-scoped because party sequentialIds collide across countries and
+    // some office types (e.g. "senate") are shared between countries.
+    const allOfficials = await electedOfficialsCollection(db)
       .find({
         countryId,
         party: partyIdStr,
@@ -192,8 +193,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     const billIds = activeBills.map((b) => b._id);
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: "bill",
         targetId: { $in: billIds },

@@ -1,23 +1,20 @@
 /**
- * Writes the annualized sector-subsidy cost line into the budget spending.byCategory
- * every turn. This keeps the figure current between fiscal-year resets.
+ * Writes the annualized sector-subsidy cost line into budget
+ * spending.byCategory every turn, keeping the figure current between
+ * fiscal-year resets.
  *
- * Cost formula: sum of (qualifying sector.revenue × TURNS_PER_YEAR) for each active subsidy,
- * grouped by the budget that owns the subsidy (national → federalBudget, state → stateBudgets).
+ * Cost: sum of (qualifying sector.revenue × TURNS_PER_YEAR) per active subsidy,
+ * grouped by owning budget (national to federalBudget, state to stateBudgets).
  *
- * Currency semantics (v0.2.6):
- *   - Per-sector revenue is normalized to ₳ via the owning corp's FX before
- *     summation so corps in different home currencies weight consistently.
- *   - Budget money fields (`spending.*`, `revenue.*`, `surplus`) are stored in
- *     the owning country's currency, so `loadAnnualSubsidyCostMaps` re-denominates
- *     each subsidy's ₳ total to its country's currency before returning (#2825).
- *     The costs written here are therefore same-unit with the budget doc — no
- *     conversion happens in this file, and none may be added without removing
- *     the one in the loader (that WOULD double-convert).
+ * Currency: per-sector revenue is normalized to ₳ via the owning corp's FX
+ * before summation. Budget money fields are stored in the owning country's
+ * currency, so the loader re-denominates to that currency. Costs here are
+ * therefore same-unit with the budget doc; no conversion here, and none may be
+ * added without removing the loader's.
  */
 
 import type { Db } from "mongodb";
-import type { FederalBudget, StateBudget } from "@/lib/db/types";
+import type { StateBudget } from "@/lib/db/types";
 import {
   normalizeFederalSpending,
   normalizeStateSpending,
@@ -25,6 +22,9 @@ import {
 } from "@/lib/budget/spending";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 export { SUBSIDY_COST_MULTIPLIER } from "@/lib/subsidies/subsidyBudgetCosts";
 
@@ -36,8 +36,8 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
   const [{ nationalCostByBudgetId, stateCostByStateId }, allFederalBudgets, stateBudgets] =
     await Promise.all([
       loadAnnualSubsidyCostMaps(db),
-      db.collection<FederalBudget>("federalBudget").find({}).toArray(),
-      db.collection<StateBudget>("stateBudgets").find({}).toArray(),
+      (await getFederalBudgetCollection(db)).find({}).toArray(),
+      stateBudgetsCollection(db).find({}).toArray(),
     ]);
 
   // Dissolved countries keep their budget doc but must not be simulated against
@@ -71,8 +71,7 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
     }
 
     writes.push(
-      db
-        .collection<FederalBudget>("federalBudget")
+      federalBudgetCollection(db)
         .updateOne({ _id: budget._id }, { $set: { spending, surplus, updatedAt: now } })
         .then(() => {
           updatedCount++;
@@ -101,8 +100,7 @@ export async function processSubsidyBudget(db: Db): Promise<number> {
     }
 
     writes.push(
-      db
-        .collection<StateBudget>("stateBudgets")
+      stateBudgetsCollection(db)
         .updateOne(
           { _id: budget._id },
           { $set: { spending, surplus: balance, balance, updatedAt: now } }

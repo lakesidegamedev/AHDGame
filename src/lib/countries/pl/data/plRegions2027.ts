@@ -2,48 +2,27 @@ import type { State } from "@/lib/db/types";
 import { apportionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 
 /**
- * Poland regions (2027) — Third-Republic democracy. The eight game
- * macroregions are kept with their existing ids so the Layer-1 census keys
- * keep resolving; each is an explicit grouping of the 16 current
- * voivodeships, following the predecessor composition already recorded in
- * `./plPopulation1991.ts` (Bydgoszcz/Torun/Wloclawek are Pomorze there, and
- * they are Pomorze here).
+ * Poland regions (2027) - Third-Republic democracy. The eight game macroregions
+ * keep their existing ids so Layer-1 census keys keep resolving; each is an
+ * explicit grouping of the 16 current voivodeships, following the composition
+ * already recorded in `./plPopulation1991.ts`.
  *
- * Population: GUS "Population. Size and structure and vital statistics in
- * Poland by territorial division in 2024. As of 31 December", tables in
- * thousands with one decimal (values below are x1,000):
- * https://stat.gov.pl/files/gfx/portalinformacyjny/en/defaultaktualnosci/3286/3/37/1/population_size_and_structure_and_vital_statistics_in_poland_by_territorial_division_in_31-12-2024.pdf
- * Mazowieckie 5508.3, Lodzkie 2345.9, Swietokrzyskie 1158.0, Malopolskie
- * 3429.1, Podkarpackie 2063.0, Slaskie 4291.4, Opolskie 930.3, Dolnoslaskie
- * 2868.2, Lubuskie 969.8, Wielkopolskie 3480.0, Pomorskie 2359.5,
- * Kujawsko-pomorskie 1984.5, Warminsko-mazurskie 1349.2,
- * Zachodniopomorskie 1622.8, Lubelskie 1996.4, Podlaskie 1132.6.
- * These sum to 37,489.0 thousand against the published 37,489.1 thousand
- * national total; the missing 100 people are a decimal-rounding remainder
- * and are carried on PL_MAZ below so the regional sum reconciles exactly.
+ * Population: GUS 31 December 2024 voivodeship figures (in thousands; see
+ * values below). They sum to 37,489.0 thousand against the published 37,489.1
+ * thousand national total; the 100-person rounding remainder is carried on
+ * PL_MAZ so the regional sum reconciles exactly.
  *
- * GDP: GUS "Provisional estimates of gross domestic product in regional
- * breakdown in 2024" (30.12.2025), current prices, millions of PLN. The
- * release splits Mazowieckie into Warszawski stoleczny 674,098 and
- * Mazowiecki regionalny 198,432; the remaining voivodeships read
- * Dolnoslaskie 302,269, Kujawsko-pomorskie 153,798, Lubelskie 135,033,
- * Lubuskie 76,040, Lodzkie 219,173, Malopolskie 297,163, Opolskie 71,313,
- * Podkarpackie 140,727, Podlaskie 82,373, Pomorskie 219,563, Slaskie
- * 419,348, Swietokrzyskie 84,575, Warminsko-mazurskie 90,396, Wielkopolskie
- * 359,824, Zachodniopomorskie 129,307:
- * https://publikacje.new.stat.gov.pl/en/file/197240/download?token=BYGP6Fty
- * The voivodeship figures sum exactly to the published national
- * 3,653,432, and the five largest (Warszawski stoleczny, Slaskie,
- * Wielkopolskie, Dolnoslaskie, Malopolskie) hold 56.2% between them, as
- * the release states. These are OBSERVED 2024 values grouped into game
- * regions, not a projection of 2027: the 2027 preset reuses the latest
- * completed observation as its anchor (2027 FALLBACK, not a 2027 forecast).
+ * GDP: GUS 2024 regional accounts, current prices, millions of PLN, voivodeship
+ * figures summed from the published subregion split (Mazowieckie = Warszawski
+ * stoleczny 674,098 + Mazowiecki regionalny 198,432). These are OBSERVED 2024
+ * values grouped into game regions, not a 2027 forecast: the 2027 preset reuses
+ * the latest completed observation as its anchor (2027 FALLBACK).
  *
  * houseDistricts = Sejm seats apportioned by population, largest remainder
  * (sum = 460). stateSenateSeats = Senate seats apportioned the same way
- * (sum = 100): a PROPORTIONAL FALLBACK, not the official 100
- * single-member constituency map, which does not follow macroregion
- * boundaries and is not modeled here.
+ * (sum = 100): a PROPORTIONAL FALLBACK, not the official 100 single-member
+ * constituency map, which does not follow macroregion boundaries and is not
+ * modeled here.
  */
 const PL_2027_MACROREGION_VOIVODESHIPS = {
   PL_MAZ: ["Mazowieckie"],

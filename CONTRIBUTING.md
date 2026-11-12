@@ -133,6 +133,16 @@ produces a diagnostic receipt; rerun only with changed input or a stated
 investigation. Reuse evidence only while its relevant inputs remain unchanged.
 Record required gate results and normal post-deployment observation separately.
 
+## Code comments
+
+Explain why, not history. A comment states a constraint, an invariant or a non-obvious reason the code is shaped as it is.
+
+- No dates, issue or ticket numbers, or change narration ("previously", "used to", "the owner decided") in code comments. That belongs in the commit, the PR and the changelog.
+- Keep comments short. A block over 12 lines is a sign the code needs a clearer name, a smaller function or a doc page instead.
+- Prefer a clear name over a comment that explains a vague one.
+
+`npm run architecture:contracts` enforces this with a ratchet (`scripts/architecture/commentRatchet.baseline.json`): a file may not gain overlong comment blocks or narrative comment lines, and a new file may not add any. After cleaning comments, run `npm run comment:ratchet:lower` and commit the lower baseline. The baseline can only go down.
+
 ## Name the mechanic at the top of the file
 
 Files under `src/lib` that implement a game mechanic open with a short JSDoc block, before the imports, that names the mechanic in the words a player uses and states the two or three facts a player asks about (what it is, what it depends on, what it affects), citing the exported symbol that implements it. Keep it to two to five lines of plain English in the present tense, with every fact taken from the code in that file. The search index embeds file text, so this header is what makes the file findable for a player question.

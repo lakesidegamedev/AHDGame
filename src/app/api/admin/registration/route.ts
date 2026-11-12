@@ -6,6 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({ enabled: z.boolean() });
 
@@ -18,7 +19,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -58,7 +59,7 @@ export async function PATCH(request: Request) {
     const actor = auth.user.username;
 
     if (enabled) {
-      await db.collection<GameConfig>("gameConfig").updateOne(
+      await gameConfigCollection(db).updateOne(
         { _id: "default" },
         {
           $set: { registrationEnabled: true },
@@ -67,7 +68,7 @@ export async function PATCH(request: Request) {
         { upsert: true }
       );
     } else {
-      await db.collection<GameConfig>("gameConfig").updateOne(
+      await gameConfigCollection(db).updateOne(
         { _id: "default" },
         {
           $set: {

@@ -9,7 +9,7 @@ import { getParliamentaryCountryConfig } from "@/lib/government/parliamentaryCou
 import { activeAppointmentVoteFilter } from "@/lib/government/appointmentVoteDedup";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type {
   EligibleSenateAppointeeView,
   NoConfidenceVoteView,
@@ -20,6 +20,10 @@ import type {
 import { isFilledOfficial } from "@/lib/governors/senateVacancy";
 import { US_SENATE_2020 } from "@/lib/constants/historicalSeats";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function getPmAppointmentCandidates(
   db: Db,
@@ -71,8 +75,7 @@ export async function getPmAppointmentCandidates(
 
   const lowerChamberKey = offices.lowerOfficeType;
   const qualifyingPartyIdStrings = eligibility.qualifyingPartyIds.map(String);
-  const lowerChamberMPs = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const lowerChamberMPs = await electedOfficialsCollection(db)
     .find({
       countryId,
       officeType: lowerChamberKey,
@@ -84,14 +87,17 @@ export async function getPmAppointmentCandidates(
   const charIds = lowerChamberMPs
     .map((mp) => mp.characterId)
     .filter((id): id is ObjectId => id != null);
-  const characters = await db
-    .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
+  const characters = await charactersCollection<{
+    _id: ObjectId;
+    name: string;
+    party?: string;
+    userId?: ObjectId;
+  }>(db)
     .find({ _id: { $in: charIds }, userId: { $exists: true } })
     .toArray();
   const charMap = new Map(characters.map((char) => [char._id.toString(), char]));
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: eligibility.qualifyingPartyIds } })
     .toArray();
   const partyNameMap = new Map(parties.map((party) => [party.sequentialId.toString(), party.name]));
@@ -157,8 +163,7 @@ export async function getHosAppointmentCandidates(
   // Joint-sitting deputies of qualifying parties, characters and NPPs alike.
   // The HoS office can go to either kind; the nomineeMode on each candidate
   // tells the appoint route which id field to read.
-  const deputies = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const deputies = await electedOfficialsCollection(db)
     .find({
       countryId,
       officeType: { $in: offices.jointSittingOfficeTypes },
@@ -181,21 +186,23 @@ export async function getHosAppointmentCandidates(
   }
 
   const charIds = deputies.map((mp) => mp.characterId).filter((id): id is ObjectId => id != null);
-  const characters = await db
-    .collection<{ _id: ObjectId; name: string; party?: string; userId?: ObjectId }>("characters")
+  const characters = await charactersCollection<{
+    _id: ObjectId;
+    name: string;
+    party?: string;
+    userId?: ObjectId;
+  }>(db)
     .find({ _id: { $in: charIds }, userId: { $exists: true } })
     .toArray();
   const charMap = new Map(characters.map((char) => [char._id.toString(), char]));
 
   const nppIds = deputies.map((mp) => mp.nppId).filter((id): id is ObjectId => id != null);
-  const npps = await db
-    .collection<{ _id: ObjectId; name: string; party?: string }>("npps")
+  const npps = await nppsCollection<{ _id: ObjectId; name: string; party?: string }>(db)
     .find({ _id: { $in: nppIds } })
     .toArray();
   const nppMap = new Map(npps.map((npp) => [npp._id.toString(), npp]));
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: eligibility.qualifyingPartyIds } })
     .toArray();
   const partyNameMap = new Map(parties.map((party) => [party.sequentialId.toString(), party.name]));
@@ -333,11 +340,11 @@ export async function getEligibleSenateAppointees(
   governorUserId: string,
   senateClass: 1 | 2 | 3
 ): Promise<{ candidates: EligibleSenateAppointeeView[] }> {
-  const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
-  const charactersCollection = db.collection<Character>("characters");
-  const nppsCollection = db.collection<NPP>("npps");
+  const officialsCollection = electedOfficialsCollection(db);
+  const charactersHandle = charactersCollection(db);
+  const nppDocs = nppsCollection(db);
 
-  const governorCharacter = await charactersCollection.findOne({
+  const governorCharacter = await charactersHandle.findOne({
     userId: new ObjectId(governorUserId),
   });
   if (!governorCharacter) {
@@ -370,10 +377,10 @@ export async function getEligibleSenateAppointees(
   }
 
   const [eligibleChars, eligibleNpps, occupiedOfficials] = await Promise.all([
-    charactersCollection
+    charactersHandle
       .find({ homeState: governorOfficial.state, userId: { $exists: true } })
       .toArray(),
-    nppsCollection.find({ homeState: governorOfficial.state, retiredAt: null }).toArray(),
+    nppDocs.find({ homeState: governorOfficial.state, retiredAt: null }).toArray(),
     officialsCollection
       .find({ $or: [{ characterId: { $ne: null } }, { nppId: { $exists: true } }] })
       .toArray(),
@@ -418,7 +425,7 @@ export async function getEligibleSenateAppointees(
 export async function getPublicVacancies(
   db: Db
 ): Promise<{ vacancies: Record<string, VacancyView[]> }> {
-  const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
+  const officialsCollection = electedOfficialsCollection(db);
   const senateOfficials = await officialsCollection.find({ officeType: "senate" }).toArray();
 
   const filledSeats = new Set<string>();
@@ -444,7 +451,7 @@ export async function getPublicVacancies(
   // States that never seated an official have no row and are filled by the
   // regular cycle, so they are NOT vacancies (matches byElectionWatcher).
   //
-  // Fixes #3275: the prior governor logic did the inverse — it treated any
+  // The prior governor logic did the inverse, it treated any
   // governor row (including tombstones) as "filled" and reported never-seated
   // states as vacant. House/stateSenate were also hard-coded empty.
   const collectRowVacancies = (
@@ -482,9 +489,10 @@ async function getViewerVoteContext(
     return { viewerVote: null, myWhippedFrom: null };
   }
 
-  const viewerChar = await db
-    .collection<Character>("characters")
-    .findOne({ userId: new ObjectId(viewerUserId) }, { projection: { _id: 1 } });
+  const viewerChar = await charactersCollection(db).findOne(
+    { userId: new ObjectId(viewerUserId) },
+    { projection: { _id: 1 } }
+  );
   if (!viewerChar) {
     return { viewerVote: null, myWhippedFrom: null };
   }

@@ -1,17 +1,10 @@
 /**
  * A small in-memory stand-in for the driver, for tests that need STATE.
  *
- * `mockDb` returns stubs and lets a test assert on the calls that were made.
- * That is the right tool for "did this code write the field it said it would",
- * and the wrong one for "does money still add up after five operations", which
- * is the question the banking conservation test has to answer. Asserting on
- * calls cannot catch a leak: every individual write looks correct, and the hole
- * is in the arithmetic between them.
- *
- * So this stores documents and applies updates for real. It implements the
- * subset of the query language the banking flows actually use, and throws on
- * anything it does not understand rather than silently matching nothing, which
- * is the failure mode that would make a conservation test pass while lying.
+ * `mockDb` returns stubs and asserts on calls, which cannot catch a leak:
+ * every individual write looks correct and the hole is in the arithmetic
+ * between them. This stores documents and applies updates for real, and
+ * throws on unsupported query syntax rather than silently matching nothing.
  */
 
 import { MongoServerError, ObjectId } from "mongodb";
@@ -344,6 +337,8 @@ function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
       return (args[0] as number) < (args[1] as number);
     case "$eq":
       return sameValue(args[0], args[1]);
+    case "$ne":
+      return !sameValue(args[0], args[1]);
     case "$in":
       return Array.isArray(args[1]) && args[1].some((value) => sameValue(value, args[0]));
     case "$add":

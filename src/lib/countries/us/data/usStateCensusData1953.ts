@@ -1,41 +1,22 @@
 import type { Layer1Config } from "@/lib/seeds/stateDemographicsPure";
 import { stateCensusData1979 } from "./usStateCensusData1979";
 
-/**
+/*
  * US Layer-1 census bundle for the 1953 era.
  *
- * CENSUS SHARES (race/education/wealth/age) are authored from the 1950 Census
- * (refs #3241) — they no longer proxy the 1979 bundle:
- * - Race: 1950 Census — national ~89.5% White (incl. most Hispanics, who were
- *   counted White; broken out here at ~2% nationally from the 1950 "Spanish
- *   surname" tabulation: NM ~35, TX ~14, AZ ~13, CA ~8, CO ~9), ~10% Black
- *   (concentrated in the South — MS 45, SC 39, LA 33, AL 32, GA 31 — with the
- *   Great Migration only partway done: northern industrial states 5-8%),
- *   Asian negligible outside HI/CA/WA, "other" carrying American Indian /
- *   Alaska Native / Pacific populations (AK, AZ, NM, OK, SD, MT, ND, HI).
- * - Education: 1950 attainment — bachelor's-or-higher ~6.2% nationally
- *   (college ~6% + graduate ~1.3% here), no_college ~93%; DC highest, New
- *   England/NY/CA/CO/UT/WA above average, Deep South + Appalachia lowest.
- * - Age: same voting-age buckets as 1979, shifted for 1950's smaller senior
- *   cohort (65+ was 8.1% of the population vs 11.3% in 1980) and the absence
- *   of the boomer bulge: per state young-1, mid+2, mature+2, senior-3 from
- *   the 1979 values. FL already the senior outlier, UT the youngest.
- * - Wealth: era-relative tiers, more compressed and poorer than 1979
- *   (low+9/middle-5/high-4 from the 1979 tiers), with the pre-Civil-Rights
- *   South markedly poorer still (Deep South low+2/middle-2) and the
- *   industrial Midwest at its postwar-boom peak (low-3/middle+2/high+1).
+ * Census shares (race/education/wealth/age) come from the 1950 Census, not
+ * the 1979 bundle. Unseeded groups (e.g. Spanish-surname Hispanics folded
+ * into White at ~2% nationally, American Indian/Alaska Native/Pacific in
+ * `other`) and per-state magnitudes are calibrated to 1950 figures.
  *
- * IDEOLOGY shares still reuse the 1979 bundle: ideology is a non-census
- * overlay dimension (no 1950 census analog), and 1953-era political behavior
- * is governed by the era position/composition tables, not by these shares.
+ * Ideology shares still reuse 1979: no 1950 census analog, and 1953
+ * political behavior is driven by era position/composition tables.
  *
- * The per-state `positions` blocks remain deliberately ABSENT (as when this
- * bundle proxied 1979): state-authored census positions sit ABOVE the era
- * tables in the layered position merge (see deriveGroupLeanFromLayer1) and
- * would silently override the 1953 era table and the Solid-South / Plains /
- * Yankee-Republican state overrides. In the 1953 era, positions are governed
- * entirely by `getEraPositions("1953", stateId)` — ERA_POSITION_OVERRIDES
- * ["1953"] plus STATE_POSITION_OVERRIDES["1953"] in demographicCategories.ts.
+ * Per-state `positions` blocks are deliberately ABSENT. State-authored
+ * positions merge ABOVE era tables (see deriveGroupLeanFromLayer1) and would
+ * silently override the 1953 era table and Solid-South/Plains/Yankee-
+ * Republican overrides. Positions are governed entirely by
+ * `getEraPositions("1953", stateId)`.
  */
 const CENSUS_SHARES_1950: Record<string, Omit<Layer1Config, "ideology" | "positions">> = {
   AK: {

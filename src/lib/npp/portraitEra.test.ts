@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { portraitsForYear, selectPoliticianImage } from "./generator";
+import { portraitToken } from "./portraitTokens";
 
 /**
  * Portrait era tiers.
@@ -76,7 +77,7 @@ describe("portrait era filtering", () => {
   });
 
   it("a 1953 US pick is never a datably-modern photograph", () => {
-    const byId = new Map(POOL.map((p) => [p.id, p]));
+    const byId = new Map(POOL.map((p) => [portraitToken(p.id), p]));
     for (let i = 0; i < 60; i++) {
       const url = selectPoliticianImage("US", "male", "white", "Fictional Nobody", 1953);
       if (!url) continue;
@@ -84,12 +85,12 @@ describe("portrait era filtering", () => {
       const row = byId.get(id);
       expect(row, id).toBeDefined();
       const year = yearOf(row!.url);
-      if (year != null) expect(year, `${row!.name} (${year})`).toBeLessThanOrEqual(1973);
+      if (year != null) expect(year, `${id} (${year})`).toBeLessThanOrEqual(1973);
     }
   });
 
   it("a modern world still reaches the modern portraits", () => {
-    const byId = new Map(POOL.map((p) => [p.id, p]));
+    const byId = new Map(POOL.map((p) => [portraitToken(p.id), p]));
     const years: number[] = [];
     for (let i = 0; i < 120; i++) {
       const url = selectPoliticianImage("US", "male", "white", "Fictional Nobody", 2019);

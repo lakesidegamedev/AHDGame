@@ -1,9 +1,11 @@
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import type { SuccessionAccountingSnapshot } from "./normalizeLiveFinances";
 import type { SuccessionFiscalShare } from "./rules/fiscalShares";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { federationFiscalAccountsCollection } from "@/lib/db/repositories/federationFiscalAccounts";
 
 export const FEDERATION_FISCAL_ACCOUNTS_COLLECTION = "federationFiscalAccounts";
 
@@ -70,8 +72,7 @@ export async function materializeFederationFiscalAccounts(input: {
     )
   )
     throw new Error("Federation fiscal accounts disagree with the approved balance sheet");
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({ $or: [{ _id: sourceCountryId }, { countryId: sourceCountryId }] }, { session })
     .toArray();
   if (budgets.length !== 1) throw new Error("Federation fiscal source needs one budget");
@@ -94,7 +95,7 @@ export async function materializeFederationFiscalAccounts(input: {
   }));
   for (const account of accounts) {
     if (account.kind !== "background-successor") continue;
-    const updated = await db.collection<MacroCountryState>("macroCountries").updateOne(
+    const updated = await macroCountriesCollection<MacroCountryState>(db).updateOne(
       {
         _id: account.entityId,
         presetId: "1991-default",
@@ -118,17 +119,15 @@ export async function materializeFederationFiscalAccounts(input: {
   const sourceCashLocal = (sourceCashMinor / 100) * rate;
   if (!Number.isFinite(sourceCashLocal))
     throw new Error("Federation source treasury exceeds local-currency precision");
-  const sourceUpdate = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { _id: budget._id, treasuryBalance: budget.treasuryBalance },
-      { $set: { treasuryBalance: sourceCashLocal } },
-      { session }
-    );
+  const sourceUpdate = await federalBudgetCollection(db).updateOne(
+    { _id: budget._id, treasuryBalance: budget.treasuryBalance },
+    { $set: { treasuryBalance: sourceCashLocal } },
+    { session }
+  );
   if (sourceUpdate.matchedCount !== 1)
     throw new Error("Federation source treasury changed during settlement");
-  await db
-    .collection<FederationFiscalAccount>(FEDERATION_FISCAL_ACCOUNTS_COLLECTION)
-    .insertMany(accounts, { session });
+  await federationFiscalAccountsCollection<FederationFiscalAccount>(db).insertMany(accounts, {
+    session,
+  });
   return accounts;
 }

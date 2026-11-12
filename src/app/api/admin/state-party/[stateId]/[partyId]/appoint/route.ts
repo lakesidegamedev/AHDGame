@@ -21,13 +21,12 @@ import {
   POSITION_LABELS,
   notifyLeadershipAppointed,
   notifyLeadershipRemovedByAdmin,
-} from "@/lib/statePartyElections";
-import type {
-  StatePartyElectionPosition,
-  StatePartyOrg,
-  Character,
-  AdminLog,
-} from "@/lib/db/types";
+} from "@/lib/elections/party/statePartyElections";
+import type { StatePartyElectionPosition, StatePartyOrg, AdminLog } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ stateId: string; partyId: string }>;
@@ -74,7 +73,7 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
       return errorResponse(400, "Invalid characterId");
     }
 
-    const char = await db.collection<Character>("characters").findOne({ _id: charOid });
+    const char = await charactersCollection(db).findOne({ _id: charOid });
 
     if (!char) return errorResponse(404, "Character not found");
 
@@ -87,9 +86,9 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
   }
 
   // Get current holder so we can notify removal
-  const org = await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .findOne({ _id: `${stateId}_${partyId}` as unknown as string });
+  const org = await statePartyOrgCollection(db).findOne({
+    _id: `${stateId}_${partyId}` as unknown as string,
+  });
 
   const previousHolderId: ObjectId | null = org?.[field] ?? null;
   const leadershipReset: Partial<Pick<StatePartyOrg, "chairId" | "viceChairId" | "treasurerId">> =
@@ -106,12 +105,10 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
   }
 
   // Update statePartyOrg (elections continue running - winner will take position when election completes)
-  await db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .updateOne(
-      { _id: `${stateId}_${partyId}` as unknown as string },
-      { $set: { ...leadershipReset, [field]: newHolderId, updatedAt: now } }
-    );
+  await statePartyOrgCollection(db).updateOne(
+    { _id: `${stateId}_${partyId}` as unknown as string },
+    { $set: { ...leadershipReset, [field]: newHolderId, updatedAt: now } }
+  );
 
   // Notifications
   if (newHolderId) {
@@ -130,7 +127,7 @@ export const POST = withAdminRoute(async (auth, request: Request, { params }: Ro
     details: `${label} of ${stateId} ${partyId}`,
     createdAt: now,
   };
-  await db.collection("adminLogs").insertOne(logEntry);
+  await adminLogsCollection<Document>(db).insertOne(logEntry);
 
   return NextResponse.json({
     success: true,

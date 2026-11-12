@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SovereignBondRisk } from "@/components/SovereignBondRisk";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondDetail } from "./bondTypes";
 

@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { roRegions } from "@/lib/seeds/ro/roRegions";
 import { roRegions1953 } from "@/lib/seeds/ro/roRegions1953";
 import { roParties } from "@/lib/seeds/ro/roParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -82,10 +81,8 @@ export function getRoSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "RO",
-    categoryId: "ro_voterGroups",
     regions,
     parties: roParties,
-    categories: makeEasternBlocCategories("ro_voterGroups", "Romania Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

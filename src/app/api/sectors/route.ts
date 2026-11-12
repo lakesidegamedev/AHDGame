@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { CorporateSector, State, UnownedSector, Corporation } from "@/lib/db/types";
+import type { CorporateSector, State, UnownedSector } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPES,
   OPERATING_SECTOR_TYPE_LABELS,
@@ -28,6 +28,11 @@ import { loadCountryPresentationOverrides } from "@/lib/country/countryIdentity"
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export type SectorView = "unowned" | "owned" | "forSale";
 export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -84,8 +89,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Load states for name resolution
-    const states = await db
-      .collection<State>("states")
+    const states = await statesCollection(db)
       .find({})
       .project<{ _id: string; name: string; countryId: CountryId }>({
         _id: 1,
@@ -95,25 +99,20 @@ export async function GET(request: Request) {
       .toArray();
     const stateMap = new Map(states.map((s) => [s._id, s]));
 
-    // A country that renamed itself must be listed and labelled under the name
-    // it goes by. Reunified Germany keeps `DD` as its country id and carries the
-    // new name in `countryState.displayNameOverride`, so reading the compiled
-    // config alone showed its sectors under "East Germany" while the dissolved
-    // shell still offered "Germany" as a filter that could never match a row
-    // (ticket #1271). `COUNTRY_ORDER` is the compiled roster, so it is narrowed
-    // to countries that still hold territory rather than trusted as a list of
-    // live countries.
+    // A renamed country must be listed and labelled under the name it goes by.
+    // Reunified Germany keeps `DD` as its id and carries the new name in
+    // `countryState.displayNameOverride`, so reading the compiled config alone
+    // showed sectors under "East Germany" while a stale "Germany" filter could
+    // never match a row. `COUNTRY_ORDER` is the compiled roster, so narrow it to
+    // countries that still hold territory.
     //
-    // Three corrections, not one. The runtime override is what reunification
-    // writes; the ERA name is what a 1953 world calls RU ("Soviet Union") and DE
-    // ("West Germany"); and the flag override travels with the rename, so
-    // applying only the name left Germany labelled correctly under the flag of
-    // the state it replaced.
+    // Three corrections: the runtime rename override, the era name (e.g. "Soviet
+    // Union" for RU in 1953), and the flag override, which travels with the rename.
     //
-    // `loadCountryPresentationOverrides` rather than `resolveCountryIdentities`
-    // because the latter reads through `getCountryState`, which SELF-HEALS a
-    // missing row. This is a public listing endpoint and must not be able to
-    // insert documents as a side effect of someone sorting a table.
+    // Use `loadCountryPresentationOverrides` rather than
+    // `resolveCountryIdentities`: the latter reads through `getCountryState`,
+    // which self-heals a missing row, and this public listing endpoint must not
+    // insert documents as a side effect.
     const [preset, overrides] = await Promise.all([
       loadWorldPreset(db),
       loadCountryPresentationOverrides(db),
@@ -148,14 +147,9 @@ export async function GET(request: Request) {
      * The country filter, as a query. Used by the rows AND by the badge counts,
      * so the two cannot disagree.
      *
-     * The second leg is for a row whose state no longer exists: `mergeRegion`
-     * re-points sector rows before deleting a region, so this is debris rather
-     * than normal state, and the pool heal deliberately leaves it for a human.
-     * It is still LABELLED from its stored country, and without this leg it
-     * would be labelled under a country whose filter could never return it:
-     * visible in the unfiltered list, gone the moment you filter by the country
-     * it names. Findable under the name it is shown under is the only pairing
-     * that is not a lie.
+     * The second leg catches rows whose state was deleted but whose stored country
+     * still labels them: without it they would be visible unfiltered but vanish
+     * when filtered by the country they name.
      */
     const allStateIds = states.map((st) => st._id);
     const countryScopedFilter: Record<string, unknown> = filteredStateIds
@@ -210,8 +204,7 @@ export async function GET(request: Request) {
       Object.assign(unownedFilter, unownedScopedFilter);
 
       const unownedSectors = (
-        await db
-          .collection<UnownedSector>("unownedSectors")
+        await unownedSectorsCollection(db)
           .find(unownedFilter, {
             projection: {
               sectorType: 1,
@@ -278,8 +271,7 @@ export async function GET(request: Request) {
         corpFilter.forSale = { $ne: null };
       }
 
-      const ownedSectors = await db
-        .collection<CorporateSector>("corporateSectors")
+      const ownedSectors = await corporateSectorsCollection(db)
         .find(corpFilter, {
           projection: {
             sectorType: 1,
@@ -304,8 +296,7 @@ export async function GET(request: Request) {
 
       const corporations =
         corpObjectIds.length > 0
-          ? await db
-              .collection<Corporation>("corporations")
+          ? await corporationsCollection(db)
               .find({ _id: { $in: corpObjectIds } })
               .project<
                 {
@@ -414,9 +405,9 @@ export async function GET(request: Request) {
     const corpCountFilter = { ...countryScopedFilter };
 
     const [unownedCount, ownedCount, forSaleCount] = await Promise.all([
-      db.collection("unownedSectors").countDocuments(unownedCountFilter),
-      db.collection("corporateSectors").countDocuments(corpCountFilter),
-      db.collection("corporateSectors").countDocuments({
+      unownedSectorsCollection<Document>(db).countDocuments(unownedCountFilter),
+      corporateSectorsCollection<Document>(db).countDocuments(corpCountFilter),
+      corporateSectorsCollection<Document>(db).countDocuments({
         forSale: { $ne: null },
         ...corpCountFilter,
       }),

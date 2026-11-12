@@ -7,6 +7,12 @@ import type { NPP, StatePartyOrg, State, PoliticalParty } from "@/lib/db/types";
 import type { Db } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { errorResponse } from "@/lib/api/errors";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export async function handleSpawnNPPs(
   db: Db,
@@ -26,7 +32,7 @@ export async function handleSpawnNPPs(
     return errorResponse(400, "party is required.");
   }
 
-  const allStatesRaw = await db.collection<State>("states").find({}).toArray();
+  const allStatesRaw = await statesCollection(db).find({}).toArray();
 
   // Look up party by sequentialId and countryId for precise matching
   let partyDoc: PoliticalParty | null = null;
@@ -34,13 +40,13 @@ export async function handleSpawnNPPs(
   if (!isNaN(seqId)) {
     if (countryId) {
       // Use explicit countryId for precise lookup (sequentialId is only unique within a country)
-      partyDoc = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ sequentialId: seqId, countryId: countryId.toUpperCase() as CountryId });
+      partyDoc = await politicalPartiesCollection(db).findOne({
+        sequentialId: seqId,
+        countryId: countryId.toUpperCase() as CountryId,
+      });
     } else {
       // No countryId provided - check if sequentialId is unambiguous
-      const matchingParties = await db
-        .collection<PoliticalParty>("politicalParties")
+      const matchingParties = await politicalPartiesCollection(db)
         .find({ sequentialId: seqId })
         .toArray();
       if (matchingParties.length === 1) {
@@ -75,8 +81,7 @@ export async function handleSpawnNPPs(
   const partySoc =
     partyDoc?.socialPosition ?? (party === "democrat" ? -2 : party === "republican" ? 2 : 0);
 
-  const nppMemberAgg = await db
-    .collection("electedOfficials")
+  const nppMemberAgg = await electedOfficialsCollection<Document>(db)
     .aggregate<{ _id: string; count: number }>([
       { $match: { isNPP: true } },
       { $lookup: { from: "npps", localField: "nppId", foreignField: "_id", as: "npp" } },
@@ -118,8 +123,7 @@ export async function handleSpawnNPPs(
     return weights[weights.length - 1].state;
   }
 
-  const existingNPPs = await db
-    .collection<NPP>("npps")
+  const existingNPPs = await nppsCollection(db)
     .find({ retiredAt: null }, { projection: { name: 1 } })
     .toArray();
   const usedNames = new Set(existingNPPs.map((n) => n.name));
@@ -133,9 +137,7 @@ export async function handleSpawnNPPs(
     const state = pickState();
 
     const statePartyKey = `${state}_${partyIdStr}`;
-    const orgDoc = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ _id: statePartyKey });
+    const orgDoc = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
     const partyOrg = orgDoc?.organization ?? 50;
     const quality = calculateQualityBonus(partyOrg);
 
@@ -191,7 +193,7 @@ export async function handleSpawnNPPs(
       updatedAt: now,
     };
 
-    await db.collection<NPP>("npps").insertOne(npp);
+    await nppsCollection(db).insertOne(npp);
     created.push({ state, name });
   }
 

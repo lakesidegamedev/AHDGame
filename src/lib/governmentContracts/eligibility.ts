@@ -5,7 +5,7 @@ import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
 import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { resolveFillEligibility, FILL_REASON_TEXT } from "@/lib/military/defenceFillEligibility";
@@ -21,6 +21,8 @@ import { resolveGameYear } from "@/lib/era/era";
 import { getStartingYearForPreset, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
 import type { GovernmentTender, ContractBid } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export class ContractError extends Error {
   constructor(
@@ -37,9 +39,7 @@ export async function validateBid(
   turn: number,
   user?: AuthUserWithCharacter
 ) {
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: new ObjectId(bid.corporationId) });
+  const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(bid.corporationId) });
   if (!corp) throw new ContractError("Corporation not found.", 404);
   if (user && requireCeo(corp, user.userId))
     throw new ContractError("Only this corporation's CEO may bid.", 403);
@@ -50,9 +50,10 @@ export async function validateBid(
   )
     throw new ContractError("The bid is no longer authorized by this corporation's CEO.");
   if (t.terms.type === "extraction") {
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ corporationId: corp._id, stateId: t.terms.stateId }, { projection: { _id: 1 } });
+    const sector = await corporateSectorsCollection(db).findOne(
+      { corporationId: corp._id, stateId: t.terms.stateId },
+      { projection: { _id: 1 } }
+    );
     const invalid = extractionBidError({
       corporationType: corp.type,
       hasOperations: !!sector,
@@ -65,12 +66,10 @@ export async function validateBid(
   const gate = await isProcurementBlocked(db, t.countryId, turn);
   if (gate.blocked) throw new ContractError(gate.reason ?? "Procurement is paused.");
   if (!bid.sectorId) throw new ContractError("Choose a defence plant.", 400);
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne(
-      { _id: new ObjectId(bid.sectorId), corporationId: corp._id, sectorType: "defense" },
-      { projection: { corporationId: 1, sectorType: 1, strategyId: 1, revenue: 1 } }
-    );
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: new ObjectId(bid.sectorId), corporationId: corp._id, sectorType: "defense" },
+    { projection: { corporationId: 1, sectorType: 1, strategyId: 1, revenue: 1 } }
+  );
   if (!sector)
     throw new ContractError("The selected defence plant does not belong to this corporation.");
   const state = await getGameState(db);

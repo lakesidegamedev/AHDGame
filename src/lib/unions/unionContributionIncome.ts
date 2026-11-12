@@ -25,25 +25,28 @@ import {
   freeCashFlowPerTurn,
   politicalContributionPerTurn,
 } from "./unionPoliticalContributions";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 export async function unionContributionIncomePerTurn(
   db: Db,
   characterId: ObjectId
 ): Promise<number> {
-  const mine = await db
-    .collection<UnionOrganizer>("unionOrganizers")
+  const mine = await unionOrganizersCollection(db)
     .find({ characterId, strength: { $gt: 0 } }, { projection: { unionId: 1, strength: 1 } })
     .toArray();
   if (mine.length === 0) return 0;
 
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { labourSystemMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { labourSystemMode: 1 } }
+  );
   if (!(await isLabourFullMode(config))) return 0;
 
   const unionIds = mine.map((row) => row.unionId);
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find(
       {
         _id: { $in: unionIds },
@@ -65,15 +68,13 @@ export async function unionContributionIncomePerTurn(
 
   const payingUnionIds = unions.map((u) => u._id);
   const [organizers, sectors] = await Promise.all([
-    db
-      .collection<UnionOrganizer>("unionOrganizers")
+    unionOrganizersCollection(db)
       .find(
         { unionId: { $in: payingUnionIds }, strength: { $gt: 0 } },
         { projection: { unionId: 1, characterId: 1, strength: 1 } }
       )
       .toArray(),
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { representingUnionId: { $in: payingUnionIds } },
         { projection: { representingUnionId: 1, workers: 1, unionization: 1, wagePerWorker: 1 } }

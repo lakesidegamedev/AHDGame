@@ -8,6 +8,10 @@ import {
 import type { ElectedOfficial, PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { buildProportionalChamberSeats, sumSeatsHeld } from "@/lib/seeds/proportionalChamberSeats";
 import { seedFromSeats, type SeedMode } from "@/lib/npp/seedHistorical";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 const FEDERATIONS = ["CS", "YU"] as const;
 
@@ -89,16 +93,13 @@ export async function seed1991FederationLegislatures(
   for (const countryId of FEDERATIONS) {
     const config = getCountryConfig(countryId, preset);
     const [regions, parties, presence] = await Promise.all([
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find({ countryId }, { projection: { _id: 1, houseDistricts: 1, stateSenateSeats: 1 } })
         .toArray(),
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId, isDefault: true }, { projection: { name: 1, sequentialId: 1 } })
         .toArray(),
-      db
-        .collection<StatePartyOrg>("statePartyOrg")
+      statePartyOrgCollection(db)
         .find(
           { countryId, hasPresence: true },
           { projection: { stateId: 1, partyId: 1, organization: 1, hasPresence: 1 } }
@@ -130,7 +131,7 @@ export async function seed1991FederationLegislatures(
     const federalOffices = [getLowerChamberOfficeType(countryId, preset), upperOffice].filter(
       (office): office is string => office !== undefined
     );
-    const playerOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+    const playerOfficial = await electedOfficialsCollection(db).findOne(
       {
         countryId,
         officeType: { $in: federalOffices },

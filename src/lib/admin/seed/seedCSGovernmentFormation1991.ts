@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { getCountryConfig } from "@/lib/constants/countries";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 /** Open the 1991 Czechoslovak federal parliamentary formation cycle. */
 export async function seedCSGovernmentFormation1991(
@@ -33,12 +34,10 @@ export async function seedCSGovernmentFormation1991(
     formedTurn: null,
     collapsedAt: null,
   };
-  await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .updateOne(
-      { _id: "CS" },
-      { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-      { upsert: true }
-    );
+  await governmentFormationsCollection(db).updateOne(
+    { _id: "CS" },
+    { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+    { upsert: true }
+  );
   log("Seeded CS 1991 government formation document (pending)");
 }

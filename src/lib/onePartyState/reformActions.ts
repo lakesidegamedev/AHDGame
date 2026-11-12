@@ -23,6 +23,8 @@ import {
   scheduleHonestByElection,
   setRulingPartyVoteMultiplierTier,
 } from "./reformPrimitives";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export interface ReformActionContext {
   db: Db;
@@ -87,12 +89,10 @@ export async function legalizePartyAction(
   // Refuse before charging anything: the flip below only matches a banned
   // party in this country, so without this check a stale or wrong id paid
   // the full cost and legalized nothing.
-  const banned = await ctx.db
-    .collection("politicalParties")
-    .findOne(
-      { sequentialId: partyId, countryId: ctx.countryId, regimeStatus: "banned" },
-      { projection: { _id: 1 } }
-    );
+  const banned = await politicalPartiesCollection<Document>(ctx.db).findOne(
+    { sequentialId: partyId, countryId: ctx.countryId, regimeStatus: "banned" },
+    { projection: { _id: 1 } }
+  );
   if (!banned) {
     throw new Error(`legalizePartyAction: party ${partyId} is not banned in ${ctx.countryId}`);
   }

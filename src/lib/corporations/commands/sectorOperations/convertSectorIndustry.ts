@@ -16,6 +16,9 @@ import { SECTOR_STRATEGIES, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sect
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -41,15 +44,14 @@ export async function convertSectorIndustryCore(
   }
 ): Promise<ConvertSectorOutcome> {
   const [sector, gameState] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: input.sectorId, corporationId: input.corporationId }),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, worldEpochId: 1, producerOpening: 1 } }
-      ),
+    corporateSectorsCollection(db).findOne({
+      _id: input.sectorId,
+      corporationId: input.corporationId,
+    }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, worldEpochId: 1, producerOpening: 1 } }
+    ),
   ]);
   if (!sector) return { ok: false, status: 404, error: "Sector not found" };
   const currentTurn = gameState?.currentTurn ?? 0;
@@ -72,7 +74,7 @@ export async function convertSectorIndustryCore(
   const to = operatingSectorIdentity(input.targetLane);
   const strategyId = result.set.strategyId as string;
 
-  const duplicate = await db.collection<CorporateSector>("corporateSectors").findOne(
+  const duplicate = await corporateSectorsCollection(db).findOne(
     {
       _id: { $ne: sector._id },
       corporationId: input.corporationId,
@@ -92,9 +94,10 @@ export async function convertSectorIndustryCore(
 
   if (to.sectorType === "extraction") {
     const strategy = (SECTOR_STRATEGIES[input.targetLane] ?? []).find((s) => s.id === strategyId);
-    const capacity = await db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
-      .findOne({ stateId: sector.stateId }, { projection: { resources: 1 } });
+    const capacity = await stateResourceCapacityCollection(db).findOne(
+      { stateId: sector.stateId },
+      { projection: { resources: 1 } }
+    );
     if (
       strategy &&
       isExtractionStrategyZeroYield(strategy, capacity ? (capacity.resources ?? null) : undefined)
@@ -107,7 +110,7 @@ export async function convertSectorIndustryCore(
   }
 
   const now = new Date();
-  const write = await db.collection<CorporateSector>("corporateSectors").updateOne(
+  const write = await corporateSectorsCollection(db).updateOne(
     {
       _id: sector._id,
       corporationId: input.corporationId,

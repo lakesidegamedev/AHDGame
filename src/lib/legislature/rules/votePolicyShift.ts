@@ -25,7 +25,7 @@ function onGrid(value: number): number {
 
 /**
  * The bill's position on each axis: the average of every provision that takes a
- * stance there. Legacy 0 values mean "no stance" (ticket #1116); v2 explicitly
+ * stance there. Legacy 0 values mean "no stance"; v2 explicitly
  * marks its neutral choice with includeNeutral. Omitted values are always left
  * out of the average rather than pulling it toward centre. Callers pass only the
  * provisions that carry ideology (policy provisions), never tariffs, subsidies,

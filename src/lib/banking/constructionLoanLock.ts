@@ -9,6 +9,9 @@ import {
   constructionBorrowerTransferTurn,
   loanServiceKeyTurn,
 } from "./rules/constructionBorrowerTransfer";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Point the loan at the borrower its site's claim names, when the site has
@@ -20,12 +23,10 @@ import {
 export async function alignConstructionBorrowerWithSite(db: Db, loan: BankLoan): Promise<void> {
   const collateral = loan.constructionCollateral;
   if (!collateral || !loan.borrowerId) return;
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne(
-      { _id: collateral.sectorId },
-      { projection: { corporationId: 1, constructionFinancing: 1 } }
-    );
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: collateral.sectorId },
+    { projection: { corporationId: 1, constructionFinancing: 1 } }
+  );
   const claim = sector?.constructionFinancing;
   if (
     !sector ||
@@ -35,7 +36,7 @@ export async function alignConstructionBorrowerWithSite(db: Db, loan: BankLoan):
     claim.borrowerId === String(loan.borrowerId)
   )
     return;
-  await db.collection<BankLoan>("bankLoans").updateOne(
+  await bankLoansCollection(db).updateOne(
     {
       _id: loan._id,
       borrowerId: loan.borrowerId,
@@ -51,12 +52,10 @@ export async function releaseConstructionLoanLock(
   key: string
 ): Promise<void> {
   if (!loan.constructionCollateral) return;
-  await db
-    .collection<BankLoan>("bankLoans")
-    .updateOne(
-      { _id: loan._id, constructionSettlementOwner: key },
-      { $unset: { constructionSettlementOwner: "" } }
-    );
+  await bankLoansCollection(db).updateOne(
+    { _id: loan._id, constructionSettlementOwner: key },
+    { $unset: { constructionSettlementOwner: "" } }
+  );
 }
 
 /** A different service receipt can be recovered, but an unfinished build stays owned. */
@@ -66,7 +65,7 @@ export async function acquireConstructionLoanLock(
   key: string
 ): Promise<BankLoan | null> {
   if (!loan.constructionCollateral) return loan;
-  const loans = db.collection<BankLoan>("bankLoans");
+  const loans = bankLoansCollection(db);
   const acquire = () =>
     loans.findOneAndUpdate(
       {
@@ -86,9 +85,10 @@ export async function acquireConstructionLoanLock(
   if (!current || !previous) return null;
   const collateral = current.constructionCollateral;
   if (collateral && previous === `construction:${collateral.claimId}:funding`) {
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: collateral.sectorId }, { projection: { constructionFinancing: 1 } });
+    const sector = await corporateSectorsCollection(db).findOne(
+      { _id: collateral.sectorId },
+      { projection: { constructionFinancing: 1 } }
+    );
     const claim = sector?.constructionFinancing;
     if (
       claim?.claimId !== collateral.claimId ||
@@ -122,9 +122,10 @@ export async function acquireConstructionLoanLock(
     return acquire();
   }
   if (!previous.startsWith(`loan-service:${loan._id}:`)) return null;
-  const record = await db
-    .collection<{ _id: string }>("bankMoneyMoves")
-    .findOne({ _id: previous }, { projection: { _id: 1 } });
+  const record = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: previous },
+    { projection: { _id: 1 } }
+  );
   if (!record) return null;
   const recovered = await resumeSettlement(db, previous);
   const complete = !recovered.error && ["applied", "replayed"].includes(recovered.status);

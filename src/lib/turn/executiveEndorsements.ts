@@ -3,29 +3,21 @@ import type { ExecutiveEndorsement } from "@/lib/db/types";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 import { withdrawExecutiveEndorsement } from "@/lib/governorOffice/endorsements/withdrawExecutiveEndorsement";
 import { preloadEndorsementTargets } from "./endorsements/preloadEndorsementTargets";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 /**
  * Turn phase: auto-withdraw executive endorsements whose conditions no longer hold.
- *   - election no longer active → election_ended
- *   - candidate no longer active → candidate_inactive
- *   - leader no longer the country's head of government (lost election, VONC,
- *     deleted character, etc.) → leader_left_office
+ *   - election no longer active -> election_ended
+ *   - candidate no longer active -> candidate_inactive
+ *   - leader no longer head of government -> leader_left_office
  *
- * Parallel to processGovernorEndorsements. Must run BEFORE processCampaignTurn
- * so withdrawals are observed by the endorsement-count aggregation there.
- *
- * Reads are batched up front (#575): elections and candidates resolve from two
- * `$in` queries instead of one `findOne` each per endorsement. Writes stay
- * sequential — they only run for the withdrawing subset, which is small, and
- * `withdrawExecutiveEndorsement` owns the Support-bump reversal.
+ * Must run BEFORE processCampaignTurn so withdrawals are observed by the
+ * endorsement-count aggregation there.
  */
 export async function processExecutiveEndorsements(
   db: Db
 ): Promise<{ withdrawn: number; byReason: Record<string, number> }> {
-  const active = await db
-    .collection<ExecutiveEndorsement>("executiveEndorsements")
-    .find({ isActive: true })
-    .toArray();
+  const active = await executiveEndorsementsCollection(db).find({ isActive: true }).toArray();
   let withdrawn = 0;
   const byReason: Record<string, number> = {};
   function tally(reason: NonNullable<ExecutiveEndorsement["withdrawnReason"]>) {

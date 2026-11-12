@@ -1,13 +1,11 @@
 /**
- * Bank-NAV floor for hostile-takeover squeeze-out pricing (issue #1750).
+ * Bank-NAV floor for hostile-takeover squeeze-out pricing.
  *
  * The quoted share price recognizes only BANK_EQUITY_VALUATION_WEIGHT of a
  * subsidiary bank's book equity, so a bank-heavy target can be squeezed out
- * for less than the realizable bank net assets the acquirer inherits
- * (ring-fenced cash plus loans plus the marked bond/prop book, net of
- * cash-backed deposits and borrowings). These pure helpers floor the
- * per-share consideration at full realizable NAV per share, so the implied
- * whole-corp value can never underprice the bank the deal delivers.
+ * for less than the realizable bank net assets the acquirer inherits. These pure
+ * helpers floor the per-share consideration at full realizable NAV per share, so
+ * the implied whole-corp value cannot underprice the bank the deal delivers.
  *
  * Rules zone: plain data in, plain data out. No DB, clock, randomness, env.
  */
@@ -21,19 +19,9 @@ import {
 /**
  * Realizable bank NAV a takeover acquirer inherits, in charter currency.
  *
- * `bankEquity()` deliberately excludes the marked prop book: marks move with
- * the market, so the distribution gate must not let an owner upstream cash
- * against them. A takeover is the other side of that trade. It moves the
- * whole charter (cash, loan book AND prop book) to the acquirer, and the
- * supervision revoke path unwinds the book to cash at exactly this mark, so
- * the marked book is realizable value the buyer receives and the floor must
- * count it. Counted exactly once: prop buys debit `cashReserves` into the
- * mark, so cash and mark never overlap and adding the mark to `bankEquity()`
- * counts each dollar one time. All of `bankEquity()`'s liability netting
- * (cash-backed deposits, every borrowing facility) still applies.
+ * `bankEquity()` deliberately excludes the marked prop book: marks move with the market, so the distribution gate must not let an owner upstream cash against them. A takeover moves the whole charter (cash, loan book AND prop book) to the acquirer, and the supervision revoke path unwinds the book to cash at exactly this mark, so the marked book is realizable value the buyer receives and the floor must count it. Counted exactly once: prop buys debit `cashReserves` into the mark, so cash and mark never overlap. All of `bankEquity()`'s liability netting still applies.
  *
- * Malformed marks (missing, non-numeric, non-finite, negative) contribute
- * zero: a corrupt cache must shrink the floor, never invent value.
+ * Malformed marks (missing, non-numeric, non-finite, negative) contribute zero.
  */
 export function takeoverBankNav(
   charter: BalanceSheetCharter | null | undefined,

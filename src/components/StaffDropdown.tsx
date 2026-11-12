@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useClickOutside } from "@/hooks/useClickOutside";
 import { useTranslations } from "next-intl";
-import { DROPDOWN_PANEL_CLASS } from "@/components/navbar/dropdownStyles";
 import { NavPanelSkeleton } from "@/components/navbar/NavPanelSkeleton";
+import { NavDropdownShell } from "@/components/navbar/NavDropdownShell";
 import {
   isStaffUser,
   visibleStaffNavItems,
@@ -30,46 +28,17 @@ type StaffDropdownProps = StaffNavOpts;
  */
 export function StaffDropdown(props: StaffDropdownProps) {
   const t = useTranslations("nav");
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const closeDropdown = useCallback(() => setIsOpen(false), []);
-  useClickOutside(dropdownRef, isOpen, closeDropdown, { closeOnEscape: true });
-
   if (!isStaffUser(props)) return null;
 
   const visible = visibleStaffNavItems(props);
   if (visible.length === 0) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        onPointerEnter={preloadPanel}
-        onFocus={preloadPanel}
-        className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-      >
-        {t("common.staff")}
-        <svg
-          className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div
-          role="menu"
-          className={`absolute right-0 z-50 mt-2 w-52 rounded-xl border border-card-border bg-card shadow-modal ${DROPDOWN_PANEL_CLASS}`}
-        >
-          <StaffDropdownPanel {...props} onClose={closeDropdown} />
-        </div>
-      )}
-    </div>
+    <NavDropdownShell
+      label={t("common.staff")}
+      panelWidthClass="w-52"
+      onPreload={preloadPanel}
+      renderPanel={(close) => <StaffDropdownPanel {...props} onClose={close} />}
+    />
   );
 }

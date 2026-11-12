@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { computeExpiresAt } from "@/lib/financialTxLog/expiresAt";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 /**
  * Stamp `subjectDeletedAt` / `counterpartyDeletedAt` on every tx row that
@@ -40,7 +40,7 @@ export async function stampSubjectDeleted(
     counterpartySet.counterpartySequentialId = options.sequentialId;
   }
 
-  await db.collection<FinancialTxLogEntry>("financialTxLog").updateMany(
+  await financialTxLogCollection(db).updateMany(
     {
       subjectId: entityId,
       // Don't overwrite an already-stamped deletion — first stamp wins so
@@ -55,7 +55,7 @@ export async function stampSubjectDeleted(
     }
   );
 
-  await db.collection<FinancialTxLogEntry>("financialTxLog").updateMany(
+  await financialTxLogCollection(db).updateMany(
     {
       counterpartyId: entityId,
       counterpartyDeletedAt: { $exists: false },

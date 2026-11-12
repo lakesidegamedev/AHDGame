@@ -6,21 +6,16 @@ import { triggerSnapElection } from "@/lib/turn/snapElection";
 /**
  * Fire the election a system conversion promised.
  *
- * `bootstrapNewSystem` has written `countryState.pendingPostConversionElection`
- * since Phase 6, and its own header and the field's type annotation both state
- * that "the election engine consumer reads + clears this on the first
- * post-conversion election". Nothing ever did. The result was that a Stage 4
- * regime collapse, and a voluntary constitutional convention alike, flipped the
- * government type and scheduled an election that never happened. This is that
- * missing consumer.
+ * `bootstrapNewSystem` sets `countryState.pendingPostConversionElection`,
+ * which the election engine must read and clear on the first
+ * post-conversion election. This is that consumer.
  *
- * A TURN STEP, not a hook inside the conversion. A conversion can run from a
- * request path, and an election spawned from a request would spawn again on a
- * retry. Reaching it from a stamp on a document instead means it fires once, on
- * a tick, however the conversion was reached.
+ * A turn step, not a hook inside the conversion: a conversion can run from
+ * a request path, and an election spawned there would double-fire on retry.
+ * Reading it as a document stamp means it fires once, on a tick.
  *
- * Must run AFTER election resolution and the perpetual ensurers, so it reads
- * settled seat state, exactly as `processByElectionWatcher` requires.
+ * Must run after election resolution and the perpetual ensurers, so it
+ * reads settled seat state as `processByElectionWatcher` requires.
  */
 export async function processPostConversionElections(
   db: Db,

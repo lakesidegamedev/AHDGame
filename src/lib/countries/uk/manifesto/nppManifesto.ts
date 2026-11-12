@@ -3,10 +3,9 @@ import type { PledgeCatalogEntry } from "@/lib/db/types/manifesto";
 import { MANIFESTO_PLEDGE_COUNT } from "@/lib/db/types/manifesto";
 
 /**
- * Auto-generate a manifesto for an AI-controlled party (NPP) — epic #856,
- * ticket #857. Symmetry decision (ops-knowledge `uk-rework-design-2026-08-25`):
- * NPPs get manifestos and are judged on delivery like players, so they must not
- * be left without one.
+ * Auto-generate a manifesto for an AI-controlled party (NPP). NPPs get
+ * manifestos and are judged on delivery like players, so they must not be left
+ * without one.
  *
  * An NPP picks the catalog pledges CLOSEST TO ITS OWN IDEOLOGY (a party
  * campaigns on what it believes), scored with the same `calcAppeal` used for

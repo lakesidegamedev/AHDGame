@@ -22,6 +22,17 @@ import type {
 } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { notifyGovernorOfSenateVacancy } from "@/lib/governors/senateVacancy";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 
 export async function POST(request: Request, { params }: { params: Promise<{ partyId: string }> }) {
   try {
@@ -45,9 +56,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     const db = await getDb();
 
     // Resolve party by (sequentialId, countryId) — the canonical unique key.
-    const party = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: partySeqId, countryId });
+    const party = await politicalPartiesCollection(db).findOne({
+      sequentialId: partySeqId,
+      countryId,
+    });
     if (!party) {
       return errorResponse(404, "Party not found");
     }
@@ -60,12 +72,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
     const partySeqIdStr = String(party.sequentialId);
     const partyCountryId = party.countryId ?? "US";
 
-    // Cascade-clean the party's NPPs: pull them out of any active/upcoming
-    // candidacies and held seats, then retire them. Without this, deleting a
-    // party leaves orphaned NPPs holding chamber seats and running in elections
-    // for a party that no longer exists.
-    const partyNpps = await db
-      .collection<NPP>("npps")
+    // Cascade-clean the party's NPPs: pull them out of active/upcoming
+    // candidacies and held seats, then retire them. Otherwise they are left
+    // orphaned, holding seats and running for a party that no longer exists.
+    const partyNpps = await nppsCollection(db)
       .find({ countryId: partyCountryId, party: partySeqIdStr, retiredAt: null })
       .project<{ _id: NPP["_id"] }>({ _id: 1 })
       .toArray();
@@ -79,17 +89,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       // Pull from active/upcoming election candidate lists (matches the pattern
       // in src/app/api/admin/npps/lib/remove.ts — completed elections are left
       // alone for historical accuracy).
-      const liveElections = await db
-        .collection<Election>("elections")
+      const liveElections = await electionsCollection(db)
         .find({ countryId: partyCountryId, status: { $in: ["upcoming", "active"] } })
         .project<{ _id: Election["_id"] }>({ _id: 1 })
         .toArray();
       const liveElectionIds = liveElections.map((e) => e._id);
 
       if (liveElectionIds.length > 0) {
-        const candRes = await db
-          .collection<ElectionCandidate>("electionCandidates")
-          .deleteMany({ electionId: { $in: liveElectionIds }, nppId: { $in: partyNppIds } });
+        const candRes = await electionCandidatesCollection(db).deleteMany({
+          electionId: { $in: liveElectionIds },
+          nppId: { $in: partyNppIds },
+        });
         nppCandidateRowsDeleted = candRes.deletedCount;
       }
 
@@ -98,15 +108,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
       // so deletion — not nulling — is the correct cleanup for every officeType.
       // Read rows first so we can fire senate-vacancy notifications to governors,
       // matching the convention in /api/officials/[id]/resign.
-      const heldOfficials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const heldOfficials = await electedOfficialsCollection(db)
         .find({ nppId: { $in: partyNppIds } })
         .toArray();
 
       if (heldOfficials.length > 0) {
-        const offRes = await db
-          .collection<ElectedOfficial>("electedOfficials")
-          .deleteMany({ _id: { $in: heldOfficials.map((o) => o._id) } });
+        const offRes = await electedOfficialsCollection(db).deleteMany({
+          _id: { $in: heldOfficials.map((o) => o._id) },
+        });
         nppOfficialRowsDeleted = offRes.deletedCount;
 
         for (const o of heldOfficials) {
@@ -118,44 +127,45 @@ export async function POST(request: Request, { params }: { params: Promise<{ par
 
       // Retire the NPPs themselves.
       const now = new Date();
-      const retireRes = await db
-        .collection<NPP>("npps")
-        .updateMany(
-          { _id: { $in: partyNppIds } },
-          { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
-        );
+      const retireRes = await nppsCollection(db).updateMany(
+        { _id: { $in: partyNppIds } },
+        { $set: { retiredAt: now, currentOffice: null, updatedAt: now } }
+      );
       nppsRetired = retireRes.modifiedCount;
     }
 
     // Delete all associated state party organizations (must match both partyId AND countryId)
-    const statePartyResult = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
+    const statePartyResult = await statePartyOrgCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      countryId: partyCountryId,
+    });
 
     // Delete all party budgets (must match both partyId AND countryId)
-    const budgetResult = await db
-      .collection<PartyBudget>("partyBudget")
-      .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
+    const budgetResult = await partyBudgetCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      countryId: partyCountryId,
+    });
 
     // Delete all party leadership elections (both national and state)
     // National elections have countryId
-    const nationalElectionResult = await db
-      .collection<NationalPartyElection>("nationalPartyElections")
-      .deleteMany({ partyId: partySeqIdStr, countryId: partyCountryId });
+    const nationalElectionResult = await nationalPartyElectionsCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      countryId: partyCountryId,
+    });
 
     // StatePartyElection doesn't have countryId — resolve via states collection
-    const countryStates = await db
-      .collection("states")
+    const countryStates = await statesCollection<Document>(db)
       .find({ countryId: partyCountryId })
       .project({ _id: 1 })
       .toArray();
     const countryStateIds = countryStates.map((s) => s._id as string);
-    const stateElectionResult = await db
-      .collection<StatePartyElection>("statePartyElections")
-      .deleteMany({ partyId: partySeqIdStr, stateId: { $in: countryStateIds } });
+    const stateElectionResult = await statePartyElectionsCollection(db).deleteMany({
+      partyId: partySeqIdStr,
+      stateId: { $in: countryStateIds },
+    });
 
     // Delete the national party by its ObjectId _id — the canonical primary key.
-    await db.collection<PoliticalParty>("politicalParties").deleteOne({ _id: party._id });
+    await politicalPartiesCollection(db).deleteOne({ _id: party._id });
 
     return NextResponse.json({
       success: true,

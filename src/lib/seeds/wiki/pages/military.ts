@@ -1,5 +1,6 @@
 import type { WikiSeedPage } from "../types";
 import { conflictsOverviewContent } from "../content/conflictsOverview";
+import { cyberOperationsContent } from "../content/cyberOperations";
 import { declaringWarContent } from "../content/declaringWar";
 import { militaryUnitsContent } from "../content/militaryUnits";
 import { manpowerConscriptionContent } from "../content/manpowerConscription";
@@ -242,5 +243,18 @@ export const militaryPages: readonly WikiSeedPage[] = [
     contentType: "mechanics",
     estimatedReadTime: 7,
     lastUpdated: "2026-09-05",
+  },
+  {
+    slug: "cyber-operations",
+    lastUpdated: "2026-11-10",
+    title: "Cyber Operations",
+    description:
+      "Attacking another country's networks: who can launch, what it costs, the success and attribution odds, the fallout, the stand-down truce, and how computer-run countries use it.",
+    content: cyberOperationsContent,
+    category: "military",
+    extraTags: ["cyber", "intelligence", "attribution", "truce"],
+    difficulty: "intermediate",
+    contentType: "mechanics",
+    estimatedReadTime: 6,
   },
 ];

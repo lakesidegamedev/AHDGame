@@ -42,7 +42,7 @@ function fixture() {
       if (name === "characters") {
         return {
           updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
-          findOne: async () => ({ favorability: 50, archetypeApprovals: {} }),
+          findOne: async () => ({ favorability: 50, bucketApprovals: {} }),
         };
       }
       throw new Error(`unexpected collection ${name}`);

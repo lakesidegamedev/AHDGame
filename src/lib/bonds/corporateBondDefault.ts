@@ -52,20 +52,16 @@ export function computeSectorNpvSum(
   corp?: CorpCapitalCurrencyInfo | null,
   fxByCurrency?: ReadonlyMap<CurrencyCode, number>,
   /**
-   * `excludeGrowthCost` values the sector on its STEADY-STATE earning power
-   * (revenue − maintenance), ignoring the discretionary, temporary growth cost.
-   * Used only for the nationalization payout: growth spending is the owner's
-   * reversible choice, not a permanent loss of the asset's worth, so a sector
-   * running high growth (whose going-concern profit is consumed by growth cost)
-   * must not value to €0 when the state seizes a fully productive asset. The
-   * going-concern path (bond default / dissolution) keeps the growth cost.
+   * `excludeGrowthCost` values the sector on steady-state earning power
+   * (revenue minus maintenance), ignoring reversible, owner-chosen growth
+   * spend. Used only for nationalization payout so a high-growth sector does
+   * not value to zero on seizure; the going-concern path keeps the cost.
    */
   options?: {
     excludeGrowthCost?: boolean;
     /**
-     * True when marketSystemMode >= "plants" — the growth-cost deduction is a
-     * phantom charge there (growth spend no longer buys capacity). Defaults to
-     * false = legacy behaviour for callers that cannot read game config.
+     * True when marketSystemMode >= "plants": growth spend no longer buys capacity,
+     * so the growth-cost deduction is a phantom charge. Defaults to false (legacy).
      */
     plantsEnabled?: boolean;
   }
@@ -80,9 +76,8 @@ export function computeSectorNpvSum(
     const primeRate =
       primeRateByCountry.get(sectorCountryId) ??
       getCountryConfig(sectorCountryId).centralBank.defaultPrimeRate;
-    // Realized-preferring basis (#3001/#3002), shared with sumCorporateSectorNpv
-    // in corporateCredit.ts via sectorProfitBasis — a corp must be rated and
-    // settled on one revenue, not nameplate here and realized there.
+    // Realized-preferring basis shared with sumCorporateSectorNpv via
+    // sectorProfitBasis: a corp must be rated and settled on one revenue.
     const { dailyProfitAnchor } = sectorDailyProfitAnchor(s, {
       plantsEnabled: options?.plantsEnabled ?? false,
       excludeGrowthCost: options?.excludeGrowthCost,
@@ -143,15 +138,6 @@ export const sumDefaultedBondPrincipal = (
     fxByCurrency
   );
 
-export const sumNonDefaultedNonMaturedPrincipal = (
-  bonds: Bond[],
-  fxByCurrency: ReadonlyMap<CurrencyCode, number>
-): number =>
-  sumBondPrincipalAnchor(
-    bonds.filter((b) => !b.matured && !b.defaulted),
-    fxByCurrency
-  );
-
 /** Face value rounded down to whole bond units ($1k each). */
 export function roundFaceToBondUnits(faceValue: number): number {
   const units = Math.floor(faceValue / BOND_UNIT_FACE_VALUE);
@@ -161,7 +147,7 @@ export function roundFaceToBondUnits(faceValue: number): number {
 /**
  * Max new face value the corporation can issue under the 2× equity rule (all non-matured bonds count).
  */
-export function maxNewIssuanceFaceValue(equity: number, existingDebt: number): number {
+function maxNewIssuanceFaceValue(equity: number, existingDebt: number): number {
   const cap = Math.max(0, equity * MAX_BOND_ISSUANCE_FRACTION - existingDebt);
   return roundFaceToBondUnits(cap);
 }
@@ -212,8 +198,7 @@ export function previewRefinanceIssuance(params: {
   // corp whose only bond was the defaulted one being rolled reported zero
   // interest, which trips calculateCreditScore's "no debt = good coverage"
   // fallback and scores interest coverage a perfect 100. That corp then prices
-  // as investment grade on a roll it can service none of. The post-default CCC
-  // floor used to hide this by flooring the result anyway.
+  // as investment grade on a roll it can service none of.
   //
   // The rolled principal survives the roll, so its obligation belongs in the
   // ratio. Its existing coupon is the non-circular proxy for the replacement's.
@@ -221,25 +206,14 @@ export function previewRefinanceIssuance(params: {
   const totalEquity = totalEquityForBonds(liquidCapitalAnchor, sectorNpv);
 
   // The post-default CCC floor is deliberately NOT applied here. This preview
-  // prices a like-for-like roll of debt that has already defaulted, and the
-  // default that set the floor is the very event this roll exists to cure —
-  // pricing off it is circular, and the result is a cure that is worse than the
-  // disease. Ticket #1130: a roll repriced 6.34% → 17.42%, tripling per-turn
-  // debt service on a corp that had defaulted for want of cash, while adding no
-  // cash at all (executeCorporationBondRefinance deliberately credits nothing,
-  // since no new investor is buying). A corp four turns from covering its coupon
-  // was pushed roughly twenty-one turns away, guaranteeing the next default.
+  // prices a like-for-like roll of debt that has already defaulted, so pricing
+  // off the default that set the floor is circular. The penalty exists to make
+  // NEW borrowing expensive; every other issuance path still passes it.
   //
-  // The penalty exists to make NEW borrowing expensive after a default, and it
-  // still does: every other issuance path passes the flag from
-  // isBondDefaultCreditPenaltyActive. Only the forced roll of existing principal
-  // is priced on the corp's actual fundamentals.
-  // Cash is NOT credited with the new face. A refinance rolls existing holders
-  // into a replacement bond at par and hands the corp nothing — see
-  // executeCorporationBondRefinance, which explicitly declines to credit it.
-  // Adding the face here (correct for a new issuance, where proceeds do arrive)
-  // scored the liquidity component as though a broke corp had just been handed
-  // its own principal in cash.
+  // Cash is also NOT credited with the new face: a refinance rolls existing
+  // holders at par and hands the corp nothing (see
+  // executeCorporationBondRefinance), so counting face here would fake
+  // liquidity that never arrived.
   const creditRating = calculateCreditScore(
     liquidCapitalAnchor,
     nonDefaultedDebt + actualFaceAnchor,
@@ -265,14 +239,11 @@ export function previewRefinanceIssuance(params: {
 }
 
 /**
- * Ticket #1198 deliberately does NOT apply its exit-equity ceiling here. That
- * cap governs NEW borrowing; a refinance is a like-for-like roll of principal
- * that already exists, adds no debt, and hands the corp no cash (see
- * `executeCorporationBondRefinance`). Capping the roll by realizable assets
- * would lock a defaulted corp out of the only cure available to it, which is
- * the #1130 failure mode in a new costume: the cure becoming worse than the
- * disease. New issuance answers to the exit cap; rolling existing paper does
- * not.
+ * The exit-equity ceiling governs NEW borrowing and does NOT apply here. A
+ * refinance is a like-for-like roll of existing principal: it adds no debt and
+ * hands the corp no cash (see `executeCorporationBondRefinance`). Capping the
+ * roll by realizable assets would lock a defaulted corp out of its only cure.
+ * New issuance answers to the exit cap; rolling existing paper does not.
  */
 export function canRefinanceDefaultedDebt(params: {
   equity: number;
@@ -388,6 +359,14 @@ export interface FundShareholderPayoutRow {
   payout: number;
 }
 
+export interface NppShareholderPayoutRow {
+  nppId: string;
+  name: string;
+  shares: number;
+  /** Anchor-denominated; credited to the NPP's personal ₳ balance as-is. */
+  payout: number;
+}
+
 export interface ShareholderAllocation {
   /** Character + imperial-character shareholder rows. Paid to personal cash balances. */
   characterRows: ShareholderPayoutRow[];
@@ -395,20 +374,18 @@ export interface ShareholderAllocation {
   corporationRows: CorporateShareholderPayoutRow[];
   /** Index-fund shareholders. Paid into the fund's cashAnchor (₳). */
   fundRows: FundShareholderPayoutRow[];
+  /** NPP shareholders. Paid into the NPP's personal ₳ balance. */
+  nppRows: NppShareholderPayoutRow[];
   /** Allocation for shares sitting in publicFloat. Paid to the country's central bank reserve. */
   publicFloatRow: PublicFloatPayoutRow | null;
 }
 
 /**
  * Allocate the shareholder pool pro-rata across every share bucket: character,
- * imperial-character, corporate equity holder, and the publicFloat.
+ * imperial-character, corporate equity holder, and the publicFloat. Callers
+ * route each to its destination.
  *
- * Pre-fix, this function emitted only character/imperial rows and divided by
- * `totalShares`, silently dropping the corporate + publicFloat allocation
- * (bug #0540). Now every bucket gets its proportional cut; callers route
- * each to the appropriate destination.
- *
- * @param nameById - Map of characterId/imperialCharacterId/corporationId string → display name
+ * @param nameById - Map of characterId/imperialCharacterId/corporationId string to display name
  */
 export function allocateShareholderPool(
   corp: Corporation,
@@ -416,7 +393,13 @@ export function allocateShareholderPool(
   nameById: Map<string, string>
 ): ShareholderAllocation {
   if ((corp.totalShares ?? 0) <= 0 || shareholderPool <= 0) {
-    return { characterRows: [], corporationRows: [], fundRows: [], publicFloatRow: null };
+    return {
+      characterRows: [],
+      corporationRows: [],
+      fundRows: [],
+      nppRows: [],
+      publicFloatRow: null,
+    };
   }
   // Divide by every share on the register, not just the stored total, so a
   // register that drifted above totalShares cannot pay out more than the pool.
@@ -429,6 +412,7 @@ export function allocateShareholderPool(
   const characterRows: ShareholderPayoutRow[] = [];
   const corporationRows: CorporateShareholderPayoutRow[] = [];
   const fundRows: FundShareholderPayoutRow[] = [];
+  const nppRows: NppShareholderPayoutRow[] = [];
 
   for (const sh of corp.shareholders ?? []) {
     if (sh.shares <= 0) continue;
@@ -459,7 +443,7 @@ export function allocateShareholderPool(
         payout,
       });
     } else if (sh.fundId) {
-      // #3451: index-fund shareholders were previously dropped here — their
+      // Index-fund shareholders were previously dropped here, their
       // pro-rata slice was computed (counted in totalShares) but matched no
       // branch, so it was silently discarded. Now emit a fund row so callers
       // can pay it (fund cash is ₳, same as the pool — no FX conversion).
@@ -467,6 +451,15 @@ export function allocateShareholderPool(
       fundRows.push({
         fundId: id,
         name: nameById.get(id) ?? "Index fund",
+        shares: sh.shares,
+        payout,
+      });
+    } else if (sh.nppId) {
+      // Counted in totalShares, so it must be paid or the slice is destroyed.
+      const id = sh.nppId.toString();
+      nppRows.push({
+        nppId: id,
+        name: nameById.get(id) ?? "NPP shareholder",
         shares: sh.shares,
         payout,
       });
@@ -482,7 +475,7 @@ export function allocateShareholderPool(
         }
       : null;
 
-  return { characterRows, corporationRows, fundRows, publicFloatRow };
+  return { characterRows, corporationRows, fundRows, nppRows, publicFloatRow };
 }
 
 export function isBondDefaultCreditPenaltyActive(corp: Corporation, currentTurn: number): boolean {
@@ -490,15 +483,39 @@ export function isBondDefaultCreditPenaltyActive(corp: Corporation, currentTurn:
   return until != null && currentTurn < until;
 }
 
+interface MergedInstitutionHolder {
+  units: number;
+  /** Weighted average cost per unit, absent when no merged entry carried one. */
+  avgCostPerUnit?: number;
+}
+
+function mergeInstitutionUnits(
+  prev: MergedInstitutionHolder,
+  units: number,
+  avgCostPerUnit: number | undefined
+): void {
+  if (prev.avgCostPerUnit !== undefined && avgCostPerUnit !== undefined) {
+    prev.avgCostPerUnit =
+      (prev.avgCostPerUnit * prev.units + avgCostPerUnit * units) / (prev.units + units);
+  } else if (avgCostPerUnit !== undefined && prev.avgCostPerUnit === undefined) {
+    prev.avgCostPerUnit = avgCostPerUnit;
+  }
+  prev.units += units;
+}
+
 export function mergeDefaultedBondHolders(defaultedBonds: Bond[]): {
   holderUnits: Map<string, { characterId: ObjectId; units: number }>;
   imperialHolderUnits: Map<string, { imperialCharacterId: ObjectId; units: number }>;
   corpHolderUnits: Map<string, { corporationId: ObjectId; units: number }>;
+  fundHolderUnits: Map<string, MergedInstitutionHolder & { fundId: ObjectId }>;
+  nppHolderUnits: Map<string, MergedInstitutionHolder & { nppId: ObjectId }>;
   publicFloat: number;
 } {
   const holderUnits = new Map<string, { characterId: ObjectId; units: number }>();
   const imperialHolderUnits = new Map<string, { imperialCharacterId: ObjectId; units: number }>();
   const corpHolderUnits = new Map<string, { corporationId: ObjectId; units: number }>();
+  const fundHolderUnits = new Map<string, MergedInstitutionHolder & { fundId: ObjectId }>();
+  const nppHolderUnits = new Map<string, MergedInstitutionHolder & { nppId: ObjectId }>();
   let publicFloat = 0;
 
   for (const bond of defaultedBonds) {
@@ -523,9 +540,36 @@ export function mergeDefaultedBondHolders(defaultedBonds: Bond[]): {
         const prev = corpHolderUnits.get(k);
         if (prev) prev.units += h.units;
         else corpHolderUnits.set(k, { corporationId: h.corporationId, units: h.units });
+      } else if (h.fundId) {
+        const k = h.fundId.toString();
+        const prev = fundHolderUnits.get(k);
+        if (prev) mergeInstitutionUnits(prev, h.units, h.avgCostPerUnit);
+        else
+          fundHolderUnits.set(k, {
+            fundId: h.fundId,
+            units: h.units,
+            ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+          });
+      } else if (h.nppId) {
+        const k = h.nppId.toString();
+        const prev = nppHolderUnits.get(k);
+        if (prev) mergeInstitutionUnits(prev, h.units, h.avgCostPerUnit);
+        else
+          nppHolderUnits.set(k, {
+            nppId: h.nppId,
+            units: h.units,
+            ...(h.avgCostPerUnit !== undefined ? { avgCostPerUnit: h.avgCostPerUnit } : {}),
+          });
       }
     }
   }
 
-  return { holderUnits, imperialHolderUnits, corpHolderUnits, publicFloat };
+  return {
+    holderUnits,
+    imperialHolderUnits,
+    corpHolderUnits,
+    fundHolderUnits,
+    nppHolderUnits,
+    publicFloat,
+  };
 }

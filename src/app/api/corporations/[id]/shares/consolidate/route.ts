@@ -34,11 +34,18 @@ import { buildStructureChangeHolderList } from "@/lib/corporations/structureChan
 import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import type { Character, Corporation, Shareholder, ImperialCharacter } from "@/lib/db/types";
+import type { Corporation, Shareholder, ImperialCharacter } from "@/lib/db/types";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -48,10 +55,9 @@ interface RouteParams {
  * POST /api/corporations/[id]/shares/consolidate
  * CEO-only stock split or reverse split: change total outstanding shares and scale prices
  * so market cap is unchanged. Applies proportionally to all shareholders and the public float.
- * 48-turn cooldown. Open share orders, private listings, and pending offers on the
- * corporation are cancelled and refunded before the restructure runs (escrow to buyers,
- * reserved shares to sellers) so leftover pre-split share counts cannot fill on the next
- * turn and wipe holders (ticket #1154).
+ * 48-turn cooldown. Open share orders, private listings, and pending offers are cancelled
+ * and refunded first (escrow to buyers, reserved shares to sellers) so leftover pre-split
+ * share counts cannot fill on the next turn and wipe holders.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
@@ -89,9 +95,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Cannot restructure shares while a privatization vote is open");
     }
 
-    const openShareholderVote = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ corporationId: corporation._id, status: "open" }, { projection: { _id: 1 } });
+    const openShareholderVote = await corporationVotesCollection(db).findOne(
+      { corporationId: corporation._id, status: "open" },
+      { projection: { _id: 1 } }
+    );
     if (openShareholderVote) {
       return errorResponse(400, "Cannot restructure shares while a shareholder vote is open");
     }
@@ -175,8 +182,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Always re-read: listing cancels restore reserved shares onto the register.
     const freshCorporation =
-      (await db.collection<Corporation>("corporations").findOne({ _id: corporation._id })) ??
-      corporation;
+      (await corporationsCollection(db).findOne({ _id: corporation._id })) ?? corporation;
 
     const freshEligibility = corporationCanRestructureShares(freshCorporation);
     if (!freshEligibility.ok) return errorResponse(409, freshEligibility.reason);
@@ -244,22 +250,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       const corpIds = droppedHolders.filter((d) => d.kind === "corporation").map((d) => d.ownerId);
       const [charDocs, imperialDocs, corpDocs] = await Promise.all([
         charIds.length > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: charIds } })
               .project<{ _id: ObjectId; name: string }>({ name: 1 })
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         imperialIds.length > 0
-          ? db
-              .collection<ImperialCharacter>("imperialCharacters")
+          ? imperialCharactersCollection(db)
               .find({ _id: { $in: imperialIds } })
               .project<{ _id: ObjectId; name: string }>({ name: 1 })
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         corpIds.length > 0
-          ? db
-              .collection<Corporation>("corporations")
+          ? corporationsCollection(db)
               .find({ _id: { $in: corpIds } })
               .project<{ _id: ObjectId; name: string }>({ name: 1 })
               .toArray()
@@ -281,12 +284,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const sharePrice = corporation.sharePrice ?? 0;
     const scaled = scaleSharePricesForStructureChange(oldTotal, targetTotalShares, sharePrice);
-    // Scale fundamentalSharePrice by the same factor. The 5-minute
-    // applyPriceMultipliers cron computes
-    //   sharePrice = fundamentalSharePrice × sentiment × orderFlow
-    // off the persisted fundamental, so leaving fundamentalSharePrice at the
-    // pre-split value clobbers the just-scaled sharePrice on the next tick
-    // and erases the split's market-cap-preserving scaling (bug #0449).
+    // Scale fundamentalSharePrice by the same factor. The 5-minute applyPriceMultipliers cron computes sharePrice = fundamentalSharePrice × sentiment × orderFlow off the persisted fundamental, so leaving fundamentalSharePrice at the pre-split value clobbers the scaled sharePrice on the next tick and erases the split's market-cap-preserving scaling.
     const fundamentalSharePrice = corporation.fundamentalSharePrice ?? sharePrice;
     const scaledFundamental = scaleSharePricesForStructureChange(
       oldTotal,
@@ -316,7 +314,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const restructure = await db.collection<Corporation>("corporations").updateOne(
+    const restructure = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
         totalShares: oldTotal,
@@ -335,26 +333,22 @@ export async function POST(request: Request, { params }: RouteParams) {
     // history price as its smoothing prior. That row was written by the turn
     // before the split, so leaving it at the pre-split price pulls the live
     // price back toward the old per-share level and moves market cap on a
-    // split that should be value-neutral (ticket #1500). Market cap on the row
-    // is unchanged by construction.
-    const currentHist = await db
-      .collection<CorporationHistory>("corporationHistory")
-      .findOne(
-        { corporationId: corporation._id, turn: currentTurn },
-        { projection: { sharePrice: 1 } }
-      );
+    // split that should be value-neutral. Market cap on the row is unchanged
+    // by construction.
+    const currentHist = await corporationHistoryCollection(db).findOne(
+      { corporationId: corporation._id, turn: currentTurn },
+      { projection: { sharePrice: 1 } }
+    );
     if (currentHist && typeof currentHist.sharePrice === "number") {
       const scaledHist = scaleSharePricesForStructureChange(
         oldTotal,
         targetTotalShares,
         currentHist.sharePrice
       );
-      await db
-        .collection<CorporationHistory>("corporationHistory")
-        .updateOne(
-          { _id: currentHist._id },
-          { $set: { sharePrice: scaledHist.sharePrice, totalShares: targetTotalShares } }
-        );
+      await corporationHistoryCollection(db).updateOne(
+        { _id: currentHist._id },
+        { $set: { sharePrice: scaledHist.sharePrice, totalShares: targetTotalShares } }
+      );
     }
 
     // Mirror each surviving index fund's rescaled cap-table position into its
@@ -366,15 +360,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     // apart on every split).
     const fundSyncs = planFundHoldingSplitSync(newShareholders, oldTotal, targetTotalShares);
     for (const sync of fundSyncs) {
-      await db
-        .collection("indexFunds")
-        .updateOne(
-          { _id: sync.fundId, "holdings.corporationId": corporation._id },
-          { $set: { "holdings.$.shares": sync.newShares, updatedAt: now } }
-        );
+      await indexFundsCollection<Document>(db).updateOne(
+        { _id: sync.fundId, "holdings.corporationId": corporation._id },
+        { $set: { "holdings.$.shares": sync.newShares, updatedAt: now } }
+      );
       // Scale per-share cost basis only where it exists, so a missing field is
       // never coerced to 0 by $mul.
-      await db.collection("indexFunds").updateOne(
+      await indexFundsCollection<Document>(db).updateOne(
         {
           _id: sync.fundId,
           holdings: {
@@ -409,8 +401,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
       const [charDocs, imperialDocs, corpDocs, fundDocs] = await Promise.all([
         ownerIds.characterIds.size > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({
                 _id: {
                   $in: [...ownerIds.characterIds].map((s) => new ObjectId(s)),
@@ -420,8 +411,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         ownerIds.imperialIds.size > 0
-          ? db
-              .collection<ImperialCharacter>("imperialCharacters")
+          ? imperialCharactersCollection(db)
               .find({
                 _id: { $in: [...ownerIds.imperialIds].map((s) => new ObjectId(s)) },
               })
@@ -429,8 +419,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         ownerIds.corporationIds.size > 0
-          ? db
-              .collection<Corporation>("corporations")
+          ? corporationsCollection(db)
               .find({
                 _id: { $in: [...ownerIds.corporationIds].map((s) => new ObjectId(s)) },
               })
@@ -438,8 +427,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               .toArray()
           : Promise.resolve([] as { _id: ObjectId; name: string }[]),
         ownerIds.fundIds.size > 0
-          ? db
-              .collection("indexFunds")
+          ? indexFundsCollection<Document>(db)
               .find({
                 _id: { $in: [...ownerIds.fundIds].map((s) => new ObjectId(s)) },
               })

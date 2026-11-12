@@ -7,6 +7,9 @@ import type { Db } from "mongodb";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { resetParliamentaryGovernmentAfterElection } from "@/lib/turn/parliamentaryGovernment";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
 export async function handleRuConvocationReset(
   db: Db,
@@ -23,7 +26,7 @@ export async function handleRuConvocationReset(
   const regularType = electionType.startsWith("snap_") ? electionType.slice(5) : electionType;
   if (![offices.lowerOfficeType, offices.config.legislature.lowerChamber.key].includes(regularType))
     return;
-  const govColl = db.collection<GovernmentFormation>("governmentFormations");
+  const govColl = governmentFormationsCollection(db);
   const gov = await govColl.findOne({ _id: "RU" });
   if ((gov?.cycle ?? 0) >= electionCycle + 1) return; // already reset for this convocation
 
@@ -47,9 +50,10 @@ export async function handleRuConvocationReset(
   );
   const hosOfficeType = offices.headOfStateOfficeType;
   if (hosOfficeType) {
-    await db
-      .collection("electedOfficials")
-      .deleteMany({ countryId: "RU", officeType: hosOfficeType });
+    await electedOfficialsCollection<Document>(db).deleteMany({
+      countryId: "RU",
+      officeType: hosOfficeType,
+    });
     for (const collection of ["characters", "npps"]) {
       await db
         .collection(collection)

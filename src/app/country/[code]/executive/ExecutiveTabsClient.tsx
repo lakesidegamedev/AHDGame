@@ -8,12 +8,11 @@ import { WhiteHouseAddressTab } from "@/app/whitehouse/WhiteHouseAddressTab";
 import { WhiteHouseOrdersTab } from "@/app/whitehouse/WhiteHouseOrdersTab";
 import { WhiteHouseEndorsementsTab } from "@/app/whitehouse/WhiteHouseEndorsementsTab";
 import { RegimeHealthTab } from "./RegimeHealthTab";
-import { AdminRegimePanel } from "@/app/admin/country/[code]/regime/AdminRegimePanel";
+import { AdminRegimePanel } from "@/components/admin/AdminRegimePanel";
 import { AdminAppointPmButton } from "./components/AdminAppointPmModal";
 import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
 import { ExecutiveActivitySection } from "./components/ExecutiveActivitySection";
 import { ForeignAffairsTab } from "./components/ForeignAffairsTab";
-import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 
 type TabKey =
   | "devolution"
@@ -89,15 +88,12 @@ export function ExecutiveTabsClient({
   const t = useTranslations("nav.devolution");
   const canSeePrivateTabs = viewerIsLeader || viewerIsAdmin;
   const canSeeDevolution = chrome.hasDevolution && canSeePrivateTabs;
-  // Seeded from `?tab=`, so a link can open a specific tab. Follows the pattern
-  // `CentralBankClient` and `CongressClient` already use. Initial state only: once
-  // the page is open, clicking a tab keeps working exactly as before without
-  // rewriting the URL.
+  // Seeded from `?tab=` so a link can open a specific tab. Initial state only:
+  // once open, tab clicks do not rewrite the URL.
   //
-  // GATED THE SAME WAY THE NAV IS. `active` used to be reachable only by clicking a
-  // button the viewer could see, which is why the `address` and `orders` bodies
-  // below carry no guard of their own. A URL that could set it directly would route
-  // around that, so an unopenable tab falls back to the overview here instead.
+  // Gated the same way the nav is. The `address` and `orders` bodies carry no
+  // guard of their own, so an unopenable tab falls back to the overview here.
+
   const searchParams = useSearchParams();
   const [active, setActive] = useState<TabKey>(() => {
     const requested = searchParams.get("tab");
@@ -109,7 +105,6 @@ export function ExecutiveTabsClient({
       (requested === "admin" ? viewerIsAdmin : canSeePrivateTabs);
     return openable ? requested : "overview";
   });
-  const conflictsEnabled = useConflictsEnabled();
   const ordersLabel = chrome.ordersLabel;
 
   return (
@@ -145,7 +140,7 @@ export function ExecutiveTabsClient({
             {t("tab")}
           </TabButton>
         )}
-        {canSeePrivateTabs && conflictsEnabled && (
+        {canSeePrivateTabs && (
           <TabButton active={active === "foreign"} onClick={() => setActive("foreign")}>
             Foreign affairs
           </TabButton>
@@ -184,10 +179,7 @@ export function ExecutiveTabsClient({
       {active === "address" && <WhiteHouseAddressTab countryId={countryId} />}
       {active === "orders" && <WhiteHouseOrdersTab countryId={countryId} />}
       {active === "endorsements" && <WhiteHouseEndorsementsTab countryId={countryId} />}
-      {/* Guards repeated on the BODY, not just the button: `active` is component
-          state, so a flag flipping off while this tab is open would otherwise leave
-          it rendered. */}
-      {active === "foreign" && canSeePrivateTabs && conflictsEnabled && (
+      {active === "foreign" && canSeePrivateTabs && (
         <ForeignAffairsTab countryId={countryId} canAct={canSeePrivateTabs} />
       )}
       {active === "regime" && isOnePartyState && <RegimeHealthTab countryCode={countryId} />}

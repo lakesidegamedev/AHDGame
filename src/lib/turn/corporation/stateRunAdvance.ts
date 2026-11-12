@@ -13,10 +13,9 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
-import type { Corporation, FederalBudget } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
@@ -32,6 +31,9 @@ import {
   stateRunAdvanceReturn,
   stateRunAdvances,
 } from "@/lib/market/producerMarket/stateRunAdvanceRules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 type CorpCash = Pick<
   Corporation,
@@ -70,12 +72,11 @@ const ownerOf = (corp: CorpCash) => String(corp.countryOwnerId ?? corp.countryId
  */
 async function frozenAnchors(db: Db, keys: readonly string[]): Promise<Map<string, number>> {
   if (keys.length === 0) return new Map();
-  const records = await db
-    .collection<{
-      _id: string;
-      status?: string;
-      legs?: { collection?: string; amount: number; valuation?: { localPerAnchor: number } }[];
-    }>(MONEY_MOVE_COLLECTION)
+  const records = await bankMoneyMovesCollection<{
+    _id: string;
+    status?: string;
+    legs?: { collection?: string; amount: number; valuation?: { localPerAnchor: number } }[];
+  }>(db)
     .find({ _id: { $in: [...keys] } }, { projection: { status: 1, legs: 1 } })
     .toArray();
   const out = new Map<string, number>();
@@ -89,8 +90,7 @@ async function frozenAnchors(db: Db, keys: readonly string[]): Promise<Map<strin
 
 async function loadStateCorps(db: Db, ids: readonly string[]): Promise<CorpCash[]> {
   if (ids.length === 0) return [];
-  return db
-    .collection<Corporation>("corporations")
+  return corporationsCollection(db)
     .find(
       { _id: { $in: ids.map((id) => new ObjectId(id)) } },
       {
@@ -229,8 +229,7 @@ async function treasuryCashByCountry(
   db: Db,
   countryIds: readonly string[]
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<FederalBudget>("federalBudget")
+  const rows = await federalBudgetCollection(db)
     .find(
       { countryId: { $in: [...countryIds] as CountryId[] } },
       { projection: { countryId: 1, treasuryCashLocal: 1 } }

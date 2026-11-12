@@ -10,8 +10,8 @@ import {
 import { STRETCHED_SCHEDULE, getPrimaryWaveSchedule } from "@/lib/constants/primaryCalendar";
 
 const candidates: PrimaryCandidateInfo[] = [
-  { id: "c1", name: "Smith", color: "#ff0000", archetype: "Populist" },
-  { id: "c2", name: "Jones", color: "#0000ff", archetype: "Moderate" },
+  { id: "c1", name: "Smith", color: "#ff0000" },
+  { id: "c2", name: "Jones", color: "#0000ff" },
   { id: "c3", name: "Lee", color: "#00ff00" },
 ];
 

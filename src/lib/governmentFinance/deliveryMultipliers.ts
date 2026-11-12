@@ -1,15 +1,16 @@
 import type { Db } from "mongodb";
-import type { DepartmentAccount, EnactedLaw, FederalBudget } from "@/lib/db/types/budget";
+import type { DepartmentAccount, EnactedLaw } from "@/lib/db/types/budget";
 import type { StateBudget } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import { resolvePolicyOptionJurisdiction } from "@/lib/legislature/jurisdiction";
 import { withLawAdministration } from "./lawAdministrationCatalog";
 import { clampRatio } from "./rules/implementation";
-import {
-  US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID,
-  US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-} from "./deliveryMultiplier";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 export interface DepartmentDeliveryMultiplierInput {
   currentTurn: number;
@@ -18,16 +19,6 @@ export interface DepartmentDeliveryMultiplierInput {
   expectedLawIds?: ReadonlySet<string>;
   /** Laws whose selected responsibility model excludes a national program. */
   nationalDeliveryExcludedLawIds?: ReadonlySet<string>;
-}
-
-function deliveryLawId(legislationTypeId: string): string {
-  return legislationTypeId === US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID
-    ? US_PUBLIC_HEALTH_POLITICAL_LAW_ID
-    : legislationTypeId;
-}
-
-function deliveryLawIds(legislationTypeId: string): string[] {
-  return [...new Set([legislationTypeId, deliveryLawId(legislationTypeId)])];
 }
 
 /**
@@ -50,9 +41,8 @@ export function resolveDepartmentDeliveryMultipliers(
           : 0;
       // One enacted option should own one program. Max makes the resolver safe
       // during migrations where an old department account may still coexist.
-      for (const lawId of deliveryLawIds(program.legislationTypeId)) {
-        multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
-      }
+      const lawId = program.legislationTypeId;
+      multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
     }
   }
   for (const lawId of input.nationalDeliveryExcludedLawIds ?? []) multipliers.set(lawId, 0);
@@ -84,11 +74,10 @@ export function resolveDepartmentDeliveryExpectations(
     const option = type?.policyOptions?.[law.policyOptionIndex ?? -1];
     if (!type?.administration || !option?.implementation) continue;
     const countryId = law.countryId ?? "US";
-    const lawIds = deliveryLawIds(law.legislationTypeId);
-    for (const lawId of lawIds) addToCountryMap(expectedByCountry, countryId, lawId);
+    addToCountryMap(expectedByCountry, countryId, law.legislationTypeId);
     const jurisdictionMode = resolvePolicyOptionJurisdiction(type, option, law.jurisdictionMode);
     if (jurisdictionMode === "regional_discretion") {
-      for (const lawId of lawIds) addToCountryMap(excludedByCountry, countryId, lawId);
+      addToCountryMap(excludedByCountry, countryId, law.legislationTypeId);
     }
   }
   return { expectedByCountry, excludedByCountry };
@@ -112,12 +101,10 @@ export async function loadDepartmentDeliveryMultipliersByCountry(
       }
     : {};
   const [budgets, activeLaws] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find(countryFilter, { projection: { countryId: 1, departmentAccounts: 1 } })
       .toArray(),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find(
         { scope: "national", repealedAt: { $exists: false }, ...lawCountryFilter },
         {
@@ -135,8 +122,7 @@ export async function loadDepartmentDeliveryMultipliersByCountry(
   const types =
     activeTypeIds.length === 0
       ? []
-      : await db
-          .collection<LegislationType>("legislationTypes")
+      : await legislationTypesCollection(db)
           .find(
             { _id: { $in: activeTypeIds } },
             { projection: { _id: 1, administration: 1, policyOptions: 1 } }
@@ -190,9 +176,8 @@ export function resolveRegionalDeliveryMultipliers(
       isCurrent && Number.isFinite(program.implementationFactor)
         ? clampRatio(program.implementationFactor)
         : 0;
-    for (const lawId of deliveryLawIds(program.legislationTypeId)) {
-      multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
-    }
+    const lawId = program.legislationTypeId;
+    multipliers.set(lawId, Math.max(multipliers.get(lawId) ?? 0, multiplier));
   }
   return multipliers;
 }
@@ -207,12 +192,10 @@ export async function loadRegionalDeliveryMultipliersByRegion(
   if (!enabled) return new Map();
   const filter = regionIds?.length ? { _id: { $in: [...regionIds] } } : {};
   const [regionalBudgets, stateBudgets] = await Promise.all([
-    db
-      .collection<RegionalBudget>("regionalBudgets")
+    regionalBudgetsCollection(db)
       .find(filter, { projection: { programSettlements: 1 } })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find(filter, { projection: { regionalProgramSettlements: 1 } })
       .toArray(),
   ]);

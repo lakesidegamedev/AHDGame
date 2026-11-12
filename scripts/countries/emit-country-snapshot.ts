@@ -110,7 +110,7 @@ import {
   NEUTRAL_STATE_SALES_TAX_BY_COUNTRY,
 } from "../../src/lib/turn/gdpGrowth";
 import { NON_PARTY_BUCKET_INDEPENDENT_BIAS_BY_COUNTRY } from "../../src/lib/turn/partyOrg/pacingConstants";
-import { SPAWN_ELECTIONS_REGISTRY } from "../../src/lib/turn/perpetualElections/registry";
+import { SPAWN_ELECTIONS_REGISTRY } from "@/lib/elections/scheduling/registry";
 import { COUNTRY_REGIONS, COUNTRY_UN_MEMBER_SINCE } from "../../src/lib/world/worldEntityManifest";
 import { DOMAIN_BUCKET_AFFINITIES } from "../../src/lib/bucketAffinities";
 import { GROUPS } from "../../src/lib/constants/cabinetPositionGroups";

@@ -3,8 +3,10 @@ import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { User, Character } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { stripPartyMembershipForBannedUser } from "@/lib/account/stripPartyMembershipForBannedUser";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * GET /api/admin/heal/banned-party-membership
@@ -17,8 +19,7 @@ export async function GET() {
 
     const db = await getDb();
 
-    const bannedIds = await db
-      .collection<User>("users")
+    const bannedIds = await usersCollection(db)
       .find({ isBanned: true })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();
@@ -27,8 +28,7 @@ export async function GET() {
     let affectedCharacters = 0;
 
     for (const u of bannedIds) {
-      const chars = await db
-        .collection<Character>("characters")
+      const chars = await charactersCollection(db)
         .find({
           userId: u._id,
           party: { $exists: true, $nin: ["", "independent"] },
@@ -62,8 +62,7 @@ export async function POST() {
 
     const db = await getDb();
 
-    const bannedIds = await db
-      .collection<User>("users")
+    const bannedIds = await usersCollection(db)
       .find({ isBanned: true })
       .project<{ _id: ObjectId }>({ _id: 1 })
       .toArray();

@@ -1,17 +1,13 @@
 /**
- * SCOTUS Nomination Lifecycle (#3598).
+ * SCOTUS Nomination Lifecycle.
  *
- * Reuses the cabinet-nomination Senate-majority-vote lifecycle's machinery
- * as-is: `nppCabinetVote` (party-line auto-vote), `computeCabinetNominationTally`
- * (seat-weighted re-tally scoped to current Senate seats), and `didPass`
- * (votesFor > votesAgainst). Mirrors `processCabinetNominationLifecycle`'s
- * two-part turn shape:
- *  A. NPP senator votes on active nominations (party-line preference)
- *  B. Close expired votes and resolve confirmed/rejected
+ * Reuses the cabinet-nomination machinery: `nppCabinetVote` (party-line
+ * auto-vote), `computeCabinetNominationTally` (seat-weighted re-tally scoped
+ * to current Senate seats), and `didPass` (votesFor > votesAgainst). Same
+ * two-part turn shape: NPP senators vote, then expired votes resolve.
  *
- * The one genuine extension over cabinet nominations: a SCOTUS nominee may be
- * a generated NPP "legal scholar" as well as a player character (cabinet
- * nominations are player-character-only today) — see `nominateJustice.ts`.
+ * The one extension: a SCOTUS nominee may be a generated NPP legal scholar
+ * as well as a player character. See `nominateJustice.ts`.
  */
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -21,7 +17,7 @@ import { didPass } from "@/lib/billLifecycleHelpers";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
 import { nppCabinetVote } from "@/lib/cabinetNominationLifecycle";
 import { getGameState } from "@/lib/gameState";
-import type { ElectedOfficial, NPP, Character, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, Character } from "@/lib/db/types";
 import type { ScotusNomination, SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { loadNomineePersonalPositions } from "@/lib/scotus/nominateJustice";
 import { computeJusticeIdeology } from "@/lib/scotus/ideology";
@@ -32,6 +28,12 @@ import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { awardAchievement } from "@/lib/achievements";
 import { SCOTUS_CONFIRMED_SLUG } from "@/lib/scotus/achievementDefinitions";
 import { buildScotusConfirmationCareerEvent } from "@/lib/scotus/careerEvents";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 export interface ScotusNominationLifecycleResult {
   nominationsProcessed: number;
@@ -85,7 +87,7 @@ async function castNPPScotusVotes(
     setFields[`votes.${k}`] = v;
   }
 
-  await db.collection<ScotusNomination>("scotusNominations").updateOne(
+  await scotusNominationsCollection(db).updateOne(
     { _id: nomination._id },
     {
       $set: setFields,
@@ -106,9 +108,9 @@ async function seatConfirmedJustice(
   if (personal && nomination.nomineeParty) {
     const seqId = parseInt(nomination.nomineeParty, 10);
     const party = Number.isFinite(seqId)
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ sequentialId: seqId, countryId: nomination.countryId })
+      ? await (
+          await getPoliticalPartiesCollection(db)
+        ).findOne({ sequentialId: seqId, countryId: nomination.countryId })
       : null;
     if (party) {
       const ideology = computeJusticeIdeology(personal, {
@@ -120,7 +122,7 @@ async function seatConfirmedJustice(
     }
   }
 
-  await db.collection<SupremeCourtSeat>("supremeCourtSeats").updateOne(
+  await supremeCourtSeatsCollection(db).updateOne(
     { countryId: nomination.countryId, seatNumber: nomination.seatNumber },
     {
       $set: {
@@ -154,8 +156,7 @@ export async function processScotusNominationLifecycle(
   const currentTurn = gameState?.currentTurn ?? 1;
 
   const [nppOfficials, president] = await Promise.all([
-    database
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(database)
       .find({
         countryId: "US",
         officeType: "senate",
@@ -163,24 +164,20 @@ export async function processScotusNominationLifecycle(
         nppId: { $exists: true },
       })
       .toArray(),
-    database
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } }),
+    electedOfficialsCollection(database).findOne({ countryId: "US", officeType: "president" }),
   ]);
   const nppIds = nppOfficials
     .map((o) => o.nppId)
     .filter((id): id is ObjectId => id instanceof ObjectId);
   const npps = nppIds.length
-    ? await database
-        .collection<NPP>("npps")
+    ? await nppsCollection(database)
         .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
         .toArray()
     : [];
   const nppMap = new Map(npps.map((n) => [n._id.toString(), n]));
   const preload: NppPreload = { nppOfficials, nppMap, presidentParty: president?.party };
 
-  const activeNominations = await database
-    .collection<ScotusNomination>("scotusNominations")
+  const activeNominations = await scotusNominationsCollection(database)
     .find({
       status: "active",
       $or: [
@@ -194,8 +191,7 @@ export async function processScotusNominationLifecycle(
     await castNPPScotusVotes(database, nom, preload);
   }
 
-  const expired = await database
-    .collection<ScotusNomination>("scotusNominations")
+  const expired = await scotusNominationsCollection(database)
     .find({
       status: "active",
       $or: [
@@ -221,14 +217,12 @@ export async function processScotusNominationLifecycle(
   ];
   const [characterPortraits, nppPortraits] = await Promise.all([
     nomineeCharacterIds.length
-      ? database
-          .collection<Character>("characters")
+      ? charactersCollection(database)
           .find({ _id: { $in: nomineeCharacterIds } }, { projection: { avatarUrl: 1 } })
           .toArray()
       : Promise.resolve([]),
     nomineeNppIds.length
-      ? database
-          .collection<NPP>("npps")
+      ? nppsCollection(database)
           .find({ _id: { $in: nomineeNppIds } }, { projection: { avatarUrl: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -281,7 +275,7 @@ export async function processScotusNominationLifecycle(
 
     if (passed) {
       await seatConfirmedJustice(database, nom, now, currentTurn);
-      const claim = await database.collection<ScotusNomination>("scotusNominations").updateOne(
+      const claim = await scotusNominationsCollection(database).updateOne(
         { _id: nom._id, status: "active" },
         {
           $set: {
@@ -298,9 +292,9 @@ export async function processScotusNominationLifecycle(
       announceResolution();
       confirmed++;
 
-      const presidentChar = await database
-        .collection<Character>("characters")
-        .findOne({ _id: nom.proposedByPresidentId });
+      const presidentChar = await charactersCollection(database).findOne({
+        _id: nom.proposedByPresidentId,
+      });
       if (presidentChar?.userId) {
         notificationInputs.push({
           userId: presidentChar.userId,
@@ -315,9 +309,9 @@ export async function processScotusNominationLifecycle(
         });
       }
       if (nom.nomineeMode === "character" && nom.nomineeCharacterId) {
-        const nomineeChar = await database
-          .collection<Character>("characters")
-          .findOne({ _id: nom.nomineeCharacterId });
+        const nomineeChar = await charactersCollection(database).findOne({
+          _id: nom.nomineeCharacterId,
+        });
         if (nomineeChar) {
           // Judicial seats have no OfficeType, so the profile reads this entry.
           confirmationCareerWrites.push({
@@ -354,7 +348,7 @@ export async function processScotusNominationLifecycle(
         }
       }
     } else {
-      const claim = await database.collection<ScotusNomination>("scotusNominations").updateOne(
+      const claim = await scotusNominationsCollection(database).updateOne(
         { _id: nom._id, status: "active" },
         {
           $set: {
@@ -371,9 +365,9 @@ export async function processScotusNominationLifecycle(
       announceResolution();
       rejected++;
 
-      const presidentChar = await database
-        .collection<Character>("characters")
-        .findOne({ _id: nom.proposedByPresidentId });
+      const presidentChar = await charactersCollection(database).findOne({
+        _id: nom.proposedByPresidentId,
+      });
       if (presidentChar?.userId) {
         notificationInputs.push({
           userId: presidentChar.userId,
@@ -391,7 +385,7 @@ export async function processScotusNominationLifecycle(
   }
 
   if (confirmationCareerWrites.length > 0) {
-    await database.collection<Character>("characters").bulkWrite(confirmationCareerWrites);
+    await charactersCollection(database).bulkWrite(confirmationCareerWrites);
   }
   for (const award of confirmationAwards) {
     await awardAchievement(award.userId, SCOTUS_CONFIRMED_SLUG, award.characterId);

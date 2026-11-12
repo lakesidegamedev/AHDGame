@@ -19,7 +19,9 @@ import {
   getNewCharacterTransferBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const apiTransferSchema = z.object({
   targetCharacterId: schemas.objectId,
@@ -66,9 +68,9 @@ export async function POST(request: Request) {
     if (transferGuard) return transferGuard;
 
     // Resolve the API key owner's active character
-    const userDoc = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(apiAuth.ownerUserId) });
+    const userDoc = await usersCollection<Document>(db).findOne({
+      _id: new ObjectId(apiAuth.ownerUserId),
+    });
     if (!userDoc) {
       return errorResponse(404, "User not found");
     }
@@ -76,7 +78,7 @@ export async function POST(request: Request) {
     const characterQuery = userDoc.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(apiAuth.ownerUserId) }
       : { userId: new ObjectId(apiAuth.ownerUserId) };
-    const sender = await db.collection<Character>("characters").findOne(characterQuery);
+    const sender = await charactersCollection(db).findOne(characterQuery);
     if (!sender) {
       return errorResponse(400, "You need a character to transfer funds");
     }
@@ -97,7 +99,7 @@ export async function POST(request: Request) {
       return errorResponse(400, "You cannot transfer funds to yourself");
     }
 
-    const target = await db.collection<Character>("characters").findOne({ _id: targetObjectId });
+    const target = await charactersCollection(db).findOne({ _id: targetObjectId });
     if (!target) {
       return errorResponse(404, "Target character not found");
     }
@@ -123,11 +125,10 @@ export async function POST(request: Request) {
 
     const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
 
-    // Exactly-once on every topology (issue #1672): keyed idempotent legs
-    // reconcile a crash between the debit and the credit instead of
-    // destroying or duplicating money. A replayed key returns duplicate.
-    // Let the keyed debit check funds. A precheck here would reject a replay
-    // after the first attempt debited the sender but before it credited the target.
+    // Exactly-once across every topology: keyed idempotent legs reconcile a
+    // crash between debit and credit rather than destroying or duplicating
+    // money. Do not precheck funds here: a replay after the first attempt
+    // debited the sender but before it credited the target would be rejected.
     const { duplicate: transferDuplicate } = await transferCharacterCampaignFunds(db, {
       senderId: sender._id,
       targetId: targetObjectId,
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
       idempotencyKey: parsed.data.idempotencyKey,
     });
     if (transferDuplicate) {
-      const freshSender = await db.collection<Character>("characters").findOne({ _id: sender._id });
+      const freshSender = await charactersCollection(db).findOne({ _id: sender._id });
       if (freshSender) {
         Object.assign(sender, freshSender);
       }

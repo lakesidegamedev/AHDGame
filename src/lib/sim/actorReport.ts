@@ -1,11 +1,10 @@
 /**
- * Actor-coverage report rendering (issue #1993).
+ * Actor-coverage report rendering.
  *
- * Pure formatting over the manifest: the prominent warnings reports must emit
- * when conclusions touch an actor-gated system that was partial or
- * unreachable, plus the checkpoint-verdict summary shape. Report scripts
- * (experiment, checkpoint) call these — they own all database reads and pass
- * the manifest in.
+ * Pure formatting over the manifest: the warnings reports must emit when
+ * conclusions touch an actor-gated system that was partial or unreachable, plus
+ * the checkpoint-verdict summary shape. Report scripts own all database reads
+ * and pass the manifest in.
  */
 
 import {

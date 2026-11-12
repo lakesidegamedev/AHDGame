@@ -3,6 +3,8 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { applyTensionEvent } from "@/lib/coldwar/tension";
 import { createSystemNewsPost } from "@/lib/news";
 import { CRACKDOWN_TENSION_SPIKE } from "@/lib/military/covertNuclear";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import type { Document } from "mongodb";
 
 /**
  * A crackdown embarrasses the government that got caught: modest approval hit,
@@ -35,12 +37,10 @@ export async function applyCovertCrackdown(
     "Soviet inspectors raid East German facilities",
     CRACKDOWN_TENSION_SPIKE
   );
-  await db
-    .collection("governmentApprovals")
-    .updateOne(
-      { _id: countryId as unknown as ObjectId },
-      { $inc: { approvalRating: CRACKDOWN_APPROVAL_HIT } }
-    );
+  await governmentApprovalsCollection<Document>(db).updateOne(
+    { _id: countryId as unknown as ObjectId },
+    { $inc: { approvalRating: CRACKDOWN_APPROVAL_HIT } }
+  );
   await createSystemNewsPost(
     `Soviet inspection teams have raided undeclared industrial facilities in the ${countryName}. Moscow has issued a formal rebuke. Officials in Berlin declined to comment.`,
     "executive",

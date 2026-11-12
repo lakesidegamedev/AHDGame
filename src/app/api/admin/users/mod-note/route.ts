@@ -5,6 +5,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
 
 const modNoteSchema = z.object({
   userId: z.string().length(24),
@@ -29,19 +31,21 @@ export async function PATCH(request: Request) {
     const db = await getDb();
     const objectId = new ObjectId(userId);
 
-    const user = await db.collection("users").findOne({ _id: objectId });
+    const user = await usersCollection<Document>(db).findOne({ _id: objectId });
     if (!user) {
       return errorResponse(404, "User not found");
     }
 
     if (trimmed) {
-      await db
-        .collection("users")
-        .updateOne({ _id: objectId }, { $set: { modNote: trimmed, updatedAt: new Date() } });
+      await usersCollection<Document>(db).updateOne(
+        { _id: objectId },
+        { $set: { modNote: trimmed, updatedAt: new Date() } }
+      );
     } else {
-      await db
-        .collection("users")
-        .updateOne({ _id: objectId }, { $unset: { modNote: "" }, $set: { updatedAt: new Date() } });
+      await usersCollection<Document>(db).updateOne(
+        { _id: objectId },
+        { $unset: { modNote: "" }, $set: { updatedAt: new Date() } }
+      );
     }
 
     return NextResponse.json({ success: true });

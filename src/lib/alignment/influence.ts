@@ -1,15 +1,12 @@
 /**
- * Influence plays — the rudder.
+ * Influence plays: the rudder. Drift is the tide a nation sits in; a play is a
+ * deliberate, paid push against it. Plays feed the SAME pull vector
+ * `computeDrift` consumes, so they inherit the non-aligned resistance, the
+ * locked gate, and the per-nation turn cap without restating any of them.
  *
- * Drift is the tide a nation sits in; a play is a deliberate, paid push against
- * it. Plays feed the SAME pull vector `computeDrift` consumes, so they inherit
- * the non-aligned resistance, the locked gate, and the per-nation turn cap
- * without restating any of them.
- *
- * Nothing here fires on its own. The meter moves on what organisations actually
- * DO — an automatic rival answer used to eat half of every play, which taxed the
- * acting bloc and paid nobody. Rivals still cancel each other, but only by
- * spending: `computeDrift` nets opposing pulls before the cap.
+ * Nothing here fires on its own: the meter moves on what organisations actually
+ * DO. Rivals still cancel each other, but only by spending: `computeDrift` nets
+ * opposing pulls before the cap.
  */
 import type { AlignmentChannel, AlignmentPoleId } from "@/lib/constants/alignmentEras";
 import type { AlignmentShares } from "./normalize";
@@ -18,30 +15,19 @@ import type { AlignmentShares } from "./normalize";
 export const PLAY_MAX_POINTS = 10;
 /**
  * Floor on one play: the smallest movement the share grid can store (a
- * hundredth of a point — see {@link roundToShareGrid}). A spend that buys less
- * than this resolves to exactly zero applied points and is refunded, so it takes
- * a submission and a turn to do nothing. The commit path refuses it up front
- * instead, and the panel tells the player the minimum spend, so "I pushed and
- * nothing moved" can no longer happen from typing an amount that is orders of
- * magnitude too small (ticket #1213).
+ * hundredth of a point, see {@link roundToShareGrid}). A spend below this
+ * resolves to zero applied points and is refunded, so the commit path
+ * rejects it up front and the panel shows the minimum spend.
  */
 export const MIN_PLAY_POINTS = 0.01;
 /**
  * Share of a target's annual GDP that buys one point of its alignment.
  *
- * A tenth of a percent. This was 1%, which priced every bloc out of its own
- * mechanic: against live 1953 funds, NATO's entire treasury ($36m) bought 0.76
- * points on the cheapest nation on the board, and the per-nation cap is 5. No
- * western org could reach the cap on ANY target by emptying itself, so plays
- * were never a contest — the side with the bigger seeded fund simply moved and
- * the other could not answer. Netting opposing pulls only produces a back and
- * forth if both sides can afford to push in the same turn.
- *
- * At a tenth of a percent the same $36m buys ~7.6 points on a small nation, so
- * a bloc can max a turn's cap and still hold a reserve, while a large economy
- * (India, ~$58bn) stays a superpower-scale project at ~$116m per effective
- * point. Sized so the cap, not the balance, is the binding constraint on small
- * targets and the balance still bites on big ones.
+ * A tenth of a percent, sized so the per-nation turn cap is the binding
+ * constraint on small targets and the balance still bites on large ones. A
+ * higher share prices blocs out of the mechanic: an org could never reach the
+ * cap on any target by emptying itself, so opposing pulls could not answer
+ * each other.
  */
 export const POINT_COST_GDP_SHARE = 0.001;
 

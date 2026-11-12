@@ -13,13 +13,16 @@
 
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getLaw } from "@/lib/politicalLegislation/catalog";
 import { computeLawCost } from "@/lib/politicalLegislation/costEngine";
 import { projectLawToLegislationType } from "@/lib/politicalLegislation/project";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 const GDP_MILLIONS = 1_000_000;
 
@@ -61,15 +64,13 @@ export async function processRURegionalBudgets(
   db: Db,
   turnNumber: number
 ): Promise<{ regionsProcessed: number }> {
-  const regions = await db.collection<State>("states").find({ countryId: "RU" }).toArray();
+  const regions = await statesCollection(db).find({ countryId: "RU" }).toArray();
   if (regions.length === 0) return { regionsProcessed: 0 };
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne(
-      { _id: getNationalBudgetId("RU") },
-      { projection: { spending: 1, baselineStateGrants: 1 } }
-    );
+  const budget = await federalBudgetCollection(db).findOne(
+    { _id: getNationalBudgetId("RU") },
+    { projection: { spending: 1, baselineStateGrants: 1 } }
+  );
   if (!budget) return { regionsProcessed: 0 };
   // `stateGrants` is normally the live pool, but a negative value is an invalid
   // allocation, not a valid negative regional grant. Treat it like a missing
@@ -84,8 +85,7 @@ export async function processRURegionalBudgets(
   const nationalPopulation = regions.reduce((sum, r) => sum + (r.population ?? 0), 0);
 
   const regionIds = regions.map((r) => r._id as string);
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: regionIds }, scope: "state" })
     .toArray();
   const policiesByRegion = new Map<string, StatePolicy[]>();
@@ -95,8 +95,7 @@ export async function processRURegionalBudgets(
     policiesByRegion.set(policy.stateId, existing);
   }
 
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
@@ -178,10 +177,10 @@ export async function processRURegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

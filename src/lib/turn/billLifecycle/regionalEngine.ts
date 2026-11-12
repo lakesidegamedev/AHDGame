@@ -13,23 +13,21 @@ import { REGIONAL_LIFECYCLE_CONFIG, type RegionalLifecycleConfig } from "./confi
 import { validateStateBudgetImpact } from "@/lib/budget/validation";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
 import type { BillLifecycleRuntimeContext } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 /**
- * Regional (state) bill-lifecycle walker — the engine's `level: "regional"`
- * counterpart to `runBillLifecycle`. It is a sibling walker rather than a
- * branch of the national engine because state bills share the stage
- * VOCABULARY (chamberVote → executiveAssent → override) but none of the
- * national mechanics: they live in `stateBills` (not `bills`), have no
- * chamber fields, scope votes per-state (stateId + per-country sub-national
- * officeType), take a per-state override threshold (2/3 of that state's
- * seats), and resolve a per-state executive (seated governor, auto-enact
- * fallback). See docs/superpowers/plans/2026-07-21-unified-bill-lifecycle-
- * phase7-state.md for the decision record.
+ * Regional (state) bill-lifecycle walker: the `level: "regional"` counterpart
+ * to `runBillLifecycle`. It is a sibling, not a branch, because state bills share
+ * the stage vocabulary (chamberVote, executiveAssent, override) but none of the
+ * national mechanics: they live in `stateBills`, have no chamber fields, scope
+ * votes per state (stateId plus per-country sub-national officeType), use a
+ * per-state override threshold of 2/3 of that state's seats, and resolve a
+ * per-state executive (seated governor, auto-enact fallback).
  *
- * Behavior parity contract: this module is a move + parameterize of the
- * former `src/lib/stateBillLifecycle.ts` — scoping (#0836), snapshot
- * freezing (#0982), the transient-claim revert (#2991), and all notification
- * copy are unchanged. `regionalEngine.test.ts` is the characterization guard.
+ * `regionalEngine.test.ts` is the characterization guard for behavior parity.
  */
 
 type DbConn = Awaited<ReturnType<typeof getDb>>;
@@ -52,8 +50,7 @@ async function loadRegionalRoster(
   const key = `${countryId}:${stateId}:${officeType}`;
   const cached = cache.rosters.get(key);
   if (cached) return cached;
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({ countryId, state: stateId, officeType })
     .project<ScopedVoteOfficial>({
       characterId: 1,
@@ -75,9 +72,10 @@ async function loadRegionalState(
 ): Promise<State | null> {
   const key = `${countryId ?? ""}:${stateId}`;
   if (cache.states.has(key)) return cache.states.get(key) ?? null;
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, ...(countryId ? { countryId } : {}) });
+  const state = await statesCollection(db).findOne({
+    _id: stateId,
+    ...(countryId ? { countryId } : {}),
+  });
   cache.states.set(key, state);
   return state;
 }
@@ -91,7 +89,7 @@ async function loadRegionalExecutive(
 ): Promise<ElectedOfficial | null> {
   const key = `${countryId}:${stateId}:${officeType}`;
   if (cache.executives.has(key)) return cache.executives.get(key) ?? null;
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     countryId,
     officeType,
     state: stateId,
@@ -108,9 +106,10 @@ async function loadNotificationCharacter(
 ): Promise<NotificationCharacter | null> {
   const key = characterId.toString();
   if (cache.characters.has(key)) return cache.characters.get(key) ?? null;
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { _id: 1, userId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { _id: 1, userId: 1 } }
+  );
   cache.characters.set(key, character);
   return character;
 }
@@ -197,7 +196,7 @@ export async function finalizeStateBillEnactment(
   const rejection = await enforceStateBudgetGate(db, bill);
   if (rejection) {
     const now = new Date();
-    const failed = await db.collection<StateBill>("stateBills").updateOne(
+    const failed = await stateBillsCollection(db).updateOne(
       { _id: bill._id },
       {
         $set: {
@@ -219,9 +218,10 @@ export async function finalizeStateBillEnactment(
       );
     }
     if (bill.sponsorId) {
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { _id: 1, userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { _id: 1, userId: 1 } }
+      );
       if (sponsor) {
         await createNotifications([
           {
@@ -314,9 +314,9 @@ export async function processStateBillTimers(
         resolutionCache
       );
     } catch (err) {
-      // Resolver threw mid-way — revert the transient claim so the bill is
+      // Resolver threw mid-way: revert the transient claim so the bill is
       // re-picked next turn instead of stranding in vote_closing forever. The
-      // status guard avoids clobbering a status the resolver already advanced. (#2991)
+      // status guard avoids clobbering a status the resolver already advanced.
       await db
         .collection<StateBill>(config.collection)
         .updateOne(
@@ -442,12 +442,11 @@ async function resolveStateBillVoting(
   const officeType = config.officeTypeFor(countryId);
   const officials = await loadRegionalRoster(db, cache, countryId, bill.stateId, officeType);
 
-  // Scope votes to the chamber's CURRENT seat holders before deciding pass/fail
-  // (bug #0836) and freeze the result the decision used so a later sub-national
-  // election cannot recompute this concluded bill's tally against a new chamber
-  // (#0982). Same shared vote-core the national engine resolves through; the
-  // stateId pins the roster lookup to this bill's chamber, and the stored
-  // aggregate + raw map are frozen when no current-holder votes survive.
+  // Scope votes to the chamber's current seat holders before deciding pass/fail,
+  // and freeze the result used so a later sub-national election cannot
+  // recompute a concluded bill's tally against a new chamber. stateId pins the
+  // roster lookup to this bill's chamber; the aggregate and raw map are frozen
+  // when no current-holder votes survive.
   const { totals, snapshot: voteSnapshot } = await resolvePhaseVotes(
     db,
     bill,

@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { ShareTradeHistory } from "@/lib/db/types/shareTradeHistory";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 const STRUCTURE_CHANGE_KINDS = ["stock_split", "reverse_split"] as const;
 
@@ -13,7 +14,7 @@ async function normalizeShareCorporateActions(
   db: Db,
   ctx: MigrationContext
 ): Promise<MigrationResult> {
-  const collection = db.collection<ShareTradeHistory>("shareTradeHistory");
+  const collection = shareTradeHistoryCollection(db);
   if (ctx.dryRun) {
     const stale = await collection.countDocuments(staleStructureChangeFilter);
     return {

@@ -24,6 +24,10 @@ import {
 } from "./computeResults";
 import { electionNightStyle, majorityThreshold } from "./electionNightChrome";
 import type { NationalParty, NationalRegion, NationalResults } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 export {
   CHAMBER_LABELS,
@@ -55,8 +59,7 @@ export interface ElectionNightPartyInfo {
 
 async function loadRegionNames(db: Db, regionIds: string[]): Promise<Map<string, string>> {
   if (regionIds.length === 0) return new Map();
-  const docs = await db
-    .collection<{ _id: string; name?: string }>("states")
+  const docs = await statesCollection<{ _id: string; name?: string }>(db)
     .find({ _id: { $in: regionIds } })
     .project<{ _id: string; name?: string }>({ name: 1 })
     .toArray();
@@ -94,8 +97,7 @@ export async function buildNationalElectionNight(
   // JP Sangiin elects half the chamber per night: the other class shares the cycle but is not tonight.
   const chamberClass = election.chamberClass;
 
-  const siblings = (await db
-    .collection<Election>("elections")
+  const siblings = (await electionsCollection(db)
     .find(
       {
         countryId: election.countryId,
@@ -109,8 +111,7 @@ export async function buildNationalElectionNight(
     .toArray()) as Pick<Election, "_id" | "state" | "totalSeats" | "status" | "allocationMethod">[];
   if (siblings.length < 2) return null;
 
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: siblings.map((s) => s._id) } })
     .project<
       Pick<
@@ -202,8 +203,7 @@ export async function buildNationalElectionNight(
     ? resolveOfficeKeyForElectionType(election.countryId, electionType)
     : null;
   if (officeType) {
-    const holdovers = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const holdovers = await electedOfficialsCollection(db)
       .find(
         {
           countryId: election.countryId,

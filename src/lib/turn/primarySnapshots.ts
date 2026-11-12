@@ -21,11 +21,9 @@ import {
   loadRegionalCampaignCells,
 } from "@/lib/campaignTargeting/audience";
 import { getDb } from "@/lib/mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
-import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/electionEngine/tallyProjections";
+import { TALLY_WITH_SNAPSHOT_TURNS_ONLY } from "@/lib/elections/engine/tallyProjections";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type {
-  DemographicCategory,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
@@ -48,8 +46,7 @@ import {
 } from "@/lib/primaryScore";
 import { parseSeatId } from "@/lib/seats/seatId";
 import { type CountryId } from "@/lib/constants/countries";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
-import { resolveTurnWindow } from "@/lib/electionEngine/voteCalculations";
+import { resolveTurnWindow } from "@/lib/elections/engine/voteCalculations";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
   accruePrimaryBallotTurn,
@@ -65,10 +62,22 @@ import { resolvePartyFamily, getTotalDelegatesForFamily } from "@/lib/constants/
 import {
   loadCandidateEnrichmentPreload,
   type CandidateEnrichmentPreload,
-} from "@/lib/electionEngine/candidateEnrichment";
+} from "@/lib/elections/engine/candidateEnrichment";
 import { primaryOpenFilter } from "@/lib/elections/electionDeadlineFilters";
 import { scopeFilter, type ElectionSweepScope } from "./electionSweepScope";
-import { planTurnSlice, type TurnSlicePart } from "@/lib/electionEngine/rules/turnSlice";
+import { planTurnSlice, type TurnSlicePart } from "@/lib/elections/rules/turnSlice";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 /**
  * Record a primary standings snapshot for every election currently in primary phase.
@@ -89,8 +98,9 @@ export async function recordPrimarySnapshots(
   const early = options?.slice === "early";
 
   // Elections still in their primary phase — turn-first with Date fallback.
-  const activeElections = await db
-    .collection<Election>("elections")
+  const activeElections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       ...scopeFilter(scope),
       status: { $in: ["upcoming", "active"] },
@@ -125,28 +135,24 @@ export async function recordPrimarySnapshots(
     regionDemographicsDocs,
     regionTurnoutDocs,
     regionDefaultsDocs,
-    demographicCategoryDocs,
     existingPrimaryTallies,
     snapshotGameState,
   ] = await Promise.all([
-    db.collection<PoliticalPartyType>("politicalParties").find({}).toArray(),
+    politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray(),
     // The presidential path needs every state's org rows; ballot accrual only
     // needs the rows for the regions actually holding a primary this turn.
     hasPresident
-      ? db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray()
+      ? statePartyOrgCollection(db).find({}).toArray()
       : snapshotRegionIds.length > 0
-        ? db
-            .collection<StatePartyOrg>("statePartyOrg")
+        ? statePartyOrgCollection(db)
             .find({ stateId: { $in: snapshotRegionIds } })
             .toArray()
         : Promise.resolve([] as StatePartyOrg[]),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
     uniqueSnapshotRegionKeys.size > 0
-      ? db
-          .collection<State>("states")
+      ? (await getStatesCollection(db))
           .find({
             $or: [...uniqueSnapshotRegionKeys].map((key) => {
               const [countryId, regionId] = key.split(":");
@@ -162,46 +168,36 @@ export async function recordPrimarySnapshots(
     // come from one source of truth. All of these degrade to "no accrual, keep
     // score-based shares" when a world has not seeded them.
     snapshotRegionIds.length > 0
-      ? db
-          .collection<StateDemographics>("stateDemographics")
+      ? stateDemographicsCollection(db)
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographics[]),
     snapshotRegionIds.length > 0
-      ? db
-          .collection<StateDemographicTurnout>("stateDemographicTurnout")
+      ? stateDemographicTurnoutCollection(db)
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographicTurnout[]),
     snapshotRegionIds.length > 0
-      ? db
-          .collection<StateDemographics>("demographicDefaults")
+      ? demographicDefaultsCollection(db)
           .find({ _id: { $in: snapshotRegionIds } })
           .toArray()
       : Promise.resolve([] as StateDemographics[]),
-    snapshotRegionIds.length > 0
-      ? db.collection<DemographicCategory>("demographicCategories").find({}).toArray()
-      : Promise.resolve([] as DemographicCategory[]),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } }, { projection: TALLY_WITH_SNAPSHOT_TURNS_ONLY })
       .project<Pick<ElectionVoteTally, "electionId" | "primaryVotes">>({
         electionId: 1,
         primaryVotes: 1,
       })
       .toArray(),
-    db
-      .collection<{
-        _id: string;
-        preset?: string;
-        currentYear?: number;
-        startingYear?: number;
-        eraSystemEnabled?: boolean;
-      }>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
+    gameStateCollection<{
+      _id: string;
+      preset?: string;
+      currentYear?: number;
+      startingYear?: number;
+    }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
   ]);
 
   // Use composite keys to avoid cross-country sequential ID collisions
@@ -231,11 +227,10 @@ export async function recordPrimarySnapshots(
   applyStandingAds(allCandidates, charMap);
   const nppMap = enrichmentPreload.nppsById;
 
-  // Presidential-only: compute per-state projections FIRST (also writes the
-  // per-state polling history to the tally). The returned projections drive a
-  // delegate-consistent national standing on the primarySnapshots doc below, so
-  // the persisted standing (read by wiki/discord/trend) matches the delegate
-  // winner instead of the old calcPresidentPrimaryScore ranking (#3022).
+  // Presidential-only: compute per-state projections first (also writes
+  // per-state polling history). Returned projections drive a
+  // delegate-consistent national standing, so persisted standing matches
+  // the delegate winner.
   const presProjections = await recordPresidentialStatePollingSnapshots(
     db,
     early ? [] : activeElections.filter((e) => usesLegacyPresidentialCampaign(e)),
@@ -250,8 +245,8 @@ export async function recordPrimarySnapshots(
   const presPreset = hasPresident ? snapshotGameState?.preset : undefined;
 
   // ── Primary ballot accrual inputs ─────────────────────────────────────────
-  // Per-region turnout pool via the SAME resolveTurnout the general vote
-  // engine uses, and per-region party registration shares. Regions missing any
+  // Per-region turnout pool from the same census cells the general vote
+  // engine counts, and per-region party registration shares. Regions missing any
   // of the inputs simply never enter these maps, and their races keep the
   // legacy score-share behavior end to end.
   const eraYear = eraYearContextFromGameState(snapshotGameState);
@@ -266,19 +261,24 @@ export async function recordPrimarySnapshots(
   }
   const turnoutPoolByRegionKey = new Map<string, number>();
   for (const key of uniqueSnapshotRegionKeys) {
-    const [, regionId] = key.split(":");
+    const [country, regionId] = key.split(":");
     const stateDoc = stateMap.get(key);
     const demographics = demographicsByRegion.get(regionId);
-    if (!stateDoc || !demographics || demographicCategoryDocs.length === 0) continue;
+    if (!stateDoc || !demographics) continue;
     const electorate = stateDoc.votingEligiblePopulation ?? stateDoc.population;
     if (!(electorate > 0)) continue;
-    const { totalPool } = resolveTurnout(
-      electorate,
-      demographics,
-      demographicCategoryDocs,
-      turnoutDocByRegion.get(regionId),
-      { preset: snapshotGameState?.preset, year: eraYear.year, startingYear: eraYear.startingYear }
-    );
+    const totalPool =
+      buildGranularElectorateSubstrate({
+        countryId: country,
+        stateId: regionId,
+        preset: snapshotGameState?.preset,
+        ...eraYear,
+        currentTurn,
+        turnoutDoc: turnoutDocByRegion.get(regionId),
+        statePopulation: electorate,
+        demographics,
+        enriched: [],
+      })?.totalPool ?? 0;
     if (totalPool > 0) turnoutPoolByRegionKey.set(key, totalPool);
   }
   const modernRegionKeys = new Set(
@@ -304,13 +304,6 @@ export async function recordPrimarySnapshots(
       campaignRulesVersion: Number(version),
     });
     const electorate = state.votingEligiblePopulation ?? state.population;
-    const liveTurnouts = resolveTurnout(
-      electorate,
-      demographics,
-      demographicCategoryDocs,
-      turnoutDoc,
-      { preset: snapshotGameState?.preset, ...eraYear }
-    ).byGroup;
     const substrate = buildGranularElectorateSubstrate({
       countryId: country,
       stateId: regionId,
@@ -321,9 +314,7 @@ export async function recordPrimarySnapshots(
       turnoutDoc,
       statePopulation: electorate,
       demographics,
-      categories: demographicCategoryDocs,
       enriched: [],
-      liveTurnouts,
       demographicDefaults: defaultsByRegion.get(regionId),
     });
     if (substrate) campaignSubstrates.set(key, substrate);
@@ -362,12 +353,9 @@ export async function recordPrimarySnapshots(
   // banked three slices; the primary accrual would do the same. A split turn
   // holds an early and a rest snapshot; each half is recorded once.
   const recordedParts = new Map<string, (TurnSlicePart | undefined)[]>();
-  // The { electionId, turn } index (2026-10-27-player-read-indexes) serves this
-  // as an equality lookup. The older { electionId, recordedAt } index could only
-  // bound the election, so every already-recorded turn of the race was fetched
-  // and filtered in memory on each turn and half-hour tick.
-  const sameTurnSnapshots = await db
-    .collection<PrimarySnapshot>("primarySnapshots")
+  // The { electionId, turn } index makes this an equality lookup; keep it
+  // that way to avoid fetching and filtering prior turns in memory.
+  const sameTurnSnapshots = await primarySnapshotsCollection(db)
     .find(
       {
         electionId: { $in: activeElections.map((e) => e._id as ObjectId) },
@@ -434,11 +422,10 @@ export async function recordPrimarySnapshots(
     const regionalAdBonuses: Record<string, number> = {};
     const byParty: Record<string, PrimarySnapshotEntry[]> = {};
 
-    // Presidential standings derive from the SAME per-state vote projection that
-    // produces the delegate winner (#3022): rank by projected delegates, votes
-    // as tiebreak, with delegate share as the displayed sharePct. Falls back to
-    // the ideology score only for a party with no projected votes yet (very
-    // early primary). Non-presidential races keep calcPrimaryScore untouched.
+    // Presidential standings derive from the same per-state projection as
+    // the delegate winner: rank by projected delegates, votes as tiebreak,
+    // delegate share as sharePct. Falls back to ideology score only for a
+    // party with no projected votes yet.
     const presStandingByCandidate = new Map<string, { standing: number; sharePct: number }>();
     const presPartiesWithProjection = new Set<string>();
     if (isPresident) {
@@ -715,20 +702,19 @@ export async function recordPrimarySnapshots(
   }
 
   if (snapshots.length > 0) {
-    await db.collection<PrimarySnapshot>("primarySnapshots").insertMany(snapshots);
+    await primarySnapshotsCollection(db).insertMany(snapshots);
   }
   if (ballotTallyOps.length > 0) {
-    await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(ballotTallyOps);
+    await electionVoteTalliesCollection(db).bulkWrite(ballotTallyOps);
   }
 
   return snapshots.length;
 }
 
 /**
- * @internal recordPrimarySnapshots helper — per-state projection history for pres
- * primaries. Returns the per-election projected votes-by-state (party → state →
- * candidate → votes) so the caller can build a delegate-consistent national
- * standing for the primarySnapshots doc from the SAME projection (#3022).
+ * @internal recordPrimarySnapshots helper, per-state projection history for pres
+ * primaries. Returns projected votes-by-state so the caller can build a
+ * delegate-consistent national standing from the same projection.
  */
 type PresProjectionByElection = Map<string, Record<string, Record<string, Record<string, number>>>>;
 
@@ -747,26 +733,19 @@ async function recordPresidentialStatePollingSnapshots(
   if (presElections.length === 0) return projectionsByElection;
 
   const { projectPrimaryByState } = await import("@/lib/primaryProjection");
-  const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+  const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
   const { loadRegionalBonusMaps } = await import("@/lib/primaryRegionalBonusLoader");
   const { ELECTORAL_VOTE_UNITS } = await import("@/lib/constants/states");
   const stateIds = [...new Set(ELECTORAL_VOTE_UNITS.map((u) => u.stateId))];
-  const campaignContext = presElections.some((e) =>
-    usesCampaignAds(e, candidatesByElection.get(e._id.toString()) ?? [])
-  )
-    ? await loadCampaignProjectionContext(db, stateIds)
-    : undefined;
+  const campaignContext = await loadCampaignProjectionContext(db, stateIds);
 
-  // One-shot fetch for demographics + state + categories used across all
+  // One-shot fetch for demographics + state used across all
   // pres elections in this turn.
-  const [categoriesDocs, statesDocs, demographicsDocs] = await Promise.all([
-    loadDemographicCategories(db),
-    db
-      .collection<State>("states")
+  const [statesDocs, demographicsDocs] = await Promise.all([
+    statesCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
+    stateDemographicsCollection(db)
       .find({ _id: { $in: stateIds } })
       .toArray(),
   ]);
@@ -776,8 +755,7 @@ async function recordPresidentialStatePollingSnapshots(
   // Win momentum per race, from the waves already run. One projected read for
   // every presidential race this turn, so the polling projection carries the
   // same momentum the next wave will.
-  const momentumTallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const momentumTallies = await electionVoteTalliesCollection(db)
     .find(
       { electionId: { $in: presElections.map((e) => e._id) } },
       { projection: { electionId: 1, primaryWaveHistory: 1, primaryStateVotes: 1 } }
@@ -855,16 +833,15 @@ async function recordPresidentialStatePollingSnapshots(
         // Same seed as the live wave, so the projection sees the same state swing.
         regionalSeed: String(election._id),
         winMomentum: winMomentumByElection.get(String(election._id)),
-        campaignContext:
-          usesCampaignAds(election, enriched) && campaignContext
-            ? { ...campaignContext, campaignRulesVersion: election.campaignRulesVersion ?? 0 }
-            : undefined,
+        campaignContext: {
+          ...campaignContext,
+          campaignRulesVersion: election.campaignRulesVersion ?? 0,
+        },
         candidates: enriched,
         candidateMeta,
         stateIds,
         stateMap,
         demographicsMap,
-        categories: categoriesDocs,
         statePartyOrgs: orgMap,
         partyPosition: {
           economicPosition: partyDoc?.economicPosition ?? 0,
@@ -903,7 +880,7 @@ async function recordPresidentialStatePollingSnapshots(
   // One write for every presidential race's polling history, instead of one
   // round trip per race.
   if (pollingHistoryOps.length > 0) {
-    await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(pollingHistoryOps);
+    await electionVoteTalliesCollection(db).bulkWrite(pollingHistoryOps);
   }
 
   return projectionsByElection;

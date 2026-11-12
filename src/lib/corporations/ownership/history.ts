@@ -2,6 +2,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Shareholder } from "@/lib/db/types/corporation";
 import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 import { ownershipKey, type OwnerKind, type OwnershipHistory } from "./rules";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 const holderFields = [
   ["character", "characterId", "characters"],
@@ -24,7 +25,7 @@ export async function loadOwnershipHistory(
   corporationId: ObjectId,
   turns: number
 ): Promise<OwnershipHistory> {
-  const collection = db.collection<CorporationHistory>("corporationHistory");
+  const collection = corporationHistoryCollection(db);
   const newest = await collection.findOne(
     { corporationId },
     { sort: { turn: -1 }, projection: { turn: 1 } }

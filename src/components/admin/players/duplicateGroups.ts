@@ -3,23 +3,19 @@ import { FINGERPRINT_COMMONNESS_CEILING } from "@/lib/utils/degenerateFingerprin
 import type { DuplicateGroup, GroupMember, MatchReason, UserData } from "./types";
 
 /**
- * Build duplicate groups from shared IPs, tracking cookies, device keys and
- * exact fingerprints — both the accounts' CURRENT values and the values they
- * were seen on within the last 90 days (`historicalIps` /
- * `historicalFingerprints`, from `identityObservations`). Historical matches
- * are reported as their own `*-past` reasons, never folded into the current
- * ones. Without them, rotating a fingerprint removed an account from the panel
- * entirely while the scoring engine still scored the link at 0.95.
+ * Build duplicate groups from shared IPs, cookies, device keys and fingerprints,
+ * using both current values and values seen in the last 90 days
+ * (`historicalIps` / `historicalFingerprints`). Historical matches get their own
+ * `*-past` reasons. Without them, rotating a fingerprint hides an account from
+ * the panel while scoring still links it.
  *
- * Eligibility is decided SERVER-SIDE (`eligibleIdentitySignals`) and arrives on
- * `UserData.signalEligibility`. This function must not re-derive it: the
- * moderator endpoint emits sha256 hashes, so neither the Cloudflare-edge CIDR
- * check nor the sentinel-string check is possible here — a hash never equals
- * "unknown", which is how every account with an unresolvable IP previously got
- * welded into a single component.
+ * Eligibility is decided server-side (`eligibleIdentitySignals`) and arrives on
+ * `UserData.signalEligibility`. Do not re-derive it here: the moderator
+ * endpoint emits sha256 hashes, so neither the CIDR nor the sentinel-string
+ * check is possible, and a hash never equals "unknown".
  *
- * A user with no annotation contributes no signals. That is deliberate: a stale
- * client bundle degrades to "no groups" rather than to "group on everything".
+ * A user with no annotation contributes no signals, so a stale client bundle
+ * degrades to "no groups" rather than "group on everything".
  */
 export const getDuplicateGroups = (users: UserData[]): DuplicateGroup[] => {
   // Signal name -> the value fields that carry it. The moderator endpoint sends
@@ -103,50 +99,29 @@ export const getDuplicateGroups = (users: UserData[]): DuplicateGroup[] => {
     parent.set(find(a), find(b));
   };
 
-  // Union users who share any IP
-  for (const [, userIds] of sharedIps) {
-    const ids = [...userIds];
-    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
-  }
-
-  // Union users who share a tracking cookie
-  for (const [, userIds] of sharedTracks) {
-    const ids = [...userIds];
-    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
-  }
-
-  // Union users who share an exact browser fingerprint
-  for (const [, userIds] of sharedFingerprints) {
-    const ids = [...userIds];
-    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
-  }
-
-  // Union users who share a device key
-  for (const [, userIds] of sharedDevices) {
-    const ids = [...userIds];
-    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
-  }
-
-  // Union users who shared a value within the 90-day history window. This is
-  // what stops rotation defeating the panel: an account that changed its
-  // fingerprint still links to the accounts it shared the old one with.
-  for (const [, userIds] of sharedHistoricalIps) {
-    const ids = [...userIds];
-    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
-  }
-  for (const [, userIds] of sharedHistoricalFingerprints) {
-    const ids = [...userIds];
-    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
+  // Historical maps cover the 90-day window, which stops rotation defeating
+  // the panel: an account that changed its fingerprint still links to the
+  // accounts it shared the old one with.
+  const sharedMaps = [
+    sharedIps,
+    sharedTracks,
+    sharedFingerprints,
+    sharedDevices,
+    sharedHistoricalIps,
+    sharedHistoricalFingerprints,
+  ];
+  for (const shared of sharedMaps) {
+    for (const userIds of shared.values()) {
+      const ids = [...userIds];
+      for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
+    }
   }
 
   // Collect groups — only include users that were actually linked
   const allLinkedIds = new Set<string>();
-  for (const [, ids] of sharedIps) ids.forEach((id) => allLinkedIds.add(id));
-  for (const [, ids] of sharedTracks) ids.forEach((id) => allLinkedIds.add(id));
-  for (const [, ids] of sharedFingerprints) ids.forEach((id) => allLinkedIds.add(id));
-  for (const [, ids] of sharedDevices) ids.forEach((id) => allLinkedIds.add(id));
-  for (const [, ids] of sharedHistoricalIps) ids.forEach((id) => allLinkedIds.add(id));
-  for (const [, ids] of sharedHistoricalFingerprints) ids.forEach((id) => allLinkedIds.add(id));
+  for (const shared of sharedMaps) {
+    for (const ids of shared.values()) ids.forEach((id) => allLinkedIds.add(id));
+  }
 
   const groupMap = new Map<string, Set<string>>();
   for (const id of allLinkedIds) {
@@ -163,30 +138,16 @@ export const getDuplicateGroups = (users: UserData[]): DuplicateGroup[] => {
       const allMembers = [...idSet].map((id) => userMap.get(id)!).filter(Boolean);
 
       // Find signals shared within this group
-      const groupIps = new Set<string>();
-      for (const [ip, ids] of sharedIps) {
-        if ([...ids].some((id) => idSet.has(id))) groupIps.add(ip);
-      }
-      const groupTracks = new Set<string>();
-      for (const [track, ids] of sharedTracks) {
-        if ([...ids].some((id) => idSet.has(id))) groupTracks.add(track);
-      }
-      const groupFingerprints = new Set<string>();
-      for (const [fingerprint, ids] of sharedFingerprints) {
-        if ([...ids].some((id) => idSet.has(id))) groupFingerprints.add(fingerprint);
-      }
-      const groupDevices = new Set<string>();
-      for (const [device, ids] of sharedDevices) {
-        if ([...ids].some((id) => idSet.has(id))) groupDevices.add(device);
-      }
-      const groupHistoricalIps = new Set<string>();
-      for (const [ip, ids] of sharedHistoricalIps) {
-        if ([...ids].some((id) => idSet.has(id))) groupHistoricalIps.add(ip);
-      }
-      const groupHistoricalFingerprints = new Set<string>();
-      for (const [fingerprint, ids] of sharedHistoricalFingerprints) {
-        if ([...ids].some((id) => idSet.has(id))) groupHistoricalFingerprints.add(fingerprint);
-      }
+      const groupKeys = (shared: Map<string, Set<string>>) =>
+        new Set(
+          [...shared].filter(([, ids]) => [...ids].some((id) => idSet.has(id))).map(([k]) => k)
+        );
+      const groupIps = groupKeys(sharedIps);
+      const groupTracks = groupKeys(sharedTracks);
+      const groupFingerprints = groupKeys(sharedFingerprints);
+      const groupDevices = groupKeys(sharedDevices);
+      const groupHistoricalIps = groupKeys(sharedHistoricalIps);
+      const groupHistoricalFingerprints = groupKeys(sharedHistoricalFingerprints);
 
       // Build per-member match reasons (checked against all members including banned,
       // so we correctly label connections even when the matched account is banned).

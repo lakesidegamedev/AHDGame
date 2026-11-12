@@ -1,6 +1,9 @@
 import type { Db } from "@/lib/mongodb";
-import type { ElectedOfficial, Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface ExecutiveHolder {
   /** Character _id or NPP _id (whichever backs the seat), as a string. */
@@ -36,16 +39,15 @@ export async function resolveExecutiveHolder(
 
   const lookupParty = async (party: string | undefined) => {
     if (!party) return { name: undefined, color: undefined };
-    const p = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: Number(party), countryId });
+    const p = await politicalPartiesCollection(db).findOne({
+      sequentialId: Number(party),
+      countryId,
+    });
     return { name: p?.name, color: p?.color };
   };
 
   if (official.characterId) {
-    const char = await db
-      .collection<Character>("characters")
-      .findOne({ _id: official.characterId });
+    const char = await charactersCollection(db).findOne({ _id: official.characterId });
     if (!char) return null;
     const { name, color } = await lookupParty(char.party);
     return {
@@ -65,7 +67,7 @@ export async function resolveExecutiveHolder(
   }
 
   if (official.nppId) {
-    const npp = await db.collection<NPP>("npps").findOne({ _id: official.nppId });
+    const npp = await nppsCollection(db).findOne({ _id: official.nppId });
     if (!npp) return null;
     const { name, color } = await lookupParty(npp.party);
     return {

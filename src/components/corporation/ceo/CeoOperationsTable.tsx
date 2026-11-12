@@ -5,7 +5,7 @@ import { sectorDisplayRevenue, sectorDisplayProfit, sectorDisplayMargin } from "
 import { Fragment, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { STATE_FLAGS } from "@/lib/constants";
+import { STATE_FLAGS } from "@/lib/constants/flags";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   MAX_GROWTH_RATE,

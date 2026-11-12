@@ -8,6 +8,8 @@ import {
 } from "@/lib/db/partyLookup";
 import { isUsPartyOrganizationJurisdiction } from "@/lib/constants/states";
 import { loadUsPoliticalStateIds } from "@/lib/elections/usPoliticalHome";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export interface EnsureStatePartyOrgRowArgs {
   countryId: CountryId;
@@ -22,29 +24,20 @@ export interface EnsureStatePartyOrgRowArgs {
   now?: Date;
 }
 
-/**
- * Idempotently ensure a `statePartyOrg` row exists for (country, state, party),
- * creating it at 0% Org with neutral defaults if missing. Returns the existing
- * row when present, otherwise the newly-bootstrapped row.
- *
- * Why this exists: the DE seed deliberately omits some (Land, party) pairs that
- * don't organize there historically (e.g. CDU stays out of Bayern under the
- * CDU/CSU Union pact). When a player later establishes genuine presence in such
- * a state, the per-click Build Org action needs a row to grow from — but no
- * seed row exists and only the national-chair budget path used to create one.
- * This helper is the single source of truth for that bootstrap so Build Org and
- * the org-building budget route all create identical rows.
- *
- * Uses an upsert with `$setOnInsert` so two concurrent callers can't double-
- * insert (the `_id` is the canonical `{stateId}_{partySequentialId}` key).
- */
+/* Idempotently ensure a `statePartyOrg` row for (country, state, party),
+ * creating at 0% Org with neutral defaults if missing. The DE seed omits
+ * some (Land, party) pairs that historically don't organize there; when a
+ * player establishes presence, Build Org and the budget route both need a
+ * row to grow. Single source of truth so both create identical rows. Uses
+ * `$setOnInsert` upsert on `{stateId}_{partySequentialId}` so concurrent
+ * callers cannot double-insert. */
 export async function ensureStatePartyOrgRow(
   db: Db,
   args: EnsureStatePartyOrgRowArgs
 ): Promise<StatePartyOrg> {
   // DC is organizable even though it elects no state or congressional offices.
   // Alaska and Hawaii also have party chapters before admission.
-  if (args.countryId === "US") {
+  if (countryHasFeature("usTurn", args.countryId)) {
     if (!isUsPartyOrganizationJurisdiction(args.stateId)) {
       throw new Error(
         `Cannot create a state party org for unsupported US region "${args.stateId}".`
@@ -58,18 +51,15 @@ export async function ensureStatePartyOrgRow(
 
   const _id = getStatePartyOrgDocumentId(args.stateId, args.party as PoliticalParty);
   const partyId = getPartyIdString(args.party as PoliticalParty);
-  const col = db.collection<StatePartyOrg>("statePartyOrg");
+  const col = statePartyOrgCollection(db);
 
   const existing = await findStatePartyOrgRow(db, args.countryId, args.stateId, args.party);
   if (existing) {
     // Heal a legacy/malformed row whose scope fields drifted from the
-    // `{countryId, stateId, partyId}` triple — most importantly a missing
-    // `countryId` (older leadership upserts created rows without it), which
-    // makes the row invisible to every countryId-scoped query, so the PS spend
-    // fails with "missing-row". The triple is the source of truth (it is what
-    // the country-scoped reads join on), so repair to match — including
-    // RE-KEYING a stale `_id` (e.g. the pre-merge `{stateId}_{oldSeqId}` key a
-    // party renumber left behind, ticket #1256) back to the canonical key.
+    // `{countryId, stateId, partyId}` triple, most importantly a missing
+    // `countryId`, which makes the row invisible to countryId-scoped queries and
+    // makes PS spend fail with "missing-row". The triple is the source of truth,
+    // so repair to match, including re-keying a stale `_id` to the canonical key.
     const fieldPatch: Partial<StatePartyOrg> = {};
     if (existing.countryId !== args.countryId) fieldPatch.countryId = args.countryId;
     if (existing.stateId !== args.stateId) fieldPatch.stateId = args.stateId;

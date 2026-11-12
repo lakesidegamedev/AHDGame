@@ -9,7 +9,7 @@ import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { MAX_NATIONAL_CAMPAIGNERS } from "@/lib/parties/access";
 import { canActAsChair } from "@/lib/parties/actingChair";
-import type { Character, CommitteeProposal, PoliticalParty } from "@/lib/db/types";
+import type { CommitteeProposal, PoliticalParty } from "@/lib/db/types";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import type { Db } from "mongodb";
 import { getGameTime } from "@/lib/time/gameTime";
@@ -17,6 +17,11 @@ import {
   getPartyTenure,
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
+import { committeeProposalsCollection } from "@/lib/db/repositories/committeeProposals";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -27,9 +32,9 @@ interface RouteParams {
  * adding. Returns an error response when a candidate fails, or null when
  * every candidate is clean.
  *
- * The relocation gate mirrors the state-leadership rule (#949) so the
- * national chair can't re-grant, via a campaigner seat, the powers a
- * fresh relocation is meant to withhold (ticket #974). Admins skip it.
+ * The relocation gate mirrors the state-leadership rule so the national chair
+ * cannot re-grant, via a campaigner seat, the powers a fresh relocation is meant
+ * to withhold. Admins skip it.
  */
 async function validateCandidates(
   db: Db,
@@ -41,8 +46,7 @@ async function validateCandidates(
 ): Promise<NextResponse | null> {
   if (candidateIds.length === 0) return null;
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: candidateIds } })
     .toArray();
   if (characters.length !== candidateIds.length) {
@@ -85,7 +89,7 @@ async function logCampaignerChange(
   isAdmin: boolean,
   detail: string
 ): Promise<void> {
-  await db.collection("adminLogs").insertOne({
+  await adminLogsCollection<Document>(db).insertOne({
     category: "system",
     action: "national_campaigners_changed",
     username: authUser.username,
@@ -103,31 +107,17 @@ const campaignersSchema = z.object({
 });
 
 /**
- * POST /api/country/[code]/parties/[id]/campaigners — chair submits the
- * desired campaigner roster (up to MAX_NATIONAL_CAMPAIGNERS).
+ * POST submits the chair's desired campaigner roster (up to
+ * MAX_NATIONAL_CAMPAIGNERS).
  *
- * Per suggestion #269, the seat is no longer purely chair-appointed:
+ * Dropped names are removed immediately (chair fires at will). Added names
+ * become `campaignerAppointment` proposals confirmed by the National Committee
+ * before seating, because campaigners carry NPP Management on top of Build Org.
+ * The committee can strip a seated campaigner via `removeOfficeHolder`.
  *
- *  - Names DROPPED from the roster are removed immediately. The chair
- *    fires at will, so a campaigner who goes rogue loses the seat on the
- *    spot.
- *  - Names ADDED become `campaignerAppointment` proposals before the
- *    National Committee. They take the seat only when the committee
- *    confirms. Nothing about the roster changes until then.
- *
- * Campaigners carry NPP Management on top of Build Org, which is why the
- * appointment is confirmed rather than granted. The National Committee
- * can also strip a seated campaigner via a `removeOfficeHolder` proposal
- * with role `campaigner`.
- *
- * Validation on additions:
- *  - Each id must resolve to a Character
- *  - Each character must currently be a member of this party
- *  - No duplicate ids, no double nomination, no over-cap once pending
- *    nominations are counted
- *
- * Vice-chair cannot reassign; only chair (or acting VC) / admin. Admins
- * still seat the roster directly, bypassing the committee.
+ * Additions must resolve to a Character, be a current party member, be unique,
+ * not already nominated, and fit the cap counting pending nominations. Chair or
+ * acting VC only; admins bypass the committee.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
@@ -173,9 +163,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Malformed campaigner id");
     }
 
-    // Split the submitted roster against the seated one. Removals land
-    // immediately (the chair can fire at will — suggestion #269); additions
-    // become National Committee nominations and only seat on a passing vote.
+    // Removals land immediately; additions become National Committee nominations
+    // and only seat on a passing vote.
     const seated = party.campaignerIds ?? [];
     const keptIds = seated.filter((id) => requestedIds.some((r) => r.equals(id)));
     const removedIds = seated.filter((id) => !requestedIds.some((r) => r.equals(id)));
@@ -190,9 +179,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         skipRelocationGate: true,
       });
       if (validation) return validation;
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { campaignerIds: requestedIds, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { campaignerIds: requestedIds, updatedAt: now } }
+      );
       await logCampaignerChange(db, party, authUser, true, `set to ${requestedIds.length}`);
       return NextResponse.json({
         ok: true,
@@ -212,8 +202,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Cap check counts seats that will remain, plus nominations already in
     // flight, plus the new ones — otherwise a chair could queue five
     // nominations against three slots and let the resolver pick winners.
-    const openNominations = await db
-      .collection<CommitteeProposal>("committeeProposals")
+    const openNominations = await committeeProposalsCollection(db)
       .find({ partyId: party._id, status: "open", type: "campaignerAppointment" })
       .toArray();
     const openTargets = openNominations
@@ -237,9 +226,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (removedIds.length > 0) {
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: party._id }, { $set: { campaignerIds: keptIds, updatedAt: now } });
+      await politicalPartiesCollection(db).updateOne(
+        { _id: party._id },
+        { $set: { campaignerIds: keptIds, updatedAt: now } }
+      );
     }
 
     const createdNominations: string[] = [];
@@ -257,9 +247,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         proposingVotes: [],
         campaignerAppointment: { targetCharacterId: targetId },
       };
-      const inserted = await db
-        .collection<CommitteeProposal>("committeeProposals")
-        .insertOne(doc as CommitteeProposal);
+      const inserted = await committeeProposalsCollection(db).insertOne(doc as CommitteeProposal);
       createdNominations.push(inserted.insertedId.toString());
     }
 

@@ -10,10 +10,10 @@ import { ObjectId } from "mongodb";
 import { parseJsonBody } from "@/lib/api/validate";
 import { badRequest, forbidden, handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Corporation } from "@/lib/db/types/corporation";
 import { MAX_PLAN_TARGET_CAPACITY_MULTIPLE } from "@/lib/constants/commandEconomyOffices";
 import { canOperateGosplan } from "@/lib/economy/commandEconomyAuth";
 import { resolveWriteContext } from "@/lib/economy/queries/commandEconomyWriteContext";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -63,8 +63,7 @@ export async function POST(request: Request, context: RouteContext) {
     for (const [id] of entries) {
       if (ObjectId.isValid(id)) ids.push(new ObjectId(id));
     }
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find(
         { _id: { $in: ids }, countryId, soe: { $exists: true } },
         { projection: { _id: 1, soe: 1 } }
@@ -94,7 +93,7 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    await db.collection<Corporation>("corporations").bulkWrite(ops);
+    await corporationsCollection(db).bulkWrite(ops);
 
     return NextResponse.json({ success: true, updated: ops.length });
   } catch (error) {

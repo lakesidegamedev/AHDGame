@@ -19,14 +19,12 @@ export interface DefenseFundingNoteProps {
 }
 
 /**
- * Defence funding reconciliation (ticket #1269, issue #1754). The surplus tile
- * counts the enacted defence line, while the standing force settles through an
- * appropriation pot. A genuine gap can create new treasury debt without
- * touching a spending row, and loss-making National Corporations are backed
- * from the treasury the same way. This memo puts every per-turn draw next to
- * the surplus tile plus the identity that ties them together, so a falling
- * treasury under a surplus reconciles on screen. Read-only; the turn phase
- * stays the sole writer of every pot.
+ * Defence funding reconciliation. The surplus tile counts the enacted defence
+ * line, while the standing force settles through an appropriation pot: a gap
+ * can create treasury debt without a spending row, and loss-making National
+ * Corporations are backed from the treasury the same way. This memo puts each
+ * per-turn draw next to the surplus tile so a falling treasury under a surplus
+ * reconciles on screen. Read-only; the turn phase is the sole writer of pots.
  */
 export function DefenseFundingNote({
   sym,

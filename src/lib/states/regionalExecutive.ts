@@ -5,7 +5,7 @@
  * Used by `getStateOverview()` to populate the optional regional-executive
  * chip on the State Overview tab.
  *
- * Coverage (Phase 1 of UK + JP devolved-executive work, 2026-05-20):
+ * Coverage (UK + JP devolved executives):
  *   - US: elected `governor` per state → `"Governor"`
  *   - DE: elected `ministerPresident` per Land → `"Ministerpräsident"`
  *   - UK: elected `governor` per devolved region, label varies by region
@@ -13,6 +13,8 @@
  *       - LON → `"Mayor of London"`
  *       - English regions other than LON → `null` (no devolved executive)
  *   - JP: elected `governor` per region → `"Governor"`
+ *   - CA: elected `governor` per province or territory → `"Premier"`
+ *   - QC: elected `governor` per region → `"Prefect"`
  *   - CN: elected `governor` per macro-region → `"Governor"`
  *   - IE: elected `governor` per region, label varies by region (recycled
  *     `governor` officeType for the Cathaoirleach):
@@ -23,7 +25,7 @@
  *       - all other IE regions → `"Cathaoirleach"`
  *   - any other country: `null`
  *
- * See `docs/design/uk-jp-devolved-executives.md` for the design that
+ * See the devolved-executives design for the design that
  * recycles the cross-country `governor` OfficeType for UK FMs / Mayor of
  * London and JP regional governors — same mechanical shape, different
  * display labels.
@@ -34,6 +36,9 @@ import type { ElectedOfficial } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { regionalExecutiveSignForTenure } from "./regionalExecutiveConstants";
+import { CA_REGIONAL_EXECUTIVE } from "@/lib/countries/ca/regionalExecutive";
+import { QC_REGIONAL_EXECUTIVE } from "@/lib/countries/qc/regionalExecutive";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Magnitude band of the regional-executive modifier (low / medium / high). */
 export type RegionalExecutiveSign = 1 | 2 | 3;
@@ -47,6 +52,18 @@ export interface RegionalExecutive {
   label: string;
 }
 
+/** Countries where every region has the same executive office. */
+const UNIFORM_EXECUTIVE_OFFICES: Readonly<
+  Partial<Record<CountryId, { officeType: string; label: string }>>
+> = {
+  US: { officeType: "governor", label: "Governor" },
+  DE: { officeType: "ministerPresident", label: "Ministerpräsident" },
+  JP: { officeType: "governor", label: "Governor" },
+  CN: { officeType: "governor", label: "Governor" },
+  CA: CA_REGIONAL_EXECUTIVE,
+  QC: QC_REGIONAL_EXECUTIVE,
+};
+
 /** UK regions whose devolved executive is a "First Minister". */
 const UK_FIRST_MINISTER_REGIONS = new Set(["SCO", "WAL", "NIR"]);
 
@@ -59,16 +76,10 @@ export function resolveExecutiveOffice(
   countryId: CountryId,
   stateId: string
 ): { officeType: string; label: string } | null {
+  const uniform = UNIFORM_EXECUTIVE_OFFICES[countryId];
+  if (uniform) return { officeType: uniform.officeType, label: uniform.label };
   const upper = stateId.toUpperCase();
   switch (countryId) {
-    case "US":
-      return { officeType: "governor", label: "Governor" };
-    case "DE":
-      return { officeType: "ministerPresident", label: "Ministerpräsident" };
-    case "JP":
-      return { officeType: "governor", label: "Governor" };
-    case "CN":
-      return { officeType: "governor", label: "Governor" };
     case "UK":
       if (upper === "LON") return { officeType: "governor", label: "Mayor of London" };
       if (UK_FIRST_MINISTER_REGIONS.has(upper)) {
@@ -113,7 +124,7 @@ export async function getRegionalExecutive(
   // Match `getRegionOfficials`'s pattern: ElectedOfficial.state is stored
   // upper-cased; uppercase the input defensively in case a caller passes
   // a lowercase region id.
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+  const official = await electedOfficialsCollection(db).findOne(
     {
       countryId,
       state: stateId.toUpperCase(),

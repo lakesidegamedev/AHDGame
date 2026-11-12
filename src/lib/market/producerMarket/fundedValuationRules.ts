@@ -2,18 +2,15 @@
  * Funded producer path: what a sector is worth to its shareholders
  * (gameConfig.fundedValuationStage >= 1).
  *
- * On a funded turn the settlement decides what a plant sold and earned. The
- * legacy per-sector pass still runs beside it and prices the plant's nameplate
- * at current market prices, so a plant that sold nothing while its goods were
- * short still carried a rising going-concern value, and that value became the
- * share price. Here a funded sector is worth the larger of:
- * - the capitalized value of what it actually earned this turn, after every
- *   cost the sector carries, and
- * - the paid basis of the capacity it owns, which never moves with prices.
+ * The legacy per-sector pass prices nameplate at current market prices, so a
+ * plant that sold nothing still carries a rising going-concern value. Here a
+ * funded sector is worth the larger of the capitalized value of what it earned
+ * this turn after every cost, and the paid basis of the capacity it owns (which
+ * never moves with prices).
  *
- * Growth for the share price premium is read from real output: units sold,
- * valued at the sector's fixed base mix price. A price climb on the same sales
- * is not growth.
+ * The share price premium's growth is read from real output: units sold valued
+ * at the sector's fixed base mix price. A price climb on the same sales is not
+ * growth.
  *
  * Pure: plain data in, plain data out.
  */

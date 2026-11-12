@@ -66,15 +66,10 @@ export interface CountryPolicyConfig {
 /**
  * Per-country policy configuration, legacy union.
  *
- * The sixteen modern blocks now live in `basePolicies2019.ts` and are spread in
- * here; the eleven below belong to eras that ended, and are kept because
- * `budgets.ts` reads them for the 1979 and 1991 budget seeds. Nothing is
- * duplicated: this map has exactly one source for every key.
- *
- * ⚠️ This is NOT the 2019 policy seed any more. `getBasePolicies("2019-default")`
- * builds from `COUNTRY_POLICY_CONFIGS_2019` alone, so a modern world no longer
- * picks up `su`, `dd` or the Warsaw-Pact blocks. Do not point a preset at this
- * map to "get everything" — that is the defect it used to have.
+ * Modern 2019 blocks come from `basePolicies2019.ts`; the remaining entries
+ * serve 1979 and 1991 budget seeds via `budgets.ts`. Do not point a preset at
+ * this map expecting the 2019 seed: `getBasePolicies("2019-default")` builds
+ * from `COUNTRY_POLICY_CONFIGS_2019` alone.
  *
  * economic/social: -3 (left/lib) to +3 (right/trad), 0 = center.
  */
@@ -88,13 +83,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       su_turnover_tax: { economic: 0, social: 0 },
       su_social_insurance: { economic: 0, social: 0 },
       su_customs_tariff: { economic: -3, social: 0 },
-      su_economic_system: { economic: -4, social: 0 },
-      su_political_system: { economic: 0, social: 3 },
-      su_price_controls: { economic: -3, social: 0 },
-      su_agriculture: { economic: -3, social: 0 },
-      su_civil_liberties: { economic: 0, social: 3 },
-      su_defense_spending: { economic: -2, social: 1 },
-      su_housing: { economic: -3, social: 0 },
     },
     optionIndexes: {
       su_enterprise_levy: 4, // Enterprise Profit Remittance Statute
@@ -102,13 +90,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       su_turnover_tax: 2, // Turnover Tax Schedule
       su_social_insurance: 1, // Unified Social Insurance Statute
       su_customs_tariff: 2, // Foreign Trade Monopoly Statute
-      su_economic_system: 4, // Economic Organization Law (orthodox Gosplan)
-      su_political_system: 3, // Article 6 Statute (one-party)
-      su_price_controls: 2, // State Price Regulation Statute
-      su_agriculture: 2, // Collective Agriculture Statute
-      su_civil_liberties: 2, // State Information & Order Statute
-      su_defense_spending: 2, // Defense and Military-Industrial Statute
-      su_housing: 2, // State Housing Allocation Statute
     },
     regions: ruRegions,
   },
@@ -122,11 +103,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       dd_product_tax: { economic: 0, social: 0 },
       dd_social_insurance: { economic: 0, social: 0 },
       dd_foreign_trade: { economic: -3, social: 0 },
-      dd_economic_system: { economic: -4, social: 0 },
-      dd_political_system: { economic: 0, social: 3 }, // SED leading role
-      dd_price_controls: { economic: -3, social: 0 },
-      dd_civil_liberties: { economic: 0, social: 3 }, // Stasi security state
-      dd_housing: { economic: -2, social: 0 },
     },
     optionIndexes: {
       dd_enterprise_levy: 3, // VEB Surplus Remittance Statute
@@ -134,11 +110,6 @@ export const COUNTRY_POLICY_CONFIGS: Record<string, CountryPolicyConfig> = {
       dd_product_tax: 2, // Product Tax Schedule
       dd_social_insurance: 1, // Unified Social Insurance Statute
       dd_foreign_trade: 2, // Foreign Trade Monopoly Statute
-      dd_economic_system: 3, // Economic Order Law (orthodox plan)
-      dd_political_system: 3, // Leading Role Statute (SED monopoly)
-      dd_price_controls: 2, // Price Regulation Statute
-      dd_civil_liberties: 2, // State Security Statute
-      dd_housing: 2, // Housing Allocation Statute
     },
     regions: ddRegions,
   },
@@ -216,27 +187,12 @@ function clampScore(n: number): number {
   return Math.max(-3, Math.min(3, Math.round(n)));
 }
 
-/** State base: from politicalLean (-4..+5). Types with strong social dimension use social axis; else economic. */
+/** State base: from politicalLean (-4..+5), on the economic axis. */
 function stateDefault(
-  legislationTypeId: string,
+  _legislationTypeId: string,
   politicalLean: number
 ): { economic: number; social: number } {
-  const score = clampScore(politicalLean * 0.6);
-  if (
-    legislationTypeId === "us_law_enforcement_criminal_justice" ||
-    legislationTypeId === "us_reproductive_rights" ||
-    legislationTypeId === "us_gun_control"
-  ) {
-    return { economic: 0, social: score };
-  }
-  if (
-    legislationTypeId === "us_school_standards" ||
-    legislationTypeId === "us_housing" ||
-    legislationTypeId === "us_state_housing"
-  ) {
-    return { economic: score, social: score };
-  }
-  return { economic: score, social: 0 };
+  return { economic: clampScore(politicalLean * 0.6), social: 0 };
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -246,11 +202,8 @@ function stateDefault(
 /**
  * Build the full `BasePolicyRecord[]` set from a country-config map.
  *
- * Originally read `COUNTRY_POLICY_CONFIGS` directly; parameterised in
- * Phase 5 so a preset-specific config (e.g. `COUNTRY_POLICY_CONFIGS_1991`)
- * can be passed in instead. The output shape and semantics are unchanged —
- * national + regional records per country, regional records derived from
- * `getStateLean` × `stateDefault` for non-tax types.
+ * Output is national + regional records per country; regional records are
+ * derived from `getStateLean` x `stateDefault` for non-tax types.
  *
  * Callers: `getBasePolicies(preset)` selects the right config map.
  */
@@ -343,16 +296,11 @@ function buildBasePolicies(
 }
 
 /**
- * The 2019 policy set, un-vacuumed and preset-blind.
+ * Preset-blind 2019 policy set from COUNTRY_POLICY_CONFIGS_2019 (sixteen
+ * countries). Retained for preset-blind importers. Still emits types whose
+ * window opens after 2019 (e.g. cn_common_prosperity, 2021).
  *
- * Retained for compatibility with preset-blind importers. It builds from
- * `COUNTRY_POLICY_CONFIGS_2019`, so it covers sixteen countries rather than the
- * legacy union's twenty-seven: running it no longer writes Warsaw-Pact or Soviet
- * policy rows into a world that has none.
- *
- * ⚠️ Preset-aware callers must use `getBasePolicies(preset)` instead. This export
- * skips the era vacuum, so it still emits types whose window opens after 2019
- * (`cn_common_prosperity`, 2021). That is unchanged and pre-existing.
+ * Preset-aware callers must use `getBasePolicies(preset)`.
  */
 export const basePolicies = buildBasePolicies(COUNTRY_POLICY_CONFIGS_2019);
 export default basePolicies;

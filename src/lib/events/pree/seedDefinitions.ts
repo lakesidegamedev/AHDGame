@@ -9,6 +9,7 @@ import { ERA_COUNTERPART_DEFINITIONS } from "./eraCounterpartDefinitions";
 import { DECADE_SEED_DEFINITIONS } from "./decadeDefinitions";
 import { ERA_COUNTRY_SEED_DEFINITIONS } from "./eraCountryDefinitions";
 import { BROADCAST_SEED_DEFINITIONS } from "./broadcastDefinitions";
+import { MODERN_PACK_DEFINITIONS } from "./modernPacks";
 
 const GLOBAL_SEED_DEFINITIONS: Omit<EventDefinition, "_id" | "createdAt" | "updatedAt">[] = [
   ...GLOBAL_SEED_DEFINITIONS_PART1,
@@ -913,6 +914,7 @@ export const PREE_SEED_DEFINITIONS: Omit<EventDefinition, "_id" | "createdAt" | 
   ...DECADE_SEED_DEFINITIONS,
   ...ERA_COUNTRY_SEED_DEFINITIONS,
   ...BROADCAST_SEED_DEFINITIONS,
+  ...MODERN_PACK_DEFINITIONS,
 ];
 
 export async function seedPreeEventDefinitions(db: Db): Promise<{ upserted: number }> {

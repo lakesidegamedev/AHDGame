@@ -19,12 +19,14 @@ import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { ensureChamberElections } from "@/lib/elections/scheduling/chamberSpawner";
+import { DE_LANDTAG_SPEC } from "./chamberSpecs";
 import { pickNextCanonicalCycle, turnToWallClock } from "@/lib/elections/canonicalCycle";
 import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import { getSeatIdFromElection } from "@/lib/seats";
 import { getLandtagAnchor } from "@/lib/seeds/de/deLandtag";
 import { electionToLarpYear } from "@/lib/utils/formatters";
-import { allocateViaSainteLague } from "@/lib/turn/election/sainteLagueAllocation";
+import { allocateViaSainteLague } from "@/lib/elections/resolution/sainteLagueAllocation";
 import type {
   State,
   Election,
@@ -41,6 +43,15 @@ import { logger } from "@/lib/observability/logger";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const LANDTAG_THRESHOLD = 0.05;
 
@@ -49,7 +60,7 @@ async function getCurrentTurnAndCtx(db: Db): Promise<{
   ctx: import("@/lib/elections/cycleAnchorContext").CycleAnchorContext;
   preset: string;
 }> {
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   const { cycleAnchorContextFromGameState } = await import("@/lib/elections/cycleAnchorContext");
   return {
     currentTurn: gs?.currentTurn ?? 1,
@@ -68,114 +79,7 @@ async function getCurrentTurnAndCtx(db: Db): Promise<{
  * rounded to year boundaries). Cycle period is 240 turns (5 game-years).
  */
 export async function ensureDELandtagElections(now: Date, inFlightTurn?: number): Promise<void> {
-  const db = await getDb();
-  const { currentTurn: persistedTurn, ctx, preset } = await getCurrentTurnAndCtx(db);
-  const currentTurn = inFlightTurn ?? persistedTurn;
-
-  const deLaender = await db
-    .collection<State>("states")
-    .find({ countryId: "DE" }, { projection: { _id: 1, stateSenateSeats: 1 } })
-    .toArray();
-  if (deLaender.length === 0) return;
-
-  const liveElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId: "DE",
-      electionType: "landtag",
-      status: { $in: ["active", "upcoming"] },
-    })
-    .toArray();
-  const liveLandtag = new Set(liveElections.map((e) => e.state));
-
-  const completedElections = await db
-    .collection<Election>("elections")
-    .find({
-      countryId: "DE",
-      electionType: "landtag",
-      status: { $in: ["completed", "resolved"] },
-    })
-    .sort({ updatedAt: -1 })
-    .toArray();
-
-  function lastCompleted(landId: string): Election | undefined {
-    return completedElections.find((e) => e.state === landId);
-  }
-
-  const dur = DEFAULT_DURATIONS.landtag.durationHours;
-  const genDur = DEFAULT_DURATIONS.landtag.generalDurationHours;
-
-  const toInsert: Omit<Election, "_id">[] = [];
-
-  for (const land of deLaender) {
-    const landId = land._id as string;
-    if (liveLandtag.has(landId)) continue;
-
-    const customAnchor = getLandtagAnchor(landId, preset);
-    if (customAnchor === undefined) continue; // unknown Land — skip silently
-
-    const prev = lastCompleted(landId);
-    const spawn = pickNextCanonicalCycle({
-      electionType: "landtag",
-      prevCycle: prev?.cycle ?? 0,
-      currentTurn,
-      customCycle1EndTurn: customAnchor,
-      ctx,
-    });
-    if (!spawn) continue;
-
-    const primaryEndTime = turnToWallClock(spawn.primaryEndTurn, now, currentTurn);
-    const endTime = turnToWallClock(spawn.endTurn, now, currentTurn);
-
-    toInsert.push({
-      countryId: "DE",
-      electionType: "landtag",
-      state: landId,
-      seatId: getSeatIdFromElection({
-        countryId: "DE",
-        electionType: "landtag",
-        state: landId,
-      }),
-      cycle: spawn.cycle,
-      electionYear: electionToLarpYear("landtag", spawn.cycle, undefined, undefined, ctx),
-      status: "active",
-      totalSeats: prev?.totalSeats ?? land.stateSenateSeats ?? 1,
-      startTime: now,
-      primaryEndTime,
-      endTime,
-      startTurn: currentTurn,
-      primaryEndTurn: spawn.primaryEndTurn,
-      endTurn: spawn.endTurn,
-      durationHours: dur,
-      primaryDurationHours: dur - genDur,
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
-
-  if (toInsert.length === 0) return;
-
-  // Guard against duplicates (mirror ensureDEElections)
-  const orFilters = toInsert.map((e) => ({
-    electionType: "landtag" as const,
-    state: e.state,
-    status: { $in: ["active", "upcoming"] as ElectionStatus[] },
-  }));
-  const existing = await db
-    .collection<Election>("elections")
-    .find({ $or: orFilters }, { projection: { state: 1 } })
-    .toArray();
-  const existingStates = new Set(existing.map((e) => e.state));
-  const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
-
-  if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
-    console.log(
-      `[Turn] ensureDELandtagElections: spawned ${toActuallyInsert.length} missing Landtag election(s)`
-    );
-  }
+  await ensureChamberElections(DE_LANDTAG_SPEC, now, inFlightTurn);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -202,14 +106,12 @@ export async function ensureDEMinisterPresidentElections(
   const { currentTurn: persistedTurn, ctx, preset } = await getCurrentTurnAndCtx(db);
   const currentTurn = inFlightTurn ?? persistedTurn;
 
-  const deLaender = await db
-    .collection<State>("states")
+  const deLaender = await statesCollection(db)
     .find({ countryId: "DE" }, { projection: { _id: 1 } })
     .toArray();
   if (deLaender.length === 0) return;
 
-  const liveElections = await db
-    .collection<Election>("elections")
+  const liveElections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: "ministerPresident",
@@ -218,8 +120,7 @@ export async function ensureDEMinisterPresidentElections(
     .toArray();
   const liveMP = new Set(liveElections.map((e) => e.state));
 
-  const completedElections = await db
-    .collection<Election>("elections")
+  const completedElections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: "ministerPresident",
@@ -234,8 +135,7 @@ export async function ensureDEMinisterPresidentElections(
 
   // Sync against any active/upcoming Landtag election for the same Land —
   // MP election timing mirrors the Landtag's (same primaryEndTime, endTime).
-  const liveLandtagElections = await db
-    .collection<Election>("elections")
+  const liveLandtagElections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: "landtag",
@@ -348,17 +248,14 @@ export async function ensureDEMinisterPresidentElections(
     state: e.state,
     status: { $in: ["active", "upcoming"] as ElectionStatus[] },
   }));
-  const existing = await db
-    .collection<Election>("elections")
+  const existing = await electionsCollection(db)
     .find({ $or: orFilters }, { projection: { state: 1 } })
     .toArray();
   const existingStates = new Set(existing.map((e) => e.state));
   const toActuallyInsert = toInsert.filter((e) => !existingStates.has(e.state));
 
   if (toActuallyInsert.length > 0) {
-    await db
-      .collection<Election>("elections")
-      .insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
+    await electionsCollection(db).insertMany(toActuallyInsert.map(withCampaignRules) as Election[]);
     console.log(
       `[Turn] ensureDEMinisterPresidentElections: spawned ${toActuallyInsert.length} missing MP election(s)`
     );
@@ -506,8 +403,7 @@ async function sweepStaleLandtagOffice(
   now: Date,
   currentTurn: number
 ): Promise<void> {
-  const current = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const current = await electedOfficialsCollection(db)
     .find({ officeType: "landtag", state: landId }, { projection: { characterId: 1, nppId: 1 } })
     .toArray();
 
@@ -519,14 +415,13 @@ async function sweepStaleLandtagOffice(
     ...officeMatch,
     ...(currentCharIds.length > 0 ? { _id: { $nin: currentCharIds } } : {}),
   };
-  const departingPlayers = await db
-    .collection<Character>("characters")
+  const departingPlayers = await charactersCollection(db)
     .find(departingFilter, { projection: { _id: 1, party: 1, countryId: 1 } })
     .toArray()
     .catch(() => []);
-  await db
-    .collection<Character>("characters")
-    .updateMany(departingFilter, { $set: { currentOffice: null, updatedAt: now } });
+  await charactersCollection(db).updateMany(departingFilter, {
+    $set: { currentOffice: null, updatedAt: now },
+  });
   await Promise.all(
     departingPlayers.map((character) =>
       captureOfficeTransition({
@@ -541,7 +436,7 @@ async function sweepStaleLandtagOffice(
     )
   );
 
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).updateMany(
     {
       ...officeMatch,
       ...(currentNppIds.length > 0 ? { _id: { $nin: currentNppIds } } : {}),
@@ -580,13 +475,9 @@ export async function resolveDELandtagElection(
   const landId = election.state;
 
   // Vote tallies for this election (per-candidate vote totals)
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
-    .findOne({ electionId: election._id });
+  const tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
   if (!tally) {
-    await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .deleteMany({ officeType: "landtag", state: landId });
+    await electedOfficialsCollection(db).deleteMany({ officeType: "landtag", state: landId });
     await sweepStaleLandtagOffice(db, landId, now, currentTurn);
     logger.warn("Landtag", `No vote tally for ${landId} cycle ${election.cycle}`);
     return { winnersAllocated: 0, seatsAllocated: 0 };
@@ -597,16 +488,14 @@ export async function resolveDELandtagElection(
   const tallyCandidateObjectIds = Object.keys(tally.totalVotes)
     .filter((id) => ObjectId.isValid(id))
     .map((id) => new ObjectId(id));
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ _id: { $in: tallyCandidateObjectIds }, electionId: election._id })
     .toArray();
 
-  // Defense-in-depth: never seat a hard-deleted character. Account deletion can
-  // leave a dangling candidacy that resolves into a phantom list seat (the NW
-  // Landtag "Wolfgang Clement" case). Drop non-NPP candidates whose character
-  // no longer exists so their votes and seats fall to the remaining eligible
-  // candidates. Mirrors the FPTP guard in generalResolution.ts.
+  // Defense-in-depth: account deletion can leave a dangling candidacy that
+  // resolves into a phantom list seat. Drop non-NPP candidates whose character no
+  // longer exists so votes and seats fall to remaining eligible candidates.
+  // Mirrors the FPTP guard in generalResolution.ts.
   let liveCandidates = candidates;
   const accountIdByCharacterId = new Map<string, string>();
   const currentOfficeByCharacterId = new Map<string, Character["currentOffice"]>();
@@ -614,8 +503,7 @@ export async function resolveDELandtagElection(
     .filter((c): c is typeof c & { characterId: ObjectId } => !c.isNPP && !!c.characterId)
     .map((c) => c.characterId);
   if (candidateCharIds.length > 0) {
-    const existingChars = await db
-      .collection<Character>("characters")
+    const existingChars = await charactersCollection(db)
       .find(
         { _id: { $in: candidateCharIds } },
         { projection: { _id: 1, currentOffice: 1, userId: 1 } }
@@ -670,12 +558,10 @@ export async function resolveDELandtagElection(
     if (candidate.isNPP && candidate.nppId) {
       const nppId = candidate.nppId;
       winnerActions.push(async () => {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: nppId },
-            { $set: { currentOffice: office, party: partyId, updatedAt: now } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: nppId },
+          { $set: { currentOffice: office, party: partyId, updatedAt: now } }
+        );
       });
     } else if (!candidate.isNPP && candidate.characterId) {
       const charId = candidate.characterId;
@@ -689,7 +575,7 @@ export async function resolveDELandtagElection(
         date: now,
       };
       winnerActions.push(async () => {
-        await db.collection<Character>("characters").updateOne(
+        await charactersCollection(db).updateOne(
           { _id: charId },
           {
             $set: { currentOffice: office, updatedAt: now },
@@ -700,12 +586,10 @@ export async function resolveDELandtagElection(
     }
   }
 
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany({ officeType: "landtag", state: landId });
+  await electedOfficialsCollection(db).deleteMany({ officeType: "landtag", state: landId });
 
   if (officialsToInsert.length > 0) {
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officialsToInsert);
+    await electedOfficialsCollection(db).insertMany(officialsToInsert);
   }
 
   // Apply NPP/Character currentOffice updates after the officials insert
@@ -715,7 +599,7 @@ export async function resolveDELandtagElection(
 
   await sweepStaleLandtagOffice(db, landId, now, currentTurn);
 
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { _id: tally._id },
     {
       $set: {
@@ -783,12 +667,10 @@ export async function resolveDELandtagElection(
       })
   );
 
-  await db
-    .collection("electionCandidates")
-    .updateMany(
-      { electionId: election._id, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { electionId: election._id, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   return {
     winnersAllocated: officialsToInsert.length,

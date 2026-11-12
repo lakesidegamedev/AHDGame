@@ -255,7 +255,7 @@ describe("auto-disaster end-to-end: spawner → margin penalty → expiry", () =
         .mockResolvedValue([{ _id: STATE_ID, countryId: COUNTRY_ID, regionType: "region" }]),
     });
 
-    await processAutoDisasterTurn(db as unknown as Db, SPAWN_TURN, { autoDisastersEnabled: true });
+    await processAutoDisasterTurn(db as unknown as Db, SPAWN_TURN);
 
     expect(db.collectionMocks["crises"]!.insertOne).toHaveBeenCalledOnce();
     const inserted = db.collectionMocks["crises"]!.insertOne.mock.calls[0]![0] as Record<
@@ -305,7 +305,7 @@ describe("auto-disaster end-to-end: spawner → margin penalty → expiry", () =
         .mockResolvedValue([{ _id: STATE_ID, countryId: COUNTRY_ID, regionType: "region" }]),
     });
 
-    await processAutoDisasterTurn(db as unknown as Db, SPAWN_TURN, { autoDisastersEnabled: true });
+    await processAutoDisasterTurn(db as unknown as Db, SPAWN_TURN);
 
     // Confirm a crisis was inserted
     expect(db.collectionMocks["crises"]!.insertOne).toHaveBeenCalledOnce();

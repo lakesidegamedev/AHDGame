@@ -1,13 +1,12 @@
 /**
- * Transition package for the funded-market cutover (phase E, owner decisions
- * 2026-10-20). One rule for every industry, no industry lists:
+ * Transition package for the funded-market cutover. One rule for every industry:
  *
  * - A sector is over-built when its funded revenue over the last few shadow
- *   turns is under a share of its legacy revenue. The classification is frozen
- *   into the reviewed opening plan and never moves afterwards.
+ *   turns is under a share of its legacy revenue. Frozen into the reviewed
+ *   opening plan and never moves afterwards.
  * - Over-built sectors get a fixed window after the switch: free conversion at
- *   book value, mothball with no upkeep, and a revenue floor that fades from
- *   full to nothing across the window.
+ *   book value, mothball with no upkeep, and a revenue floor fading from full
+ *   to nothing across the window.
  * - The floor is paid only from public funding that would otherwise be burned
  *   at close, pro rata within each country, so no money is created.
  *

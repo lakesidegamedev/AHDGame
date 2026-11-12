@@ -4,12 +4,12 @@
  * under one per-loan, per-turn key and counts only newly applied payments.
  */
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import type { InterbankLoan } from "@/lib/db/types/bank";
 import { getCashReserves } from "@/lib/banking/bankCash";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { interbankServiceTransition } from "@/lib/banking/rules/interbankServicing";
 import { settleTransition } from "@/lib/banking/settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 type InterbankServiceResult = { interestPaid: number; writtenOff: number };
 
@@ -27,9 +27,10 @@ export async function serviceOneInterbankLoan(
   const empty: InterbankServiceResult = { interestPaid: 0, writtenOff: 0 };
   if (loan.lastProcessedTurn === turn) return empty;
 
-  const borrower = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerCorporationId }, { projection: { bankCharter: 1 } });
+  const borrower = await corporationsCollection(db).findOne(
+    { _id: loan.borrowerCorporationId },
+    { projection: { bankCharter: 1 } }
+  );
   const { decision, transition } = interbankServiceTransition({
     loan,
     borrowerCash: getCashReserves(borrower?.bankCharter),

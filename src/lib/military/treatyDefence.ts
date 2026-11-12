@@ -1,7 +1,6 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { ConflictDoc, TreatyEntry } from "@/lib/db/types/conflict";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { OrganizationMembership } from "@/lib/db/types/internationalOrganization";
 import {
   getGameStateCollection,
@@ -32,27 +31,18 @@ import { announceTreatyEntries } from "@/lib/military/treatyEntryNotice";
 /**
  * Enforced mutual defence: who an alliance drags into a war, and under which alliance.
  *
- * WHICH ORGANIZATIONS BIND is data, decided by `mutualDefenceBasis`: the effective
- * category's `mutualDefence` switches, the organization's current alert posture, and
- * a def's `standingMutualDefence` charter. NATO and the Warsaw Pact in a Cold War
- * world are one case of that rule (a standing charter on a bloc), and any Security or
- * Bloc organization whose members vote the Article 5 posture is another. Nothing here
- * names an organization.
+ * WHICH ORGANIZATIONS BIND is data (`mutualDefenceBasis`): the effective category's
+ * `mutualDefence` switches, the organization's alert posture, and a def's
+ * `standingMutualDefence` charter. Nothing here names an organization.
  *
  * WHO MARCHES is `selectTreatyDefenders`, one pure function every path shares:
  * declaration-time enrolment in `declareWar`, and `reconcileMutualDefence`, the
  * per-turn sweep that catches what a declaration cannot (a posture raised to Article 5
- * while a member is already under attack, and a country that joins an alliance while
- * a fellow member is at war).
+ * while a member is under attack, a country joining an alliance mid-war).
  *
- * DEFENSIVE ONLY, and that is the whole shape of it. The trigger is a declaration
- * against a member, never "a member is at war", which is what makes chaining impossible
- * by construction: an ally pulled in to defend has not declared on anybody, so it never
- * becomes a victim whose own alliance fires. The reconciliation keeps this: it only
- * ever defends the country a war was declared ON (the host, on the host's roster), and
- * only in wars a declaration opened.
- *
- * Spec: docs/superpowers/specs/2026-08-24-enforced-treaty-defence-design.md
+ * DEFENSIVE ONLY: the trigger is a declaration against a member, never "a member is at
+ * war", so chaining is impossible by construction. An ally pulled in to defend has not
+ * declared on anybody, so it never becomes a victim whose own alliance fires.
  */
 export interface TreatyDefender {
   countryId: CountryId;
@@ -84,20 +74,16 @@ export interface MutualDefenceContext {
 /**
  * Read every alliance that binds right now, plus the bloc roll and the access table.
  *
- * Null when the conflicts subsystem is off. Narrow by construction: only orgs with a
+ * Narrow by construction: only orgs with a
  * committing posture or a standing charter are loaded, so a world with no Article 5
  * posture and no Cold War blocs costs three small reads and returns no pacts.
  */
-async function loadMutualDefenceContext(db: Db): Promise<MutualDefenceContext | null> {
+async function loadMutualDefenceContext(db: Db): Promise<MutualDefenceContext> {
   const gs = await (
     await getGameStateCollection(db)
-  ).findOne(
-    { _id: "current" },
-    { projection: { conflictsEnabled: 1, preset: 1, coldWarEndedTurn: 1 } }
-  );
-  if (!gs?.conflictsEnabled) return null;
-  const preset = (gs as Partial<GameState>).preset;
-  const coldWarEnded = (gs as Partial<GameState>).coldWarEndedTurn != null;
+  ).findOne({ _id: "current" }, { projection: { preset: 1, coldWarEndedTurn: 1 } });
+  const preset = gs?.preset;
+  const coldWarEnded = gs?.coldWarEndedTurn != null;
 
   const postureRows = await (
     await getOrganizationPosturesCollection(db)
@@ -184,28 +170,20 @@ function pactFiresFor(params: {
 }
 
 /**
- * THE eligibility rule: which countries an attack on `defender` brings in, and under
- * which alliance. Pure, so every rule below is tested without a database; the two
- * checks that need one (truce, and an existing war with an attacker) are applied by
- * `resolveTreatyDefenders` on top of this.
+ * THE eligibility rule for treaty defenders: which countries an attack on `defender`
+ * brings in, and under which alliance. Pure; the truce and existing-war checks that
+ * need a database are applied by `resolveTreatyDefenders` on top of this.
  *
- * An alliance fires for the defender when:
- * - the defender is a member, and was one when the attack began (`attackedOnTurn`).
- *   Admission is not retroactive: joining an alliance mid-war does not conscript the
- *   alliance into the war the applicant brought with it. A bloc can still vote that
- *   through its conflict-entry resolution.
- * - no attacker is a member. A war between two members is a split the alliance does
- *   not take a side in, so it stays out entirely rather than pick one.
+ * An alliance fires for the defender when the defender was a member at `attackedOnTurn`
+ * (admission is not retroactive) and no attacker is a member (a war between two members
+ * is a split the alliance stays out of).
  *
- * A member of a firing alliance marches unless it:
- * - has no government (not player-enabled), or is the defender or an attacker;
- * - is already on either roster of the war, or is listed in `excluded`;
- * - shares a military bloc with an attacker, or belongs to any binding alliance that
- *   an attacker also belongs to. Being bound to both sides means being bound to
- *   neither, and an alliance must never march a member against its own ally.
+ * A member of a firing alliance marches unless it has no government, is the defender or
+ * an attacker, is already on either war roster, is in `excluded`, or shares a military
+ * bloc or binding alliance with an attacker (never march a member against its own ally).
  *
- * First alliance wins when a country is bound to the defender twice; the order is
- * the pact order, built-ins first, so the result is deterministic.
+ * First alliance wins when a country is bound to the defender twice; order is pact
+ * order, built-ins first, so the result is deterministic.
  */
 export function selectTreatyDefenders(params: {
   context: Pick<MutualDefenceContext, "pacts" | "blocs" | "enabled">;
@@ -455,7 +433,7 @@ export function pactEntryWarnings(
 /** Read side of `pactEntryWarnings`: one context read, one conflicts read. */
 export async function loadPactEntryWarnings(db: Db): Promise<Map<string, PactEntryWarning[]>> {
   const context = await loadMutualDefenceContext(db);
-  if (!context || context.pacts.length === 0) return new Map();
+  if (context.pacts.length === 0) return new Map();
   return pactEntryWarnings(context, await loadDeclaredWarFronts(db));
 }
 
@@ -465,34 +443,29 @@ export interface MutualDefenceReconcileResult {
 }
 
 /**
- * The per-turn sweep: bring every live declared war into line with the alliances as
- * they stand now. Idempotent: an ally already on a roster is skipped, so a second run
- * in the same turn (or every later turn) writes nothing.
+ * Per-turn sweep: bring every live declared war into line with the alliances
+ * as they stand now. Idempotent: an ally already on a roster is skipped.
  *
- * It exists for what declaration-time enrolment cannot see. A declaration is one
- * moment; a posture raised to Article 5 after it, or a country that joins the
- * defender's alliance after it, changes who is bound while the war is being fought.
+ * Needed because declaration-time enrolment cannot see later changes: a
+ * posture raised to Article 5 after the declaration, or a country joining the
+ * defender's alliance mid-war, changes who is bound.
  *
- * Scope, deliberately narrow:
+ * Scope:
  * - wars a declaration opened (`createdBy: "player"`), interstate, not concluded;
- * - the defended members are the war's host entities on the host's roster. Allies
- *   join that roster and never the other one;
- * - a country that has already been in this war and left it (a separate peace, or a
- *   release) is not pulled back in. It holds a truce in the ordinary case; this is
- *   the guard for the case where it does not.
+ * - defended members are the war's host entities on the host's roster; allies
+ *   join that roster only;
+ * - a country that already left this war is not pulled back in.
  *
- * Entry goes through `enactImmediateWarEntry`, the same primitive the bloc
- * collective-defence resolution uses, so an ally entering here arrives with the same
- * consequences as any other defensive entry: the roster and `joinTurns` stamp (war
- * weariness, approval, war effort all key on those), a reserve commitment sent to the
- * front, and a treaty entry that the peace bar and release read.
+ * Enters through `enactImmediateWarEntry`, the same primitive as the bloc
+ * collective-defence resolution, so an ally gets the same consequences as any
+ * defensive entry: roster and `joinTurns` stamp, reserve commitment, treaty entry.
  */
 export async function reconcileMutualDefence(
   db: Db,
   currentTurn: number
 ): Promise<MutualDefenceReconcileResult> {
   const context = await loadMutualDefenceContext(db);
-  if (!context || context.pacts.length === 0) return { conflictsChecked: 0, entered: 0 };
+  if (context.pacts.length === 0) return { conflictsChecked: 0, entered: 0 };
 
   const fronts = await loadDeclaredWarFronts(db);
 

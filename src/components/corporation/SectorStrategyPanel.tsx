@@ -3,16 +3,14 @@
 /**
  * Operating strategies for one sector type.
  *
- * The strategy a site runs is the single biggest lever a CEO has over what it
- * consumes and produces, and until now it was a bare dropdown on each table
- * row: you could change it without ever being shown what it did. This panel
- * puts every strategy the type offers on a tab strip, marks the ones nothing
- * is running, and for the selected one shows the commodity chain, the sites on
- * it, and the controls that steer them.
+ * The strategy a site runs is the biggest lever a CEO has on its consumption
+ * and production. This panel shows every strategy the type offers on a tab
+ * strip, marks the ones nothing is running, and for the selected one shows the
+ * commodity chain, the sites on it, and steering controls.
  *
- * The strategy list, descriptions and commodity rates come from
- * `SECTOR_STRATEGIES`, the same constant the row dropdown and the turn
- * processor read. Counts and site chips come from the sectors themselves.
+ * Strategy list, descriptions and commodity rates come from
+ * `SECTOR_STRATEGIES`, the same constant the row dropdown and turn processor
+ * read. Counts and site chips come from the sectors themselves.
  */
 
 import { useWorldFlags } from "@/hooks/useWorldFlags";

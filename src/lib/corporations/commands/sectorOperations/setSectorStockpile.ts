@@ -8,6 +8,7 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import type { CorporateSector } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { setSectorStockpileSchema } from "@/lib/api/schemas/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -53,17 +54,19 @@ export async function setSectorStockpile(request: Request, { params }: RoutePara
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
 
     if (!sector) {
       return errorResponse(404, "Sector not found");
     }
 
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .updateOne({ _id: sector._id }, { $set: { stockpileUnsold, updatedAt: new Date() } });
+    await corporateSectorsCollection(db).updateOne(
+      { _id: sector._id },
+      { $set: { stockpileUnsold, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, stockpileUnsold });
   } catch (error) {

@@ -1,17 +1,14 @@
 /**
- * Brazil Region Census Profiles — 1953 era.
+ * Brazil Region Census Profiles - 1953 era.
  *
- * 1953-default companion to {@link brRegionCensusData} (the 2019 profiles).
- * Anchored on IBGE Censo Demográfico 1950.
+ * Companion to {@link brRegionCensusData} (2019 profiles).
+ * Anchored on IBGE Censo Demografico 1950.
  *
- * Era anchors (Vargas second presidency / pre-Kubitschek): Getúlio Vargas
- * had returned to the presidency via election in 1950 and would die by
- * suicide in August 1954; national literacy was ~50%; rural population was
- * ~64% nationally; the Nordeste was devastated by recurrent droughts; the
- * industrial expansion of the Sudeste (SP–ABC steel and auto belt) was only
- * beginning; income was very low with extreme inequality; Brasília was not
- * yet built (construction began 1956). The Norte frontier was essentially
- * Amazon forest with tiny riverine towns. All income tiers era-neutral.
+ * Era anchors: Vargas second presidency, pre-Kubitschek. National literacy
+ * ~50%; rural population ~64%; Nordeste hit by recurrent droughts; Sudeste
+ * industrial expansion just beginning; income very low with extreme
+ * inequality; Brasilia not yet built. Norte was Amazon forest with tiny
+ * riverine towns. Income tiers are era-neutral.
  */
 
 import type { BRRegionLayer1 } from "@/lib/seeds/br/brRegionCensusData";

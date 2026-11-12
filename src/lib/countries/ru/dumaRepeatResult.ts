@@ -5,23 +5,10 @@
  */
 import { type ClientSession, type Db, type ObjectId } from "mongodb";
 import { russianDumaElectoralLaw } from "./rules/dumaElectoralLaw";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { loadRussianDumaCertificationInputs } from "./dumaCertificationInputs";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION,
-  type RussianDumaRepeatOpeningRecord,
-} from "./dumaRepeatOpening";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
+import { type RussianDumaRepeatOpeningRecord } from "./dumaRepeatOpening";
 import {
   resolveRussianDumaRepeatGeneration,
   russianDumaProtectedConstituencyOwners,
@@ -33,6 +20,13 @@ import {
   russianDumaRootFilter,
 } from "./dumaConvocationAuthority";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianDumaRepeatOpeningsCollection } from "@/lib/db/repositories/russianDumaRepeatOpenings";
 
 export async function materializeRussianDumaRepeatResult(input: {
   db: Db;
@@ -52,9 +46,9 @@ export async function materializeRussianDumaRepeatResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Duma repeat certification needs a transaction, generation, turn and time");
-  const opening = await db
-    .collection<RussianDumaRepeatOpeningRecord>(RUSSIAN_DUMA_REPEAT_OPENINGS_COLLECTION)
-    .findOne({ _id: `${rootCohortId.toHexString()}:repeat:${generation}` }, { session });
+  const opening = await russianDumaRepeatOpeningsCollection<RussianDumaRepeatOpeningRecord>(
+    db
+  ).findOne({ _id: `${rootCohortId.toHexString()}:repeat:${generation}` }, { session });
   if (
     !opening ||
     !opening.rootCohortId.equals(rootCohortId) ||
@@ -68,7 +62,7 @@ export async function materializeRussianDumaRepeatResult(input: {
     opening.openedOnTurn > turn
   )
     throw new Error("Duma repeat certification has no valid generation opening");
-  const results = db.collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION);
+  const results = russianDumaElectionResultsCollection<RussianDumaResultRecord>(db);
   const id = opening.cohortId.toHexString();
   const replay = await results.findOne({ _id: id }, { session });
   if (replay) {
@@ -83,11 +77,12 @@ export async function materializeRussianDumaRepeatResult(input: {
       throw new Error("Duma repeat result identity changed");
     return replay;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") throw new Error("No Duma repeat mandate in this world");
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -136,7 +131,7 @@ export async function materializeRussianDumaRepeatResult(input: {
   )
     throw new Error("Duma repeat predecessor changed");
   await loadRussianAssemblyRepeatTerm({ db, session, country, chamber: "duma", turn, previous });
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const cohort = await elections
     .find(
       { countryId: "RU", "russianDumaRound.cohortId": opening.cohortId },
@@ -197,7 +192,7 @@ export async function materializeRussianDumaRepeatResult(input: {
     combined.result.constituencyResults.map((row) => [row.electionId, row.decision.outcome])
   );
   outcomes.set(combined.result.listElectionId, combined.result.listDecision.outcome);
-  const finalized = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalized = await electionVoteTalliesCollection(db).bulkWrite(
     loaded.counted.map((row) => ({
       updateOne: {
         filter: { _id: row._id, finalized: false },
@@ -227,13 +222,11 @@ export async function materializeRussianDumaRepeatResult(input: {
   );
   if (resolved.matchedCount !== cohort.length)
     throw new Error("Duma repeat ballots changed during certification");
-  const retired = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { electionId: { $in: opening.electionIds }, status: "active" },
-      { $set: { status: "withdrawn", withdrawnAt: now } },
-      { session }
-    );
+  const retired = await electionCandidatesCollection(db).updateMany(
+    { electionId: { $in: opening.electionIds }, status: "active" },
+    { $set: { status: "withdrawn", withdrawnAt: now } },
+    { session }
+  );
   if (retired.matchedCount !== loaded.candidates.filter((row) => row.status === "active").length)
     throw new Error("Duma repeat candidacies changed during certification");
   const bound = await countries.updateOne(

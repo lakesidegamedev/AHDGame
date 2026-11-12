@@ -231,7 +231,7 @@ export function TreasuryOverviewSection({
           (() => {
             // $0 while at the PS cap: no headroom to convert treasury into PS, so
             // the budget goes unspent that turn even though it's allocated.
-            // Surface that so "-$0" doesn't read as a bug (ticket #905).
+            // Surface that so "-$0" doesn't read as a bug.
             const psSpend = Math.max(
               0,
               revenue -

@@ -44,13 +44,13 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { notifyHostileTakeoverThresholdIfEligible } from "@/lib/corporations/hostileTakeoverNotifications";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
-import type {
-  Character,
-  Corporation,
-  Notification,
-  ShareListing,
-  ShareOffer,
-} from "@/lib/db/types";
+import type { Notification, ShareListing, ShareOffer } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 interface RouteParams {
   params: Promise<{ id: string; listingId: string; offerId: string }>;
@@ -95,8 +95,8 @@ export async function acceptShareOffer(request: Request, { params }: RouteParams
     }
 
     const [listing, offer] = await Promise.all([
-      db.collection<ShareListing>("shareListings").findOne({ _id: new ObjectId(listingId) }),
-      db.collection<ShareOffer>("shareOffers").findOne({ _id: new ObjectId(offerId) }),
+      shareListingsCollection(db).findOne({ _id: new ObjectId(listingId) }),
+      shareOffersCollection(db).findOne({ _id: new ObjectId(offerId) }),
     ]);
 
     if (!listing) return errorResponse(404, "Listing not found");
@@ -199,9 +199,7 @@ export async function settleListingOffer(
   // corp's liquidCurrencyCode (Option B). proceeds + refund always equals
   // offer.escrowAmount exactly in local terms, so we compute both in local
   // and then hop through ₳ for the seller-credit / buyer-refund wallet math.
-  const listingCorp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: listing.corporationId });
+  const listingCorp = await corporationsCollection(db).findOne({ _id: listing.corporationId });
   const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
   const proceedsLocal = sharesToAccept * offer.pricePerShare;
   const refundLocal = (offer.shares - sharesToAccept) * offer.pricePerShare;
@@ -213,9 +211,10 @@ export async function settleListingOffer(
     Math.round(corpLiquidCapitalToAnchor(refundLocal, listingCorp ?? {}, listingCorpFxRate) * 100) /
     100;
   const sellerChar = !listing.sellerCorporationId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: listing.sellerCharacterId }, { projection: { countryId: 1, name: 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: listing.sellerCharacterId },
+        { projection: { countryId: 1, name: 1 } }
+      )
     : null;
   const sellerCurrency = sellerChar ? getHomeCurrency(sellerChar) : "USD";
   let sellerFxRate = 1.0;
@@ -228,9 +227,10 @@ export async function settleListingOffer(
   }
 
   const buyerCharForRefund = !offer.buyerCorporationId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: offer.buyerCharacterId }, { projection: { countryId: 1, name: 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: offer.buyerCharacterId },
+        { projection: { countryId: 1, name: 1 } }
+      )
     : null;
   const buyerCurrency = buyerCharForRefund ? getHomeCurrency(buyerCharForRefund) : "USD";
   let buyerFxRate = 1.0;
@@ -244,14 +244,15 @@ export async function settleListingOffer(
 
   const [sellerCorp, buyerCorp, activation] = await Promise.all([
     listing.sellerCorporationId
-      ? db.collection<Corporation>("corporations").findOne({ _id: listing.sellerCorporationId })
+      ? corporationsCollection(db).findOne({ _id: listing.sellerCorporationId })
       : null,
     offer.buyerCorporationId
-      ? db.collection<Corporation>("corporations").findOne({ _id: offer.buyerCorporationId })
+      ? corporationsCollection(db).findOne({ _id: offer.buyerCorporationId })
       : null,
-    db
-      .collection<{ _id: string; stockHoldingTaxStartTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } }),
+    gameStateCollection<{ _id: string; stockHoldingTaxStartTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { stockHoldingTaxStartTurn: 1 } }
+    ),
   ]);
   if (listing.sellerCorporationId ? !sellerCorp : !sellerChar)
     return { ok: false, status: 404, error: "Seller not found" };
@@ -372,7 +373,7 @@ export async function settleListingOffer(
     })
   );
   const listingSharesRemaining = listing.sharesRemaining - sharesToAccept;
-  const listingUpdate = await db.collection<ShareListing>("shareListings").findOneAndUpdate(
+  const listingUpdate = await shareListingsCollection(db).findOneAndUpdate(
     {
       _id: listing._id,
       sharesRemaining: listing.sharesRemaining,
@@ -403,13 +404,11 @@ export async function settleListingOffer(
       error: "Listing changed before this acceptance could be applied",
     };
   }
-  const claimedOffer = await db
-    .collection<ShareOffer>("shareOffers")
-    .findOneAndUpdate(
-      { _id: offer._id, status: "pending" },
-      { $set: { status: "accepted", acceptFillKey: fillKey } },
-      { returnDocument: "before" }
-    );
+  const claimedOffer = await shareOffersCollection(db).findOneAndUpdate(
+    { _id: offer._id, status: "pending" },
+    { $set: { status: "accepted", acceptFillKey: fillKey } },
+    { returnDocument: "before" }
+  );
   if (!claimedOffer) {
     await restoreFailedShareFillClaim(db, fillKey);
     await settleShareFillAttempt(db, fillKey, "failed", "listing:offer-claim-lost");
@@ -424,15 +423,15 @@ export async function settleListingOffer(
   if (audit !== "failed") await settleShareFillAttempt(db, fillKey, "completed");
 
   // Notify buyer
-  const buyerChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: offer.buyerCharacterId }, { projection: { userId: 1 } });
+  const buyerChar = await charactersCollection(db).findOne(
+    { _id: offer.buyerCharacterId },
+    { projection: { userId: 1 } }
+  );
 
   if (buyerChar) {
     const listingCorpSym =
       CURRENCY_SYMBOLS[(listingCorp?.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
-    void db
-      .collection<Omit<Notification, "_id">>("notifications")
+    void notificationsCollection<Omit<Notification, "_id">>(db)
       .insertOne({
         userId: buyerChar.userId,
         type: "share_offer_accepted",

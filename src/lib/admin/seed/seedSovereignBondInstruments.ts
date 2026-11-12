@@ -2,23 +2,17 @@
  * Materialize outstanding federalBudget.debt.principal into tradeable sovereign
  * bond series at world bootstrap.
  *
- * Budgets seed debt as a scalar (principal + interestRate) with zero Bond docs.
- * Surplus countries never trigger quarterly issuance, so that scalar stays
- * orphaned forever (1953-default audit #3370: US/UK WWII-era debt with an empty
- * bond market). Deficit countries eventually grow a float, but only for *new*
- * borrowing — the opening principal remains uninstrumented.
- *
- * This seeder closes the gap: for every national budget whose principal exceeds
- * the sum of active sovereign bond face, it issues staggered reconcile-flagged
- * tranches covering the difference. Budget principal and debtInterest are left
- * alone — they already reflect the national debt; the bonds are the market
- * instruments that will retire that principal as they mature (with quarterly
- * rollover keeping surplus-country float stable).
+ * Budgets seed debt as a scalar with zero Bond docs; surplus countries never
+ * trigger quarterly issuance, so the scalar stays orphaned. Deficit countries
+ * instrument only new borrowing, leaving opening principal uninstrumented.
+ * For any budget whose principal exceeds active bond face, this issues
+ * staggered reconcile-flagged tranches covering the difference. Budget
+ * principal and debtInterest are untouched; the bonds retire it on maturity.
  */
 import { ObjectId, type Db } from "mongodb";
 import { calculateBondMarketPrice } from "@/lib/constants/bonds";
 import { getOpeningPolicyRate } from "@/lib/centralBank/rules/openingPolicyRate";
-import type { Bond, CentralBank, Corporation, FederalBudget } from "@/lib/db/types";
+import type { Bond, Corporation } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { sovereignCreditSpreadPp } from "@/lib/bonds/rules/sovereignCreditSpread";
 import { COUNTRY_ORDER, getCountryConfig, type CountryId } from "@/lib/constants/countries";
@@ -31,6 +25,10 @@ import {
   SOVEREIGN_RECONCILE_DISTRIBUTION,
 } from "@/lib/bonds/sovereign";
 import { planOpeningSovereignMaturityCohorts } from "@/lib/bonds/rules/openingMaturity";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SeedSovereignBondInstrumentsResult {
   countriesSeeded: number;
@@ -50,8 +48,7 @@ export interface SeedSovereignBondInstrumentsResult {
 async function loadPrimaryNationalCorporations(
   db: Db
 ): Promise<Map<string, Pick<Corporation, "_id" | "name">>> {
-  const rows = await db
-    .collection<Corporation>("corporations")
+  const rows = await corporationsCollection(db)
     .find({ countryOwnerId: { $in: [...COUNTRY_ORDER] }, isPrimaryNationalCorporation: true })
     .project<Pick<Corporation, "_id" | "name"> & { countryOwnerId: string }>({
       _id: 1,
@@ -74,7 +71,7 @@ async function findAnyNationalCorporation(
   db: Db,
   countryId: CountryId
 ): Promise<Pick<Corporation, "_id" | "name"> | null> {
-  return db.collection<Corporation>("corporations").findOne({ countryOwnerId: countryId });
+  return corporationsCollection(db).findOne({ countryOwnerId: countryId });
 }
 
 /**
@@ -99,16 +96,13 @@ export async function seedSovereignBondInstruments(
   // deliberately NOT fully preloaded — see loadPrimaryNationalCorporations.
   const budgetIds = COUNTRY_ORDER.map((c) => getNationalBudgetId(c));
   const [budgetRows, bankRows, bondRows, primaryCorporations] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({ _id: { $in: budgetIds } } as Record<string, unknown>)
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({ _id: { $in: COUNTRY_ORDER.map((c) => getBankId(c)) } } as Record<string, unknown>)
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({
         issuerType: "sovereign",
         countryId: { $in: [...COUNTRY_ORDER] },
@@ -255,7 +249,7 @@ export async function seedSovereignBondInstruments(
   }
 
   if (staged.length > 0) {
-    await db.collection<Omit<Bond, "_id">>("bonds").insertMany(staged);
+    await bondsCollection<Omit<Bond, "_id">>(db).insertMany(staged);
   }
 
   if (countriesSeeded === 0) {

@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import { ok, warn, critical } from "./checkFactory";
 import { expectedRegionDerivedCoverage, type SeedExpectations } from "./expectations";
 import type { SeedDiagnosticCheck } from "./types";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import type { Document } from "mongodb";
 
 /**
  * Coverage of the region-derived collections — the diagnostic's blind spot.
@@ -77,7 +79,7 @@ export async function checkRegionDerivedCoverage(
 
   // US-only, and the one `runSeed --reset` used to empty with nothing to rebuild
   // it (MEASURED 51 -> 0). Presence is the whole check.
-  const poolRows = await db.collection("stateRegistrationPool").countDocuments();
+  const poolRows = await stateRegistrationPoolCollection<Document>(db).countDocuments();
   checks.push(
     poolRows > 0
       ? ok(

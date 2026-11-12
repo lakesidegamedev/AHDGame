@@ -1,7 +1,7 @@
 /**
  * Same-turn spillover of final demand (gameConfig.producerSpilloverStage >= 1).
  *
- * A household that wanted a good no seller has left (its lane sold out) keeps
+ * A household whose wanted good has no seller left (its lane sold out) keeps
  * its money. Realistically it substitutes: part of that budget goes to other
  * things it buys that are still on the shelves. After the first clearing, this
  * moves SUBSTITUTION_SHARE of each buyer's stranded spend onto its other lanes

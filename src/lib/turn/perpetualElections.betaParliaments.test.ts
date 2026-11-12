@@ -142,8 +142,8 @@ const SE_REGIONS_1953: MockRegion[] = [
   { id: "SE_SKA", houseDistricts: 30 },
 ];
 const ES_REGIONS: MockRegion[] = [
-  { id: "ES_MAD", houseDistricts: 50 },
-  { id: "ES_CAT", houseDistricts: 47 },
+  { id: "ES_MAD", houseDistricts: 50, stateSenateSeats: 4 },
+  { id: "ES_CAT", houseDistricts: 47, stateSenateSeats: 4 },
 ];
 const IT_REGIONS_1953: MockRegion[] = [
   { id: "IT_NW", houseDistricts: 90 },
@@ -164,7 +164,7 @@ const TR_SENATE_REGIONS: MockRegion[] = [
   { id: "TR_ANK", houseDistricts: 60, stateSenateSeats: 6 },
 ];
 
-describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
+describe("beta lower-chamber specs (FR/IT/ES/SE/TR, #3239)", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -179,7 +179,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: null,
       });
       await mountDb(mock);
-      const { ensureTRElections } = await import("./perpetualElections");
+      const { ensureTRElections } = await import("@/lib/elections/scheduling");
       await ensureTRElections(NOW);
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
@@ -192,7 +192,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureTRElections } = await import("./perpetualElections");
+      const { ensureTRElections } = await import("@/lib/elections/scheduling");
       await ensureTRElections(NOW);
       expect(mock.insertCalls.flat()).toHaveLength(TR_REGIONS.length);
     });
@@ -207,7 +207,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureTRElections } = await import("./perpetualElections");
+      const { ensureTRElections } = await import("@/lib/elections/scheduling");
       await ensureTRElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -234,7 +234,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureFRElections } = await import("./perpetualElections");
+      const { ensureFRElections } = await import("@/lib/elections/scheduling");
       await ensureFRElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -252,7 +252,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureITElections } = await import("./perpetualElections");
+      const { ensureITElections } = await import("@/lib/elections/scheduling");
       await ensureITElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -270,7 +270,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureSEElections } = await import("./perpetualElections");
+      const { ensureSEElections } = await import("@/lib/elections/scheduling");
       await ensureSEElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -291,7 +291,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureESElections } = await import("./perpetualElections");
+      const { ensureESElections } = await import("@/lib/elections/scheduling");
       await ensureESElections(NOW);
       expect(mock.insertCalls.flat()).toHaveLength(0);
       expect(mock.electionsCollection.insertMany).not.toHaveBeenCalled();
@@ -305,7 +305,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureESElections } = await import("./perpetualElections");
+      const { ensureESElections } = await import("@/lib/elections/scheduling");
       await ensureESElections(NOW);
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
@@ -324,7 +324,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
       const regions: MockRegion[] = [{ id: `${cc}_A`, houseDistricts: 25 }];
       const mock = makeMockDb(cc as CountryId, regions, [], [], { ...WORLD, status: "beta" });
       await mountDb(mock);
-      const mod = await import("./perpetualElections");
+      const mod = await import("@/lib/elections/scheduling");
       await (mod as unknown as Record<string, (n: Date) => Promise<void>>)[fnName](NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -349,7 +349,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
       const regions: MockRegion[] = [{ id: `${cc}_A`, houseDistricts: 30 }];
       const mock = makeMockDb(cc as CountryId, regions, [], [], { ...WORLD, status: "beta" });
       await mountDb(mock);
-      const mod = await import("./perpetualElections");
+      const mod = await import("@/lib/elections/scheduling");
       await (mod as unknown as Record<string, (n: Date) => Promise<void>>)[fnName](NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -368,7 +368,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureESElections } = await import("./perpetualElections");
+      const { ensureESElections } = await import("@/lib/elections/scheduling");
       await ensureESElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -403,7 +403,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureTRElections } = await import("./perpetualElections");
+      const { ensureTRElections } = await import("@/lib/elections/scheduling");
       await ensureTRElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -437,7 +437,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureSEElections } = await import("./perpetualElections");
+      const { ensureSEElections } = await import("@/lib/elections/scheduling");
       await ensureSEElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -465,7 +465,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureFRElections } = await import("./perpetualElections");
+      const { ensureFRElections } = await import("@/lib/elections/scheduling");
       await ensureFRElections(NOW);
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
@@ -488,7 +488,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: null,
       });
       await mountDb(mock);
-      const { ensureGRElections } = await import("./perpetualElections");
+      const { ensureGRElections } = await import("@/lib/elections/scheduling");
       await ensureGRElections(NOW);
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
@@ -501,7 +501,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureGRElections } = await import("./perpetualElections");
+      const { ensureGRElections } = await import("@/lib/elections/scheduling");
       await ensureGRElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -516,7 +516,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
 
   // ─── #3791 defect 2: upper chambers only ever lose members ────────────────
   //
-  // No spawner existed for any Senate — `ensureBetaParliamentElections` only
+  // No spawner existed for any Senate — the lower-chamber specs only
   // ever ran for the LOWER chamber, so once a seeded senator's term lapsed
   // nothing refilled the seat. Fixed by `ensureBetaSenateElections` (new
   // sibling spawner, seats sourced from `stateSenateSeats`).
@@ -529,7 +529,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureFRSenateElections } = await import("./perpetualElections");
+      const { ensureFRSenateElections } = await import("@/lib/elections/scheduling");
       await ensureFRSenateElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -560,7 +560,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureFRSenateElections } = await import("./perpetualElections");
+      const { ensureFRSenateElections } = await import("@/lib/elections/scheduling");
       await ensureFRSenateElections(NOW);
 
       expect(mock.electionsCollection.bulkWrite).toHaveBeenCalledWith([
@@ -605,7 +605,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureTRSenateElections } = await import("./perpetualElections");
+      const { ensureTRSenateElections } = await import("@/lib/elections/scheduling");
       await ensureTRSenateElections(NOW);
 
       const inserted = mock.insertCalls.flat();
@@ -626,7 +626,8 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureITSenateElections, ensureITElections } = await import("./perpetualElections");
+      const { ensureITSenateElections, ensureITElections } =
+        await import("@/lib/elections/scheduling");
       await ensureITSenateElections(NOW);
       const senatoEndTurn = mock.insertCalls.flat()[0]?.endTurn;
 
@@ -645,7 +646,7 @@ describe("ensureBetaParliamentElections (FR/IT/ES/SE/TR, #3239)", () => {
         status: "beta",
       });
       await mountDb(mock);
-      const { ensureESSenateElections } = await import("./perpetualElections");
+      const { ensureESSenateElections } = await import("@/lib/elections/scheduling");
       await ensureESSenateElections(NOW);
       expect(mock.insertCalls.flat()).toHaveLength(0);
     });
@@ -672,7 +673,7 @@ describe("successor lower chambers", () => {
       { preset: "1991-default", startingYear: 1991, currentTurn: 100, status: "active" }
     );
     await mountDb(mock);
-    const { ensureSecededChamberElections } = await import("./perpetualElections/shared");
+    const { ensureSecededChamberElections } = await import("@/lib/elections/scheduling/shared");
     await ensureSecededChamberElections(country, type, NOW, undefined, 100);
     expect(mock.insertCalls).toHaveLength(0);
     expect(mock.electionsCollection.find).toHaveBeenCalledWith(
@@ -708,7 +709,7 @@ it.each([
     status: "active",
   });
   await mountDb(mock);
-  const { ensureSecededChamberElections } = await import("./perpetualElections/shared");
+  const { ensureSecededChamberElections } = await import("@/lib/elections/scheduling/shared");
   await ensureSecededChamberElections(country, type, NOW, undefined, 101);
   const [race] = mock.insertCalls.flat();
   expect(race).toMatchObject({

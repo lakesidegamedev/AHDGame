@@ -1,27 +1,17 @@
 /**
  * Every place a party is referenced by its per-country `sequentialId`.
  *
- * Enumerated EMPIRICALLY against the live world, not derived from the type
- * definitions. A type-level sweep is wrong in both directions: several
- * `partyId` fields hold ObjectIds, and several sequentialId fields are typed
- * only as `string`. This is the table a party migration walks, and a new
- * party-referencing collection has exactly one place to be registered.
+ * Enumerated empirically, not derived from types: some `partyId` fields hold
+ * ObjectIds and some sequentialId fields are typed only as `string`.
  *
- * ⚠️ IT WAS INCOMPLETE, AND SILENTLY SO. A German reunification renumbered a
- * country's own parties and thirteen fields listed below were not swept, because
- * they were not here: the government went on naming a party that had become a
- * BANNED opposition party, `seatsByParty` counted the government's support
- * against the wrong benches, and every Landesliste pointed at the other side's
- * bloc. Nothing threw — a stale sequentialId is a perfectly valid number that
- * simply names somebody else now, which is exactly why the omission has to be
- * caught by the table rather than by a reader noticing.
+ * A field belongs here if it stores a per-country `sequentialId`. Party
+ * ObjectIds go in `PARTY_OBJECTID_COLLECTIONS` (they survive a renumber), and
+ * maps whose KEYS are party ids go in `PARTY_KEYED_MAP_COLLECTIONS`, because a
+ * key cannot be renamed with `$set`.
  *
- * A field belongs here if it stores a party's PER-COUNTRY `sequentialId`. Party
- * ObjectIds go in `PARTY_OBJECTID_COLLECTIONS` (they survive a renumber
- * untouched), and a map whose KEYS are party ids goes in
- * `PARTY_KEYED_MAP_COLLECTIONS`, because a key cannot be renamed with `$set`.
- *
- * Spec: docs/superpowers/specs/2026-08-29-reunification-merge-design.md
+ * A stale sequentialId is a valid number that now names someone else, so
+ * omissions are silent: a missed field keeps pointing at whatever party took
+ * that index. This table is the only guard.
  */
 export interface PartyRef {
   collection: string;
@@ -105,19 +95,14 @@ export const PARTY_KEYED_MAP_COLLECTIONS: PartyRef[] = [
 /**
  * Collections whose DOCUMENT `_id` embeds the party's sequentialId.
  *
- * A third shape again, and the most dangerous of the three, because renumbering
- * the field alone leaves a document that disagrees with its own key. A Mongo
- * `_id` is immutable, so these have to be re-keyed — read, re-inserted under the
- * new id, and the old row deleted.
- *
+ * `_id` is immutable, so these must be re-keyed (read, re-insert, delete).
  * `statePartyOrg._id` is `${stateId}_${sequentialId}`
- * (`getStatePartyOrgDocumentId`). Its readers are split: the region's party list
- * queries the `partyId` FIELD while the state-party page does
- * `findOne({ _id })`. Leaving the two disagreeing does not fail loudly — it
- * shows one party's organisation on another party's page, and sends a Build Org
- * spend to whichever row happens to hold that key (ticket #1256).
+ * (`getStatePartyOrgDocumentId`). Some readers query the `partyId` FIELD
+ * while the state-party page does `findOne({ _id })`; if the two disagree
+ * they fail silently, showing one party's org on another's page and sending
+ * Build Org spend to the wrong row.
  *
- * `idTemplate` names the fields the key is built from, in order, so the rebuild
+ * `idParts` names the fields the key is built from, in order, so the rebuild
  * cannot drift from `getStatePartyOrgDocumentId`.
  */
 export interface PartyKeyedDocumentRef {

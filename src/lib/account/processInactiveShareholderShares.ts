@@ -1,8 +1,11 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import { cleanupShareMarketActivityForCharacters } from "@/lib/corporations/cleanupShareMarketActivity";
 import { releaseCharacterHeldSharesToFloat } from "@/lib/corporations/releaseCharacterHeldSharesToFloat";
 import { isUserActive, INACTIVE_SHAREHOLDER_TURN_THRESHOLD } from "@/lib/players/playerActivity";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface ProcessInactiveShareholderSharesOptions {
   now: Date;
@@ -51,8 +54,7 @@ export async function processInactiveShareholderShares(
   const { now, forexEnabled } = options;
 
   // 1. Scan corps that have at least one character shareholder.
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { "shareholders.characterId": { $exists: true } },
       { projection: { _id: 1, ceoId: 1, userId: 1, shareholders: 1 } }
@@ -73,8 +75,7 @@ export async function processInactiveShareholderShares(
   const holderCharIds = [...holderCharIdSet].map((id) => new ObjectId(id));
 
   // 3. Map character -> user.
-  const chars = await db
-    .collection<Character>("characters")
+  const chars = await charactersCollection(db)
     .find({ _id: { $in: holderCharIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
   const charIdsByUser = new Map<string, ObjectId[]>();
@@ -89,8 +90,7 @@ export async function processInactiveShareholderShares(
 
   // 4. Keep only inactive holder users.
   const holderUserIds = [...charIdsByUser.keys()].map((id) => new ObjectId(id));
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find(
       { _id: { $in: holderUserIds } },
       { projection: { _id: 1, lastActivity: 1, createdAt: 1 } }

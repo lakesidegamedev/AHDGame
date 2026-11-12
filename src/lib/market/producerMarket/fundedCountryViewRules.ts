@@ -1,24 +1,20 @@
 /**
  * Country market views read from the funded country book.
  *
- * `commodityPrices.nationalDemand` is rolled up from the funded ledger by the
- * buyer's STATE. Public, military and investment buyers order from a national
- * wallet with no state, so their orders reach the world total and the
- * per-country funded book but never a country's `nationalDemand`. A country
- * whose demand is mostly public (ordnance, building materials, construction)
- * then read as a glut while its funded book was short.
+ * `commodityPrices.nationalDemand` is rolled up by the buyer's STATE, but
+ * public, military and investment buyers order from a national wallet with no
+ * state: their orders reach the world total and the funded book but never a
+ * country's `nationalDemand`. A country whose demand is mostly public then read
+ * as a glut while its funded book was short.
  *
- * On a turn the funded market published a book, a country view reads that
- * book instead: supply is what the country's producers offered, demand is what
- * its buyers requested (the reservation and its public fallback counted once),
- * and the fill is what they actually received. Household substitution orders
- * placed after a first choice sold out (spillover) are not first-choice
- * demand: they are left out of `demand` and reported as `spilloverRequested`,
- * so a cheap good that caught spilled budget does not read as short. Units
- * they bought still count in `filled`. World totals are unchanged:
- * `globalSupply` / `globalDemand` are already the sum of the same orders.
- * Countries absent from the book had no funded activity and read as empty.
- * Without a book for the price row's turn the stored national fields stand.
+ * When the funded market published a book for the turn, a country view reads
+ * it: supply is what the country's producers offered, demand is what its
+ * buyers requested (the reservation and its public fallback counted once), and
+ * the fill is what they received. Household spillover orders (placed after a
+ * first choice sold out) are not first-choice demand: excluded from `demand`,
+ * reported as `spilloverRequested`, but their units count in `filled`. World
+ * totals are unchanged. Countries absent from the book read as empty. Without
+ * a book for the turn, stored national fields stand.
  *
  * Pure: rows in, view out. No DB.
  */

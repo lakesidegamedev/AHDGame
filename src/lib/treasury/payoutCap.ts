@@ -23,6 +23,8 @@ import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { formatPayoutCap, getEffectivePlayerPayoutCap } from "@/lib/treasury/payoutCapValues";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
+import type { Document } from "mongodb";
 
 export {
   countDistinctOfficers,
@@ -47,8 +49,7 @@ export async function getPlayerPayoutThisTurn(
   countryId: CountryId,
   currentTurn: number
 ): Promise<number> {
-  const [row] = await db
-    .collection("treasuryTransactions")
+  const [row] = await treasuryTransactionsCollection<Document>(db)
     .aggregate<{ total: number }>([
       {
         $match: {

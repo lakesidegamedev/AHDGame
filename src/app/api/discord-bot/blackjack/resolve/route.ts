@@ -4,12 +4,14 @@ import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse, handleRouteError } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Character } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
 import { getCurrencyFxRate } from "@/lib/currency/corporationCapital";
 import { houseLimits, loadHouse, settleHouseBet } from "@/lib/casino/house";
 import { casinoFailure, guardCasinoPlayer, guardCasinoRequest } from "@/lib/casino/routeSupport";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { blackjackPendingWagersCollection } from "@/lib/db/repositories/blackjackPendingWagers";
 
 const resolveSchema = z.object({
   discordId: z.string().min(1, "discordId is required"),
@@ -32,7 +34,7 @@ interface PendingWager {
 
 /** House edge taken from blackjack winnings. BLACKJACK_HOUSE_EDGE overrides, clamped to 0..1. */
 function blackjackHouseEdge(): number {
-  return Math.min(Math.max(parseFloat(process.env.BLACKJACK_HOUSE_EDGE ?? "0.05"), 0), 1);
+  return Math.min(Math.max(parseFloat(runtimeConfig.blackjackHouseEdge() ?? "0.05"), 0), 1);
 }
 
 // POST /api/discord-bot/blackjack/resolve — Settles a dealt hand against the casino house.
@@ -52,9 +54,11 @@ export async function POST(request: Request) {
     if (limited) return limited;
 
     const db = await getDb();
-    const pending = await db
-      .collection<PendingWager>("blackjackPendingWagers")
-      .findOneAndDelete({ discordId, gameId, status: "pending" });
+    const pending = await blackjackPendingWagersCollection<PendingWager>(db).findOneAndDelete({
+      discordId,
+      gameId,
+      status: "pending",
+    });
     if (!pending) {
       return errorResponse(404, "Pending wager not found", {
         extra: {
@@ -66,9 +70,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: pending.characterId });
+    const character = await charactersCollection(db).findOne({ _id: pending.characterId });
     if (!character) return errorResponse(404, "Character not found", { extra: { discordId } });
     const currency = pending.currency ?? ("USD" as CurrencyCode);
     const rate = pending.rate ?? (await getCurrencyFxRate(db, currency));

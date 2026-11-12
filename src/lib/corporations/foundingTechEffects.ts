@@ -2,7 +2,6 @@ import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { OperatingSectorIdentity } from "@/lib/constants/corporationsClient";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 
 export interface FoundingTechEffects {
@@ -10,12 +9,6 @@ export interface FoundingTechEffects {
   growthCostMultiplier: number;
   dominanceShield: number;
 }
-
-const NO_TECH: FoundingTechEffects = {
-  expansionDiscount: 0,
-  growthCostMultiplier: 1,
-  dominanceShield: 0,
-};
 
 /**
  * Tech-tree effects that price founding a sector in one lane.
@@ -35,7 +28,6 @@ export async function loadFoundingTechEffects(
   identity: OperatingSectorIdentity,
   currentYear: number
 ): Promise<FoundingTechEffects> {
-  if (!(await isSectorTechTreesEnabled())) return NO_TECH;
   const techView = {
     type: corporation.type,
     industryModel: corporation.industryModel,

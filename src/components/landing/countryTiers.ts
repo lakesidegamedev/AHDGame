@@ -1,14 +1,7 @@
 /**
- * The four country tiers the landing globe is allowed to draw.
- *
- * Product rule (owner, #globe-tiers): the globe shows and colors ONLY these
- * four tiers — nothing else. The previous globe painted three access outcomes
- * plus a near-black "not named by this era" dim that covered most of the map
- * and read as ocean; that dim is now an explicit tier (Background Nations) and
- * is drawn as visible land.
- *
- * Tiers are presentation only. Nothing here decides what is playable, resolves
- * access, or affects routing — see `resolveCountryAvailability` for that.
+ * The four country tiers the landing globe draws. The globe shows and colors
+ * ONLY these four tiers. Tiers are presentation only: nothing here decides
+ * what is playable, resolves access or affects routing.
  */
 
 /** Canonical tier ids. Order is the legend / z-order order. */
@@ -77,11 +70,10 @@ export function tierWireframeFill(tier: CountryTier, phosphorColor: string): str
 }
 
 /**
- * Background Nations the world still simulates as macro aggregates (the
- * manifest's `background-macro` tier, about 150 of them in 1991). They stay in
- * the Background tier, inert and merged, but read as simulated land rather
- * than the grey of land nothing simulates (owner, 2026-10-01). Only the
- * landing globe draws the split; a caller that passes no roster sees grey.
+ * Background Nations the world still simulates as macro aggregates (manifest tier
+ * "background-macro"): inert and merged, but drawn as simulated land rather than
+ * the grey of unsimulated land. Only the landing globe draws the split; a caller
+ * that passes no roster sees grey.
  */
 export const BACKGROUND_MACRO_COLOR = "rgba(139, 124, 220, 0.5)";
 export const BACKGROUND_MACRO_STROKE = "rgba(196, 181, 253, 0.32)";

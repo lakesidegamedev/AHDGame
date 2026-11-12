@@ -3,27 +3,18 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 
 /**
- * SCO's money.
- *
- * ⚠ GENERATED FROM `__snapshots__/sco.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * SCO's money. GENERATED from `__snapshots__/sco.pre-move.json`; regenerate
+ * with:
  *
  *     npx tsx scripts/countries/gen-country-economy.ts SCO --force
  *
- * ⚠ THE EXCHANGE RATE IS NOT HERE, DELIBERATELY. Currency IDENTITY is this
- * country's fact and moved; a rate is a fact about a PAIR of countries in a
- * YEAR, and belongs beside the rates it must stay consistent with. Moving one
- * into a country folder would give it a value whose meaning only exists relative
- * to the table it left.
+ * Exchange rate is NOT here by design: a rate is a fact about a pair of
+ * countries in a year and belongs beside the table it must stay consistent
+ * with.
  *
- * ⚠ EVERY FIGURE BELOW IS IN LOCAL CURRENCY and is not comparable to another
- * country's. Do not reconcile one toward its neighbours.
- *
- * ⚠ NO MONETARY BASELINE FOR 1953, 1971, 1979, 1991: SCO has no entry in
- * those era tables and takes the base baseline. The key is ABSENT rather than
- * defaulted, because inventing one would turn a fallback into an authored value.
- *
- * ⚠ NO SECTOR WEIGHTS FOR 1953, 1979, for the same reason.
+ * Every figure is in LOCAL CURRENCY; do not reconcile toward neighbours.
+ * Missing keys for eras/sectors SCO has no data for are ABSENT rather than
+ * defaulted, so a fallback is not mistaken for an authored value.
  */
 
 const currencyCode = "GBP" as CurrencyCode;

@@ -6,13 +6,14 @@
  * them at resolution, which is how `statePartyOrg.primarySurge` came to be read
  * by four call sites and written by none.
  *
- * What each kind DOES with a row lives in `electionEngine/constants`
+ * What each kind DOES with a row lives in `elections/engine/constants`
  * (`stateAttackMultiplier`, `stateFavorabilityDeltas`), read by the stagger and
  * the projection alike. Nothing here interprets a row's effect.
  */
 
 import type { Db, Filter, ObjectId } from "mongodb";
 import type { PrimaryStateAction } from "@/lib/db/types";
+import { primaryStateActionsCollection } from "@/lib/db/repositories/primaryStateActions";
 
 /**
  * Rows still in force this turn.
@@ -31,8 +32,7 @@ export async function loadLiveStateActions(
   db: Db,
   args: { electionId: ObjectId; currentTurn: number }
 ): Promise<PrimaryStateAction[]> {
-  return db
-    .collection<PrimaryStateAction>("primaryStateActions")
+  return primaryStateActionsCollection(db)
     .find(liveActionFilter(args.electionId, args.currentTurn))
     .toArray();
 }

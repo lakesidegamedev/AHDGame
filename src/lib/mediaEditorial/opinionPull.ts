@@ -10,6 +10,9 @@ import type { Db } from "mongodb";
 import { reachWeightedSlant, type Newsroom, type StateSlant } from "./slant";
 import { normalizeEditorialPosition, type EditorialPosition } from "./rules";
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 /**
  * Most an axis can move from media in a window of {@link MEDIA_PULL_WINDOW_TURNS}
@@ -69,8 +72,7 @@ export function mediaPullForState(
  * the owning corporations), regardless of state count.
  */
 export async function loadAllStateSlants(db: Db): Promise<Map<string, StateSlant>> {
-  const sectors = await db
-    .collection("corporateSectors")
+  const sectors = await corporateSectorsCollection<Document>(db)
     .find({ sectorType: "media", mothballed: { $ne: true } })
     .project<{
       corporationId: unknown;
@@ -81,8 +83,7 @@ export async function loadAllStateSlants(db: Db): Promise<Map<string, StateSlant
     .toArray();
   const result = new Map<string, StateSlant>();
   if (sectors.length === 0) return result;
-  const corps = await db
-    .collection("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: [...new Set(sectors.map((s) => s.corporationId))] as never[] } })
     .project<{ _id: unknown; editorialStance?: EditorialPosition }>({ editorialStance: 1 })
     .toArray();

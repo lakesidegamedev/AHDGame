@@ -14,6 +14,8 @@ import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import { assertStandingAdRegion } from "./regions";
 import { quoteAdAudience } from "./adQuote";
 import { AD_ACTION_COST, AD_BOOST_PER_ACTION, planAdPurchase, type CampaignTarget } from "./rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type StandingAdRequest = CampaignTarget & {
   stateId: string;
@@ -45,7 +47,7 @@ export async function purchaseStandingAds(
   payer: Character,
   request: StandingAdRequest
 ) {
-  const current = await db.collection<Character>("characters").findOne({ _id: owner._id });
+  const current = await charactersCollection(db).findOne({ _id: owner._id });
   if (!current) throw notFound("Character not found");
   if (current.countryId !== payer.countryId)
     throw forbidden("Advertiser and payer must be in the same country");
@@ -71,9 +73,10 @@ export async function purchaseStandingAds(
     throw conflict("The ad quote changed. Refresh before buying.");
   const actions = AD_ACTION_COST * request.count;
   const fundsField = quote.forex ? "currencyBalances.campaign" : "funds";
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { politicalMediaMarketEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { politicalMediaMarketEnabled: 1 } }
+  );
   if (config?.politicalMediaMarketEnabled === true) {
     const orderId = randomUUID();
     const funding = await fundPoliticalMediaOrder(db, {
@@ -122,23 +125,23 @@ export async function purchaseStandingAds(
   };
   const debitFilter = { _id: payer._id, actions: { $gte: actions }, [fundsField]: { $gte: funds } };
   const write = async (session?: ClientSession) => {
-    const result = await db
-      .collection<Character>("characters")
-      .updateOne(
-        ownerFilter,
-        { $set: { targetedAds: ads }, $inc: { targetedAdsRevision: 1 } },
-        { session }
-      );
+    const result = await charactersCollection(db).updateOne(
+      ownerFilter,
+      { $set: { targetedAds: ads }, $inc: { targetedAdsRevision: 1 } },
+      { session }
+    );
     if (!result.modifiedCount) throw conflict("Ad purchases changed. Refresh before buying");
   };
   const debit = async (session?: ClientSession) => {
-    const result = await db
-      .collection<Character>("characters")
-      .updateOne(debitFilter, { $inc: { actions: -actions, [fundsField]: -funds } }, { session });
+    const result = await charactersCollection(db).updateOne(
+      debitFilter,
+      { $inc: { actions: -actions, [fundsField]: -funds } },
+      { session }
+    );
     if (!result.modifiedCount) throw conflict("Insufficient personal actions or campaign funds");
   };
   if (current._id.equals(payer._id)) {
-    const result = await db.collection<Character>("characters").updateOne(
+    const result = await charactersCollection(db).updateOne(
       { ...ownerFilter, ...debitFilter },
       {
         $set: { targetedAds: ads },
@@ -158,9 +161,10 @@ export async function purchaseStandingAds(
         try {
           await write();
         } catch (error) {
-          await db
-            .collection<Character>("characters")
-            .updateOne({ _id: payer._id }, { $inc: { actions, [fundsField]: funds } });
+          await charactersCollection(db).updateOne(
+            { _id: payer._id },
+            { $inc: { actions, [fundsField]: funds } }
+          );
           throw error;
         }
       }

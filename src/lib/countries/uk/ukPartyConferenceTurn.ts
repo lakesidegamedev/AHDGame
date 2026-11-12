@@ -9,17 +9,18 @@ import {
   ensureNppPlatformProposal,
   postConferenceNews,
   resolveConference,
-} from "@/lib/uk/conference/conferenceCommands";
+} from "@/lib/countries/uk/conference/conferenceCommands";
 import {
   conferenceHistoryEntry,
   getOrSeedConference,
   pushConferenceHistory,
-} from "@/lib/uk/conference/conferenceStore";
+} from "@/lib/countries/uk/conference/conferenceStore";
 import {
   conferenceOpensAtTurn,
   conferenceVotingClosesTurn,
   conferenceYearForTurn,
-} from "@/lib/uk/conference/rules";
+} from "@/lib/countries/uk/conference/rules";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface UkPartyConferenceTurnResult {
   scheduled: number;
@@ -40,15 +41,9 @@ const EMPTY: UkPartyConferenceTurnResult = {
 };
 
 /**
- * UK party-conference turn driver (ticket #862).
- *
- * Annual lifecycle per UK party, all idempotent: seed this year's row at
- * the year's first turn, open scheduled rows at their opening turn, ensure
- * an NPP platform proposal on open AI-run conferences, close + resolve
- * rows past their voting window (player votes or deterministic NPP
- * acclamation), apply each ratified row's payoff exactly once, and expire
- * rows a past year left behind. UK-gated: a cheap no-op on worlds without
- * a registered UK.
+ * UK party-conference turn: per-party annual lifecycle, all idempotent.
+ * Seeds, opens, proposes, closes/resolves, pays out, and expires rows.
+ * UK-gated: cheap no-op on worlds without a registered UK.
  */
 export async function processUkPartyConferenceTurn(
   db: Db,
@@ -59,8 +54,7 @@ export async function processUkPartyConferenceTurn(
   if (!registered.has("UK")) return { ...EMPTY };
   const result: UkPartyConferenceTurnResult = { ...EMPTY };
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "UK" })
     .project<PoliticalParty>({
       sequentialId: 1,
@@ -155,9 +149,7 @@ export async function processUkPartyConferenceTurn(
 
     doc = (await getUKPartyConferencesCollection(db).findOne({ _id: doc._id })) ?? doc;
     if (doc.status === "open") {
-      const full = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: party._id });
+      const full = await politicalPartiesCollection(db).findOne({ _id: party._id });
       if (!full) continue;
       if (!full.chairId) {
         await ensureNppPlatformProposal(db, "UK", full, doc, currentTurn, now);
@@ -183,9 +175,7 @@ export async function processUkPartyConferenceTurn(
       // Recovery: a previous tick won the open->completed claim but crashed
       // before the fill (outcome null), or before the side effects landed.
       // resolveConference resumes both; only a won fill counts telemetry.
-      const full = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: party._id });
+      const full = await politicalPartiesCollection(db).findOne({ _id: party._id });
       if (full) {
         const resolution = await resolveConference(db, "UK", full, doc, currentTurn, now);
         if (resolution.completed) {
@@ -202,9 +192,7 @@ export async function processUkPartyConferenceTurn(
     }
 
     if (doc.status === "completed" && conferencePayoffNeedsSettle(doc)) {
-      const full = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ _id: party._id });
+      const full = await politicalPartiesCollection(db).findOne({ _id: party._id });
       if (full) {
         const payoff = await applyConferencePayoff(db, "UK", full, doc, currentTurn, now);
         if (payoff.applied) result.payoffs += 1;

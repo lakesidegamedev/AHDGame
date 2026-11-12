@@ -2,6 +2,9 @@ import type { AnyBulkWriteOperation, Db, ObjectId, UpdateFilter } from "mongodb"
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
 import { INDEX_FUND_INITIAL_NAV } from "@/lib/indexFunds/unitAccounting";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 type FundState = Pick<
   IndexFund,
@@ -18,23 +21,16 @@ type FundState = Pick<
  * Remove references to corporations that no longer exist and reconcile each
  * fund's unitSupply to its position ledger.
  *
- * The reset manifest used to preserve `indexFunds` as reference data while it
- * wiped corporations and every indexFund* runtime collection. That retained
- * old-world holdings and unit supply but deleted both their corporations and
- * holder positions. The current world then accumulated new positions on top.
- *
  * Holdings are removed with `$pull` and supply is repaired with `$inc`, so a
  * subscription or redemption racing the migration keeps its own atomic delta.
  */
 async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-  const liveCorporations = await db
-    .collection<{ _id: ObjectId }>("corporations")
+  const liveCorporations = await corporationsCollection<{ _id: ObjectId }>(db)
     .find({}, { projection: { _id: 1 } })
     .toArray();
   const liveIds = new Set(liveCorporations.map((corporation) => corporation._id.toString()));
 
-  const funds = await db
-    .collection<FundState>("indexFunds")
+  const funds = await indexFundsCollection<FundState>(db)
     .find(
       {},
       {
@@ -61,8 +57,7 @@ async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promis
   }
   const fundIds = funds.map((fund) => fund._id);
   const positions = fundIds.length
-    ? await db
-        .collection<IndexFundPosition>("indexFundPositions")
+    ? await indexFundPositionsCollection(db)
         .find({ fundId: { $in: fundIds } }, { projection: { fundId: 1, holderKind: 1, units: 1 } })
         .toArray()
     : [];
@@ -171,11 +166,11 @@ async function repairOrphanIndexFundState(db: Db, ctx: MigrationContext): Promis
   }
 
   if (reserveOps.length > 0) {
-    await db.collection<IndexFundPosition>("indexFundPositions").bulkWrite(reserveOps);
+    await indexFundPositionsCollection(db).bulkWrite(reserveOps);
   }
   let updated = 0;
   if (fundOps.length > 0) {
-    const result = await db.collection<FundState>("indexFunds").bulkWrite(fundOps);
+    const result = await indexFundsCollection<FundState>(db).bulkWrite(fundOps);
     updated = result.modifiedCount;
   }
   return { documentsScanned: funds.length, documentsUpdated: updated, notes };

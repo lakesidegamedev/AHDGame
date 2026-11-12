@@ -215,6 +215,13 @@ export const REGION_ROSTERS: Partial<Record<CountryId, Partial<Record<EraId, Ros
   WAL: {
     "2019": () => import("@/lib/seeds/wal/walRegions").then((m) => m.walRegions),
   },
+  // Canada exists only in the 2027 world, so it has no 2019 fallback bundle.
+  CA: {
+    "2027": () => import("@/lib/countries/ca/data/caRegions2027").then((m) => m.caRegions2027),
+  },
+  QC: {
+    "2027": () => import("@/lib/countries/qc/data/qcRegions").then((m) => m.qcRegions),
+  },
 };
 
 /** The region ids a country seeds for an era, via the same fallback as seeding. */

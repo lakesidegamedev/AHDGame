@@ -1,13 +1,12 @@
 /**
- * One-time data migration for the removal of the entertainment commodity
- * (2026-10-19). Runs at the start of the corporation turn, before lookups load
- * sectors, so the first turn on the new recipes also runs on rescaled stock.
+ * One-time data migration for the removal of the entertainment commodity.
+ * Runs at the start of the corporation turn, before lookups load sectors, so
+ * the first turn on the new recipes also runs on rescaled stock.
  *
- * 1. Rescales owned units on every sector whose mix carried entertainment
- *    (entertainmentRemovalRescale.ts), moving the same fields a strategy
- *    switch moves: capital stock, plant ledger, build queue and the per-unit
- *    opex anchor. Each sector update is stamped, so a crash part-way through
- *    never applies the ratio twice.
+ * 1. Rescales owned units on every sector whose mix carried entertainment,
+ *    moving the same fields a strategy switch moves: capital stock, plant
+ *    ledger, build queue and the per-unit opex anchor. Each sector update is
+ *    stamped, so a crash part-way through never applies the ratio twice.
  * 2. Clears the commodity's keys from sector telemetry maps and macro
  *    contributions.
  * 3. Archives, then deletes, documents keyed by the commodity (prices,
@@ -21,6 +20,10 @@ import { entertainmentRemovalRescaleRatio } from "@/lib/corporations/entertainme
 import { rescaleOtherOpexAnchorForRetool } from "@/lib/corporations/physicalPnl";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import type { SectorBuildOrder } from "@/lib/db/types";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { retiredCommodityArchiveCollection } from "@/lib/db/repositories/retiredCommodityArchive";
 
 export const REMOVED_COMMODITY = "entertainment_services";
 export const ENTERTAINMENT_REMOVAL_MARKER = "entertainmentCommodityRemovedAtTurn";
@@ -81,7 +84,7 @@ async function archiveAndDelete(
 ): Promise<{ archived: number; deleted: number }> {
   const docs = await db.collection(name).find({ commodity: REMOVED_COMMODITY }).toArray();
   if (docs.length === 0) return { archived: 0, deleted: 0 };
-  await db.collection(RETIRED_COMMODITY_ARCHIVE).bulkWrite(
+  await retiredCommodityArchiveCollection<Document>(db).bulkWrite(
     docs.map((doc) => ({
       replaceOne: {
         filter: { _id: `${name}:${String(doc._id)}` as never },
@@ -105,15 +108,15 @@ export async function migrateEntertainmentRemoval(
   db: Db,
   args: { turn: number; plantsEnabled: boolean; now: Date }
 ): Promise<{ skipped: true } | { rescaled: number; archived: number; deleted: number }> {
-  const config = await db
-    .collection<Document>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { [ENTERTAINMENT_REMOVAL_MARKER]: 1 } });
+  const config = await gameConfigCollection<Document>(db).findOne(
+    { _id: "default" as never },
+    { projection: { [ENTERTAINMENT_REMOVAL_MARKER]: 1 } }
+  );
   if (config?.[ENTERTAINMENT_REMOVAL_MARKER] != null) return { skipped: true };
 
   // 1. Rescale media sectors not yet stamped. Only media rows can carry the mix.
-  const rows = (await db
-    .collection("corporateSectors")
-    .find(
+  const rows = await corporateSectorsCollection<Document>(db)
+    .find<RescaleRow>(
       { sectorType: "media", [ENTERTAINMENT_RESCALE_STAMP]: { $ne: true } },
       {
         projection: {
@@ -127,7 +130,7 @@ export async function migrateEntertainmentRemoval(
         },
       }
     )
-    .toArray()) as unknown as RescaleRow[];
+    .toArray();
   const unset = Object.fromEntries(
     SECTOR_COMMODITY_MAPS.map((field) => [`${field}.${REMOVED_COMMODITY}`, ""])
   );
@@ -142,10 +145,11 @@ export async function migrateEntertainmentRemoval(
       },
     });
   }
-  if (ops.length > 0) await db.collection("corporateSectors").bulkWrite(ops, { ordered: false });
+  if (ops.length > 0)
+    await corporateSectorsCollection<Document>(db).bulkWrite(ops, { ordered: false });
 
   // 2. Telemetry keys on any other sector.
-  await db.collection("corporateSectors").updateMany(
+  await corporateSectorsCollection<Document>(db).updateMany(
     {
       $or: SECTOR_COMMODITY_MAPS.map((f) => ({
         [`${f}.${REMOVED_COMMODITY}`]: { $exists: true },
@@ -155,12 +159,10 @@ export async function migrateEntertainmentRemoval(
   );
 
   // Macro contributions are recomputed each macro turn; drop the stale key now.
-  await db
-    .collection("macroCountries")
-    .updateMany(
-      { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: { $exists: true } },
-      { $unset: { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: "" } }
-    );
+  await macroCountriesCollection<Document>(db).updateMany(
+    { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: { $exists: true } },
+    { $unset: { [`contribution.byCommodity.${REMOVED_COMMODITY}`]: "" } }
+  );
 
   // 3. Archive, then delete, documents keyed by the commodity.
   const swept = await Promise.all([
@@ -174,11 +176,9 @@ export async function migrateEntertainmentRemoval(
   const deleted = swept.reduce((n, r) => n + r.deleted, 0);
 
   // 4. Done: later turns skip the pass.
-  await db
-    .collection<Document>("gameConfig")
-    .updateOne(
-      { _id: "default" as never },
-      { $set: { [ENTERTAINMENT_REMOVAL_MARKER]: args.turn, updatedAt: args.now } }
-    );
+  await gameConfigCollection<Document>(db).updateOne(
+    { _id: "default" as never },
+    { $set: { [ENTERTAINMENT_REMOVAL_MARKER]: args.turn, updatedAt: args.now } }
+  );
   return { rescaled: ops.length, archived, deleted };
 }

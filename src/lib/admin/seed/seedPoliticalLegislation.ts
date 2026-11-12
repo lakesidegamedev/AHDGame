@@ -6,8 +6,7 @@
  *
  * Runs on EVERY preset: law existence and day-one levels resolve by year
  * (catalog.isLawActive / baselineLevelFor), not by the seed preset string.
- * Non-playable countries' old catalogs are untouched; the US/UK/RU/DD old
- * catalogs are excluded in seedLegislationTypes.
+ * Other countries' catalogs are untouched.
  */
 
 import { ObjectId } from "mongodb";
@@ -46,26 +45,34 @@ import {
   openingProgramCostScale,
   scaleProgramCostModel,
 } from "@/lib/seeds/reference/rules/openingProgramCostScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
-/** Player books refit per category to their authored 1991 composition. */
-const OPENING_COMPOSITION_REFIT_1991: ReadonlySet<string> = new Set(["US", "UK"]);
-
-// The gate lives in ONE place (politicalMetrics/pipelinePreset) so the four
-// seed call sites cannot drift apart again. Re-exported under the historical
-// name so existing importers need no edit.
-export { isPoliticalPipelinePreset as isPoliticalLegislationPreset } from "@/lib/politicalMetrics/pipelinePreset";
+/** Player books refit per category to their authored opening composition, by world year. */
+const OPENING_COMPOSITION_REFIT: Readonly<Partial<Record<number, readonly LawCountryId[]>>> = {
+  1991: ["US", "UK", "JP"],
+  2027: ["CA"],
+};
 
 /**
- * The projected docs seedLegislationTypes upserts. Omitting `year` projects the
- * whole catalog; passing one projects only the laws that exist then, so a world
- * never gets a proposable type for a law outside its era window.
+ * The projected docs seedLegislationTypes upserts: the whole catalog. A law's
+ * era `window` gates FILING at runtime (isLegislationTypeFileable), so a type
+ * whose window opens later must already exist when the world reaches that
+ * year, and one whose filing has closed must still resolve for enacted laws.
+ * The world year some seed callers still pass is accepted and not used.
  */
-export function getProjectedPoliticalLegislationTypes(year?: number): LegislationType[] {
+export function getProjectedPoliticalLegislationTypes(_year?: number): LegislationType[] {
   return LAW_COUNTRY_IDS.flatMap((countryId) =>
     [
-      ...getCatalog(countryId, year),
+      ...getCatalog(countryId),
       // Historical bills still resolve their aggregate instrument after a reseed.
-      ...[...getCoreCatalog(countryId, year), ...getRegionalCatalog(countryId, year)].filter(
+      ...[...getCoreCatalog(countryId), ...getRegionalCatalog(countryId)].filter(
         (law) => law.taxPolicy?.taxType === "incomeTax"
       ),
     ].map(projectLawToLegislationType)
@@ -110,7 +117,7 @@ export async function seedPoliticalLegislationBaseline(
   // countries. Country budget seeders may have already written uk_nhs_funding /
   // us_defense_spending / etc. from generateDefaultEnactedLaws before this runs;
   // leaving them would double-count (or misprice) against the v2 baseline book.
-  const oldLawPurge = await db.collection<EnactedLaw>("enactedLaws").deleteMany({
+  const oldLawPurge = await enactedLawsCollection(db).deleteMany({
     countryId: { $in: [...LAW_COUNTRY_IDS] },
     scope: "national",
     legislationTypeId: {
@@ -182,26 +189,24 @@ export async function seedPoliticalLegislationBaseline(
       lawCount++;
     }
 
-    // Regional statePolicies baselines — no enactedLaws, no budget sync. Two
-    // sets, seeded through one loop because they differ only in level:
-    //
-    //   - Regional sidecars (DD Land laws today) at their authored
-    //     `baselineLevelFor` — a region really does start with these enacted.
+    // Regional statePolicies baselines, no enactedLaws or budget sync. Two
+    // sets share this loop, differing only in level:
+    //   - Regional sidecars at their authored `baselineLevelFor` (a region
+    //     really does start with these enacted).
     //   - `both` laws at level 0 (`regionalDefaultLaws`): the region has no
-    //     program of its own on top of the national law YET, but it may propose
-    //     one, so it needs a current-law row to propose against. Without it the
-    //     whole "Current law -> Proposed" block — fiscal comparison and metric
-    //     chips included — renders nothing. See regionalDefaults.ts for why the
-    //     level must be 0 and not the national baseline.
+    //     program of its own yet but may propose one, so it needs a current-law
+    //     row to propose against or the whole Current law -> Proposed block
+    //     renders nothing. See regionalDefaults.ts for why level 0.
     //
     // Live regions intersect the authored Land id list so a drifted world
     // cannot invent phantom Bezirke.
     const regionalLaws = getRegionalCatalog(countryId, year).filter((law) => law.kind !== "tax");
     const defaultLaws = regionalDefaultLaws(countryId, year);
     if (regionalLaws.length > 0 || defaultLaws.length > 0) {
-      const allowed = countryId === "DD" ? new Set<string>(DD_LAND_STATE_IDS) : null;
-      const states = await db
-        .collection<{ _id: string }>("states")
+      const allowed = countryHasFeature("ddAdmin", countryId)
+        ? new Set<string>(DD_LAND_STATE_IDS)
+        : null;
+      const states = await statesCollection<{ _id: string }>(db)
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray();
       const regionIds = states
@@ -241,21 +246,19 @@ export async function seedPoliticalLegislationBaseline(
   // Flushed before the budget sync below, which READS `enactedLaws` — batching
   // must not let that sync run ahead of the law book it is summing.
   if (policyOps.length > 0) {
-    await db.collection<StatePolicyRecord>("statePolicies").bulkWrite(policyOps, { ordered: true });
+    await statePoliciesCollection<StatePolicyRecord>(db).bulkWrite(policyOps, { ordered: true });
   }
   if (lawOps.length > 0) {
-    await db.collection<EnactedLaw>("enactedLaws").bulkWrite(lawOps, { ordered: true });
+    await enactedLawsCollection(db).bulkWrite(lawOps, { ordered: true });
   }
 
   // Recalibrate from the new 1991 law book on every seed. A prior run's
   // non-law envelope must not be counted while measuring that book's cost.
   if (year === 1991) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { _id: getNationalBudgetId("RU") },
-        { $unset: { nonLawSpendingGdpShareBaseline: "" } }
-      );
+    await federalBudgetCollection(db).updateOne(
+      { _id: getNationalBudgetId("RU") },
+      { $unset: { nonLawSpendingGdpShareBaseline: "" } }
+    );
   }
 
   // One budget sync so day-one budgets reflect the inherited law book
@@ -268,13 +271,13 @@ export async function seedPoliticalLegislationBaseline(
     LAW_COUNTRY_IDS.map((cc) => getNationalBudgetId(cc as CountryId))
   );
 
+  const refitCountries = OPENING_COMPOSITION_REFIT[year];
+  if (refitCountries) await calibratePlayerOpeningPrograms(db, log, year, refitCountries);
+
   if (year === 1991) {
-    await calibratePlayerOpeningPrograms1991(db, log);
     const { SUCCESSOR_1991_GENERAL_GOVERNMENT_GDP_PERCENT } =
       await import("@/lib/seeds/reference/successorFiscal1991");
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId("RU") });
+    const budget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId("RU") });
     if (!budget) throw new Error("Missing 1991 Russian national budget after law sync");
     const targetSpending = Math.round(
       (budget.gdp * SUCCESSOR_1991_GENERAL_GOVERNMENT_GDP_PERCENT.RU.expenditure) / 100
@@ -290,12 +293,10 @@ export async function seedPoliticalLegislationBaseline(
     if (residual < 0) {
       throw new Error(`1991 Russian law spending exceeds the fiscal envelope by ${-residual}`);
     }
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { _id: budget._id },
-        { $set: { nonLawSpendingGdpShareBaseline: residual / budget.gdp } }
-      );
+    await federalBudgetCollection(db).updateOne(
+      { _id: budget._id },
+      { $set: { nonLawSpendingGdpShareBaseline: residual / budget.gdp } }
+    );
     await refreshNationalBudgetRevenue(db, [budget._id]);
     log(`Calibrated 1991 Russian non-law spending to ${targetSpending} SUR`);
   }
@@ -309,23 +310,32 @@ export async function seedPoliticalLegislationBaseline(
 }
 
 /**
- * US/UK use the v2 book at every preset. Calibrate that authoritative book,
- * including every proposable level, after its real receipts and fixed regional
- * transfers are known. Expense fractions persist through fiscal refreshes;
- * revenue fractions, tax rates and political metric effects are preserved.
+ * Calibrate a player country's authoritative v2 book, including every
+ * proposable level, after its real receipts and fixed regional transfers are
+ * known. Expense fractions persist through fiscal refreshes; revenue fractions,
+ * tax rates and political metric effects are preserved. A country whose
+ * regions are not in this world has no budget to fit and is skipped.
  */
-async function calibratePlayerOpeningPrograms1991(
+async function calibratePlayerOpeningPrograms(
   db: Db,
-  log: (msg: string) => void
+  log: (msg: string) => void,
+  year: number,
+  countries: readonly LawCountryId[]
 ): Promise<void> {
-  for (const countryId of ["US", "UK"] as const) {
+  const { getAuthoredNationalSpending } = await import("@/lib/seeds/reference/budgets");
+  for (const countryId of countries) {
     const budgetId = getNationalBudgetId(countryId);
-    const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
-    if (!budget) throw new Error(`Missing 1991 ${countryId} national budget after law sync`);
+    const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
+    if (!budget) {
+      const regions = await statesCollection<Document>(db).countDocuments(
+        { countryId },
+        { limit: 1 }
+      );
+      if (regions === 0) continue;
+      throw new Error(`Missing ${year} ${countryId} national budget after law sync`);
+    }
     const { items } = await calculateFederalLawAnnualCosts(db, budget);
-    const authored = OPENING_COMPOSITION_REFIT_1991.has(countryId)
-      ? (await import("@/lib/seeds/reference/budgets")).getAuthoredNationalSpending1991(countryId)
-      : null;
+    const authored = getAuthoredNationalSpending(countryId, year);
     // The book-wide fit stays the regional (state) program scale and the
     // fallback for any national category the refit does not price.
     const bookProgramCost = items.reduce((sum, item) => sum + item.amount, 0);
@@ -344,9 +354,9 @@ async function calibratePlayerOpeningPrograms1991(
     let scaleSet: Partial<FederalBudget>;
     let scaleNote: string;
     if (authored) {
-      // The catalog prices this book on 1953 anchors: GDP-share defence and
-      // social programs on a 1953 income anchor. Refit each category to the
-      // authored 1991 composition instead of one book-wide factor.
+      // The catalog prices a book on its own anchors, which need not match the
+      // authored opening mix (the US and UK use 1953 anchors in 1991). Refit
+      // each category to the authored composition instead of one book-wide factor.
       const programCostByCategory: Record<string, number> = {};
       for (const { law, amount } of items) {
         if (!law.costModelV2) continue;
@@ -379,9 +389,7 @@ async function calibratePlayerOpeningPrograms1991(
       scaleSet = { programCostScaleBaseline: bookScale };
       scaleNote = bookScale.toFixed(6);
     }
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budgetId }, { $set: scaleSet });
+    await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: scaleSet });
     const costOps: AnyBulkWriteOperation<EnactedLaw>[] = items.flatMap(({ law }) =>
       law.costModelV2
         ? [
@@ -401,9 +409,9 @@ async function calibratePlayerOpeningPrograms1991(
           ]
         : []
     );
-    if (costOps.length > 0) await db.collection<EnactedLaw>("enactedLaws").bulkWrite(costOps);
+    if (costOps.length > 0) await enactedLawsCollection(db).bulkWrite(costOps);
 
-    const typeOps: AnyBulkWriteOperation<LegislationType>[] = getCatalog(countryId, 1991)
+    const typeOps: AnyBulkWriteOperation<LegislationType>[] = getCatalog(countryId, year)
       .filter((law) => law.kind !== "tax")
       .map((law) => {
         const doc = projectLawToLegislationType(law);
@@ -424,10 +432,9 @@ async function calibratePlayerOpeningPrograms1991(
           },
         };
       });
-    if (typeOps.length > 0)
-      await db.collection<LegislationType>("legislationTypes").bulkWrite(typeOps);
+    if (typeOps.length > 0) await legislationTypesCollection(db).bulkWrite(typeOps);
     await refreshNationalBudgetRevenue(db, [budgetId]);
-    log(`Calibrated 1991 ${countryId} program expense fractions by ${scaleNote}`);
+    log(`Calibrated ${year} ${countryId} program expense fractions by ${scaleNote}`);
   }
 }
 
@@ -458,10 +465,7 @@ export async function seedPoliticalMetricsResiduals(db: Db, year: number): Promi
     const regionalSupplement =
       regionalBaseline.size > 0 ? lawTargets(countryId, regionalBaseline) : null;
 
-    const docs = await db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
-      .find({ countryId })
-      .toArray();
+    const docs = await politicalMetricsCollection(db).find({ countryId }).toArray();
     for (const doc of docs) {
       const residuals = {} as Record<PoliticalMetricId, number>;
       for (const [metricId, points] of Object.entries(national)) {
@@ -477,9 +481,7 @@ export async function seedPoliticalMetricsResiduals(db: Db, year: number): Promi
     }
   }
   if (residualOps.length > 0) {
-    await db
-      .collection<PoliticalMetricsDoc>("politicalMetrics")
-      .bulkWrite(residualOps, { ordered: true });
+    await politicalMetricsCollection(db).bulkWrite(residualOps, { ordered: true });
   }
   return count;
 }

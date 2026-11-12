@@ -3,13 +3,13 @@ import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Election, ElectionCandidate, ElectionVoteTally } from "@/lib/db/types";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/turn/election/presidentExecutiveSeating", () => ({
+vi.mock("@/lib/elections/resolution/presidentExecutiveSeating", () => ({
   seatPresidentialExecutive: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/elections/liveResults/captureResultSnapshot", () => ({
   captureElectionResultSnapshot: vi.fn().mockResolvedValue(undefined),
 }));
-import { seatPresidentialExecutive } from "@/lib/turn/election/presidentExecutiveSeating";
+import { seatPresidentialExecutive } from "@/lib/elections/resolution/presidentExecutiveSeating";
 import { resolveBrazilPresidentialElection } from "./resolvePresidentialElection";
 
 let db: MockDb;

@@ -7,7 +7,12 @@ import {
   generateStockExchangeSnapshots,
   generateInvestorRankingSnapshot,
 } from "@/lib/turn/stockExchangeSnapshot";
-import type { StockExchangeSnapshot, InvestorRankingSnapshot, Corporation } from "@/lib/db/types";
+import type { StockExchangeSnapshot, InvestorRankingSnapshot } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 
 interface DiagnosticResult {
   timestamps: {
@@ -63,23 +68,22 @@ export async function GET() {
 
     // Count documents in relevant collections
     const [corpCount, sectorCount, snapshotCount, investorSnapshotCount] = await Promise.all([
-      db.collection("corporations").countDocuments(),
-      db.collection("corporateSectors").countDocuments(),
-      db.collection("stockExchangeSnapshots").countDocuments(),
-      db.collection("investorRankingSnapshots").countDocuments(),
+      corporationsCollection(db).countDocuments(),
+      corporateSectorsCollection<Document>(db).countDocuments(),
+      stockExchangeSnapshotsCollection<Document>(db).countDocuments(),
+      investorRankingSnapshotsCollection<Document>(db).countDocuments(),
     ]);
 
     // Fetch existing snapshots
     const [nyseSnapshot, ftseSnapshot, globalSnapshot, investorSnapshot] = await Promise.all([
-      db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "nyse" }),
-      db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "ftse" }),
-      db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "global" }),
-      db.collection<InvestorRankingSnapshot>("investorRankingSnapshots").findOne({ _id: "global" }),
+      stockExchangeSnapshotsCollection(db).findOne({ _id: "nyse" }),
+      stockExchangeSnapshotsCollection(db).findOne({ _id: "ftse" }),
+      stockExchangeSnapshotsCollection(db).findOne({ _id: "global" }),
+      investorRankingSnapshotsCollection(db).findOne({ _id: "global" }),
     ]);
 
     // Get sample corporations
-    const sampleCorps = await db
-      .collection<Corporation>("corporations")
+    const sampleCorps = await corporationsCollection(db)
       .find({})
       .limit(10)
       .project({
@@ -153,23 +157,22 @@ export async function POST() {
 
     // Fetch the newly generated snapshots
     const [nyseSnapshot, ftseSnapshot, globalSnapshot, investorSnapshot] = await Promise.all([
-      db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "nyse" }),
-      db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "ftse" }),
-      db.collection<StockExchangeSnapshot>("stockExchangeSnapshots").findOne({ _id: "global" }),
-      db.collection<InvestorRankingSnapshot>("investorRankingSnapshots").findOne({ _id: "global" }),
+      stockExchangeSnapshotsCollection(db).findOne({ _id: "nyse" }),
+      stockExchangeSnapshotsCollection(db).findOne({ _id: "ftse" }),
+      stockExchangeSnapshotsCollection(db).findOne({ _id: "global" }),
+      investorRankingSnapshotsCollection(db).findOne({ _id: "global" }),
     ]);
 
     // Count documents
     const [corpCount, sectorCount, snapshotCount, investorSnapshotCount] = await Promise.all([
-      db.collection("corporations").countDocuments(),
-      db.collection("corporateSectors").countDocuments(),
-      db.collection("stockExchangeSnapshots").countDocuments(),
-      db.collection("investorRankingSnapshots").countDocuments(),
+      corporationsCollection(db).countDocuments(),
+      corporateSectorsCollection<Document>(db).countDocuments(),
+      stockExchangeSnapshotsCollection<Document>(db).countDocuments(),
+      investorRankingSnapshotsCollection<Document>(db).countDocuments(),
     ]);
 
     // Get sample corporations
-    const sampleCorps = await db
-      .collection<Corporation>("corporations")
+    const sampleCorps = await corporationsCollection(db)
       .find({})
       .limit(10)
       .project({

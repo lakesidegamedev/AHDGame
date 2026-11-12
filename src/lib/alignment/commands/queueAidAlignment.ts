@@ -25,8 +25,8 @@ import type { InternationalOrganizationId } from "@/lib/constants/internationalO
 import { getAlignmentPlaysCollection } from "@/lib/db/collections";
 import type { GameState } from "@/lib/db/types";
 import { resolveGameYear } from "@/lib/era/era";
-import { isIntOrgAlignmentEnabled } from "../featureFlag";
 import { loadAlignmentTopology } from "../topology";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Queue the alignment pull an aid package earns. Returns whether one was
@@ -44,17 +44,10 @@ export async function queueAidAlignmentPull(params: {
   const { db, organizationId, recipient, amountUsd, amountLocal, turn } = params;
   if (!(amountUsd > 0)) return false;
 
-  const gs = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, startingYear: 1, currentTurn: 1, intOrgAlignmentEnabled: 1 } }
-    );
-  // Fail-closed, and never queue a row the phase will not run: with the gate off
-  // the alignment phase does nothing at all, so an insert here would sit pending
-  // forever.
-  if (!(await isIntOrgAlignmentEnabled(gs ?? {}))) return false;
-
+  const gs = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
+  );
   const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();
   // No channel means this organisation carries no influence this era — the aid
   // still pays, it simply buys no alignment.

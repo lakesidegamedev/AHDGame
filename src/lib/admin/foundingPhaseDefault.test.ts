@@ -12,6 +12,11 @@ import { presetDefaultsToFoundingPhase } from "@/lib/seeds/presetSelector";
  *   races and would pin the calendar to the era start forever.
  */
 
+// Seed data is checked by the seed contract suite; this suite covers orchestration.
+vi.mock("@/lib/seeds/contract/checkSeedContract", () => ({
+  assertSeedContract: vi.fn(),
+  checkSeedContract: vi.fn(() => []),
+}));
 vi.mock("@/lib/admin/resetGameWorld", () => ({
   resetGameWorld: vi.fn(async () => ({
     success: true as const,

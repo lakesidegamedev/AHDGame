@@ -40,9 +40,9 @@ export function parseEquityLiquidityFacilityEnabled(
 }
 
 /** True when one argv entry is a gameplay override, which
- * --preserve-live-config refuses to run alongside. Covers both the canonical
- * equity liquidity facility flag and its deprecated alias, plus the #1001
- * sovereign issuance consolidation and domestic coverage flags. */
+ * --preserve-live-config refuses to run alongside. Covers the canonical
+ * equity liquidity facility flag, its deprecated alias, and the sovereign
+ * issuance consolidation and domestic coverage flags. */
 export function isGameplayOverrideArg(value: string): boolean {
   return /^(--(?:market-mode|labour-mode|autonomy|difficulty|foreign-policy|foreign-policy-stage|freight-settlement|npp-market-coverage|npp-fragile-market-supply|npp-fund-redemption|canonical-freight-billing|shortage-responsive-sourcing|index-fund-bond-liquidity|sovereign-issuance-consolidation|domestic-sovereign-bond-coverage|equity-liquidity-facility|equity-liquidity|frontier-entry-experiment)=|--(?:scarcity-drift|brand-loyalty|brand-loyalty-slice|quality|demographics|command-economy|macro-growth|pre-iteration|no-pre-iteration)$)/.test(
     value
@@ -87,10 +87,10 @@ export function economicExperimentConfigSet(
 }
 
 /**
- * Sim-pipeline spelling of the frontier-entry experiment gate (issue #991).
- * Single source of truth for the CLI flag name: worker.ts emits it and
- * runWorld.ts parses it, both through the helpers below, so the spelling
- * cannot drift between the two ends of the queue.
+ * Sim-pipeline spelling of the frontier-entry experiment gate. Single source
+ * of truth for the CLI flag name: worker.ts emits it and runWorld.ts parses
+ * it, both through the helpers below, so the spelling cannot drift between
+ * the two ends of the queue.
  */
 export const FRONTIER_ENTRY_SIM_CLI_FLAG = "frontier-entry-experiment";
 

@@ -1,20 +1,10 @@
 /**
- * Controlled evaluation harness for #1001: choose among issuance
- * consolidation, safe cross-border fund eligibility, and domestic fund
- * coverage WITHOUT enabling any mechanic.
- *
- * Pure rules module: plain data in, plain data out. No database, wall clock,
- * randomness, or environment reads, so the headless harness and worldsim
- * report evaluators can copy it. The caller loads evidence (trailing-12
- * vital-sign snapshots, active fund rows, country fill medians, terminal
- * reconciliation) from each sandbox world; this module aggregates the issue's
- * gates and emits a deterministic pass/fail report with first-failure
- * evidence. Absent evidence is reported as missing, never as a pass, and
- * never fabricated.
- *
- * Gate order follows the issue text: no-holder rate, fund backing plus the
- * 5% cash buffer, country goods-fill deltas, trial balance, money
- * attribution, then the two-sided equity-depth guardrails.
+ * Pure rules module for sovereign demand evaluation: plain data in, plain data out.
+ * No database, wall clock, randomness, or environment reads, so headless harness
+ * and worldsim evaluators can copy it. Caller supplies evidence; absent evidence
+ * is reported missing, never as a pass and never fabricated. Gate order: no-holder
+ * rate, fund backing plus 5% cash buffer, country goods-fill deltas, trial balance,
+ * money attribution, then two-sided equity-depth guardrails.
  */
 
 export const SOVEREIGN_DEMAND_EVALUATION_WINDOW_TURNS = 12;

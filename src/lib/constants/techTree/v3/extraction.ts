@@ -491,4 +491,92 @@ export const EXTRACTION_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Predictive Fleet Maintenance",
+      description: "Agents order parts before machines fail.",
+      effects: [
+        { kind: "inputCost", commodity: "vehicles", pct: 0.075 },
+        { kind: "laborCostReduction", pct: 0.045 },
+      ],
+    },
+    {
+      name: "Traceable Critical Minerals",
+      description: "Verified origin sells into the strictest supply rules.",
+      effects: [{ kind: "plantOutput", pct: 0.017 }],
+    },
+    {
+      name: "Water-Neutral Sites",
+      description: "Sites that return clean water get permits faster everywhere.",
+      effects: [{ kind: "dominanceShield", pct: 0.13 }],
+    },
+    {
+      name: "Unmanned Mine Sites",
+      description: "Fully robotic sites mine, process and load with no one underground.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "rare_earth", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Critical Mineral Auctions",
+      description: "Direct auctions of scarce material clear above contract prices.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "oil", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Strategic Mineral Partnerships",
+      description: "Government stockpile and offtake deals secure demand beyond any one nation.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.25 },
+        { kind: "expansionDiscount", pct: 0.2 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Self-Repairing Fleets",
+      description: "Machines diagnose and fix themselves in the pit.",
+      effects: [
+        { kind: "inputCost", commodity: "vehicles", pct: 0.08 },
+        { kind: "laborCostReduction", pct: 0.05 },
+      ],
+    },
+    {
+      name: "Certified Space-Sourced Metals",
+      description: "Metals mined off Earth sell into the strictest green rules.",
+      effects: [{ kind: "plantOutput", pct: 0.018 }],
+    },
+    {
+      name: "Zero-Footprint Mining",
+      description: "Sites that leave the land restored get permits faster everywhere.",
+      effects: [{ kind: "dominanceShield", pct: 0.14 }],
+    },
+    {
+      name: "Robotic Off-World Mines",
+      description: "Robot mines on asteroids and the Moon run with no one on site.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.1 },
+        { kind: "outputRate", commodity: "rare_earth", pct: 0.1 },
+      ],
+    },
+    {
+      name: "Space Metal Exchanges",
+      description: "Orbital metal sells at exchange prices above any Earth contract.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "iron", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Planetary Resource Treaties",
+      description: "Treaty rights to off-world deposits secure demand beyond any one nation.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.25 },
+        { kind: "expansionDiscount", pct: 0.2 },
+      ],
+    },
+  ],
 };

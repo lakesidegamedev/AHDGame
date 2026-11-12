@@ -1,23 +1,21 @@
 /**
  * POST /api/admin/retention
  *
- * Runs the history-retention pipeline (archive old rows to R2, then
- * delete/downsample). Admin-only.
+ * Runs the history-retention pipeline (archive to R2, then delete/downsample).
+ * Admin-only.
  *
- * Body (JSON):
- *   dryRun?: boolean       - default TRUE. When true, performs no writes and
- *                            returns only the manifest of what WOULD happen.
- *   collections?: string[] - restrict to specific collections (default: all).
- *   compact?: boolean      - run `compact` after deletes to reclaim disk.
+ * dryRun defaults to TRUE and performs no writes, returning only the manifest
+ * of what WOULD happen.
  *
  * Execution (dryRun=false) is refused unless env RETENTION_ENABLED === "1",
- * so the endpoint is safe to expose while the pipeline is being rolled out.
+ * so the endpoint is safe to expose.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { runRetention } from "@/lib/retention/retention";
+import { runtimeConfig } from "@/lib/config/runtime";
 
 const bodySchema = z.object({
   dryRun: z.boolean().optional().default(true),
@@ -30,9 +28,7 @@ export async function POST(request: Request) {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    // The endpoint historically accepted no request body (→ dry-run defaults).
-    // Parse tolerantly: an empty or absent body is valid; a present-but-malformed
-    // body is rejected.
+    // Empty or absent body is valid and means dry-run defaults; a present-but-malformed body is rejected.
     let text = "";
     try {
       text = await request.text();
@@ -53,7 +49,7 @@ export async function POST(request: Request) {
     }
     const { dryRun, collections, compact } = parsedBody.data;
 
-    if (!dryRun && process.env.RETENTION_ENABLED !== "1") {
+    if (!dryRun && !runtimeConfig.retentionEnabled()) {
       return errorResponse(
         403,
         "Retention execution is disabled. Set RETENTION_ENABLED=1 to run for real."

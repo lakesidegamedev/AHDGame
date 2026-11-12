@@ -17,6 +17,13 @@ import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constan
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -65,7 +72,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Resolve election by seatId or ObjectId
     let election: Election | null = null;
     if (isSeatId(electionId)) {
-      election = await db.collection<Election>("elections").findOne({
+      election = await electionsCollection(db).findOne({
         seatId: electionId,
         status: { $in: ["active", "upcoming"] },
       });
@@ -76,7 +83,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       } catch {
         return errorResponse(400, "Invalid election ID");
       }
-      election = await db.collection<Election>("elections").findOne({ _id: electionObjectId });
+      election = await electionsCollection(db).findOne({ _id: electionObjectId });
     }
     if (!election || election.electionType !== "president") {
       return errorResponse(400, "Not a presidential election");
@@ -86,7 +93,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Election is not active");
     }
 
-    const myCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const myCandidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -95,10 +102,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(403, "You are not a candidate in this election");
     }
 
-    if (election.countryId === "RU" && election.russianPresidentialRound) {
-      const game = await db
-        .collection<{ _id: string; currentTurn: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    if (countryHasFeature("ruApi", election.countryId) && election.russianPresidentialRound) {
+      const game = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
       if (
         myCandidate.russianTicketLocked ||
         election.russianPresidentialRound.round === 2 ||
@@ -113,7 +121,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (runningMateId === null || runningMateId === undefined || runningMateId === "") {
-      const changed = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+      const changed = await electionCandidatesCollection(db).updateOne(
         {
           _id: myCandidate._id,
           ...(election.russianPresidentialRound ? { russianTicketLocked: { $ne: true } } : {}),
@@ -138,7 +146,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const electionCountry = (election.countryId ?? COUNTRY_CONFIGS.US.id) as CountryId;
     const countryConfig = getCountryConfig(electionCountry);
 
-    const currentPresident = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const currentPresident = await electedOfficialsCollection(db).findOne({
       ...getExecutiveOfficialFilter(electionCountry, "president"),
       characterId: { $ne: null },
     });
@@ -146,9 +154,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "The current President cannot be a running mate");
     }
 
-    const runningMateChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: runningMateObjectId });
+    const runningMateChar = await charactersCollection(db).findOne({ _id: runningMateObjectId });
     if (!runningMateChar) {
       return errorResponse(404, "Running mate character not found");
     }
@@ -156,9 +162,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "That character is not eligible to be selected as running mate");
     }
 
-    const runningMateUser = await db
-      .collection<User>("users")
-      .findOne({ _id: runningMateChar.userId }, { projection: { _id: 1, isBanned: 1 } });
+    const runningMateUser = await usersCollection(db).findOne(
+      { _id: runningMateChar.userId },
+      { projection: { _id: 1, isBanned: 1 } }
+    );
     if (!runningMateUser || runningMateUser.isBanned) {
       return errorResponse(400, "That character is not eligible to be selected as running mate");
     }
@@ -183,19 +190,17 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // A candidate who suspended their own campaign to endorse is allowed to be a
     // running mate; only a genuinely-active (non-suspended) candidate is blocked.
-    const isAlreadyCandidate = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .findOne({
-        electionId: election._id,
-        characterId: runningMateObjectId,
-        status: "active",
-        campaignSuspended: { $ne: true },
-      });
+    const isAlreadyCandidate = await electionCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: runningMateObjectId,
+      status: "active",
+      campaignSuspended: { $ne: true },
+    });
     if (isAlreadyCandidate) {
       return errorResponse(400, "That character is already a candidate in this election");
     }
 
-    const changed = await db.collection<ElectionCandidate>("electionCandidates").updateOne(
+    const changed = await electionCandidatesCollection(db).updateOne(
       {
         _id: myCandidate._id,
         ...(election.russianPresidentialRound ? { russianTicketLocked: { $ne: true } } : {}),

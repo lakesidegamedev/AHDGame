@@ -10,7 +10,7 @@
  *
  *  - **Revocation did nothing at all.** It set `status: "revoked"`, refused to
  *    refund the owner while deposits existed, and left every depositor pointed
- *    at a dead bank with `npcDeposits` still on its books. That is ticket 1093:
+ *    at a dead bank with `npcDeposits` still on its books. That is:
  *    a revoke erased the balance sheet and stranded the money.
  *  - **Charter switch and admin unwind duplicated money.** Both credited the
  *    central bank's `externalBroadMoney` with the household deposit book while
@@ -73,8 +73,7 @@
 
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types/character";
-import type { DepositInsuranceFund, InterbankLoan } from "@/lib/db/types/bank";
+import type { InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -83,14 +82,20 @@ import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJour
 import type { BankingPolicySnapshot } from "./rules/policy";
 import { oid, type TransitionLeg, type TransitionProjection } from "@/lib/banking/rules/boundary";
 import { getNationalBudgetId, issueDepositInsuranceBackstopBond } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
-import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import { BANK_FAILURE_EVENTS } from "./failurePolitics";
 import type { BankFailurePoliticalEvent } from "./rules/failurePolitics";
 import { CENTRAL_BANK_HOLDER } from "@/lib/savings/rules/accounts";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { depositInsuranceFundsCollection } from "@/lib/db/repositories/depositInsuranceFunds";
+import { bankFailurePoliticalEventsCollection } from "@/lib/db/repositories/bankFailurePoliticalEvents";
 
 /** Budget spending line a deposit insurance backstop is booked against. */
 export const DEPOSIT_INSURANCE_SPENDING_KEY = "depositInsurance";
@@ -173,7 +178,7 @@ async function ensureTreasuryInsuranceCash(
   if (!(args.amount > 0)) return null;
   const countryId = getCountryIdForCurrency(args.currency);
   const budgetId = getNationalBudgetId(countryId);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne(
+  const budget = await federalBudgetCollection(db).findOne(
     { _id: budgetId },
     {
       projection: args.treasuryCashLedgerEnabled
@@ -206,7 +211,7 @@ async function ensureTreasuryInsuranceCash(
   });
   if (!issuance) return `Could not issue a funded insurance bond for ${countryId}.`;
 
-  const fundedBudget = await db.collection<FederalBudget>("federalBudget").findOne(
+  const fundedBudget = await federalBudgetCollection(db).findOne(
     { _id: budgetId },
     {
       projection: args.treasuryCashLedgerEnabled
@@ -246,7 +251,7 @@ export async function returnDepositBook(
   corporationId: ObjectId,
   options: DepositReturnOptions
 ): Promise<DepositBookReturnResult> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   let corp = await corporations.findOne(
     { _id: corporationId },
     {
@@ -316,9 +321,10 @@ export async function returnDepositBook(
       return { ...EMPTY, error: "Another bank operation owns deposit return" };
   }
   if (previous?.kind === "returning") {
-    const original = await db
-      .collection<{ _id: string }>("bankMoneyMoves")
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const original = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     if (original) {
       const recovered = await resumeSettlement(db, key);
       if (recovered.error || !["applied", "replayed"].includes(recovered.status))
@@ -378,9 +384,10 @@ async function returnDepositBookInner(
       };
     }
     if (liquidation.soldUnits > 0) {
-      const refreshed = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: corporationId }, { projection: { bankCharter: 1 } });
+      const refreshed = await corporationsCollection(db).findOne(
+        { _id: corporationId },
+        { projection: { bankCharter: 1 } }
+      );
       if (!refreshed?.bankCharter)
         return { ...EMPTY, error: "Failed-bank charter disappeared after bill liquidation" };
       charter = refreshed.bankCharter;
@@ -388,30 +395,27 @@ async function returnDepositBookInner(
   }
   const sheetOptions = { playerDepositsAreLiabilities };
 
-  // Under the pointer model the pointer flips first, outside the money move:
-  // it is not a money movement at all, it is a label, idempotent by
-  // construction, and doing it first means a crash mid-way leaves depositors
-  // free of a dead bank rather than trapped in one.
+  // Pointer model: flip the pointer first, outside the money move. It is a
+  // label, not a money movement, and idempotent by construction, so a
+  // crash mid-way leaves depositors free of a dead bank rather than
+  // trapped in one.
   //
-  // Under the account model the player balances the bank held are part of
-  // the book it must return (their backing came into the vault with the
-  // holder change, so it leaves with the household deposits, through the same
-  // waterfall, insured the same way), the pointer is a projection of the
-  // account, and both move AFTER the money has: the accounts were frozen by
-  // the caller before the waterfall started (see `freezeAccountsAt`) and are
-  // released to the central bank, open again, together with their pointers,
-  // only once the backing and the liability have both landed there. A crash
-  // in between leaves them frozen at the dead bank, which recovery finishes;
-  // it never leaves them open at a bank that no longer holds their cash, and
-  // never leaves the pointer saying one thing and the account another.
+  // Account model: player balances the bank held are part of the book it
+  // must return (their backing came in with the holder change, so it
+  // leaves with the household deposits through the same waterfall,
+  // insured the same way). Accounts were frozen by the caller before the
+  // waterfall (see `freezeAccountsAt`) and are released to the central
+  // bank, open again, with their pointers, only once backing and liability
+  // have both landed. A crash in between leaves them frozen at the dead
+  // bank, which recovery finishes; it never leaves them open at a bank
+  // that no longer holds their cash, and never leaves the pointer and
+  // account disagreeing.
   let depositorsFlipped = 0;
   if (!playerDepositsAreLiabilities) {
-    const flip = await db
-      .collection<Character>("characters")
-      .updateMany(
-        { [holderPath]: bankIdHex },
-        { $set: { [holderPath]: "centralBank", updatedAt: now } }
-      );
+    const flip = await charactersCollection(db).updateMany(
+      { [holderPath]: bankIdHex },
+      { $set: { [holderPath]: "centralBank", updatedAt: now } }
+    );
     depositorsFlipped = flip.modifiedCount ?? 0;
   }
   const playerBookReturned = playerDepositsAreLiabilities
@@ -441,9 +445,7 @@ async function returnDepositBookInner(
 
   // The fund pays what it has; the treasury covers the rest by deficit, which
   // is money entering the world and is booked as such.
-  const fund = await db
-    .collection<DepositInsuranceFund>("depositInsuranceFunds")
-    .findOne({ _id: currency });
+  const fund = await depositInsuranceFundsCollection(db).findOne({ _id: currency });
   const fundBalance = Math.max(0, fund?.balance ?? 0);
   const fromInsuranceFund = Math.min(fundBalance, shortfall);
   const fromTreasury = Math.max(0, shortfall - fromInsuranceFund);
@@ -470,8 +472,7 @@ async function returnDepositBookInner(
   // central bank facilities, this money was never minted: it came out of
   // another bank's vault, so recovering it is a transfer rather than a burn.
   const cashAfterDeposits = Math.max(0, cashAfterCentralBank - fromBankCash);
-  const interbankLoans = await db
-    .collection<InterbankLoan>("interbankLoans")
+  const interbankLoans = await interbankLoansCollection(db)
     .find({ borrowerCorporationId: corporationId, status: "current" })
     .toArray();
   const interbankOwed = interbankLoans.reduce(
@@ -493,8 +494,7 @@ async function returnDepositBookInner(
   // shareholder who has already collected.
   const lenderIds = [...new Set(interbankLoans.map((loan) => loan.lenderCorporationId.toString()))];
   const lenders = lenderIds.length
-    ? await db
-        .collection<Corporation>("corporations")
+    ? await corporationsCollection(db)
         .find({ _id: { $in: lenderIds.map((id) => new ObjectId(id)) } })
         .project<Pick<Corporation, "_id" | "name" | "bankCharter">>({ name: 1, bankCharter: 1 })
         .toArray()
@@ -522,10 +522,8 @@ async function returnDepositBookInner(
     largest.paid = toCents(largest.paid + remainder);
   }
 
-  // (4) Cash left after every creditor belongs to the owner, but only as far as
-  // book equity: anything above that is still owed to somebody, and paying it
-  // out is the "distribution funded by borrowing" hole the upstream guard
-  // already refuses to open.
+  // Cash left after every creditor belongs to the owner, but only up to
+  // book equity; anything above that is still owed to somebody.
   const surplus = Math.max(0, cashAfterDeposits - interbankPaid);
   const ownerResidual = options.releaseResidualToOwner ? Math.max(0, Math.min(surplus, equity)) : 0;
 
@@ -714,9 +712,10 @@ async function returnDepositBookInner(
 
   if (policy.failurePolitics && options.cause === "failure" && npc > 0) {
     const countryId = getCountryIdForCurrency(currency);
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) }, { projection: { gdp: 1 } });
+    const budget = await federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) },
+      { projection: { gdp: 1 } }
+    );
     // Both GDP and paid amounts are in this government's native currency.
     // Publish last: no event is visible before cash and liability projections land.
     if (typeof budget?.gdp === "number" && Number.isFinite(budget.gdp) && budget.gdp > 0) {
@@ -765,22 +764,18 @@ async function returnDepositBookInner(
       depositorsFlipped,
       await releaseAccountsFrom(db, bankIdHex, currency, now)
     );
-    await db
-      .collection<Character>("characters")
-      .updateMany(
-        { [holderPath]: bankIdHex },
-        { $set: { [holderPath]: "centralBank", updatedAt: now } }
-      );
+    await charactersCollection(db).updateMany(
+      { [holderPath]: bankIdHex },
+      { $set: { [holderPath]: "centralBank", updatedAt: now } }
+    );
   }
   if (policy.failurePolitics && options.cause === "failure") {
     // Activation follows completed cash and liability settlement, including replay.
     // A delayed payout starts its decay when delivered, not when first claimed.
-    await db
-      .collection<BankFailurePoliticalEvent>(BANK_FAILURE_EVENTS)
-      .updateOne(
-        { _id: `bank-failure:${bankIdHex}:${charter.charteredTurn}`, paidTurn: null },
-        { $set: { paidTurn: options.effectsTurn ?? options.turn } }
-      );
+    await bankFailurePoliticalEventsCollection<BankFailurePoliticalEvent>(db).updateOne(
+      { _id: `bank-failure:${bankIdHex}:${charter.charteredTurn}`, paidTurn: null },
+      { $set: { paidTurn: options.effectsTurn ?? options.turn } }
+    );
   }
   if (settled.status === "replayed") {
     // The cash moved on an earlier attempt and any projections that attempt
@@ -790,8 +785,8 @@ async function returnDepositBookInner(
   }
 
   // The journaled treasury-backstop projection moves cash (plus the
-  // spending/surplus legs); `debt.principal` belongs to the bond ledger (see
-  // bonds/sovereignPrincipal.ts) and is correctly left alone (#1975).
+  // spending/surplus legs); `debt.principal` belongs to the bond ledger
+  // (see bonds/sovereignPrincipal.ts) and is correctly left alone.
 
   const result: DepositBookReturnResult = {
     returned: true,
@@ -848,12 +843,10 @@ export async function freezeAccountsAt(
   currency: CurrencyCode,
   now: Date
 ): Promise<number> {
-  const frozen = await db
-    .collection<SavingsAccount>("savingsAccounts")
-    .updateMany(
-      { currency, holder: bankIdHex, status: "open" },
-      { $set: { status: "frozen", updatedAt: now } }
-    );
+  const frozen = await savingsAccountsCollection(db).updateMany(
+    { currency, holder: bankIdHex, status: "open" },
+    { $set: { status: "frozen", updatedAt: now } }
+  );
   return frozen.modifiedCount ?? 0;
 }
 
@@ -869,12 +862,10 @@ export async function releaseAccountsFrom(
   currency: CurrencyCode,
   now: Date
 ): Promise<number> {
-  const released = await db
-    .collection<SavingsAccount>("savingsAccounts")
-    .updateMany(
-      { currency, holder: bankIdHex },
-      { $set: { holder: CENTRAL_BANK_HOLDER, status: "open", updatedAt: now } }
-    );
+  const released = await savingsAccountsCollection(db).updateMany(
+    { currency, holder: bankIdHex },
+    { $set: { holder: CENTRAL_BANK_HOLDER, status: "open", updatedAt: now } }
+  );
   return released.modifiedCount ?? 0;
 }
 
@@ -988,10 +979,9 @@ function creditorClaimProjections(
 /**
  * Zero the deposit aggregates AFTER the cash has moved, never before.
  *
- * Order matters and used to be the other way round: `adminUnwind` cleared the
- * aggregates so that `revokeCharter` would see an empty book and refund the
- * owner, which is how a shareholder ended up with the depositors' cash. As
- * the last projection of the transition, it cannot run before the legs.
+ * As the last projection of the transition, it cannot run before the legs: a
+ * premature clear makes the revoke path see an empty book and hand the
+ * depositors' cash to the shareholder.
  */
 function depositAggregateClearProjection(
   bankIdHex: string,
@@ -1027,7 +1017,7 @@ function depositAggregateClearProjection(
  *
  * The balance/spending/surplus legs stay `$inc` (concurrent-safe).
  * `debt.principal` belongs to the bond ledger (see bonds/sovereignPrincipal.ts)
- * and is correctly left alone (#1975).
+ * and is correctly left alone.
  */
 export async function debitTreasuryDepositInsurance(
   db: Db,
@@ -1039,25 +1029,23 @@ export async function debitTreasuryDepositInsurance(
   const countryId = getCountryIdForCurrency(currency);
   const budgetId = getNationalBudgetId(countryId);
   const now = new Date();
-  const result = await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      treasuryCashLedgerEnabled
-        ? { _id: budgetId, treasuryCashLocal: { $gte: amount } }
-        : { _id: budgetId, treasuryBalance: { $gte: amount } },
-      {
-        $inc: {
-          ...(treasuryCashLedgerEnabled
-            ? { treasuryCashLocal: -amount }
-            : { treasuryBalance: -amount }),
-          ...(treasuryCashLedgerEnabled ? { treasuryBalance: -amount } : {}),
-          [`spending.byCategory.${DEPOSIT_INSURANCE_SPENDING_KEY}`]: amount,
-          "spending.total": amount,
-          surplus: -amount,
-        },
-        $set: { updatedAt: now },
-      }
-    );
+  const result = await federalBudgetCollection(db).updateOne(
+    treasuryCashLedgerEnabled
+      ? { _id: budgetId, treasuryCashLocal: { $gte: amount } }
+      : { _id: budgetId, treasuryBalance: { $gte: amount } },
+    {
+      $inc: {
+        ...(treasuryCashLedgerEnabled
+          ? { treasuryCashLocal: -amount }
+          : { treasuryBalance: -amount }),
+        ...(treasuryCashLedgerEnabled ? { treasuryBalance: -amount } : {}),
+        [`spending.byCategory.${DEPOSIT_INSURANCE_SPENDING_KEY}`]: amount,
+        "spending.total": amount,
+        surplus: -amount,
+      },
+      $set: { updatedAt: now },
+    }
+  );
   if (!result.matchedCount)
     throw new Error("Treasury cash cannot cover the deposit insurance debit.");
 }

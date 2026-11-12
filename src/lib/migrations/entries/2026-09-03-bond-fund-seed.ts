@@ -7,6 +7,8 @@ import {
   INDEX_FUND_SEED_RESERVE_UNITS,
 } from "@/lib/indexFunds/unitAccounting";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 /**
  * Seed the bond index funds (one home-sovereign fund per broad-fund country,
@@ -16,8 +18,8 @@ import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
  */
 async function seedBondFunds(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
   const now = new Date();
-  const coll = db.collection<IndexFund>("indexFunds");
-  const positions = db.collection<IndexFundPosition>("indexFundPositions");
+  const coll = indexFundsCollection(db);
+  const positions = indexFundPositionsCollection(db);
   const existing = new Set(
     (
       await coll

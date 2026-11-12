@@ -1,13 +1,15 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Election, NPPEndorsement, NPP } from "@/lib/db/types";
 import { buildActiveVisibleNppEndorsementFilter } from "@/lib/nppEndorsements";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 export async function getNppEndorsements(db: Db, nppId: ObjectId) {
-  const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+  const npp = await nppsCollection(db).findOne({ _id: nppId });
   if (!npp) return null;
 
-  const endorsements = await db
-    .collection<NPPEndorsement>("nppEndorsements")
+  const endorsements = await nppEndorsementsCollection(db)
     .find(buildActiveVisibleNppEndorsementFilter({ nppId }))
     .sort({ createdAt: -1 })
     .toArray();
@@ -15,8 +17,7 @@ export async function getNppEndorsements(db: Db, nppId: ObjectId) {
   const elections =
     endorsements.length === 0
       ? []
-      : await db
-          .collection<Election>("elections")
+      : await electionsCollection(db)
           .find({ _id: { $in: endorsements.map((endorsement) => endorsement.electionId) } })
           .toArray();
   const electionMap = new Map(elections.map((election) => [election._id.toString(), election]));

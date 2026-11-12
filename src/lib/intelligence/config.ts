@@ -55,16 +55,12 @@ export const ACTION_MIN_NETWORK_LEVEL = 2;
 /** Live coverage an action operation needs. The "cannot act blind" gate. */
 export const ACTION_MIN_COVERAGE = 40;
 /**
- * Operation cost as a fraction of the OWNER'S OWN GDP, not a flat currency amount.
- *
- * `federalBudget.gdp` is denominated in each country's own currency — live figures span
- * RU 1.478e12 down to UK 2.201e10 — so a flat price is not a balance dial, it is a currency
- * artefact: 75,000 bought the UK three operations a turn and Russia two hundred at the very
- * same share of GDP. Because the funding line is also a fraction of the same GDP, GDP
- * CANCELS, and a given funding level affords exactly the same in every country and era.
- *
- * Calibrated so level 2 ("Standing Service", 0.0015 of GDP) affords both operation slots
- * plus one network at `steady`, which is the design centre of the funding ladder.
+ * Operation cost as a fraction of the OWNER'S OWN GDP, not a flat currency
+ * amount. `federalBudget.gdp` is denominated in each country's own currency,
+ * so a flat price is a currency artefact, not a balance dial. Because the
+ * funding line is also a GDP fraction, GDP CANCELS and a given funding level
+ * affords the same in every country and era. Calibrated so level 2
+ * ("Standing Service") affords both operation slots plus one network.
  */
 export const OP_COST_GDP_FRACTION = 9.0e-6;
 export const ACTION_COST_GDP_FRACTION = 2.7e-5;

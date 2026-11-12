@@ -16,7 +16,7 @@ describe("officialsCountryScope", () => {
   });
 
   it("always constrains the country, so an unscoped query is never produced", () => {
-    // The bug this exists to prevent (#0699) is a filter that omits the country
+    // The bug this exists to prevent is a filter that omits the country
     // entirely and matches a same-numbered party in another country.
     for (const countryId of ["US", "UK", "BR", "RU", "CN"] as const) {
       expect(Object.keys(officialsCountryScope(countryId)).length).toBeGreaterThan(0);

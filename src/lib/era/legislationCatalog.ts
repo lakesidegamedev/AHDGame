@@ -1,73 +1,34 @@
 /**
  * Era-Aware Legislation catalog (Spec A). Single source of truth for WHEN a
- * legislation type may exist. Inert while `eraSystemEnabled` is off: every
- * resolver treats a null year as "legacy" (all types active), so flag-off
- * behavior is byte-identical.
+ * legislation type may exist. Every resolver treats a null year as
+ * "legacy" (all types active).
  *
  * EVERY seed legislation type appears here explicitly — windowed types as a
  * number (first fileable year), era-universal types as the literal "always".
  * No silent gaps: legislationCatalog.validation.test.ts asserts the key set
  * equals the live seed catalog exactly, so adding a type without classifying
  * it fails CI.
- *
- * Spec: docs/superpowers/specs/2026-07-06-era-legislation-design.md (Appendix A).
  */
 
 import { successorTaxInstrumentIds } from "@/lib/resetLegislation/successorTaxTypes";
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";
 import { MECHANICAL_LEGISLATION_ERA_ENTRIES } from "@/lib/mechanicalLaws/legislation";
+import { SAVED_WORLD_LEGISLATION_ERA } from "./savedWorldLegislationEra";
+import {
+  MODERN_ERA_LEGISLATION_ERA_ENTRIES,
+  MODERN_ERA_LEGISLATION_UNTIL_ENTRIES,
+} from "@/lib/seeds/shared/modernEraLegislation";
+import {
+  isNewGenerationLawActive,
+  isNewGenerationLawFileable,
+  newGenerationLawWindowFrom,
+} from "@/lib/politicalLegislation/catalog";
 
 export const LEGISLATION_ERA: Record<string, number | "always"> = {
   ...Object.fromEntries(successorTaxInstrumentIds.map((id) => [id, "always" as const])),
   // ── Windowed (74) — numbers are the first fileable calendar year ──────────
   // US (8)
-  us_broadband_energy: 1998,
-  us_state_utilities: 1998,
-  us_clean_energy: 1974,
-  us_state_environment: 1974,
-  us_medicaid: 1965,
-  us_medicaid_expansion: 1965,
-  us_drug_pricing_medicare: 1965,
-  us_paid_family_leave: 1993,
   // UK (6)
-  uk_digital_broadband: 1998,
-  uk_climate_net_zero: 1990,
-  uk_north_sea_energy: 1974,
-  uk_mental_health: 1970,
-  uk_devolution_local_powers: 1979,
-  uk_trident_defence: 1956,
-  // DE (18)
-  de_digital_infrastructure: 1998,
-  de_cybersecurity: 1998,
-  de_digital_governance: 1998,
-  de_renewable_energy_target: 1974,
-  de_carbon_pricing: 1990,
-  de_climate_targets: 1990,
-  de_nuclear_energy: 1961,
-  de_mental_health: 1970,
-  de_solidarity_surcharge: 1991,
-  de_eu_integration: 1993,
-  de_defense_posture: 1956,
-  de_bundeswehr_funding: 1956,
-  de_wehrpflicht: 1956,
-  de_family_policy: 1996,
-  de_robotics_ai: 1980,
-  de_payroll_social_insurance: 1957,
-  de_pension_system: 1957,
-  de_integration_programs: 1961,
-  // JP (12)
-  jp_digital_infrastructure: 1998,
-  jp_digital_governance: 1998,
-  jp_cybersecurity: 1998,
-  jp_nuclear_energy: 1966,
-  jp_climate_emissions: 1990,
-  jp_renewable_energy: 1974,
-  jp_mental_health: 1970,
-  jp_foreign_worker_policy: 1990,
-  jp_visa_residency: 1990,
-  jp_integration_programs: 1990,
-  jp_robotics_ai: 1980,
-  jp_rd_investment: 1980,
   // IE (9)
   ie_digital_infrastructure: 1998,
   ie_cybersecurity: 1998,
@@ -79,23 +40,6 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   ie_immigration_asylum: 2000,
   ie_regional_health: 2005,
   // CN (17)
-  cn_common_prosperity: 2021,
-  cn_belt_and_road: 2013,
-  cn_cybersecurity: 2014,
-  cn_internet_governance: 1998,
-  cn_hukou_reform: 1958,
-  cn_hk_macao_affairs: 1997,
-  cn_ai_strategy: 2015,
-  cn_semiconductor_strategy: 1986,
-  cn_emissions_trading_scheme: 1997,
-  cn_climate_targets: 2000,
-  cn_nuclear_energy: 1991,
-  cn_renewable_energy_target: 1974,
-  cn_digital_infrastructure: 1998,
-  cn_mental_health: 1970,
-  cn_gaokao_reform: 1977,
-  cn_pension_system: 1957,
-  cn_social_insurance_contribution: 1957,
   // NG (4)
   ng_renewable_energy: 1974,
   ng_digital_economy: 1998,
@@ -162,51 +106,7 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   br_social_security_benefits: "always",
   br_state_enterprises: "always",
   br_state_grants: "always",
-  cn_academic_pressure_reform: "always",
-  cn_agricultural_subsidies: "always",
-  cn_anticorruption_campaign: "always",
-  cn_conscription: "always",
-  cn_criminal_justice: "always",
-  cn_customs_tariff: "always",
-  cn_diaspora_engagement: "always",
-  cn_education_funding: "always",
-  cn_elder_care: "always",
-  cn_enterprise_income_tax: "always",
-  cn_family_policy: "always",
-  cn_fiscal_stimulus: "always",
-  cn_food_security: "always",
-  cn_gender_equality: "always",
-  cn_housing: "always",
-  cn_individual_income_tax: "always",
-  cn_industrial_strategy: "always",
-  cn_land_value_added_tax: "always",
-  cn_medical_insurance: "always",
-  cn_minimum_wage: "always",
-  cn_npc_reform: "always",
-  cn_pla_modernization: "always",
-  cn_press_freedom: "always",
-  cn_provincial_culture_propaganda: "always",
-  cn_provincial_economic_development: "always",
-  cn_provincial_education: "always",
-  cn_provincial_environmental_policy: "always",
-  cn_provincial_health_services: "always",
-  cn_provincial_infrastructure_investment: "always",
-  cn_provincial_public_security: "always",
   cn_provincial_resource_tax: "always",
-  cn_public_health: "always",
-  cn_public_security: "always",
-  cn_rail_transport: "always",
-  cn_research_science: "always",
-  cn_rural_revitalization: "always",
-  cn_skilled_immigration: "always",
-  cn_stamp_duty: "always",
-  cn_state_enterprises: "always",
-  cn_state_media_funding: "always",
-  cn_taiwan_strait_doctrine: "always",
-  cn_un_security_council_posture: "always",
-  cn_urban_maintenance_construction_tax: "always",
-  cn_us_china_relations: "always",
-  cn_value_added_tax: "always",
   cs_defense_appropriations: "always",
   cs_economic_system: "always",
   cs_enterprise_levy: "always",
@@ -222,58 +122,6 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   cs_social_security_fund: "always",
   cs_state_administration: "always",
   cs_universal_education: "always",
-  dd_civil_liberties: "always",
-  dd_economic_system: "always",
-  dd_enterprise_levy: "always",
-  dd_foreign_trade: "always",
-  dd_housing: "always",
-  dd_income_tax: "always",
-  dd_political_system: "always",
-  dd_price_controls: "always",
-  dd_product_tax: "always",
-  dd_social_insurance: "always",
-  de_academic_reform: "always",
-  de_agricultural_subsidies: "always",
-  de_animal_welfare: "always",
-  de_asylum_policy: "always",
-  de_constitutional_protection: "always",
-  de_criminal_justice: "always",
-  de_customs_tariff_rate: "always",
-  de_domestic_corporate_tax_rate: "always",
-  de_education_funding: "always",
-  de_elder_care: "always",
-  de_electoral_reform: "always",
-  de_fiscal_stimulus_act: "always",
-  de_food_security: "always",
-  de_foreign_aid_diplomacy: "always",
-  de_foreign_corporate_tax_rate: "always",
-  de_gender_equality: "always",
-  de_government_ethics: "always",
-  de_grundgesetz_reform: "always",
-  de_health_insurance: "always",
-  de_housing: "always",
-  de_immigration_policy: "always",
-  de_income_tax_rate: "always",
-  de_labor_reform: "always",
-  de_land_culture: "always",
-  de_land_economic_development: "always",
-  de_land_education: "always",
-  de_land_health_services: "always",
-  de_land_municipal_grants: "always",
-  de_land_police: "always",
-  de_minimum_wage: "always",
-  de_policing_public_safety: "always",
-  de_press_freedom: "always",
-  de_public_broadcasting: "always",
-  de_public_health: "always",
-  de_rail_transport: "always",
-  de_research_science: "always",
-  de_sme_mittelstand: "always",
-  de_trade_agreements: "always",
-  de_trade_tax: "always",
-  de_unemployment_welfare: "always",
-  de_university_tuition: "always",
-  de_vat_rate: "always",
   es_consumption_tax: "always",
   es_corporate_tax: "always",
   es_customs_tariff: "always",
@@ -312,6 +160,8 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   hu_state_administration: "always",
   hu_universal_education: "always",
   ie_agricultural_subsidies: "always",
+  jp_fixed_asset_tax: "always",
+  jp_resident_tax: "always",
   ie_capital_gains_tax: "always",
   ie_childcare_policy: "always",
   ie_corporate_tax_rate: "always",
@@ -374,57 +224,6 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   it_state_holdings: "always",
   it_vat: "always",
   it_welfare_state: "always",
-  jp_academic_reform: "always",
-  jp_agricultural_subsidies: "always",
-  jp_article9_sdf: "always",
-  jp_constitutional_reform: "always",
-  jp_consumption_tax: "always",
-  jp_criminal_justice: "always",
-  jp_customs_tariff: "always",
-  jp_defense_spending: "always",
-  jp_disaster_preparedness: "always",
-  jp_domestic_corporation_tax: "always",
-  jp_education_funding: "always",
-  jp_elder_care: "always",
-  jp_electoral_reform: "always",
-  jp_family_policy: "always",
-  jp_fiscal_stimulus: "always",
-  jp_fixed_asset_tax: "always",
-  jp_food_security: "always",
-  jp_foreign_aid_diplomacy: "always",
-  jp_foreign_corporation_tax: "always",
-  jp_gender_equality: "always",
-  jp_income_tax_rate: "always",
-  jp_jsdf_recruitment: "always",
-  jp_labor_reform: "always",
-  jp_local_allocation_tax: "always",
-  jp_media_press: "always",
-  jp_minimum_wage: "always",
-  jp_national_health_insurance: "always",
-  jp_pension: "always",
-  jp_policing_public_safety: "always",
-  jp_public_health: "always",
-  jp_rail_transport: "always",
-  jp_regional_agriculture: "always",
-  jp_regional_autonomy: "always",
-  jp_regional_economic_development: "always",
-  jp_regional_education: "always",
-  jp_regional_environment: "always",
-  jp_regional_governance: "always",
-  jp_regional_health: "always",
-  jp_regional_policing: "always",
-  jp_regional_skills: "always",
-  jp_regional_social_services: "always",
-  jp_regional_transport: "always",
-  jp_regional_utilities: "always",
-  jp_research_science: "always",
-  jp_resident_tax: "always",
-  jp_rural_development: "always",
-  jp_sme_support: "always",
-  jp_social_insurance: "always",
-  jp_trade_agreements: "always",
-  jp_university_tuition: "always",
-  jp_work_culture_reform: "always",
   ng_agriculture_policy: "always",
   ng_anti_corruption: "always",
   ng_basic_education: "always",
@@ -522,22 +321,8 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   se_local_grants: "always",
   se_social_charges: "always",
   se_vat: "always",
-  resource_extraction_authority: "always",
   se_wage_earner_funds: "always",
   se_welfare_state: "always",
-  senate_filibuster_rules: "always",
-  su_agriculture: "always",
-  su_civil_liberties: "always",
-  su_customs_tariff: "always",
-  su_defense_spending: "always",
-  su_economic_system: "always",
-  su_enterprise_levy: "always",
-  su_housing: "always",
-  su_individual_income_tax: "always",
-  su_political_system: "always",
-  su_price_controls: "always",
-  su_social_insurance: "always",
-  su_turnover_tax: "always",
   at_corporate_tax: "always",
   at_customs_tariff: "always",
   at_defense_appropriations: "always",
@@ -594,62 +379,6 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   tr_social_charges: "always",
   tr_state_enterprises: "always",
   tr_welfare_state: "always",
-  uk_agriculture_policy: "always",
-  uk_bbc_public_media: "always",
-  uk_business_rates: "always",
-  uk_childcare: "always",
-  uk_council_tax: "always",
-  uk_defence_spending: "always",
-  uk_domestic_corporation_tax: "always",
-  uk_drug_policy: "always",
-  uk_education_funding: "always",
-  uk_education_standards: "always",
-  uk_electoral_reform: "always",
-  uk_energy_grid: "always",
-  uk_excise_customs: "always",
-  uk_fiscal_spending: "always",
-  uk_foreign_corporation_tax: "always",
-  uk_foreign_policy: "always",
-  uk_government_ethics: "always",
-  uk_housing_planning: "always",
-  uk_immigration_asylum: "always",
-  uk_income_tax_rate: "always",
-  uk_leasehold_reform: "always",
-  uk_local_government_funding: "always",
-  uk_national_insurance: "always",
-  uk_national_service: "always",
-  uk_nhs_funding: "always",
-  uk_policing_crime: "always",
-  uk_prison_rehabilitation: "always",
-  uk_public_health: "always",
-  uk_regional_agriculture: "always",
-  uk_regional_economic_development: "always",
-  uk_regional_education: "always",
-  uk_regional_emergency_services: "always",
-  uk_regional_environment: "always",
-  uk_regional_governance: "always",
-  uk_regional_health: "always",
-  uk_regional_housing_development: "always",
-  uk_regional_housing_support: "always",
-  uk_regional_justice: "always",
-  uk_regional_labour: "always",
-  uk_regional_policing: "always",
-  uk_regional_skills: "always",
-  uk_regional_technology: "always",
-  uk_regional_transport: "always",
-  uk_regional_utilities: "always",
-  uk_research_science: "always",
-  uk_social_care: "always",
-  uk_state_pensions: "always",
-  uk_surveillance_privacy: "always",
-  uk_technology_policy: "always",
-  uk_transport_rail: "always",
-  uk_tuition_fees: "always",
-  uk_universal_credit: "always",
-  uk_vat: "always",
-  uk_work_visas: "always",
-  uk_workers_rights: "always",
-  uk_workforce_development: "always",
   ukr_defense_appropriations: "always",
   ukr_economic_system: "always",
   ukr_enterprise_levy: "always",
@@ -665,63 +394,9 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   ukr_social_security_fund: "always",
   ukr_state_administration: "always",
   ukr_universal_education: "always",
-  us_border_security_enforcement: "always",
-  us_civics_voting_rights: "always",
-  us_conservation: "always",
-  us_defense_spending: "always",
-  us_emergency_services: "always",
-  us_federal_domestic_corporate_tax_rate: "always",
-  us_federal_education_funding: "always",
-  us_federal_foreign_corporate_tax_rate: "always",
-  us_federal_healthcare_funding: "always",
-  us_federal_income_tax_rate: "always",
-  us_federal_payroll_tax_rate: "always",
-  us_federal_sales_tax_rate: "always",
-  us_federal_science_funding: "always",
-  us_federal_spending_stimulus: "always",
-  us_federal_tariff_rate: "always",
-  us_food_nutrition: "always",
-  us_foreign_policy: "always",
-  us_government_ethics: "always",
-  us_gun_control: "always",
-  us_housing: "always",
-  us_law_enforcement_criminal_justice: "always",
-  us_legal_immigration_visas: "always",
-  us_media_communications: "always",
-  us_minimum_wage: "always",
-  us_national_service: "always",
-  us_prison_rehabilitation: "always",
-  us_public_health: "always",
-  us_reproductive_rights: "always",
-  us_school_standards: "always",
-  us_social_security: "always",
-  us_state_business_regulation: "always",
   us_state_compactness: "always",
-  us_state_domestic_corporate_tax_rate: "always",
-  us_state_education_funding: "always",
   us_state_fairness: "always",
-  us_state_food_assistance: "always",
-  us_state_foreign_corporate_tax_rate: "always",
-  us_state_government_ethics: "always",
-  us_state_healthcare: "always",
-  us_state_higher_education: "always",
-  us_state_housing: "always",
-  us_state_income_tax_rate: "always",
-  us_state_labor: "always",
-  us_state_media_communications: "always",
-  us_state_minimum_wage: "always",
-  us_state_policing: "always",
-  us_state_prison_rehabilitation: "always",
-  us_state_property_tax_rate: "always",
-  us_state_public_health: "always",
   us_state_redistricting_authority: "always",
-  us_state_sales_tax_rate: "always",
-  us_state_spending_stimulus: "always",
-  us_state_transportation: "always",
-  us_state_voting_rights: "always",
-  us_state_workforce_development: "always",
-  us_transportation: "always",
-  us_workforce_development: "always",
   yu_defense_appropriations: "always",
   yu_economic_system: "always",
   yu_enterprise_levy: "always",
@@ -740,6 +415,24 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   // Banking separation: reusable charter law, era-universal for every legislature.
   ...BANKING_SEPARATION_ERA_ENTRIES,
   ...MECHANICAL_LEGISLATION_ERA_ENTRIES,
+  // 2027 to 2040 law types (AI liability, wage insurance, climate adaptation, ...).
+  ...MODERN_ERA_LEGISLATION_ERA_ENTRIES,
+};
+
+/**
+ * Optional end of filing for a LEGISLATION_ERA entry: the first calendar year in
+ * which no NEW bill may legislate the type. Old laws fade rather than vanish, so
+ * an enacted law of the type stays in force, keeps its budget line and keeps its
+ * effects; only proposing and sponsoring stop. Keys must be LEGISLATION_ERA keys
+ * and each year must fall after the entry's first fileable year.
+ *
+ * Each entry names the successor that takes over its filing.
+ */
+export const LEGISLATION_ERA_UNTIL: Record<string, number> = {
+  // The four-day work week (2040) takes over the working-hours side of the
+  // older work culture reform law, which already offered a four-day option.
+  // The automation dividend (2040) replaces the automation tax for new bills.
+  ...MODERN_ERA_LEGISLATION_UNTIL_ENTRIES,
 };
 
 /**
@@ -752,40 +445,56 @@ export const WINDOW_CONSTRAINT_WAIVERS = new Set<string>([
   "ie_excise_duty",
   "ie_peat_bog_policy",
   "ng_excise_duty",
-  "cn_un_security_council_posture",
-  "cn_diaspora_engagement",
   "cn_provincial_resource_tax",
-  "cn_provincial_environmental_policy",
-  "cn_internet_governance",
 ]);
 
 /** Windowed tax types whose revenue line is consciously gated (vanishes pre-window). */
-export const GATED_REVENUE_ACK = new Set<string>([
-  "de_solidarity_surcharge",
-  "de_payroll_social_insurance",
-  "cn_social_insurance_contribution",
-  "ng_petroleum_profit_tax",
-]);
+export const GATED_REVENUE_ACK = new Set<string>(["ng_petroleum_profit_tax"]);
 
 /** In-game years a freshly-unlocked type wears the "New this era" badge. */
 const NEW_BADGE_YEARS = 2;
 
 /**
  * True if the type may exist at `year`. Null year (flag off / legacy) ⇒ true.
- * "always" ⇒ true. Unknown typeId ⇒ true (fail-open; validation forbids it).
+ * "always" ⇒ true. A new-generation law answers from its own `window` start,
+ * which never closes, so enacted laws stay in force. Unknown typeId ⇒ true
+ * (fail-open; validation forbids it).
  */
 export function isLegislationTypeActive(typeId: string, year: number | null): boolean {
   typeId = typeId.split(/__(?:income|capital)_/)[0];
   if (year == null || !Number.isFinite(year)) return true;
-  const from = LEGISLATION_ERA[typeId];
-  if (from === undefined || from === "always") return true;
+  const from = LEGISLATION_ERA[typeId] ?? SAVED_WORLD_LEGISLATION_ERA[typeId];
+  if (from === undefined) return isNewGenerationLawActive(typeId, year) ?? true;
+  if (from === "always") return true;
   return year >= from;
+}
+
+/**
+ * True if a NEW bill may legislate the type at `year`: it exists
+ * ({@link isLegislationTypeActive}) and has not passed its
+ * {@link LEGISLATION_ERA_UNTIL} year. Use this on filing, sponsoring and
+ * proposal-picker paths only; enacted laws keep resolving through
+ * isLegislationTypeActive so they stay in force after filing closes.
+ *
+ * New-generation laws (US, UK, RU, DD law books) carry their own `window` and
+ * follow the same rule: fileable while from <= year < until.
+ */
+export function isLegislationTypeFileable(typeId: string, year: number | null): boolean {
+  if (!isLegislationTypeActive(typeId, year)) return false;
+  if (year == null || !Number.isFinite(year)) return true;
+  const newGeneration = isNewGenerationLawFileable(typeId, year);
+  if (newGeneration != null) return newGeneration;
+  const until = LEGISLATION_ERA_UNTIL[typeId.split(/__(?:income|capital)_/)[0]];
+  return until === undefined || year < until;
 }
 
 /** True while `from <= year <= from + NEW_BADGE_YEARS`. Null year / "always" ⇒ false. */
 export function isNewThisEra(typeId: string, year: number | null): boolean {
   if (year == null || !Number.isFinite(year)) return false;
-  const from = LEGISLATION_ERA[typeId];
+  const from =
+    LEGISLATION_ERA[typeId] ??
+    SAVED_WORLD_LEGISLATION_ERA[typeId] ??
+    newGenerationLawWindowFrom(typeId);
   if (from === undefined || from === "always") return false;
   return year >= from && year - from <= NEW_BADGE_YEARS;
 }

@@ -5,8 +5,9 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CabinetMember } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import { incompatibleBankHolders } from "./rules/officeCompatibility";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export async function getIncompatibleOfficeHolders(
   db: Db,
@@ -15,16 +16,14 @@ export async function getIncompatibleOfficeHolders(
 ): Promise<Set<string>> {
   if (characterIds.length === 0) return new Set();
   if (destination === "bank") {
-    const members = await db
-      .collection<CabinetMember>("cabinetMembers")
+    const members = await cabinetMembersCollection(db)
       .find({ characterId: { $in: [...characterIds] } }, { projection: { characterId: 1 } })
       .toArray();
     return new Set(
       members.flatMap((member) => (member.characterId ? [member.characterId.toString()] : []))
     );
   }
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find(
       {
         $or: [

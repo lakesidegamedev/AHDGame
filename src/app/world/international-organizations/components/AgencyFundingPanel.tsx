@@ -52,10 +52,7 @@ export function AgencyFundingPanel({
   // The BALANCE stays in the fund's own currency — it is an account, not a view
   // of the viewer's wallet.
   const fundDisplay = formatFundAmount(org.fund.balanceLocal, org.fund.currencyCode);
-  // Catalog costs are USD. Converting them into fund units and back out through
-  // the viewer's preference keeps one rate in play: the era-resolved
-  // server-side one (refs #3778), never a client read of COUNTRY_CONFIGS, which
-  // priced 1953 agency costs off modern rates.
+  // Catalog costs are USD; convert via the fund's usdToFundRate so the era-resolved server rate is used, never client COUNTRY_CONFIGS rates.
   const fundAmount = useFundFormatter(org.fund);
   const fundRate =
     org.fund.usdToFundRate && org.fund.usdToFundRate > 0 ? org.fund.usdToFundRate : 1;

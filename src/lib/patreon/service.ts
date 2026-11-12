@@ -8,6 +8,7 @@ import { createNotification } from "@/lib/notifications";
 import type { PatreonTier, SupporterProvider, User } from "@/lib/db/types";
 import { isPatreonActive, isPlusOrBetter } from "@/lib/db/types";
 import { getPatreonGracePeriodMs, getPatreonTierMap } from "./config";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface ApplyPatreonStatusInput {
   userId: ObjectId;
@@ -21,11 +22,6 @@ export interface ApplyPatreonStatusInput {
    * passes "bot" and the Lakeside Stripe webhook passes "stripe".
    */
   provider?: SupporterProvider;
-}
-
-export interface PatreonEventIdentity {
-  patreonUserId: string;
-  tierId?: string;
 }
 
 export type SupporterStatusSnapshot = Pick<
@@ -67,7 +63,7 @@ export function getGracePeriodEnd(from = new Date()): Date {
 }
 
 export async function findUserByPatreonUserId(db: Db, patreonUserId: string): Promise<User | null> {
-  return db.collection<User>("users").findOne({ patreonUserId });
+  return usersCollection(db).findOne({ patreonUserId });
 }
 
 export async function applyPatreonStatus(
@@ -75,7 +71,7 @@ export async function applyPatreonStatus(
   input: ApplyPatreonStatusInput,
   expected?: SupporterStatusSnapshot
 ): Promise<{ supporterPlusAwarded: boolean }> {
-  const existing = await db.collection<User>("users").findOne({ _id: input.userId });
+  const existing = await usersCollection(db).findOne({ _id: input.userId });
   const nextAdsDisabled =
     input.tier !== null && existing?.patreonTier == null
       ? (input.adsDisabledDefault ?? true)
@@ -85,7 +81,7 @@ export async function applyPatreonStatus(
       ? "ad-free"
       : existing?.patreonAdPreference;
 
-  const result = await db.collection<User>("users").updateOne(
+  const result = await usersCollection(db).updateOne(
     { _id: input.userId, ...supporterStatusFilter(expected) },
     {
       $set: {
@@ -150,7 +146,7 @@ export async function startPatreonGracePeriod(
   from = new Date(),
   expected?: SupporterStatusSnapshot
 ): Promise<void> {
-  const result = await db.collection<User>("users").updateOne(
+  const result = await usersCollection(db).updateOne(
     { _id: userId, ...supporterStatusFilter(expected) },
     {
       $set: {
@@ -166,12 +162,12 @@ export async function clearExpiredPatreonBenefits(
   userId: ObjectId,
   expected?: SupporterStatusSnapshot
 ): Promise<void> {
-  const user = await db.collection<User>("users").findOne({ _id: userId });
+  const user = await usersCollection(db).findOne({ _id: userId });
   if (!user || isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null)) {
     return;
   }
 
-  const result = await db.collection<User>("users").updateOne(
+  const result = await usersCollection(db).updateOne(
     { _id: userId, ...supporterStatusFilter(expected) },
     {
       $set: {

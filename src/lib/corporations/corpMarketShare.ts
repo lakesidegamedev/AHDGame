@@ -20,6 +20,8 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { computeMarketSharePercent } from "./marketShare";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 /** The focal corporation's market position in one industry (home country). */
 export interface CorpMarketSharePosition {
@@ -58,14 +60,13 @@ export async function loadIndustryBasis(
   countryId: CountryId,
   types: CorporationType[],
   // Retained for call-site compatibility; market share is revenue-basis in every
-  // tier now (ticket #1145), so the tier no longer selects a different basis.
+  // tier now, so the tier no longer selects a different basis.
   _plantsEnabled: boolean = false
 ): Promise<Map<CorporationType, IndustryBasis>> {
   const out = new Map<CorporationType, IndustryBasis>();
   if (types.length === 0) return out;
 
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId })
     .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
     .toArray();
@@ -73,8 +74,7 @@ export async function loadIndustryBasis(
   const stateIds = states.map((s) => s._id);
 
   const [sectorsInScope, fxByCurrency] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({ sectorType: { $in: types }, stateId: { $in: stateIds } })
       .project<Pick<CorporateSector, "corporationId" | "sectorType" | "stateId" | "revenue">>({
         corporationId: 1,
@@ -99,10 +99,7 @@ export async function loadIndustryBasis(
   for (const sectorType of types) {
     const typeSectors = sectorsInScope.filter((s) => s.sectorType === sectorType);
 
-    // National market = Σ real revenue produced in this sector across the
-    // country's states (ticket #1145). No unowned pool, no GDP floor, no
-    // capacity-units twin — the denominator is what every producer actually
-    // earns, and a corp's share is its revenue over that total.
+    // National market = sum of real revenue produced across the country's states. No unowned pool, no GDP floor: the denominator is what every producer actually earns.
     const anchorByCorp = new Map<string, number>();
     let totalMarket = 0;
     for (const sec of typeSectors) {

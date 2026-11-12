@@ -1,0 +1,456 @@
+"use client";
+
+import {
+  LegislatureRowsSkeleton,
+  LegislaturePageShell,
+  LegislaturePageTabs,
+} from "./components/shared/LegislaturePageShell";
+
+import { filterLegislatureBills } from "./components/shared/legislaturePresentation";
+import { useState, useEffect } from "react";
+import { fetchJson } from "@/lib/observability/fetchJson";
+import {
+  mapSnapElectionViewerState,
+  type ExecutiveGovernmentResponse,
+} from "@/lib/government/executiveViewerState";
+import { TariffsTab } from "@/components/legislature/TariffsTab";
+import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
+import { LeaderCard } from "@/components/legislature/LeaderCard";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import { BillsList } from "@/components/bills/BillsList";
+import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
+import { LegislatureMembersTab } from "./components/shared/LegislatureMembersTab";
+import LegislatureHeader from "./components/shared/LegislatureHeader";
+import {
+  useLegislatureData,
+  type BillsData,
+  type LeadersData,
+} from "./components/shared/useLegislatureData";
+import { PMSnapElectionButton } from "@/components/parliamentary/PMSnapElectionButton";
+import { AdminSnapElectionButton } from "@/components/parliamentary/AdminSnapElectionButton";
+import { ProposeLegislationModal } from "./ProposeLegislationModal";
+
+/**
+ * Legislature page for a Westminster-style parliament where one elected
+ * chamber votes on player bills: independent Scotland, Wales and Quebec, and
+ * Canada, whose appointed Senate does not vote. Chamber name and key come from
+ * the country config, the live seat count from the members API, and the
+ * per-country copy (member title, presiding officer, hero) from
+ * PARLIAMENT_META.
+ */
+
+interface ParliamentMeta {
+  heroSlug: string;
+  heroAlt: string;
+  /** Head of government chosen by the chamber. */
+  headTitle: string;
+  /** Short post-nominal for a member (MSP / MS). */
+  memberAbbr: string;
+  /** Plural label used in the propose banner + subtitle. */
+  memberPlural: string;
+  /** Chair of the chamber (Presiding Officer / Llywydd). */
+  presidingOfficer: string;
+  electoralSystem: string;
+  /** How the chamber is referred to in the propose-bill banner copy. */
+  proposeChamberLabel: string;
+  /** ProposeLegislationModal domestic-only corporation label. */
+  domesticOnlyLabel: string;
+}
+
+const PARLIAMENT_META: Partial<Record<CountryId, ParliamentMeta>> = {
+  SCO: {
+    heroSlug: "holyrood",
+    heroAlt: "The Scottish Parliament, Holyrood, Edinburgh",
+    headTitle: "First Minister",
+    memberAbbr: "MSP",
+    memberPlural: "MSPs",
+    presidingOfficer: "Presiding Officer",
+    electoralSystem: "Additional Member System",
+    proposeChamberLabel: "Holyrood",
+    domesticOnlyLabel: "Scottish-headquartered corporations only",
+  },
+  WAL: {
+    heroSlug: "senedd",
+    heroAlt: "The Senedd, Cardiff Bay",
+    headTitle: "First Minister",
+    memberAbbr: "MS",
+    memberPlural: "Members of the Senedd",
+    presidingOfficer: "Llywydd",
+    electoralSystem: "Additional Member System",
+    proposeChamberLabel: "the Senedd",
+    domesticOnlyLabel: "Welsh-headquartered corporations only",
+  },
+  QC: {
+    heroSlug: "quebec-parliament",
+    heroAlt: "The Parliament Building, Quebec City",
+    headTitle: "Premier",
+    memberAbbr: "MNA",
+    memberPlural: "MNAs",
+    presidingOfficer: "President of the National Assembly",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "National Assembly",
+    domesticOnlyLabel: "Quebec-headquartered corporations only",
+  },
+  CA: {
+    heroSlug: "parliament-hill",
+    heroAlt: "Parliament Hill, Ottawa",
+    headTitle: "Prime Minister",
+    memberAbbr: "MP",
+    memberPlural: "MPs",
+    presidingOfficer: "Speaker",
+    electoralSystem: "Regional proportional representation",
+    proposeChamberLabel: "House of Commons",
+    domesticOnlyLabel: "Canadian-headquartered corporations only",
+  },
+};
+
+type PageTab = "bills" | "composition" | "leadership" | "tariffs" | "subsidies";
+
+// ─── Bills Tab ────────────────────────────────────────────────────────────────
+
+function BillsTab({
+  bills,
+  loading,
+  countryId,
+  chamberKey,
+  chamberLabel,
+  meta,
+  onProposed,
+}: {
+  bills: BillsData | null;
+  loading: boolean;
+  countryId: CountryId;
+  chamberKey: string;
+  chamberLabel: string;
+  meta: ParliamentMeta;
+  onProposed: () => void;
+}) {
+  const [showModal, setShowModal] = useState(false);
+  const [voteFilter, setVoteFilter] = useState<BillVoteFilter>("all");
+
+  if (loading) {
+    return <LegislatureRowsSkeleton kind="bills" />;
+  }
+
+  if (!bills) {
+    return <p className="text-center text-sm text-muted py-12">Bills data unavailable.</p>;
+  }
+
+  const {
+    bills: billList,
+    canPropose,
+    hasActiveBill,
+    adminOverride,
+    blockedProvisions,
+    proposalWarnings,
+  } = bills;
+  const filtered = filterLegislatureBills(billList, voteFilter);
+
+  return (
+    <div className="space-y-4">
+      {(canPropose || hasActiveBill) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-foreground">
+              {adminOverride
+                ? `Admin — propose a ${meta.proposeChamberLabel} bill`
+                : `You are a seated ${meta.memberAbbr} — propose a bill`}
+            </p>
+            <p className="text-xs text-muted">
+              Opens to a vote among seated members of {chamberLabel} immediately.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            Propose bill
+          </button>
+        </div>
+      )}
+
+      <BillListControls
+        voteFilter={voteFilter}
+        onVoteFilterChange={setVoteFilter}
+        showVoteFilter={canPropose}
+      />
+
+      <BillsList bills={filtered} onVoted={onProposed} />
+
+      <p className="text-xs text-muted">
+        {filtered.length} bill{filtered.length !== 1 ? "s" : ""} total
+      </p>
+
+      {showModal && (
+        <ProposeLegislationModal
+          hasActiveBill={!canPropose && Boolean(hasActiveBill)}
+          adminOverride={adminOverride}
+          countryId={countryId}
+          blockedProvisions={blockedProvisions}
+          proposalWarning={proposalWarnings?.[chamberKey] ?? null}
+          chambers={[{ value: chamberKey, label: chamberLabel }]}
+          domesticOnlyLabel={meta.domesticOnlyLabel}
+          onClose={() => setShowModal(false)}
+          onSuccess={() => {
+            setShowModal(false);
+            onProposed();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Leadership Tab ───────────────────────────────────────────────────────────
+
+function LeadershipTab({
+  leaders,
+  loading,
+  countryId,
+  chamberLabel,
+  meta,
+  governmentStatus,
+  viewerIsSittingPM,
+  snapElectionsAllowed,
+  snapElectionsUsed,
+  snapElectionsRemaining,
+  snapCooldownTurnsRemaining,
+  onRefresh,
+}: {
+  leaders: LeadersData | null;
+  loading: boolean;
+  countryId: CountryId;
+  chamberLabel: string;
+  meta: ParliamentMeta;
+  governmentStatus: string | null;
+  viewerIsSittingPM: boolean;
+  snapElectionsAllowed: boolean;
+  snapElectionsUsed: number;
+  snapElectionsRemaining: number;
+  snapCooldownTurnsRemaining: number;
+  onRefresh: () => void;
+}) {
+  if (loading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="h-28 rounded-xl bg-card/60 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!leaders) {
+    return <p className="text-center text-sm text-muted py-12">Leadership data unavailable.</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {governmentStatus === "formed" && viewerIsSittingPM && snapElectionsAllowed && (
+        <div className="rounded-xl border border-warning/20 bg-warning/5 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">Dissolve {chamberLabel}</p>
+              <p className="text-xs text-muted">
+                As {meta.headTitle}, you may call a snap election. All active legislation will fail.
+              </p>
+            </div>
+          </div>
+          <PMSnapElectionButton
+            countryId={countryId}
+            snapElectionsUsed={snapElectionsUsed}
+            snapElectionsRemaining={snapElectionsRemaining}
+            cooldownTurnsRemaining={snapCooldownTurnsRemaining}
+            onTriggered={onRefresh}
+          />
+        </div>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <LeaderCard
+          title={meta.headTitle}
+          subtitle="Head of government"
+          character={leaders.primeMinister}
+        />
+        <LeaderCard
+          title="Opposition leader"
+          subtitle="Leader of the largest non-governing party"
+          character={leaders.oppositionLeader}
+        />
+      </div>
+
+      <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4">
+        <p className="text-xs text-muted leading-relaxed">
+          The {meta.headTitle} is nominated by {chamberLabel} and leads the government. The{" "}
+          {meta.presidingOfficer} presides over the chamber. The Opposition Leader heads the largest
+          party not in the governing administration.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export function SingleChamberParliamentPage({ countryId }: { countryId: CountryId }) {
+  const config = getCountryClientConfig(countryId);
+  const meta = PARLIAMENT_META[countryId];
+  const chamberKey = config.legislature.lowerChamber.key;
+  const chamberLabel = config.legislature.lowerChamber.name;
+  const seats = config.legislature.lowerChamber.seats;
+
+  const { members, bills, leaders, loading, error, refetch } = useLegislatureData(
+    countryId,
+    chamberKey
+  );
+  const [activeTab, setActiveTab] = useState<PageTab>("bills");
+
+  const [governmentStatus, setGovernmentStatus] = useState<string | null>(null);
+  const [viewerIsSittingPM, setViewerIsSittingPM] = useState(false);
+  const [snapElectionsAllowed, setSnapElectionsAllowed] = useState(false);
+  const [snapElectionsUsed, setSnapElectionsUsed] = useState(0);
+  const [snapElectionsRemaining, setSnapElectionsRemaining] = useState(0);
+  const [snapCooldownTurnsRemaining, setSnapCooldownTurnsRemaining] = useState(0);
+
+  const fetchGovernmentData = () => {
+    fetchJson<ExecutiveGovernmentResponse>(`/api/country/${countryId.toLowerCase()}/executive`, {
+      feature: "single-chamber-parliament-government",
+    })
+      .then((data) => {
+        if (!data) return;
+        const snap = mapSnapElectionViewerState(data);
+        setGovernmentStatus(data.government?.status ?? null);
+        setViewerIsSittingPM(snap.viewerIsSittingPM);
+        setSnapElectionsAllowed(snap.snapElectionsAllowed);
+        setSnapElectionsUsed(snap.snapElectionsUsed);
+        setSnapElectionsRemaining(snap.snapElectionsRemaining);
+        setSnapCooldownTurnsRemaining(snap.snapCooldownTurnsRemaining);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchGovernmentData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countryId]);
+
+  if (!meta) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted">{config.name} legislature coming soon.</p>
+      </div>
+    );
+  }
+
+  const majorityParty = members?.composition[0];
+  const headerStats = {
+    majorityParty: {
+      name: majorityParty?.partyName ?? "—",
+      color: majorityParty?.partyColor ?? "#888888",
+      seats: majorityParty?.seats ?? 0,
+    },
+    totalSeats: members?.totalSeats ?? seats,
+    leader: leaders?.primeMinister
+      ? {
+          label: meta.headTitle,
+          name: leaders.primeMinister.characterName,
+          id: leaders.primeMinister.characterId,
+          sequentialId: leaders.primeMinister.sequentialId,
+        }
+      : null,
+    minorityLeader: leaders?.oppositionLeader
+      ? {
+          label: "Opposition leader",
+          name: leaders.oppositionLeader.characterName,
+          id: leaders.oppositionLeader.characterId,
+          sequentialId: leaders.oppositionLeader.sequentialId,
+        }
+      : null,
+  };
+
+  const TABS: { id: PageTab; label: string }[] = [
+    { id: "bills", label: "Bills" },
+    { id: "composition", label: "Composition" },
+    { id: "leadership", label: "Leadership" },
+    { id: "tariffs", label: "Tariffs" },
+    { id: "subsidies", label: "Subsidies" },
+  ];
+
+  return (
+    <LegislaturePageShell
+      loading={loading}
+      error={error}
+      onRetry={refetch}
+      header={
+        <LegislatureHeader
+          countryId={countryId}
+          title={chamberLabel}
+          subtitle={`${members?.totalSeats ?? seats} ${meta.memberPlural} · ${meta.electoralSystem} · ${config.name}`}
+          heroImage={`/api/images/hero/${meta.heroSlug}`}
+          heroAlt={meta.heroAlt}
+          stats={headerStats}
+        />
+      }
+    >
+      <LegislaturePageTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+        {bills?.adminOverride && (
+          <div className="ml-auto pb-1">
+            <AdminSnapElectionButton
+              countryId={countryId}
+              onDone={() => {
+                refetch();
+                fetchGovernmentData();
+              }}
+            />
+          </div>
+        )}
+      </LegislaturePageTabs>
+
+      {activeTab === "composition" && (
+        <LegislatureMembersTab
+          members={members}
+          loading={loading}
+          compositionOptions={{ includeAvatars: true }}
+          chamberLabel={chamberLabel}
+          showSeatsColumn={true}
+          regionLabel={getCountryClientConfig(countryId).regionLabel}
+          searchPlaceholder={`Search ${chamberLabel} members…`}
+          countryId={countryId}
+          parliamentChartVariant="hemicycle"
+        />
+      )}
+      {activeTab === "bills" && (
+        <BillsTab
+          bills={bills}
+          loading={loading}
+          countryId={countryId}
+          chamberKey={chamberKey}
+          chamberLabel={chamberLabel}
+          meta={meta}
+          onProposed={refetch}
+        />
+      )}
+      {activeTab === "leadership" && (
+        <LeadershipTab
+          leaders={leaders}
+          loading={loading}
+          countryId={countryId}
+          chamberLabel={chamberLabel}
+          meta={meta}
+          governmentStatus={governmentStatus}
+          viewerIsSittingPM={viewerIsSittingPM}
+          snapElectionsAllowed={snapElectionsAllowed}
+          snapElectionsUsed={snapElectionsUsed}
+          snapElectionsRemaining={snapElectionsRemaining}
+          snapCooldownTurnsRemaining={snapCooldownTurnsRemaining}
+          onRefresh={() => {
+            refetch();
+            fetchGovernmentData();
+          }}
+        />
+      )}
+      {activeTab === "tariffs" && <TariffsTab countryId={countryId} />}
+      {activeTab === "subsidies" && <SubsidiesTab countryId={countryId} />}
+    </LegislaturePageShell>
+  );
+}

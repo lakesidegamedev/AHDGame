@@ -62,16 +62,8 @@ vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: async () => false,
 }));
 
-vi.mock("@/lib/stats/featureFlag", () => ({
-  isRpgStatsEnabled: async () => false,
-}));
-
 vi.mock("@/lib/gameState", () => ({
   getGameState: async () => ({}),
-}));
-
-vi.mock("@/lib/redistricting/flag", () => ({
-  isRedistrictingEnabled: () => false,
 }));
 
 vi.mock("@/lib/currency/corporationCapital", () => ({

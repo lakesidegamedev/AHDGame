@@ -1,22 +1,15 @@
 /**
- * Germany Region Census Profiles — 1999 (red-green era).
+ * Germany Region Census Profiles , 1999 (red-green era).
  *
- * 1999-era companion to {@link deRegionCensusData} (the 2019 profiles).
- * All values independently authored from 1999 historical knowledge of each
- * Land — never derived by scaling another era's file.
+ * Companion to {@link deRegionCensusData} (2019 profiles). All values
+ * independently authored from 1999 historical knowledge, never derived by
+ * scaling another era's file.
  *
- * Era anchor: first Schröder government; the federal capital moved to Berlin
- * in 1999. The East was a decade into transformation: deindustrialization
- * complete, unemployment near its peak (~18–20%), heavy westward emigration
- * of the young already underway but the age structure not yet fully aged.
- * The 1990s Aussiedler wave (ethnic Germans from the former USSR — counted
- * under `turkish_russian_diaspora`) and the Yugoslav-war refugee inflows had
- * lifted western migrant shares well above 1991 levels; eastern Länder
- * remained overwhelmingly German with small Aussiedler placements via the
- * Wohnortzuweisungsgesetz. Western economy was sluggish ("sick man of
- * Europe") but household income structure was still solidly middle-heavy.
- * Tertiary attainment was rising slowly; Lehre/Berufsausbildung still the
- * dominant qualification everywhere.
+ * Era anchor: capital moved to Berlin; East a decade into transformation.
+ * Western migrant shares lifted well above 1991 by the Aussiedler wave and
+ * Yugoslav-war refugees; eastern Länder overwhelmingly German with small
+ * Aussiedler placements. Western economy sluggish but income still
+ * middle-heavy; Lehre/Berufsausbildung dominant qualification everywhere.
  */
 
 import type { DERegionLayer1 } from "@/lib/seeds/de/deRegionCensusData";

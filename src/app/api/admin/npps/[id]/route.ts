@@ -11,6 +11,10 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { schemas } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import type { NPP } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -23,16 +27,16 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const db = await getDb();
     const nppId = new ObjectId(id);
 
-    const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+    const npp = await nppsCollection(db).findOne({ _id: nppId });
     if (!npp) throw notFound("NPP not found");
 
     // Hard-delete the NPP document and all direct references.
     // nppInfluence and congress vote records are left in place — they are
     // historical and don't affect live game state.
     await Promise.all([
-      db.collection("npps").deleteOne({ _id: nppId }),
-      db.collection("electedOfficials").deleteMany({ nppId }),
-      db.collection("electionCandidates").deleteMany({ nppId }),
+      nppsCollection<Document>(db).deleteOne({ _id: nppId }),
+      electedOfficialsCollection<Document>(db).deleteMany({ nppId }),
+      electionCandidatesCollection<Document>(db).deleteMany({ nppId }),
     ]);
 
     return NextResponse.json({ success: true });

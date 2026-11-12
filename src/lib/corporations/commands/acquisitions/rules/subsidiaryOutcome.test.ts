@@ -8,7 +8,6 @@ import {
 } from "./subsidiaryOutcome";
 
 const clean: SubsidiaryAcquisitionFacts = {
-  featureEnabled: true,
   acquirerStateOwned: false,
   acquirerIsFormalizedSubsidiary: false,
   targetStateOwned: false,
@@ -33,7 +32,6 @@ describe("subsidiaryAcquisitionBlock", () => {
   });
 
   it.each([
-    ["feature off", { featureEnabled: false }, 400, /not enabled/],
     ["state-owned acquirer", { acquirerStateOwned: true }, 403, /cannot act as a parent/],
     [
       "acquirer already a subsidiary",
@@ -64,18 +62,8 @@ describe("subsidiaryAcquisitionBlock", () => {
     expect(block?.error).toMatch(message);
   });
 
-  it("reports the feature gate before any structural reason", () => {
-    const block = subsidiaryAcquisitionBlock({
-      ...clean,
-      featureEnabled: false,
-      wouldCreateOwnershipCycle: true,
-    });
-    expect(block?.error).toMatch(/not enabled/);
-  });
-
   it("never uses dashes in player-facing copy", () => {
     const patches: Array<Partial<SubsidiaryAcquisitionFacts>> = [
-      { featureEnabled: false },
       { acquirerStateOwned: true },
       { targetStateOwned: true },
       { targetHasOtherControllingParent: true },

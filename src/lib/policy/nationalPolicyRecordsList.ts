@@ -1,10 +1,13 @@
 import { getDb } from "@/lib/mongodb";
 import { loadResetLawPolicyRecords } from "./resetLawPolicyRecords";
-import type { Corporation, Tariff, Subsidy } from "@/lib/db/types";
+import type { Tariff, Subsidy } from "@/lib/db/types";
 import { reconcileSignedTariffBills } from "@/lib/tariffs/reconcileTariffs";
 import { assembleNationalPolicyRecords } from "@/lib/policy/nationalPolicyRecords";
 import type { PolicyRecordResponse } from "@/lib/policy/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 function formatSectorLabel(raw: string): string {
   return raw.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -114,13 +117,11 @@ export async function loadNationalPolicyRecords(
   const db = await getDb();
   await reconcileSignedTariffBills(db, countryId);
   const { records: out } = await assembleNationalPolicyRecords(db, countryId);
-  const tariffs = await db
-    .collection<Tariff>("tariffs")
+  const tariffs = await tariffsCollection(db)
     .find({ countryId })
     .sort({ updatedAt: -1, createdAt: -1 })
     .toArray();
-  const subsidies = await db
-    .collection<Subsidy>("subsidies")
+  const subsidies = await subsidiesCollection(db)
     .find({ countryId, active: true, scope: "national" })
     .sort({ scopeType: 1, targetSectorType: 1, targetStrategyId: 1, createdAt: 1 })
     .toArray();
@@ -129,8 +130,7 @@ export async function loadNationalPolicyRecords(
     .filter((value): value is NonNullable<Tariff["targetCorporationId"]> => value != null);
   const targetedCorporations =
     corporationIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corporationIds } }, { projection: { name: 1 } })
           .toArray()
       : [];

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isMissingRequiredEnvError } from "@/lib/env";
+import { isMissingRequiredEnvError } from "@/lib/config/validatedEnv";
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { computeIntakeStatus, type IntakeStatus } from "@/lib/auth/intakeStatus";
@@ -8,6 +8,7 @@ import { getEraConfig } from "@/components/landing/eraThemes";
 import { getLoginImage } from "@/lib/images/staticCdnAssets";
 import { IntakeClosedPanel } from "@/components/intake/IntakeClosedPanel";
 import RegisterPageClient from "./RegisterPageClient";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export default async function RegisterPage() {
   // The signup hero must match the world the player is signing up to. This is
@@ -20,7 +21,7 @@ export default async function RegisterPage() {
 
   try {
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
+    const config = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {

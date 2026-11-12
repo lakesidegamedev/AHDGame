@@ -1,6 +1,9 @@
 import type { BankCharterHistoryEntry, BankLoan } from "@/lib/db/types/bank";
 import type { Corporation } from "@/lib/db/types";
 import type { Migration } from "../types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankCharterHistoryCollection } from "@/lib/db/repositories/bankCharterHistory";
 
 type EpochRange = { charteredTurn: number; nextCharteredTurn?: number };
 
@@ -11,24 +14,21 @@ export const migration: Migration = {
   idempotent: true,
   execute: async (db, ctx) => {
     const [loans, history, corporations] = await Promise.all([
-      db
-        .collection<BankLoan>("bankLoans")
+      bankLoansCollection(db)
         .find({ charteredTurn: { $exists: false } })
         .project<Pick<BankLoan, "_id" | "bankCorporationId" | "originatedTurn">>({
           bankCorporationId: 1,
           originatedTurn: 1,
         })
         .toArray(),
-      db
-        .collection<BankCharterHistoryEntry>("bankCharterHistory")
+      bankCharterHistoryCollection(db)
         .find({})
         .project<Pick<BankCharterHistoryEntry, "corporationId" | "charter">>({
           corporationId: 1,
           charter: 1,
         })
         .toArray(),
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ "bankCharter.charteredTurn": { $exists: true } })
         .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
         .toArray(),
@@ -89,7 +89,7 @@ export const migration: Migration = {
     }
 
     if (!ctx.dryRun && operations.length > 0) {
-      await db.collection<BankLoan>("bankLoans").bulkWrite(operations, { ordered: false });
+      await bankLoansCollection(db).bulkWrite(operations, { ordered: false });
     }
     return {
       documentsScanned: loans.length,

@@ -12,12 +12,14 @@ import { loadCountrySovereignSnapshot } from "@/lib/sovereignDefault/snapshotLoa
 import { computeMarketDemand } from "@/lib/sovereignDefault/marketDemand";
 import { computeDsa } from "@/lib/sovereignDefault/debtSustainability";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 interface RouteParams {
   params: Promise<{ code: string }>;
@@ -44,18 +46,17 @@ export async function GET(_req: Request, { params }: RouteParams) {
 
   const demand = computeMarketDemand(snapshot);
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: getNationalBudgetId(upperCode) });
+  const budget = await federalBudgetCollection(db).findOne({ _id: getNationalBudgetId(upperCode) });
 
   // Live national growth, not `economicFactors.gdpGrowth`. That field is the
   // fiscal-year assumption frozen at the last rollover and can sit points away
   // from the rate every other page shows (UK: -5.32 stored against +6.24 live).
   // A forward-looking gauge must use the forward-looking number.
   // See lib/country/nationalGdpGrowth.
-  const gameStateForGrowth = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const gameStateForGrowth = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1 } }
+  );
   const liveGdpGrowth = await loadNationalGdpGrowth(db, upperCode, gameStateForGrowth?.currentYear);
 
   // Phase 11a: forward-looking sustainability gauge. Pure math; reads from
@@ -77,8 +78,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
   // Phase 9b: surface either the open decision (crisisPending) OR the
   // executiveProposed decision (legislative ratification) so the UI panel
   // can render the right view.
-  const surfacedDecisions = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
+  const surfacedDecisions = await sovereignCrisisDecisionsCollection(db)
     .find({ countryCode: upperCode, state: { $in: ["open", "executiveProposed"] } })
     .sort({ firedAtTurn: -1 })
     .limit(1)

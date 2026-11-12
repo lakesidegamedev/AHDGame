@@ -5,7 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { buildNationalBillCountryScopeFilter } from "@/lib/legislature/nationalBillScope";
 import { getBankId } from "@/lib/centralBank/helpers";
-import type { CentralBank, FederalBudget, GameConfig, GameState, State } from "@/lib/db/types";
+import type { GameConfig, GameState, State } from "@/lib/db/types";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import { resolveRatioGdp } from "@/lib/budget/gdpDenominator";
 import { isColdWarPrincipal, type OverviewCounts } from "@/lib/country/overviewCounts";
@@ -13,6 +13,20 @@ import { getColdWarDials } from "@/lib/coldwar/dials";
 import { commandEconomyOffices } from "@/lib/constants/commandEconomyOffices";
 import { DUAL_TRACK_CEILING, scheduledMarketizationLevel } from "@/lib/constants/commandEconomy";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { referendumsCollection } from "@/lib/db/repositories/referendums";
 
 export type { OverviewCounts } from "@/lib/country/overviewCounts";
 
@@ -43,8 +57,7 @@ async function countPoliticians(db: Db, countryId: CountryId): Promise<number> {
   // Mirrors fetchPoliticians: players excluding banned users, plus active NPPs —
   // keeps the directory figure equal to the Politicians page count.
   const [playerRows, nppCount] = await Promise.all([
-    db
-      .collection("characters")
+    charactersCollection(db)
       .aggregate<{ count: number }>([
         { $match: { countryId } },
         {
@@ -64,7 +77,7 @@ async function countPoliticians(db: Db, countryId: CountryId): Promise<number> {
         { $count: "count" },
       ])
       .toArray(),
-    db.collection("npps").countDocuments({ retiredAt: null, countryId }),
+    nppsCollection<Document>(db).countDocuments({ retiredAt: null, countryId }),
   ]);
   return (playerRows[0]?.count ?? 0) + nppCount;
 }
@@ -77,25 +90,23 @@ async function countPoliticians(db: Db, countryId: CountryId): Promise<number> {
 async function resolveCommandEconomyActive(db: Db, countryId: CountryId): Promise<boolean> {
   if (!commandEconomyOffices(countryId)) return false;
   const [config, state, budget] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
-    db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, {
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    ),
+    gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+      {
         projection: { "economicFactors.marketizationLevel": 1 },
-      }),
+      }
+    ),
   ]);
   const enabled = config?.commandEconomyEnabled === true;
   if (!enabled) return false;
   const currentYear = state?.currentYear ?? null;
-  // Prefer the persisted (endogenous) level over the era schedule — the
-  // stored-level registry is process-local, so this API process must read the
-  // persisted value. A country that has fully marketized past the dual-track
-  // ceiling (70) no longer shows the planned-economy surface.
+  // Prefer the persisted level over the era schedule: the stored-level registry
+  // is process-local, so this process must read the persisted value.
   const persisted = budget?.economicFactors?.marketizationLevel;
   const level =
     typeof persisted === "number" && Number.isFinite(persisted)
@@ -124,13 +135,13 @@ async function resolveFiscalFigures(
   countryId: CountryId
 ): Promise<{ gdpMillions: number | null; budgetBalancePctGdp: number | null }> {
   const [budget, gdpAgg] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: getNationalBudgetId(countryId) } as { _id: "federal" }, {
+    federalBudgetCollection(db).findOne(
+      { _id: getNationalBudgetId(countryId) } as { _id: "federal" },
+      {
         projection: { gdp: 1, gdpSmoothed: 1, "revenue.total": 1, "spending.total": 1 },
-      }),
-    db
-      .collection<State>("states")
+      }
+    ),
+    statesCollection(db)
       .aggregate<{ _id: null; gdpMillions: number }>([
         { $match: { countryId } },
         { $group: { _id: null, gdpMillions: { $sum: "$gdp" } } },
@@ -162,18 +173,9 @@ async function resolveFiscalFigures(
   };
 }
 
-/**
- * Cold War readiness for a principal, or null. Gated on the same
- * `conflictsEnabled` switch as `/world/conflicts` itself, so switching the
- * subsystem off removes the directory row rather than leaving a link to a page
- * that redirects.
- */
+/** Cold War readiness for a principal, or null. */
 async function resolveColdWarDefcon(db: Db, countryId: CountryId): Promise<number | null> {
   if (!isColdWarPrincipal(countryId)) return null;
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { conflictsEnabled: 1 } });
-  if (!gameState?.conflictsEnabled) return null;
   return (await getColdWarDials(db)).defcon;
 }
 
@@ -195,35 +197,40 @@ async function assembleOverviewCounts(db: Db, countryId: CountryId): Promise<Ove
     navairFormations,
   ] = await Promise.all([
     orNull(
-      db.collection("politicalParties").countDocuments({ countryId, isDefunct: { $ne: true } })
+      politicalPartiesCollection<Document>(db).countDocuments({
+        countryId,
+        isDefunct: { $ne: true },
+      })
     ),
     orNull(countPoliticians(db, countryId)),
-    orNull(db.collection("elections").countDocuments({ countryId, status: "active" })),
-    orNull(db.collection("elections").countDocuments({ countryId, status: "upcoming" })),
+    orNull(electionsCollection<Document>(db).countDocuments({ countryId, status: "active" })),
+    orNull(electionsCollection<Document>(db).countDocuments({ countryId, status: "upcoming" })),
     orNull(
-      db.collection("bills").countDocuments({
+      billsCollection<Document>(db).countDocuments({
         ...buildNationalBillCountryScopeFilter(countryId),
         status: { $nin: FINAL_BILL_STATUSES },
       })
     ),
-    orNull(db.collection("states").countDocuments({ countryId })),
+    orNull(statesCollection<Document>(db).countDocuments({ countryId })),
     orNull(
-      db
-        .collection<CentralBank>("centralBanks")
+      centralBanksCollection(db)
         .findOne({ _id: getBankId(countryId) }, { projection: { primeRate: 1 } })
         .then((bank) => bank?.primeRate ?? null)
     ),
     orNull(resolveCommandEconomyActive(db, countryId)).then((v) => v ?? false),
-    orNull(db.collection("unions").countDocuments({ countryId })),
-    orNull(db.collection("referendums").countDocuments({ countryId, status: "campaigning" })),
-    orNull(db.collection("referendums").countDocuments({ countryId })),
+    orNull(unionsCollection<Document>(db).countDocuments({ countryId })),
+    orNull(
+      referendumsCollection<Document>(db).countDocuments({ countryId, status: "campaigning" })
+    ),
+    orNull(referendumsCollection<Document>(db).countDocuments({ countryId })),
     orNull(resolveFiscalFigures(db, countryId)),
     orNull(resolveColdWarDefcon(db, countryId)),
     // Hulls and wings this nation owns. Gates the command link: no fleet, no row.
     orNull(
-      db
-        .collection("militaryUnits")
-        .countDocuments({ countryId, domain: { $in: ["naval", "air"] } })
+      militaryUnitsCollection<Document>(db).countDocuments({
+        countryId,
+        domain: { $in: ["naval", "air"] },
+      })
     ),
   ]);
   return {

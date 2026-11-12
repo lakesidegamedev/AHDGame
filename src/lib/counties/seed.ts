@@ -18,6 +18,10 @@ import {
   loadPopulationSubdivisionReference,
   referencePopulationBaseline,
 } from "./subdivisionReference";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { countiesCollection } from "@/lib/db/repositories/counties";
 
 export async function seedCountyPopulations(
   db: Db,
@@ -32,15 +36,15 @@ export async function seedCountyPopulations(
   const preset =
     options.preset ??
     (
-      await db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1 } })
+      await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { preset: 1 } }
+      )
     )?.preset;
   const year = countyBaselineYear(preset);
   const countryIds = options.countryIds ?? COUNTY_COUNTRY_IDS;
   const states = (
-    await db
-      .collection<{ _id: string; countryId: CountyCountryId; population: number }>("states")
+    await statesCollection<{ _id: string; countryId: CountyCountryId; population: number }>(db)
       .find(
         { countryId: { $in: [...countryIds] } },
         { projection: { _id: 1, countryId: 1, population: 1 } }
@@ -50,17 +54,16 @@ export async function seedCountyPopulations(
   const groups = await Promise.all(
     states.map(async (state) => {
       const reference = await loadPopulationSubdivisionReference(state._id, state.countryId);
-      const baseline =
-        state.countryId === "US"
-          ? selectCountyPopulationBaseline(
-              reference.map((c) => ({ id: c.id, population: c.population })),
-              historicalCountyWeights(reference[0]?.id.slice(0, 2), year),
-              year
-            )
-          : {
-              weights: reference.map((c) => ({ id: c.id, population: c.population })),
-              populationBaseline: referencePopulationBaseline(state.countryId),
-            };
+      const baseline = countryHasFeature("usLib", state.countryId)
+        ? selectCountyPopulationBaseline(
+            reference.map((c) => ({ id: c.id, population: c.population })),
+            historicalCountyWeights(reference[0]?.id.slice(0, 2), year),
+            year
+          )
+        : {
+            weights: reference.map((c) => ({ id: c.id, population: c.population })),
+            populationBaseline: referencePopulationBaseline(state.countryId),
+          };
       const allocated = apportionPopulation(baseline.weights, state.population);
       return reference.map((c, i): County => ({
         _id: c.id,
@@ -75,8 +78,7 @@ export async function seedCountyPopulations(
   );
   const rows = groups.flat();
   const expectedById = new Map(rows.map((row) => [row._id, row]));
-  const existing = await db
-    .collection<County>("counties")
+  const existing = await countiesCollection(db)
     .find(
       { $or: [{ countryId: { $in: [...countryIds] } }, { _id: { $in: rows.map((c) => c._id) } }] },
       { projection: { _id: 1, countryId: 1, stateId: 1, population: 1 } }
@@ -108,9 +110,9 @@ export async function seedCountyPopulations(
   }
   if (options.apply === false) return rows.length;
   if (options.replace)
-    await db.collection<County>("counties").deleteMany({ countryId: { $in: [...countryIds] } });
+    await countiesCollection(db).deleteMany({ countryId: { $in: [...countryIds] } });
   if (rows.length)
-    await db.collection<County>("counties").bulkWrite(
+    await countiesCollection(db).bulkWrite(
       rows.map((row) => ({
         updateOne: {
           filter: { _id: row._id },
@@ -120,8 +122,7 @@ export async function seedCountyPopulations(
       })),
       { ordered: true }
     );
-  const persisted = await db
-    .collection<County>("counties")
+  const persisted = await countiesCollection(db)
     .find(
       { countryId: { $in: [...countryIds] } },
       { projection: { _id: 1, stateId: 1, population: 1 } }

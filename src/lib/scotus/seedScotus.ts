@@ -3,26 +3,21 @@ import { ObjectId } from "mongodb";
 import type { SupremeCourtSeat, DocketCase } from "@/lib/db/types/scotus";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { getScotusPresetSeed } from "./presetData";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import type { Document } from "mongodb";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 /**
- * Seed the SCOTUS Original Roster (9 seats) + Docket for the US, as part of
- * era-preset world creation/reset (#3598 scope item 8). Wired into
- * `bootstrapGameWorld.ts` alongside the other US-only, preset-gated seed steps
- * (mirrors `seedPoliticalLegislationBaseline`'s placement/shape).
+ * Seeds the SCOTUS Original Roster (9 seats) + Docket for the US. No-ops
+ * when the preset's roster/docket content is not yet authored.
  *
- * No-ops (logs and returns) when the preset's roster/docket content hasn't
- * been authored yet — see `src/lib/scotus/presetData/index.ts` — so this hook
- * is safe to ship ahead of the four content tickets (#3599-#3602).
+ * Historical justices are seated from the preset's Original Roster. Tenure
+ * vacates the first occupant on their authored date; every replacement is
+ * nominated and confirmed live.
  *
- * Historical justices are seated from the preset's Original Roster
- * (`justiceMode: "historical"`, `isDivergent: false`). Tenure vacates that
- * first occupant on their authored date. Later historical occupants are
- * reference data only; the President nominates and the Senate confirms every
- * replacement (ticket #1289). The Divergence Point is that live confirmation.
- *
- * On `reset=true`, wipes `supremeCourtSeats`/`docketCases`/`scotusNominations`
- * for the country first so a world reset always starts from the Original
- * Roster, never a stale divergent state from a prior game.
+ * With `reset=true`, wipes seats/docket/nominations first so a reset always
+ * starts from the Original Roster rather than a stale divergent state.
  */
 export async function seedScotus(
   db: Db,
@@ -34,9 +29,9 @@ export async function seedScotus(
 
   if (reset) {
     await Promise.all([
-      db.collection("supremeCourtSeats").deleteMany({ countryId }),
-      db.collection("docketCases").deleteMany({ countryId }),
-      db.collection("scotusNominations").deleteMany({ countryId }),
+      supremeCourtSeatsCollection<Document>(db).deleteMany({ countryId }),
+      docketCasesCollection<Document>(db).deleteMany({ countryId }),
+      scotusNominationsCollection<Document>(db).deleteMany({ countryId }),
     ]);
   }
 
@@ -71,13 +66,11 @@ export async function seedScotus(
       createdAt: now,
       updatedAt: now,
     };
-    await db
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .updateOne(
-        { countryId, seatNumber: seatSeed.seatNumber },
-        { $setOnInsert: { _id: new ObjectId(), ...seat } as SupremeCourtSeat },
-        { upsert: true }
-      );
+    await supremeCourtSeatsCollection(db).updateOne(
+      { countryId, seatNumber: seatSeed.seatNumber },
+      { $setOnInsert: { _id: new ObjectId(), ...seat } as SupremeCourtSeat },
+      { upsert: true }
+    );
     seatsSeeded++;
   }
 
@@ -100,13 +93,11 @@ export async function seedScotus(
       createdAt: now,
       updatedAt: now,
     };
-    await db
-      .collection<DocketCase>("docketCases")
-      .updateOne(
-        { countryId, preset, caseKey: caseSeed.caseKey },
-        { $setOnInsert: { _id: new ObjectId(), ...docketCase } as DocketCase },
-        { upsert: true }
-      );
+    await docketCasesCollection(db).updateOne(
+      { countryId, preset, caseKey: caseSeed.caseKey },
+      { $setOnInsert: { _id: new ObjectId(), ...docketCase } as DocketCase },
+      { upsert: true }
+    );
     casesSeeded++;
   }
 

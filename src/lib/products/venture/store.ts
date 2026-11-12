@@ -4,6 +4,8 @@
  */
 import type { Db } from "mongodb";
 import type { ProductVenture } from "./types";
+import { productVenturesCollection } from "@/lib/db/repositories/productVentures";
+import type { Document } from "mongodb";
 
 export const PRODUCT_VENTURES = "productVentures";
 export const PRODUCT_VENTURE_ACTIVE_INDEX =
@@ -12,7 +14,7 @@ export const PRODUCT_VENTURE_CORPORATION_INDEX = "product_venture_corporation_st
 export const PRODUCT_VENTURE_STAGE_INDEX = "product_venture_stage_processed_v1";
 
 export async function ensureProductVentureIndexes(db: Db): Promise<void> {
-  const collection = db.collection(PRODUCT_VENTURES);
+  const collection = productVenturesCollection<Document>(db);
   await collection.createIndex(
     { activeKey: 1 },
     {

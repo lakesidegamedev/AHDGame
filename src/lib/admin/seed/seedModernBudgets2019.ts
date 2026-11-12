@@ -1,12 +1,16 @@
 import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types";
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { StateBudget } from "@/lib/db/types/budget";
 import {
   generateCountryOwnedSeedData,
   generateStateBudgets,
   getInitialNationalBudgetsForPreset,
 } from "@/lib/seeds/reference/budgets";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 const COUNTRY_IDS = ["RU", "PL", "HU", "RO", "BG"] as const;
 
@@ -25,19 +29,16 @@ export async function seedModernBudgets2019(
   if (budgets.length !== countries.length)
     throw new Error("Missing 2019 transition national budget");
   if (reset) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .deleteMany({ countryId: { $in: countries } });
-    await db.collection<StateBudget>("stateBudgets").deleteMany({ countryId: { $in: countries } });
+    await federalBudgetCollection(db).deleteMany({ countryId: { $in: countries } });
+    await stateBudgetsCollection(db).deleteMany({ countryId: { $in: countries } });
   }
   const now = new Date();
-  await db.collection<FederalBudget>("federalBudget").bulkWrite(
+  await federalBudgetCollection(db).bulkWrite(
     budgets.map(({ _id, ...budget }) => ({
       updateOne: { filter: { _id }, update: { $set: { ...budget, updatedAt: now } }, upsert: true },
     }))
   );
-  const regions = await db
-    .collection<State>("states")
+  const regions = await statesCollection(db)
     .find({ countryId: { $in: countries } })
     .project({ _id: 1, countryId: 1, population: 1, gdp: 1 })
     .toArray();
@@ -51,12 +52,12 @@ export async function seedModernBudgets2019(
     })),
     2019
   );
-  await db.collection<StateBudget>("stateBudgets").bulkWrite(
+  await stateBudgetsCollection(db).bulkWrite(
     stateBudgets.map(({ _id, ...budget }) => ({
       updateOne: { filter: { _id }, update: { $set: budget }, upsert: true },
     }))
   );
-  const ruRegions = regions.filter((region) => region.countryId === "RU");
+  const ruRegions = regions.filter((region) => countryHasFeature("ruAdmin", region.countryId));
   const issuer = generateCountryOwnedSeedData(
     ruRegions.map((region) => ({
       id: region._id,
@@ -69,7 +70,8 @@ export async function seedModernBudgets2019(
     log
   ).find(
     (entry) =>
-      entry.corporation.countryOwnerId === "RU" && entry.corporation.isPrimaryNationalCorporation
+      countryHasFeature("ruAdmin", entry.corporation.countryOwnerId) &&
+      entry.corporation.isPrimaryNationalCorporation
   );
   if (!issuer) throw new Error("Missing 2019 RU sovereign issuer template");
   await upsertCountryOwnedCorpEntries(db, "RU", [

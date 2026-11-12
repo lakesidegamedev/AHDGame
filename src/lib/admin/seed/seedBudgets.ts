@@ -1,7 +1,16 @@
 import type { Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { FederalBudget, EnactedLaw, StateBudget, FormulaGrant } from "@/lib/db/types/budget";
+import type { CorporateSector, State } from "@/lib/db/types";
+import type { EnactedLaw, StateBudget, FormulaGrant } from "@/lib/db/types/budget";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { formulaGrantsCollection } from "@/lib/db/repositories/formulaGrants";
 
 /**
  * Seeds US-only budget data: federal budget, US enacted laws, US state budgets,
@@ -19,37 +28,25 @@ export async function seedBudgets(
 ) {
   if (reset) {
     // Only delete US-specific budget data, not UK/JP
-    await db.collection<FederalBudget>("federalBudget").deleteMany({ countryId: "US" });
+    await federalBudgetCollection(db).deleteMany({ countryId: "US" });
     const usStateIds = (
-      await db.collection("states").find({ countryId: "US" }).project({ _id: 1 }).toArray()
+      await statesCollection<Document>(db).find({ countryId: "US" }).project({ _id: 1 }).toArray()
     ).map((s) => s._id as string);
     if (usStateIds.length > 0) {
-      await db
-        .collection<StateBudget>("stateBudgets")
-        .deleteMany({ stateId: { $in: usStateIds }, countryId: "US" });
+      await stateBudgetsCollection(db).deleteMany({
+        stateId: { $in: usStateIds },
+        countryId: "US",
+      });
     }
-    // ⚠️ Only on presets where this function actually rebuilds the US law book.
-    //
-    // On a political-legislation preset (1953) the authored US baseline comes
-    // from `seedPoliticalLegislationBaseline`, because
-    // `POLITICAL_LEGISLATION_EXCLUDED_SCOPES` strips the legacy US catalog out
-    // of the budget-derived defaults below. That seeder lives in the
-    // orchestrators, NOT in `runSeed` — so on `POST /api/seed?reset=true` and
-    // `scripts/seed/seed.ts --reset` this delete removed the US law book with nothing
-    // to restore it. MEASURED as enactedLaws 742 -> 642, exactly the 100 US rows.
-    //
-    // Scoping the delete to the US does not help; the US is who loses them.
-    // Calling `seedPoliticalLegislationBaseline` from here would be worse — it
-    // prices every LAW_COUNTRY_ID against `countryFiscalBase`, and on the
-    // standalone path only US budgets exist, so it would silently MISPRICE
-    // UK/RU/DD to fix a US omission. Deleting only what we rebuild is the fix.
-    const { isPoliticalLegislationPreset } = await import("./seedPoliticalLegislation");
-    if (!isPoliticalLegislationPreset(preset)) {
-      await db.collection<EnactedLaw>("enactedLaws").deleteMany({ countryId: "US" });
-    }
+    // The US enacted-law book comes from `seedPoliticalLegislationBaseline`,
+    // which strips the legacy US catalog via `POLITICAL_LEGISLATION_EXCLUDED_SCOPES`.
+    // That seeder lives in the orchestrators, NOT in `runSeed`, so deleting here
+    // would remove the US law book with nothing to restore it. Calling it from
+    // here would be worse: it prices every LAW_COUNTRY_ID against
+    // `countryFiscalBase`, and on the standalone path only US budgets exist,
+    // mispricing UK/RU/DD.
     // Formula grants are US-only, safe to drop
-    await db
-      .collection("formulaGrants")
+    await formulaGrantsCollection<Document>(db)
       .drop()
       .catch(() => {
         /* collection may not exist */
@@ -61,65 +58,29 @@ export async function seedBudgets(
     getNationalBudgetSeedConfigsForPreset,
     generateCountryOwnedSeedData,
     generateStateBudgets,
-    generateDefaultEnactedLaws,
   } = await import("@/lib/seeds/reference/budgets");
   const { formulaGrants } = await import("@/lib/seeds/reference/formulaGrants");
 
   const presetBudgets = getInitialNationalBudgetsForPreset(preset);
   const usFiscalYear =
-    getNationalBudgetSeedConfigsForPreset(preset).find((c) => c.countryId === "US")?.fiscalYear ??
-    2020;
+    getNationalBudgetSeedConfigsForPreset(preset).find((c) =>
+      countryHasFeature("usAdmin", c.countryId)
+    )?.fiscalYear ?? 2020;
 
   // Seed US national budget only (UK is handled by seedUkBudgets)
-  const usNationalBudgets = presetBudgets.filter((b) => b.countryId === "US");
+  const usNationalBudgets = presetBudgets.filter((b) => countryHasFeature("usAdmin", b.countryId));
   for (const nationalBudget of usNationalBudgets) {
     const { _id, ...budgetData } = nationalBudget;
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id }, { $set: { ...budgetData, updatedAt: new Date() } }, { upsert: true });
-  }
-  log(`Seeded ${usNationalBudgets.length} US national budget(s)`);
-
-  // Seed US default enacted laws so runtime spending calculation has data.
-  // $unset stale cost fields to prevent priority conflicts in calculateEnactedLawAnnualCost
-  // (which checks gdpPerCapitaMultiplier before annualCostPerCapita — a stale gdpPerCapitaMultiplier: 0
-  // from a previous seed would shadow a correct annualCostPerCapita from the current seed).
-  const allDefaultEnactedLaws = generateDefaultEnactedLaws(preset);
-  const defaultEnactedLaws = allDefaultEnactedLaws.filter((law) => law.countryId === "US");
-  for (const law of defaultEnactedLaws) {
-    const { _id, ...lawWithoutId } = law;
-
-    // Determine which cost fields to unset (those NOT in the current law)
-    const unsetFields: Record<string, ""> = {};
-    if (law.gdpPerCapitaMultiplier === undefined) unsetFields.gdpPerCapitaMultiplier = "";
-    if (law.annualCostPerCapita === undefined) unsetFields.annualCostPerCapita = "";
-    if (law.annualCostUsd === undefined) unsetFields.annualCostUsd = "";
-    if (law.gdpCostFraction === undefined) unsetFields.gdpCostFraction = "";
-    if (law.incomeCostFraction === undefined) unsetFields.incomeCostFraction = "";
-
-    const update: Record<string, unknown> = {
-      $set: lawWithoutId,
-      $setOnInsert: { _id },
-    };
-    if (Object.keys(unsetFields).length > 0) {
-      update.$unset = unsetFields;
-    }
-
-    await db.collection<EnactedLaw>("enactedLaws").updateOne(
-      {
-        legislationTypeId: law.legislationTypeId,
-        scope: law.scope,
-        countryId: law.countryId,
-        repealedAt: { $exists: false },
-      },
-      update,
+    await federalBudgetCollection(db).updateOne(
+      { _id },
+      { $set: { ...budgetData, updatedAt: new Date() } },
       { upsert: true }
     );
   }
-  log(`Seeded ${defaultEnactedLaws.length} US default enacted laws`);
+  log(`Seeded ${usNationalBudgets.length} US national budget(s)`);
 
   // Get US states for generating state budgets (UK handled by seedUkBudgets, JP by seedJpBudgets)
-  const states = await db.collection<State>("states").find({ countryId: "US" }).toArray();
+  const states = await statesCollection(db).find({ countryId: "US" }).toArray();
   const statesForBudgets = states.map((s) => ({
     id: s._id,
     population: s.population,
@@ -129,26 +90,26 @@ export async function seedBudgets(
   const stateBudgets = generateStateBudgets(statesForBudgets, usFiscalYear);
   for (const budget of stateBudgets) {
     const { _id, ...budgetData } = budget;
-    await db
-      .collection<StateBudget>("stateBudgets")
-      .updateOne({ _id }, { $set: budgetData }, { upsert: true });
+    await stateBudgetsCollection(db).updateOne({ _id }, { $set: budgetData }, { upsert: true });
   }
   log(`Seeded ${stateBudgets.length} US state budgets`);
 
   // Seed US country-owned public corporation (UK NHS handled by seedUkBudgets, JP by seedJpBudgets)
   const countryOwnedSeedData = generateCountryOwnedSeedData(statesForBudgets, preset);
-  const usCorpData = countryOwnedSeedData.filter(
-    (entry) => entry.corporation.countryOwnerId === "US"
+  const usCorpData = countryOwnedSeedData.filter((entry) =>
+    countryHasFeature("usAdmin", entry.corporation.countryOwnerId)
   );
   for (const entry of usCorpData) {
     const { _id: corpId, ...corpData } = entry.corporation;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne({ _id: corpId }, { $set: corpData }, { upsert: true });
+    await corporationsCollection(db).updateOne(
+      { _id: corpId },
+      { $set: corpData },
+      { upsert: true }
+    );
 
     for (const sector of entry.sectors) {
       const { _id: _sectorId, ...sectorData } = sector;
-      await db.collection<CorporateSector>("corporateSectors").updateOne(
+      await corporateSectorsCollection(db).updateOne(
         {
           corporationId: corpId,
           stateId: sector.stateId,
@@ -166,13 +127,15 @@ export async function seedBudgets(
   // Seed formula grants
   const validGrantIds = formulaGrants.map((g) => g.programId);
   for (const grant of formulaGrants) {
-    await db
-      .collection<FormulaGrant>("formulaGrants")
-      .updateOne({ programId: grant.programId }, { $set: grant }, { upsert: true });
+    await formulaGrantsCollection(db).updateOne(
+      { programId: grant.programId },
+      { $set: grant },
+      { upsert: true }
+    );
   }
 
   // Remove stale formula grants that no longer exist
-  const grantDeleteResult = await db.collection("formulaGrants").deleteMany({
+  const grantDeleteResult = await formulaGrantsCollection<Document>(db).deleteMany({
     programId: { $nin: validGrantIds },
   });
   const staleGrantsRemoved = grantDeleteResult.deletedCount || 0;
@@ -182,8 +145,7 @@ export async function seedBudgets(
   );
 
   // Budget indexes
-  await db
-    .collection("stateBudgets")
+  await stateBudgetsCollection<Document>(db)
     .createIndex({ stateId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {
@@ -192,8 +154,7 @@ export async function seedBudgets(
         metadata: { index: "stateId", error: String(error) },
       });
     });
-  await db
-    .collection("enactedLaws")
+  await enactedLawsCollection<Document>(db)
     .createIndex({ scope: 1, stateId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {
@@ -202,8 +163,7 @@ export async function seedBudgets(
         metadata: { index: "scope_stateId", error: String(error) },
       });
     });
-  await db
-    .collection("enactedLaws")
+  await enactedLawsCollection<Document>(db)
     .createIndex({ legislationTypeId: 1 })
     .catch((error) => {
       logWarning("Index creation failed (may already exist)", {

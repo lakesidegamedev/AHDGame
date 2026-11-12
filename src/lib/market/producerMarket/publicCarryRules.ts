@@ -1,17 +1,14 @@
 /**
- * Public funding carry-forward (funded-market cutover). A public buyer's budget
- * line is a fixed per-turn outlay. When a commodity is short, that outlay goes
- * partly unfilled and the unspent money used to be burned at close, so the
- * buyer never gained purchasing power when supply finally landed. Here a share
- * of the unfilled part of each line stays in the public wallet and is added to
- * that same line next turn, capped at PUBLIC_CARRY_MAX_TURNS of the line's own fresh outlay (so a line can hold up to 1 + that many turns of fresh outlay in total).
+ * Public funding carry-forward. A public buyer's budget line is a fixed per-turn
+ * outlay. When a commodity is short, the unfilled share of that line stays in
+ * the public wallet and is added to the same line next turn, capped at
+ * PUBLIC_CARRY_MAX_TURNS of the line's fresh outlay.
  *
- * Nothing is minted: carried money was already funded by an earlier turn and is
- * simply not burned. Transition support and decommission grants are paid from
- * what is left after the carry is set aside.
+ * Nothing is minted: carried money was already funded and is simply not burned.
+ * Transition support and decommission grants are paid from what is left after
+ * the carry is set aside.
  *
- * Pure: lines and settled order outcomes in, carry amounts out. Amounts are in
- * the same units as the order's maximumSpend (anchor).
+ * Pure: amounts are in the same units as the order's maximumSpend.
  */
 export const PUBLIC_CARRY_MAX_TURNS = 4;
 export const PUBLIC_CARRY_DEFAULT_SHARE = 0.5;

@@ -54,7 +54,7 @@ export const MANUFACTURING_PRODUCT_KINDS: readonly ManufacturingProductKind[] = 
     label: "Industrial electronics",
     outputCommodity: "electronics",
     sectorTypes: ["manufacturing"],
-    strategyIds: ["electronics_manufacturing", "additive_manufacturing"],
+    strategyIds: ["electronics_manufacturing", "additive_manufacturing", "humanoid_robotics"],
   },
   {
     id: "electronic_components",
@@ -89,7 +89,12 @@ export const MANUFACTURING_PRODUCT_KINDS: readonly ManufacturingProductKind[] = 
     label: "Specialty steel",
     outputCommodity: "steel",
     sectorTypes: ["manufacturing"],
-    strategyIds: ["heavy_metals", "additive_manufacturing", "autonomous_factory"],
+    strategyIds: [
+      "heavy_metals",
+      "additive_manufacturing",
+      "autonomous_factory",
+      "humanoid_robotics",
+    ],
   },
   {
     id: "cookware_hardware",

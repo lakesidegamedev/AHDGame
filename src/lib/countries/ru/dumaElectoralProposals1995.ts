@@ -4,7 +4,7 @@
  * campaigns, whose frozen authority is checked by loadEnactedRussianDumaLaw.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { Bill, Character, CountryGameState, GameState } from "@/lib/db/types";
+import type { Bill, Character, CountryGameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import {
@@ -15,8 +15,14 @@ import {
   russianDuma1995DecisionAvailability,
   passesRussianDumaLawChamber,
 } from "./rules/dumaElectoralLaw";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianDumaLawProposalsCollection } from "@/lib/db/repositories/russianDumaLawProposals";
 
-const RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION = "russianDumaLawProposals";
 const ID = "1991-default:ru-duma:law1995";
 export interface RussianDuma1995Proposal {
   _id: string;
@@ -56,12 +62,10 @@ function availability(
   });
 }
 async function canonicalGame(db: Db, session?: ClientSession) {
-  return db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  return gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: GAME_STATE_PRE_ITERATION_FIELDS }
+  );
 }
 function validClock(turn: number, now: Date) {
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))
@@ -81,16 +85,17 @@ export async function materializeRussianDuma1995Proposal(input: {
   validClock(turn, now);
   if (!session.inTransaction()) throw new Error("Duma law needs a required transaction");
   const game = await canonicalGame(db, session);
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "RU" }, { session, projection });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU" },
+    { session, projection }
+  );
   if (!game || input.game.preset !== game.preset)
     throw new RussianConstitutionalDecisionConflict("other-era");
   const allowed = availability(game, turn, country);
   if (!allowed.available) throw new RussianConstitutionalDecisionConflict(allowed.reason);
   if (
     input.sponsor &&
-    !(await db.collection("electedOfficials").findOne(
+    !(await electedOfficialsCollection<Document>(db).findOne(
       {
         countryId: "RU",
         characterId: input.sponsor._id,
@@ -103,15 +108,13 @@ export async function materializeRussianDuma1995Proposal(input: {
     throw new RussianConstitutionalDecisionConflict(
       "A seated Russian legislator must introduce this law"
     );
-  const proposals = db.collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION);
+  const proposals = russianDumaLawProposalsCollection<RussianDuma1995Proposal>(db);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
-    const bill = await db
-      .collection<Bill>("bills")
-      .findOne(
-        { _id: prior.billId },
-        { session, projection: { countryId: 1, status: 1, russianDumaElectoralMandate: 1 } }
-      );
+    const bill = await billsCollection(db).findOne(
+      { _id: prior.billId },
+      { session, projection: { countryId: 1, status: 1, russianDumaElectoralMandate: 1 } }
+    );
     if (
       !Number.isSafeInteger(prior.revision) ||
       prior.revision < 1 ||
@@ -167,7 +170,7 @@ export async function materializeRussianDuma1995Proposal(input: {
     { session, upsert: !prior }
   );
   if (prior && claim.matchedCount !== 1) throw new Error("Duma proposal changed");
-  await db.collection<Bill>("bills").insertOne(bill, { session });
+  await billsCollection(db).insertOne(bill, { session });
   return proposal;
 }
 export async function openRussianDuma1995Proposal(
@@ -194,7 +197,7 @@ function validBinding(bill: Bill, proposal: RussianDuma1995Proposal) {
   );
 }
 async function signedBill(db: Db, proposal: RussianDuma1995Proposal, session?: ClientSession) {
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "RU",
@@ -237,7 +240,7 @@ export async function authorizeRussianDuma1995Proposal(input: {
   const { db, session, turn, now } = input;
   validClock(turn, now);
   if (!session.inTransaction()) throw new Error("Duma enactment needs a required transaction");
-  const proposals = db.collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION);
+  const proposals = russianDumaLawProposalsCollection<RussianDuma1995Proposal>(db);
   const proposal = await proposals.findOne({ _id: ID, status: "open" }, { session });
   if (!proposal || !(await signedBill(db, proposal, session))) return false;
   if (
@@ -247,7 +250,7 @@ export async function authorizeRussianDuma1995Proposal(input: {
   )
     throw new Error("Duma law opening clock changed");
   const game = await canonicalGame(db, session);
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne({ _id: "RU" }, { session, projection });
   if (!game || input.game.preset !== game.preset || !availability(game, turn, country).available)
     return false;
@@ -292,14 +295,16 @@ export async function processRussianDuma1995Mandate(
     !availability(game, turn, { ruFederalAssemblySinceTurn: 1 }).available
   )
     return false;
-  const proposal = await db
-    .collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
+  const proposal = await russianDumaLawProposalsCollection<RussianDuma1995Proposal>(db).findOne(
+    { _id: ID, status: "open" },
+    { projection: { billId: 1 } }
+  );
   if (
     !proposal ||
-    !(await db
-      .collection<Bill>("bills")
-      .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: proposal.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(
@@ -329,17 +334,15 @@ export async function loadEnactedRussianDumaLaw(input: {
     mandate.sinceTurn > turn
   )
     throw new Error("Duma law requires valid recorded authority");
-  const proposal = await db
-    .collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION)
-    .findOne(
-      {
-        _id: ID,
-        revision: mandate.revision,
-        status: "authorized",
-        authorizedOnTurn: mandate.sinceTurn,
-      },
-      { session }
-    );
+  const proposal = await russianDumaLawProposalsCollection<RussianDuma1995Proposal>(db).findOne(
+    {
+      _id: ID,
+      revision: mandate.revision,
+      status: "authorized",
+      authorizedOnTurn: mandate.sinceTurn,
+    },
+    { session }
+  );
   if (!proposal || !(await signedBill(db, proposal, session)))
     throw new Error("Duma law lacks its actual enactment receipt");
   const game = await canonicalGame(db, session);
@@ -357,18 +360,15 @@ export async function loadRussianDuma1995Decisions(
   turn: number
 ) {
   if (game.preset !== "1991-default") return [];
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "RU" }, { projection });
+  const country = await countryGameStatesCollection(db).findOne({ _id: "RU" }, { projection });
   const allowed = availability(game, turn, country);
   if (allowed.reason === "before-date" || allowed.reason === "no-legislature") return [];
-  const proposal = await db
-    .collection<RussianDuma1995Proposal>(RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID }, { projection: { billId: 1, revision: 1, status: 1 } });
+  const proposal = await russianDumaLawProposalsCollection<RussianDuma1995Proposal>(db).findOne(
+    { _id: ID },
+    { projection: { billId: 1, revision: 1, status: 1 } }
+  );
   const bill = proposal
-    ? await db
-        .collection<Bill>("bills")
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return [
     {

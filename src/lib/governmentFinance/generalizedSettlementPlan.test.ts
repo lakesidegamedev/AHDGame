@@ -1,10 +1,13 @@
 import { ObjectId } from "mongodb";
 import { describe, expect, it } from "vitest";
 import type { DepartmentAccount, EnactedLaw } from "@/lib/db/types/budget";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { legislationTypes as referenceTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 import { createEmptyDepartmentAccount } from "./departments";
 import { DEPARTMENT_DEFINITIONS } from "./departmentCatalog";
 import { buildCountryDepartmentSettlementPlan } from "./generalizedSettlementPlan";
+
+const legislationTypes = [...referenceTypes, ...getProjectedPoliticalLegislationTypes()];
 
 function law(
   typeId: string,
@@ -39,8 +42,8 @@ describe("generalized country department settlement plan", () => {
       year: 2027,
       accounts: {},
       activeLawCosts: [
-        { law: law("uk_nhs_funding", 3), amount: 4_800 },
-        { law: law("uk_public_health", 3), amount: 4_800 },
+        { law: law("uk.health.universalCare.primary", 2), amount: 4_800 },
+        { law: law("uk.health.prevention.primary", 2), amount: 4_800 },
       ],
       legislationTypes,
     });
@@ -76,7 +79,7 @@ describe("generalized country department settlement plan", () => {
       accounts: {},
       activeLawCosts: [
         {
-          law: law("uk_nhs_funding", 3, "regional_discretion"),
+          law: law("uk.health.universalCare.primary", 2, "regional_discretion"),
           amount: 4_800,
         },
       ],
@@ -86,7 +89,7 @@ describe("generalized country department settlement plan", () => {
   });
 
   it("derives left-to-regions delivery from the enacted option", () => {
-    const stateLedEducation = law("us_federal_education_funding", 5);
+    const stateLedEducation = law("us.education.universalSchooling.primary", 0);
     stateLedEducation.countryId = "US";
     const plan = buildCountryDepartmentSettlementPlan({
       countryId: "US",
@@ -108,8 +111,8 @@ describe("generalized country department settlement plan", () => {
       programs: {
         old_project: {
           programId: "old_project",
-          legislationTypeId: "uk_transport_rail",
-          policyOptionId: "uk_transport_rail_opt_3",
+          legislationTypeId: "uk.infrastructure.transit.primary",
+          policyOptionId: "l2",
           status: "operating",
           annualDemand: 4_800,
           periodDemand: 100,

@@ -5,6 +5,7 @@ import type { StateMetrics } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { presentEconomicModel } from "@/lib/economicModels/present";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * GET /api/country/[code]/economic-model
@@ -28,9 +29,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     }
 
     const db = await getDb();
-    const doc = await db
-      .collection<StateMetrics>("macroMetrics")
-      .findOne({ _id: docId }, { projection: { economicModel: 1 } });
+    const doc = await macroMetricsCollection(db).findOne(
+      { _id: docId },
+      { projection: { economicModel: 1 } }
+    );
 
     if (!doc?.economicModel) {
       return errorResponse(404, "No economic model classified yet");

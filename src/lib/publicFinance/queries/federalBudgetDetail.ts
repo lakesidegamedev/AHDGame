@@ -11,7 +11,7 @@ import type { StateBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { regionalGrantAmount } from "@/lib/budget/regionalGrantField";
-import type { CentralBank, GameConfig, GameState } from "@/lib/db/types";
+import type { GameConfig, GameState } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, isParliamentarySystem, type CountryId } from "@/lib/constants/countries";
 import { calculateFederalRevenue, loadLatestSourcedImportAggregates } from "@/lib/budget/revenue";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
@@ -26,9 +26,24 @@ import { estimateCountryOwnedBudgetNetLocal } from "@/lib/budget/publicEnterpris
 import { readStateOwnershipConcentration } from "@/lib/nationalization/concentration";
 import { nationalLawCountryQuery } from "@/lib/policy/nationalPolicyRecords";
 import { effectiveBorrowingLimit } from "@/lib/budget/borrowingLimit";
+import {
+  summariseFiscalConsolidation,
+  type ConsolidationPackageInput,
+  type FiscalConsolidationSummary,
+} from "@/lib/budget/rules/fiscalStabilizer";
 import { loadDefenseFunding } from "./defenseFunding";
 import { loadOrganizationContributions } from "./organizationContributions";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 /** One point on the fiscal-year trend series (stat strip compare + debt sparkline). */
 export interface FyHistoryPoint {
@@ -106,6 +121,8 @@ export interface SovereignProjection {
   ceilingHeadroom: number | null;
   ceilingHeadroomYears: number | null;
   ceilingStatus: SovereignCeilingStatus;
+  /** Latest austerity package while its approval cost is still fading. */
+  consolidation: FiscalConsolidationSummary | null;
 }
 
 type SovereignProjectionBudget = {
@@ -116,6 +133,7 @@ type SovereignProjectionBudget = {
   debt?: Pick<FederalBudget["debt"], "principal" | "ceiling">;
   revenue?: Pick<FederalBudget["revenue"], "total">;
   spending?: Pick<FederalBudget["spending"], "total">;
+  fiscalConsolidation?: { lastPackage?: ConsolidationPackageInput | null };
 };
 
 function projectCeiling(
@@ -188,6 +206,11 @@ export function projectSovereign(
     marketAccess: locked ? "Locked" : "Open",
     marketAccessUntilTurn: locked ? lockUntil : null,
     ...projectCeiling(budget),
+    consolidation: summariseFiscalConsolidation(
+      budget.fiscalConsolidation?.lastPackage,
+      currentTurn,
+      TURNS_PER_YEAR
+    ),
   };
 }
 
@@ -215,8 +238,7 @@ export async function loadFederalBudgetDetail(params: {
           ? "Macro-Region"
           : COUNTRY_CONFIGS[budgetCountryId].regionLabel;
 
-  const snapshotDocs = await db
-    .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
+  const snapshotDocs = await federalBudgetSnapshotsCollection(db)
     .find(
       { countryId },
       {
@@ -239,18 +261,17 @@ export async function loadFederalBudgetDetail(params: {
   const requestedFY = rawFiscalYear ? parseInt(rawFiscalYear, 10) : null;
 
   if (requestedFY && !Number.isNaN(requestedFY)) {
-    const snapshot = await db
-      .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
-      .findOne({ _id: `${countryId}:FY${requestedFY}` });
+    const snapshot = await federalBudgetSnapshotsCollection(db).findOne({
+      _id: `${countryId}:FY${requestedFY}`,
+    });
     if (!snapshot) return { ok: false as const, status: 404, error: "Snapshot not found" };
 
     const [snapshotGameState, snapshotGameConfig] = await Promise.all([
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentYear: 1 } }),
+      gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      ),
     ]);
 
     const snapshotCurrencyCode =
@@ -293,22 +314,18 @@ export async function loadFederalBudgetDetail(params: {
   }
 
   const [storedNationalBudgetDoc, gameState, centralBank, gameConfig] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId }),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1, currentYear: 1, startingYear: 1 } }
-      ),
-    db
-      .collection<CentralBank>("centralBanks")
-      .findOne(
-        COUNTRY_CONFIGS[countryId].centralBank.sharedBankId
-          ? { _id: COUNTRY_CONFIGS[countryId].centralBank.sharedBankId }
-          : { countryId },
-        { projection: { primeRate: 1, reserveBalance: 1 } }
-      ),
-    db.collection<GameConfig>("gameConfig").findOne(
+    federalBudgetCollection(db).findOne({ _id: budgetId }),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1, currentYear: 1, startingYear: 1 } }
+    ),
+    centralBanksCollection(db).findOne(
+      COUNTRY_CONFIGS[countryId].centralBank.sharedBankId
+        ? { _id: COUNTRY_CONFIGS[countryId].centralBank.sharedBankId }
+        : { countryId },
+      { projection: { primeRate: 1, reserveBalance: 1 } }
+    ),
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -405,23 +422,18 @@ export async function loadFederalBudgetDetail(params: {
     };
   }
 
-  const states = await db
-    .collection<State>("states")
-    .find({ countryId: budgetCountryId })
-    .toArray();
+  const states = await statesCollection(db).find({ countryId: budgetCountryId }).toArray();
   // A1 SSOT: national GDP is the live sum of regional gdp, not the fiscal-close
   // snapshot in `budget.gdp`, which runs up to 6.5% behind between rollovers.
   // See lib/budget/gdpDenominator.
   const liveGdpUnits = liveNationalGdpUnits(states);
   const stateIds = states.map((state) => state._id);
   const [stateBudgets, regionalBudgets] = await Promise.all([
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({ stateId: { $in: stateIds } })
       .toArray(),
     isParliamentarySystem(COUNTRY_CONFIGS[budgetCountryId])
-      ? db
-          .collection<RegionalBudget>("regionalBudgets")
+      ? regionalBudgetsCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray()
       : Promise.resolve([] as RegionalBudget[]),
@@ -433,12 +445,10 @@ export async function loadFederalBudgetDetail(params: {
     .map((state) => {
       const regionalBudget = regionalBudgetMap.get(state._id);
       const stateBudget = stateBudgetMap.get(state._id);
-      // Table lookup, not an if/else chain with a default: the chain this
-      // replaced ended in `westminsterGrant`, so any country it did not name
-      // read the UK's field and reported DDM 0 instead of failing. DD lost its
-      // Länder grants that way (#1323). `undefined` here means "no grant field
-      // mapped for this country", which falls back to the stateBudgets figure
-      // exactly as a missing regionalBudget does.
+      // Table lookup, not an if/else chain with a default fallback: a chained default
+      // would report DDM 0 instead of the correct figure for unnamed countries.
+      // `undefined` here means "no grant field mapped for this country", which falls
+      // back to the stateBudgets figure exactly as a missing regionalBudget does.
       const federalGrants =
         regionalGrantAmount(budgetCountryId, regionalBudget) ??
         stateBudget?.revenue?.federalGrants ??
@@ -456,10 +466,7 @@ export async function loadFederalBudgetDetail(params: {
     ...nationalLawCountryQuery(budgetCountryId),
     repealedAt: { $exists: false },
   };
-  const enactedLaws = await db
-    .collection<EnactedLaw>("enactedLaws")
-    .find(enactedLawQuery)
-    .toArray();
+  const enactedLaws = await enactedLawsCollection(db).find(enactedLawQuery).toArray();
 
   // Enrich tax statutes with the revenue line they govern: a tax law's
   // legislationType carries `taxRateChange.taxType`, which is a FederalTaxRates /
@@ -470,8 +477,10 @@ export async function loadFederalBudgetDetail(params: {
   );
   const revenueTaxTypeByLegId = new Map<string, string>();
   if (legislationTypeIds.length > 0) {
-    const legislationTypes = await db
-      .collection<{ _id: string; taxRateChange?: { taxType?: string } }>("legislationTypes")
+    const legislationTypes = await legislationTypesCollection<{
+      _id: string;
+      taxRateChange?: { taxType?: string };
+    }>(db)
       .find({ _id: { $in: legislationTypeIds } }, { projection: { "taxRateChange.taxType": 1 } })
       .toArray();
     for (const t of legislationTypes) {
@@ -508,7 +517,7 @@ export async function loadFederalBudgetDetail(params: {
     // surplus tile counts vs the force's actual upkeep, plus the appropriation
     // pot. Upkeep beyond the line leaves the treasury as debt without touching
     // any spending row, which is the usual reason a balance falls under a
-    // surplus (ticket #1269). Read-only; the turn phase stays the sole writer.
+    // surplus. Read-only; the turn phase stays the sole writer.
     defenseFunding,
     // International organization dues or tribute debited directly from the
     // treasury. These are also read-only; the turn phase remains the sole writer.

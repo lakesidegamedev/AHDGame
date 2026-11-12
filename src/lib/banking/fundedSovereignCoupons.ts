@@ -33,6 +33,10 @@ import {
   claimAtFiscalScale,
   fiscalScaleCouponOrder,
 } from "@/lib/budget/rules/fiscalScale";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
@@ -84,7 +88,7 @@ let claimIndexReady: Promise<unknown> | null = null;
 
 /** The claim store, with its indexes ensured once per process. */
 export function sovereignCouponClaimStore(db: Db) {
-  const store = db.collection<SovereignCouponClaimRecord>(SOVEREIGN_COUPON_CLAIMS_COLLECTION);
+  const store = sovereignCouponClaimsCollection<SovereignCouponClaimRecord>(db);
   claimIndexReady ??= Promise.all([
     store.createIndex(
       { budgetId: 1, settledTurn: 1 },
@@ -213,7 +217,7 @@ export async function settleableSovereignCouponHolderKeys(
 }
 
 /** Unpaid claims for one budget, in book order. Legacy array claims are not included. */
-export async function loadOpenSovereignCouponClaims(
+async function loadOpenSovereignCouponClaims(
   db: Db,
   budgetId: string
 ): Promise<FundedSovereignCouponClaim[]> {
@@ -236,8 +240,7 @@ export async function loadOpenSovereignCouponClaims(
 export async function loadSovereignCouponPriorPayouts(
   db: Db
 ): Promise<Array<{ _id: string; status: string }>> {
-  return db
-    .collection<{ _id: string; status: string }>("bankMoneyMoves")
+  return bankMoneyMovesCollection<{ _id: string; status: string }>(db)
     .find(
       { _id: { $regex: "^sovereign-coupon:" }, status: { $in: ["partial", "applied"] } },
       { projection: { _id: 1, status: 1 } }
@@ -539,8 +542,7 @@ export async function loadSovereignCouponSettlementPrefetch(
     }
   }
   const batchRows = keys.length
-    ? await db
-        .collection<CouponBatchRecord>("bankMoneyMoves")
+    ? await bankMoneyMovesCollection<CouponBatchRecord>(db)
         .find({ _id: { $in: keys } }, { projection: BATCH_PROJECTION })
         .toArray()
     : [];
@@ -598,8 +600,7 @@ async function findPriorPayouts(
   claims: FundedSovereignCouponClaim[]
 ): Promise<Array<{ _id: string; status: string }>> {
   if (!claims.length) return [];
-  return db
-    .collection<{ _id: string; status: string }>("bankMoneyMoves")
+  return bankMoneyMovesCollection<{ _id: string; status: string }>(db)
     .find(
       {
         $or: claims.map((claim) => ({ _id: { $regex: `^${escapeRegex(claim.id)}:attempt:` } })),
@@ -646,17 +647,6 @@ export function sovereignCouponQueuedClaimIds(
   for (const batch of batches) for (const id of batchMembers(batch)) ids.add(id);
   for (const move of priors) ids.add(claimIdOfMove(move._id));
   return ids;
-}
-
-/**
- * This turn's claims for one budget's coupon-bearing bonds, in bond order.
- *
- * The record has to be written before the frozen-through mark, so a crash
- * between the two re-installs the same id (a no-op) rather than losing the
- * claim.
- */
-export function freezeDueSovereignCouponClaims(input: FreezeDueSovereignCouponInput) {
-  return freezeDueSovereignCouponClaimSet(input).records;
 }
 
 export interface FreezeDueSovereignCouponInput {
@@ -914,12 +904,10 @@ async function migrateLegacyClaims(
     )
   );
   if (movable.length) {
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { _id: budgetId as FederalBudget["_id"] },
-        { $pull: { sovereignCouponClaims: { id: { $in: movable.map((claim) => claim.id) } } } }
-      );
+    await federalBudgetCollection(db).updateOne(
+      { _id: budgetId as FederalBudget["_id"] },
+      { $pull: { sovereignCouponClaims: { id: { $in: movable.map((claim) => claim.id) } } } }
+    );
   }
   return legacy.filter((claim) => pinned.has(claim.id));
 }
@@ -1045,9 +1033,10 @@ function payoutTransition(
 
 /** Cash the Treasury currently holds in its own currency; missing reads as zero. */
 async function readBudgetCash(db: Db, budgetId: unknown): Promise<number> {
-  const row = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ _id: budgetId as never }, { projection: { treasuryCashLocal: 1 } });
+  const row = await federalBudgetCollection(db).findOne(
+    { _id: budgetId as never },
+    { projection: { treasuryCashLocal: 1 } }
+  );
   const value = (row as { treasuryCashLocal?: unknown } | null)?.treasuryCashLocal;
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
 }
@@ -1270,9 +1259,7 @@ export async function settleFundedSovereignCoupons(
       fresh.push(
         ...(await installGroupedReplaySupplements(db, fresh, existingById, frozenSet!.parts))
       );
-    await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne({ _id: budget._id }, { $max: frozenSet!.marks });
+    await federalBudgetCollection(db).updateOne({ _id: budget._id }, { $max: frozenSet!.marks });
     for (const row of fresh) {
       const saved = existingById.get(row._id);
       if (saved?.settledTurn !== undefined) continue;
@@ -1331,9 +1318,10 @@ export async function settleFundedSovereignCoupons(
   // resumed batches, so their landed debits are not offered again.
   let fundableCash = 0;
   if (claims.length && !skipSettlementWork) {
-    const cash = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: budget._id }, { projection: { treasuryCashLocal: 1 } });
+    const cash = await federalBudgetCollection(db).findOne(
+      { _id: budget._id },
+      { projection: { treasuryCashLocal: 1 } }
+    );
     const value = (cash as { treasuryCashLocal?: unknown } | null)?.treasuryCashLocal;
     fundableCash = typeof value === "number" && Number.isFinite(value) ? value : 0;
   }
@@ -1401,9 +1389,10 @@ export async function settleFundedSovereignCoupons(
       return prepared ? { completed: false, batchClose } : { completed: false };
     if (settlementLanded(result)) {
       // A replay keeps the membership the receipt was first written with.
-      const saved = await db
-        .collection<CouponBatchRecord>("bankMoneyMoves")
-        .findOne({ _id: transition.key }, { projection: BATCH_PROJECTION });
+      const saved = await bankMoneyMovesCollection<CouponBatchRecord>(db).findOne(
+        { _id: transition.key },
+        { projection: BATCH_PROJECTION }
+      );
       if (saved && batchSettled(saved)) {
         if (prepared) batchClose.push(...couponBatchCloseOps(budgetId, [saved], grouped));
         else await markBatchMembersSettled(db, budgetId, [saved], grouped);
@@ -1486,8 +1475,7 @@ async function loadCouponBatches(
   if (first === null) return [];
   const keys: string[] = [];
   for (let t = first; t <= turn; t++) keys.push(couponBatchKey(budgetId, t));
-  return db
-    .collection<CouponBatchRecord>("bankMoneyMoves")
+  return bankMoneyMovesCollection<CouponBatchRecord>(db)
     .find({ _id: { $in: keys } }, { projection: BATCH_PROJECTION })
     .toArray();
 }
@@ -1500,8 +1488,7 @@ async function loadCouponBatches(
  * records and needs no payee lock.
  */
 export async function unfinishedSovereignCouponBatchClaimIds(db: Db): Promise<string[]> {
-  const rows = await db
-    .collection<CouponBatchRecord>("bankMoneyMoves")
+  const rows = await bankMoneyMovesCollection<CouponBatchRecord>(db)
     .find(
       {
         status: { $in: ["partial", "replayed"] },
@@ -1563,7 +1550,7 @@ async function markBatchMembersSettled(
  * the receipt document and the claim close-out write; a larger backlog drains
  * over the following turns.
  */
-export const MAX_BATCH_CLAIMS = 2000;
+const MAX_BATCH_CLAIMS = 2000;
 
 /**
  * A claim may join a grouped receipt when every credit targets a document by id
@@ -1695,7 +1682,7 @@ export async function loadCouponTargetReadiness(
   ]);
   if (poolCurrencies.size > 0) {
     try {
-      await db.collection<{ _id: string }>("bondMarketPools").bulkWrite(
+      await bondMarketPoolsCollection<{ _id: string }>(db).bulkWrite(
         [...poolCurrencies].map((currencyCode) => ({
           updateOne: {
             filter: { _id: currencyCode },

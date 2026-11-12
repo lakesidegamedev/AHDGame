@@ -1,6 +1,6 @@
 import { HONEST_BUYBACK_CAP_STAGE } from "@/lib/corporations/honestBalanceSheets";
 import type { ClientSession, Db, ObjectId } from "mongodb";
-import type { Corporation, EquityMarketPool } from "@/lib/db/types";
+import type { EquityMarketPool } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import * as Sentry from "@sentry/nextjs";
 import { getShareBuybackMode } from "./shareBuybackMode";
@@ -27,6 +27,8 @@ import {
   readEquityPool,
   refundEquityPoolDebit,
 } from "@/lib/equities/marketPool";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Centralized routing for public-float cash settlement. When a currency has an
@@ -89,7 +91,7 @@ async function claimUnpaidIpoShares(
   options?: EscrowSettlementOptions
 ): Promise<number> {
   if (!Number.isSafeInteger(shares) || shares <= 0) return 0;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const mongoOptions = options?.session ? { session: options.session } : undefined;
   const previous = await corporations.findOneAndUpdate(
     {
@@ -165,7 +167,7 @@ export async function applyFloatBuyCredit(
       }
     } catch (error) {
       if (issuerShares > 0) {
-        await db.collection<Corporation>("corporations").updateOne(
+        await corporationsCollection(db).updateOne(
           { _id: corp._id },
           {
             $inc: {
@@ -215,9 +217,10 @@ export type FloatSellSettlement = {
 
 /** gameConfig.honestBalanceSheetsStage >= 3 caps escrow buybacks by the issuer's cash. */
 async function buybackCappedByCash(db: Db): Promise<boolean> {
-  const cfg = await db
-    .collection<{ honestBalanceSheetsStage?: number }>("gameConfig")
-    .findOne({ _id: "default" as never }, { projection: { honestBalanceSheetsStage: 1 } });
+  const cfg = await gameConfigCollection<{ honestBalanceSheetsStage?: number }>(db).findOne(
+    { _id: "default" as never },
+    { projection: { honestBalanceSheetsStage: 1 } }
+  );
   return (cfg?.honestBalanceSheetsStage ?? 0) >= HONEST_BUYBACK_CAP_STAGE;
 }
 

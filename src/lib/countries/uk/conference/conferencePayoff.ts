@@ -7,7 +7,7 @@ import {
   getUKPartyConferencesCollection,
   getUKPartyPlatformsCollection,
 } from "@/lib/db/collections/ukPartyConferences";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import { resolvePartyPsCap, resolvePartyTier } from "@/lib/parties/partyTier";
 import { NATIONAL_PS_CAP } from "@/lib/politicalStrength/strengthConstants";
 import {
@@ -19,16 +19,20 @@ import {
   conferenceYearStartTurn,
   isConferencePayoffEnabled,
   payoffGroupsForPledges,
-} from "@/lib/uk/conference/rules";
+} from "@/lib/countries/uk/conference/rules";
 import {
   conferenceDocId,
   conferenceHistoryEntry,
   pushConferenceHistory,
-} from "@/lib/uk/conference/conferenceStore";
-import type { UKPartyConference } from "@/lib/uk/conference/types";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+} from "@/lib/countries/uk/conference/conferenceStore";
+import type { UKPartyConference } from "@/lib/countries/uk/conference/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { partySeqIdOf } from "./conferenceShared";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { partyGroupFavorabilityCollection } from "@/lib/db/repositories/partyGroupFavorability";
 
 export interface ConferencePayoff {
   applied: boolean;
@@ -58,10 +62,9 @@ async function computePayoffIntent(
   party: PoliticalParty,
   proposal: UKPartyConference["proposal"]
 ): Promise<{ grant: number; groups: string[] }> {
-  const partyNow =
-    (await db.collection<PoliticalParty>("politicalParties").findOne({ _id: party._id })) ?? party;
+  const partyNow = (await politicalPartiesCollection(db).findOne({ _id: party._id })) ?? party;
   let groups: string[] = [];
-  if (proposal && isConferencePayoffEnabled(process.env.UK_CONFERENCE_PAYOFF)) {
+  if (proposal && isConferencePayoffEnabled(runtimeConfig.ukConferencePayoff())) {
     const catalog = pledgeCatalogFor(countryId);
     const salience = new Map(catalog.map((e) => [e.id, Object.keys(e.salienceByGroup ?? {})]));
     groups = payoffGroupsForPledges(proposal.pledgeIds, salience).slice(
@@ -76,21 +79,17 @@ async function computePayoffIntent(
  * Apply the completion payoff exactly once per conference: favorability rows
  * for the ratified platform's salient groups (gated by UK_CONFERENCE_PAYOFF
  * until worldsim calibration) plus a PS credit clamped at the party's tier
- * cap. Claim + reconcile protocol:
+ * cap.
  *
- * 1. Claim: one guarded write fixes the payoff INTENT (cohesion grant from
- *    the claim-time party, approval groups from the ratified proposal) and
- *    marks the row claimed. Resumes replay the same intent, never a
- *    recomputation from drifted state.
- * 2. Approval rows reconcile via upserts keyed by
- *    (sourceConferenceId, groupId): replays converge, concurrent writers
- *    cannot duplicate.
- * 3. The cohesion credit lands in ONE conditional party write that sets the
- *    `lastConferencePayoffId` receipt atomically with the `$inc`: replays
- *    and concurrent callers match zero documents and cannot double-credit.
- * 4. Settle: a guarded write flips `payoffSettledTurn` only after every
- *    effect verifies durable. Returns applied:true solely to the settler,
- *    so turn telemetry counts each payoff once.
+ * - Claim: one guarded write fixes the payoff intent and marks the row
+ *   claimed. Replays reuse the intent, never recompute from drifted state.
+ * - Approval rows upsert on (sourceConferenceId, groupId): replays converge,
+ *   concurrent writers cannot duplicate.
+ * - Cohesion credit lands in one conditional write setting
+ *   `lastConferencePayoffId` atomically with `$inc`, so replays match zero
+ *   documents and cannot double-credit.
+ * - Settle: flips `payoffSettledTurn` only after every effect is durable;
+ *   returns applied:true solely to the settler.
  */
 export async function applyConferencePayoff(
   db: Db,
@@ -157,26 +156,22 @@ export async function applyConferencePayoff(
       expiresAtTurn: currentTurn + CONFERENCE_PAYOFF_DURATION_TURNS,
       createdAt: now,
     };
-    await db
-      .collection<PartyGroupFavorability>("partyGroupFavorability")
-      .updateOne(
-        { sourceConferenceId: working._id, groupId },
-        { $setOnInsert: row },
-        { upsert: true }
-      );
+    await partyGroupFavorabilityCollection(db).updateOne(
+      { sourceConferenceId: working._id, groupId },
+      { $setOnInsert: row },
+      { upsert: true }
+    );
   }
 
   if (working.payoffCohesionAppliedTurn == null && intentGrant > 0) {
-    const partyNow =
-      (await db.collection<PoliticalParty>("politicalParties").findOne({ _id: party._id })) ??
-      party;
+    const partyNow = (await politicalPartiesCollection(db).findOne({ _id: party._id })) ?? party;
     if ((partyNow.lastConferencePayoffId ?? null) !== working._id) {
       // Reclamp at apply time: the party may have earned PS after the claim
       // fixed the intent, and the tier cap stays binding. A zero effective
       // grant settles as skipped-at-cap below.
       const effective = Math.min(intentGrant, cohesionCapRoom(partyNow));
       if (effective > 0) {
-        await db.collection<PoliticalParty>("politicalParties").updateOne(
+        await politicalPartiesCollection(db).updateOne(
           { _id: partyNow._id, lastConferencePayoffId: { $ne: working._id } },
           {
             $inc: { politicalStrength: effective },
@@ -191,14 +186,10 @@ export async function applyConferencePayoff(
   // for the next tick instead of being marked done.
   const presentGroups = new Set(
     (
-      await db
-        .collection<PartyGroupFavorability>("partyGroupFavorability")
-        .find({ sourceConferenceId: working._id })
-        .toArray()
+      await partyGroupFavorabilityCollection(db).find({ sourceConferenceId: working._id }).toArray()
     ).map((row) => row.groupId)
   );
-  const partyCheck =
-    (await db.collection<PoliticalParty>("politicalParties").findOne({ _id: party._id })) ?? party;
+  const partyCheck = (await politicalPartiesCollection(db).findOne({ _id: party._id })) ?? party;
   const cohesionDone =
     working.payoffCohesionAppliedTurn != null ||
     intentGrant <= 0 ||
@@ -235,9 +226,10 @@ export async function applyConferencePayoff(
   // never fail the turn or double-pay on retry.
   try {
     const chair = party.chairId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: party.chairId }, { projection: { userId: 1, name: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: party.chairId },
+          { projection: { userId: 1, name: 1 } }
+        )
       : null;
     if (chair?.userId) {
       await createNotification({

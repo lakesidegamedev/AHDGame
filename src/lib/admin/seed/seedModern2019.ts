@@ -1,11 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type {
-  DemographicCategory,
-  PoliticalParty,
-  State,
-  StateDemographics,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { PoliticalParty, State, StateDemographics, StatePartyOrg } from "@/lib/db/types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
@@ -14,7 +8,6 @@ import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { prunePresetMismatchedDefaultParties } from "@/lib/seeds/ensureDefaultParties";
 import { getCountryLayer1Model, buildModelRegionDemographics } from "@/lib/seeds/international";
 import { getSuccessor1991Model } from "@/lib/seeds/international/successor1991";
-import { deriveCountryGroupTurnout } from "@/lib/seeds/international/derive";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import { metricsToBaselines } from "./seedModernTransitionCountries";
 import { PARTY_ROSTERS_2019 } from "@/lib/seeds/partyRosters2019";
@@ -23,6 +16,17 @@ import {
   modernRegions2019,
   type Modern2019CountryId,
 } from "@/lib/seeds/reference/modernRegions2019";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import type { Document } from "mongodb";
+import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
+import { stateMetricsCollection } from "@/lib/db/repositories/stateMetrics";
 
 const COUNTRY_IDS = [
   "RU",
@@ -53,29 +57,25 @@ export async function seedModern2019(
     const now = new Date();
 
     if (reset) {
-      await db.collection<State>("states").deleteMany({ countryId });
-      await db.collection<StateDemographics>("stateDemographics").deleteMany({ countryId });
-      await db.collection("stateDemographicTurnout").deleteMany({ countryId });
-      await db.collection<StatePartyOrg>("statePartyOrg").deleteMany({ countryId });
-      await db
-        .collection<StateMetrics>("macroMetrics")
-        .deleteMany({ _id: { $in: regions.map((r) => r._id) } });
-      await db
-        .collection<StateMetrics>("stateMetrics")
-        .deleteMany({ _id: { $in: regions.map((r) => r._id) } });
-      await db.collection<StateMetricBaseline>("stateBaselines").deleteMany({
+      await statesCollection(db).deleteMany({ countryId });
+      await stateDemographicsCollection(db).deleteMany({ countryId });
+      await stateDemographicTurnoutCollection<Document>(db).deleteMany({ countryId });
+      await statePartyOrgCollection(db).deleteMany({ countryId });
+      await macroMetricsCollection(db).deleteMany({ _id: { $in: regions.map((r) => r._id) } });
+      await stateMetricsCollection(db).deleteMany({ _id: { $in: regions.map((r) => r._id) } });
+      await stateBaselinesCollection(db).deleteMany({
         _id: { $in: regions.map((r) => String(r._id)) },
       });
     }
 
-    await db.collection<State>("states").bulkWrite(
+    await statesCollection(db).bulkWrite(
       regions.map(({ _id, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))
     );
     await writeSplitMetricsBulk(db, metrics);
     const baselines = metricsToBaselines(metrics);
-    await db.collection<StateMetricBaseline>("stateBaselines").bulkWrite(
+    await stateBaselinesCollection(db).bulkWrite(
       baselines.map(({ _id, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))
@@ -84,33 +84,14 @@ export async function seedModern2019(
     // RU/PL/HU/RO use the modern democratic voter model. Bulgaria's
     // five-region geometry currently has only the 1991 transition model, which
     // is an explicit fallback rather than a reintroduced communist model.
-    const model =
-      countryId === "BG" ? getSuccessor1991Model("BG") : getCountryLayer1Model(countryId, "2027");
+    const model = countryHasFeature("bgAdmin", countryId)
+      ? getSuccessor1991Model("BG")
+      : getCountryLayer1Model(countryId, "2027");
     if (!model) throw new Error(`Missing democratic voter model for ${countryId}`);
-    const category: DemographicCategory = {
-      _id: model.categoryId,
-      name: `${countryId} 2019 voter groups`,
-      defaultWeight: 100,
-      groups: model.groupIds.map((id) => {
-        const lean = model.defaultLeans[id];
-        if (!lean) throw new Error(`Missing ${countryId} voter lean for ${id}`);
-        return {
-          id,
-          name: id.replaceAll("_", " "),
-          defaultEconomicLean: lean.economicLean,
-          defaultSocialLean: lean.socialLean,
-          defaultTurnout: deriveCountryGroupTurnout(model, id),
-        };
-      }),
-    };
-    const { _id: categoryId, ...categoryData } = category;
-    await db
-      .collection<DemographicCategory>("demographicCategories")
-      .updateOne({ _id: categoryId }, { $set: categoryData }, { upsert: true });
     const demographics = buildModelRegionDemographics(model);
     if (demographics.length !== regions.length)
       throw new Error(`2019 ${countryId} demographic regions do not match seeded regions`);
-    await db.collection<StateDemographics>("stateDemographics").bulkWrite(
+    await stateDemographicsCollection(db).bulkWrite(
       demographics.map(({ _id, ...data }) => ({
         updateOne: { filter: { _id }, update: { $set: data }, upsert: true },
       }))
@@ -121,7 +102,7 @@ export async function seedModern2019(
       const { seedOrder: _order, validForPresets: _presets, ...data } = seed;
       void _order;
       void _presets;
-      const collection = db.collection<PoliticalParty>("politicalParties");
+      const collection = politicalPartiesCollection(db);
       const existing = await collection.findOne({ countryId, name: seed.name });
       if (existing && !existing.isDefault) continue;
       if (existing) {
@@ -141,14 +122,13 @@ export async function seedModern2019(
         } as PoliticalParty);
       }
     }
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ countryId, isDefault: true })
       .toArray();
     for (const region of regions) {
       for (const party of parties) {
         const partyId = String(party.sequentialId);
-        await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+        await statePartyOrgCollection(db).updateOne(
           { _id: `${region._id}_${partyId}` },
           {
             $set: { countryId, stateId: String(region._id), partyId, updatedAt: now },
@@ -170,7 +150,7 @@ export async function seedModern2019(
         );
       }
     }
-    if (countryId !== "RU") {
+    if (!countryHasFeature("ruAdmin", countryId)) {
       const totalSeats = regions.reduce((n, region) => n + region.houseDistricts, 0);
       const formation: Omit<GovernmentFormation, "createdAt" | "updatedAt"> = {
         _id: countryId,
@@ -194,13 +174,11 @@ export async function seedModern2019(
         formedTurn: null,
         collapsedAt: null,
       };
-      await db
-        .collection<GovernmentFormation>("governmentFormations")
-        .updateOne(
-          { _id: countryId },
-          { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
-          { upsert: true }
-        );
+      await governmentFormationsCollection(db).updateOne(
+        { _id: countryId },
+        { $set: { ...formation, updatedAt: now }, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
     }
     log(
       `[${countryId}] seeded ${regions.length} 2019 regions and ${partySeeds.length} democratic parties`

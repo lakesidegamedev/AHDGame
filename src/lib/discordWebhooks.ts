@@ -17,6 +17,8 @@ import {
 } from "@/lib/discord/eventCard";
 import type { ChamberVoteSplit } from "@/lib/charts/voteSplitChart";
 import type { SuggestionReporterIdentity } from "@/lib/suggestions/reporterIdentity";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { sentNewsDedupCollection } from "@/lib/db/repositories/sentNewsDedup";
 
 export interface DiscordEmbed {
   title?: string;
@@ -172,7 +174,7 @@ async function getWebhookUrls(): Promise<{
 }> {
   try {
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     // #1208 — a restored database must not post into the players' channels.
     if (!ownsConfiguredWebhooks(config?.discordWebhookOwnerService)) return {};
     return {
@@ -397,7 +399,7 @@ async function claimNewsEmbed(embed: DiscordEmbed, now: Date): Promise<boolean> 
     const db = await getDb();
     const bucket = Math.floor(now.getTime() / NEWS_DEDUP_WINDOW_MS);
     const key = newsDedupHash(`${embed.title ?? ""}\u0000${embed.description ?? ""}`);
-    const coll = db.collection<{ _id: string; sentAt: Date }>("sentNewsDedup");
+    const coll = sentNewsDedupCollection<{ _id: string; sentAt: Date }>(db);
     // Best-effort TTL so the collection self-cleans; ignore if it already exists.
     await coll.createIndex({ sentAt: 1 }, { expireAfterSeconds: 3600 }).catch(() => {});
     await coll.insertOne({ _id: `news:${bucket}:${key}`, sentAt: now });

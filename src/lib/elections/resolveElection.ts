@@ -11,7 +11,7 @@
  *   resolveElections()  - batch (one round of queries, then _enrichElection)
  *   _enrichElection()   - low-level enrichment on pre-fetched data
  */
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import { usesCampaignRules } from "@/lib/campaignTargeting/rules";
 import { applyStandingAds } from "@/lib/campaignTargeting/standingAds";
 
@@ -54,6 +54,21 @@ import {
   ELECTION_SUMMARY_GAME_STATE_PROJECTION,
   ELECTION_SUMMARY_NPP_PROJECTION,
 } from "./electionSummaryProjections";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { playerEndorsementsCollection } from "@/lib/db/repositories/playerEndorsements";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 export type {
   PollingData,
@@ -115,10 +130,9 @@ export async function resolveElection(
       const query: Record<string, unknown> = { seatId: id, status: { $ne: "cancelled" } };
       if (cycle != null) {
         query.cycle = cycle;
-        election = await db.collection<Election>("elections").findOne(query);
+        election = await electionsCollection(db).findOne(query);
       } else {
-        const candidates = await db
-          .collection<Election>("elections")
+        const candidates = await electionsCollection(db)
           .find(query)
           .sort({ cycle: -1 })
           .limit(10)
@@ -137,7 +151,7 @@ export async function resolveElection(
       } catch {
         return null; // invalid ObjectId
       }
-      election = await db.collection<Election>("elections").findOne({ _id: oid });
+      election = await electionsCollection(db).findOne({ _id: oid });
     }
   } else {
     election = idOrElection;
@@ -146,14 +160,15 @@ export async function resolveElection(
   if (!election) return null;
 
   // Fetch game state and game time in parallel with election deps.
-  // Summary views only consume preset/currentYear/redistrictingEnabled, so
-  // project the read (#2168); full view keeps the whole document.
+  // Summary views only consume preset/currentYear, so
+  // project the read; full view keeps the whole document.
   const [gameState, gameTime, deps] = await Promise.all([
     isFull
-      ? db.collection<GameState>("gameState").findOne({ _id: "current" })
-      : db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }),
+      ? gameStateCollection(db).findOne({ _id: "current" })
+      : gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }
+        ),
     getGameTime(),
     fetchDepsForElection(db, election, options.view),
   ]);
@@ -162,8 +177,7 @@ export async function resolveElection(
   let adjacentElections: Array<{ _id: MongoObjectId; cycle: number; seatId?: string }> | null =
     null;
   if (isFull) {
-    adjacentElections = await db
-      .collection<Election>("elections")
+    adjacentElections = await electionsCollection(db)
       .find(adjacentElectionsQuery(election))
       .sort({ cycle: 1 })
       .project<{ _id: MongoObjectId; cycle: number; seatId?: string }>({
@@ -226,8 +240,7 @@ export async function resolveElections(
   // For completed/resolved elections include all candidates; for active/upcoming
   // only active ones. We handle this by fetching all and filtering per-election
   // during slicing, matching the logic in fetchDepsForElection().
-  const allCandidatesRaw = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const allCandidatesRaw = await electionCandidatesCollection(db)
     .find({ electionId: { $in: electionIds } })
     .toArray();
 
@@ -281,14 +294,14 @@ export async function resolveElections(
     incumbentNPPsRaw,
   ] = await Promise.all([
     isFull
-      ? db.collection<GameState>("gameState").findOne({ _id: "current" })
-      : db
-          .collection<GameState>("gameState")
-          .findOne({ _id: "current" }, { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }),
+      ? gameStateCollection(db).findOne({ _id: "current" })
+      : gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: ELECTION_SUMMARY_GAME_STATE_PROJECTION }
+        ),
     getGameTime(),
     allCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: allCharIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_CHARACTER_PROJECTION }
@@ -296,25 +309,21 @@ export async function resolveElections(
           .toArray()
       : Promise.resolve([] as Character[]),
     allNppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: allNppIds } },
             isFull ? undefined : { projection: ELECTION_SUMMARY_NPP_PROJECTION }
           )
           .toArray()
       : Promise.resolve([] as NPP[]),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId: { $in: uniqueCountryIds } })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
     hasSingleSeat
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             {
               countryId: { $in: uniqueCountryIds },
@@ -325,8 +334,7 @@ export async function resolveElections(
           .toArray()
       : Promise.resolve([] as Character[]),
     hasSingleSeat
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             {
               countryId: { $in: uniqueCountryIds },
@@ -410,12 +418,10 @@ export async function resolveElections(
       campaignsRaw,
       statePartyOrgsRaw,
     ] = await Promise.all([
-      db
-        .collection<NPPEndorsement>("nppEndorsements")
+      nppEndorsementsCollection(db)
         .find(buildActiveVisibleNppEndorsementFilter({ electionId: { $in: electionIds } }))
         .toArray(),
-      db
-        .collection<PlayerEndorsement>("playerEndorsements")
+      playerEndorsementsCollection(db)
         .find({ electionId: { $in: electionIds }, isActive: true })
         .toArray(),
       // Only the last 72 turns per election are kept (see snapsLimited),
@@ -424,8 +430,7 @@ export async function resolveElections(
       // One index-bounded read per election: a $group over the $in match
       // loaded every snapshot of every listed race before slicing.
       perElectionInBatches(electionIds, (electionId) =>
-        db
-          .collection<PrimarySnapshot>("primarySnapshots")
+        primarySnapshotsCollection(db)
           .find({ electionId })
           .sort({ recordedAt: -1 })
           .limit(144)
@@ -435,16 +440,14 @@ export async function resolveElections(
           .flat()
           .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())
       ),
-      db
-        .collection<Campaign>("campaigns")
+      campaignsCollection(db)
         .find(
           { electionId: { $in: electionIds } },
           { projection: { _id: 1, candidateId: 1, funds: 1, electionId: 1 } }
         )
         .toArray(),
       hasPresident
-        ? db
-            .collection<StatePartyOrg>("statePartyOrg")
+        ? statePartyOrgCollection(db)
             .find(
               {
                 countryId: {
@@ -507,12 +510,7 @@ export async function resolveElections(
     // The newest row per election straight off the { electionId, recordedAt }
     // index. Sorting the whole $in match and grouping read every snapshot.
     const latestRows = await perElectionInBatches(electionIds, (electionId) =>
-      db
-        .collection<PrimarySnapshot>("primarySnapshots")
-        .find({ electionId })
-        .sort({ recordedAt: -1 })
-        .limit(1)
-        .next()
+      primarySnapshotsCollection(db).find({ electionId }).sort({ recordedAt: -1 }).limit(1).next()
     );
     for (const doc of latestRows) {
       if (doc) latestSnapshotByElection.set(doc.electionId.toString(), doc);
@@ -540,11 +538,12 @@ export async function resolveElections(
     _id: { $in: [...ids] },
   }));
   const shouldBatchHouseDistricts =
-    gameState?.redistrictingEnabled === true &&
-    elections.some((e) => (e.countryId ?? "US") === "US" && e.electionType === "house") &&
+    elections.some(
+      (e) => countryHasFeature("usElections", e.countryId ?? "US") && e.electionType === "house"
+    ) &&
     elections.some(
       (e) =>
-        (e.countryId ?? "US") === "US" &&
+        countryHasFeature("usElections", e.countryId ?? "US") &&
         e.electionType === "house" &&
         tallyByElection.get(e._id.toString()) &&
         !resolvedSeatsEstimate(tallyByElection.get(e._id.toString())!, null)
@@ -554,7 +553,7 @@ export async function resolveElections(
       elections
         .filter(
           (e) =>
-            (e.countryId ?? "US") === "US" &&
+            countryHasFeature("usElections", e.countryId ?? "US") &&
             e.electionType === "house" &&
             tallyByElection.get(e._id.toString()) &&
             !resolvedSeatsEstimate(tallyByElection.get(e._id.toString())!, null)
@@ -565,11 +564,10 @@ export async function resolveElections(
   const [sharedApportionment, localRegionStates, houseDistricts] = await Promise.all([
     loadApportionment(db, gameState?.preset, gameState?.currentYear),
     regionFilters.length
-      ? db.collection<State>("states").find({ $or: regionFilters }).toArray()
+      ? statesCollection(db).find({ $or: regionFilters }).toArray()
       : Promise.resolve([] as State[]),
     shouldBatchHouseDistricts && houseStates.length
-      ? db
-          .collection<CongressionalDistrict>("congressionalDistricts")
+      ? congressionalDistrictsCollection(db)
           .find({ countryId: "US", stateId: { $in: houseStates } })
           .toArray()
       : Promise.resolve(undefined),
@@ -606,8 +604,7 @@ export async function resolveElections(
   const campaignCellsByRegion = advertisedRegions.length
     ? await loadRegionalCampaignCells(
         db,
-        await db
-          .collection<State>("states")
+        await statesCollection(db)
           .find({
             countryId: { $in: uniqueCountryIds },
             $or: [

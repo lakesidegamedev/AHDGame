@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * Total savings balances held in a given currency across all characters (forex buckets + legacy savingsOnHand for matching home country).
@@ -9,8 +10,7 @@ import type { CountryId } from "@/lib/constants/countries";
 export async function sumSavingsInCurrency(db: Db, currencyCode: CurrencyCode): Promise<number> {
   const sumPath = `$currencyBalances.savings.${currencyCode}`;
   const matchField = `currencyBalances.savings.${currencyCode}`;
-  const bucket = await db
-    .collection("characters")
+  const bucket = await charactersCollection(db)
     .aggregate<{ total: number }>([
       { $match: { [matchField]: { $gt: 0 } } },
       { $group: { _id: null, total: { $sum: sumPath } } },
@@ -19,8 +19,7 @@ export async function sumSavingsInCurrency(db: Db, currencyCode: CurrencyCode): 
   let total = bucket[0]?.total ?? 0;
 
   const countryId: CountryId = getCountryIdForCurrency(currencyCode);
-  const legacy = await db
-    .collection("characters")
+  const legacy = await charactersCollection(db)
     .aggregate<{ s: number }>([
       {
         $match: {

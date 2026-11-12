@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getPartyTextColor, getPartyLabel } from "@/lib/utils/politics";
 import { formatDate } from "@/lib/utils/formatters";
 import { ResponsiveTable, type ResponsiveTableColumn } from "@/components/ui";
@@ -213,18 +213,12 @@ export function UsersTable({
   }
 
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   // Menu state keys off the row's user id; a row that leaves the page unmounts
   // its menu with it, so no cleanup effect is needed.
   const [menuUserId, setMenuUserId] = useState<string | null>(null);
 
   const openDossier = (userId: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("tab", "players");
-    params.set("sub", "dossier");
-    params.set("user", userId);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`/control/players/dossier?user=${encodeURIComponent(userId)}`);
   };
 
   return (

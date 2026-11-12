@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { referendumDetailUrl } from "@/lib/urls";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Campaign-relevant slice of a referendum from `/api/country/[code]/referendum`. */
 interface CampaignReferendum {
@@ -37,7 +38,7 @@ export function RegionReferendumCampaign({
   const [data, setData] = useState<ReferendumResponse | null>(null);
 
   const load = useCallback(async () => {
-    if (countryId !== "UK") return;
+    if (!countryHasFeature("ukUi", countryId)) return;
     try {
       const res = await fetch(`/api/country/${countryId.toLowerCase()}/referendum`);
       if (!res.ok) return;
@@ -51,7 +52,7 @@ export function RegionReferendumCampaign({
     void load(); // eslint-disable-line react-hooks/set-state-in-effect -- initial data fetch
   }, [load]);
 
-  if (countryId !== "UK" || !data) return null;
+  if (!countryHasFeature("ukUi", countryId) || !data) return null;
   const ref = data.referendums.find(
     (r) => r.regionId.toUpperCase() === regionId.toUpperCase() && r.status === "campaigning"
   );

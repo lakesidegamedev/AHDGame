@@ -5,6 +5,7 @@ import {
   type NppOperatorAggregate,
   type NppOperatorObservation,
 } from "./rules";
+import { nppOperatorDiagnosticsCollection } from "@/lib/db/repositories/nppOperatorDiagnostics";
 
 export const NPP_OPERATOR_TELEMETRY_COLLECTION = "nppOperatorDiagnostics";
 export const NPP_OPERATOR_TELEMETRY_RETENTION_TURNS = 48;
@@ -24,9 +25,7 @@ export async function recordNppOperatorObservationsBestEffort(
 ): Promise<void> {
   if (observations.length === 0) return;
   try {
-    const collection = db.collection<NppOperatorTelemetryDocument>(
-      NPP_OPERATOR_TELEMETRY_COLLECTION
-    );
+    const collection = nppOperatorDiagnosticsCollection<NppOperatorTelemetryDocument>(db);
     await collection.updateOne(
       { _id: `turn:${turn}` },
       {

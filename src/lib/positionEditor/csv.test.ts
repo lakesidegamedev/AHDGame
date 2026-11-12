@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { stateConfigToCsv, allStatesLeanToCsv } from "./csv";
-import { editorConfigFromSeed, computeDerivedComposition } from "./derive";
+import { editorConfigFromSeed } from "./derive";
+import { computeDerivedComposition } from "./preview";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 
 const CFG: Layer1Config = {
@@ -50,6 +51,12 @@ describe("csv", () => {
       expect(Number.isNaN(Number(r[6]))).toBe(false);
     }
     const derivedRows = rows.filter((r) => r[0] === "derived");
-    expect(derivedRows.length).toBe(derived.archetypes.length);
+    expect(derivedRows.length).toBe(
+      derived.buckets.reduce((n, section) => n + section.buckets.length, 0)
+    );
+    for (const r of derivedRows) {
+      expect(r).toHaveLength(10);
+      expect(Number.isNaN(Number(r[6]))).toBe(false);
+    }
   });
 });

@@ -1,45 +1,41 @@
 /**
- * Deterministic #992 stock-flow evidence gate.
+ * Deterministic stock-flow evidence gate.
  *
- * Pure rules core: plain data in, plain data out. No DB, no clock, no random,
- * no env. The shell (scripts/ledger/collectStockFlowEvidence.ts) loads
- * per-turn ledgerReconciliations from one sandbox DB, attaches run provenance
- * and the banking activation turn, and calls {@link validateStockFlowWindow}.
+ * Pure rules core: plain data in, plain data out. No DB, clock, random, or
+ * env. The shell (scripts/ledger/collectStockFlowEvidence.ts) loads per-turn
+ * ledgerReconciliations from one sandbox DB and calls
+ * {@link validateStockFlowWindow}.
  *
  * A window passes only when 12 consecutive turns are all genuine (the check
  * ran, not skipped), each machine-recorded as running under authoritative
  * banking, and show zero relevant divergence: trial balance green with no
  * unbalanced entries, stock-vs-flow green with zero divergent accounts,
  * money supply green, and an empty unattributed bucket. A skipped check
- * reports null/amber upstream (see reconcileLedger), and this gate rejects
- * it explicitly so a run of dead turns can never satisfy the 12-turn
- * criterion. Post-activation proof is per-turn: reconcileTurn stamps the
- * turn's `gameConfig.savingsAccountsMode` onto every persisted
- * ledgerReconciliation doc, so an accepted turn proves itself
- * post-activation. Docs that predate the stamp carry null (unknown, never
- * authoritative) and fail closed.
+ * reports null/amber upstream; this gate rejects it explicitly so a run of
+ * dead turns can never satisfy the 12-turn criterion. Post-activation proof
+ * is per-turn: reconcileTurn stamps the turn's
+ * `gameConfig.savingsAccountsMode` onto every persisted ledgerReconciliation
+ * doc, so an accepted turn proves itself post-activation. Docs predating the
+ * stamp carry null (unknown, never authoritative) and fail closed.
  *
  * Machine-recorded provenance means pinned-source identity, not just a git
- * string in the report. Since sim pinned-source support (#1969), a queued job
- * binds to a registered worktree + full commit SHA, the worker verifies HEAD
- * equality and a clean tree at claim AND immediately before spawn, runWorld
- * re-checks HEAD in the child and stamps
- * simRuns.source = {worktree, requestedCommit, executedPath, executedCommit},
- * and collectExperimentReport surfaces it as runConfig.source. The collector
- * reads that identity (never the short `runConfig.gitCommit` from the
- * collector operator's own checkout, which may be a different tree and is a
- * short SHA that can never equal a full expected revision). The gate requires
- * the executed commit to be a full SHA, requested == executed (the pin held),
- * codeRevision == executed (no mixed-report substitution), and a non-empty
- * executed path + worktree leaf. Legacy reports without runConfig.source fail
- * closed with the exact reason: rerun as a pinned job.
+ * string in the report. A queued pinned job binds to a registered worktree
+ * plus full commit SHA; the worker verifies HEAD equality and a clean tree at
+ * claim and immediately before spawn; runWorld re-checks HEAD in the child
+ * and stamps simRuns.source = {worktree, requestedCommit, executedPath,
+ * executedCommit}; collectExperimentReport surfaces it as runConfig.source.
+ * The collector reads that identity, never the short `runConfig.gitCommit`
+ * from the operator's own checkout (different tree; short SHA can never equal
+ * a full expected revision). The gate requires the executed commit to be a
+ * full SHA, requested == executed, codeRevision == executed (no
+ * mixed-report substitution), and non-empty executed path + worktree leaf.
+ * Legacy reports without runConfig.source fail closed: rerun as a pinned job.
  *
- * One input stays operator-supplied by necessity and is documented as such:
- * expectedCodeRevision (the branch revision the evidence must come from).
- * Worker-side tree cleanliness is enforced fail-closed by the worker itself
- * (a dirty worktree fails the job, so no completed pinned run executed dirty);
- * the report's gitDirty flag covers the collector checkout and is still
- * required false.
+ * One input stays operator-supplied: expectedCodeRevision (the branch
+ * revision the evidence must come from). Worker-side tree cleanliness is
+ * enforced fail-closed by the worker (a dirty worktree fails the job); the
+ * report's gitDirty flag covers the collector checkout and must still be
+ * false.
  */
 
 import type { ReconcileStatus } from "@/lib/ledger/types";
@@ -82,9 +78,7 @@ export interface StockFlowProvenance {
   codeRevisionSource: ProvenanceSource;
   /** True when the executing checkout had uncommitted changes. */
   gitDirty: boolean | null;
-  // Pinned-source identity from runConfig.source (#1966/#1969). Each field is
-  // null on reports that predate pinned-source support (legacy: gate fails
-  // closed). sourceWorktree is the registered worktree leaf the sim ran from.
+  // Pinned-source identity from runConfig.source. Null on legacy reports (gate fails closed). sourceWorktree is the registered worktree leaf the sim ran from.
   sourceWorktree: string | null;
   /** The commit SHA the queued job requested (full SHA). */
   sourceRequestedCommit: string | null;

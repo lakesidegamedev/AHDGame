@@ -2,26 +2,21 @@ import Link from "next/link";
 import type { CountryWarNotice } from "@/lib/military/countryAtWar";
 
 /**
- * The strip that says this country is at war, under the navbar on every one of
- * its pages.
+ * Strip under the navbar on every page of a country at war.
  *
- * Sits in the country LAYOUT rather than on the pages, so it cannot be forgotten
- * on the next surface somebody adds — a war is a fact about the country, not
- * about the tab you happen to be reading. Same shape as the admin and econ-only
- * strips already there, in the error colour rather than warning: those two are
- * notes about your access, this one is about the country itself.
+ * Lives in the country layout so no future page can forget it: war is a fact
+ * about the country, not the tab. Error colour, since it describes the
+ * country rather than the viewer's access.
  *
- * WORDING TURNS ON WHAT IS TRUE. A belligerent is at war; a country that is only
- * the ground somebody else is fighting over is not at war but is certainly not at
- * peace, and saying it "is involved in" a war would misdescribe an occupied
- * neutral. One war names itself and links to its record; several link to the
- * conflicts board, because picking one of them to feature would be arbitrary.
+ * Wording depends on what is true: a belligerent is at war, an occupied
+ * neutral is not at peace. One war links to its record; several link to the
+ * conflicts board to avoid arbitrarily featuring one.
  */
 export function WartimeBanner({ notice }: { notice: CountryWarNotice }) {
   const href =
     notice.conflictNumber !== null
       ? `/world/conflicts/${notice.conflictNumber}`
-      : "/world/conflicts";
+      : "/world/crises?view=conflicts";
 
   return (
     <div className="border-b border-error/30 bg-error/10 px-4 py-2 text-center text-sm text-error">

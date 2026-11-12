@@ -27,7 +27,8 @@ export function derivePopulationMetrics(
   before: AgeSexVector,
   after: AgeSexVector,
   flows: CohortFlowTallies,
-  turnsPerYear: number
+  turnsPerYear: number,
+  ages?: { workingAgeMin: number; retirementAge: number }
 ): PopulationMetricValues {
   const popBefore = Math.max(1, totalPopulation(before));
   const popAfter = Math.max(1, totalPopulation(after));
@@ -39,7 +40,7 @@ export function derivePopulationMetrics(
   // it goes negative and as the dependency ratio (aging pressure) grows.
   const naturalPerTurn = (flows.births - flows.deaths) / popBefore;
   const naturalAnnualPct = naturalPerTurn * 100 * turnsPerYear;
-  const dep = dependencyRatio(after);
+  const dep = dependencyRatio(after, ages?.workingAgeMin, ages?.retirementAge);
   // Map: 0 natural change + moderate dependency (~0.5) → ~50; strong natural
   // decrease and high dependency push toward 100; strong increase toward 0.
   const declineRaw = 50 - naturalAnnualPct * 10 + (dep - 0.5) * 40;

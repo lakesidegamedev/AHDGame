@@ -19,6 +19,14 @@ import {
   withHeldStakeIssuers,
   loadFundValueByCharacter,
 } from "@/lib/wealth/computeCharacterWealth";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { wealthListHistoryCollection } from "@/lib/db/repositories/wealthListHistory";
+import { wealthListSnapshotsCollection } from "@/lib/db/repositories/wealthListSnapshots";
 
 function resolveCountryId(character: Pick<Character, "countryId">): CountryId {
   return character.countryId as CountryId;
@@ -48,8 +56,7 @@ async function computeWealthListFallback(
   forexEnabled: boolean,
   exchangeRates?: Partial<Record<CurrencyCode, number>>
 ) {
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({})
     .project<
       Pick<
@@ -90,8 +97,7 @@ async function computeWealthListFallback(
   const userIds = [...new Set(exchangeCharacters.map((c) => c.userId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const users = await db
-    .collection<User>("users")
+  const users = await usersCollection(db)
     .find({ _id: { $in: userIds } })
     .project<Pick<User, "_id" | "isBanned" | "discordId" | "discordAvatar" | "googleAvatar">>({
       _id: 1,
@@ -117,13 +123,11 @@ async function computeWealthListFallback(
   // shareholder would be ranked against a JP shareholder as if both
   // currencies were identical to ₳.
   const [states, corporations, bonds, fxByCurrency] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ _id: { $in: [...new Set(activeCharacters.map((c) => c.homeState))] } })
       .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({
         $or: [
           { "shareholders.characterId": { $in: characterIds } },
@@ -156,8 +160,7 @@ async function computeWealthListFallback(
         totalShares: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ matured: false, "holders.characterId": { $in: characterIds } })
       .project<Pick<Bond, "_id" | "holders" | "marketPrice" | "currencyCode" | "countryId">>({
         _id: 1,
@@ -263,9 +266,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Read the live snapshot
-    const snapshot = await db
-      .collection<WealthListSnapshot>("wealthListSnapshots")
-      .findOne({ _id: exchange });
+    const snapshot = await wealthListSnapshotsCollection(db).findOne({ _id: exchange });
 
     if (!snapshot || snapshot.entries.length === 0) {
       // No snapshot yet — compute on the fly with placeholder change data
@@ -273,7 +274,7 @@ export async function GET(request: Request) {
       // Fetch exchange rates for accurate cross-currency wealth comparison
       const rateMap = forexEnabled
         ? (Object.fromEntries(
-            (await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()).map((r) => [
+            (await exchangeRatesCollection(db).find({}).toArray()).map((r) => [
               r.currencyCode,
               r.rate,
             ])
@@ -285,13 +286,11 @@ export async function GET(request: Request) {
 
     // Look up the snapshot from 24 turns ago for change calculations
     const turn24Ago = Math.max(1, snapshot.turn - 24);
-    const oldSnapshot = await db
-      .collection<{
-        exchange: string;
-        turn: number;
-        entries: WealthListSnapshot["entries"];
-      }>("wealthListHistory")
-      .findOne({ exchange, turn: { $lte: turn24Ago } }, { sort: { turn: -1 } });
+    const oldSnapshot = await wealthListHistoryCollection<{
+      exchange: string;
+      turn: number;
+      entries: WealthListSnapshot["entries"];
+    }>(db).findOne({ exchange, turn: { $lte: turn24Ago } }, { sort: { turn: -1 } });
 
     // Build lookup maps from old snapshot
     const oldWealthMap = new Map<string, number>();
@@ -310,8 +309,7 @@ export async function GET(request: Request) {
       .map((id) => new ObjectId(id));
     const characters =
       charIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: charIds } })
             .project<Pick<Character, "_id" | "userId">>({ _id: 1, userId: 1 })
             .toArray()

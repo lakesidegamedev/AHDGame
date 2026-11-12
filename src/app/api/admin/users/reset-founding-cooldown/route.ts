@@ -6,6 +6,9 @@ import { getDb } from "@/lib/mongodb";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 const schema = z.object({
   userId: z.string().min(1),
@@ -15,13 +18,10 @@ const schema = z.object({
 // Auth: requireAdmin
 // Errors: 400, 403, 404
 //
-// The founding cooldown (Bug #0728) is deliberately per-USER, not per-character:
-// it blocks the found -> drain -> abandon -> found rotation, and scoping it to
-// the character would let a reroll dodge it. That means a player who founds a
-// corp and then retires keeps the cooldown on their new character — working as
-// designed, but with no way for staff to grant an exception. `reset-movement`
-// had this escape hatch for relocation; founding did not, so the only remedy
-// was a direct Mongo write. This closes that gap.
+// The founding cooldown is deliberately per-USER, not per-character: it blocks
+// the found -> drain -> abandon -> found rotation, and scoping it to the
+// character would let a reroll dodge it. A player who founds a corp and retires
+// keeps the cooldown on their new character, so staff need this escape hatch.
 //
 // Grant sparingly on production: waiving it hands back the exact exploit the
 // cooldown exists to prevent. The common legitimate case is a freshly reset
@@ -38,7 +38,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
 
   const db = await getDb();
   const userId = new ObjectId(parsed.data.userId);
-  const user = await db.collection<User>("users").findOne({ _id: userId });
+  const user = await usersCollection(db).findOne({ _id: userId });
 
   if (!user) {
     return errorResponse(404, "User not found");
@@ -48,11 +48,12 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     return NextResponse.json({ message: "No founding cooldown was active" });
   }
 
-  await db
-    .collection<User>("users")
-    .updateOne({ _id: userId }, { $unset: { lastCorporationFoundedTurn: "" } });
+  await usersCollection(db).updateOne(
+    { _id: userId },
+    { $unset: { lastCorporationFoundedTurn: "" } }
+  );
 
-  await db.collection("adminLogs").insertOne({
+  await adminLogsCollection<Document>(db).insertOne({
     category: "system",
     action: "founding_cooldown_reset",
     username: user.username,

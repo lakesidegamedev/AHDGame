@@ -26,7 +26,7 @@ export interface CorporationHistory {
    * The `currencyCode` FX rate (local per 1 ₳) in effect when this row was
    * written. Readers converting this row's money fields back to ₳ MUST use
    * this rate, not the live/current rate — reconverting with today's rate
-   * drifts by however much FX has moved since this turn (#2958). Missing on
+   * drifts by however much FX has moved since this turn. Missing on
    * rows written before this field existed, or when `currencyCode` itself is
    * absent (pre-forex ₳ passthrough — no conversion needed).
    */
@@ -50,12 +50,10 @@ export interface CorporationHistory {
   marketCap: number;
   liquidCapital: number;
   /**
-   * SOE treasury-backing reconciliation for this turn, in `currencyCode` (same
-   * denomination as every other money field on this row). Mirrors
-   * `CorpSnapshot.soeBacking` (which is ₳-denominated). Absent on private
-   * corps, on SOEs with no shortfall, and on rows written before this field
-   * was added. `cipHeld` only names the residual — capital construction is
-   * never coverable.
+   * SOE treasury-backing reconciliation this turn, in `currencyCode` (matches
+   * other money fields here; `CorpSnapshot.soeBacking` is ₳-denominated).
+   * Absent on private corps, SOEs with no shortfall, and pre-migration rows.
+   * `cipHeld` names the residual; capital construction is never coverable.
    */
   soeBacking?: {
     /** Total negative-liquidCapital hole at backing time. */
@@ -72,11 +70,7 @@ export interface CorporationHistory {
     residual: number;
   };
   /**
-   * Market-making buyback escrow balance at snapshot time, in liquidCurrencyCode
-   * units. May be negative (a tracked buyback debt). Snapshotted so forensics can
-   * see true net cash (`liquidCapital + shareEscrowBalance`) per turn and catch
-   * escrow drift that inflates the displayed gross liquidCapital. Omitted on
-   * entries written before this field was added.
+   * Market-making buyback escrow balance at snapshot time, in liquidCurrencyCode units. May be negative (tracked buyback debt). Snapshotted so net cash (`liquidCapital + shareEscrowBalance`) is visible per turn and escrow drift inflating gross liquidCapital is caught. Omitted on entries written before this field existed.
    */
   shareEscrowBalance?: number;
   revenue: number;
@@ -85,11 +79,7 @@ export interface CorporationHistory {
   /** Total dividend paid to all shareholders this turn (matches turn processor). */
   dividendPaidPerTurn?: number;
   /**
-   * Net dividend income (local ccy, per-turn) this corp RECEIVED from holding
-   * other corps' shares — after FX spread + the 50% dividend-received-deduction
-   * tax. Reporting only (the cash was credited to liquidCapital in the dividend
-   * phase, NOT via `income`). Surfaced as a Financials P&L line (#3109). Absent
-   * when the corp holds no dividend-paying corp shares.
+   * Net dividend income (local ccy, per-turn) this corp received from holding other corps' shares, after FX spread and the 50% dividend-received-deduction tax. Reporting only: the cash was credited to liquidCapital in the dividend phase, not via `income`. Surfaced as a Financials P&L line. Absent when the corp holds no dividend-paying corp shares.
    */
   dividendIncomeReceived?: number;
   /** Pre-tax operating income minus overhead, before bond flows (₳/turn). Older snapshots lack this field. */

@@ -93,7 +93,7 @@ describe("ensurePerpetualElections query batching", () => {
       { _id: "TX", stateSenateSeats: 31 },
     ]);
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     // Non-vacuous: the bootstrap world must actually spawn stateSenate races,
@@ -113,7 +113,7 @@ describe("ensurePerpetualElections query batching", () => {
       { _id: "CA", stateSenateSeats: 40 },
     ]);
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     const wy = inserted.find((e) => e.electionType === "stateSenate" && e.state === "WY");
@@ -125,7 +125,7 @@ describe("ensurePerpetualElections query batching", () => {
   it("falls back to 40 seats when the state doc carries no stateSenateSeats", async () => {
     const { inserted } = await mountUsWorld([{ _id: "WY" }]);
 
-    const { ensurePerpetualElections } = await import("./perpetualElections");
+    const { ensurePerpetualElections } = await import("@/lib/elections/scheduling");
     await ensurePerpetualElections(NOW, 1);
 
     const wy = inserted.find((e) => e.electionType === "stateSenate" && e.state === "WY");

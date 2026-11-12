@@ -6,6 +6,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { INDEX_TARGETS } from "@/lib/admin/seed/indexTargets";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface SeedTarget {
   id: string;
@@ -306,13 +307,6 @@ const SEED_TARGETS: SeedTarget[] = [
     scope: "DE",
   },
   {
-    id: "deLegislation",
-    label: "DE legislation",
-    description: "DE-scoped legislation types (tax, labor, energy, immigration)",
-    destructiveWarning: "Deletes and re-inserts all DE legislation types",
-    scope: "DE",
-  },
-  {
     id: "deElections",
     label: "DE elections",
     description: "Spawn missing Bundestag elections for every Land",
@@ -576,9 +570,7 @@ type SeedScope = CountryId | "all";
 type YearTab = "2019" | "1991";
 type SeedMode = "full" | "partial";
 
-// Maps the UI year tab to the engine preset id consumed by /api/admin/seed.
-// The "2019" baseline is the January-2019 era (116th Congress, post-2019 UK
-// general election) — historically the codebase keyed this as "2019-default".
+// Maps UI year tab to the engine preset id consumed by /api/admin/seed.
 const PRESET_BY_YEAR: Record<YearTab, string> = {
   "2019": "2019-default",
   "1991": "1991-default",
@@ -676,14 +668,18 @@ export function UniversalSeeder() {
 
   const [partialFilter, setPartialFilter] = useState<CountryId | null>(null);
 
-  const usTargets = SEED_TARGETS.filter((t) => !t.scope || t.scope === "US" || t.scope === "both");
-  const ukTargets = SEED_TARGETS.filter((t) => t.scope === "UK" || t.scope === "both");
-  const jpTargets = SEED_TARGETS.filter((t) => t.scope === "JP");
-  const deTargets = SEED_TARGETS.filter((t) => t.scope === "DE");
-  const ieTargets = SEED_TARGETS.filter((t) => t.scope === "IE");
-  const brTargets = SEED_TARGETS.filter((t) => t.scope === "BR");
-  const ngTargets = SEED_TARGETS.filter((t) => t.scope === "NG");
-  const cnTargets = SEED_TARGETS.filter((t) => t.scope === "CN");
+  const usTargets = SEED_TARGETS.filter(
+    (t) => !t.scope || countryHasFeature("usUi", t.scope) || t.scope === "both"
+  );
+  const ukTargets = SEED_TARGETS.filter(
+    (t) => countryHasFeature("ukUi", t.scope) || t.scope === "both"
+  );
+  const jpTargets = SEED_TARGETS.filter((t) => countryHasFeature("jpUi", t.scope));
+  const deTargets = SEED_TARGETS.filter((t) => countryHasFeature("deUi", t.scope));
+  const ieTargets = SEED_TARGETS.filter((t) => countryHasFeature("ieUi", t.scope));
+  const brTargets = SEED_TARGETS.filter((t) => countryHasFeature("brUi", t.scope));
+  const ngTargets = SEED_TARGETS.filter((t) => countryHasFeature("ngUi", t.scope));
+  const cnTargets = SEED_TARGETS.filter((t) => countryHasFeature("cnUi", t.scope));
 
   const YEAR_TABS: { id: YearTab; label: string; description: string }[] = [
     {
@@ -807,7 +803,9 @@ export function UniversalSeeder() {
                 {[...registered, "all" as const].map((s) => {
                   const hasTargets =
                     s === "all" ||
-                    SEED_TARGETS.some((t) => t.scope === s || (!t.scope && s === "US"));
+                    SEED_TARGETS.some(
+                      (t) => t.scope === s || (!t.scope && countryHasFeature("usUi", s))
+                    );
                   return (
                     <button
                       key={s}
@@ -829,18 +827,21 @@ export function UniversalSeeder() {
                 })}
               </div>
               <span className="text-xs text-muted">
-                {scope === "US" && "50 states + DC, policies, demographics, parties, etc."}
-                {scope === "UK" && "12 UK regions, parties, demographics, party orgs"}
-                {scope === "JP" && "8 JP regions, parties, demographics, government formation"}
-                {scope === "DE" &&
+                {countryHasFeature("usUi", scope) &&
+                  "50 states + DC, policies, demographics, parties, etc."}
+                {countryHasFeature("ukUi", scope) &&
+                  "12 UK regions, parties, demographics, party orgs"}
+                {countryHasFeature("jpUi", scope) &&
+                  "8 JP regions, parties, demographics, government formation"}
+                {countryHasFeature("deUi", scope) &&
                   "16 Länder, parties, demographics, government formation, budgets"}
-                {scope === "IE" &&
+                {countryHasFeature("ieUi", scope) &&
                   "8 NUTS III regions, parties, demographics, government formation, budgets"}
-                {scope === "BR" &&
+                {countryHasFeature("brUi", scope) &&
                   "5 macro-regions, parties, demographics, government formation, budgets"}
-                {scope === "NG" &&
+                {countryHasFeature("ngUi", scope) &&
                   "6 geopolitical zones, parties, demographics, government formation, budgets"}
-                {scope === "CN" &&
+                {countryHasFeature("cnUi", scope) &&
                   "7 geographic regions, parties, demographics, government formation, budgets"}
                 {scope === "all" && "All countries: US, UK, JP, DE, IE, BR, CN, NG"}
               </span>

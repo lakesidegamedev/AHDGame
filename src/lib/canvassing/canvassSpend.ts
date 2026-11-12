@@ -10,7 +10,10 @@ import {
   type MoneyFlowStepRef,
 } from "@/lib/db/nonAtomicMoneyFlow";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type { Campaign, Character, StateDemographicTurnout } from "@/lib/db/types";
+import type { Campaign, StateDemographicTurnout } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 
 export interface CanvassTurnoutWrite {
   /** `_id` of the state demographic turnout document. */
@@ -65,7 +68,7 @@ function mapSpendError(step: MoneyFlowStepRef, outcome: MoneyFlowLegOutcome): Er
 /**
  * Charge a canvass (optional surrogate-pool draw, character funds+actions)
  * and apply the turnout boost so the result is exactly-once on every
- * topology (issue #1672).
+ * topology.
  *
  * Under real transactions the legs, the turnout write, and the idempotency
  * receipt join the transaction and commit atomically, preserving the old
@@ -97,9 +100,9 @@ export async function applyCanvassSpend(
     throw new RangeError("Canvass idempotency key must be 1-128 characters");
   }
 
-  const characters = db.collection<Character>("characters");
-  const campaigns = db.collection<Campaign>("campaigns");
-  const turnout = db.collection<StateDemographicTurnout>("stateDemographicTurnout");
+  const characters = charactersCollection(db);
+  const campaigns = campaignsCollection(db);
+  const turnout = stateDemographicTurnoutCollection(db);
   const receipts = await getMoneyFlowReceiptsCollection(db);
   const now = new Date();
 

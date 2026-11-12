@@ -13,6 +13,7 @@ import {
   buildTechUnlockTxEntry,
   refundSpecForNode,
 } from "@/lib/corporations/techTree/techUnlockLedger";
+import { frontierResearchInc } from "@/lib/corporations/techTree/frontierResearch";
 import {
   canUnlock,
   getCommittedLane,
@@ -23,6 +24,7 @@ import {
   type CanUnlockResult,
   type UnlockBlockReason,
 } from "@/lib/constants/techTree";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type UnlockTechNodeResult =
   | {
@@ -127,7 +129,11 @@ export async function unlockTechNode(
 
   // One-time strength grants applied here (not recomputed each turn).
   const grants = sumStrengthGrants(node.effects);
-  const inc: Record<string, number> = { rdScore: -node.cost, liquidCapital: -cashCost };
+  const inc: Record<string, number> = {
+    rdScore: -node.cost,
+    liquidCapital: -cashCost,
+    ...frontierResearchInc(node.decadeId, node.cost),
+  };
   if (grants.marketingStrength > 0) inc.marketingStrength = grants.marketingStrength;
   if (grants.logisticsStrength > 0) inc.logisticsStrength = grants.logisticsStrength;
 
@@ -137,7 +143,7 @@ export async function unlockTechNode(
     set[`techDecadeChosenTurn.${node.decadeId}`] = turn;
   }
 
-  const updateResult = await db.collection<Corporation>("corporations").updateOne(
+  const updateResult = await corporationsCollection(db).updateOne(
     {
       _id: corporation._id,
       rdScore: { $gte: node.cost },
@@ -169,7 +175,7 @@ export async function unlockTechNode(
   }
 
   // The cash debit above committed: record the matching finance-history debit
-  // in the same turn and currency (ticket #1998). The strict emit retries
+  // in the same turn and currency. The strict emit retries
   // transient insert failures and adopts an applied-but-unacknowledged row;
   // a persistent failure rolls the unlock back so a successful debit can
   // never be left with no visible entry.
@@ -204,12 +210,10 @@ export async function unlockTechNode(
       },
     });
     try {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          buildTechUnlockRefundUpdate(refundSpecForNode(node, cashCost, committing))
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        buildTechUnlockRefundUpdate(refundSpecForNode(node, cashCost, committing))
+      );
     } catch (refundErr) {
       Sentry.captureException(refundErr, {
         extra: {

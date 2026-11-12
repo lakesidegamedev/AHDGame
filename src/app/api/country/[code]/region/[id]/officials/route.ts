@@ -8,7 +8,11 @@ import {
   type CountryId,
 } from "@/lib/constants/countries";
 import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
-import type { ElectedOfficial, State, Character, User } from "@/lib/db/types";
+import type { ElectedOfficial, State, User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -24,23 +28,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country code");
     }
-    // State ids are stored upper-case ("BEO", "SN"). The server-rendered region
-    // page already uppercases before querying; this route did not, so a
-    // lower-case id in the URL matched nothing and the parliament list came
-    // back empty (ticket-1107).
+    // State ids are stored upper-case ("BEO", "SN"). The region page
+    // uppercases before querying; a lower-case URL id would otherwise
+    // match nothing and return an empty parliament list.
     const stateId = id.toUpperCase();
 
     const db = await getDb();
 
     // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
 
     // Get all elected officials for this state
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ state: stateId, countryId })
       .sort({ officeType: 1, senateClass: 1, seatsHeld: -1 })
       .toArray();
@@ -49,8 +51,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const characterIds = officials.filter((o) => o.characterId).map((o) => o.characterId!);
 
     // Get the characters to find their user IDs
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ _id: { $in: characterIds } })
       .toArray();
 
@@ -58,8 +59,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const userIds = characters.map((c) => c.userId);
 
     // Get users to check ban status
-    const users = await db
-      .collection<User>("users")
+    const users = await usersCollection(db)
       .find({ _id: { $in: userIds } })
       .toArray();
 

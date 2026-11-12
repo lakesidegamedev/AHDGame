@@ -4,7 +4,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { CountryId } from "@/lib/constants/countries";
-import type { GameState, MarketCapHistory, Corporation } from "@/lib/db/types";
+import type { GameState, MarketCapHistory } from "@/lib/db/types";
 import type { MarketIndexIntraday } from "@/lib/db/types/marketIndexIntraday";
 import type { MarketCapTick } from "@/lib/db/types/marketCapTick";
 import type { ShareTradeHistory, ShareTradeKind } from "@/lib/db/types/shareTradeHistory";
@@ -23,6 +23,12 @@ import {
   mergeQuarterCandles,
   type CandleInput,
 } from "@/lib/stockExchange/candles";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { marketCapTicksCollection } from "@/lib/db/repositories/marketCapTicks";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
+import { marketIndexIntradayCollection } from "@/lib/db/repositories/marketIndexIntraday";
 
 // Game-calendar ranges plus older client ranges retained for compatibility.
 const VALID_TURNS = new Set([4, 12, 24, 48, 168, 240, 480, 720, 8760, 0]);
@@ -64,10 +70,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ exchange, turns, bucketed: false, points: [] });
     }
     const db = await getDb();
-    const collection = db.collection<MarketCapHistory>("marketCapHistory");
+    const collection = marketCapHistoryCollection(db);
     const [latest, gameState] = await Promise.all([
       collection.findOne({}, { sort: { turn: -1 }, projection: { turn: 1 } }),
-      db.collection<GameState>("gameState").findOne(
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {
@@ -100,8 +106,7 @@ export async function GET(request: Request) {
         .sort({ turn: 1 })
         .toArray(),
       collection.findOne({ turn: { $lt: firstTurn } }, { sort: { turn: -1 } }),
-      db
-        .collection<MarketIndexIntraday>("marketIndexIntraday")
+      marketIndexIntradayCollection(db)
         .find({
           exchange: sector ? `sector:${sector}` : exchange,
           turn: { $gte: Math.max(1, firstTurn - 1), $lte: lastTurn },
@@ -129,8 +134,7 @@ export async function GET(request: Request) {
     // Scope before grouping so other venues cannot consume the limit or poison the sum.
     const corps =
       venueCountry || sector
-        ? await db
-            .collection<Corporation>("corporations")
+        ? await corporationsCollection(db)
             .find({
               ...(venueCountry ? { countryId: venueCountry } : {}),
               ...(sector
@@ -151,8 +155,7 @@ export async function GET(request: Request) {
         { $lte: ["$totalAnchor", Number.MAX_VALUE] },
       ],
     };
-    const turnover = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const turnover = await shareTradeHistoryCollection(db)
       .aggregate<{ _id: number; volume: number; invalidTrades: number }>([
         {
           $match: {
@@ -171,8 +174,7 @@ export async function GET(request: Request) {
         },
       ])
       .toArray();
-    const actions = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const actions = await shareTradeHistoryCollection(db)
       .aggregate<{ _id: { turn: number; kind: string }; count: number }>([
         {
           $match: {
@@ -256,8 +258,7 @@ export async function GET(request: Request) {
     let points = bucketCandles(raw, bucketTurns);
     let resolution: "15m" | "turn" = "turn";
     if (bucketTurns === 1 && turns !== 0 && turns <= QUARTER_RANGE_MAX_TURNS) {
-      const ticks = await db
-        .collection<MarketCapTick>("marketCapTicks")
+      const ticks = await marketCapTicksCollection(db)
         .find({
           exchange: sector ? `sector:${sector}` : exchange,
           turn: { $gte: firstTurn, $lte: lastTurn },
@@ -267,8 +268,7 @@ export async function GET(request: Request) {
         .toArray();
       if (ticks.length > 0) {
         // Executable turnover per quarter from trade timestamps.
-        const quarterTurnover = await db
-          .collection<ShareTradeHistory>("shareTradeHistory")
+        const quarterTurnover = await shareTradeHistoryCollection(db)
           .aggregate<{ _id: Date; volume: number }>([
             {
               $match: {

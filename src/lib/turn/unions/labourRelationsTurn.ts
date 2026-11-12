@@ -1,9 +1,7 @@
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import type {
-  Character,
   BargainingCampaign,
   CollectiveAgreement,
-  Corporation,
   CorporateSector,
   StateMetrics,
   Union,
@@ -18,6 +16,13 @@ import {
   type MandateLocal,
 } from "@/lib/unions/commands/bargaining";
 import { closeDueRatificationVotes } from "@/lib/unions/commands/ratifySettlement";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
 
 export interface LabourRelationsTurnResult {
   campaignsMovedToDispute: number;
@@ -44,7 +49,7 @@ export async function processLabourRelationsTurn(
 ): Promise<LabourRelationsTurnResult> {
   const now = new Date();
   const [campaigns, agreements, mediations] = await Promise.all([
-    db.collection<BargainingCampaign>("bargainingCampaigns").updateMany(
+    bargainingCampaignsCollection(db).updateMany(
       { status: "negotiating", deadlineTurn: { $lte: currentTurn } },
       {
         $set: {
@@ -54,13 +59,11 @@ export async function processLabourRelationsTurn(
         },
       }
     ),
-    db
-      .collection<CollectiveAgreement>("collectiveAgreements")
-      .updateMany(
-        { status: "active", expiresAtTurn: { $lte: currentTurn } },
-        { $set: { status: "expired", updatedAt: now } }
-      ),
-    db.collection<BargainingCampaign>("bargainingCampaigns").updateMany(
+    collectiveAgreementsCollection(db).updateMany(
+      { status: "active", expiresAtTurn: { $lte: currentTurn } },
+      { $set: { status: "expired", updatedAt: now } }
+    ),
+    bargainingCampaignsCollection(db).updateMany(
       {
         status: "dispute",
         "mediation.status": "pending",
@@ -126,15 +129,13 @@ async function notifyLabourRelationsEvents(
   if (events.length === 0) return;
 
   const [unions, corporations] = await Promise.all([
-    db
-      .collection<Union>("unions")
+    unionsCollection(db)
       .find(
         { _id: { $in: events.map((event) => event.unionId) } },
         { projection: { name: 1, ownerId: 1, ownerType: 1 } }
       )
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         { _id: { $in: events.map((event) => event.employerCorporationId) } },
         { projection: { name: 1 } }
@@ -154,8 +155,7 @@ async function notifyLabourRelationsEvents(
     .map((union) => union.ownerId)
     .filter((id): id is ObjectId => id != null);
   if (ownerIds.length === 0) return;
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: ownerIds } }, { projection: { userId: 1 } })
     .toArray();
   const userIdByCharacterId = new Map(
@@ -204,7 +204,7 @@ async function lapseStaleDisputes(
   currentTurn: number,
   now: Date
 ): Promise<{ count: number; campaigns: LapsedCampaign[] }> {
-  const collection = db.collection<BargainingCampaign>("bargainingCampaigns");
+  const collection = bargainingCampaignsCollection(db);
   const stale = await collection
     .find(
       { status: "dispute" },
@@ -294,22 +294,19 @@ async function refreshOpenCampaigns(
     overtimeBansEnded: 0,
     endedBans: [],
   };
-  const campaigns = await db
-    .collection<BargainingCampaign>("bargainingCampaigns")
+  const campaigns = await bargainingCampaignsCollection(db)
     .find({ status: { $in: ["negotiating", "dispute"] } })
     .toArray();
   if (campaigns.length === 0) return counters;
 
   const [locals, unions] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find(
         { _id: { $in: campaigns.flatMap((c) => c.sectorIds) } },
         { projection: MANDATE_LOCAL_PROJECTION }
       )
       .toArray(),
-    db
-      .collection<Union>("unions")
+    unionsCollection(db)
       .find(
         { _id: { $in: campaigns.map((c) => c.unionId) } },
         { projection: { treasury: 1, countryId: 1 } }
@@ -322,8 +319,7 @@ async function refreshOpenCampaigns(
   const stateIds = [...new Set(locals.map((local) => local.stateId).filter(Boolean))];
   const metrics =
     stateIds.length > 0
-      ? await db
-          .collection<StateMetrics>("macroMetrics")
+      ? await macroMetricsCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { "economic.costOfLiving": 1 } })
           .toArray()
       : [];
@@ -400,9 +396,7 @@ async function refreshOpenCampaigns(
   }
 
   if (campaignOps.length > 0) {
-    const result = await db
-      .collection<BargainingCampaign>("bargainingCampaigns")
-      .bulkWrite(campaignOps);
+    const result = await bargainingCampaignsCollection(db).bulkWrite(campaignOps);
     counters.mandatesRefreshed = result.modifiedCount;
   }
 
@@ -417,7 +411,7 @@ async function refreshOpenCampaigns(
       },
     });
   }
-  if (treasuryOps.length > 0) await db.collection<Union>("unions").bulkWrite(treasuryOps);
+  if (treasuryOps.length > 0) await unionsCollection(db).bulkWrite(treasuryOps);
 
   return counters;
 }

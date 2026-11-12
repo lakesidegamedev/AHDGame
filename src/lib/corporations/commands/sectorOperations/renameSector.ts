@@ -8,6 +8,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type { CorporateSector } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -43,7 +44,7 @@ export async function renameSector(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const sector = await corporateSectorsCollection(db).findOne({
       _id: new ObjectId(sectorId),
       corporationId: corporation._id,
     });
@@ -70,7 +71,7 @@ export async function renameSector(request: Request, { params }: RouteParams) {
             },
           };
 
-    await db.collection<CorporateSector>("corporateSectors").updateOne({ _id: sector._id }, update);
+    await corporateSectorsCollection(db).updateOne({ _id: sector._id }, update);
 
     return NextResponse.json({
       success: true,

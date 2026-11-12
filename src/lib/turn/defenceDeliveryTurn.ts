@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { rawLotsFromSector, militaryDivertedShare } from "@/lib/military/arsenal";
 import {
@@ -18,6 +18,7 @@ import {
 import {
   listActiveContracts,
   advanceContract,
+  cancelContract,
   reverseContractDelivery,
   stampDeliveryCarry,
   recordContractPayment,
@@ -28,7 +29,7 @@ import {
   drawDownEncumbrance,
   getDefenseAppropriation,
 } from "@/lib/db/collections/defenseAppropriation";
-import { applyMoneyMove, MONEY_MOVE_COLLECTION, type MoneyMoveLeg } from "@/lib/banking/moneyMove";
+import { applyMoneyMove, type MoneyMoveLeg } from "@/lib/banking/moneyMove";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import {
@@ -39,6 +40,10 @@ import {
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { resolveDefenseLine } from "@/lib/turn/defenseEnvelope";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Idempotency key for one contract's settlement in one turn.
@@ -67,33 +72,21 @@ export interface DeliveryResult {
 }
 
 /**
- * Per-turn: every active contract delivers what its plant produced into the arsenal, paid for
- * out of the defence appropriation.
+ * Per-turn: every active contract delivers what its plant produced into the
+ * arsenal, paid for out of the defence appropriation.
  *
- * Four caps apply, in this order:
- *   1. what the plant produced       — you cannot deliver what you did not build
- *   2. what remains on the order     — a contract never over-delivers what it was billed for
- *   3. what the appropriation covers — procurement has NO overdraft
- *   4. what the appropriation may pay THIS TURN: procurement has no overdraft and no
- *      floodgate either, so a whole contracting window cannot settle in one tick
+ * Four caps, in order: plant production; the remaining order; what the
+ * appropriation covers (procurement has no overdraft); and what it may pay
+ * this turn (no floodgate either). Cap 3 stalls rather than borrowing, since
+ * the overdraft exists for upkeep, never new purchases.
  *
- * Cap 3 stalls rather than borrowing: C1 established the overdraft is for upkeep, an
- * obligation already incurred, never for new purchases. A country that cannot pay this turn
- * takes fewer lots and the contract waits.
+ * Recording must precede payment: `applyMoneyMove` claims its key, guards the
+ * debit in the write, and reports a refused move having touched nothing, so
+ * only the lot record needs unwinding via `reverseContractDelivery`.
  *
- * **Recording precedes payment, and that is a REVERSAL of the old order.** It used to pay
- * first, because `advanceContract` clamps and a rollback after a failed debit would have been a
- * silent no-op leaving the buyer credited with materiel they never paid for. That reasoning
- * held only while the debit was a bare guarded `$inc` that could half-land. The money now goes
- * through `applyMoneyMove`, which claims its key before anything moves, guards the debit inside
- * the write, and reports a refused move having touched NOTHING - so a payment that does not
- * land leaves exactly one thing to unwind, the lot record, and `reverseContractDelivery` undoes
- * it exactly. One unwind beats the old three-step ladder of refund, reclaim and re-bank.
- *
- * @param currentYear the world's game YEAR (not turn), which gates the tech decades a
+ * @param currentYear the world's game YEAR, which gates the tech decades a
  *   corporation may count toward its grade ceiling.
- * @param maxGrade era ceiling on delivered grade, mirroring the seeder's `MAX_TECH_TIER_BY_ERA`
- *   so a 1953 world cannot be handed modern kit through a contract either.
+ * @param maxGrade era ceiling on delivered grade, mirroring `MAX_TECH_TIER_BY_ERA`.
  */
 export async function applyDefenceDeliveries(
   db: Db,
@@ -125,7 +118,7 @@ export async function applyDefenceDeliveries(
   const supplierPaidThisTurn = new Map<string, number>();
   let projectedBalance = opening.balance;
   let projectedEncumbered = opening.encumbered ?? 0;
-  const moveRecords = db.collection<{ _id: string }>(MONEY_MOVE_COLLECTION);
+  const moveRecords = bankMoneyMovesCollection<{ _id: string }>(db);
 
   let lots = 0;
   let paid = 0;
@@ -136,14 +129,27 @@ export async function applyDefenceDeliveries(
 
   for (const contract of contracts) {
     const [sector, corp] = await Promise.all([
-      db.collection<CorporateSector>("corporateSectors").findOne({ _id: contract.sectorId }),
+      corporateSectorsCollection(db).findOne({ _id: contract.sectorId }),
       // Eligibility and payment read the corp's country, currency and cash; its
       // settlement stamps are never read on this path and are most of the doc.
-      db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: contract.corporationId }, { projection: SETTLEMENT_HISTORY_EXCLUDED }),
+      corporationsCollection(db).findOne(
+        { _id: contract.corporationId },
+        { projection: SETTLEMENT_HISTORY_EXCLUDED }
+      ),
     ]);
     if (!sector || !corp) {
+      // The supplier plant or corp is gone, so the order can never deliver and
+      // would hold its encumbrance and window quota forever. Tear it up for
+      // cause: the supplier side vanished, so no minister break fee is owed.
+      await cancelContract(db, contract._id, {
+        termination: {
+          basis: "cause",
+          fee: 0,
+          lotsCancelled: Math.max(0, (contract.allocatedLots ?? 0) - (contract.lotsDelivered ?? 0)),
+          favorabilityPenalty: 0,
+          turn: currentTurn,
+        },
+      });
       stalled++;
       continue;
     }
@@ -173,10 +179,9 @@ export async function applyDefenceDeliveries(
       continue;
     }
 
-    // Throughput is the plant's output scaled by the production lines the CONTRACTOR assigned
-    // to this order (suggestion #281), not an even split across every contract it holds. The
-    // old even split let two contracts on one plant each take its FULL per-component share, so
-    // the plant was paid twice for materiel it built once.
+    // Throughput is the plant's output scaled by the production lines the CONTRACTOR
+    // assigned to this order, not an even split across every contract it holds;
+    // an even split would pay the plant twice for materiel it built once.
     const assigned =
       contract.assignedFactories ??
       defaultFactoryAllocation(components.length, DEFENCE_FACTORY_SLOTS_PER_PLANT);
@@ -291,20 +296,11 @@ export async function applyDefenceDeliveries(
       eraMaxGrade: maxGrade,
     });
     const actualCost = recorded * contract.pricePerLot;
-    // What the lots COST the supplier to build, at LIVE input prices. Without this leg the
-    // whole contract price was free cash: liquid capital rose one-for-one with the
-    // appropriation drained, which is both an economy-wide money mint and a direct contaminant
-    // of the market-cap series. Payment is margin, and a plant that took a bad price genuinely
-    // loses money on the order - which is now a thing the commodity market can cause.
-    // Build cost scales with the DELIVERED grade, mirroring the band the contract was priced
-    // in (lotPriceBand grades productionCost by GRADE_PRICE_SCALE). Charging ungraded cost
-    // here made every grade-0 contract underwater from turn one even at the band floor
-    // (floor 0.784x cost vs cost 1.0x), and over-credited grade-3 deliveries by the 1.25x
-    // the band charged but the build never paid.
-    // Settled on the economics THIS contract was signed under. A post-#1134 order costs a
-    // share of its own stored `pricePerLot`, so it keeps the margin it was struck at even if
-    // the country's GDP has moved since. A pre-#1134 order keeps the old model outright: those
-    // players agreed to those terms, and a repair never takes away what a player already holds.
+    // Build cost at LIVE input prices, scaled by DELIVERED grade to mirror
+    // contract pricing (lotPriceBand grades productionCost by GRADE_PRICE_SCALE).
+    // Payment is margin; a plant that took a bad price genuinely loses money.
+    // Settled on the economics this contract was signed under, so margin is
+    // preserved even as input prices move.
     const unitCost = contractLotProductionCost(contract, sector.strategyId, priceRatios) ?? 0;
     const gradedUnitCost = unitCost * GRADE_PRICE_SCALE[normalizeGrade(grade)];
     const buildCost = Math.max(0, Math.round(gradedUnitCost * recorded));
@@ -567,7 +563,9 @@ export async function applyDefenceDeliveries(
   // contribution next turn. The turn stamp is what makes it expire on its own when a
   // contract completes or is cancelled — no sweep has to go and clear it.
   if (divertedBySector.size > 0) {
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await (
+      await getCorporateSectorsCollection(db)
+    ).bulkWrite(
       [...divertedBySector.values()].map(({ sector, lots: delivered }) => ({
         updateOne: {
           filter: { _id: sector._id },

@@ -1,3 +1,4 @@
+import { hostsSovereigntyReferendums } from "@/lib/referendum/rules/sovereigntyRegions";
 import { z } from "zod";
 import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
@@ -9,13 +10,15 @@ import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { getReferendumCollection } from "@/lib/db/collections/referendum";
 import { canSpendOnStateParty } from "@/lib/parties/access";
 import { spendGroundGame } from "@/lib/referendum/groundGame";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/country/[code]/referendum/[refId]/ground-game
 // Auth: requireHumanSessionWithCharacter; nation-gated (the acting character must
 //   belong to the referendum's country). Official mode requires the actor be a
 //   party Chair/Vice/Campaigner (canSpendOnStateParty) and debits Political
 //   Strength; volunteer mode debits the player's Actions + Campaign Funds.
-//   UK-only. Errors: 400, 401, 403, 404.
+//   Any country that hosts sovereignty referendums. Errors: 400, 401, 403, 404.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ code: string; refId: string }> }
@@ -26,8 +29,8 @@ export async function POST(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (countryId !== "UK") {
-      return errorResponse(400, "Referendums are UK-only.");
+    if (!hostsSovereigntyReferendums(countryId)) {
+      return errorResponse(400, "This country holds no sovereignty referendums.");
     }
 
     const auth = await requireHumanSessionWithCharacter(request);
@@ -64,12 +67,12 @@ export async function POST(
         return errorResponse(400, "You are not in a party.");
       }
       const [partyDoc, stateParty] = await Promise.all([
-        db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId, sequentialId: Number(partyId) }),
-        db
-          .collection<StatePartyOrg>("statePartyOrg")
-          .findOne({ countryId, stateId: ref.regionId, partyId: String(partyId) }),
+        politicalPartiesCollection(db).findOne({ countryId, sequentialId: Number(partyId) }),
+        statePartyOrgCollection(db).findOne({
+          countryId,
+          stateId: ref.regionId,
+          partyId: String(partyId),
+        }),
       ]);
       if (!partyDoc || !canSpendOnStateParty(partyDoc, stateParty, auth.user)) {
         return errorResponse(403, "Only a party officer may run an official ground game.");

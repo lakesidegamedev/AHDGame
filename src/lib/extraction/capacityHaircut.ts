@@ -6,23 +6,17 @@ import {
 } from "@/lib/constants/commodities";
 
 /**
- * Extraction capacity → revenue haircut.
+ * Extraction capacity to revenue haircut.
  *
  * Extraction sectors are output-clamped by their operating state's resource
- * capacity (see computeExtractionCapacityMultipliers). Historically that clamp
- * only reduced the sector's contribution to the commodity MARKET supply — the
- * corp still booked full revenue for output it could not physically extract
- * (audit t786). This module makes the clamp bite realized revenue: a sector
- * that can only extract X% of its revenue-based potential realizes X% of its
- * resource revenue.
+ * capacity. Historically that clamp only reduced the sector's contribution to
+ * commodity market supply; the corp still booked full revenue for output it
+ * could not extract. This makes the clamp bite realized revenue.
  *
- * Because the live game had extraction pinned at ~33% utilization, applying the
- * full haircut instantly would erase ~57% of extraction-sector revenue and
- * bankrupt miners. So the haircut fades in over a transition window (mirrors the
- * nationalization productivity shock): each sector stamps a start turn the first
- * time it is processed, and the haircut ramps linearly from none → full over
- * EXTRACTION_CAPACITY_HAIRCUT_TURNS, giving corps time to acquire capacity,
- * specialize, or divest before the constraint fully bites.
+ * Because live extraction was pinned at ~33% utilization, applying the full
+ * haircut instantly would erase ~57% of extraction revenue and bankrupt miners.
+ * So it fades in linearly from none to full over
+ * EXTRACTION_CAPACITY_HAIRCUT_TURNS, giving corps time to adapt.
  */
 
 /** Transition window (turns) over which the capacity haircut fades to full. 5 game years. */
@@ -167,21 +161,18 @@ export function weightedCapacityUtilization(
  * Capacity utilization with scarcity relief capped by the physical deposit
  * ceiling.
  *
- * The relief exists so a shortage stops taxing exactly the extraction revenue
- * the economy needs. Against the corrected ledger-basis output figures,
- * though, an unconstrained relief can lift utilization fully to 1 for a
- * sector whose desired output is many times its state's capacity: the corp
- * would book revenue for ore the deposits cannot physically yield.
+ * Relief stops a shortage taxing the extraction revenue the economy needs,
+ * but unconstrained it can lift utilization to 1 for a sector whose desired
+ * output far exceeds its state's capacity, booking revenue for ore deposits
+ * cannot yield.
  *
- * The raw capacity ratio bounds that: the share of the sector's DESIRED
- * output (in corrected units) its multipliers actually permit,
+ * The raw capacity ratio bounds relief:
  *
  *   ratio = Σ(units_r × multiplier_r) / Σ(units_r)
  *
- * The relieved, rate-weighted utilization is honored only up to this ratio;
- * past it the physical clamp wins and the unrelieved figure is returned.
- * When no corrected units are recorded this is exactly
- * weightedCapacityUtilization.
+ * Relieved utilization is honored only up to this ratio; past it the physical
+ * clamp wins and the unrelieved figure is returned. With no corrected units
+ * this equals weightedCapacityUtilization.
  */
 export function scarcityReliefCappedUtilization(
   supplyRates: Partial<Record<CommodityType, number>>,

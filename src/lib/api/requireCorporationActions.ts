@@ -6,14 +6,15 @@ import { errorResponse } from "@/lib/api/errors";
 import { corporationActionsPause } from "@/lib/corporations/corporationActionsPause";
 
 /**
- * Full-game pause gate (`gameState.isActive === false`): admin stop, auto-drift
- * pause, or pre-start / pre-launch worlds. Same signal and message as
- * `executeAction` / influence — not the narrower `corporationActionsPaused` flag.
+ * Full-game pause gate (`gameState.isActive === false`): admin stop,
+ * auto-drift pause, or pre-start/pre-launch worlds. Same signal and message
+ * as `executeAction` / influence, not the narrower
+ * `corporationActionsPaused` flag.
  *
- * Do NOT use this on corporation founding or CEO corp-mutation routes. Turns may
- * be paused on purpose during registration / settling windows so players can
- * still found companies and place first plants (ticket #1009; #1004 over-gated).
- * Political spends and reputation influence keep their own `isActive` checks.
+ * Do NOT use on corporation founding or CEO corp-mutation routes. Turns may
+ * be paused on purpose during registration/settling windows so players can
+ * found companies and place first plants. Political spends and reputation
+ * influence keep their own `isActive` checks.
  */
 export async function requireGameActive(db: Db): Promise<NextResponse | null> {
   const col = await getGameStateCollection(db);

@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { campaignSongSchema } from "@/lib/api/schemas/settings";
 import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // Extract YouTube video ID from various URL formats
 function extractYouTubeId(input: string): string | null {
@@ -54,7 +55,7 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
 
-    const character = await db.collection<Character>("characters").findOne({
+    const character = await charactersCollection(db).findOne({
       userId: new ObjectId(user.userId),
     });
 
@@ -81,9 +82,7 @@ export async function PATCH(request: Request) {
       updateData.campaignSongUrl = "";
     }
 
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $set: updateData });
+    await charactersCollection(db).updateOne({ _id: character._id }, { $set: updateData });
 
     return NextResponse.json({ success: true, videoId });
   } catch (error) {

@@ -310,26 +310,13 @@ const CAPITAL_1999: PositionsBlock = {
 
 /**
  * 1999-era US state demographic profiles, anchored to the 2000 Census.
+ * Authored independently, not derived from `stateCensusData.ts` (consulted only for field shape).
  *
- * Methodology: every state was authored INDEPENDENTLY from historical
- * knowledge of that state circa 1999-2000 — values are NOT scaled or
- * derived from the 2019 dataset in `stateCensusData.ts` (that file was
- * consulted only for field shape and ideology-scale conventions).
+ * Reference points (Census 2000): White ~69%, Black ~12%, Hispanic ~12.5%, Asian ~3.6%;
+ * bachelor's+ ~24%; median age ~35.3; dot-com prosperity in CA/WA/MA/CO/CT/NJ;
+ * pre-9/11 sentiment; partisan sorting only beginning.
  *
- * Key national reference points (Census 2000):
- * - Race: non-Hispanic White ~69%, Black ~12%, Hispanic ~12.5%, Asian ~3.6%
- * - Education: bachelor's degree or higher ~24% of adults 25+
- * - Median age ~35.3 (younger than 2019; smaller senior cohorts)
- * - Dot-com boom prosperity concentrated in CA/WA/MA/CO/CT/NJ tech and
- *   finance corridors; Appalachia and the Deep South lag
- * - Hispanic population growth concentrated in CA/TX/AZ/NM/NV/FL
- * - Evangelical influence strong across the South; environmental movement
- *   mid-strength (strongest in the Pacific Northwest and Vermont);
- *   pre-9/11, so nationalist "patriot" sentiment is modest; partisan
- *   sorting only beginning, so progressive shares run lower than 2019
- *
- * race/education/wealth/age each sum to exactly 100 per state;
- * ideology values are independent shares and do not sum to 100.
+ * race/education/wealth/age sum to 100 per state; ideology shares are independent and do not.
  */
 export const stateCensusData1999: Record<string, Layer1Config> = {
   AK: {

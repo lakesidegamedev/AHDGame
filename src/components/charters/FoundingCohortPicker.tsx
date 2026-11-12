@@ -8,20 +8,14 @@ import type { FoundingCohortPick } from "@/lib/db/types";
 import { sortByRegionLabel } from "@/lib/regionOptions";
 
 /**
- * F4 Founding-Cohort picker for the charter-draft flow.
+ * F4 founding-cohort picker: chair distributes 2 player-controlled NPPs
+ * across states adjacent to their home state. The 3rd NPP is implicit and
+ * spawns in the chair's home state.
  *
- * Lets the chair distribute the 2 player-controlled founding NPPs across
- * states adjacent to their home state (the 3rd NPP is implicit — always
- * spawned in the chair's home state, no picker needed).
- *
- * Pickers default to the chair's home state so a player clicking through
- * gets all 3 NPPs in the home state — matching the legacy F4 behavior.
- * Picking the same state in both slots is allowed (concentrates 2 NPPs).
- *
- * Per-NPP positions default to the charter platform converted to the
- * party-grid (axis/12 → [-5, +5]). Player can tweak per-NPP for jitter
- * / coalition feel. Position changes are slider-driven (-5..+5 with 0.5
- * step).
+ * Pickers default to the chair's home state. Picking the same state in
+ * both slots is allowed (concentrates 2 NPPs). Per-NPP positions default to
+ * the charter platform mapped to the party grid and can be tuned via
+ * sliders (-5..+5, step 0.5).
  */
 
 /** Charter axis [-60, +60] → party-grid position [-5, +5]. Mirrors `ratifyCharter.axisToPartyPosition`. */

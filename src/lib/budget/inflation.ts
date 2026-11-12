@@ -7,36 +7,28 @@
  * The result is clamped to MIN_INFLATION..MAX_INFLATION.
  */
 /**
- * Dynamic inflation calculation per country.
+ * Dynamic inflation per country from tracked drivers:
+ *   - Demand-pull (Phillips curve: GDP growth + unemployment)
+ *   - Monetary    (prime rate vs neutral rate)
+ *   - Fiscal      (deficit as share of GDP)
+ *   - Cost-push   (tariff rate + wage growth)
  *
- * Combines real economic drivers that the game already tracks:
- *   - Demand-pull   (Phillips curve: GDP growth + unemployment)
- *   - Monetary       (central bank prime rate vs neutral rate)
- *   - Fiscal         (government deficit as share of GDP)
- *   - Cost-push      (tariff rate + wage growth)
+ * Replaces the static inflationRate each turn, making inflation emergent.
  *
- * The result replaces the static 2.5% `inflationRate` on EconomicGrowthFactors
- * each turn, making inflation emergent from player decisions.
- *
- * **Currency (v0.2.6):** Inflation math here is entirely ratio-based — GDP growth
- * %, unemployment %, prime-rate %, deficit÷GDP %, tariff %, wage growth %. All
- * inputs are dimensionless, so the output percentage is unit-agnostic. The
- * numerator/denominator cancellations (e.g. deficit/GDP) keep the ratio stable
- * regardless of which country currency the underlying budgets denominate in, so
- * no FX conversion is needed.
+ * All inputs are ratios (percentages, deficit÷GDP), so the output is
+ * unit-agnostic and no FX conversion is needed.
  */
 
 import { ObjectId, type Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import { fractionalAlpha } from "@/lib/turn/subhour/stepFraction";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { State } from "@/lib/db/types/state";
 import { nationalOutputGap } from "@/lib/metricEngine/outputTrend";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { Tariff } from "@/lib/db/types/tariff";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
@@ -49,6 +41,14 @@ import { TARIFF_INFLATION_BASELINE } from "@/lib/tariffs/rules/tariffInflationEx
 import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { isMoneySupplyEnabledFromConfig } from "@/lib/moneySupply/featureFlag";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 
@@ -155,26 +155,20 @@ const WAGE_COEFF_DOWN = 0.08;
  * Commodity cost-push coefficients.
  *
  * Signal is the median ANNUALIZED CHANGE in the country's national commodity
- * prices (see inflationRecalc.ts) — 0.10 means the basket is rising 10%/yr. The
- * coefficient is therefore a basket weight: at COEFF=10 a basket rising
+ * prices (see inflationRecalc.ts), so 0.10 means the basket is rising 10%/yr.
+ * The coefficient is therefore a basket weight: at COEFF=10 a basket rising
  * 10%/yr contributes 1.0pp of CPI, i.e. 0.10pp per 1pp of commodity inflation.
  *
  * The weight is deliberately well under 1. Commodity prices ARE most prices, so
  * this channel feeds back on itself: CPI settles near
- * (target + other terms) / (1 - weight), a 1.11x amplification at 0.10.
+ * (target + other terms) / (1 - weight), a 1.11x amplification at 0.10. A
+ * higher weight makes commodity trends swamp every policy lever.
  *
- * It was 30 up / 15 down. At that weight the commodity trend drove CPI almost
- * one-for-one and swamped every policy lever: on prod US food fell 36% over
- * t265-t285 and CPI went from +3.4% to the -2% floor for 13 turns while the
- * central bank sat at a 0.5% prime.
- *
- * It used to be 3.0 against a price LEVEL (`P_national / P_base - 1`) rather
- * than a rate. `basePrice` is a frozen seed constant, so that term grew without
- * bound and no policy could ever return CPI to target — on prod at turn 221 it
- * was worth +4.1pp (US) to +8.4pp (FR) permanently, with those countries' prices
- * actually flat over the preceding game year. See the block comment in
- * inflationRecalc.ts, and HOUSING_PRESSURE_COEFF below, which retired the
- * identical error in the cost-of-living channel.
+ * This is a rate coefficient, not a level term. A price-level form
+ * (`P_national / P_base - 1`) grows without bound against a frozen seed
+ * constant, so no policy could return CPI to target. See the block comment in
+ * inflationRecalc.ts and HOUSING_PRESSURE_COEFF below, which retired the same
+ * error in the cost-of-living channel.
  *
  * Symmetric weight; downward stickiness comes from the tighter down clamp.
  */
@@ -204,25 +198,22 @@ const FOREX_PRESSURE_COEFF_DOWN = 4.0;
 const FOREX_PRESSURE_CLAMP = 0.25;
 
 /**
- * Breaks the FX↔inflation deflation feedback loop.
+ * Breaks the FX-inflation deflation feedback loop.
  *
- * The two channels are individually realistic but mutually reinforcing on the
- * way down: below-target inflation lowers a currency's macro FX target
- * (`computeMacroTarget` in rateCalculation.ts), the currency appreciates
- * (`rate / baseRate` falls), and an appreciated currency feeds a *deflationary*
- * forex term back into inflation here — which lowers the FX target again. In a
- * model where the prime rate is player-controlled, there is no automatic
- * monetary-policy reaction to arrest this, so once a currency hits the FX
- * appreciation guardrail the forex term becomes a near-constant deflationary
- * drag that roughly cancels mean-reversion and locks inflation deep below target.
+ * Below-target inflation lowers a currency's macro FX target, the currency
+ * appreciates, and an appreciated currency feeds a deflationary forex term
+ * back into inflation, lowering the FX target again. With a player-controlled
+ * prime rate there is no automatic monetary-policy reaction to arrest this, so
+ * once a currency hits the FX appreciation guardrail the forex term becomes a
+ * near-constant deflationary drag that locks inflation deep below target.
  *
  * The economically-grounded brake is downward price stickiness: once consumer
  * prices are already falling, importers and retailers stop passing through a
- * still-appreciating currency. We model that by attenuating ONLY the deflationary
- * forex arm, scaled by how far below target inflation already sits. At the target
- * the attenuation is 1.0 (no change); `HALFLIFE` pp below target it is 0.5; it
- * decays smoothly toward 0 in deep deflation. The inflationary arm (depreciation)
- * and all near-target behaviour are untouched.
+ * still-appreciating currency. We attenuate ONLY the deflationary forex arm,
+ * scaled by how far below target inflation already sits. At the target the
+ * attenuation is 1.0; `HALFLIFE` pp below target it is 0.5; it decays smoothly
+ * toward 0 in deep deflation. The inflationary arm and near-target behaviour
+ * are untouched.
  */
 const FOREX_DEFLATION_ATTENUATION_HALFLIFE = 4.0;
 
@@ -246,8 +237,7 @@ const SAVINGS_PRESSURE_COEFF_DOWN = 0.5;
  * predict its own growth) and REDUNDANT with the commodity/wage/forex cost-push
  * channels. In prod `costOfLiving` is near-static, so a rate version would be ~0
  * anyway. Term zeroed; the (now inert) baseline/pressure plumbing is removed in a
- * follow-up. See ops-knowledge [[ahd-dynamic-cost-of-living-baseline-plan]] and the
- * t1165 incident [[ahd-deflation-spiral-incident-2026-07-18]]. */
+ * follow-up. */
 const HOUSING_PRESSURE_COEFF = 0;
 
 /** Hard clamps so inflation stays in a realistic game range.
@@ -676,27 +666,15 @@ export function computeHousingCostPressure(
 /**
  * Neutral (zero-pressure) cost-of-living index for the housing term.
  *
- * MUST match the scale the world's live `costOfLiving` DATA actually sits on —
- * which is fixed by the SEED era and does NOT rescale as the in-game clock
- * advances. The housing term is `(costOfLiving − neutral) × 0.25`, so a neutral
- * that does not match the data's center injects a constant, uncorrectable
- * inflation bias (mean-reversion at coeff 0.08 cannot overcome it).
+ * MUST match the scale the world's live `costOfLiving` data actually sits on,
+ * which is fixed by the SEED era and does not rescale as the clock advances.
+ * The housing term is `(costOfLiving - neutral) * 0.25`, so a mismatched neutral
+ * injects a constant, uncorrectable inflation bias.
  *
- * INCIDENT (t1165 deflation spiral, 2026-07-18): this returned a hardcoded 100
- * on the theory that seed CoL is "100-centered." That is true for modern
- * (1999+) seeds, but the LIVE 1991-default prod world runs national CoL flat at
- * ~40-68 (US 40.1 since t1081, DE 49, IE 40, UK 68). Against neutral=100 that
- * made the US housing term (40.1−100)×0.25 = −15pp — a permanent ~−12.5pp
- * deflation force vs the −2.5pp it was at neutral=50. Combined with the removed
- * −2% floor (05f59109c) it drove unbounded deflation. See ops-knowledge
- * [[ahd-deflation-spiral-incident-2026-07-18]] and the dynamic-baseline plan
- * [[ahd-dynamic-cost-of-living-baseline-plan]].
- *
- * Keyed on the SEED year (`gameState.startingYear`), NOT currentYear: the CoL
- * data is calibrated once at seed time and stays there. 1954-1991 seeds center
- * near 50; 1953-and-earlier and modern (1999+) seeds center at 100. This is a
- * stopgap — the long-term fix is a baseline computed from the world's actual CoL
- * distribution (see the plan) so it can never drift from the data again.
+ * Keyed on the SEED year (`gameState.startingYear`), not currentYear: CoL is
+ * calibrated once at seed time. 1954-1991 seeds center near 50; 1953-and-earlier
+ * and modern (1999+) seeds center at 100. Long term this should be computed from
+ * the world's actual CoL distribution so it can never drift from the data.
  */
 export function getCostOfLivingNeutralIndex(seedYear: number | null | undefined): number {
   const year = finiteOr(seedYear, STARTING_YEAR);
@@ -765,19 +743,15 @@ export async function calculateCountryInflation(
   // Both reads gate the command-economy early return below, and neither depends
   // on the other, so they share one round-trip.
   const [gameState, gc] = await Promise.all([
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
+    ),
     // Command-economy CPI is administered (held at the era target), not market-driven.
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { commandEconomyEnabled: 1, moneySupplyEnabled: 1 } }
-      ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1, moneySupplyEnabled: 1 } }
+    ),
   ]);
   const currentYear = gameState?.currentYear;
   const commandEconomyEnabled = gc?.commandEconomyEnabled === true;
@@ -800,25 +774,21 @@ export async function calculateCountryInflation(
     typeof tariffRateOverride === "number" && Number.isFinite(tariffRateOverride);
   const [nationalMetrics, centralBank, tariffs, sectors, activeFtaPairs, gapStates] =
     await Promise.all([
-      nationalDocId
-        ? db.collection<StateMetrics>("macroMetrics").findOne({ _id: nationalDocId })
-        : null,
-      db.collection<CentralBank>("centralBanks").findOne({ _id: getBankId(countryId) }),
+      nationalDocId ? macroMetricsCollection(db).findOne({ _id: nationalDocId }) : null,
+      centralBanksCollection(db).findOne({ _id: getBankId(countryId) }),
       hasMeasuredTariffRate
         ? Promise.resolve([])
-        : db.collection<Tariff>("tariffs").find({ countryId }).toArray(),
+        : tariffsCollection(db).find({ countryId }).toArray(),
       hasMeasuredTariffRate
         ? Promise.resolve([])
-        : db
-            .collection<CorporateSector>("corporateSectors")
+        : corporateSectorsCollection(db)
             .find(
               { countryId },
               { projection: { corporationId: 1, countryId: 1, sectorType: 1, revenue: 1 } }
             )
             .toArray(),
       hasMeasuredTariffRate ? Promise.resolve(new Set<string>()) : loadActiveFtaPairs(db),
-      db
-        .collection<State>("states")
+      statesCollection(db)
         .find(
           { countryId },
           { projection: { gdp: 1, outputGap: 1, outputTrendGrowth: 1, realOutputStartTurn: 1 } }
@@ -860,8 +830,7 @@ export async function calculateCountryInflation(
   );
   const corporations =
     corporationIds.length > 0
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ _id: { $in: corporationIds } }, { projection: { countryId: 1 } })
           .toArray()
       : [];
@@ -904,7 +873,7 @@ export async function calculateCountryInflation(
     moneySupplyGrowthPct: isMoneySupplyEnabledFromConfig(gc)
       ? finiteOr(moneySupplyGrowthPct, gdpGrowth)
       : gdpGrowth,
-    // Bretton Woods exit (issue #7): the caller passes the regime coefficient
+    // Bretton Woods exit: the caller passes the regime coefficient
     // for this country's stored regime; omitted keeps the pegged default, so
     // flag-off worlds compute byte-identically.
     moneyGrowthCoeff: finiteOr(moneyGrowthCoeff, PEGGED_MONEY_GROWTH_COEFF),

@@ -1,22 +1,17 @@
 /**
- * Batch manifesto read for the elections page (epic #856, ticket #857).
+ * Batch manifesto read for the elections page.
  *
  * GET /api/country/[code]/elections/manifestos?electionIds=<id>,<id>,…
  *   → { catalog, pledgeCount, isPartyLeader, party, manifestos } where
  *     `manifestos` is keyed by election id, `null` where the caller's party has
  *     not written one.
  *
- * Why this exists: `ElectionsClient` renders a `ManifestoFlavorBar` per
- * contested Commons race, and each bar used to fetch
- * `…/elections/[electionId]/manifesto` on mount. Every one of those repeated
- * the session auth, the character lookup and the party lookup, and returned an
- * identical `catalog`/`party`/`isPartyLeader` — only `manifesto` differed. On
- * live that was 7,763 requests over 24 elections in 7 days, 19% of all logged
- * API traffic, from one page. This answers the whole page in two queries.
- *
- * The per-election route stays: it still serves POST (save/lock), which is
- * genuinely per-election.
+ * The page renders one ManifestoFlavorBar per contested race, and each used to
+ * fetch its own manifesto and repeat the session/party lookups plus the
+ * identical `catalog`/`party`/`isPartyLeader`. This answers the whole page in
+ * two queries. The per-election route stays for POST (save/lock).
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -25,9 +20,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import { getManifestosForElections } from "@/lib/db/collections/manifestos";
 import { MANIFESTO_PLEDGE_COUNT, MAX_MANIFESTO_ELECTION_IDS } from "@/lib/db/types/manifesto";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 // withNoStore: the body is per-user (your party, your pledges). The header also
 // carries `no-transform`, which stops Cloudflare re-compressing the JSON with
@@ -42,7 +38,7 @@ export const GET = withNoStore(
       if (!COUNTRY_CONFIGS[countryId]) {
         return errorResponse(400, "Invalid country");
       }
-      if (countryId !== "UK") {
+      if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
         return errorResponse(400, "Manifestos are UK-only");
       }
 
@@ -73,9 +69,10 @@ export const GET = withNoStore(
       if (!auth.ok) return auth.response;
 
       const db = await getDb();
-      const party = await db
-        .collection<PoliticalParty>("politicalParties")
-        .findOne({ countryId, chairId: auth.user.character._id });
+      const party = await politicalPartiesCollection(db).findOne({
+        countryId,
+        chairId: auth.user.character._id,
+      });
 
       const catalog = pledgeCatalogFor(countryId).map((e) => ({
         id: e.id,

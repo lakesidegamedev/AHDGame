@@ -314,7 +314,3 @@ export function getTransitionMacroCountry(
   if (!profile) return null;
   return buildMacroCountry(profile, turn, now);
 }
-
-export function hasTransitionMacroSeed(entityId: WorldEntityId): boolean {
-  return entityId === GHANA_ENTITY_ID || entityId in ROSTER_PROFILES;
-}

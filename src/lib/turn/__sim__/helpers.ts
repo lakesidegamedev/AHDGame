@@ -1,30 +1,10 @@
 /**
- * Phase-8 simulation harness for end-to-end regime-collapse scenarios.
- *
- * Design choice: instead of standing up an in-memory MongoDB and
- * running the full per-turn driver chain (which would force us to
- * mock 8+ collections + decision-handler dispatch + history writes
- * for tests whose questions are really about drift-coefficient
- * calibration), the harness composes the same pure functions the
- * per-turn drivers wrap — `computePopularTurnDrift`,
- * `computeNextStage`, `updateDwellCounters`, and the intra-party
- * drift formula — directly on an in-memory state object.
- *
- * What this does NOT exercise:
- *   - Decision-queue dispatch (mocked separately in registry tests)
- *   - Reform-action handlers (covered in reformActions.test.ts)
- *   - History persistence (covered by individual driver tests)
- *
- * What this DOES exercise:
- *   - Per-turn drift accumulation under sustained inputs
- *   - Stage-transition timing against dwell windows
- *   - Convention / conversion gating logic
- *   - Intra-party ↔ popular coupling
- *
- * The collapse-time floor (132 turns) and the design-doc turn ranges
- * are validated against this harness's output. If the harness disagrees
- * with what the DB-backed driver would do, the drivers themselves have
- * a bug — re-run the unit tests to localise it.
+ * Simulation harness composing the pure per-turn functions directly on
+ * in-memory state, instead of standing up an in-memory DB and the full
+ * driver chain. Exercises drift accumulation, stage-transition timing,
+ * gating logic and intra-party coupling; does NOT exercise decision-queue
+ * dispatch, reform handlers, or history persistence (covered elsewhere).
+ * If this disagrees with the DB-backed driver, the driver has a bug.
  */
 import { clamp } from "@/lib/numeric/rules";
 import type { PopularMoodAxisProfile } from "@/lib/constants/popularMoodProfiles";

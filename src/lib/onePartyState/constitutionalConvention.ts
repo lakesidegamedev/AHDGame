@@ -201,20 +201,15 @@ export async function submitConventionDraft(
 }
 
 /**
- * Per-turn convention auto-transitions. Called from
- * `processRegimeEscalationTurn` (before the dwell update so the
- * conventionInProgress flag is correct for this tick).
+ * Per-turn convention auto-transitions. Call before the dwell update so
+ * `conventionInProgress` is correct for this tick.
  *
- *   - `draft` → `ratification` when `draftDeadlineTurn` is reached.
- *   - `ratification` → conversion when
- *     `draftDeadlineTurn + electionDelayTurns` is reached. The
- *     `targetSystem` must be set (was set in `submitConventionDraft`);
- *     if the draft was never submitted, the convention is silently
- *     dropped at the deadline (no conversion fires) so an abandoned
- *     announce doesn't accidentally collapse the regime.
- *   - `announced` is the player's window to submit a draft. The tick
- *     leaves it alone — if no draft arrives by `draftDeadlineTurn`,
- *     the convention is cleared and `conventionInProgress` is reset.
+ *   - `draft` -> `ratification` at `draftDeadlineTurn`.
+ *   - `ratification` -> conversion at `draftDeadlineTurn + electionDelayTurns`.
+ *     `targetSystem` must be set; an unsubmitted draft is silently dropped so
+ *     an abandoned announce cannot collapse the regime.
+ *   - `announced` is the player's window; if no draft arrives by the deadline,
+ *     the convention is cleared and `conventionInProgress` reset.
  */
 export async function tickConventionPhase(
   db: Db,

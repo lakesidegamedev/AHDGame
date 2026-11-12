@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 
-vi.mock("@/lib/turn/election/contingentHouseVoteStandings", () => ({
+vi.mock("@/lib/elections/resolution/contingentHouseVoteStandings", () => ({
   loadHouseVoteStandings: vi.fn(async () => ({
     delegationVotes: { OH: "b", TX: null },
     delegationTotals: { a: 1, b: 1 },

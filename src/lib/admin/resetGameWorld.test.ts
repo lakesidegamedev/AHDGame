@@ -239,7 +239,6 @@ describe("resetGameWorld", () => {
     db.collection("gameState");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
-      seasonRecapEnabled: true,
       iteration: 4,
       currentTurn: 100,
       startingYear: 1991,
@@ -294,7 +293,6 @@ describe("resetGameWorld", () => {
     db.collection("gameState");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
-      seasonRecapEnabled: true,
       iteration: { type: "Iteration", number: 4 },
       currentTurn: 100,
       startingYear: 1991,
@@ -408,9 +406,8 @@ describe("resetGameWorld", () => {
       currentYear: 1995,
       iteration: 1,
       nppAutonomyLevel: "v5",
-      autoSectorSeedEnabled: false,
-      nppOffensiveJoinEnabled: false,
-      settlementCrisisEnabled: false,
+      sectorTechTreesEnabled: false,
+      coldWarEnabled: false,
     });
     await resetGameWorld(db as never, {
       deleteProfiles: true,
@@ -419,10 +416,9 @@ describe("resetGameWorld", () => {
     });
     assertSetFields(db.collectionMocks.gameState.updateOne, { ...DEFAULT_GAME_STATE_FLAGS });
     assertSetFields(db.collectionMocks.gameState.updateOne, {
-      nppAutonomyLevel: "v4",
-      autoSectorSeedEnabled: true,
-      nppOffensiveJoinEnabled: true,
-      settlementCrisisEnabled: true,
+      nppAutonomyLevel: "v6",
+      sectorTechTreesEnabled: true,
+      coldWarEnabled: true,
     });
     assertSetFields(db.collectionMocks.gameConfig.updateOne, {
       treasuryCashLedgerEnabled: true,
@@ -477,11 +473,11 @@ describe("resetGameWorld", () => {
     expect(db.collectionMocks.imperialCharacters.updateMany).toHaveBeenCalledWith({}, [
       {
         $set: {
-          cashOnHand: 0,
-          "currencyBalances.personal": {},
-          incomeTaxBatchReceipt: null,
-          incomeTaxStartTurn: 1,
-          pendingStockTaxReceipts: [],
+          cashOnHand: { $literal: 0 },
+          currencyBalances: { $literal: { personal: {} } },
+          incomeTaxStartTurn: { $literal: 1 },
+          incomeTaxBatchReceipt: { $literal: null },
+          pendingStockTaxReceipts: { $literal: [] },
           incomeTier: { $ifNull: ["$initialIncomeTier", "high"] },
         },
       },
@@ -818,7 +814,7 @@ describe("resetGameWorld", () => {
     expect(users.deleteMany).toHaveBeenCalledTimes(1);
     expect(users.deleteMany).toHaveBeenCalledWith({
       isAdmin: { $ne: true },
-      role: { $nin: ["admin", "moderator"] },
+      role: { $nin: ["admin", "moderator", "junior_dev"] },
       isBanned: { $ne: true },
     });
     // Survivors lost every character, so the one-character limit must not
@@ -832,6 +828,38 @@ describe("resetGameWorld", () => {
     expect(users.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
       users.updateMany.mock.invocationCallOrder.at(-1)!
     );
+  });
+
+  it("rebuilds gameState from fresh writes plus the keep list, dropping undeclared fields", async () => {
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 1262,
+      createdAt: new Date("2025-01-01T00:00:00Z"),
+      iterationHistory: ["Beta 1"],
+      legacyWarExhaustion: { US: 0.4 },
+      debtCeilingCrisisActive: true,
+    });
+
+    await resetGameWorld(db as never, {
+      deleteProfiles: true,
+      preset: "1991-default",
+      seedHistorical: false,
+    });
+
+    const currentUpdate = db.collectionMocks.gameState.updateOne.mock.calls.find(
+      (c) => (c[0] as { _id?: string })?._id === "current" && (c[1] as { $set?: object }).$set
+    );
+    const update = currentUpdate![1] as {
+      $set: Record<string, unknown>;
+      $unset: Record<string, string>;
+    };
+    expect(update.$unset.legacyWarExhaustion).toBe("");
+    expect(update.$unset.debtCeilingCrisisActive).toBe("");
+    expect(update.$unset).not.toHaveProperty("createdAt");
+    expect(update.$unset).not.toHaveProperty("iterationHistory");
+    expect(update.$unset).not.toHaveProperty("currentTurn");
+    for (const field of Object.keys(update.$set)) expect(update.$unset).not.toHaveProperty(field);
   });
 
   it("clears the previous world's per-world progress guards from gameState", async () => {

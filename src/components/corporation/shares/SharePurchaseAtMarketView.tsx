@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { CURRENCY_SYMBOLS, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { estimateExplicitPayCoverage } from "@/lib/currency/purchaseAffordability";
 import type { OrderSide } from "./sharePurchaseModalTypes";

@@ -1,28 +1,17 @@
-/**
+/*
  * v2: cohort-batched NPP relocation-bond credit.
  *
- * `resolveNppMarketEntryCredit` is the only DB-touching call inside the NPP
- * decision loop, and it is a per-corporation fan of six reads plus one insert:
+ * resolveNppMarketEntryCredit does six reads plus one insert per corporation
+ * inside the NPP decision loop, dominating corporationTurn cost. None of the
+ * reads depends on other corporations (each is keyed by the corp's own id) and
+ * new bonds carry an empty holder list, so the reads preload as one cohort
+ * bundle and the inserts batch into one insertMany.
  *
- *   bonds (latest, for cooldown)      bonds (unmatured, for existing debt)
- *   corporateSectors (for the NPV)    gameConfig (market mode)
- *   bonds held as a creditor          gameState (currentYear)
- *   corporationHistory (latest income)
- *
- * On the production copy that is ~8 round trips for every corporation that asks
- * for entry credit — ~1.1k of them — which is most of corporationTurn's 9k
- * round trips and ~150s. None of those reads depends on another corporation:
- * every one is keyed by the corp's own id, and a new bond is issued with an
- * empty holder list, so no later corp in the loop can see it. That makes the
- * whole fan preloadable as one cohort bundle and the inserts deferrable to one
- * `insertMany`.
- *
- * The decision math is deliberately duplicated from `issueRelocationBond.ts`
- * rather than shared with it. Sharing would have changed the v1 code the bench
- * compares against, and a shared mistake would then be invisible to the parity
- * run: both engines would agree with each other and disagree with production.
- * v1 stays byte-for-byte what it was; this file is what the bench proves equal
- * to it on a full production-sized copy.
+ * The decision math is intentionally duplicated from issueRelocationBond.ts
+ * rather than shared: sharing would change v1, and a shared bug would be
+ * invisible to the parity bench (both engines would agree, both wrong). v1
+ * stays byte-for-byte unchanged; this file is what the bench proves equal to
+ * it on a production-sized copy.
  */
 
 import { ObjectId, type Db } from "mongodb";
@@ -71,6 +60,9 @@ import type {
   NppMarketEntryDiagnostic,
   NppMarketEntryReason,
 } from "@/lib/turn/npp/entryDiagnostics";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 /** The longest corporate tenor (7yr = 336 turns), mirrored from `issueRelocationBond`. */
 const RELOCATION_BOND_MATURITY_TURNS: BondMaturityTurns = 336;
@@ -164,8 +156,7 @@ export function createRelocationCreditBatch(input: {
     // singleton the per-corp path reads.
     const [allIssuedBonds, latestIncomeRows, centralBanks, plantsEnabled, gameState, eraUnitScale] =
       await Promise.all([
-        db
-          .collection<Bond>("bonds")
+        bondsCollection(db)
           .find(
             { corporationId: { $in: corpIds } },
             {
@@ -183,8 +174,7 @@ export function createRelocationCreditBatch(input: {
             }
           )
           .toArray(),
-        db
-          .collection<{ corporationId: ObjectId; income?: number }>("corporationHistory")
+        corporationHistoryCollection<{ corporationId: ObjectId; income?: number }>(db)
           .aggregate<{ _id: ObjectId; income: number }>([
             { $match: { corporationId: { $in: corpIds } } },
             { $sort: { corporationId: 1, turn: -1 } },
@@ -193,8 +183,7 @@ export function createRelocationCreditBatch(input: {
           .toArray(),
         bankRates
           ? Promise.resolve(bankRates as readonly CentralBank[])
-          : db
-              .collection<CentralBank>("centralBanks")
+          : centralBanksCollection(db)
               .find({}, { projection: { _id: 1, countryId: 1, primeRate: 1 } })
               .toArray(),
         getMarketSystemModeForDb(db).then((mode) => marketAtLeast(mode, "plants")),
@@ -317,7 +306,7 @@ export function createRelocationCreditBatch(input: {
     if (pendingBonds.length === 0) return;
     const docs = [...pendingBonds];
     pendingBonds.length = 0;
-    await db.collection<Bond>("bonds").insertMany(docs, { ordered: true });
+    await bondsCollection(db).insertMany(docs, { ordered: true });
   }
 
   return {

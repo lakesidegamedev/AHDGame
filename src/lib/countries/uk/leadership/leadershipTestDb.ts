@@ -2,20 +2,10 @@ import { ObjectId, type Db } from "mongodb";
 
 /**
  * Minimal in-memory Mongo stand-in for UK leadership tests. Supports the
- * operators the leadership commands use: equality / $in / $exists / $ne /
- * $lte / $gte filters (including dotted paths), $set / $setOnInsert / $push /
- * $pull / $inc / $unset updates (dotted), findOneAndUpdate with
- * returnDocument "after", and the vote-tally aggregation-pipeline update
- * emitted by buildEmbeddedVoteTallyUpdate / buildMotionVoteTallyUpdate
- * ($getField / $ifNull / $mergeObjects / $add / $cond / $eq / $and / $map
- * with $$ variables only — anything else throws so a divergence surfaces
- * loudly instead of silently passing).
- *
- * Two server matching semantics matter to conference code and are
- * implemented faithfully here: `{ field: null }` matches rows where the
- * field is null OR missing, and scalar equality against an array field
- * matches when any element equals the value (how the frozen-roll write
- * filters test membership).
+ * operators and updates the leadership commands use; unsupported operators
+ * throw so divergence surfaces loudly rather than silently passing.
+ * Matches faithfully: `{ field: null }` matches null or missing; scalar
+ * equality against an array matches any element (frozen-roll membership).
  */
 
 type Doc = Record<string, unknown>;

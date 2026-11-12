@@ -1,39 +1,29 @@
 /**
- * Rules for the capped frontier-entry experiment (issue #991).
+ * Rules for the capped frontier-entry experiment.
  *
- * The experiment runs in the real NPP turn path behind
- * `frontierEntryExperimentEnabled` (default false, fail-closed, excluded from
- * player-facing singleplayer controls). Activation still requires the
- * controlled 48-turn trial and largest-supplier-failure stress evidence the
- * issue gates require. The NPP entry funnel and state-sector coverage metrics
- * are the always-on evidence layer; this module states the experiment's
- * constraints and its rollback-observability contract so a trial can be
- * evaluated against preregistered guardrails.
+ * Runs in the real NPP turn path behind `frontierEntryExperimentEnabled`
+ * (default false, fail-closed). Activation requires a controlled 48-turn
+ * trial and largest-supplier-failure stress evidence against preregistered
+ * guardrails.
  *
  * Rules-zone module: plain data in, plain data out. No database, clock,
  * randomness, environment, network, or async.
  *
- * Constraints encoded here:
+ * Constraints:
  * - at most one entrant per eligible state-country cohort per turn
- * - no duplicate common-control entities masquerading as entry: one entrant
- *   per controlling entity per turn
+ * - one entrant per controlling entity per turn
  * - real financing and real founding costs: eligibility requires a priced
  *   founding quote covered by capital or an approved credit line
- * - expectational relaxations use
- *   FRONTIER_ENTRY_RELAXABLE_REASONS: profitability, margin floor, and the
- *   nominal pre-pricing cash floor. Policy, physical, and accounting gates
- *   (state control, logistics, retail pause, glut, per-turn
- *   cap, real founding-cost affordability, facility size) stay binding
+ * - only FRONTIER_ENTRY_RELAXABLE_REASONS may be relaxed
+ *   (profitability, margin floor, nominal pre-pricing cash floor). Policy,
+ *   physical, and accounting gates stay binding
  * - ordinary cohort staggering may be replaced only for profitable uncovered
- *   positive-use cells by the experiment's state-country/controller caps
- * - no guaranteed survival: exits (including failures) are recorded, never
- *   prevented; rollback triggers only on guardrail breach, not on entrant
- *   failure
+ *   positive-use cells
+ * - no guaranteed survival: exits are recorded, never prevented
  * - embargo, bloc, planned-economy, geography, accounting, and conservation
- *   invariants are preserved by construction: the experiment only ever
- *   reallocates an already policy-cleared candidate slot, so `policyCleared`
- *   is a required input, not something this module re-derives
- * - no aggregate concentration cap: none is defined here, per the issue
+ *   invariants are preserved: the experiment only reallocates an already
+ *   policy-cleared candidate slot (`policyCleared` is required input)
+ * - no aggregate concentration cap
  */
 
 export type FrontierEntryRelaxableReason = "unprofitable" | "margin_below_floor" | "cash_floor";

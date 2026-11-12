@@ -6,6 +6,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import { claimCharacterActivation } from "@/lib/analytics/characterActivation";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   characterId: z.string().regex(/^[a-f0-9]{24}$/i),
@@ -19,12 +20,10 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, schema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const db = await getDb();
-    const character = await db
-      .collection("characters")
-      .findOne(
-        { _id: new ObjectId(parsed.data.characterId), userId: new ObjectId(auth.user.userId) },
-        { projection: { _id: 1 } }
-      );
+    const character = await charactersCollection(db).findOne(
+      { _id: new ObjectId(parsed.data.characterId), userId: new ObjectId(auth.user.userId) },
+      { projection: { _id: 1 } }
+    );
     if (!character) return errorResponse(404, "Character unavailable");
     return NextResponse.json({
       activation: await claimCharacterActivation(db, parsed.data.characterId),

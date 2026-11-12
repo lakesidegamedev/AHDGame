@@ -1,14 +1,7 @@
 /**
- * Overton-window guardrails for Phase 6 party charters.
- *
- * Per Phase 6 D2, each platform axis is bounded to `[-60, +60]`.
- * The `AMENDMENT_MAX_DELTA_PER_AXIS` constant + `validateAmendmentDeltas`
- * helper were retired in the 2026-05-22 amendments-via-CommitteeProposal
- * redesign — post-ratification platform changes now flow through
- * `CommitteeProposal.positionShift` (±1 per proposal, per-axis 336-turn
- * cooldown), so the ±10/axis guardrail is no longer relevant.
- *
- * See `docs/plans/archive/2026-05/2026-05-22-amendments-via-committee-proposals.md`.
+ * Overton-window guardrails for party charter platform axes.
+ * Each axis is bounded to `[-60, +60]`. Post-ratification platform changes
+ * flow through `CommitteeProposal.positionShift`, not through amendments.
  */
 
 import type { PartyCharterPlatform } from "@/lib/db/types";

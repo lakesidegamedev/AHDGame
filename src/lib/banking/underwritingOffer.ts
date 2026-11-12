@@ -16,6 +16,7 @@ import {
   DEFAULT_PRIMARY_UNDERWRITING_FEE_RATE,
   primaryUnderwritingCharterEligible,
 } from "./rules/underwriting";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface UnderwritingBankChoice {
   corporationId: string;
@@ -37,8 +38,7 @@ export async function listPrimaryUnderwritingBanks(
   currencyCode: CurrencyCode
 ): Promise<UnderwritingBankChoice[]> {
   if (!policy.primaryUnderwriting) return [];
-  const banks = await db
-    .collection<Corporation>("corporations")
+  const banks = await corporationsCollection(db)
     .find(
       {
         "bankCharter.status": "active",
@@ -109,7 +109,7 @@ export async function resolvePrimaryUnderwritingOffer(
   ) {
     return null;
   }
-  const bank = await db.collection<Corporation>("corporations").findOne(
+  const bank = await corporationsCollection(db).findOne(
     {
       _id: mandate.bankCorporationId,
       "bankCharter.status": "active",

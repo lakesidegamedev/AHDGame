@@ -3,17 +3,14 @@
  *
  * 1. Re-size each pool's target to a share of its currency's latest broad
  *    money, so the pool scales with the economy it sits in.
- * 2. Sweep cash back out to depositors when the pool has hoarded far past
- *    the target. There is no inflow toward the target: it used to credit 2%
- *    of the shortfall every turn with no payer, and that new money funded
- *    about a quarter of all sovereign underwriting. A pool now holds only what
- *    it took in (purchases, coupons, maturities, QE), the same finite book as
- *    the equity pools. A sovereign issue the pool cannot afford stays unsold
- *    and places later, or an autonomous central bank monetizes part of it on
- *    its own counted balance sheet (`primaryMarket.ts`).
+ * 2. Sweep cash back out to depositors when the pool has hoarded far past the
+ *    target. There is no inflow toward the target: a pool holds only what it
+ *    took in, the same finite book as the equity pools. A sovereign issue the
+ *    pool cannot afford stays unsold and places later, or an autonomous central
+ *    bank monetizes part of it on its own counted balance sheet.
  * 3. Refresh the pool's appetite for each sovereign issuer in its currency
- *    from the sovereign-default demand model, so quotes on a CCC sovereign at
- *    four times GDP are thinner than on an AAA one.
+ *    from the sovereign-default demand model, so quotes on a distressed
+ *    sovereign are thinner than on a strong one.
  *
  * Runs at the top of the bond turn, before any coupon or trade.
  */
@@ -21,7 +18,6 @@
 import { calibratedPoolTarget, poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
 import type { BondMarketPool } from "@/lib/db/types";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { BOND_POOL_M2_SHARE, debitBondPoolGated } from "@/lib/bonds/marketPool";
@@ -33,6 +29,9 @@ import {
   type BondPoolLedgerContext,
 } from "./marketPoolLedger";
 import { SOVEREIGN_ISSUANCE_INTERVAL_TURNS } from "@/lib/bonds/sovereign";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 /** Cash above this multiple of target triggers a sweep... */
 export const BOND_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
@@ -68,8 +67,7 @@ export async function sovereignFaceMaturingSoon(
   currency: CurrencyCode,
   turn: number
 ): Promise<number> {
-  const rows = await db
-    .collection<{ totalIssued?: number }>("bonds")
+  const rows = await bondsCollection<{ totalIssued?: number }>(db)
     .find(
       {
         issuerType: "sovereign",
@@ -89,8 +87,7 @@ export async function sovereignFaceMaturingSoonByCurrency(
   db: Db,
   turn: number
 ): Promise<Map<string, number>> {
-  const rows = await db
-    .collection<{ currencyCode?: string; totalIssued?: number }>("bonds")
+  const rows = await bondsCollection<{ currencyCode?: string; totalIssued?: number }>(db)
     .aggregate<{ _id: string | null; face: number }>([
       {
         $match: {
@@ -130,13 +127,12 @@ export async function latestMoneySupplyByCurrency(
   currencies: readonly CurrencyCode[]
 ): Promise<Map<string, { m2?: number; turn: number; accountingVersion?: number }>> {
   if (currencies.length === 0) return new Map();
-  const rows = await db
-    .collection<{
-      currencyCode: string;
-      m2?: number;
-      turn: number;
-      accountingVersion?: number;
-    }>("moneySupplySnapshots")
+  const rows = await moneySupplySnapshotsCollection<{
+    currencyCode: string;
+    m2?: number;
+    turn: number;
+    accountingVersion?: number;
+  }>(db)
     .aggregate<{ _id: string; m2?: number; turn: number; accountingVersion?: number }>([
       { $match: { currencyCode: { $in: [...new Set(currencies)] } } },
       { $sort: { currencyCode: 1, turn: -1 } },
@@ -159,10 +155,7 @@ export async function processBondMarketPoolTurn(
   now: Date,
   ledgerContext?: BondPoolLedgerContext | null
 ): Promise<BondMarketPoolTurnResult> {
-  const pools = await db
-    .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-    .find({})
-    .toArray();
+  const pools = await bondMarketPoolsCollection<BondMarketPool>(db).find({}).toArray();
   const result: BondMarketPoolTurnResult = {
     poolsProcessed: 0,
     sweptLocalByCurrency: {},
@@ -228,7 +221,7 @@ export async function processBondMarketPoolTurn(
         }
       }
 
-      await db.collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION).updateOne(
+      await bondMarketPoolsCollection<BondMarketPool>(db).updateOne(
         { _id: currency },
         {
           $set: {

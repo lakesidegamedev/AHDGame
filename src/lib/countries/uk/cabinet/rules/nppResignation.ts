@@ -1,19 +1,12 @@
 /**
- * NPP minister resignation rule (epic #856, ticket #859).
- *
- * Rules core: plain data in, decision out. Randomness arrives as an injected
- * rng and time arrives as turns in post, with no database, wall clock,
- * or ambient reads, so the headless harness can run this
- * unchanged. The shell (`../nppResignation.ts`) loads the seat, applies the
- * outcome, and writes the confidence event.
- *
- * Design (uk-rework-design-2026-08-25): resignation is a deliberate act the
- * NPP AI chooses — a flat gauge hit each, so waves destabilise. Likelihood
- * rises as government approval falls below the confidence pivot; impact
- * weighting (Great Offices hit harder) lives in the gauge, not here.
+ * NPP minister resignation rule. Plain data in, decision out; rng and turns are
+ * injected, no DB or wall clock, so the headless harness can run it unchanged.
+ * The shell loads the seat, applies the outcome, and writes the confidence event.
+ * Resignation is a deliberate AI choice with a flat gauge hit; likelihood rises as
+ * approval falls below the confidence pivot. Impact weighting lives in the gauge.
  */
 
-import { CONFIDENCE_APPROVAL_PIVOT } from "@/lib/uk/confidence/confidenceGauge";
+import { CONFIDENCE_APPROVAL_PIVOT } from "@/lib/countries/uk/confidence/confidenceGauge";
 
 export interface NppResignationInput {
   /** 0-100 government approval. */

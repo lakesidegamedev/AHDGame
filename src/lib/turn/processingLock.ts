@@ -1,4 +1,5 @@
 import type { GameState } from "@/lib/db/types";
+import { workerConfig } from "@/lib/config/worker";
 
 export const TURN_LOCK_STALE_MS = 20 * 60 * 1000;
 export const TURN_LOCK_HEARTBEAT_MS = 30_000;
@@ -8,17 +9,14 @@ export const TURN_LOCK_HEARTBEAT_MS = 30_000;
  * this and records the phase as failed when it is exceeded. The timeout cannot
  * cancel the phase function, so the runtime then holds the turn, with its lock
  * and heartbeat, until that function settles; no later phase starts while it
- * is still writing (#3385).
+ * is still writing.
  *
  * Lives here rather than in turnPhaseRuntime so the admin health check can
  * measure phases against the same number the runtime enforces, instead of
  * duplicating a literal that would drift. This module is deliberately
  * dependency-light (types only) so route handlers can import it freely.
  *
- * Sizing note (2026-08-28): corporationTurn is the phase closest to this
- * threshold. It costs ~6ms per corporateSector and the sector population grows
- * with NPP expansion, so its cost rises with the world rather than with any
- * code change. Raising this constant is not the remedy. It reports failure
+ * Raising this constant is not the remedy for slow phases: it reports failure
  * promptly while the drain barrier prevents later work from overlapping the
  * timed-out phase. A permanently hung function requires process recovery.
  */
@@ -32,7 +30,7 @@ const DEFAULT_PHASE_TIMEOUT_MS = 4 * 60 * 1000;
  * not make the lock look stale.
  */
 export function resolvePhaseTimeoutMs(
-  raw: string | undefined = process.env.TURN_PHASE_TIMEOUT_MS
+  raw: string | undefined = workerConfig.turnPhaseTimeoutMs()
 ): number {
   const parsed = Number(raw);
   if (!raw || !Number.isFinite(parsed) || parsed <= 0) return DEFAULT_PHASE_TIMEOUT_MS;
@@ -69,20 +67,13 @@ export function getProcessingLockLastTouch(snapshot: ProcessingLockSnapshot): Da
 }
 
 /**
- * An ABANDONED lock is stale immediately, without serving the 20-minute wait.
+ * An abandoned lock is stale immediately: `processingAbandonedAt` is written by
+ * the graceful shutdown handler, so there is nothing to wait for.
  *
- * `processingAbandonedAt` is written by the graceful shutdown handler when a deploy
- * lands mid-turn: the process is going away, it says so on its way out, and there is
- * nothing to wait for. Waiting the full `TURN_LOCK_STALE_MS` on a lock whose holder has
- * already announced its own death is how a redeploy costs a second turn slot on top of
- * the one it interrupted.
- *
- * The marker is deliberately NOT a release. The handler used to clear the lock outright,
- * which also wiped `processingPhase` and `processingPhaseStatuses` and so destroyed the
- * evidence `shouldRecoverCrashedTurn` reads. A clean shutdown therefore made the next
- * cron re-run a turn that had already committed writes, double-applying every additive
- * income phase, which is the exact failure the #2815 guard exists to prevent. Keeping
- * the lock held and marking it abandoned preserves the evidence AND skips the wait.
+ * The marker is deliberately NOT a release. Clearing the lock would also wipe
+ * `processingPhase` and `processingPhaseStatuses`, destroying the evidence
+ * `shouldRecoverCrashedTurn` reads and letting the next cron re-run an
+ * already-committed turn.
  */
 export function getProcessingLockState(snapshot: ProcessingLockSnapshot, now = new Date()) {
   const lastTouch = getProcessingLockLastTouch(snapshot);
@@ -101,16 +92,12 @@ export function getProcessingLockState(snapshot: ProcessingLockSnapshot, now = n
 }
 
 /**
- * v3 Phase 7/8 fix: is a turn actively being processed right now (lock held,
- * not stale/abandoned)? Player-facing mutation routes whose fields are ALSO
- * written by the corp turn's own bulk write (unionization, strikeStartedAtTurn,
- * strikeCooldownUntilTurn on CorporateSector; treasury/approval on Union)
- * must reject during this window, the turn's write recomputes those
- * fields from a pre-mutation snapshot and would otherwise silently clobber a
- * paid-for player action with no error surfaced. See
- * docs/plans/2026-06-30-labour-handoff.md's code-review section for the bug
- * this closes. Cheaper and lower-risk than retrofitting optimistic
- * concurrency into the shared turn-processing bulk writes.
+ * Whether a turn is actively processing (lock held, not stale). Player-facing
+ * mutation routes whose fields are ALSO written by the corp turn's own bulk
+ * write (unionization, strikeStartedAtTurn, strikeCooldownUntilTurn on
+ * CorporateSector; treasury/approval on Union) must reject during this window:
+ * the turn's write recomputes those fields from a pre-mutation snapshot and
+ * would silently clobber a paid-for player action with no error surfaced.
  */
 export function isTurnProcessingNow(snapshot: ProcessingLockSnapshot, now = new Date()): boolean {
   if (snapshot.isProcessing !== true) return false;
@@ -134,26 +121,24 @@ export function turnHasCommittedWrites(phase: string | null | undefined): boolea
   return !!phase && phase !== TURN_BOOTSTRAP_PHASE;
 }
 
-/**
- * Turn-atomicity guard (issue #2815). A turn's ~20 phases each commit DB writes
- * directly, and `currentTurn` only advances after they all finish, no
- * transaction wraps the turn (turns run 36, 67s over thousands of docs, past
- * Mongo's per-transaction limits). If the process dies mid-turn (OOM, the
- * worker 5-min kill, a deploy, a host crash) the lock is left held; the 20-min
- * stale takeover would otherwise re-run the SAME turn from the start and
- * double-apply every additive-income phase that already committed (fund
- * generation, corp liquidity/dividends, savings interest, bond coupons, caucus
- * tax, treasury), persistent, economy-wide money creation.
+/*
+ * Turn-atomicity guard. A turn's ~20 phases each commit DB writes directly and
+ * nothing wraps the turn in a transaction (too long for Mongo's per-transaction
+ * limits). If the process dies mid-turn, the lock is left held; the stale
+ * takeover would otherwise re-run the SAME turn from the start and double-apply
+ * every additive-income phase that already committed (fund generation, corp
+ * liquidity/dividends, savings interest, bond coupons, caucus tax, treasury),
+ * persistent, economy-wide money creation.
  *
  * Returns true when a stale lock belongs to a turn that had already progressed
  * past bootstrap (so phases may have committed). The caller then consumes the
  * turn number instead of re-executing it, leaving the crashed turn partially
  * applied rather than duplicated. A turn stranded at bootstrap applied nothing,
- * so this returns false and the turn is safely (and losslessly) re-run.
+ * so this returns false and the turn is safely re-run.
  *
- * `currentPhase` (the phase the runtime durably flushes as it runs) is the
- * progress signal. This is a pure decision, the caller re-checks the freshly
- * locked state before acting so a concurrent completion can't be double-counted.
+ * `currentPhase` (durably flushed as the turn runs) is the progress signal.
+ * Pure decision: the caller re-checks freshly locked state before acting so a
+ * concurrent completion can't be double-counted.
  */
 export function shouldRecoverCrashedTurn(
   snapshot: CrashRecoverySnapshot,

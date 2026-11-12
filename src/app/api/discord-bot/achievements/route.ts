@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { ObjectId } from "mongodb";
-import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
-import { escapeRegex } from "@/lib/utils/escapeRegex";
-import type { Character, User, Achievement, CharacterAchievement } from "@/lib/db/types";
+import { lookupBotCharacter } from "@/lib/discord/botCharacterLookup";
+import type { Achievement, CharacterAchievement } from "@/lib/db/types";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 
 // GET /api/discord-bot/achievements — Returns a character's earned achievements, looked up by characterId, discordId, or name.
 // Auth: requireAdminOrApiKey
@@ -23,40 +23,15 @@ export async function GET(request: Request) {
     );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
-    const url = new URL(request.url);
-    const characterId = url.searchParams.get("characterId");
-    const discordId = url.searchParams.get("discordId");
-    const name = url.searchParams.get("name");
-
-    if (!characterId && !discordId && !name) {
-      return errorResponse(400, "Must provide characterId, discordId, or name");
-    }
-
-    const db = await getDb();
-
-    let character: Character | null = null;
-
-    if (characterId && ObjectId.isValid(characterId)) {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ _id: new ObjectId(characterId) });
-    } else if (discordId) {
-      const user = await db.collection<User>("users").findOne({ discordId });
-      if (user) {
-        character = await db.collection<Character>("characters").findOne({ userId: user._id });
-      }
-    } else if (name) {
-      character = await db
-        .collection<Character>("characters")
-        .findOne({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } });
-    }
+    const lookup = await lookupBotCharacter(request);
+    if (!lookup.ok) return lookup.response;
+    const { db, character } = lookup;
 
     if (!character) {
       return NextResponse.json({ found: false, achievements: [] });
     }
 
-    const earned = await db
-      .collection<CharacterAchievement>("characterAchievements")
+    const earned = await characterAchievementsCollection(db)
       .find({ characterId: character._id })
       .sort({ earnedAt: -1 })
       .toArray();
@@ -71,8 +46,7 @@ export async function GET(request: Request) {
     }
 
     const achievementIds = earned.map((e) => e.achievementId);
-    const definitions = await db
-      .collection<Achievement>("achievements")
+    const definitions = await achievementsCollection(db)
       .find({ _id: { $in: achievementIds } })
       .toArray();
 

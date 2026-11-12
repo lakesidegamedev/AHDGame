@@ -12,6 +12,7 @@ import { createBillDiscussion } from "@/lib/legislature/discussions/discussionCo
 import { getBillDiscussionsForViewer } from "@/lib/legislature/discussions/discussionQueries";
 import type { BillDiscussionScope } from "@/lib/legislature/discussions/types";
 import type { Bill } from "@/lib/db/types";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 const createSchema = z.object({ content: z.string().min(1).max(1000).trim() });
 
@@ -20,7 +21,7 @@ async function resolveScope(
   id: string
 ): Promise<BillDiscussionScope | null> {
   if (!ObjectId.isValid(id)) return null;
-  const bill = await db.collection<Bill>("bills").findOne({ _id: new ObjectId(id) });
+  const bill = await billsCollection(db).findOne({ _id: new ObjectId(id) });
   if (!bill) return null;
   const countryId = await resolveBillCountryId(db, bill);
   return { kind: "national", countryId, billId: id };

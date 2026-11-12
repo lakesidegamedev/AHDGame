@@ -16,8 +16,8 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { revokeCharter } from "@/lib/banking/charter";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export type UnwindBankResult =
   | {
@@ -47,7 +47,7 @@ export async function unwindBank(
     return { ok: false, error: "Reason is required" };
   }
 
-  const corporation = await db.collection<Corporation>("corporations").findOne({
+  const corporation = await corporationsCollection(db).findOne({
     _id: corporationId,
   });
   if (!corporation) {
@@ -65,12 +65,6 @@ export async function unwindBank(
     };
   }
 
-  // Everything the unwind used to do by hand is the shared waterfall's job now.
-  // The hand-rolled version credited the central bank's money pool with the
-  // household book, left the matching cash in the bank, and then let
-  // `revokeCharter` hand that same cash to the shareholder as a refund. The
-  // deposit book existed twice and the owner was paid out of it.
-  //
   // `revokeCharter` runs the waterfall itself, so calling it is the whole job.
   const npcDeposits = Math.max(0, charter.npcDeposits ?? 0);
 

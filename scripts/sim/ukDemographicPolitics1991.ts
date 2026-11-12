@@ -6,14 +6,13 @@
 import assert from "node:assert/strict";
 import { getUkModel } from "@/lib/countries/uk/layer1Model";
 import { ukRegions1991 } from "@/lib/countries/uk/data/ukRegions1991";
-import { ukDemographicCategories } from "@/lib/seeds/uk/ukDemographicCategories";
 import { buildModelRegionDemographics } from "@/lib/seeds/international/derive";
 import { applyEra1991DemographicAdjustments } from "@/lib/seeds/reference/stateDemographics1991";
 import { calculateStateLean } from "@/lib/utils/demographics";
 import { getSocialPositionName } from "@/lib/utils/politics";
 import { calcAppeal } from "@/lib/utils/demographicAppeal";
 import { deriveGranularElectorateUnits } from "@/lib/demographics/granularElectorate";
-import type { Layer1PositionOverlay, StateDemographics } from "@/lib/db/types";
+import type { Layer1PositionOverlay, CensusGroupView, DemographicCategory } from "@/lib/db/types";
 
 // Frozen pre-fix social inputs. Economic/census/composition/turnout inputs are
 // unchanged by this PR and remain read from the model, never reimplemented.
@@ -29,6 +28,20 @@ const LEGACY_SOCIAL = {
 };
 
 const treatment = getUkModel("1991");
+const ukDemographicCategories = [
+  {
+    _id: treatment.categoryId,
+    name: "UK voter groups",
+    defaultWeight: 100,
+    groups: treatment.groupIds.map((id) => ({
+      id,
+      name: id,
+      defaultEconomicLean: 0,
+      defaultSocialLean: 0,
+      defaultTurnout: 55,
+    })),
+  },
+] as unknown as DemographicCategory[];
 const baseline = structuredClone(treatment);
 const oldSocialOverlay: Layer1PositionOverlay = {};
 for (const [dim, entries] of Object.entries(LEGACY_SOCIAL)) {
@@ -51,10 +64,10 @@ const after = buildModelRegionDemographics(treatment);
 const population = Object.fromEntries(
   ukRegions1991.map((region) => [region._id, region.population])
 );
-const lean = (doc: StateDemographics) => calculateStateLean(doc, ukDemographicCategories);
+const lean = (doc: CensusGroupView) => calculateStateLean(doc, ukDemographicCategories);
 const round = (value: number) => Math.round(value * 100) / 100;
 const fmt = (value: number) => value.toFixed(2);
-const means = (docs: StateDemographics[], gbOnly = false) => {
+const means = (docs: CensusGroupView[], gbOnly = false) => {
   const rows = docs.filter((doc) => !gbOnly || doc._id !== "NIR");
   const total = rows.reduce((sum, doc) => sum + population[String(doc._id)], 0);
   const economic =
@@ -77,7 +90,7 @@ interface Voter {
   economicLean: number;
   socialLean: number;
 }
-const groups = (doc: StateDemographics): Voter[] =>
+const groups = (doc: CensusGroupView): Voter[] =>
   Object.values(doc.groups).map((group) => ({
     weight: group.population * (group.turnout ?? 55),
     economicLean: group.economicLean,
@@ -142,7 +155,7 @@ console.log(
 console.log("| --- | --- | --- | --- | --- | --- | --- |");
 for (let i = 0; i < after.length; i++) {
   const vectors = [liveBefore[i], releaseBefore[i], cleanBefore[i], after[i]].map(lean);
-  const total = (doc: StateDemographics) =>
+  const total = (doc: CensusGroupView) =>
     Object.values(doc.groups).reduce((sum, group) => sum + group.population, 0);
   assert(Math.abs(total(after[i]) - 100) < 0.05);
   assert.equal(vectors[2].economicLean, vectors[3].economicLean);

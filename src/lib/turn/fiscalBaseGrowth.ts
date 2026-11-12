@@ -1,7 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { FederalBudget, StateBudget, EconomicGrowthFactors } from "@/lib/db/types/budget";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
-import type { State } from "@/lib/db/types/state";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalDocId, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { getRegisteredCountryIdSet } from "@/lib/country/registeredCountries";
@@ -29,23 +28,19 @@ import {
   type LabourWagePlant,
   type WageShareReceipt,
 } from "@/lib/market/producerMarket/wageShareRules";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
-/**
- * Per-turn fiscal base growth (the dynamic wage/trade application). The metric
- * engine recomputes `economic.wageGrowth`/`tradeGrowth`/`gdpGrowth` every turn as
- * ANNUAL display rates; this phase applies a single `1/TURNS_PER_YEAR` slice of
- * them to the tax bases each turn (mirroring how the engine already compounds
- * `state.gdp`), so the income- and trade-tax bases — and the federal revenue the
- * per-turn `treasuryTurn` accrues against — track the live economy instead of
- * jumping once a year. `fiscalYear` no longer grows the bases (it would
- * double-count); it keeps the annual inflation snapshot, GDP derivation, grants,
- * debt, and the state-revenue reconciliation (off these grown bases).
- *
- * Runs AFTER `computeNationalMetrics` (reads the fresh national rates) and BEFORE
- * `tradeGrowthMirror` (which reads the `economicFactors.tradeGrowth` this phase
- * writes). Federal bases grow on the NATIONAL rates; each state's bases grow on
- * THAT state's own rates (the engine writes per-state factors).
- */
+/* Applies 1/TURNS_PER_YEAR of the annual wage/trade/gdp rates to tax bases
+ * each turn, so bases and accrued revenue track the live economy instead of
+ * jumping yearly. fiscalYear keeps annual work but no longer grows bases.
+ * Runs after computeNationalMetrics and before tradeGrowthMirror. Federal
+ * bases use national rates; state bases use that state's own rates. */
 function resolveBudgetCountryId(budget: Pick<FederalBudget, "_id" | "countryId">): CountryId {
   return (budget.countryId ||
     (String(budget._id) === "federal" ? "US" : String(budget._id))) as CountryId;
@@ -93,8 +88,7 @@ async function loadLabourWagePlantsByState(
   db: Awaited<ReturnType<typeof getDb>>,
   turn: number
 ): Promise<Map<string, LabourWagePlant[]>> {
-  const sectors = await db
-    .collection<LabourWageSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection<LabourWageSector>(db)
     .find(
       { "producerSettlement.turn": turn },
       {
@@ -134,13 +128,14 @@ export async function processFiscalBaseGrowth(
 ): Promise<{ countriesProcessed: number; statesProcessed: number }> {
   const db = await getDb();
   const [allFederalBudgets, stateBudgets, allStateMetrics, states, gameConfig] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").find({}).toArray(),
-    db.collection<StateBudget>("stateBudgets").find({}).toArray(),
-    db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
-    db.collection<State>("states").find({}).toArray(),
-    db
-      .collection<LabourWageGameConfig & { _id: string }>("gameConfig")
-      .findOne({ _id: "default" }, { projection: LABOUR_WAGE_CONFIG_PROJECTION }),
+    (await getFederalBudgetCollection(db)).find({}).toArray(),
+    stateBudgetsCollection(db).find({}).toArray(),
+    macroMetricsCollection(db).find({}).toArray(),
+    (await getStatesCollection(db)).find({}).toArray(),
+    gameConfigCollection<LabourWageGameConfig & { _id: string }>(db).findOne(
+      { _id: "default" },
+      { projection: LABOUR_WAGE_CONFIG_PROJECTION }
+    ),
   ]);
   // Labour stage: wage growth follows each country's labour market instead of
   // the national doc's rate (or the flat 3.0 where there is none).
@@ -171,7 +166,7 @@ export async function processFiscalBaseGrowth(
       // Same states this country's per-state base growth already filters below —
       // computed here first so the federal gravity pull (guardrail against the
       // wage/trade-vs-GDP structural drift, see taxBaseGdpShareBaseline) has a
-      // live current-GDP figure without waiting for the annual `budget.gdp` sync.
+      // live current-GDP figure rather than the smoothed `budget.gdp` basis.
       const countryStates = states.filter(
         (s) => s.countryId === countryId && !NATIONAL_SCOPE_IDS.has(String(s._id))
       );
@@ -263,7 +258,7 @@ export async function processFiscalBaseGrowth(
         const currentOther = budget.revenue?.other;
         // Divided by `budget.gdp`, NOT the live regional roll-up used for the tax
         // -base gravity above. `calculateFederalRevenue` multiplies this share by
-        // `budget.gdp`, and the two figures differ (the fiscal-close snapshot runs
+        // `budget.gdp`, and the two figures differ (the smoothed basis runs
         // behind the live sum), so healing against the live figure would shift
         // `other` by that ratio on the very first turn instead of preserving it.
         // Same denominator in and out is what makes the heal value-neutral.
@@ -279,9 +274,7 @@ export async function processFiscalBaseGrowth(
           set.otherRevenueGdpShareBaseline = currentOther / budgetGdp;
         }
       }
-      await db
-        .collection<FederalBudget>("federalBudget")
-        .updateOne({ _id: budget._id }, { $set: set });
+      await federalBudgetCollection(db).updateOne({ _id: budget._id }, { $set: set });
 
       // Recompute federal revenue off the freshly grown bases (calculateFederalRevenue
       // reads the persisted taxBases) so the per-turn treasury accrual tracks growth.
@@ -289,15 +282,14 @@ export async function processFiscalBaseGrowth(
         const normalized = normalizeFederalTaxRates(budget.taxRates);
         if (normalized) {
           const revenue = await calculateFederalRevenue(db, normalized, String(budget._id));
-          // `surplus` is a cache of revenue.total - spending.total (see
-          // federalSurplus): a revenue-only write leaves it stale by exactly
-          // the grown amount every turn, which the end-of-turn invariant check
-          // reports as source drift (#1975). Persist the canonical value in
-          // the same guarded write; spending is untouched by this phase.
+          // `surplus` caches revenue.total - spending.total (see federalSurplus).
+          // A revenue-only write leaves it stale by the grown amount each turn, which
+          // the end-of-turn invariant check flags as drift. Persist both in the same write.
           const surplus = federalSurplus({ revenue, spending: budget.spending });
-          await db
-            .collection<FederalBudget>("federalBudget")
-            .updateOne({ _id: budget._id }, { $set: { revenue, surplus } });
+          await federalBudgetCollection(db).updateOne(
+            { _id: budget._id },
+            { $set: { revenue, surplus } }
+          );
         }
       }
       countriesProcessed += 1;
@@ -347,7 +339,7 @@ export async function processFiscalBaseGrowth(
         statesProcessed += 1;
       }
       if (stateOps.length > 0) {
-        await db.collection<StateBudget>("stateBudgets").bulkWrite(stateOps);
+        await stateBudgetsCollection(db).bulkWrite(stateOps);
       }
     })
   );

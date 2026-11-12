@@ -10,8 +10,8 @@
 import { createHash, randomBytes } from "crypto";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { emailChangesCollection } from "@/lib/db/repositories/emailChanges";
 
-const EMAIL_CHANGES_COLLECTION = "emailChanges";
 const EMAIL_CHANGE_TTL_MS = 60 * 60 * 1000;
 const TOKEN_PREFIX = "ahde_";
 
@@ -40,7 +40,7 @@ export async function createEmailChange(
   const rawToken = `${TOKEN_PREFIX}${randomBytes(24).toString("base64url")}`;
   const now = new Date();
   const db = await getDb();
-  const collection = db.collection<EmailChangeDoc>(EMAIL_CHANGES_COLLECTION);
+  const collection = emailChangesCollection<EmailChangeDoc>(db);
 
   await collection.updateMany({ userId, usedAt: null }, { $set: { usedAt: now } });
 
@@ -62,10 +62,8 @@ export async function createEmailChange(
 export async function consumeEmailChange(rawToken: string): Promise<EmailChangeDoc | null> {
   if (!rawToken.startsWith(TOKEN_PREFIX)) return null;
   const db = await getDb();
-  return db
-    .collection<EmailChangeDoc>(EMAIL_CHANGES_COLLECTION)
-    .findOneAndUpdate(
-      { tokenHash: hashEmailChangeToken(rawToken), usedAt: null, expiresAt: { $gt: new Date() } },
-      { $set: { usedAt: new Date() } }
-    );
+  return emailChangesCollection<EmailChangeDoc>(db).findOneAndUpdate(
+    { tokenHash: hashEmailChangeToken(rawToken), usedAt: null, expiresAt: { $gt: new Date() } },
+    { $set: { usedAt: new Date() } }
+  );
 }

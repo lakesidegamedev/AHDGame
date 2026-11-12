@@ -1,6 +1,6 @@
 /**
- * Household purchase specs for each funded household wallet (owner decision
- * 2026-10-18: households spend what they actually receive).
+ * Household purchase specs for each funded household wallet: households spend
+ * what they actually receive.
  *
  * One spec per wallet: the shared consumer basket, each product on its book
  * (local services on the wallet's own state book, everything else on the world
@@ -26,9 +26,7 @@ export function householdDemandSpecs(input: {
   priceHeadroom: number;
   spendFraction?: number;
   /**
-   * Demand curves (issue #5448). Absent: one order per good. Present: each
-   * wallet gets a price ladder, with basket weights shifted by its state's
-   * income index (missing states read as 1).
+   * Absent: one order per good. Present: each wallet gets a price ladder, with basket weights shifted by its state's income index (missing states read as 1).
    */
   demandCurve?: {
     incomeIndexByState: ReadonlyMap<string, number>;

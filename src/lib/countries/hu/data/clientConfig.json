@@ -1,0 +1,220 @@
+{
+  "config": {
+    "id": "HU",
+    "name": "Hungary",
+    "code": "HU",
+    "status": "coming-soon",
+    "flagEmoji": "🇭🇺",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "General Secretary",
+    "executiveRealmPhrase": "Hungary",
+    "executiveLabel": "Parliament",
+    "executivePath": "/country/hu/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A one-party socialist state where the ruling party's General Secretary governs through a single-chamber National Assembly; the economy is centrally planned until reform.",
+    "heroImage": "https://flagcdn.com/w640/hu.png",
+    "overviewPath": "/country/hu",
+    "mapPath": "/country/hu/map",
+    "currencyCode": "HUF",
+    "centralGovernmentLabel": "Central Plan",
+    "exchangeName": "OT",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "majorPartyIds": ["mszmp"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "legislature": {
+      "name": "National Assembly",
+      "path": "/country/hu/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "nationalAssembly",
+        "name": "National Assembly",
+        "shortName": "Assembly",
+        "seats": 352,
+        "description": "352 deputies of the Országgyűlés, elected to five-year terms in the Hungarian People's Republic - in practice a single-list body controlled by the ruling socialist workers' party."
+      },
+      "upperChamber": {
+        "key": "presidentialCouncil",
+        "name": "Presidential Council",
+        "shortName": "Council",
+        "seats": 21,
+        "description": "The Elnöki Tanács - a 21-member collective head of state that exercised standing legislative authority between Assembly sessions; members chosen by the National Assembly.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "General Secretaries"
+      },
+      {
+        "key": "chairmanOfPresidentialCouncil",
+        "label": "Chairman of the Presidential Council",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Chairmen of the Presidential Council"
+      },
+      {
+        "key": "assemblyDelegate",
+        "label": "Deputy",
+        "chamberKey": "nationalAssembly",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the MNB",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the MNB"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Hungarian National Bank",
+      "abbreviation": "MNB",
+      "heroImage": "https://flagcdn.com/w640/hu.png",
+      "defaultPrimeRate": 5
+    },
+    "usdExchangeRate": 0.031
+  },
+  "eraOverrides": {
+    "2027-default": {
+      "executiveTitle": "Prime Minister",
+      "executiveLabel": "Prime Minister's Office",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Parliamentary Republic",
+      "descriptor": "The Prime Minister governs with the confidence of the 199-seat National Assembly, elected by a mixed constituency and list vote.",
+      "centralGovernmentLabel": "National Government",
+      "exchangeName": "Budapest Stock Exchange",
+      "exchangeKind": "market",
+      "rulingPartyId": null,
+      "majorPartyIds": ["tisza", "fidesz-kdnp", "mi hazank"],
+      "legislature": {
+        "name": "National Assembly",
+        "path": "/country/hu/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "National Assembly",
+          "shortName": "Assembly",
+          "seats": 199,
+          "description": "199 deputies elected for four-year terms, with 106 single-member constituencies and 93 national-list seats."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "assemblyDelegate",
+          "label": "Deputy",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the MNB",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the MNB"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "ams",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "usdExchangeRate": 0.0028312570781426957
+    },
+    "1991-default": {
+      "executiveTitle": "Prime Minister",
+      "governmentType": "parliamentaryRepublic",
+      "governmentTypeLabel": "Parliamentary Republic",
+      "exchangeName": "Budapest Stock Exchange",
+      "exchangeKind": "market",
+      "rulingPartyId": null,
+      "majorPartyIds": ["mdf", "szdsz", "fkgp", "mszp", "fidesz", "kdnp"],
+      "legislature": {
+        "name": "National Assembly",
+        "path": "/country/hu/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "nationalAssembly",
+          "name": "National Assembly",
+          "shortName": "Assembly",
+          "seats": 386,
+          "description": "386 deputies elected in a mixed constituency and list system in 1990."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "isExecutive": true,
+          "isSubNational": false,
+          "labelPlural": "Prime Ministers"
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true,
+          "labelPlural": "Presidents"
+        },
+        {
+          "key": "assemblyDelegate",
+          "label": "Deputy",
+          "chamberKey": "nationalAssembly",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Deputies"
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the MNB",
+          "isExecutive": false,
+          "isSubNational": false,
+          "labelPlural": "Governors of the MNB"
+        }
+      ],
+      "electionSystems": {
+        "lowerChamber": "ams",
+        "headOfGovernment": "parliamentary",
+        "headOfState": "ceremonial"
+      },
+      "lowerElectionSystem": { "snapElectionsAllowed": true },
+      "usdExchangeRate": 0.01338054286200446
+    },
+    "1953-default": { "majorPartyIds": ["mdp"], "usdExchangeRate": 0.05 }
+  }
+}

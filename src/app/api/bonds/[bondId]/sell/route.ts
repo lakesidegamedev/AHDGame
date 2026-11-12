@@ -6,8 +6,7 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { sellBondSchema } from "@/lib/api/schemas/bonds";
 import { badRequest, handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Bond, Character, Corporation, ExchangeRate, User } from "@/lib/db/types";
-import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import type { Bond } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
@@ -41,10 +40,17 @@ import {
   loadPendingBondSaleIntents,
   markBondSaleIntentBestEffort,
   settledKeyPush,
-  BOND_SALE_INTENT_COLLECTION,
   type BondSaleIntent,
   type BondSaleSettlementOps,
 } from "@/lib/bonds/saleRecovery";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { bondSaleIntentsCollection } from "@/lib/db/repositories/bondSaleIntents";
 
 interface RouteParams {
   params: Promise<{ bondId: string }>;
@@ -111,9 +117,10 @@ function roundBondSaleCents(value: number): number {
 function buildBondSaleFallbackOps(db: Db, intent: BondSaleIntent): BondSaleSettlementOps {
   return {
     claimLanded: async () => {
-      const bondDoc = await db
-        .collection<Bond>("bonds")
-        .findOne({ _id: intent.bondId }, { projection: { holders: 1 } });
+      const bondDoc = await bondsCollection(db).findOne(
+        { _id: intent.bondId },
+        { projection: { holders: 1 } }
+      );
       return (
         bondDoc?.holders.some(
           (holder) =>
@@ -175,7 +182,7 @@ function buildBondSaleFallbackOps(db: Db, intent: BondSaleIntent): BondSaleSettl
       return seller ? "already" : "missing";
     },
     restoreClaim: async () => {
-      await db.collection<Bond>("bonds").updateOne(
+      await bondsCollection(db).updateOne(
         {
           _id: intent.bondId,
           holders: {
@@ -292,7 +299,7 @@ async function runBondSaleFallbackSettlement(
 
   let claimed: boolean;
   try {
-    const claimResult = await db.collection<Bond>("bonds").updateOne(claimFilter, claimUpdate);
+    const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate);
     claimed = claimResult.modifiedCount > 0;
   } catch (error) {
     if (await ops.claimLanded()) {
@@ -319,7 +326,7 @@ async function runBondSaleFallbackSettlement(
         { status: "rejected", error: "insufficient holdings" },
         reportMarkError
       );
-      const refreshedBond = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
+      const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
       const refreshedUnits = refreshedBond
         ? readHolderUnits(refreshedBond, seller.holderKey, seller.holderId)
         : 0;
@@ -332,9 +339,9 @@ async function runBondSaleFallbackSettlement(
     claimConfirmed: true,
   });
   if (outcome === "reverted") {
-    const settled = await db
-      .collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION)
-      .findOne({ _id: intent._id });
+    const settled = await bondSaleIntentsCollection<BondSaleIntent>(db).findOne({
+      _id: intent._id,
+    });
     // Only the seller-missing path reverts with the pool still debited, and
     // only the pool-dry path reverts without it.
     if (settled?.poolDebited) throw args.throwSellerMissing();
@@ -352,9 +359,10 @@ async function cleanupEmptyHolderBestEffort(
   now: Date
 ) {
   try {
-    await db
-      .collection("bonds")
-      .updateOne({ _id: bondId }, buildHolderCleanupUpdate(holderKey, holderId, now));
+    await bondsCollection(db).updateOne(
+      { _id: bondId },
+      buildHolderCleanupUpdate(holderKey, holderId, now)
+    );
   } catch (error) {
     // The sale is already financially complete. A zero-unit holder row is
     // harmless and can be removed later; rolling the sale back here would
@@ -398,8 +406,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (turnGuard) return turnGuard;
 
     const forexEnabled = await isForexEnabled();
+    if (!ObjectId.isValid(bondId)) {
+      return errorResponse(400, "Invalid bond ID");
+    }
 
-    const bond = await db.collection<Bond>("bonds").findOne({ _id: new ObjectId(bondId) });
+    const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
     if (!bond) {
       return errorResponse(404, "Bond not found");
     }
@@ -425,9 +436,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // appetite for the issuer.
     const quote = await loadBondQuote(db, bond);
     const proceedsLocal = units * quote.bidPerUnit;
-    const turnDoc = await db
-      .collection<{ _id: string; currentTurn?: number }>("gameState")
-      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
     const currentTurn = turnDoc?.currentTurn ?? 0;
 
     // Depth check before any holder-side write. The gated debit inside each
@@ -435,9 +447,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // refusal into a message that says how much the market can take.
     const pricePerUnitLocal = quote.bidPerUnit;
     const fillableUnits = bondPoolFillableUnits(quote.poolCashLocal, pricePerUnitLocal, units);
-    const pendingSale = await db
-      .collection<BondSaleIntent>(BOND_SALE_INTENT_COLLECTION)
-      .findOne({ bondId: bond._id, status: "claimed" }, { projection: { _id: 1 } });
+    const pendingSale = await bondSaleIntentsCollection<BondSaleIntent>(db).findOne(
+      { bondId: bond._id, status: "claimed" },
+      { projection: { _id: 1 } }
+    );
     // A pending sale may itself account for the apparent pool shortfall. Let
     // its seller-specific branch resume the stamped debit instead of rejecting
     // the retry from a newly observed pool balance.
@@ -454,9 +467,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     if (sellAsCorp) {
-      const corp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ _id: new ObjectId(sellAsCorp) });
+      if (!ObjectId.isValid(sellAsCorp)) {
+        return errorResponse(400, "Invalid corporation ID");
+      }
+      const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(sellAsCorp) });
       if (!corp) {
         return errorResponse(404, "Corporation not found");
       }
@@ -464,9 +478,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(403, "Only the CEO can sell bonds for a corporation");
       }
 
-      const bondRateDoc = await db
-        .collection<ExchangeRate>("exchangeRates")
-        .findOne({ currencyCode: bondCurrency });
+      const bondRateDoc = await exchangeRatesCollection(db).findOne({ currencyCode: bondCurrency });
       const bondFxRate = bondRateDoc?.rate && bondRateDoc.rate > 0 ? bondRateDoc.rate : 1;
       const proceedsAnchor = corpCapitalToAnchor(proceedsLocal, bondCurrency, bondFxRate);
       const corpFxRate = await getCorpFxRate(db, corp);
@@ -491,9 +503,9 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (currentUnits < units) {
             throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
           }
-          const claimResult = await db
-            .collection<Bond>("bonds")
-            .updateOne(claimFilter, claimUpdate, { session });
+          const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
+            session,
+          });
           if (claimResult.modifiedCount === 0) {
             throw badRequest("Insufficient bond holdings");
           }
@@ -507,24 +519,20 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
           if (!poolDebit.ok) throw await poolDepthRefusal();
 
-          const payoutResult = await db
-            .collection<Corporation>("corporations")
-            .updateOne(
-              { _id: corp._id },
-              { $inc: { liquidCapital: proceedsInCorpCapital }, $set: { updatedAt: now } },
-              { session }
-            );
+          const payoutResult = await corporationsCollection(db).updateOne(
+            { _id: corp._id },
+            { $inc: { liquidCapital: proceedsInCorpCapital }, $set: { updatedAt: now } },
+            { session }
+          );
           if (payoutResult.matchedCount === 0) {
             throw notFound("Corporation not found");
           }
 
-          await db
-            .collection("bonds")
-            .updateOne(
-              { _id: bond._id },
-              buildHolderCleanupUpdate("corporationId", corp._id, now),
-              { session }
-            );
+          await bondsCollection(db).updateOne(
+            { _id: bond._id },
+            buildHolderCleanupUpdate("corporationId", corp._id, now),
+            { session }
+          );
         },
         async () => {
           const seller: BondSaleSeller = {
@@ -587,12 +595,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     }
 
-    const userDoc = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc.activeImperialCharacterId!,
         userId: new ObjectId(user.userId),
       });
@@ -624,9 +632,9 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (currentUnits < units) {
             throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
           }
-          const claimResult = await db
-            .collection<Bond>("bonds")
-            .updateOne(claimFilter, claimUpdate, { session });
+          const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
+            session,
+          });
           if (claimResult.modifiedCount === 0) {
             throw badRequest("Insufficient bond holdings");
           }
@@ -640,20 +648,20 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
           if (!poolDebit.ok) throw await poolDepthRefusal();
 
-          const payoutResult = await db
-            .collection<ImperialCharacter>("imperialCharacters")
-            .updateOne({ _id: imperial._id }, payoutUpdate, { session });
+          const payoutResult = await imperialCharactersCollection(db).updateOne(
+            { _id: imperial._id },
+            payoutUpdate,
+            { session }
+          );
           if (payoutResult.matchedCount === 0) {
             throw notFound("Imperial character not found");
           }
 
-          await db
-            .collection("bonds")
-            .updateOne(
-              { _id: bond._id },
-              buildHolderCleanupUpdate("imperialCharacterId", imperial._id, now),
-              { session }
-            );
+          await bondsCollection(db).updateOne(
+            { _id: bond._id },
+            buildHolderCleanupUpdate("imperialCharacterId", imperial._id, now),
+            { session }
+          );
         },
         async () => {
           const seller: BondSaleSeller = {
@@ -718,7 +726,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const characterQuery = userDoc?.activeCharacterId
       ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
       : { userId: new ObjectId(user.userId) };
-    const character = await db.collection<Character>("characters").findOne(characterQuery);
+    const character = await charactersCollection(db).findOne(characterQuery);
     if (!character) {
       return errorResponse(404, "Character not found");
     }
@@ -747,9 +755,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (currentUnits < units) {
           throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
         }
-        const claimResult = await db
-          .collection<Bond>("bonds")
-          .updateOne(claimFilter, claimUpdate, { session });
+        const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
+          session,
+        });
         if (claimResult.modifiedCount === 0) {
           throw badRequest("Insufficient bond holdings");
         }
@@ -763,20 +771,20 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
         if (!poolDebit.ok) throw await poolDepthRefusal();
 
-        const payoutResult = await db
-          .collection<Character>("characters")
-          .updateOne({ _id: character._id }, payoutUpdate, { session });
+        const payoutResult = await charactersCollection(db).updateOne(
+          { _id: character._id },
+          payoutUpdate,
+          { session }
+        );
         if (payoutResult.matchedCount === 0) {
           throw notFound("Character not found");
         }
 
-        await db
-          .collection("bonds")
-          .updateOne(
-            { _id: bond._id },
-            buildHolderCleanupUpdate("characterId", character._id, now),
-            { session }
-          );
+        await bondsCollection(db).updateOne(
+          { _id: bond._id },
+          buildHolderCleanupUpdate("characterId", character._id, now),
+          { session }
+        );
       },
       async () => {
         const seller: BondSaleSeller = {

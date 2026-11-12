@@ -1,0 +1,172 @@
+import type { CnLawText } from "./cnLawTextTypes";
+
+export const CN_LAW_TEXT_HEALTH: Record<string, CnLawText> = {
+  "health.universalCare.primary": [
+    "Basic Medical Insurance Coverage Act",
+    "Care for everyone through mandatory basic insurance with set reimbursement rates.",
+    3,
+    [
+      ["No National Service", "Care is bought by whoever can pay."],
+      ["Basic Coverage", "Insurance covers urban employees and public servants."],
+      ["Mandatory Insurance", "Everyone must belong to the employee or the residents' scheme."],
+      [
+        "Broad Public Service",
+        "A national drug list and reimbursement schedule cover nearly all care.",
+      ],
+      ["Universal Comprehensive Service", "Every treatment is covered for every resident."],
+    ],
+  ],
+  "health.socialInsurance.primary": [
+    "Pension and Social Insurance Act",
+    "The contributory pension, unemployment and work injury insurance system.",
+    3,
+    [
+      ["No Social Insurance", "Old age and sickness are a private matter."],
+      ["Foundation Insurance", "A basic pension covers urban employees."],
+      ["Expanded Insurance", "A basic pension reaches rural residents and the self-employed."],
+      ["Full Contributory System", "Two-tier pensions and unemployment cover reach every worker."],
+      [
+        "Full Social Insurance",
+        "Pensions, care and unemployment cover are comprehensive and generous.",
+      ],
+    ],
+  ],
+  "health.prevention.primary": [
+    "Disease Control and Prevention Act",
+    "Vaccination, screening and the disease control centres.",
+    3,
+    [
+      ["No Programme", "Prevention is left to doctors and families."],
+      ["Disease Control Centres", "Local centres monitor outbreaks."],
+      ["Vaccination and Screening", "Regular vaccination drives and health checks are funded."],
+      ["Preventive Network", "A network of clinics, checks and campaigns reaches every town."],
+      [
+        "Total Prevention System",
+        "Screening, vaccination and lifestyle programmes cover the whole population.",
+      ],
+    ],
+  ],
+  "health.outcomes.primary": [
+    "Hospital Quality and Medical Progress Act",
+    "Hospital standards and the push against the leading causes of death.",
+    3,
+    [
+      ["No Investment", "Hospitals pursue quality as they see fit."],
+      ["Hospital Planning", "Provinces plan hospital beds and specialties."],
+      ["Quality Reporting", "Hospitals report outcomes and are compared openly."],
+      ["National Health Campaign", "National plans target cancer, stroke and heart disease."],
+      ["Outcomes Guarantee", "Every patient may expect the best outcomes the system can give."],
+    ],
+  ],
+  "health.responsibility.primary": [
+    "Co-payments and Benefit Conditions Act",
+    "Patient charges and the conditions attached to benefits.",
+    3,
+    [
+      ["No Conditions", "Care and benefits are free of conditions."],
+      ["Modest Charges", "Small co-payments apply to visits and drugs."],
+      ["Targeting Regime", "Charges rise with income and fall for the poorest."],
+      [
+        "Work Requirements",
+        "Sickness and livelihood benefits are tied to efforts to return to work.",
+      ],
+      ["Strict Conditionality", "Benefits are tightly conditioned and heavily checked."],
+    ],
+  ],
+  "health.providerChoice.primary": [
+    "Medical Institutions and Provider Choice Act",
+    "Private clinics, private hospitals and patients' freedom to choose.",
+    2,
+    [
+      ["No Framework", "Patients go where the state sends them."],
+      ["Private Practice", "Doctors may open private clinics under a licence."],
+      ["Dual System", "Private and public hospitals both take insured patients."],
+      ["Choice Protections", "Patients may visit any clinic or hospital without a referral."],
+      ["Open Market Charter", "Providers compete freely and patients choose with ease."],
+    ],
+  ],
+  "health.systemEfficiency.primary": [
+    "Medical Cost Efficiency Act",
+    "Volume-based drug purchasing and reforms aimed at waste in hospitals.",
+    2,
+    [
+      ["No Programme", "Costs are left alone."],
+      ["Cost Reporting", "Hospitals report costs and drug prices."],
+      ["Efficiency Review", "Bulk purchasing and fee reviews trim excess and favour generics."],
+      ["Performance Funding", "Payments reward results rather than volume."],
+      ["Lean Service Mandate", "Every yuan is traced and waste is cut hard."],
+    ],
+  ],
+  "sec.pensionCoverageExtension": [
+    "Pension Coverage Extension Act",
+    "Regular adjustment and extension of pension coverage to more people.",
+    3,
+    [
+      ["No Extension", "Pension coverage stays as it is."],
+      ["Coverage Extension", "Gig and migrant workers join the employee pension."],
+      ["Benefit Adjustment", "Benefits are adjusted for prices and longer lives."],
+      ["Broad Extension", "Almost every worker and rural resident is covered."],
+      ["Universal Adequacy Drive", "Every retiree is assured a decent income."],
+    ],
+  ],
+  "sec.hospitalInvestment": [
+    "Hospital Investment Act",
+    "National and provincial money for new wards, equipment and digital records.",
+    3,
+    [
+      ["No Programme", "Hospitals raise their own capital."],
+      ["Repairs and Extensions", "Grants fund repairs and new wings."],
+      ["Investment Programme", "A steady fund buys equipment and digital systems."],
+      ["Regional Hospital Plan", "Provincial plans place hospitals where need is greatest."],
+      ["Universal Standard", "Every county holds a modern hospital within easy reach."],
+    ],
+  ],
+  "sec.workInjuryAndVeteransCare": [
+    "Work Injury and Veterans Care Act",
+    "Workers' injury compensation and care for those hurt at work or in service.",
+    3,
+    [
+      ["No Programmes", "Injured workers rely on employers' goodwill."],
+      ["Injury Insurance", "Employers insure workers against injury."],
+      ["Insurance and Treatment", "Insurance pays for treatment and rehabilitation."],
+      ["Expanded Care System", "Long-term care and pensions extend to the severely disabled."],
+      ["Full Guarantee", "Every injured worker and veteran is fully cared for."],
+    ],
+  ],
+  "sec.medicalResearch": [
+    "Medical Research Funding Act",
+    "Research units on disease, from clinical trials to public health studies.",
+    3,
+    [
+      ["No Council", "Research is left to universities and firms."],
+      ["Research Units", "Units study single diseases."],
+      ["Research Council", "A council sets priorities and funds trials."],
+      ["Disease Missions", "Long programmes aim at cancer, dementia and rare disease."],
+      ["Conquest of Disease Drive", "The state commits to defeating the great diseases."],
+    ],
+  ],
+  "sec.insuranceFundManagement": [
+    "Insurance Fund Management Act",
+    "How the pooled medical and pension funds are run and by whom.",
+    2,
+    [
+      ["No Framework", "The state runs all funds directly."],
+      ["Recognized Funds", "Provincial funds are recognized."],
+      ["Fund Administration", "Funds set contribution bases and run health programmes."],
+      ["Portable Benefits", "Members keep coverage when they move province or change jobs."],
+      ["National Pooling", "Funds are pooled nationally and managed by one body."],
+    ],
+  ],
+  "sec.benefitConditionality": [
+    "Benefit Conditionality Act",
+    "Case work, job search duties and the checks behind livelihood support.",
+    3,
+    [
+      ["No Reform", "Benefits are paid with few questions."],
+      ["Eligibility Review", "Claims are checked against means and assets."],
+      ["Casework Standards", "Caseworkers follow national standards."],
+      ["Work-Linked Assistance", "Able claimants must seek work to keep payments."],
+      ["Full Conditionality", "Every payment carries duties and checks."],
+    ],
+  ],
+};

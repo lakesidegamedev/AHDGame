@@ -1,10 +1,8 @@
 /**
- * The Global Conflicts board's view type + its colour helpers.
+ * The Global Conflicts board's view type and colour helpers.
  *
- * The static flashpoint dataset this file used to carry is gone: the board now
- * renders the live `conflicts` collection, mapped by `conflictView.ts`. `lean` and
- * `x`/`y` are nullable because a dynamic conflict may have no bloc backer and no map
- * anchor — neither of which the original static set could express.
+ * `lean` and `x`/`y` are nullable because a dynamic conflict may have no bloc
+ * backer and no map anchor.
  */
 
 export type Severity = "CRITICAL" | "MAJOR" | "ACTIVE" | "WINDING DOWN";

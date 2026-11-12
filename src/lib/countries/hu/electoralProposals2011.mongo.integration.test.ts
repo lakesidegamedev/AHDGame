@@ -24,7 +24,7 @@ import {
   HU_2011_BY_ELECTIONS_COLLECTION,
 } from "./constituencyByElections2011";
 import { registerHu1991PlayerFiling } from "./playerFiling1991";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { huRegions1991 } from "./data/huRegions1991";
 import {
   loadHu1991ListVacancies,
@@ -38,7 +38,7 @@ import { bindHu2011Campaigns } from "./assemblyCampaignBinding2011";
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 
 vi.mock("@/lib/news", () => ({ generateElectionNews: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/turn/election/electionNotifications", () => ({
+vi.mock("@/lib/elections/resolution/electionNotifications", () => ({
   sendBatchedElectionResults: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAuditBulk: vi.fn(), recordAudit: vi.fn() }));

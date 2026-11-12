@@ -1,13 +1,9 @@
 /**
- * Organisational efficiency as a physical effect (owner decision 2026-10-18:
- * policy effects become real flows, nothing is created from nothing).
- *
- * The legacy margin stack billed the type-match bonus or penalty and the
- * state-company efficiency penalty as margin points of revenue: money that
- * appeared or vanished with no counterparty. Here the same points become
- * productivity. An off-type plant or a badly run state company makes less from
- * the same workers and materials; an own-type plant makes a little more. Its
- * costs are unchanged, so the loss or gain shows up only through what it sells.
+ * Organisational efficiency as a physical effect: same points become
+ * productivity, not margin, so nothing is created from nothing.
+ * An off-type plant or badly run state company makes less from the same
+ * workers and materials; an own-type plant makes a little more. Costs are
+ * unchanged, so the effect shows only through what it sells.
  *
  * Pure: no database, clock or ambient state.
  */

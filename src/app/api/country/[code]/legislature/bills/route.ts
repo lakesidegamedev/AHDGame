@@ -22,6 +22,8 @@ import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getGameState } from "@/lib/gameState";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { mayRuleByDecree } from "@/lib/singleplayerHeadOfState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
 
 // GET /api/country/[code]/legislature/bills — List national legislature bills for a country.
 // Auth: public
@@ -85,8 +87,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const lowerKey = config.legislature.lowerChamber.key;
     const upperKey = config.legislature.upperChamber?.key;
     // Bill-active bicameral legislatures (JP/NG) let the upper chamber originate
-    // bills too; UK Lords / DE Bundesrat are `bicameral: false` and stay lower-only
-    // (#912 — NG senators were rejected as ineligible proposers).
+    // bills too; UK Lords / DE Bundesrat are `bicameral: false` and stay lower-only.
     // Era-aware: TR 1953 is unicameral (no Senato).
     const allowedOriginKeys: string[] =
       config.legislature.bicameral && upperKey ? [lowerKey, upperKey] : [lowerKey];
@@ -108,7 +109,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const official =
       character == null
         ? null
-        : await db.collection("electedOfficials").findOne({
+        : await electedOfficialsCollection<Document>(db).findOne({
             characterId: character._id,
             officeType: { $in: allowedOriginOfficeTypes },
             countryId,

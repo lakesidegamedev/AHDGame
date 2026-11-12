@@ -59,7 +59,6 @@ beforeEach(async () => {
   vi.clearAllMocks();
   for (const c of ["gameState", "conflicts", "peaceOffers", "federalBudget"]) db.collection(c);
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    conflictsEnabled: true,
     currentTurn: 40,
   });
   // The payer's GDP anchors the indemnity ceiling. Ample here so the small
@@ -366,12 +365,6 @@ describe("POST offer", () => {
 
   it("404s when the war does not exist", async () => {
     db.collectionMocks.conflicts.findOne.mockResolvedValue(null);
-    const { POST } = await import("./route");
-    expect((await POST(req(good), params)).status).toBe(404);
-  });
-
-  it("404s when the conflicts subsystem is off", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
     const { POST } = await import("./route");
     expect((await POST(req(good), params)).status).toBe(404);
   });

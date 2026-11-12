@@ -22,7 +22,6 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
@@ -43,18 +42,24 @@ import {
   loadSurvivingPartyResolver,
   type SurvivingPartyResolver,
 } from "@/lib/parties/survivingParty";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { districtedHouseResolution } from "@/lib/redistricting/districtedHouseResolution";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import {
   applyConversionVotePenalty,
   applyLegacySeatFloor,
-} from "@/lib/turn/election/conversionTerms";
-import { buildPrimaryShareMap } from "@/lib/turn/election/generalResolutionHelpers";
+} from "@/lib/elections/resolution/conversionTerms";
+import { buildPrimaryShareMap } from "@/lib/elections/resolution/generalResolutionHelpers";
 import {
   loadContingentElectionData,
   type ContingentChamberOfficials,
-} from "@/lib/turn/election/loadContingentElectionData";
+} from "@/lib/elections/resolution/loadContingentElectionData";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 const CHAMBER_TYPES = ["house", "senate"] as const;
 
@@ -81,8 +86,7 @@ async function projectChamberRace(
   if (Object.values(effectiveVotes).reduce((s, v) => s + v, 0) === 0) return [];
 
   const candidateIds = Object.keys(effectiveVotes);
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ _id: { $in: candidateIds.map((id) => new ObjectId(id)) }, status: "active" })
     .toArray();
   for (const c of candidates) c.party = survivingParty(c.party) ?? c.party;
@@ -94,8 +98,7 @@ async function projectChamberRace(
     .map((c) => c.characterId as ObjectId);
   const [npps, chars] = await Promise.all([
     nppIds.length > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: nppIds } },
             { projection: { _id: 1, retiredAt: 1, currentOffice: 1 } }
@@ -103,8 +106,7 @@ async function projectChamberRace(
           .toArray()
       : Promise.resolve([]),
     charIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: charIds } }, { projection: { _id: 1, currentOffice: 1 } })
           .toArray()
       : Promise.resolve([]),
@@ -147,7 +149,7 @@ async function projectChamberRace(
   const totalVotesCast = ranked.reduce((sum, { votes }) => sum + votes, 0);
 
   let districted: Awaited<ReturnType<typeof districtedHouseResolution>> = null;
-  if (race.electionType === "house" && isRedistrictingEnabled(gameState)) {
+  if (race.electionType === "house") {
     const candidateParty: Record<string, string> = {};
     const candidateCharacterId: Record<string, string | null> = {};
     const candidateNppId: Record<string, string | null> = {};
@@ -228,8 +230,7 @@ async function buildProjectedChamber(
   sittingHouseStates: number;
 }> {
   const windowEnd = president.endTurn;
-  const races = await db
-    .collection<Election>("elections")
+  const races = await electionsCollection(db)
     .find({
       countryId: countryId as CountryId,
       electionType: { $in: [...CHAMBER_TYPES] },
@@ -240,8 +241,7 @@ async function buildProjectedChamber(
 
   const tallies =
     races.length > 0
-      ? await db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+      ? await electionVoteTalliesCollection(db)
           .find({ electionId: { $in: races.map((r) => r._id) } })
           .toArray()
       : [];
@@ -282,8 +282,7 @@ async function buildProjectedChamber(
   }
 
   const [sittingHouse, sittingSenate] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: countryId as CountryId,
         officeType: "house",
@@ -291,8 +290,7 @@ async function buildProjectedChamber(
         ...seatedHolderFilter,
       })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({ countryId: countryId as CountryId, officeType: "senate", ...seatedHolderFilter })
       .toArray(),
   ]);
@@ -313,15 +311,17 @@ async function buildProjectedChamber(
 async function personName(db: Db, personId: string | null): Promise<string | null> {
   if (!personId) return null;
   if (personId.startsWith("npp_")) {
-    const npp = await db
-      .collection<NPP>("npps")
-      .findOne({ _id: new ObjectId(personId.slice(4)) }, { projection: { name: 1 } });
+    const npp = await nppsCollection(db).findOne(
+      { _id: new ObjectId(personId.slice(4)) },
+      { projection: { name: 1 } }
+    );
     return npp?.name ?? null;
   }
   if (!ObjectId.isValid(personId)) return null;
-  const char = await db
-    .collection<Character>("characters")
-    .findOne({ _id: new ObjectId(personId) }, { projection: { name: 1 } });
+  const char = await charactersCollection(db).findOne(
+    { _id: new ObjectId(personId) },
+    { projection: { name: 1 } }
+  );
   return char?.name ?? null;
 }
 
@@ -340,8 +340,7 @@ async function computeProjection(
   );
 
   const survivingParty = await loadSurvivingPartyResolver(db, countryId);
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       _id: { $in: Object.keys(electoralVotesByCandidate).map((id) => new ObjectId(id)) },
       status: "active",
@@ -412,7 +411,11 @@ export async function projectContingentElection(
   evNeeded: number,
   gameState: GameState | null
 ): Promise<ContingentProjectionDisplay | null> {
-  if ((president.countryId ?? "US") !== "US" || president.electionType !== "president") return null;
+  if (
+    !countryHasFeature("usElections", president.countryId ?? "US") ||
+    president.electionType !== "president"
+  )
+    return null;
   const risk = assessContingentEvRisk(electoralVotesByCandidate, evNeeded);
   if (!risk?.atRisk || !electoralVotesByCandidate) return null;
 

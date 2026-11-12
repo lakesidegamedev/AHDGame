@@ -1,6 +1,6 @@
 /**
  * reshuffleGuard — tenure, cooldown, and escalation rules for autonomous NPP
- * ministerial reshuffles (issue #1994).
+ * ministerial reshuffles.
  *
  * `runMinisterialGovernance` used to evaluate every minister every turn with
  * only a shortfall/propensity threshold (`shouldReshuffleMinister`), so a

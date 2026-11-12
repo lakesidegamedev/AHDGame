@@ -1,12 +1,13 @@
 import type { Db } from "mongodb";
 import type { Migration, MigrationResult } from "../types";
+import { clientSimulationStatisticsCollection } from "@/lib/db/repositories/clientSimulationStatistics";
+import type { Document } from "mongodb";
 
-const COLLECTION = "clientSimulationStatistics";
 const INDEX_NAME = "clientSimulationStatistics_expiresAt_ttl";
 
 /** Ensure anonymous client aggregates expire at their stored expiresAt instant. */
 async function ensureClientStatisticsTtlIndex(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const collection = db.collection(COLLECTION);
+  const collection = clientSimulationStatisticsCollection<Document>(db);
   const indexes = await collection.indexes().catch(() => []);
   const existing = indexes.find((index) => index.name === INDEX_NAME);
   if (existing) {

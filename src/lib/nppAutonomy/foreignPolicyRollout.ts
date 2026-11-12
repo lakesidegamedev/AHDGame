@@ -61,3 +61,8 @@ export function foreignPolicyActionAllowed(
 ): boolean {
   return STAGE_RANK[foreignPolicyActionStage(type)] <= STAGE_RANK[stage];
 }
+
+/** Covert cyber operations open with the trade stage, alongside the other hostile levers. */
+export function foreignPolicyCyberAllowed(stage: NppForeignPolicyStage): boolean {
+  return STAGE_RANK[stage] >= STAGE_RANK.trade;
+}

@@ -1,18 +1,17 @@
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
 /**
- * Divergent Justice tenure clock (#3598, spec #3581, ahd-scotus-adr-age-agnostic-tenure-clock).
+ * Divergent Justice tenure clock.
  *
- * A Divergent Justice's tenure end is a flat per-turn hazard: no chance of
- * departure within roughly the first 2 years post-confirmation, then a small
- * constant per-turn probability thereafter, uncapped on the high end.
- * Deliberately age-agnostic — the game has no character age/mortality concept
- * anywhere, and this avoids inventing one just for SCOTUS.
+ * A Divergent Justice's tenure end is a flat per-turn hazard: no departure
+ * within roughly the first 2 years post-confirmation, then a small constant
+ * per-turn probability thereafter, uncapped on the high end. Deliberately
+ * age-agnostic because the game has no character age/mortality concept, and
+ * this avoids inventing one just for SCOTUS.
  *
- * The clock applies to player-held seats as well as generated NPPs (ticket
- * #1135). Without it, a confirmed player stays on the Court forever. Callers
- * must notify the occupant and surface the death chance in the UI; silently
- * vacating is the actual bug.
+ * Applies to player-held seats as well as generated NPPs; without it a
+ * confirmed player stays on the Court forever. Callers must notify the
+ * occupant and surface the death chance in the UI; silently vacating is a bug.
  */
 
 /** Turns after confirmation before the hazard starts rolling at all (~2 years). */
@@ -96,4 +95,25 @@ export function formatDivergentDeathChance(
     return `No death chance yet. ${livePct} per turn starts in ${n} ${unit}.`;
   }
   return `${livePct} death chance per turn`;
+}
+
+/**
+ * Calendar year at which authored departure data stops. A seeded justice with
+ * no departure year is "still serving" only as far as the authored record
+ * reaches; from this year on the same flat hazard as a Divergent Justice
+ * applies, with no grace floor because they are already seated.
+ */
+export const HISTORICAL_RECORD_END_YEAR = 2027;
+
+/**
+ * Decide whether an open-ended seeded justice (no authored departure year)
+ * leaves this turn. Pure: the caller supplies the calendar year and the draw.
+ */
+export function rollOpenEndedHistoricalDeparture(
+  calendarYear: number,
+  randomDraw: number,
+  hazardPerTurn: number = DIVERGENT_TENURE_HAZARD_PER_TURN
+): boolean {
+  if (calendarYear < HISTORICAL_RECORD_END_YEAR) return false;
+  return randomDraw < hazardPerTurn;
 }

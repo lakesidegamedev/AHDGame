@@ -5,9 +5,14 @@
  * - house: state's House delegation (lumped)
  */
 import { getDb } from "@/lib/mongodb";
-import type { State, ElectedOfficial, Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { State, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import { SENATE_CLASSES } from "@/lib/constants";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export type SeatSlugType = "governor" | "senate" | "house";
 
@@ -64,8 +69,7 @@ function slugToStateAndType(
 
 export async function getAllSeatSlugs(): Promise<SeatSlug[]> {
   const db = await getDb();
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({
       $or: [{ countryId: "US" }, { countryId: { $exists: false } }],
     })
@@ -95,25 +99,20 @@ export async function getSeatData(slug: string): Promise<SeatData | null> {
   const db = await getDb();
   // This API only resolves US state-level offices (governor/house) — scope the
   // lookup to US to avoid cross-country state-ID collisions.
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: parsed.stateId, countryId: "US" });
+  const state = await statesCollection(db).findOne({ _id: parsed.stateId, countryId: "US" });
   if (!state) return null;
 
   let officials: ElectedOfficial[];
   if (parsed.type === "governor") {
-    officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    officials = await electedOfficialsCollection(db)
       .find({ state: parsed.stateId, officeType: "governor" })
       .toArray();
   } else if (parsed.type === "senate" && parsed.senateClass) {
-    officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    officials = await electedOfficialsCollection(db)
       .find({ state: parsed.stateId, officeType: "senate", senateClass: parsed.senateClass })
       .toArray();
   } else {
-    officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    officials = await electedOfficialsCollection(db)
       .find({ state: parsed.stateId, officeType: "house" })
       .toArray();
   }
@@ -122,22 +121,17 @@ export async function getSeatData(slug: string): Promise<SeatData | null> {
   const nppIds = officials.filter((o) => o.nppId).map((o) => o.nppId!);
   const [characters, npps, parties] = await Promise.all([
     characterIds.length
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ _id: { $in: characterIds } })
           .toArray()
       : [],
     nppIds.length
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find({ _id: { $in: nppIds } })
           .toArray()
       : [],
     // Filter parties by country derived from state to avoid cross-country collisions
-    db
-      .collection<PoliticalParty>("politicalParties")
-      .find({ countryId: state.countryId })
-      .toArray(),
+    politicalPartiesCollection(db).find({ countryId: state.countryId }).toArray(),
   ]);
 
   const charMap = new Map(characters.map((c) => [c._id.toString(), c]));

@@ -3,21 +3,19 @@ import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
 
 /**
  * Mongo error code 117 (`ConflictingOperationInProgress`). Despite the
- * sharded-cluster wording, it fires on replica sets too: the driver hands out a
- * pooled session whose internal transaction counter is ahead of the server's
- * active transaction number (typically a session that survived a failed or
- * aborted transaction). Retrying the transaction on a FRESH session succeeds,
- * so this failure is transient, but it carries no
+ * sharded-cluster wording it fires on replica sets too: the driver hands out
+ * a pooled session whose transaction counter is ahead of the server's,
+ * typically a session that survived a failed or aborted transaction. Retrying
+ * on a FRESH session succeeds, but the error carries no
  * `TransientTransactionError` label, so `withTransaction`'s built-in retry
- * never runs and the error surfaces to players as an opaque 500.
+ * never runs.
  *
- * NOT every 117 is transient. The same code and the same message also fire when
- * OUR code issues concurrent operations on ONE session (a `Promise.all` of
- * session-bound reads): each racer sends `startTransaction` at the same
- * txnNumber and every loser is rejected. That variant is a call-pattern bug and
- * retrying cannot clear it, because each attempt re-runs the race. Ticket #1239
- * was this. Before assuming a stale session, check the call site for concurrent
- * session use.
+ * NOT every 117 is transient. The same code also fires when OUR code issues
+ * concurrent operations on ONE session (a `Promise.all` of session-bound
+ * reads): each racer sends `startTransaction` at the same txnNumber and every
+ * loser is rejected. That variant is a call-pattern bug; retrying re-runs the
+ * race. Check the call site for concurrent session use before assuming a
+ * stale session.
  */
 const MONGO_CONFLICTING_OPERATION_IN_PROGRESS = 117;
 
@@ -43,28 +41,19 @@ function defaultSleep(ms: number): Promise<void> {
 
 /**
  * Run `run(session)` inside a multi-document transaction, retrying
- * `ConflictingOperationInProgress` (code 117) failures with a brand-new
- * session each attempt. A failed session cannot be reused for this error —
- * only a fresh `startSession()` clears the poisoned transaction counter — so
- * every attempt opens and ends its own session.
+ * `ConflictingOperationInProgress` (code 117) with a brand-new session each
+ * attempt; only a fresh session clears the poisoned transaction counter.
+ * Mongo's built-in retry lacks the transient label for this error, so pooled
+ * stale sessions surface raw `MongoServerError` 500s. All other errors
+ * propagate immediately, and every session is ended.
  *
- * Mongo's built-in `withTransaction` retry does not cover this error (it lacks
- * the transient label), and callers like the sector-split route end up
- * surfacing raw `MongoServerError` 500s to players when the pooled session is
- * stale. All other errors propagate immediately. Every session is ended,
- * including on the failure path.
- *
- * STANDALONE FALLBACK. A standalone deployment rejects transactions, so the
- * topology is probed first. When it cannot do transactions, the body receives
- * no session and callers must handle partial writes themselves. Optimistic
- * compare-and-set guards can reject competing writes, but do not make a
- * multi-document operation atomic. Replica sets and sharded deployments use
- * the transaction path regardless of whether the URI names a replica set.
- *
- * The probe is the ONLY thing that selects the sequential path. A transaction
- * that fails once started is never re-run here, because `withTransaction` can
- * fail at commit with the body's writes already applied, and retrying that
- * sequentially would double-apply them.
+ * STANDALONE FALLBACK. Standalone deployments reject transactions, so topology
+ * is probed first; the body then receives no session and callers must handle
+ * partial writes themselves (compare-and-set guards do not make multi-document
+ * operations atomic). The probe is the ONLY thing selecting the sequential
+ * path: a transaction that fails once started is never re-run, because
+ * `withTransaction` can fail at commit with the body's writes applied, and
+ * retrying sequentially would double-apply them.
  */
 export async function runTransactionWithSessionRetry<T>(
   getMongoClient: () => Promise<{ startSession: () => ClientSession }>,

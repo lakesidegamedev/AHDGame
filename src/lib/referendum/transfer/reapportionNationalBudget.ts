@@ -24,6 +24,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { FederalBudget, State } from "@/lib/db/types";
 
 import { shiftNumericMap } from "./rules/fiscalCurrency";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
 type NumMap = Record<string, number>;
 
 export async function reapportionNationalBudget(
@@ -44,16 +46,13 @@ export async function reapportionNationalBudget(
   sourceDissolving = false,
   currencyScale = 1
 ): Promise<void> {
-  const region = await db
-    .collection<State>("states")
-    .findOne({ _id: regionId }, { projection: { gdp: 1 } });
+  const region = await statesCollection(db).findOne({ _id: regionId }, { projection: { gdp: 1 } });
   const regionGdp = region?.gdp ?? 0;
   if (regionGdp <= 0) return;
 
   // Source country's pre-transfer GDP = its remaining regions + this one (the
   // region's `countryId` has already flipped to the target by this point).
-  const remaining = await db
-    .collection<State>("states")
+  const remaining = await statesCollection(db)
     .find({ countryId: fromCountryId })
     .project<{ gdp?: number }>({ gdp: 1 })
     .toArray();
@@ -68,8 +67,8 @@ export async function reapportionNationalBudget(
   if (weight === 1 && !sourceDissolving) return;
 
   const [from, to] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: fromCountryId }),
-    db.collection<FederalBudget>("federalBudget").findOne({ _id: toCountryId }),
+    federalBudgetCollection(db).findOne({ _id: fromCountryId }),
+    federalBudgetCollection(db).findOne({ _id: toCountryId }),
   ]);
   if (!from || !to) return;
   const now = new Date();
@@ -91,7 +90,7 @@ export async function reapportionNationalBudget(
   );
   const grant = (from.baselineStateGrants ?? 0) * weight;
 
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { _id: fromCountryId },
     {
       $set: {
@@ -102,7 +101,7 @@ export async function reapportionNationalBudget(
       },
     }
   );
-  await db.collection<FederalBudget>("federalBudget").updateOne(
+  await federalBudgetCollection(db).updateOne(
     { _id: toCountryId },
     {
       $set: {

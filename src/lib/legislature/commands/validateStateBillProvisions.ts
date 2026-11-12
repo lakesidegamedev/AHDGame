@@ -18,7 +18,7 @@ import {
 } from "@shared/constants/legislation";
 import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constants/corporations";
 import { getEraContext } from "@/lib/era/context";
-import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
+import { isLegislationTypeFileable } from "@/lib/era/legislationCatalog";
 import { stampTaxSliderProvisions } from "@/lib/politicalLegislation/taxSlider";
 import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -28,6 +28,9 @@ import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import type { LawChoice } from "@/lib/resetLegislation/rules/eligibility";
 import { resetTaxesFor } from "@/lib/resetLegislation/taxCatalog";
 import { resolveResetTaxProvisionFields } from "@/lib/resetLegislation/resolveTaxProvision";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
 
 export type ValidateStateBillProvisionsResult =
   | {
@@ -131,7 +134,7 @@ export async function validateStateBillProvisions(
         choice: selection.choice as LawChoice,
       });
     }
-    const gameState = await db.collection<GameState>("gameState").findOne(
+    const gameState = await gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -195,7 +198,7 @@ export async function validateStateBillProvisions(
         balanceBasis: entry.balanceBasis,
       });
     }
-    const duplicateProgramBill = await db.collection<StateBill>("stateBills").findOne({
+    const duplicateProgramBill = await stateBillsCollection(db).findOne({
       stateId,
       countryId,
       status: { $nin: STATE_TERMINAL_STATUSES },
@@ -356,8 +359,7 @@ export async function validateStateBillProvisions(
         return { ok: false, status: 400, error: "A v2 bill cannot repeat a tax instrument." };
       }
       const legislationTypes = reviewedTaxes.length
-        ? await db
-            .collection<LegislationType>("legislationTypes")
+        ? await legislationTypesCollection(db)
             .find({
               _id: { $in: reviewedTaxes.map(({ provision }) => provision.legislationTypeId) },
             })
@@ -414,7 +416,7 @@ export async function validateStateBillProvisions(
   // Null year (flag off / legacy) ⇒ every type active, byte-identical.
   const { year: eraYear } = await getEraContext(db);
   for (const provision of policyProvisionsForCheck) {
-    if (!isLegislationTypeActive(provision.legislationTypeId, eraYear)) {
+    if (!isLegislationTypeFileable(provision.legislationTypeId, eraYear)) {
       return { ok: false, status: 400, error: "This legislation is not available in this era." };
     }
   }

@@ -80,7 +80,7 @@ describe("getScotusComposition", () => {
           justiceMode: "historical",
           justiceCharacterId: null,
           justiceNppId: null,
-          justiceName: "Earl Warren",
+          justiceName: "Edwin Halloran",
           justiceParty: "1",
           economicLean: -1,
           socialLean: -1,
@@ -93,7 +93,7 @@ describe("getScotusComposition", () => {
           justiceMode: "historical",
           justiceCharacterId: null,
           justiceNppId: null,
-          justiceName: "Abe Fortas",
+          justiceName: "Abel Fairchild",
           justiceParty: "1",
           economicLean: -2,
           socialLean: -3,
@@ -123,7 +123,7 @@ describe("getScotusComposition", () => {
       expect.objectContaining({
         vacant: false,
         originalRoster: false,
-        justiceName: "Abe Fortas",
+        justiceName: "Abel Fairchild",
       })
     );
   });

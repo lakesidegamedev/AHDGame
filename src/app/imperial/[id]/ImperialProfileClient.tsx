@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ProfilePictureLightbox } from "@/app/profile/components/ProfilePictureLightbox";
 import { CampaignSongPlayer } from "@/components/CampaignSongPlayer";
-import { getCountryFlagUrlForEra } from "@/lib/constants";
+import { getCountryFlagUrlForEra } from "@/lib/constants/flags";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { PROFILE_HERO_OVERLAP_CLASSES } from "@/lib/constants/profileHeroLayout";
 import type { ProfileBorderKey } from "@/lib/db/types";

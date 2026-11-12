@@ -9,6 +9,7 @@ import type { GameConfig } from "@/lib/db/types";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getLabourSystemMode, type LabourSystemMode } from "@/lib/labour/featureFlag";
 import { seedUnions } from "@/lib/admin/seed/seedUnions";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   mode: z.enum(["off", "wages", "macro", "unions", "full"]),
@@ -26,17 +27,10 @@ export const GET = withAdminRoute(async (_auth) => {
 // Auth: requireAdmin
 // Errors: 400, 403
 //
-// Phase 0: pure flag scaffolding. Setting a mode has no economic effect until
-// the corresponding phases land and read the flag (see
-// docs/plans/2026-06-30-labour-system.md). No bootstrap migrations yet — the
-// labour system adds no new collections at this stage.
-//
-// Exception (v3 Phase 8 follow-up): flipping INTO "full" backfills the vacant
-// union roster via `seedUnions` (reset:false — the idempotent $setOnInsert
-// upsert bootstrapGameWorld uses). Player `Union` docs are only ever created
-// by `seedUnions`, so a world bootstrapped before Phase 8 landed (or with the
-// unions target skipped) would otherwise reach "full" with zero claimable
-// unions.
+// Flipping INTO "full" backfills the vacant union roster via `seedUnions`
+// (reset:false, idempotent). Player `Union` docs are only created by
+// `seedUnions`, so a world bootstrapped before unions landed would otherwise
+// reach "full" with zero claimable unions.
 export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const parsed = await parseJsonBody(request, patchSchema);
   if (!parsed.success) {
@@ -46,7 +40,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const { mode } = parsed.data as { mode: LabourSystemMode };
 
   const db = await getDb();
-  const gameConfig = db.collection<GameConfig>("gameConfig");
+  const gameConfig = gameConfigCollection(db);
 
   const priorMode = await getLabourSystemMode();
 

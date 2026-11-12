@@ -1,3 +1,4 @@
+import { regionTableFor } from "@/lib/seeds/contract/regionTables";
 import { describe, expect, it } from "vitest";
 import { calculateEnactedLawAnnualCost } from "@/lib/budget/costs";
 import { getInitialRates } from "@/lib/constants/currencies";
@@ -108,9 +109,10 @@ describe("1991 native GDP and fiscal continuity", () => {
 
   it.each(fixtures)(
     "%s regional GDP reaches the same native fiscal anchor before dependent seeds",
-    (countryId, geography) => {
+    (countryId) => {
       expect(shouldReconcileStateGdpForPreset("1991-default")).toBe(true);
-      const rows = selectPresetBundle("1991-default", geography.regionBundles, "GDP audit");
+      // The roster the region seeder writes, not the geography summary.
+      const rows = selectPresetBundle("1991-default", regionTableFor(countryId), "GDP audit");
       const national = new Map([[countryId, NATIVE_NOMINAL_GDP_1991[countryId]]]);
       const [entry] = computeStateGdpScalars(rows, national);
       expect(entry).toBeDefined();

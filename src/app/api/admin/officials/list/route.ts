@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { ElectedOfficial } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 // GET /api/admin/officials/list — Returns a filtered list of elected officials by state, office type, or vacancy status.
 // Auth: requireAdmin
@@ -39,8 +40,7 @@ export async function GET(request: Request) {
       query.characterId = { $ne: null };
     }
 
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find(query)
       .sort({ state: 1, officeType: 1, senateClass: 1, seatsHeld: -1 })
       .limit(100) // Limit results

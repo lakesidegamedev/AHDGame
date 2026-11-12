@@ -3,7 +3,6 @@ import { ObjectId } from "mongodb";
 import type {
   AuctionBid,
   AuctionBidHistoryEntry,
-  Character,
   Corporation,
   CorporateSector,
   NationalizationAuction,
@@ -44,6 +43,10 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 /**
  * Witness escrow cash that landed on a bidder: a bid moves it into escrow, and a
@@ -99,7 +102,7 @@ export interface PlaceBidParams {
  * escrow per bidder. Throws on any rejection (the route maps it to a 400).
  */
 export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<void> {
-  const auctions = db.collection<NationalizationAuction>("nationalizationAuctions");
+  const auctions = nationalizationAuctionsCollection(db);
   const auction = await auctions.findOne({ _id: params.auctionId });
   if (!auction || auction.status !== "open") throw new Error("Auction is not open");
   if (params.turn > auction.closesAtTurn) throw new Error("Auction has closed");
@@ -107,7 +110,7 @@ export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<v
   // Residency gate (spec §13.3): only residents of the auction's country may bid.
   // The acting character must be a resident — this covers personal bids and
   // CEO-on-behalf corp bids alike (the corp currency match is checked below).
-  const actor = await db.collection<Character>("characters").findOne({ _id: params.characterId });
+  const actor = await charactersCollection(db).findOne({ _id: params.characterId });
   if (!actor || actor.countryId !== auction.countryId) {
     throw new Error(`Only residents of ${auction.countryId} may bid on this auction.`);
   }
@@ -122,9 +125,7 @@ export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<v
   const isCorp = params.asCorporationId != null;
 
   if (isCorp) {
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: params.asCorporationId });
+    const corp = await corporationsCollection(db).findOne({ _id: params.asCorporationId });
     if (!corp) throw new Error("Bidding corporation not found");
     if (corp.ceoVacant || corp.ceoId?.toString() !== params.characterId.toString()) {
       throw new Error("Only the CEO may bid on behalf of a corporation");
@@ -270,7 +271,7 @@ export async function reabsorbSpunOutCorp(
   ledger?: TreasuryCashOptions
 ): Promise<void> {
   const now = new Date();
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const shellSectors = await sectors.find({ corporationId: shell._id }).toArray();
 
   // Route each sector back to the NatCorp that owns its type.
@@ -359,13 +360,11 @@ export async function reabsorbSpunOutCorp(
 
   // Residual cash → the primary NatCorp (money conservation).
   if ((shell.liquidCapital ?? 0) > 0) {
-    const primary = await db
-      .collection<Corporation>("corporations")
-      .findOneAndUpdate(
-        { _id: primaryNationalCorporationId },
-        { $inc: { liquidCapital: shell.liquidCapital }, $set: { updatedAt: now } },
-        { projection: { liquidCurrencyCode: 1 } }
-      );
+    const primary = await corporationsCollection(db).findOneAndUpdate(
+      { _id: primaryNationalCorporationId },
+      { $inc: { liquidCapital: shell.liquidCapital }, $set: { updatedAt: now } },
+      { projection: { liquidCurrencyCode: 1 } }
+    );
     if (primary) {
       await witnessTreasuryCash(db, ledger, {
         flow: "corporation_liquidation",
@@ -420,8 +419,8 @@ export async function resolveNationalizationAuction(
   auction: NationalizationAuction,
   turn: number
 ): Promise<"sold" | "passedIn"> {
-  const auctions = db.collection<NationalizationAuction>("nationalizationAuctions");
-  const corps = db.collection<Corporation>("corporations");
+  const auctions = nationalizationAuctionsCollection(db);
+  const corps = corporationsCollection(db);
   const now = new Date();
   const forexEnabled = await isForexEnabled();
 
@@ -521,9 +520,7 @@ export async function resolveNationalizationAuction(
   // existing HQ when the buyer's region is somehow absent (data-safe).
   let hqState: string | undefined;
   if (winner.characterId) {
-    const winnerChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: winner.characterId });
+    const winnerChar = await charactersCollection(db).findOne({ _id: winner.characterId });
     winnerUserId = winnerChar?.userId;
     hqState = winnerChar?.homeState;
     // `ceoType` is stamped, not inherited: a state shell may carry ceoType:"npp"
@@ -565,8 +562,7 @@ export async function resolveNationalizationAuction(
 
   // Public State Ownership Register row (best-effort — never abort the sale).
   try {
-    const soldSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const soldSectors = await corporateSectorsCollection(db)
       .find({ corporationId: shell._id }, { projection: { sectorType: 1 } })
       .toArray();
     await recordNationalizationLedger(db, {
@@ -615,8 +611,7 @@ export async function processNationalizationAuctions(
   db: Db,
   currentTurn: number
 ): Promise<{ sold: number; passedIn: number }> {
-  const due = await db
-    .collection<NationalizationAuction>("nationalizationAuctions")
+  const due = await nationalizationAuctionsCollection(db)
     .find({ status: "open", closesAtTurn: { $lte: currentTurn } })
     .toArray();
   let sold = 0;

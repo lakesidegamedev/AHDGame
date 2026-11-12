@@ -1,17 +1,10 @@
 /**
- * Ireland Cabinet positions (Government of Ireland / Rialtas na hÉireann).
+ * Ireland Cabinet positions.
  *
- * The Taoiseach nominates ministers to the Government; the Uachtarán
- * formally appoints them on the Taoiseach's advice without a separate
- * Dáil confirmation vote. 19 positions = Taoiseach + Tánaiste + 17
- * ministers, matching the Government of Ireland as constituted under
- * the Ministers and Secretaries Acts.
- *
- * Position IDs lower-snake_case, prefixed with `minister_for_*` for the
- * 17 portfolio ministers; the two constitutional offices (Taoiseach,
- * Tánaiste) use bare keys. The Phase 1 IE country config's
- * `financeMinisterCabinetId: "minister_for_finance"` resolves against
- * this list.
+ * 19 positions = Taoiseach + Tanaiste + 17 ministers. Position IDs are
+ * lower_snake_case, prefixed with `minister_for_*` for portfolio ministers;
+ * the two constitutional offices use bare keys.
+ * `financeMinisterCabinetId: "minister_for_finance"` resolves against this list.
  */
 export const IE_CABINET_POSITIONS = [
   { id: "taoiseach", yearEnabled: 1775, name: "Taoiseach", order: 0, isHeadOfGovernment: true },
@@ -89,5 +82,3 @@ export const IE_CABINET_POSITIONS = [
     order: 18,
   },
 ] as const;
-
-export type IECabinetPositionId = (typeof IE_CABINET_POSITIONS)[number]["id"];

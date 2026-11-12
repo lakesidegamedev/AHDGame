@@ -10,8 +10,7 @@ const OVERRIDE_HOURS = 24;
 /**
  * US Congress national lifecycle: house/senate (or joint) origin vote → second
  * chamber → presidential action window (pocket-sign on timeout) → veto override
- * (2/3 of the SEATS in each chamber). Reproduces the phase graph previously
- * hard-coded in billLifecycle.ts phases A/D/E/F/G.
+ * (2/3 of the SEATS in each chamber).
  */
 export const US_NATIONAL_CONFIG: BillLifecycleConfig = {
   country: "US",

@@ -3,32 +3,28 @@ import type { StatePartyOrg } from "@/lib/db/types";
 import type { Migration, MigrationResult } from "../types";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { calculateUKStatePartyOrgs } from "@/lib/seeds/uk/ukStatePartyOrgCalculations";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Give the formerly-regional UK parties an organisation row in every region.
  *
- * SNP, Plaid Cymru, the DUP, Sinn Fein and the UUP used to be barred from
- * standing outside their home nation by a hardcoded table in
- * `src/lib/parties/regionalContest.ts`. That gate is gone — they stand
- * UK-wide now — but the seed never wrote them a `statePartyOrg` row outside
- * their home nation, and a party with no row (or `hasPresence: false`) still
- * cannot field NEW candidates there (`canPartyFieldInState`). Without this
- * backfill, lifting the gate would leave them able to file by hand and
- * nothing else.
+ * The hardcoded home-nation gate in `regionalContest.ts` is gone, but the seed
+ * never wrote them a `statePartyOrg` row outside their home nation, and a
+ * party with no row (or `hasPresence: false`) still cannot field NEW
+ * candidates there (`canPartyFieldInState`). Without this backfill they could
+ * file by hand and nothing else.
  *
  * The expected row set comes from `calculateUKStatePartyOrgs` for the world's
- * active preset — the same function the seeder and the reset reconciler use —
- * so the backfill and a fresh world agree by construction, on any preset.
+ * active preset, the same function the seeder and reset reconciler use, so
+ * backfill and a fresh world agree by construction on any preset.
  *
- * Insert-only. An existing row is never touched, which matters on live: Plaid
- * Cymru already carries player-built org in four English regions (EMI 29.2,
- * SWE 33.9, WMI 24.2, EAE 7.4) that was inert under the gate and becomes real
- * the moment it lifts. Overwriting those to the seed floor would confiscate
- * work players had already paid for.
+ * Insert-only. An existing row is never touched: on live, player-built org
+ * that was inert under the gate becomes real the moment it lifts, and
+ * overwriting it to the seed floor would confiscate paid-for work.
  *
- * New rows land wherever the era polling table puts them, which for a party
- * that polled 0 in a region is the MIN_ORG floor of 5 with a registration
- * share of 0 — present and organisable, not competitive.
+ * New rows land where the era polling table puts them: for a region with 0
+ * poll, the MIN_ORG floor of 5 with registration share 0, present and
+ * organisable, not competitive.
  */
 async function backfillUKRegionalPartyOrg(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
@@ -38,8 +34,7 @@ async function backfillUKRegionalPartyOrg(db: Db, dryRun: boolean): Promise<Migr
   notes.push(`preset ${preset}: ${expected.length} expected UK statePartyOrg row(s)`);
 
   const ids = expected.map((o) => o._id);
-  const existing = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const existing = await statePartyOrgCollection(db)
     // _id is a string composite ("REGION_partyId") — cast for the typed filter.
     /* eslint-disable @typescript-eslint/no-explicit-any */
     .find({ _id: { $in: ids as any } } as any)
@@ -76,7 +71,7 @@ async function backfillUKRegionalPartyOrg(db: Db, dryRun: boolean): Promise<Migr
     // abort the whole run on E11000; $setOnInsert makes the write a no-op on
     // a row that already exists, so the player's org survives either way.
     const { _id, ...fields } = org;
-    const result = await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+    const result = await statePartyOrgCollection(db).updateOne(
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       { _id: _id as any },
       { $setOnInsert: { ...fields, createdAt: now, updatedAt: now } },

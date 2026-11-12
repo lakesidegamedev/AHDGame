@@ -4,7 +4,7 @@
  * in one required transaction; it preserves the existing mandate and financial records.
  */
 import type { ClientSession, Db } from "mongodb";
-import type { CountryGameState, Election, ElectedOfficial, GameState, State } from "@/lib/db/types";
+import type { CountryGameState, GameState } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
@@ -17,6 +17,15 @@ import {
   latestBgOrdinaryCohort,
   hasValidBgOrdinaryCustody,
 } from "@/lib/countries/bg/rules/legacyAssemblyHandover";
+import {
+  getGameStateCollection,
+  GAME_STATE_PRE_ITERATION_FIELDS,
+} from "@/lib/db/collections/gameState";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 type Calendar = Pick<GameState, "preset" | "preIteration" | "preIterationTurns">;
 function clock(game: Calendar, turn: number) {
   return calendarTurn(turn, {
@@ -34,9 +43,10 @@ export async function processBgAssemblyTransition(
   if (!Number.isSafeInteger(turn) || turn < 1 || !Number.isFinite(now.getTime()))
     throw new Error("Bulgarian handover needs a valid turn and time");
   if (clock(game, turn) < BG_ORDINARY_ASSEMBLY_START_TURN) return false;
-  const ready = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "BG" }, { projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } });
+  const ready = await countryGameStatesCollection(db).findOne(
+    { _id: "BG" },
+    { projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } }
+  );
   if (!ready || ready.dissolvedTurn != null || ready.bgOrdinaryAssemblySinceTurn != null)
     return false;
   return runRequiredTransaction((session) => materializeBgLegacyHandover(db, turn, now, session), {
@@ -50,23 +60,21 @@ async function materializeBgLegacyHandover(
   session: ClientSession
 ): Promise<boolean> {
   if (!session.inTransaction()) throw new Error("Bulgarian handover requires a transaction");
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default" || clock(game, turn) < BG_ORDINARY_ASSEMBLY_START_TURN)
     return false;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "BG" },
     { session, projection: { bgOrdinaryAssemblySinceTurn: 1, dissolvedTurn: 1 } }
   );
   if (!country || country.dissolvedTurn != null || country.bgOrdinaryAssemblySinceTurn != null)
     return false;
-  const regions = await db
-    .collection<State>("states")
+  const regions = await (
+    await getStatesCollection(db)
+  )
     .find({ countryId: "BG" }, { session, projection: { _id: 1 } })
     .toArray();
   const ids = regions.map((row) => String(row._id));
@@ -75,8 +83,9 @@ async function materializeBgLegacyHandover(
     ids.some((id) => BG_ORDINARY_ASSEMBLY_SEATS[id] == null)
   )
     return false;
-  const resolved = await db
-    .collection<Election>("elections")
+  const resolved = await (
+    await getElectionsCollection(db)
+  )
     .find(
       { countryId: "BG", electionType: "nationalAssembly", cycle: { $gte: 1 }, status: "resolved" },
       { session, projection: { state: 1, totalSeats: 1, cycle: 1 } }
@@ -86,8 +95,9 @@ async function materializeBgLegacyHandover(
     .toArray();
   const cohort = latestBgOrdinaryCohort(clock(game, turn), ids, resolved);
   if (!cohort) return false;
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find(
       { countryId: "BG", officeType: "assemblyDeputy" },
       { session, projection: { seatsHeld: 1, characterId: 1, state: 1 } }
@@ -104,7 +114,9 @@ async function materializeBgLegacyHandover(
     )
   )
     return false;
-  const updated = await db.collection<State>("states").bulkWrite(
+  const updated = await (
+    await getStatesCollection(db)
+  ).bulkWrite(
     ids.map((id) => ({
       updateOne: {
         filter: { _id: id, countryId: "BG" },
@@ -114,7 +126,7 @@ async function materializeBgLegacyHandover(
     { session }
   );
   if (updated.matchedCount !== ids.length) throw new Error("Bulgarian handover regions changed");
-  const formation = await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  const formation = await governmentFormationsCollection(db).updateOne(
     { _id: "BG" },
     {
       $set: {

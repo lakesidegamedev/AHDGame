@@ -1,3 +1,5 @@
+import { authConfig } from "@/lib/config/auth";
+
 /**
  * Cloudflare Turnstile server-side verification.
  *
@@ -18,7 +20,7 @@ export async function verifyTurnstileToken(
   token: string | undefined,
   remoteIp: string
 ): Promise<TurnstileVerifyResult> {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
+  const secret = authConfig.turnstileSecretKey();
   if (!secret) return { ok: true, skipped: true };
 
   if (!token) return { ok: false };

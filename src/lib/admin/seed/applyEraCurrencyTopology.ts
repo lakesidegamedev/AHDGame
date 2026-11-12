@@ -1,5 +1,4 @@
 import type { Db, Document, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import {
   COUNTRY_CURRENCY_MAP,
   getInitialRates,
@@ -16,6 +15,13 @@ import {
   redenominateStateBudget,
 } from "@/lib/currency/rules/redenominate";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 type AnyDoc = Document & { _id: ObjectId | string; countryId: string };
 
@@ -58,10 +64,10 @@ export async function applyEraCurrencyTopology(
     }
     const scale = currencyConversionScale(legacyRate, eurRate);
 
-    const budget = (await db.collection("federalBudget").findOne({ countryId })) as AnyDoc | null;
+    const budget = (await federalBudgetCollection(db).findOne({ countryId })) as AnyDoc | null;
     const needsFiscalConversion = budget?.currencyCode !== "EUR";
     if (budget && needsFiscalConversion) {
-      await db.collection<AnyDoc>("federalBudget").updateOne(
+      await federalBudgetCollection<AnyDoc>(db).updateOne(
         { _id: budget._id },
         {
           $set: {
@@ -73,12 +79,11 @@ export async function applyEraCurrencyTopology(
       );
     }
 
-    const stateBudgets = (await db
-      .collection("stateBudgets")
+    const stateBudgets = (await stateBudgetsCollection<Document>(db)
       .find({ countryId })
       .toArray()) as AnyDoc[];
     if (stateBudgets.length > 0 && needsFiscalConversion) {
-      await db.collection<AnyDoc>("stateBudgets").bulkWrite(
+      await stateBudgetsCollection<AnyDoc>(db).bulkWrite(
         stateBudgets.map((doc) => ({
           updateOne: {
             filter: { _id: doc._id },
@@ -88,7 +93,7 @@ export async function applyEraCurrencyTopology(
           },
         }))
       );
-      await db.collection("states").updateMany({ countryId }, { $mul: { gdp: scale } });
+      await statesCollection<Document>(db).updateMany({ countryId }, { $mul: { gdp: scale } });
     }
 
     if (needsFiscalConversion) {
@@ -97,13 +102,12 @@ export async function applyEraCurrencyTopology(
       }
     }
 
-    const npps = (await db
-      .collection("npps")
+    const npps = (await nppsCollection<Document>(db)
       .find({ countryId, [`currencyBalances.personal.${legacyCurrency}`]: { $exists: true } })
       .project({ currencyBalances: 1 })
       .toArray()) as Document[];
     if (npps.length > 0) {
-      await db.collection("npps").bulkWrite(
+      await nppsCollection<Document>(db).bulkWrite(
         npps.map((npp) => ({
           updateOne: {
             filter: { _id: npp._id },
@@ -120,10 +124,7 @@ export async function applyEraCurrencyTopology(
       );
     }
 
-    const corporations = await db
-      .collection<Corporation>("corporations")
-      .find({ countryId })
-      .toArray();
+    const corporations = await corporationsCollection(db).find({ countryId }).toArray();
     for (const corporation of corporations) {
       if (corporation.liquidCurrencyCode === "EUR") continue;
       const result = await convertCorpCurrency(
@@ -138,12 +139,11 @@ export async function applyEraCurrencyTopology(
         throw new Error(`Cannot redenominate ${countryId} corporation: ${result.error}`);
     }
 
-    const bonds = (await db
-      .collection("bonds")
+    const bonds = (await bondsCollection<Document>(db)
       .find({ countryId, currencyCode: { $ne: "EUR" } })
       .toArray()) as Document[];
     if (bonds.length > 0) {
-      await db.collection("bonds").bulkWrite(
+      await bondsCollection<Document>(db).bulkWrite(
         bonds.map((bond) => ({
           updateOne: {
             filter: { _id: bond._id },
@@ -171,7 +171,7 @@ export async function applyEraCurrencyTopology(
       );
     }
 
-    await db.collection<Document & { _id: string }>("exchangeRates").updateOne(
+    await exchangeRatesCollection<Document & { _id: string }>(db).updateOne(
       { _id: countryId },
       {
         $set: {

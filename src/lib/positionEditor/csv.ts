@@ -10,17 +10,12 @@ export function stateConfigToCsv(cfg: EditorStateConfig, derived: DerivedComposi
       );
     }
   }
-  for (const a of cfg.archetypes) {
-    for (const w of a.weights) {
+  for (const section of derived.buckets) {
+    for (const b of section.buckets) {
       lines.push(
-        `composition,${cfg.era},${cfg.countryId},${cfg.stateId},${a.id},${w.dim},${w.key},${w.w},${a.civicMultiplier},`
+        `derived,${cfg.era},${cfg.countryId},${cfg.stateId},${section.dim},${b.id},${b.sharePct.toFixed(2)},${b.economicLean.toFixed(2)},${b.socialLean.toFixed(2)},${b.turnout.toFixed(1)}`
       );
     }
-  }
-  for (const a of derived.archetypes) {
-    lines.push(
-      `derived,${cfg.era},${cfg.countryId},${cfg.stateId},${a.id},${a.populationShare},${a.votingPoolShare},${a.economicLean},${a.socialLean},${a.turnout}`
-    );
   }
   lines.push(
     `state,${cfg.era},${cfg.countryId},${cfg.stateId},${derived.stateEconomicLean},${derived.stateSocialLean},${derived.stateDisplayLean},,,`
@@ -39,7 +34,7 @@ export function allStatesLeanToCsv(
   return lines.join("\n");
 }
 
-/** Full-country CSV export — every state's Layer-1, composition, derived, and lean.
+/** Full-country CSV export — every state's Layer-1, census buckets, and lean.
  *  Includes localStorage edits (overrides) when passed as `configs`. */
 export function allStatesFullToCsv(
   era: EraId,
@@ -58,19 +53,13 @@ export function allStatesFullToCsv(
         );
       }
     }
-    // Composition rows
-    for (const a of config.archetypes) {
-      for (const w of a.weights) {
+    // Derived census bucket rows
+    for (const section of derived.buckets) {
+      for (const b of section.buckets) {
         lines.push(
-          `composition,${era},${country},${stateId},${a.id},${w.dim},${w.key},${w.w},${a.civicMultiplier},,,`
+          `derived,${era},${country},${stateId},${section.dim},${b.id},${b.sharePct.toFixed(2)},${b.economicLean.toFixed(2)},${b.socialLean.toFixed(2)},${b.turnout.toFixed(1)},,`
         );
       }
-    }
-    // Derived archetype rows
-    for (const a of derived.archetypes) {
-      lines.push(
-        `derived,${era},${country},${stateId},${a.id},${a.populationShare},${a.votingPoolShare},${a.economicLean},${a.socialLean},${a.turnout},,`
-      );
     }
     // State lean row
     lines.push(

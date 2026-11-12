@@ -13,6 +13,8 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { buildContingentHouseVoteView } from "@/lib/elections/contingentHouseVoteView";
 import { CONTINGENT_EXCLUDED_HOUSE_STATE } from "@/lib/elections/contingentConstants";
 import type { ElectedOfficial, ElectionVoteTally } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -34,9 +36,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(404, "Election not found");
     }
     const election = resolved.election;
-    const tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne({ electionId: election._id });
+    const tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
     if (election.electionType !== "president" || !tally?.contingentHouseVote) {
       return NextResponse.json({ vote: null }, { headers: NO_STORE });
     }
@@ -93,7 +93,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       message: "You cannot vote in elections from other countries",
     });
 
-    const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+    const tallies = electionVoteTalliesCollection(db);
     const tally = await tallies.findOne(
       { electionId: election._id },
       { projection: { contingentHouseVote: 1 } }
@@ -108,7 +108,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "That candidate is not on the House ballot");
     }
 
-    const seat = await db.collection<ElectedOfficial>("electedOfficials").findOne(
+    const seat = await electedOfficialsCollection(db).findOne(
       {
         countryId: election.countryId ?? "US",
         officeType: "house",

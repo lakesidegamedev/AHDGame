@@ -34,6 +34,10 @@ import {
   recruitmentCooldownSet,
   recruitmentCooldownReadyFilter,
 } from "@/lib/npp/recruitmentCooldown";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 // POST /api/country/[code]/parties/[id]/recruitment/recruit — Recruit an NPP into the party in a specified state
 // Auth: requireAuthWithCharacter
@@ -115,7 +119,7 @@ export async function POST(
       }
 
       // Verify state exists and is in correct country
-      const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+      const state = await statesCollection(db).findOne({ _id: stateId, countryId });
       if (!state) {
         return errorResponse(404, "State not found");
       }
@@ -125,18 +129,19 @@ export async function POST(
       // resources gate this — letting national chairs back-fill states that are
       // led by an inactive or recently-installed local chair, or where players
       // are already present, was the original missing capability.
-      const statePartyOrg = await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .findOne({ stateId, partyId: partyIdStr });
+      const statePartyOrg = await statePartyOrgCollection(db).findOne({
+        stateId,
+        partyId: partyIdStr,
+      });
 
       // Calculate slots and cost
       const stateOrg = statePartyOrg?.organization ?? 0;
-      const currentNPPs = await db
-        .collection<NPP>("npps")
-        .countDocuments(activePartyNppFilter(countryId, partyIdStr, stateId));
-      const partyNPPCount = await db
-        .collection<NPP>("npps")
-        .countDocuments(activePartyNppFilter(countryId, partyIdStr));
+      const currentNPPs = await nppsCollection(db).countDocuments(
+        activePartyNppFilter(countryId, partyIdStr, stateId)
+      );
+      const partyNPPCount = await nppsCollection(db).countDocuments(
+        activePartyNppFilter(countryId, partyIdStr)
+      );
       const partyNppCapacity = await getPartyNppCapacity(db, countryId, partyIdStr, now);
       const capacityError = partyNppCapacityError(partyNppCapacity, partyNPPCount);
       if (capacityError) {
@@ -179,8 +184,7 @@ export async function POST(
       }
 
       // Generate NPP
-      const existingNPPs = await db
-        .collection<NPP>("npps")
+      const existingNPPs = await nppsCollection(db)
         .find({ retiredAt: null }, { projection: { name: 1 } })
         .toArray();
       const usedNames = new Set(existingNPPs.map((n) => n.name));
@@ -247,17 +251,15 @@ export async function POST(
       // Heal a never-initialized AP pool (paused / never-regenerated game) to the
       // tier cap so the atomic `$gte` deduct can match. Idempotent via `$exists:false`.
       if (party.nppActionPoints == null) {
-        await db
-          .collection<PoliticalParty>("politicalParties")
-          .updateOne(
-            { _id: party._id, nppActionPoints: { $exists: false } },
-            { $set: { nppActionPoints: availableAp } }
-          );
+        await politicalPartiesCollection(db).updateOne(
+          { _id: party._id, nppActionPoints: { $exists: false } },
+          { $set: { nppActionPoints: availableAp } }
+        );
       }
 
       await runWithOptionalTransaction(
         async (session) => {
-          const deductResult = await db.collection<PoliticalParty>("politicalParties").updateOne(
+          const deductResult = await politicalPartiesCollection(db).updateOne(
             {
               _id: party._id,
               nppActionPoints: { $gte: recruitCost },
@@ -275,10 +277,10 @@ export async function POST(
             throw new Error("NATIONAL_RECRUITMENT_CHANGED");
           }
 
-          await db.collection<NPP>("npps").insertOne(npp, { session });
+          await nppsCollection(db).insertOne(npp, { session });
         },
         async () => {
-          const deductResult = await db.collection<PoliticalParty>("politicalParties").updateOne(
+          const deductResult = await politicalPartiesCollection(db).updateOne(
             {
               _id: party._id,
               nppActionPoints: { $gte: recruitCost },
@@ -296,7 +298,7 @@ export async function POST(
           }
 
           try {
-            await db.collection<NPP>("npps").insertOne(npp);
+            await nppsCollection(db).insertOne(npp);
           } catch (error) {
             const rollbackUpdate: {
               $inc: { nppActionPoints: number; treasury: number };
@@ -337,9 +339,7 @@ export async function POST(
               rollbackUpdate.$unset = rollbackUnset;
             }
 
-            await db
-              .collection<PoliticalParty>("politicalParties")
-              .updateOne({ _id: party._id }, rollbackUpdate);
+            await politicalPartiesCollection(db).updateOne({ _id: party._id }, rollbackUpdate);
             throw error;
           }
         }

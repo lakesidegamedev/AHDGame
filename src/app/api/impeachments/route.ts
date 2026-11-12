@@ -8,7 +8,7 @@ import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial } from "@/lib/db/types";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { governorOfficialFilter } from "@/lib/db/electedOfficialScope";
@@ -22,6 +22,9 @@ import {
   senateConvictionVotesNeeded,
   impeachmentStageChamberOfficeType,
 } from "@/lib/impeachment/impeachmentTally";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 /** The all-seats bar a player needs to read a vote in progress. */
 export interface ImpeachmentChamberInfo {
@@ -63,8 +66,7 @@ export async function GET(request: Request) {
     if (state) query.state = state;
 
     const db = await getDb();
-    const impeachments = await db
-      .collection<Impeachment>("impeachments")
+    const impeachments = await impeachmentsCollection(db)
       .find(query)
       .sort({ createdAt: -1 })
       .limit(20)
@@ -117,18 +119,17 @@ export async function GET(request: Request) {
           )
         : null;
 
-    const official = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne(
-        office === "governor"
-          ? governorOfficialFilter(countryId as CountryId, state?.toUpperCase() ?? "")
-          : getExecutiveOfficialFilter(countryId as CountryId, "president"),
-        { projection: { characterId: 1 } }
-      );
+    const official = await electedOfficialsCollection(db).findOne(
+      office === "governor"
+        ? governorOfficialFilter(countryId as CountryId, state?.toUpperCase() ?? "")
+        : getExecutiveOfficialFilter(countryId as CountryId, "president"),
+      { projection: { characterId: 1 } }
+    );
     const target = official?.characterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: official.characterId }, { projection: { careerHistory: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: official.characterId },
+          { projection: { careerHistory: 1 } }
+        )
       : null;
     const filingWindow = target
       ? await loadImpeachmentFilingWindow(

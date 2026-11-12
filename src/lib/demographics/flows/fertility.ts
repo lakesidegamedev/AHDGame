@@ -24,13 +24,12 @@ export function asfrWeight(age: number): number {
 
 /**
  * Map the 0-100 `birthRate` index to a total-fertility rate (births per woman),
- * anchored so index 50 = the supplied replacement TFR (preset-specific; audit).
+ * anchored so index 50 = the supplied replacement TFR (preset-specific).
  *
  * Piecewise linear: the lower half (0-50) preserves the original mapping so
- * every existing seed below replacement is unchanged. The upper half (50-100)
- * is steeper so index 100 maps to ≈3.4×replacementTFR (≈7.0 TFR at the
- * standard 2.06 anchor), letting the model express real mid-century high
- * fertility (Turkey, Nigeria, India, etc.) that was previously unreachable.
+ * existing seeds below replacement are unchanged. The upper half (50-100) is
+ * steeper so index 100 reaches ≈3.4×replacementTFR (≈7.0 TFR at 2.06), covering
+ * real mid-century high fertility.
  */
 export function birthRateIndexToTFR(index: number, replacementTFR: number): number {
   const i = Math.max(0, Math.min(100, index));

@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Coalition, CoalitionMember } from "@/lib/db/types/coalition";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 interface AbsorbedPartyRef {
   _id: ObjectId;
@@ -41,7 +42,7 @@ export async function absorbPartyIntoCoalitions(
 ): Promise<void> {
   const { countryId, proposingParty, targetParty, now } = opts;
 
-  const coalitions = await db.collection<Coalition>("coalitions").find({ countryId }).toArray();
+  const coalitions = await coalitionsCollection(db).find({ countryId }).toArray();
 
   for (const coalition of coalitions) {
     const members = coalition.members ?? [];
@@ -93,6 +94,6 @@ export async function absorbPartyIntoCoalitions(
       if (newChairCharacter) set.chairCharacterId = newChairCharacter;
     }
 
-    await db.collection<Coalition>("coalitions").updateOne({ _id: coalition._id }, { $set: set });
+    await coalitionsCollection(db).updateOne({ _id: coalition._id }, { $set: set });
   }
 }

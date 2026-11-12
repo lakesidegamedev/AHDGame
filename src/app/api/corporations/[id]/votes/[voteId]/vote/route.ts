@@ -16,6 +16,8 @@ import { getGameState } from "@/lib/gameState";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 const CastSchema = z.object({
   vote: z.enum(["yes", "no"]),
@@ -43,7 +45,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const vote = await db.collection<CorporationVote>("corporationVotes").findOne({
+    const vote = await corporationVotesCollection(db).findOne({
       _id: new ObjectId(voteId),
       corporationId: corporation._id,
     });
@@ -55,12 +57,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const { vote: choice, voterCorporationId } = parsed.data;
 
-    // Resolve the voter's shareholding. If voterCorporationId is explicitly
-    // provided, vote as that corporation (must be CEO of it and it must hold
-    // shares). Otherwise, vote as the active character (respects
-    // activeCharacterId for multi-character support — Bug #0832).
-    // If the character holds no shares, auto-detect a managed corporation
-    // that holds shares (multi-CEO path).
+    // Resolve the voter's shareholding. If voterCorporationId is provided, vote as that corporation (must be CEO and it must hold shares). Otherwise vote as the active character. If the character holds no shares, auto-detect a managed corporation that holds shares.
     let voterId: ObjectId;
     let voterType: "character" | "corporation";
     let voteShares: number;
@@ -69,12 +66,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       // Explicit corporation vote — verify the user is CEO of this corp
       // and that the corp holds shares in the target.
       const corpOid = new ObjectId(voterCorporationId);
-      const managedCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne(
-          { _id: corpOid, ceoId: voterCharacter._id, ceoType: { $ne: "npp" } },
-          { projection: { _id: 1 } }
-        );
+      const managedCorp = await corporationsCollection(db).findOne(
+        { _id: corpOid, ceoId: voterCharacter._id, ceoType: { $ne: "npp" } },
+        { projection: { _id: 1 } }
+      );
       if (!managedCorp) {
         return errorResponse(403, "You are not the CEO of that corporation");
       }
@@ -96,8 +91,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         voteShares = shareholderVotingPower(corporation, charShareholding);
       } else {
         // Auto-detect a managed corporation that holds shares.
-        const managedCorps = await db
-          .collection<Corporation>("corporations")
+        const managedCorps = await corporationsCollection(db)
           .find({ ceoId: voterCharacter._id, ceoType: { $ne: "npp" } }, { projection: { _id: 1 } })
           .toArray();
 
@@ -137,9 +131,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Without this, a decisive vote (e.g. 68% YES meeting a 50% threshold) would leave
     // the vote open until someone manually loads the vote detail page (GET), delaying
     // any share issuance or governance change by an arbitrary amount of time.
-    const updatedVote = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ _id: vote._id });
+    const updatedVote = await corporationVotesCollection(db).findOne({ _id: vote._id });
     if (updatedVote && updatedVote.status === "open") {
       const gameState = await getGameState();
       const currentTurn = gameState?.currentTurn ?? 0;

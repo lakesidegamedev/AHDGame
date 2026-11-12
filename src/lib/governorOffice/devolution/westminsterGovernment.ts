@@ -6,14 +6,12 @@ import type { Db } from "mongodb";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import type { WestminsterGovernment } from "./rules";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export async function loadWestminsterGovernment(db: Db): Promise<WestminsterGovernment | null> {
   const formation = await getGovernmentFormationsCollection(db).findOne({ _id: "UK" });
   const government =
-    formation ??
-    (await db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-      .findOne({ _id: "UK" }));
+    formation ?? (await parliamentaryGovernmentsCollection(db).findOne({ _id: "UK" }));
   if (!government?.pmCharacterId || government.status !== "formed") return null;
   return {
     key: JSON.stringify([

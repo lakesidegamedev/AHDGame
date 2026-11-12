@@ -13,7 +13,10 @@ import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote, advanceBondPoolSnapshot } from "@/lib/bonds/marketPool";
-import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
+import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 export type PurchaseBondUnitsForFundResult =
   | {
@@ -41,13 +44,11 @@ async function atomicallyDebitFundCashAnchor(
 ): Promise<{ ok: true; newCashAnchor: number } | { ok: false }> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return { ok: false };
   const rounded = Math.round(amountAnchor * 100) / 100;
-  const result = await db
-    .collection<IndexFund>("indexFunds")
-    .findOneAndUpdate(
-      { _id: fundId, cashAnchor: { $gte: rounded + minimumRemainingCashAnchor } },
-      { $inc: { cashAnchor: -rounded }, $set: { updatedAt: new Date() } },
-      { returnDocument: "after", projection: { cashAnchor: 1 } }
-    );
+  const result = await indexFundsCollection(db).findOneAndUpdate(
+    { _id: fundId, cashAnchor: { $gte: rounded + minimumRemainingCashAnchor } },
+    { $inc: { cashAnchor: -rounded }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after", projection: { cashAnchor: 1 } }
+  );
   if (!result) return { ok: false };
   return { ok: true, newCashAnchor: result.cashAnchor };
 }
@@ -55,9 +56,10 @@ async function atomicallyDebitFundCashAnchor(
 async function refundFundCashAnchor(db: Db, fundId: ObjectId, amountAnchor: number): Promise<void> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return;
   const rounded = Math.round(amountAnchor * 100) / 100;
-  await db
-    .collection("indexFunds")
-    .updateOne({ _id: fundId }, { $inc: { cashAnchor: rounded }, $set: { updatedAt: new Date() } });
+  await indexFundsCollection<Document>(db).updateOne(
+    { _id: fundId },
+    { $inc: { cashAnchor: rounded }, $set: { updatedAt: new Date() } }
+  );
 }
 
 type BondPurchaseFund = Pick<IndexFund, "_id" | "name" | "quotedNav" | "anchorCurrencyCode">;
@@ -74,9 +76,8 @@ export interface BondPurchaseOptions {
   /** Caller flushes ledger rows for completed purchases after the reserve pass. */
   ledgerSink?: TxInput[];
   /**
-   * #992 tranche 6: game turn stamped on the fund-subject ledger row. When
-   * absent no ledger row is emitted (the cash debit still settles) so
-   * turn-less callers keep their old behavior.
+   * Game turn stamped on the fund-subject ledger row. When absent no ledger row
+   * is emitted (the cash debit still settles), preserving old behavior.
    */
   turn?: number;
   /** Preloaded thresholds for the ledger row; avoids a per-purchase read. */
@@ -225,7 +226,7 @@ export async function purchaseBondUnitsForFund(
     if (options?.txSink) options.txSink.push(transaction);
     else await insertFundTransaction(db, transaction);
 
-    // #992 tranche 6: fund-subject ledger leg for the cashAnchor debit above.
+    // Fund-subject ledger leg for the cashAnchor debit above.
     // The bond position is an asset account the shadow ledger does not carry,
     // so the row is single-sided under the shared bond_principal_investment
     // reason (the sale leg shares it, netting per currency). Fund-subject
@@ -387,20 +388,17 @@ export async function settleBondPurchasesInTransaction(
     });
   }
 
-  const debited = await db
-    .collection<IndexFund>("indexFunds")
-    .bulkWrite(debits, { ordered: true, session });
+  const debited = await indexFundsCollection(db).bulkWrite(debits, { ordered: true, session });
   if (debited.matchedCount !== debits.length) throw new BondBatchGuardMiss("fund cash");
 
-  const reserved = await db
-    .collection<Bond>("bonds")
-    .bulkWrite(reservations, { ordered: true, session });
+  const reserved = await bondsCollection(db).bulkWrite(reservations, { ordered: true, session });
   if (reserved.matchedCount !== reservations.length) throw new BondBatchGuardMiss("bond float");
 
   if (poolCredits.length > 0) {
-    const credited = await db
-      .collection<BondMarketPool>(BOND_MARKET_POOLS_COLLECTION)
-      .bulkWrite(poolCredits, { ordered: true, session });
+    const credited = await bondMarketPoolsCollection<BondMarketPool>(db).bulkWrite(poolCredits, {
+      ordered: true,
+      session,
+    });
     if (credited.matchedCount + credited.upsertedCount !== poolCredits.length) {
       throw new BondBatchGuardMiss("bond pool");
     }

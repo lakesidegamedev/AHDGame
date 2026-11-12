@@ -9,6 +9,8 @@ import { cnOverviewContent } from "../content/cnOverview";
 import { ngOverviewContent } from "../content/ngOverview";
 import { ruOverviewContent } from "../content/ruOverview";
 import { ddOverviewContent } from "../content/ddOverview";
+import { backgroundCountriesContent } from "../content/backgroundCountries";
+import { caOverviewContent } from "@/lib/countries/ca/wiki/caOverview";
 
 export const countriesPages: readonly WikiSeedPage[] = [
   {
@@ -39,6 +41,20 @@ export const countriesPages: readonly WikiSeedPage[] = [
     difficulty: "beginner",
     contentType: "reference",
     estimatedReadTime: 8,
+  },
+  {
+    slug: "ca-overview",
+    title: "Canada",
+    description:
+      "Federal parliamentary monarchy with 13 provinces and territories, a 343-seat House of Commons, an appointed Senate, and Quebec's sovereignty question.",
+    content: caOverviewContent,
+    category: "countries",
+    extraTags: ["ca", "westminster"],
+    countryId: "CA",
+    featured: false,
+    difficulty: "beginner",
+    contentType: "reference",
+    estimatedReadTime: 6,
   },
   {
     slug: "de-overview",
@@ -153,5 +169,19 @@ export const countriesPages: readonly WikiSeedPage[] = [
     difficulty: "intermediate",
     contentType: "reference",
     estimatedReadTime: 8,
+  },
+  {
+    slug: "background-countries",
+    lastUpdated: "2026-11-10",
+    title: "Background Countries",
+    description:
+      "The sixteen countries of a 2027 world that run as whole economies without regions or politicians: their page, briefs, debt, tariffs, sanctions, organization votes and trade.",
+    content: backgroundCountriesContent,
+    category: "countries",
+    extraTags: ["2027", "background", "bonds", "currency"],
+    featured: false,
+    difficulty: "beginner",
+    contentType: "reference",
+    estimatedReadTime: 5,
   },
 ];

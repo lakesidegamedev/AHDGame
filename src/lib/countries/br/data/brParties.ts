@@ -4,16 +4,11 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
  * Brazil default political parties.
  *
  * Preset rosters:
- *   - 1953-default: PSD (Vargas-era 1945 party) / UDN / PTB — Second Republic.
- *   - 2019-default: PT / PL / MDB / UNIÃO / PSD — the modern post-2018 landscape.
- *   - 1991-default: PMDB / PFL / PDT / PDS / PTB / PRN / PSB / PCDOB + PT / PSD
- *     — the 1990-91 Câmara composition. PMDB was the dominant catch-all centrist
- *     party, PFL the post-Sarney conservatives, PDT the Brizolista labourists,
- *     PDS the ARENA successor, PRN was Collor's 1989 vehicle, PT the workers'
- *     party (then ~6% but rising), PSB the democratic socialists, PCdoB the
- *     Communist Party of Brazil. PT and modern PSD straddle 1979/1991/2019.
+ *   - 1953-default: PSD (1945 party, not the 2011 one) / UDN / PTB.
+ *   - 1991-default: PMDB / PFL / PDT / PDS / PTB / PRN / PSB / PCdoB + PT / PSD.
+ *   - 2019-default: PT / PL / MDB / UNIAO / PSD.
  *
- * Seeded as `isDefault: true` — they always exist and cannot be deleted.
+ * Seeded as `isDefault: true` and cannot be deleted.
  * seedOrder determines sequentialId assignment within BR.
  */
 export const brParties: PartySeed[] = [

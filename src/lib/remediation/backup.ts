@@ -9,17 +9,17 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { HealBackup, HealResult, TouchedDocs } from "./types";
+import { healBackupsCollection } from "@/lib/db/repositories/healBackups";
 
 export const HEAL_BACKUPS_COLLECTION = "healBackups";
 
 export async function ensureBackupIndexes(db: Db): Promise<void> {
-  await db.collection<HealBackup>(HEAL_BACKUPS_COLLECTION).createIndex({ runId: 1 });
-  await db
-    .collection<HealBackup>(HEAL_BACKUPS_COLLECTION)
-    .createIndex({ runId: 1, collection: 1, docId: 1 }, { unique: true });
-  await db
-    .collection<HealBackup>(HEAL_BACKUPS_COLLECTION)
-    .createIndex({ defectId: 1, createdAt: -1 });
+  await healBackupsCollection<HealBackup>(db).createIndex({ runId: 1 });
+  await healBackupsCollection<HealBackup>(db).createIndex(
+    { runId: 1, collection: 1, docId: 1 },
+    { unique: true }
+  );
+  await healBackupsCollection<HealBackup>(db).createIndex({ defectId: 1, createdAt: -1 });
 }
 
 /**
@@ -82,12 +82,12 @@ export async function snapshot(
   }
 
   if (rows.length > 0) {
-    await db.collection<HealBackup>(HEAL_BACKUPS_COLLECTION).insertMany(rows, { ordered: true });
+    await healBackupsCollection<HealBackup>(db).insertMany(rows, { ordered: true });
   }
 
-  const readBack = await db
-    .collection<HealBackup>(HEAL_BACKUPS_COLLECTION)
-    .countDocuments({ runId: args.runId });
+  const readBack = await healBackupsCollection<HealBackup>(db).countDocuments({
+    runId: args.runId,
+  });
   if (readBack !== rows.length) {
     throw new Error(
       `[remediation] snapshot readback mismatch for run ${args.runId}: wrote ${rows.length}, read ${readBack}. ` +
@@ -114,10 +114,7 @@ export async function rollback(
   db: Db,
   args: { runId: string; result?: HealResult }
 ): Promise<RollbackSummary> {
-  const backups = await db
-    .collection<HealBackup>(HEAL_BACKUPS_COLLECTION)
-    .find({ runId: args.runId })
-    .toArray();
+  const backups = await healBackupsCollection<HealBackup>(db).find({ runId: args.runId }).toArray();
 
   const notes: string[] = [];
   let restored = 0;

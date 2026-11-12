@@ -6,28 +6,20 @@ import type { IncomeStartVintage, NormalAnchor } from "@/lib/era/metricCatalog";
 import type { WorldEntityRegion } from "@/lib/world/worldEntityManifest";
 
 /**
- * The small facts about where SE is.
+ * Geography facts for SE.
  *
- * ⚠ GENERATED FROM `__snapshots__/se.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * ⚠ GENERATED. Regenerate with:
  *
  *     npx tsx scripts/countries/gen-country-geography-facts.ts SE --force
  *
- * A hand-written draft of this file got six values wrong, including an
- * independent-bias of 0.06 where the registry says 2.33 and a threshold object
- * with the wrong KEYS. All six typechecked. Do not edit values here by hand.
+ * Do not edit values by hand; hand edits have produced typecheck-passing
+ * wrong values before.
  *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair;
- * `geography.ts` imports every era of census, metric and region data as values.
- * A registry that forwards to the heavy module for one string ships all of it to
- * the browser -- which shipped once already, when `countryContinents.ts` started
- * pulling 108 KB per bundle for a continent name.
+ * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. `geography.ts` imports heavy
+ * era data; importing it here pulls it into the browser bundle.
  *
- * ⚠ THE ISO PAIR IS TWO REGISTRIES DESCRIBING ONE FACT.
- * `COUNTRY_TO_ISO_NUMERIC` maps SE to the code and
- * `ISO_NUMERIC_TO_COUNTRY` maps it back. The generator asserts they agree
- * before writing; if they ever disagree, a lookup by code and a lookup by
- * country would report different things.
+ * ⚠ `COUNTRY_TO_ISO_NUMERIC` and `ISO_NUMERIC_TO_COUNTRY` must agree;
+ * the generator asserts it.
  */
 
 export const SE_CONTINENT: Continent = "Europe";
@@ -133,10 +125,7 @@ export const SE_INCOME_ANCHORS: NormalAnchor[] = [
 /**
  * Income anchor for a world that STARTS in the given year. Used only at the
  * exact start year; never interpolated, so a 1953 world running forward keeps
- * its flat 1953 anchor. 1991 is the derived krona household median from
- * seeds/reference/income1991 (#3393). 1979 is the authored national level of
- * the ~1979 seed bundle, labelled as a gameplay level rather than a sourced
- * statistic (#3398).
+ * its flat 1953 anchor. 1979 is a gameplay level, not a sourced statistic.
  */
 export const SE_INCOME_START_VINTAGES: Record<number, IncomeStartVintage> = {
   1979: { value: 90_000, id: "se-1979-household-authored" },

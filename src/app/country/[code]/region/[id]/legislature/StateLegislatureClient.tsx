@@ -14,6 +14,7 @@ import { BillsTab } from "./components/BillsTab";
 import { TabFallback } from "@/components/state/TabFallback";
 import { CardSkeleton, ListRowSkeleton, Skeleton } from "@/components/ui";
 import type { LegislatureCompositionData, LegislatureMember } from "@/components/legislature/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 // Composition is the second tab; only opened on a click. The seat chart and its
 // party logos stay out of the bills chunk, with the shared tab skeleton holding
@@ -157,7 +158,7 @@ export function StateLegislatureClient({
   }, [activeTab, fetchBills]);
 
   const ukContext = (() => {
-    if (countryId !== "UK") return null;
+    if (!countryHasFeature("ukUi", countryId)) return null;
     const nation = UK_NATIONS.find((n) => n.id === stateId);
     if (nation?.devolvedBody) {
       return { label: nation.devolvedBody, backHref: regionUrl("UK", stateId) };

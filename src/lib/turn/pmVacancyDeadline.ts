@@ -10,7 +10,7 @@
  * their deadline cleared before the watcher checks.
  */
 import type { Db } from "mongodb";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { getDb } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { getCountryConfig, supportsSnapElections } from "@/lib/constants/countries";
@@ -33,7 +33,9 @@ export async function processPMVacancyDeadlines(
   const autoSnapsFired: CountryId[] = [];
   const preset = await getGameStatePreset(db);
 
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // Full-simulation countries only: a background country (#5702) has no
+  // politicians, government or legislature for this phase to run.
+  const registered = new Set(await getFullSimulationCountryIds(db));
   for (const countryId of getParliamentaryCountryIds(preset).filter((id) => registered.has(id))) {
     const config = getCountryConfig(countryId, preset);
     if (!supportsSnapElections(config)) continue;

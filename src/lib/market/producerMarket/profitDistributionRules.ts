@@ -1,17 +1,9 @@
-/**
- * Closing the money loop (owner decision 2026-10-18).
- *
- * Under funded demand households spend only cash they receive. Base wages are
- * a small share of value added (about 12% measured in November 2026; see
- * wageShareRules.ts), so without a return path for profit, company cash piles
- * up and final demand shrinks every turn. AI-run companies are owned by the
- * public: they pay profit beyond what they reinvest into their country's
- * household wallet. State companies remit to their own treasury. Player
- * companies keep their profit; the player decides what to do with it.
- *
- * Pure: plain data in, transfers out. A payout never exceeds the company's
- * cash after settlement, and a loss pays nothing (no clawback).
- */
+// Closes the money loop: under funded demand households spend only cash they
+// receive, so without a profit return path company cash piles up and final
+// demand shrinks. AI companies pay profit beyond what they reinvest into the
+// country's household wallet; state companies remit to their treasury;
+// player companies keep it. A payout never exceeds cash, and a loss pays
+// nothing.
 
 /** Share of a turn's profit an AI or state company keeps to reinvest. Tunable. */
 export const RETAINED_PROFIT_SHARE = 0.4;

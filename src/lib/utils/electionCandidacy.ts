@@ -1,7 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   NPP,
@@ -14,12 +13,29 @@ import type {
   NationalCommitteeElection,
   PoliticalParty,
 } from "@/lib/db/types";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
 import { withdrawFromPartyLeadershipElections } from "@/lib/elections/withdrawFromPartyLeadershipElections";
 import { withdrawPlayerEndorsementsOnPartyChange } from "@/lib/elections/playerEndorsements";
 import type { CongressLeader } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { nationalPartyElectionsCollection } from "@/lib/db/repositories/nationalPartyElections";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { nationalPartyCandidatesCollection } from "@/lib/db/repositories/nationalPartyCandidates";
+import { nationalCommitteeCandidatesCollection } from "@/lib/db/repositories/nationalCommitteeCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
+import { nationalCommitteeElectionsCollection } from "@/lib/db/repositories/nationalCommitteeElections";
 
 /**
  * Move an Independent player's live governmental candidacies onto the party
@@ -33,8 +49,7 @@ export async function transferIndependentCandidaciesToParty(
   newParty: string,
   now = new Date()
 ): Promise<{ transferredCount: number; elections: string[] }> {
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({
       characterId,
       isNPP: { $ne: true },
@@ -50,8 +65,7 @@ export async function transferIndependentCandidaciesToParty(
   const electionIds = [
     ...new Map(candidacies.map((c) => [c.electionId.toString(), c.electionId])).values(),
   ];
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         _id: { $in: electionIds },
@@ -71,7 +85,7 @@ export async function transferIndependentCandidaciesToParty(
   const transferredElectionIds = [
     ...new Map(toTransfer.map((c) => [c.electionId.toString(), c.electionId])).values(),
   ];
-  const result = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  const result = await electionCandidatesCollection(db).updateMany(
     {
       _id: { $in: candidateIds },
       status: "active",
@@ -82,7 +96,7 @@ export async function transferIndependentCandidaciesToParty(
 
   // Campaign access and party funding key off Campaign.party, so keep the
   // retained campaign in lockstep with its candidate row.
-  await db.collection("campaigns").updateMany(
+  await campaignsCollection<Document>(db).updateMany(
     {
       electionId: { $in: transferredElectionIds },
       candidateId: characterId,
@@ -94,7 +108,7 @@ export async function transferIndependentCandidaciesToParty(
   // Existing tallies denormalize each candidate's party for maps, seat
   // estimates, and result displays. Each race needs its own dynamic field so
   // unrelated tallies do not gain candidate entries from another election.
-  await db.collection("electionVoteTallies").bulkWrite(
+  await electionVoteTalliesCollection<Document>(db).bulkWrite(
     toTransfer.map((candidate) => ({
       updateMany: {
         filter: { electionId: candidate.electionId },
@@ -131,8 +145,7 @@ export async function withdrawFromMismatchedPrimaries(
   const now = new Date();
 
   // Find all active candidacies for this character where party doesn't match
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({
       characterId,
       status: "active",
@@ -146,8 +159,7 @@ export async function withdrawFromMismatchedPrimaries(
 
   // Get the elections to check if they're still active
   const electionIds = candidacies.map((c) => c.electionId);
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       _id: { $in: electionIds },
       status: { $in: ["upcoming", "active", "completed"] },
@@ -165,12 +177,10 @@ export async function withdrawFromMismatchedPrimaries(
 
   // Withdraw the candidacies
   const candidateIds = toWithdraw.map((c) => c._id);
-  await db
-    .collection("electionCandidates")
-    .updateMany(
-      { _id: { $in: candidateIds } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { _id: { $in: candidateIds } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Clean up tallies for withdrawn candidates
   for (const c of toWithdraw) {
@@ -178,7 +188,7 @@ export async function withdrawFromMismatchedPrimaries(
   }
 
   // Archive their campaigns so a party switcher's campaign stops appearing on
-  // Campaign Operations alongside the candidates still in the race (#1313).
+  // Campaign Operations alongside the candidates still in the race.
   await archiveCampaignsForCandidates({
     db,
     candidates: toWithdraw
@@ -216,8 +226,7 @@ export async function withdrawNPPFromMismatchedPrimaries(
   const now = new Date();
 
   // Find all active candidacies for this NPP where party doesn't match
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidacies = await electionCandidatesCollection(db)
     .find({
       nppId,
       isNPP: true,
@@ -232,8 +241,7 @@ export async function withdrawNPPFromMismatchedPrimaries(
 
   // Get the elections to check if they're still active
   const electionIds = candidacies.map((c) => c.electionId);
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       _id: { $in: electionIds },
       status: { $in: ["upcoming", "active", "completed"] },
@@ -248,12 +256,10 @@ export async function withdrawNPPFromMismatchedPrimaries(
   }
 
   const candidateIds = toWithdraw.map((c) => c._id);
-  await db
-    .collection("electionCandidates")
-    .updateMany(
-      { _id: { $in: candidateIds } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { _id: { $in: candidateIds } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Clean up tallies for withdrawn candidates
   for (const c of toWithdraw) {
@@ -261,7 +267,7 @@ export async function withdrawNPPFromMismatchedPrimaries(
   }
 
   // Archive their campaigns. NPP campaigns key `candidateId` by the NPP id,
-  // which archiveCampaignsForCandidates matches via `nppId` (#1313).
+  // which archiveCampaignsForCandidates matches via `nppId`.
   await archiveCampaignsForCandidates({
     db,
     candidates: toWithdraw.map((c) => ({
@@ -339,9 +345,7 @@ export async function cleanupPartyPositionsOnSwitch(
     nationalPartyQuery.countryId = countryId;
   }
 
-  const nationalParty = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(nationalPartyQuery);
+  const nationalParty = await politicalPartiesCollection(db).findOne(nationalPartyQuery);
 
   if (nationalParty) {
     const setUpdates: Record<string, unknown> = { updatedAt: now };
@@ -385,25 +389,20 @@ export async function cleanupPartyPositionsOnSwitch(
       if (hasSetUpdates || hasPullUpdates) updateOp.$set = setUpdates;
       if (hasPullUpdates) updateOp.$pull = pullUpdates;
 
-      await db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne({ _id: nationalParty._id }, updateOp);
+      await politicalPartiesCollection(db).updateOne({ _id: nationalParty._id }, updateOp);
 
       // If chair was cleared, sync any coalition this party leads
       if (clearedNationalLeadership.includes("chair")) {
-        await db
-          .collection("coalitions")
-          .updateMany(
-            { chairPartyId: nationalParty._id },
-            { $set: { chairCharacterId: null, updatedAt: now } }
-          );
+        await coalitionsCollection<Document>(db).updateMany(
+          { chairPartyId: nationalParty._id },
+          { $set: { chairCharacterId: null, updatedAt: now } }
+        );
       }
     }
   }
 
   // 2. Clear state party leadership positions (incl. campaigner)
-  const stateOrgs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const stateOrgs = await statePartyOrgCollection(db)
     .find({
       partyId: oldParty,
       $or: [
@@ -437,23 +436,20 @@ export async function cleanupPartyPositionsOnSwitch(
     }
 
     if (positions.length > 0) {
-      await db
-        .collection<StatePartyOrg>("statePartyOrg")
-        .updateOne({ _id: org._id }, { $set: updates });
+      await statePartyOrgCollection(db).updateOne({ _id: org._id }, { $set: updates });
       clearedStateLeadership.push(`${org.stateId}: ${positions.join(", ")}`);
     }
   }
 
   // 3. Withdraw from active state party election candidacies for old party
-  const activeStateElections = await db
-    .collection<StatePartyElection>("statePartyElections")
+  const activeStateElections = await statePartyElectionsCollection(db)
     .find({ partyId: oldParty, status: "voting" })
     .toArray();
 
   let withdrawnStateElections = 0;
   if (activeStateElections.length > 0) {
     const stateElectionIds = activeStateElections.map((e) => e._id);
-    const result = await db.collection<StatePartyCandidate>("statePartyCandidates").updateMany(
+    const result = await statePartyCandidatesCollection(db).updateMany(
       {
         electionId: { $in: stateElectionIds },
         characterId,
@@ -467,7 +463,7 @@ export async function cleanupPartyPositionsOnSwitch(
   // 4. Withdraw from the old party's national leadership election candidacies
   // AND delete the leaver's ballots — including ballots cast FOR them — so a
   // departed member no longer stands for, or tallies toward, a seat in a party
-  // they left. Shared with the charter/faction split paths (#0701).
+  // they left. Shared with the charter/faction split paths.
   const { candidatesWithdrawn: withdrawnNationalElections } =
     await withdrawFromPartyLeadershipElections(db, [characterId], oldParty, countryId);
 
@@ -475,24 +471,21 @@ export async function cleanupPartyPositionsOnSwitch(
   // Filter by countryId to avoid cross-country sequential ID collisions
   const committeeElectionQuery: Record<string, unknown> = { partyId: oldParty, status: "voting" };
   if (countryId) committeeElectionQuery.countryId = countryId;
-  const activeCommitteeElections = await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
+  const activeCommitteeElections = await nationalCommitteeElectionsCollection(db)
     .find(committeeElectionQuery)
     .toArray();
 
   let withdrawnCommitteeElections = 0;
   if (activeCommitteeElections.length > 0) {
     const committeeElectionIds = activeCommitteeElections.map((e) => e._id);
-    const result = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-      .updateMany(
-        {
-          electionId: { $in: committeeElectionIds },
-          characterId,
-          status: "active",
-        },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const result = await nationalCommitteeCandidatesCollection(db).updateMany(
+      {
+        electionId: { $in: committeeElectionIds },
+        characterId,
+        status: "active",
+      },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     withdrawnCommitteeElections = result.modifiedCount;
   }
 
@@ -504,10 +497,7 @@ export async function cleanupPartyPositionsOnSwitch(
   // survives the switch instead of leaving an empty chair with no election.
   // Lazy import keeps that module (and the two chamber compositions it reads)
   // out of every party switch that touches no leadership at all.
-  const heldLeadershipRoles = await db
-    .collection<CongressLeader>("congressLeaders")
-    .find({ characterId })
-    .toArray();
+  const heldLeadershipRoles = await congressLeadersCollection(db).find({ characterId }).toArray();
   if (heldLeadershipRoles.length > 0) {
     try {
       const { vacateRolesLostToPartySwitch } =
@@ -539,7 +529,7 @@ export async function cleanupPartyPositionsOnSwitch(
   }
 
   // 7. Withdraw player endorsements that now violate primary-phase party
-  // alignment (ticket #1179). A member who endorsed their party's presidential
+  // alignment. A member who endorsed their party's presidential
   // candidate must not keep boosting it — standings count and per-turn
   // campaign-action grant included — after defecting to another party or to
   // independence. Cross-party endorsements stay untouched in general-phase
@@ -577,8 +567,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
   const now = new Date();
 
   // Get all active candidacies in non-resolved elections
-  const activeElections = await db
-    .collection<Election>("elections")
+  const activeElections = await electionsCollection(db)
     .find({ status: { $in: ["upcoming", "active", "completed"] } })
     .project({ _id: 1 })
     .toArray();
@@ -587,8 +576,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
 
   const activeElectionIds = activeElections.map((e) => e._id);
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({
       electionId: { $in: activeElectionIds },
       status: "active",
@@ -608,8 +596,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
   // Batch-load current party for all referenced characters and NPPs
   const charPartyMap = new Map<string, string>();
   if (charIds.length > 0) {
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: charIds } })
       .project({ _id: 1, party: 1 })
       .toArray();
@@ -620,8 +607,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
 
   const nppPartyMap = new Map<string, string>();
   if (nppIds.length > 0) {
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ _id: { $in: nppIds } })
       .project({ _id: 1, party: 1 })
       .toArray();
@@ -662,9 +648,10 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
 
   // Withdraw all mismatched candidacies
   const ids = toWithdraw.map((c) => c._id);
-  await db
-    .collection("electionCandidates")
-    .updateMany({ _id: { $in: ids } }, { $set: { status: "withdrawn", withdrawnAt: now } });
+  await electionCandidatesCollection<Document>(db).updateMany(
+    { _id: { $in: ids } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Clean tallies
   for (const c of toWithdraw) {
@@ -672,7 +659,7 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
   }
 
   // Archive their campaigns — a stale-party candidacy that is swept out of the
-  // race must not keep a live campaign on Campaign Operations (#1313).
+  // race must not keep a live campaign on Campaign Operations.
   await archiveCampaignsForCandidates({
     db,
     candidates: toWithdraw
@@ -717,16 +704,14 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   const now = new Date();
 
   // 1. General / primary election candidacies
-  const generalCandidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const generalCandidacies = await electionCandidatesCollection(db)
     .find({ characterId, status: "active" })
     .toArray();
 
   let withdrawnGeneralElections = 0;
   if (generalCandidacies.length > 0) {
     const electionIds = [...new Set(generalCandidacies.map((c) => c.electionId))];
-    const openElections = await db
-      .collection<Election>("elections")
+    const openElections = await electionsCollection(db)
       .find({
         _id: { $in: electionIds },
         status: { $in: ["upcoming", "active", "completed"] },
@@ -738,14 +723,15 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
 
     if (toWithdraw.length > 0) {
       const ids = toWithdraw.map((c) => c._id);
-      await db
-        .collection("electionCandidates")
-        .updateMany({ _id: { $in: ids } }, { $set: { status: "withdrawn", withdrawnAt: now } });
+      await electionCandidatesCollection<Document>(db).updateMany(
+        { _id: { $in: ids } },
+        { $set: { status: "withdrawn", withdrawnAt: now } }
+      );
       for (const c of toWithdraw) {
         await removeWithdrawnCandidateFromTally(db, c.electionId, c._id.toString());
       }
       // Archive their campaigns — relocation takes the character out of the
-      // race, so the campaign leaves Campaign Operations with it (#1313).
+      // race, so the campaign leaves Campaign Operations with it.
       await archiveCampaignsForCandidates({
         db,
         candidates: toWithdraw
@@ -764,8 +750,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   }
 
   // 2. State-party election candidacies (voting)
-  const activeStateElections = await db
-    .collection<StatePartyElection>("statePartyElections")
+  const activeStateElections = await statePartyElectionsCollection(db)
     .find({ status: "voting" })
     .project({ _id: 1 })
     .toArray();
@@ -773,7 +758,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   let withdrawnStatePartyElections = 0;
   if (activeStateElections.length > 0) {
     const stateElectionIds = activeStateElections.map((e) => e._id);
-    const result = await db.collection<StatePartyCandidate>("statePartyCandidates").updateMany(
+    const result = await statePartyCandidatesCollection(db).updateMany(
       {
         electionId: { $in: stateElectionIds },
         characterId,
@@ -785,8 +770,7 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   }
 
   // 3. National-party election candidacies (voting)
-  const activeNationalElections = await db
-    .collection<NationalPartyElection>("nationalPartyElections")
+  const activeNationalElections = await nationalPartyElectionsCollection(db)
     .find({ status: "voting" })
     .project({ _id: 1 })
     .toArray();
@@ -794,22 +778,19 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   let withdrawnNationalPartyElections = 0;
   if (activeNationalElections.length > 0) {
     const nationalElectionIds = activeNationalElections.map((e) => e._id);
-    const result = await db
-      .collection<NationalPartyCandidate>("nationalPartyCandidates")
-      .updateMany(
-        {
-          electionId: { $in: nationalElectionIds },
-          characterId,
-          status: "active",
-        },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const result = await nationalPartyCandidatesCollection(db).updateMany(
+      {
+        electionId: { $in: nationalElectionIds },
+        characterId,
+        status: "active",
+      },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     withdrawnNationalPartyElections = result.modifiedCount;
   }
 
   // 4. National-committee election candidacies (voting)
-  const activeCommitteeElections = await db
-    .collection<NationalCommitteeElection>("nationalCommitteeElections")
+  const activeCommitteeElections = await nationalCommitteeElectionsCollection(db)
     .find({ status: "voting" })
     .project({ _id: 1 })
     .toArray();
@@ -817,16 +798,14 @@ export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promi
   let withdrawnCommitteeElections = 0;
   if (activeCommitteeElections.length > 0) {
     const committeeElectionIds = activeCommitteeElections.map((e) => e._id);
-    const result = await db
-      .collection<NationalCommitteeCandidate>("nationalCommitteeCandidates")
-      .updateMany(
-        {
-          electionId: { $in: committeeElectionIds },
-          characterId,
-          status: "active",
-        },
-        { $set: { status: "withdrawn", withdrawnAt: now } }
-      );
+    const result = await nationalCommitteeCandidatesCollection(db).updateMany(
+      {
+        electionId: { $in: committeeElectionIds },
+        characterId,
+        status: "active",
+      },
+      { $set: { status: "withdrawn", withdrawnAt: now } }
+    );
     withdrawnCommitteeElections = result.modifiedCount;
   }
 

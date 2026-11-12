@@ -2,12 +2,9 @@
  * Turns belong to the turn worker whenever `CRON_OWNER=worker`.
  *
  * `processTurn` holds the Node event loop for the whole turn (tens of minutes on a
- * large world). Run inside the web server, it stops the server answering anyone:
- * on 2026-10-22 an admin "process turn" click ran turn 372 inside web while the
- * worker was stopped, the site timed out for every player, and two phases then
- * hit their timeout under the contention and the turn needed a manual repair.
- * `CRON_OWNER=worker` only moved the SCHEDULE out of web; every manual trigger
- * still ran the turn inline.
+ * large world). Run inside the web server, it stops the server answering anyone,
+ * and phases can time out under the contention. `CRON_OWNER=worker` only moves the
+ * SCHEDULE out of web; manual triggers must not run the turn inline.
  *
  * So, when the worker owns turns:
  *   - `processTurn` refuses to run inside the Next.js server (`inProcessTurnRefusal`).
@@ -21,6 +18,8 @@
  */
 import type { Db } from "mongodb";
 import { randomUUID } from "node:crypto";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { turnWorkerControlCollection } from "@/lib/db/repositories/turnWorkerControl";
 
 type Env = Record<string, string | undefined>;
 
@@ -93,7 +92,7 @@ export function isOpenRequest(request: TurnRequest | null | undefined): request 
   return !!request && request.completedAt === null;
 }
 
-const control = (db: Db) => db.collection<TurnWorkerControl>("turnWorkerControl");
+const control = (db: Db) => turnWorkerControlCollection<TurnWorkerControl>(db);
 
 export async function getTurnWorkerStatus(db: Db, now = new Date()) {
   const doc = await control(db).findOne({ _id: TURN_WORKER_CONTROL_ID });
@@ -205,11 +204,14 @@ export async function runTurnRequestTick(input: {
   // A scheduled turn already holds the lock: leave the request queued rather
   // than claim it and fail on the lock. A stale lock (dead holder) does not
   // block; processTurn's own recovery takes it over.
-  const gs = await input.db
-    .collection<{ _id: string; isProcessing?: boolean; processingHeartbeatAt?: Date | null }>(
-      "gameState"
-    )
-    .findOne({ _id: "current" }, { projection: { isProcessing: 1, processingHeartbeatAt: 1 } });
+  const gs = await gameStateCollection<{
+    _id: string;
+    isProcessing?: boolean;
+    processingHeartbeatAt?: Date | null;
+  }>(input.db).findOne(
+    { _id: "current" },
+    { projection: { isProcessing: 1, processingHeartbeatAt: 1 } }
+  );
   const lockHeartbeat = gs?.processingHeartbeatAt
     ? new Date(gs.processingHeartbeatAt).getTime()
     : 0;

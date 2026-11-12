@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -12,65 +11,29 @@ import type {
   HealContext,
   VerifyResult,
 } from "../types";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
- * Ticket #1124. Brazil's bondholders were force-converted out of BRL at a rate
- * the engine itself had corrupted.
+ * Brazil's bondholders were force-converted out of BRL at a rate the engine
+ * had corrupted (inflated Taylor-rule target from the Vargas-era CPI). Held
+ * bonds and voluntary sales repair themselves and are not restituted. Only
+ * forced maturity conversions are: the holder could not elect to keep the
+ * bond, so it was sold at the bug's price and is made good at
+ * {@link COUNTERFACTUAL_BRL_RATE}.
  *
- * Brazil's 1953 monetary baseline carried an inflation TARGET of 10%, taken
- * from the Vargas-era CPI, so the Taylor rule was aiming FOR high inflation
- * rather than defending a stable currency. BRL left a 17.2 to 17.8 plateau
- * around turns 130 to 172 and ran to a peak of 26.19 by turn 215. The code half
- * (commit 503e6e1e31) stops treating the Vargas CPI as a target, and the rate
- * is already walking back toward equilibrium on its own.
+ * Rows are hardcoded because `financialTxLog` carries a 7-day TTL;
+ * {@link FORCED_BRL_MATURITIES} keeps the heal re-derivable and testable.
+ * `brlAmount` is `meta.bondAmount` when present, else `amount`.
  *
- * WHAT IS RESTITUTABLE, AND WHAT IS NOT
+ * Idempotency is a durable `remediation[DEFECT_ID]` marker written in the
+ * same atomic update as the balance increment, under a filter requiring the
+ * marker to be absent; a re-run matches nothing.
  *
- * Almost nothing here is. An unrealized loss on a bond still held repairs
- * itself as BRL falls back toward target, and a player who chose to sell into
- * the bad rate made a choice. Neither is restituted.
- *
- * Bond MATURITY is the exception, and it is the ONLY exception. A holder cannot
- * elect to keep holding a bond that has matured: the engine converts the face
- * value out of BRL into anchor on the spot, at whatever rate the corrupted
- * currency happened to be showing that turn. That is a forced sale at a price
- * the bug set, so it is made good.
- *
- * THE COUNTERFACTUAL RATE
- *
- * {@link COUNTERFACTUAL_BRL_RATE} is `exchangeRates.BR.macroTarget`, the
- * engine's own corrected equilibrium for BRL. It is deliberately not a
- * hand-picked number and not a historical average: it is what the fixed code
- * says the rate should be.
- *
- * WHY THE ROWS ARE HARDCODED
- *
- * `financialTxLog` rows carry a 7-day `expiresAt` TTL, so the affected set ages
- * out of the database. The 22 rows were snapshotted while they still existed
- * and are pinned in {@link FORCED_BRL_MATURITIES} below, which keeps this heal
- * re-derivable, reviewable and testable long after the source rows are gone.
- * The selector that produced them was:
- *
- *   { type: "bond_maturity", turn: { $in: [180, 192, 204, 216] },
- *     $or: [{ currencyCode: "BRL" }, { "meta.bondCurrency": "BRL" }] }
- *
- * `brlAmount` is `meta.bondAmount` where the row carried one, else `amount`.
- *
- * IDEMPOTENCY
- *
- * Not via the source rows (they expire) and not via the emitted credit rows
- * (those expire too). Each RECIPIENT document gets a durable
- * `remediation["AHD-1124-brl-forced-maturity-restitution"]` marker, written in
- * the SAME atomic `updateOne` as the balance increment, under a filter that
- * requires the marker to be absent. A second run matches nothing, and the
- * detector counts recipients missing the marker, so it returns zero once
- * applied.
- *
- * This heal MINTS MONEY on purpose: it is paying back value the bug destroyed,
- * so `moneyDelta` is non-zero and the `money-conserving` guard is absent. Every
- * credit emits a `restitution_credit` tx row referencing its source maturity,
- * so the shadow ledger books an attributed `restitution` mint rather than
- * showing an unexplained jump in someone's balance.
+ * Mints money by design; each credit emits a `restitution_credit` tx row
+ * referencing its source maturity so the shadow ledger attributes the mint.
  */
 
 /** Marker key under `remediation` on the recipient document. Presence makes a re-run a no-op. */
@@ -80,7 +43,7 @@ const MARKER_PATH = `remediation.${DEFECT_ID}`;
 
 /**
  * `exchangeRates.BR.macroTarget`: the corrected equilibrium BRL per 1 anchor.
- * Owner-locked. Do not retune this without re-running the whole repair.
+ * Owner-locked. Do not retune without re-running the whole repair.
  */
 export const COUNTERFACTUAL_BRL_RATE = 18.369197584045413;
 
@@ -408,14 +371,12 @@ async function loadRecipients(
   const corporationIds = toObjectIds(credits, "corporation");
   const [characters, corporations] = await Promise.all([
     characterIds.length > 0
-      ? db
-          .collection<CharacterDoc>("characters")
+      ? charactersCollection<CharacterDoc>(db)
           .find({ _id: { $in: characterIds } })
           .toArray()
       : Promise.resolve([]),
     corporationIds.length > 0
-      ? db
-          .collection<CorporationDoc>("corporations")
+      ? corporationsCollection<CorporationDoc>(db)
           .find({ _id: { $in: corporationIds } })
           .toArray()
       : Promise.resolve([]),
@@ -428,7 +389,7 @@ async function loadRecipients(
 }
 
 async function loadRatesByCurrency(db: Db): Promise<Map<string, number>> {
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   return new Map(rates.map((rate) => [String(rate.currencyCode), rate.rate]));
 }
 
@@ -629,8 +590,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   // emitTxBulk mints its own ids, so read them back rather than guessing: a
   // rollback has to be able to delete the receipts it created.
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

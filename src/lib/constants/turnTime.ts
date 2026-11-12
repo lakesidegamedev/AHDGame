@@ -31,6 +31,11 @@ export const SEED_PRESET_IDS = [
 
 export type SeedPresetId = (typeof SEED_PRESET_IDS)[number];
 
+/** `first` and every later shipping preset, so era ranges include new presets. */
+export function seedPresetsFrom(first: SeedPresetId): SeedPresetId[] {
+  return SEED_PRESET_IDS.slice(SEED_PRESET_IDS.indexOf(first));
+}
+
 /**
  * Presets currently being authored. Draft presets have a calendar identity but
  * MUST NOT be offered to reset or singleplayer callers until their seed lanes,
@@ -84,19 +89,10 @@ export function getStartingYearForPreset(presetId: string): number {
 export const FOREX_AND_MACRO_CHART_HISTORY_TURNS = TURNS_PER_YEAR * 5;
 
 /**
- * Turns per financial day. 24 turns = 1 financial "day" used by the corp
- * simulation (matches the real-time hourly cron: one turn = one hour so a
- * day's worth of revenue/costs spans 24 turns).
- *
- * Sector **growth rate** compounding uses {@link GROWTH_RATE_TURNS_PER_YEAR} (48)
- * instead; one player "day" of growth is spread across a full game year of turns.
- *
- * Re-exports the authoritative constant from `@/lib/constants/corporationsClient`
- * so there's exactly one source of truth; previously this file declared `2`,
- * which disagreed with every call site except stockExchangeSnapshot.ts and
- * caused the snapshot's `dailyInterestCost` to come out 12× smaller than the
- * rest of the codebase expected. The constant is intentionally re-exported
- * here so existing imports from `@/lib/constants/turnTime` keep working.
+ * Turns per financial day (24), matching the hourly cron so one turn is one
+ * hour of revenue/costs. Sector growth rate compounding uses
+ * {@link GROWTH_RATE_TURNS_PER_YEAR} (48) instead. Re-exported from
+ * `@/lib/constants/corporationsClient` as the single source of truth.
  */
 export { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 

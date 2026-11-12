@@ -18,12 +18,14 @@ import type { CorporationVote, CorporationVoteType } from "@/lib/db/types/corpor
 import type { LegalStructureId } from "@/lib/constants/legalStructures";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { Character } from "@/lib/db/types";
 import { commandEconomyRelocationBlock } from "@/lib/corporations/relocationCommandEconomyGate";
 import {
   SUPERSHARE_MIN_MULTIPLIER,
   SUPERSHARE_MAX_MULTIPLIER,
 } from "@/lib/corporations/superShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 const OpenVoteSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("governance_change"), newLegalStructure: z.string() }),
@@ -76,8 +78,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const statusFilter = url.searchParams.get("status");
     const query: Record<string, unknown> = { corporationId: corporation._id };
     if (statusFilter) query.status = statusFilter;
-    const votes = await db
-      .collection<CorporationVote>("corporationVotes")
+    const votes = await corporationVotesCollection(db)
       .find(query)
       .sort({ createdAt: -1 })
       .toArray();
@@ -105,9 +106,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: corporation.ceoId });
+    const character = await charactersCollection(db).findOne({ _id: corporation.ceoId });
     if (!character) return errorResponse(404, "CEO character not found");
 
     const parsed = await parseJsonBody(request, OpenVoteSchema);
@@ -129,9 +128,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (body.type === "ticker_change") {
-      const conflict = await db
-        .collection("corporations")
-        .findOne({ tickerSymbol: body.newTicker, _id: { $ne: corporation._id } });
+      const conflict = await corporationsCollection(db).findOne({
+        tickerSymbol: body.newTicker,
+        _id: { $ne: corporation._id },
+      });
       if (conflict) {
         return errorResponse(409, "That ticker is already in use by another corporation");
       }
@@ -191,9 +191,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
     if (!result.ok) return errorResponse(result.status, result.error);
 
-    const inserted = await db
-      .collection<CorporationVote>("corporationVotes")
-      .findOne({ _id: new ObjectId(result.voteId) });
+    const inserted = await corporationVotesCollection(db).findOne({
+      _id: new ObjectId(result.voteId),
+    });
     if (inserted) {
       await notifyVoteEvent({
         db,

@@ -77,6 +77,15 @@ import {
   type CampaignIntelligenceAssessment,
   type CampaignRequirementResult,
 } from "./campaign";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
 
 /**
  * The deep module for shared world-event responses. Callers only need to ask
@@ -118,14 +127,9 @@ export async function loadCampaignCapability(
   countryId: string
 ): Promise<CampaignCapabilitySnapshot> {
   const [budget, approval, units] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ countryId: countryId as FederalBudget["countryId"] }),
-    db
-      .collection<GovernmentApproval>("governmentApprovals")
-      .findOne({ _id: countryId as GovernmentApproval["_id"] }),
-    db
-      .collection<MilitaryUnit>("militaryUnits")
+    federalBudgetCollection(db).findOne({ countryId: countryId as FederalBudget["countryId"] }),
+    governmentApprovalsCollection(db).findOne({ _id: countryId as GovernmentApproval["_id"] }),
+    militaryUnitsCollection(db)
       .find({ countryId: countryId as MilitaryUnit["countryId"] })
       .project<Pick<MilitaryUnit, "personnel" | "readiness" | "equipment">>({
         personnel: 1,
@@ -186,7 +190,7 @@ async function responderContext(
 /**
  * Per-option eligibility for one country. The Actions-page card and the crisis
  * detail page both gate their buttons on this, so a player is never offered an
- * option the command path is bound to refuse (ticket #1183). Null when the
+ * option the command path is bound to refuse. Null when the
  * country has no role in this response.
  */
 export async function optionAvailabilityForGlobalResponder(
@@ -313,9 +317,10 @@ export async function prepareGlobalResponseOption(
     ["recapitalize", "guarantee", "stimulus", "sovereign_support"].includes(option.action.response);
   const cashLedgerEnabled = cashLedgerAction
     ? (
-        await db
-          .collection<GameConfig>("gameConfig")
-          .findOne({ _id: "default" }, { projection: { treasuryCashLedgerEnabled: 1 } })
+        await gameConfigCollection(db).findOne(
+          { _id: "default" },
+          { projection: { treasuryCashLedgerEnabled: 1 } }
+        )
       )?.treasuryCashLedgerEnabled === true
     : undefined;
   await prepareFinancialCrisisBankResponse(db, countryId, option, cashLedgerEnabled);
@@ -335,7 +340,7 @@ export async function recordGlobalResponseCommitment(
 ): Promise<void> {
   const definition = crisis.globalResponse;
   if (!definition || !option.campaignCommitment) return;
-  const collection = db.collection<LivingConflictState>("livingConflicts");
+  const collection = livingConflictsCollection<LivingConflictState>(db);
   const responseId = `${crisis.livingConflictEventId ?? definition.eventKey}:${countryId}`;
   const powersKey = `emergencyPowers:${countryId}`;
   const powersPath = `tracks.${powersKey}`;
@@ -471,9 +476,9 @@ export async function spendGlobalResponseCost(
   if (option.action?.kind === "financialCrisisResponse") return 0;
   const pct = option.treasuryCostPctGdp ?? 0;
   if (!(pct > 0)) return 0;
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as FederalBudget["countryId"] });
+  const budget = await federalBudgetCollection(db).findOne({
+    countryId: countryId as FederalBudget["countryId"],
+  });
   const gdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
   const amount = Math.max(0, Math.round(gdp * pct));
@@ -496,13 +501,11 @@ async function applyEffectsForCountry(
   effects: CrisisDecisionOption["effects"]
 ): Promise<void> {
   if (effects.length === 0) return;
-  const states = await db
-    .collection<{ _id: string }>("states")
+  const states = await statesCollection<{ _id: string }>(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   const characters = effects.some((effect) => effect.targetType === "stat")
-    ? await db
-        .collection<{ _id: ObjectId }>("characters")
+    ? await charactersCollection<{ _id: ObjectId }>(db)
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray()
     : [];
@@ -527,13 +530,7 @@ async function applyOutcomeTension(
   const minimumValue =
     outcome.tensionDelta < 0
       ? tensionFloor(
-          (
-            await readStandingPressureSnapshot(
-              db,
-              world ?? {},
-              world?.currentTurn ?? crisis.startTurn
-            )
-          ).pressures
+          (await readStandingPressureSnapshot(db, world?.currentTurn ?? crisis.startTurn)).pressures
         )
       : undefined;
   await applyTensionEvent(
@@ -601,9 +598,10 @@ async function applyOutcomeTrajectory(
         : relieveCommitment(def, state, side, Math.abs(amount));
   }
   if (def.key === ARAB_UPRISINGS_KEY && state.arabRegional) {
-    const interaction = await db
-      .collection<CrisisInteraction>("crisisInteractions")
-      .findOne({ crisisId: crisis._id }, { projection: { leaderResponses: 1 } });
+    const interaction = await crisisInteractionsCollection(db).findOne(
+      { crisisId: crisis._id },
+      { projection: { leaderResponses: 1 } }
+    );
     state = projectArabRegion({
       ...state,
       arabRegional: resolveArabRegion(
@@ -653,11 +651,9 @@ export async function resolveGlobalResponse(
   db: Db,
   crisisId: ObjectId
 ): Promise<ResolvedGlobalResponse | null> {
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: crisisId });
+  const crisis = await crisesCollection(db).findOne({ _id: crisisId });
   if (!crisis?.globalResponse) return null;
-  const interaction = await db
-    .collection<CrisisInteraction>("crisisInteractions")
-    .findOne({ crisisId });
+  const interaction = await crisisInteractionsCollection(db).findOne({ crisisId });
   if (!interaction) return null;
   if (interaction.globalResponseOutcome) {
     const prior = crisis.globalResponse.outcomes.find(
@@ -671,7 +667,7 @@ export async function resolveGlobalResponse(
       if (prior.capacityDestruction && !interaction.globalResponseOutcome.capacityDestruction) {
         const summary = await applyConflictCapacityDestruction(db, crisis, prior, resolutionId);
         if (summary)
-          await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+          await crisisInteractionsCollection(db).updateOne(
             { _id: interaction._id },
             {
               $set: {
@@ -805,7 +801,7 @@ export async function resolveGlobalResponse(
   // deterministic embargo identity makes concurrent/repeated resolution safe.
   await applyCrisisTradeSanctions(db, crisis, interaction, outcome);
 
-  const claimed = await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+  const claimed = await crisisInteractionsCollection(db).updateOne(
     {
       _id: interaction._id,
       globalResponseOutcome: { $exists: false },
@@ -829,9 +825,7 @@ export async function resolveGlobalResponse(
     }
   );
   if (claimed.modifiedCount === 0) {
-    const latest = await db
-      .collection<CrisisInteraction>("crisisInteractions")
-      .findOne({ _id: interaction._id });
+    const latest = await crisisInteractionsCollection(db).findOne({ _id: interaction._id });
     if (latest?.globalResponseOutcome) return latest.globalResponseOutcome;
     throw new Error("Global response changed during resolution; retry from current responses");
   }
@@ -856,7 +850,7 @@ export async function resolveGlobalResponse(
   );
   if (capacitySummary) {
     resolved.capacityDestruction = capacitySummary;
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    await crisisInteractionsCollection(db).updateOne(
       { _id: interaction._id },
       {
         $set: {
@@ -875,7 +869,7 @@ export async function resolveGlobalResponse(
   if (campaignResult) {
     resolved.campaignStageBefore = campaignResult.previousStage;
     resolved.campaignStageAfter = campaignResult.nextStage;
-    await db.collection<CrisisInteraction>("crisisInteractions").updateOne(
+    await crisisInteractionsCollection(db).updateOne(
       { _id: interaction._id },
       {
         $set: {

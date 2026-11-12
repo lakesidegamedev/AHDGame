@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getImperialEligibleCountries } from "@/lib/imperial";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 /**
  * GET /api/imperial-characters/eligible — List countries available for imperial character creation.
@@ -20,8 +21,7 @@ export async function GET() {
     const eligible = getImperialEligibleCountries();
 
     // Find which countries already have imperial characters
-    const existing = await db
-      .collection<ImperialCharacter>("imperialCharacters")
+    const existing = await imperialCharactersCollection(db)
       .find({ countryId: { $in: eligible } })
       .project({ countryId: 1 })
       .toArray();

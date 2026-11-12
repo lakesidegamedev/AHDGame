@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, CorporateSector, Notification } from "@/lib/db/types";
+import type { CorporateSector, Notification } from "@/lib/db/types";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -21,6 +21,10 @@ import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
 import { hasTenderOpportunity } from "./rules/opportunities";
 import { canBid } from "./rules";
 import type { GovernmentTender } from "./types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { defenceProcurementAllocationsCollection } from "@/lib/db/repositories/defenceProcurementAllocations";
 
 /** One projected read per dataset, then one idempotent bulk write per published tender. */
 export async function notifyTenderBidders(
@@ -30,8 +34,7 @@ export async function notifyTenderBidders(
   now: Date
 ) {
   if (!canBid(tender, turn)) return;
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       {
         userId: { $type: "objectId" },
@@ -59,8 +62,7 @@ export async function notifyTenderBidders(
     .toArray();
   const humans = corps.filter((c) => !isNppOwned(c));
   if (!humans.length) return;
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       {
         corporationId: { $in: humans.map((c) => c._id) },
@@ -81,14 +83,13 @@ export async function notifyTenderBidders(
     const [game, prices, allocation] = await Promise.all([
       getGameState(db),
       loadDefencePriceRatios(db),
-      db
-        .collection<{ _id: string; supplierAmounts?: Record<string, number> }>(
-          "defenceProcurementAllocations"
-        )
-        .findOne(
-          { _id: defenceContractWindow(tender.countryId, tender.publishedTurn).id },
-          { projection: { supplierAmounts: 1 } }
-        ),
+      defenceProcurementAllocationsCollection<{
+        _id: string;
+        supplierAmounts?: Record<string, number>;
+      }>(db).findOne(
+        { _id: defenceContractWindow(tender.countryId, tender.publishedTurn).id },
+        { projection: { supplierAmounts: 1 } }
+      ),
     ]);
     const preset = game?.preset ?? DEFAULT_SEED_PRESET;
     const budget = await ensureFederalBudget(db, tender.countryId, preset);
@@ -142,7 +143,7 @@ export async function notifyTenderBidders(
     recipients.set(key, entry);
   }
   if (!recipients.size) return;
-  await db.collection<Notification>("notifications").bulkWrite(
+  await notificationsCollection(db).bulkWrite(
     [...recipients.values()].map((recipient) => ({
       updateOne: {
         filter: {

@@ -1,0 +1,20 @@
+import type { Db } from "mongodb";
+import { seedCountryBudgets } from "./seedCountryBudgets";
+
+/**
+ * Seeds Canada's national budget, default enacted laws, provincial budgets and
+ * sovereign issuer. The 2027 budget row exists only once the roster includes
+ * Canada, so this is a no-op until then.
+ */
+export async function seedCaBudgets(
+  db: Db,
+  reset: boolean,
+  log: (msg: string) => void,
+  preset: string
+) {
+  return seedCountryBudgets(db, reset, log, preset, {
+    countryId: "CA",
+    fiscalYearFallback: 2027,
+    skipWithoutNationalBudget: true,
+  });
+}

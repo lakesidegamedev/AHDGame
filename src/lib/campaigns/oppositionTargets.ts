@@ -2,6 +2,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { computeElectionPhase } from "@/lib/elections/phases";
 import type { GameTimeContext } from "@/lib/time/gameTime";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface OppositionTarget {
   /** characters._id (or npps._id), which is what the retarget route takes. */
@@ -14,25 +15,20 @@ export interface OppositionTarget {
 /**
  * Who a campaign may put opposition research on.
  *
- * The rule is the race, not the country. Before this, the picker searched every
- * character in the game and the server checked only that the target existed and
- * shared a country, so research could be bought against a private citizen or a
- * senator who was not running — 8 actions and $40,000 spent to drain the
- * favourability of somebody the buyer was not standing against.
+ * The rule is the race, not the country. Scoping by country alone would let
+ * research be bought against a private citizen or a non-candidate.
  *
  * Scoped by phase, because "opponent" means different people in each:
  *
  *  - **Primary.** The other candidates in the buyer's OWN party field. A rival
  *    in the other party's primary is not competing with the buyer for a single
- *    delegate, so draining them would be a purchase with no effect on the race
- *    the buyer is in — the same undetectable-spend shape that got turnout
- *    suppression pulled.
+ *    delegate.
  *  - **General.** Every other ticket, which is by then the whole field.
  *
  * Exported as one function so the picker and the route's validation cannot
- * disagree about who is fair game: a list the UI offers but the server refuses
- * is a button that fails, and a target the server allows but the UI hides is a
- * mechanic nobody finds.
+ * disagree: a list the UI offers but the server refuses is a button that
+ * fails, and a target the server allows but the UI hides is a mechanic nobody
+ * finds.
  */
 export async function loadOppositionTargets(
   db: Db,
@@ -69,8 +65,7 @@ export async function loadOppositionTargets(
     }
   );
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: election._id, status: "active" })
     .toArray();
 

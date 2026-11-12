@@ -24,18 +24,18 @@ import {
   nonConvertibleTradeCurrency,
 } from "@/lib/constants/commandEconomy";
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  Character,
-  ExchangeRate,
-  CurrencyOrder,
-  GameConfig,
-  GameState,
-  User,
-  CentralBank,
-} from "@/lib/db/types";
+import type { ExchangeRate, CurrencyOrder, GameConfig, GameState, User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { rankReserveCurrencies } from "@/lib/centralBank/reserveCurrencyRanking";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const marketOrderSchema = z
   .object({
@@ -57,14 +57,13 @@ export async function GET() {
     const db = await getDb();
 
     // Rates are public — no auth required
-    const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+    const rates = await exchangeRatesCollection(db).find({}).toArray();
 
     // Top reserve currencies by FX reserve volume held across every central bank
     // (the spread-fee reserve bucket; home lending reserves are excluded),
     // valued in ₳ for ranking. The #1 is the "leading exchange currency" and
     // carries the volatility buff.
-    const banks = await db
-      .collection<CentralBank>("centralBanks")
+    const banks = await centralBanksCollection(db)
       .find({}, { projection: { spreadFeeReserveBalances: 1 } })
       .toArray();
     const rateMap = Object.fromEntries(rates.map((r) => [r.currencyCode, r.rate])) as Partial<
@@ -81,10 +80,9 @@ export async function GET() {
     }));
 
     // Public order book: open limit orders only (no direct requests), excluding expired
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
-    const openOrders = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    const openOrders = await currencyOrdersCollection(db)
       .find({
         status: { $in: ["open", "partial"] },
         type: "limit",
@@ -166,15 +164,16 @@ export async function POST(request: Request) {
 
     const { fromCurrency, toCurrency, amount } = parsed.data;
     const db = await getDb();
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
 
     // Non-convertible command currencies cannot be market-traded. Gated here
     // (not inside executeMarketMakerTrade) so corp/bond/autoConvert system FX
     // still works when the flag is on.
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [fromCurrency, toCurrency],
       gs?.currentYear,
@@ -185,9 +184,7 @@ export async function POST(request: Request) {
     }
 
     // Resolve character type for collection targeting
-    const userDoc = await db
-      .collection<User>("users")
-      .findOne({ _id: new ObjectId(auth.user.userId) });
+    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(auth.user.userId) });
     const isImperialMode =
       userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
 
@@ -197,7 +194,7 @@ export async function POST(request: Request) {
     let characterName: string;
 
     if (isImperialMode) {
-      const imperial = await db.collection<ImperialCharacter>("imperialCharacters").findOne({
+      const imperial = await imperialCharactersCollection(db).findOne({
         _id: userDoc!.activeImperialCharacterId!,
         userId: new ObjectId(auth.user.userId),
       });
@@ -212,7 +209,7 @@ export async function POST(request: Request) {
       const characterQuery = userDoc?.activeCharacterId
         ? { _id: userDoc.activeCharacterId, userId: new ObjectId(auth.user.userId) }
         : { userId: new ObjectId(auth.user.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(404, "Character not found");
       }

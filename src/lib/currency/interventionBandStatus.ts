@@ -3,7 +3,7 @@ import { DEFENCE_MAX_PRESSURE } from "./intervention/rules/defence";
 /**
  * How long a declared FX corridor would take to reach at maximum defence.
  *
- * The issue behind this (#4495) is a band declared far from the live rate: the
+ * The issue behind this is a band declared far from the live rate: the
  * page says "Defending" every turn, interventions fire, and the corridor never
  * arrives. Settlement cannot be fixed by spending harder, so the honest fix is
  * to state the arithmetic: defence moves the rate at most

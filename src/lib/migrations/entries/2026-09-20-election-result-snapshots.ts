@@ -7,6 +7,12 @@ import {
 } from "@/lib/elections/liveResults/buildResultsPayload";
 import type { ElectionResultSnapshot } from "@/lib/db/types/electionResultSnapshot";
 import type { Election, GameState } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import type { Document } from "mongodb";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 
 const ENDED = ["completed", "resolved"] as const;
 
@@ -41,7 +47,7 @@ export const migration: Migration = {
     "Create electionResultSnapshots indexes and backfill a frozen result for every ended race.",
   idempotent: true,
   async execute(db: Db, ctx) {
-    const snapshots = db.collection<ElectionResultSnapshot>("electionResultSnapshots");
+    const snapshots = electionResultSnapshotsCollection(db);
 
     // Indexes FIRST, and before any write. The unique electionId index is what
     // makes the capture at resolution idempotent, and building it ahead of the
@@ -58,13 +64,10 @@ export const migration: Migration = {
       );
     }
 
-    const gameState = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" } as never);
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" } as never);
     const currentTurn = gameState?.currentTurn ?? 0;
 
-    const ended = await db
-      .collection<Election>("elections")
+    const ended = await electionsCollection(db)
       .find({ status: { $in: ENDED } })
       .sort({ cycle: 1 })
       .toArray();
@@ -75,7 +78,7 @@ export const migration: Migration = {
     const houseSeatsByYear = new Map<number, Record<string, number>>();
     for (const election of ended) {
       if (
-        election.countryId !== "US" ||
+        !countryHasFeature("usSeeds", election.countryId) ||
         election.electionType !== "house" ||
         typeof election.electionYear !== "number" ||
         typeof election.totalSeats !== "number" ||
@@ -97,8 +100,7 @@ export const migration: Migration = {
     // Only a race that actually recorded votes has anything to freeze.
     const withTallies = new Set(
       (
-        await db
-          .collection("electionVoteTallies")
+        await electionVoteTalliesCollection<Document>(db)
           .find({})
           .project<{ electionId: ObjectId }>({ electionId: 1 })
           .toArray()
@@ -139,7 +141,7 @@ export const migration: Migration = {
             // The map and allocation rules in force when the race ran, not
             // the ones in force today.
             apportionmentYear: election.electionYear ?? null,
-            ...(election.countryId === "US" &&
+            ...(countryHasFeature("usSeeds", election.countryId) &&
             election.electionType === "president" &&
             election.electionYear !== undefined
               ? { houseSeatsByState: houseSeatsByYear.get(election.electionYear) }

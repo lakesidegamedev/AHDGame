@@ -23,6 +23,10 @@ import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
+import type { Document } from "mongodb";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -318,9 +322,7 @@ async function executeSingleTransfer(
   const corpKey = plan.corporationId.toString();
   let corp = corpState.get(corpKey);
   if (!corp) {
-    const loaded = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: plan.corporationId });
+    const loaded = await corporationsCollection(db).findOne({ _id: plan.corporationId });
     if (!loaded) return false;
     corp = loaded;
     corpState.set(corpKey, corp);
@@ -368,61 +370,53 @@ async function executeSingleTransfer(
 
       if (completed.buyerTransactionId) {
         await attempt("delete buyer transaction", async () => {
-          const deleted = await db
-            .collection("indexFundTransactions")
-            .deleteOne({ _id: completed.buyerTransactionId });
+          const deleted = await indexFundTransactionsCollection<Document>(db).deleteOne({
+            _id: completed.buyerTransactionId,
+          });
           return deleted.deletedCount === 1;
         });
       }
       if (completed.sellerTransactionId) {
         await attempt("delete seller transaction", async () => {
-          const deleted = await db
-            .collection("indexFundTransactions")
-            .deleteOne({ _id: completed.sellerTransactionId });
+          const deleted = await indexFundTransactionsCollection<Document>(db).deleteOne({
+            _id: completed.sellerTransactionId,
+          });
           return deleted.deletedCount === 1;
         });
       }
       if (completed.buyerHoldingsUpdated) {
         await attempt("restore buyer holdings", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
-            .updateOne(
-              { _id: plan.buyerFundId, holdings: completed.buyerAppliedHoldings },
-              { $set: { holdings: buyerFund.holdings, updatedAt: new Date() } }
-            );
+          const result = await indexFundsCollection(db).updateOne(
+            { _id: plan.buyerFundId, holdings: completed.buyerAppliedHoldings },
+            { $set: { holdings: buyerFund.holdings, updatedAt: new Date() } }
+          );
           return result.matchedCount === 1;
         });
       }
       if (completed.sellerHoldingsUpdated) {
         await attempt("restore seller holdings", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
-            .updateOne(
-              { _id: plan.sellerFundId, holdings: completed.sellerAppliedHoldings },
-              { $set: { holdings: sellerFund.holdings, updatedAt: new Date() } }
-            );
+          const result = await indexFundsCollection(db).updateOne(
+            { _id: plan.sellerFundId, holdings: completed.sellerAppliedHoldings },
+            { $set: { holdings: sellerFund.holdings, updatedAt: new Date() } }
+          );
           return result.matchedCount === 1;
         });
       }
       if (completed.sellerCashCredited) {
         await attempt("debit seller compensation cash", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
-            .updateOne(
-              { _id: plan.sellerFundId, cashAnchor: { $gte: plan.valueAnchor } },
-              { $inc: { cashAnchor: -plan.valueAnchor }, $set: { updatedAt: new Date() } }
-            );
+          const result = await indexFundsCollection(db).updateOne(
+            { _id: plan.sellerFundId, cashAnchor: { $gte: plan.valueAnchor } },
+            { $inc: { cashAnchor: -plan.valueAnchor }, $set: { updatedAt: new Date() } }
+          );
           return result.matchedCount === 1;
         });
       }
       if (completed.buyerCashDebited) {
         await attempt("credit buyer compensation cash", async () => {
-          const result = await db
-            .collection<IndexFund>("indexFunds")
-            .updateOne(
-              { _id: plan.buyerFundId },
-              { $inc: { cashAnchor: plan.valueAnchor }, $set: { updatedAt: new Date() } }
-            );
+          const result = await indexFundsCollection(db).updateOne(
+            { _id: plan.buyerFundId },
+            { $inc: { cashAnchor: plan.valueAnchor }, $set: { updatedAt: new Date() } }
+          );
           return result.matchedCount === 1;
         });
       }
@@ -665,7 +659,7 @@ async function restoreFundShareholder(
   expectedCurrentShares: number,
   expectedCurrentAverage: number | undefined
 ): Promise<boolean> {
-  const collection = db.collection<Corporation>("corporations");
+  const collection = corporationsCollection(db);
   const expectedEntry = {
     fundId,
     shares: expectedCurrentShares,
@@ -787,23 +781,19 @@ async function atomicallyMoveFundCash(
   const now = new Date();
   const sessionOpts = options?.session ? { session: options.session } : undefined;
 
-  const buyerDebit = await db
-    .collection<IndexFund>("indexFunds")
-    .updateOne(
-      { _id: buyerFundId, cashAnchor: { $gte: amountAnchor } },
-      { $inc: { cashAnchor: -amountAnchor }, $set: { updatedAt: now } },
-      sessionOpts
-    );
+  const buyerDebit = await indexFundsCollection(db).updateOne(
+    { _id: buyerFundId, cashAnchor: { $gte: amountAnchor } },
+    { $inc: { cashAnchor: -amountAnchor }, $set: { updatedAt: now } },
+    sessionOpts
+  );
   if (buyerDebit.matchedCount === 0) return false;
   if (progress) progress.buyerCashDebited = true;
 
-  const sellerCredit = await db
-    .collection<IndexFund>("indexFunds")
-    .updateOne(
-      { _id: sellerFundId },
-      { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: now } },
-      sessionOpts
-    );
+  const sellerCredit = await indexFundsCollection(db).updateOne(
+    { _id: sellerFundId },
+    { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: now } },
+    sessionOpts
+  );
   if (sellerCredit.matchedCount === 0) return false;
   if (progress) progress.sellerCashCredited = true;
 

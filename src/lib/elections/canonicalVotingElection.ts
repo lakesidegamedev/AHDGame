@@ -1,10 +1,7 @@
 /**
- * When two voting elections exist for the same seat, the party page and the
- * enter/vote routes must agree on which one is real. Last-write-wins on an
- * unsorted find() showed the later empty duplicate while the unique candidacy
- * index still locked the player to the earlier race (ticket #1295).
- *
- * Canonical = earliest startTurn, then createdAt, then _id.
+ * When two voting elections exist for the same seat, all readers must agree
+ * on which one is real. Canonical = earliest startTurn, then createdAt, then
+ * _id.
  */
 export const CANONICAL_VOTING_ELECTION_SORT = {
   startTurn: 1,

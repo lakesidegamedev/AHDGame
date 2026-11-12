@@ -12,10 +12,12 @@ import {
   assignByLeanOrdering,
   type CandidateDistributionInfo,
 } from "@/lib/utils/subdivisionResults";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
 import type { ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 // GET /api/elections/[id]/state/[stateId]/subdivision-results — sub-region
 // vote distribution + seat-consistent winners for a region in an election.
@@ -83,7 +85,7 @@ export async function GET(
     // state and runs to megabytes; this route needs one state's slice. The map
     // requests a state at a time as the reader zooms, so the full read made
     // every county load crawl.
-    const tally = await db.collection<ElectionVoteTally>("electionVoteTallies").findOne(
+    const tally = await electionVoteTalliesCollection(db).findOne(
       { electionId: election._id },
       {
         projection: {
@@ -127,8 +129,7 @@ export async function GET(
     const uniquePartySeqIds = [...new Set(Object.values(tally.candidateParties ?? {}))]
       .map(Number)
       .filter(Boolean);
-    const partyDocs = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyDocs = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: uniquePartySeqIds }, countryId: election.countryId })
       .toArray();
     const partyBySeqId = new Map(partyDocs.map((p) => [String(p.sequentialId), p]));

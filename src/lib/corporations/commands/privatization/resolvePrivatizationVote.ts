@@ -9,10 +9,10 @@ import {
 import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt";
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import type {
-  Corporation,
   Character,
   CorporationPrivatizationVote,
   IndexFund,
+  NPP,
   Shareholder,
 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -29,6 +29,11 @@ import {
 import { notifyVoteEventRaw } from "@/lib/corporations/votes/voteNotifications";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
 
 export interface ResolveInput {
   db: Db;
@@ -68,9 +73,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   // against current shareholdings. A holder who sold their shares between
   // casting and the deadline should not influence the outcome, and a holder
   // who partially divested should only count for what they still own.
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: vote.corporationId });
+  const corp = await corporationsCollection(db).findOne({ _id: vote.corporationId });
 
   const liveVotes = corp
     ? vote.votes.flatMap((v) => {
@@ -113,14 +116,12 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   // FIRST. Only the winner of the transition does payouts. The loser sees
   // matchedCount === 0 and bails out as already_resolved.
   const finalStatus: "passed" | "failed" = passed ? "passed" : "failed";
-  const claim = await db
-    .collection<CorporationPrivatizationVote>("corporationPrivatizationVotes")
-    .updateOne(
-      // The tallied votes are part of the claim: a cast that lands after the
-      // tally leaves the vote open for the next resolver to count it.
-      { _id: vote._id, status: "open", votes: vote.votes },
-      { $set: { status: finalStatus, resolvedAt: now, updatedAt: now } }
-    );
+  const claim = await corporationPrivatizationVotesCollection(db).updateOne(
+    // The tallied votes are part of the claim: a cast that lands after the
+    // tally leaves the vote open for the next resolver to count it.
+    { _id: vote._id, status: "open", votes: vote.votes },
+    { $set: { status: finalStatus, resolvedAt: now, updatedAt: now } }
+  );
   if (claim.matchedCount === 0) {
     // Another resolver already claimed this vote, or a cast moved the tally.
     // Bail out: the claimant owns the side effects, or the next pass recounts.
@@ -148,7 +149,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       vote.totalReservedCash,
       forexEnabled
     );
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $set: {
@@ -190,25 +191,36 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   const nonCeoHolders = corp.shareholders.filter((s) => s.characterId?.toString() !== ceoIdStr);
   const publicFloat = Math.max(0, (corp.publicFloat ?? 0) - unplacedIpoShares(corp));
 
-  // #3450: index-fund holders must be paid too. Previously a fund holder had its
-  // payout counted into the CEO's outflow but was NEVER credited, and its shares
-  // were absorbed into the CEO by the cap-table rebuild below — destroying money
-  // and wiping the fund's stake for free. Funds hold cash in ₳, so convert the
-  // buyout payout from the buyout currency. There is no `fund` subjectType for
-  // financialTxLog yet (Phase-3 ledger gap), so the cash credit is the real,
-  // conserving move and the fund leg stays unbooked — matching every other fund
-  // cash flow today. Fund payouts are tracked separately so the CEO's booked
-  // outflow leg reflects only the char/corp/float portions it can attribute.
+  // Index-fund holders must be paid too. Otherwise their payout is counted into
+  // the CEO's outflow but never credited, and the cap-table rebuild below absorbs
+  // their shares into the CEO, destroying money and wiping the fund's stake.
+  // Funds hold cash in ₳, so convert the buyout payout from the buyout currency.
+  // There is no `fund` subjectType for financialTxLog yet, so the cash credit is
+  // the conserving move and the fund leg stays unbooked. Fund payouts are tracked
+  // separately so the CEO's booked outflow leg reflects only the portions it can
+  // attribute.
   const hasFundHolder = nonCeoHolders.some((h) => h.fundId && !h.characterId && !h.corporationId);
   const fxByCurrency =
     input.fxByCurrency ??
     (hasFundHolder || input.stockTaxActive ? await loadFxRatesByCurrency(db) : null);
 
+  const grossLocal =
+    nonCeoHolders.reduce((acc, h) => acc + Math.round(h.shares * vote.lockedBuyoutPrice), 0) +
+    Math.round(publicFloat * vote.lockedBuyoutPrice);
+  // Shares can move into the cap table after the vote opened (IPO placements
+  // are excluded from the reserve at open). Scale payouts to what was actually
+  // reserved rather than minting the difference, and refund any remainder
+  // below so undershoot does not destroy cash either.
+  const reserveScale =
+    grossLocal > vote.totalReservedCash ? vote.totalReservedCash / grossLocal : 1;
   let totalCharCorpPaid = 0;
+  let totalPaidLocal = 0;
   const personalPayoutOps: AnyBulkWriteOperation<Character>[] = [];
+  const nppPayoutOps: AnyBulkWriteOperation<NPP>[] = [];
   let totalFundPaidAnchor = 0;
   for (const holder of nonCeoHolders) {
-    const payout = Math.round(holder.shares * vote.lockedBuyoutPrice);
+    const payout = Math.round(holder.shares * vote.lockedBuyoutPrice * reserveScale);
+    totalPaidLocal += payout;
     if (holder.characterId) {
       const rate = fxByCurrency?.get(vote.lockedBuyoutCurrency as CurrencyCode) ?? 1;
       const stockTax = input.stockTaxActive
@@ -247,9 +259,10 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       });
       totalCharCorpPaid += payout;
     } else if (holder.corporationId) {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne({ _id: holder.corporationId }, { $inc: { liquidCapital: payout } });
+      await corporationsCollection(db).updateOne(
+        { _id: holder.corporationId },
+        { $inc: { liquidCapital: payout } }
+      );
       void emitTx(db, {
         type: "share_buyout_payout",
         turn: currentTurn,
@@ -267,20 +280,31 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     } else if (holder.fundId) {
       const rate = fxByCurrency?.get(vote.lockedBuyoutCurrency as CurrencyCode) ?? 1;
       const payoutAnchor = rate > 0 ? payout / rate : payout;
-      await db.collection<IndexFund>("indexFunds").updateOne({ _id: holder.fundId }, {
+      await indexFundsCollection(db).updateOne({ _id: holder.fundId }, {
         $inc: { cashAnchor: payoutAnchor },
         $pull: { holdings: { corporationId: corp._id } },
         $set: { updatedAt: now },
       } as unknown as UpdateFilter<IndexFund>);
       totalFundPaidAnchor += payoutAnchor;
+    } else if (holder.nppId) {
+      nppPayoutOps.push({
+        updateOne: {
+          filter: { _id: holder.nppId },
+          update: {
+            $inc: { [`currencyBalances.personal.${vote.lockedBuyoutCurrency}`]: payout },
+            $set: { updatedAt: now },
+          },
+        },
+      });
     }
   }
 
-  if (personalPayoutOps.length)
-    await db.collection<Character>("characters").bulkWrite(personalPayoutOps);
+  if (personalPayoutOps.length) await charactersCollection(db).bulkWrite(personalPayoutOps);
+  if (nppPayoutOps.length) await (await getNppsCollection(db)).bulkWrite(nppPayoutOps);
 
   // The float belongs to the equity market pool, not the issuer being taken private.
-  const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice);
+  const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice * reserveScale);
+  totalPaidLocal += floatPayout;
   if (floatPayout > 0) {
     await creditEquityPool(
       db,
@@ -288,6 +312,17 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       floatPayout,
       "purchasesIn",
       now
+    );
+  }
+
+  const reserveRemainder = vote.totalReservedCash - totalPaidLocal;
+  if (reserveRemainder > 0) {
+    await refundCharacterCash(
+      db,
+      vote.openedByCharacterId,
+      vote.reservedCashCurrency,
+      reserveRemainder,
+      forexEnabled
     );
   }
 
@@ -327,7 +362,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   }
   const newTotalShares = ceoSharesAfter; // = old totalShares − publicFloat
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: {
@@ -338,12 +373,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
         lastPrivatizationTurn: currentTurn,
         updatedAt: now,
       },
-      // #908: a private corp is single-class — drop dual-class supershare state
-      // so hasSuperShares() stops reporting 10× voting on a now-private corp
-      // (the rebuilt CEO shareholder entry above already omits `superShares`).
-      // Approved-but-unissued public float is void once the corp leaves the
-      // public market; the paced placement loop skips private corps, so a
-      // surviving flag would block future share proposals forever.
+      // A private corp is single-class: drop dual-class supershare state so hasSuperShares() stops reporting 10x voting. Also void pendingShareIssuance, since the placement loop skips private corps and a stale flag would block future proposals forever.
       $unset: {
         privatizationCooldownUntilTurn: "",
         superShareMultiplier: "",

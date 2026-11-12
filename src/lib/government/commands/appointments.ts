@@ -15,6 +15,13 @@ import type { Character, CareerEvent, ElectedOfficial, NPP, OfficeType } from "@
 import type { CountryConfig } from "@/lib/constants/countries";
 import type { EligibleSenateAppointeeView } from "@/lib/government/dto/governmentView";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import type { Document } from "mongodb";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { ukCabinetCooldownsCollection } from "@/lib/db/repositories/ukCabinetCooldowns";
 
 export async function adminAppointPrimeMinister(
   db: Db,
@@ -32,9 +39,7 @@ export async function adminAppointPrimeMinister(
     if (!ObjectId.isValid(characterId)) {
       throw badRequest("Invalid characterId");
     }
-    character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: new ObjectId(characterId) });
+    character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
     if (!character) {
       throw notFound("Character not found");
     }
@@ -46,20 +51,17 @@ export async function adminAppointPrimeMinister(
   }
 
   const execKey = getHeadOfGovernmentOfficeKey(countryId, await getGameStatePreset(db));
-  const formerHolders = await db
-    .collection<Character>("characters")
+  const formerHolders = await charactersCollection(db)
     .find(
       { "currentOffice.type": execKey, countryId },
       { projection: { party: 1, careerHistory: 1 } }
     )
     .toArray()
     .catch(() => []);
-  await db
-    .collection<Character>("characters")
-    .updateMany(
-      { "currentOffice.type": execKey, countryId },
-      { $set: { currentOffice: null, updatedAt: now } }
-    );
+  await charactersCollection(db).updateMany(
+    { "currentOffice.type": execKey, countryId },
+    { $set: { currentOffice: null, updatedAt: now } }
+  );
 
   if (character) {
     const prev = character.currentOffice;
@@ -84,12 +86,10 @@ export async function adminAppointPrimeMinister(
       date: now,
       ...(character.party ? { party: character.party, partyCountryId: countryId } : {}),
     };
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: character._id },
-        { $set: { currentOffice: pmOffice, updatedAt: now }, $push: { careerHistory: pmCareer } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $set: { currentOffice: pmOffice, updatedAt: now }, $push: { careerHistory: pmCareer } }
+    );
   }
 
   const govCol = getGovernmentFormationsCollection(db);
@@ -98,8 +98,7 @@ export async function adminAppointPrimeMinister(
     const partySeqId = character.party?.toString();
     let partySeats = 0;
     if (partySeqId) {
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await electedOfficialsCollection(db)
         .find({
           officeType: lowerChamberKey,
           countryId,
@@ -148,8 +147,8 @@ export async function adminAppointPrimeMinister(
       }
     );
     await Promise.all([
-      db.collection("cabinetMembers").deleteMany({ countryId }),
-      db.collection("ukCabinetCooldowns").deleteMany({ countryId }),
+      cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
+      ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
     ]);
   }
 
@@ -237,11 +236,11 @@ export async function appointSenator(
   }
   const appointeeId = new ObjectId(appointeeIdRaw);
 
-  const officialsCollection = db.collection<ElectedOfficial>("electedOfficials");
-  const charactersCollection = db.collection<Character>("characters");
-  const nppsCollection = db.collection<NPP>("npps");
+  const officialsCollection = electedOfficialsCollection(db);
+  const charactersHandle = charactersCollection(db);
+  const nppDocs = nppsCollection(db);
 
-  const governorCharacter = await charactersCollection.findOne({
+  const governorCharacter = await charactersHandle.findOne({
     userId: new ObjectId(governorUserId),
   });
   if (!governorCharacter) {
@@ -285,7 +284,7 @@ export async function appointSenator(
   let appointeeUserId: ObjectId | undefined;
 
   if (input.appointeeType === "npp") {
-    const npp = await nppsCollection.findOne({ _id: appointeeId });
+    const npp = await nppDocs.findOne({ _id: appointeeId });
     if (!npp) {
       throw notFound("NPP not found");
     }
@@ -302,7 +301,7 @@ export async function appointSenator(
     appointeeName = npp.name;
     appointeeParty = npp.party;
   } else {
-    const appointee = await charactersCollection.findOne({ _id: appointeeId });
+    const appointee = await charactersHandle.findOne({ _id: appointeeId });
     if (!appointee) {
       throw notFound("Character not found");
     }
@@ -321,7 +320,7 @@ export async function appointSenator(
     appointeeUserId = appointee.userId;
   }
 
-  const nextClassElection = await db.collection("elections").findOne(
+  const nextClassElection = await electionsCollection<Document>(db).findOne(
     {
       electionType: "senate",
       state: governorOfficial.state,
@@ -370,12 +369,12 @@ export async function appointSenator(
   }
 
   if (input.appointeeType === "npp") {
-    await nppsCollection.updateOne(
+    await nppDocs.updateOne(
       { _id: appointeeId },
       { $set: { currentOffice: officeType, party: appointeeParty, updatedAt: now } }
     );
   } else {
-    await charactersCollection.updateOne(
+    await charactersHandle.updateOne(
       { _id: appointeeId },
       { $set: { currentOffice: officeType, updatedAt: now } }
     );

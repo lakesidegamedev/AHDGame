@@ -43,7 +43,7 @@ describe("processLaenderRegionalBudgets for DD", () => {
     db = createMockDb();
   });
 
-  function wire(nationalPolicies: unknown[]) {
+  function wire(nationalPolicies: unknown[], federalBudget: unknown = null) {
     const setup = <T>(name: string, data: T[]) => {
       db.collection(name);
       db.collectionMocks[name]!.find = vi.fn().mockReturnValue({
@@ -62,6 +62,8 @@ describe("processLaenderRegionalBudgets for DD", () => {
     setup("regionalBudgets", []);
     setup("macroMetrics", [{ _id: "NW", economic: { medianIncome: { value: 9_000 } } }]);
     setup("cabinetSettings", []);
+    setup("federalBudget", []);
+    db.collectionMocks.federalBudget!.findOne = vi.fn().mockResolvedValue(federalBudget);
     db.collection.mockImplementation((name: string) => db.collectionMocks[name]);
   }
 
@@ -129,5 +131,33 @@ describe("processLaenderRegionalBudgets for DD", () => {
     }
     expect(LAENDER_MODEL_COUNTRIES).toContain("DD");
     expect(LAENDER_MODEL_COUNTRIES).toContain("DE");
+  });
+
+  it("funds a Land from the national budget's rates before any tax bill has passed", async () => {
+    // A world seeded before the tax book joined has no slider rows: the rates
+    // live only in the national budget, as they do on the budget page.
+    wire([], { _id: "DD", taxRates: { incomeTax: 35, salesTax: 32 } });
+    const { processLaenderRegionalBudgets } = await import("./deRegionalBudget");
+    await processLaenderRegionalBudgets(db as unknown as Db, "DD", 600, "1953-default");
+
+    const doc = db.collectionMocks.regionalBudgets!.bulkWrite.mock.calls[0][0][0].updateOne.update
+      .$set as Record<string, number>;
+    expect(doc.incomeTaxShare).toBeGreaterThan(0);
+    expect(doc.vatShare).toBeGreaterThan(0);
+  });
+
+  it("reads the same shares from a slider row and from the budget at the same rates", async () => {
+    wire(LIVE_DD_POLICIES);
+    const { processLaenderRegionalBudgets } = await import("./deRegionalBudget");
+    await processLaenderRegionalBudgets(db as unknown as Db, "DD", 600, "1953-default");
+    const fromRows = db.collectionMocks.regionalBudgets!.bulkWrite.mock.calls[0][0][0].updateOne
+      .update.$set as Record<string, number>;
+
+    wire([], { _id: "DD", taxRates: { incomeTax: 35, salesTax: 32 } });
+    await processLaenderRegionalBudgets(db as unknown as Db, "DD", 600, "1953-default");
+    const fromBudget = db.collectionMocks.regionalBudgets!.bulkWrite.mock.calls[0][0][0].updateOne
+      .update.$set as Record<string, number>;
+    expect(fromBudget.incomeTaxShare).toBe(fromRows.incomeTaxShare);
+    expect(fromBudget.vatShare).toBe(fromRows.vatShare);
   });
 });

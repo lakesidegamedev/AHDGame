@@ -23,7 +23,9 @@ import {
 import { migrateUnlockedTechOnPrimaryTypeSwitch } from "@/lib/corporations/techTree/migrateUnlocksOnTypeSwitch";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -86,13 +88,10 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
 
     // Enforce 150% overhead cap: combined marketing + logistics + R&D + CEO salary ≤ 1.5× daily revenue.
     // Checked whenever at least one budget field is being set. The cap is $0 for a
-    // corp with no gross revenue, mirroring the Bug #0728 CEO-salary rule: a
-    // zero-revenue shell cannot commit positive overhead budgets either. Before
-    // ticket #1237 the check was skipped entirely at zero revenue, so absurd
-    // typed values (1e+278 scale) were stored and the turn engine charged the
-    // uncapped logistics/R&D legs in full, cratering liquidCapital to -1e+277.
-    // A save that does not raise total overhead above what is already stored is
-    // still allowed, so a corp that lost revenue can lower or clear its budgets.
+    // corp with no gross revenue, so a zero-revenue shell cannot commit positive
+    // overhead budgets. A save that does not raise total overhead above what is
+    // already stored is still allowed, so a corp that lost revenue can lower or
+    // clear its budgets.
     const hasBudgetUpdate =
       marketingBudget !== undefined ||
       logisticsBudget !== undefined ||
@@ -100,8 +99,7 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
       ceoSalary !== undefined;
     if (hasBudgetUpdate) {
       const [sectors, fxByCurrency] = await Promise.all([
-        db
-          .collection<CorporateSector>("corporateSectors")
+        corporateSectorsCollection(db)
           .find(
             { corporationId: corporation._id },
             {
@@ -136,11 +134,9 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
       const revenueForBudgetCap = Number.isFinite(totalDailyRevenue)
         ? Math.max(0, Math.round(totalDailyRevenue))
         : 0;
-      // Bug #0728: CEO salary alone cannot exceed 1.25x daily gross revenue,
-      // including when revenue is 0 (a zero-revenue shell may not set any
-      // positive salary, which closes the bond-mint → salary drain). Gross
-      // revenue excludes bond proceeds (these land in liquidCapital) and bond
-      // coupon income (a separate line).
+      // CEO salary cannot exceed 1.25x daily gross revenue, even at zero
+      // revenue (blocks bond-mint to salary drain). Gross revenue excludes
+      // bond proceeds and bond coupon income.
       if (ceoSalary !== undefined) {
         const maxCeoSalary = revenueForBudgetCap * CEO_SALARY_MAX_REVENUE_MULTIPLE;
         if (ceoSalary > maxCeoSalary) {
@@ -269,7 +265,6 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
 
         // Sector research is lane-specific: drop it on switch (no remap,
         // no refund). Corporate-lane unlocks + new-type past-decade baseline keep
-        // (ticket #1040).
         if (primaryType !== currentLane) {
           const startingYear = gameState?.startingYear ?? STARTING_YEAR;
           const currentYear =
@@ -331,7 +326,7 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
     if (techUnset && Object.keys(techUnset).length > 0) updateDoc.$unset = techUnset;
     if (techInc && Object.keys(techInc).length > 0) updateDoc.$inc = techInc;
 
-    await db.collection<Corporation>("corporations").updateOne({ _id: corporation._id }, updateDoc);
+    await corporationsCollection(db).updateOne({ _id: corporation._id }, updateDoc);
 
     return NextResponse.json({
       success: true,

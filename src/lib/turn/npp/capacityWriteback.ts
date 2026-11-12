@@ -3,11 +3,9 @@
  * Cohort capacity write-back for NPP corporation turns.
  *
  * Everything the cohort writes about capacity after deciding: capex ledger
- * legs for reinvestment builds, in-memory depletion of the unowned pools later
- * corps in the pass still see, founded-sector inserts, the founded-capacity
- * drawdown against the pool collection, and the bulk flushes. Pure
- * construction except for the final bulk writes, which issue the same ops the
- * shell used to issue inline.
+ * legs, in-memory depletion of unowned pools later corps still see, founded
+ * sector inserts, founded-capacity drawdown, and bulk flushes. Pure except
+ * for the final bulk writes.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { CorporateSector, Corporation } from "@/lib/db/types";
@@ -37,6 +35,7 @@ import {
   type NppReinvestmentCashWitness,
 } from "./reinvestmentCashLedger";
 import type { NppCorpUpdateOp } from "./nppCashWrite";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export type NppReinvestmentList = NonNullable<NppCorpDecision["reinvestments"]>;
 export type NppUnownedDrawList = NonNullable<NppCorpDecision["unownedDraws"]>;
@@ -176,7 +175,7 @@ export async function drawFoundedCapacityFromPools(
   args: { eraUnitScale: number; now: Date }
 ): Promise<void> {
   if (draws.length === 0) return;
-  await db.collection<UnownedSector>("unownedSectors").bulkWrite(
+  await unownedSectorsCollection(db).bulkWrite(
     draws.map(({ stateId, sectorType, units, countryId, industryModel, mediaDiscriminator }) => {
       return {
         updateOne: {

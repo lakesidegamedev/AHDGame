@@ -15,6 +15,7 @@
  */
 import { getDb } from "@/lib/mongodb";
 import { checkRateLimit, type RateLimitResult } from "./rateLimit";
+import { rateLimitBucketsCollection } from "@/lib/db/repositories/rateLimitBuckets";
 
 interface RateLimitBucket {
   _id: string;
@@ -39,13 +40,11 @@ export async function mongoRateLimit(
   const resetAt = windowStart + windowMs;
 
   const db = await getDb();
-  const doc = await db
-    .collection<RateLimitBucket>("rateLimitBuckets")
-    .findOneAndUpdate(
-      { _id: `${id}:${windowStart}` },
-      { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date(resetAt) } },
-      { upsert: true, returnDocument: "after" }
-    );
+  const doc = await rateLimitBucketsCollection<RateLimitBucket>(db).findOneAndUpdate(
+    { _id: `${id}:${windowStart}` },
+    { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date(resetAt) } },
+    { upsert: true, returnDocument: "after" }
+  );
 
   const count = doc?.count ?? 1;
   if (count > maxRequests) {

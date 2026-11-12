@@ -6,7 +6,7 @@ import type {
 } from "@/lib/db/types/manifesto";
 
 /**
- * Manifesto policy-popularity scoring (UK rework, epic #856).
+ * Manifesto policy-popularity scoring.
  *
  * Two pure halves:
  *   1. Campaign popularity → a per-demographic-group vote-share multiplier.
@@ -16,9 +16,7 @@ import type {
  * the vote model, polling, and the confidence gauge without a DB.
  *
  * The vote-share multiplier is deliberately bounded and defaults small; the
- * caller supplies `maxSwing`. Design decision: MEDIUM (~5-7%) — validate the
- * exact value in worldsim before enabling in live elections. See ops-knowledge
- * `uk-rework-design-2026-08-25`.
+ * caller supplies `maxSwing`.
  */
 
 /** Default maximum fractional vote-share swing a manifesto can apply per group. */

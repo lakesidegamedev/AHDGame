@@ -1,5 +1,6 @@
 import { resolveMongoDbName } from "@/lib/mongodb";
-import type { Env } from "@/lib/env";
+import type { Env } from "@/lib/config/validatedEnv";
+import { assertSeedContract } from "@/lib/seeds/contract/checkSeedContract";
 
 type ResetDatabaseEnv = Pick<Env, "MONGODB_URI" | "MONGODB_DB">;
 
@@ -15,4 +16,12 @@ export function assertResetDatabaseMatchesApplication(
       `Reset database mismatch: ${candidateLabel} ${candidateDatabaseName}, application selects ${applicationDatabaseName}`
     );
   }
+}
+
+/**
+ * Refuse a reset or bootstrap whose preset fails the seed contract. Runs before
+ * anything is written and throws one `SeedContractError` listing every gap.
+ */
+export function assertSeedContractForReset(preset: string): void {
+  assertSeedContract(preset);
 }

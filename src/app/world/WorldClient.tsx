@@ -32,7 +32,6 @@ interface WorldClientProps {
   legacyFinances?: LegacyServiceSnapshot[];
   countryAccess: CountryAccessMap;
   /** Gates the Conflicts entry; mirrors the World navbar link. */
-  conflictsEnabled: boolean;
   worldEntities: WorldEntityMapSnapshot;
   /** entityId → bloc, for the globe's Blocs mode. */
   blocMapData: BlocMapData;
@@ -53,7 +52,6 @@ export default function WorldClient({
   rows: allRows,
   roadmap,
   countryAccess,
-  conflictsEnabled,
   worldEntities,
   blocMapData,
   legacyFinances = [],
@@ -74,16 +72,12 @@ export default function WorldClient({
       description: "Active world events affecting nations, economies, and metrics.",
       href: "/world/crises",
     },
-    ...(conflictsEnabled
-      ? [
-          {
-            heading: "World affairs",
-            title: "Conflicts",
-            description: "Rivalries, blocs, and confrontations between nations.",
-            href: "/world/conflicts",
-          },
-        ]
-      : []),
+    {
+      heading: "World affairs",
+      title: "Conflicts",
+      description: "Rivalries, blocs, and confrontations between nations.",
+      href: "/world/crises?view=conflicts",
+    },
     {
       heading: "World trade",
       title: "Balance of trade",

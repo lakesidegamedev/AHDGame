@@ -3,18 +3,15 @@
  *
  * `pensionTurn.ts` debits a corporation twice every turn (the bargained
  * contribution, then a deficit top-up) and ledgers both as `pension_contribution`.
- * Every reader of that log is an admin route, so before this the CEO saw the
- * cash leave and had nothing to name it. This recomputes the same two figures
- * from the same rules the turn uses, so the income statement can carry a line
- * for each.
+ * This recomputes the same two figures from the same rules the turn uses, so the
+ * income statement can carry a line for each.
  *
  * Projection, not history: it answers "what is this agreement charging me right
- * now", the way every other row on that statement does. An employer too short to
- * pay is still shown what it owes, because the claim accrues either way.
+ * now", like every other row on that statement. An employer too short to pay is
+ * still shown what it owes, because the claim accrues either way.
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { CollectiveAgreement } from "@/lib/db/types";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import { activeCollectiveAgreementFilter } from "@/lib/unions/bargaining";
 import {
@@ -23,7 +20,8 @@ import {
   pensionSchemeAssetsAnchor,
   pensionTopUpForTurn,
 } from "./rules";
-import { PENSION_SCHEMES } from "./schemeAssets";
+import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 export interface EmployerPensionCostAnchorPerTurn {
   /** The bargained rate applied to the covered wage bill. */
@@ -56,8 +54,7 @@ export async function employerPensionCostForTurn(
   currentTurn: number,
   wageBillAnchorPerTurnBySectorId: Map<string, number>
 ): Promise<EmployerPensionCostAnchorPerTurn> {
-  const agreements = await db
-    .collection<CollectiveAgreement>("collectiveAgreements")
+  const agreements = await collectiveAgreementsCollection(db)
     .find({
       ...activeCollectiveAgreementFilter(currentTurn),
       employerCorporationId: corporationId,
@@ -69,8 +66,7 @@ export async function employerPensionCostForTurn(
   const unionIds = [...new Set(agreements.map((a) => a.unionId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const schemes = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
+  const schemes = await pensionSchemesCollection<PensionScheme>(db)
     .find({ unionId: { $in: unionIds } })
     .toArray();
   const schemeByUnionId = new Map(schemes.map((s) => [s.unionId.toString(), s]));

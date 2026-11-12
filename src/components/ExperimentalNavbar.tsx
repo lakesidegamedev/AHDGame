@@ -1,18 +1,14 @@
 "use client";
 
 /**
- * ExperimentalNavbar — the redesigned primary navigation, imported from the
- * "AHD Navbar" Claude Design doc. This is now the DEFAULT navbar, selected in
- * NavbarWrapper; the classic {@link Navbar} is used when a player selects the
- * classic interface in Settings → Appearance. The name is kept for continuity.
+ * ExperimentalNavbar: the default primary navigation. The classic {@link Navbar}
+ * is used when a player selects the classic interface in Settings → Appearance.
+ * The name is kept for continuity.
  *
- * Visuals use the app's themed Tailwind tokens (foreground/muted/card/primary…)
- * so it inherits all 11 themes. The desktop bar mirrors the classic {@link Navbar}
- * organization — logo left; text-forward tabs + icon cluster hug the right; a thin
- * underline for the active tab; an inline expanding search — with the top tabs in
- * the production order (Actions · State · Nation · World · Help · Staff). Keeps this
- * redesign's avatar/profile dropdown (notifications folded in) and the improved
- * mobile collapsed bar + slide-down menu.
+ * Visuals use themed Tailwind tokens so it inherits all 11 themes. Desktop bar:
+ * logo left; text tabs + icon cluster right; underline on active tab; inline
+ * expanding search, with tabs in production order (Actions · State · Nation ·
+ * World · Help · Staff). Includes the avatar/profile dropdown and a mobile menu.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -69,7 +65,7 @@ import { ExperimentalUserMenu } from "@/components/navbar/ExperimentalUserMenu";
 import { NavSettingsMenu, NavSettingsIcon } from "@/components/navbar/NavSettingsMenu";
 import { PixelNavIcon } from "@/components/navbar/PixelNavIcon";
 import { useToast } from "@/contexts/ToastContext";
-import { useRefetchNav } from "@/contexts/AuthDataContext";
+import { useOptionalAuthMe, useRefetchNav } from "@/contexts/AuthDataContext";
 import {
   applySavedOrder,
   MAX_NAV_PINS,
@@ -113,6 +109,7 @@ import type {
   OpenKey,
 } from "@/components/navbar/experimentalNavTypes";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 const NavCustomizeDialog = dynamic(
   () =>
@@ -159,7 +156,6 @@ export interface ExperimentalNavbarProps {
   myUnionId?: string | null;
   adminCharacters?: AdminCharacter[];
   imperialCharacter?: ImperialCharacterNav;
-  conflictsEnabled?: boolean;
   unionsEnabled?: boolean;
   settlementCrisisLive?: boolean;
   activePresidentElectionId?: string;
@@ -194,7 +190,6 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   myUnionId,
   adminCharacters,
   imperialCharacter,
-  conflictsEnabled = false,
   unionsEnabled = false,
   settlementCrisisLive = false,
   activePresidentElectionId: _activePresidentElectionId,
@@ -422,6 +417,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   // preset/era AND any runtime rename — not every non-coming-soon country with
   // its default name.
   const countryName = useCountryDisplayName();
+  const crisisActionCount = useOptionalAuthMe()?.navData?.crisisActionCount ?? 0;
   const switchableCountries = useEnabledCountries();
 
   const stateLegislatureLabel = stateLegislatureLabelFor(t as unknown as NavTranslator, homeState);
@@ -496,9 +492,9 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     myCorporationHasGroup,
     countryId: pageCountry,
     myCorporationId,
-    conflictsEnabled,
     unionsEnabled,
     settlementCrisisLive,
+    crisisActionCount,
   });
 
   const profileOrgItems = visibleProfileOrgItems({
@@ -507,14 +503,13 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     unionsEnabled,
   });
 
-  const staffSubItems =
-    user?.isAdmin || user?.isModerator
-      ? visibleStaffNavItems({
-          isAdmin: !!user?.isAdmin,
-          isModerator: !!user?.isModerator,
-          isSingleplayerOwner: viewerIsSingleplayerOwner(user),
-        })
-      : [];
+  // Empty for non-staff: every staff item is gated on a staff role.
+  const staffSubItems = visibleStaffNavItems({
+    isAdmin: !!user?.isAdmin,
+    isModerator: !!user?.isModerator,
+    isJuniorDev: !!user?.isJuniorDev,
+    isSingleplayerOwner: viewerIsSingleplayerOwner(user),
+  });
 
   // ── Dropdown panels ────────────────────────────────────────────────────────
   const worldMenu = (
@@ -568,6 +563,8 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
               strong={item.id === "legacyLeaderboard"}
               dot={item.primary ? "bg-primary" : undefined}
               nested={item.parentId != null}
+              meta={item.badge ? String(item.badge > 9 ? "9+" : item.badge) : undefined}
+              metaClass="rounded-full bg-error px-1.5 text-[10px] font-semibold text-white"
             >
               {t(item.labelKey)}
             </MenuRow>
@@ -611,7 +608,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
             {t("menus.nation.myParty")} · {currentParty.name}
           </MenuRow>
         )}
-        {userCountry === "US" && (
+        {countryHasFeature("usUi", userCountry) && (
           <MenuRow href="/political-operations" onNavigate={closeAll}>
             {t("menus.nation.myPoliticalOperations")}
           </MenuRow>
@@ -908,7 +905,6 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     myCorporationId,
     myCorporationHasGroup,
     myUnionId,
-    conflictsEnabled,
     unionsEnabled,
     settlementCrisisLive,
     nationalDetailSections,
@@ -1056,7 +1052,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                   src={CDN_LOGO_URL}
                   priority
                   unoptimized
-                  alt="A House Divided"
+                  alt=""
                   width={30}
                   height={30}
                   className="h-full w-full object-contain"
@@ -1206,7 +1202,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                 </div>
 
                 {/* Staff — admin/mod only */}
-                {(user?.isAdmin || user?.isModerator) && staffSubItems.length > 0 && (
+                {staffSubItems.length > 0 && (
                   <div
                     className="relative shrink-0"
                     ref={open === "staff" ? dropdownAnchorRef : undefined}
@@ -1501,13 +1497,8 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                       });
                       if (navigationVariant === "a")
                         void captureProductEvent("navigation_menu_opened", { variant: "control" });
-                      if (navigationVariant === "b") {
-                        setMobileProfileOpen((value) => !value);
-                        setMobileMenuOpen(false);
-                      } else {
-                        setMobileProfileOpen((value) => !value);
-                        setMobileMenuOpen(true);
-                      }
+                      setMobileProfileOpen((value) => !value);
+                      setMobileMenuOpen(navigationVariant !== "b");
                     }}
                     aria-label={t("common.profile")}
                     aria-expanded={navigationVariant === "b" ? mobileProfileOpen : mobileMenuOpen}

@@ -10,31 +10,20 @@ import {
 } from "./manpower";
 
 /**
- * The stance actually in force: a playable nation's enacted reserve-forces law, else the
+ * The stance in force: a playable nation's enacted reserve-forces law, else the
  * default stance table.
  *
- * The short-circuit matters. `getEnactedLevel` returns the law's authored `baselineLevel`
- * when a nation simply has not legislated yet (good), but returns 0 for an *unknown* law
- * id — so calling it for a nation that has no such law would read as "No Reserve System"
- * and silently strip its manpower instead of falling back.
+ * The short-circuit matters: `getEnactedLevel` returns the authored baseline
+ * when a nation simply has not legislated, but 0 for an unknown law id, which
+ * would silently strip manpower instead of falling back.
  *
- * A nation with no reserve law of its OWN can still have inherited one: a country merge
- * hands the absorbed state's legislation catalogue to the survivor
- * (`rescopeLegislationCatalogue` flips `legislationTypes.countryScope`), so a survivor
- * that never had such a law of its own can still answer through the carried one.
+ * A survivor of a country merge inherits the absorbed state's catalogue, so a
+ * nation with no reserve law of its own can still answer through a carried one.
+ * The native entry wins the lookup, matching the merge rule (survivor's law
+ * governs).
  *
- * Where both a native and a carried law exist the NATIVE entry wins the lookup order
- * here, and that is the merge rule rather than an accident: the survivor is the side
- * that won, so its own law governs and the absorbed state's catalogue is available
- * beneath it rather than over it. German reunification leaves the GDR standing, and
- * `RESERVE_LAW_BY_COUNTRY` lists DD, so the unified state resolves natively and the
- * carried-law path never runs for that pair.
- *
- * The scope check keeps this inert everywhere else: a country that never absorbed
- * anyone scopes none of the known reserve-law ids.
- *
- * Server-only: this reaches the law catalogue. Client surfaces import the pure ladder
- * (`stanceForReserveLevel`) from `manpower.ts` instead.
+ * Server-only: reaches the law catalogue. Clients import the pure
+ * `stanceForReserveLevel` instead.
  */
 export async function resolveConscriptionStanceFor(
   db: Db,

@@ -2,78 +2,60 @@
  * Country-and-era GDP-per-capita baselines for campaign income and action costs.
  *
  * PORTABLE RULES (see `rules/currency.ts`): plain data in, plain data out. No
- * database, clock, randomness, env, network, or async — the caller supplies the
- * world preset and this module resolves the number.
+ * database, clock, randomness, env, network, or async.
  *
- * WHY THIS EXISTS (issue #798): campaign income (`getIncomeGdpScalar`) and
- * action costs (`getFundMultiplier`) scale regional GDP per capita against a
- * national baseline. The old table hardcoded five modern-era local-currency
- * values and fell back to the US 65,000 default for everyone else, so any
- * country whose `State.gdp` is stored in a different denomination pinned every
- * scalar to its clamp (JP yen per-capita ~4.2M vs 65,000; IE ~91k euro-proxy
- * vs 65,000). Worse, a single fixed per-country number cannot work across
- * eras: JP's modern seed is JPY millions while its 1953 seed is USD-anchored
- * millions (see `seeds/reference/gdpDenomination.ts`), so the baseline must be
- * keyed by (country, era), not by country alone.
+ * Campaign income (`getIncomeGdpScalar`) and action costs (`getFundMultiplier`)
+ * scale regional GDP per capita against a national baseline. The baseline must
+ * be keyed by (country, era), not country alone: a country's `State.gdp`
+ * denomination differs by era (e.g. JPY millions in the modern seed, USD-anchored
+ * millions in 1953), so a single fixed per-country number pins the scalar to its
+ * clamp.
  *
  * WHAT THE NUMBERS ARE: for each playable country and era bundle, the
  * population-weighted mean regional GDP per capita
- * (SUM gdp x 1e6 / SUM population) over exactly the region bundle that
- * country's seeder writes for that preset, multiplied by the seed-time
- * reconcile scalar where the pre-1999 era gate applies
- * (`admin/seed/reconcileStateGdp.ts`: post-seed regional GDP matches the
- * authored national GDP, so the baseline matches what `State.gdp` actually
- * holds at runtime). Units therefore match `State.gdp` by construction, and
- * the average region resolves a ~1.0 (neutral) scalar.
+ * (SUM gdp x 1e6 / SUM population) over exactly the region bundle that seeder
+ * writes, multiplied by the seed-time reconcile scalar where the pre-1999 era
+ * gate applies, so the units match `State.gdp` by construction and the average
+ * region resolves a ~1.0 (neutral) scalar.
  *
- * Derivation is pinned by `gdpBaseline.table.test.ts`, which recomputes every
- * cell from the seed modules and fails if a seed edit leaves the table stale.
- * To recalibrate: edit seeds, run the table test, copy the recomputed values
- * it reports, and have the result reviewed (balance-sensitive: worldsim).
+ * `gdpBaseline.table.test.ts` recomputes every cell from the seed modules and
+ * fails if a seed edit leaves the table stale. To recalibrate: edit seeds, run
+ * the table test, copy the recomputed values, and have the result reviewed
+ * (balance-sensitive: worldsim).
  *
- * ACTIVATING A NEW COUNTRY: add its per-era row here. Until then the resolver
- * throws for it — deliberately, so a new playable country can never silently
- * inherit a mismatched US denomination.
+ * A new country without a row throws from the resolver, deliberately, so it can
+ * never silently inherit a mismatched US denomination.
  *
- * ⚠️ THAT THROW IS NOT CONTAINED TO THE COUNTRY THAT CAUSES IT. Two surfaces
- * make a missing row far more expensive than a loud error:
+ * That throw is NOT contained to the offending country:
+ * - `/profile` calls `calculateFullFundDistribution` for every character, so one
+ *   missing row 500s that page for its players.
+ * - The turn processor loops every character with no per-character catch and
+ *   writes only after the loop, and `runPhase` aborts on throw, so one missing
+ *   row costs EVERY player that turn's campaign income, plus `partyGOTV` and
+ *   `caucusTax`.
  *
- * - `/profile` calls `calculateFullFundDistribution` for every character, so a
- *   country with no row 500s the page for its own players. DD shipped that way,
- *   and the bug arrived as "cannot log in via Discord" — OAuth succeeds and
- *   redirects onto the page that threw.
- * - The turn processor is worse. `processFundGeneration` loops every character
- *   with no per-character catch and writes only after the loop, and `runPhase`
- *   turns a throw into an aborted phase. One RU character therefore cost EVERY
- *   player that turn's campaign income, plus `partyGOTV` and `caucusTax`.
- *
- * `gdpBaselineCoverage.guard.test.ts` now pins the row set against the region
- * bundles on disk — any era, not just 1953 — so the next country fails a test
- * rather than a player's page and everyone else's payout.
+ * `gdpBaselineCoverage.guard.test.ts` pins the row set against the region
+ * bundles on disk for every era, so a new country fails a test rather than a
+ * player's page and everyone else's payout.
  */
 
 import type { EraId } from "@/lib/seeds/presetSelector";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { aggregateNationalGdp } from "@/lib/utils/nationalGdp";
 import { GDP_DENOMINATION_1953 } from "@/lib/seeds/reference/gdpDenomination";
 
 export type GdpBaselineUnit = "local" | "usd";
 
 /**
- * Playable countries with an explicit baseline. Matches the `status: "active"`
- * country configs (US/UK/DE/JP/IE/CN), plus coming-soon NG so its calibration
- * lands before activation, plus DD and RU, which a 1953 world seeds and plays
- * regardless of their `status` marker, plus SCO and WAL, whose sub-regions exist
- * once Scotland or Wales secedes. Other coming-soon countries (BR, …) are
- * intentionally absent: resolving one throws (see below) instead of silently
- * pricing in USD.
+ * Playable countries with an explicit baseline. Resolving any other country
+ * throws instead of silently pricing in USD.
  *
- * ⚠️ `status` IS NOT THE GATE. DD and RU both carry `status: "coming-soon"` and
- * both have live players, because a historical preset seeds the countries that
- * existed in its era, not the ones marked active for the modern world. Whether
- * a country needs a row is decided by whether a world can seed regions for it —
- * pinned in `gdpBaselineCoverage.guard.test.ts`, which reads the seed bundles
- * off disk.
+ * ⚠️ `status` is NOT the gate. DD and RU carry `status: "coming-soon"` but a
+ * 1953 world seeds and plays them. Whether a country needs a row is decided by
+ * whether a world can seed regions for it, pinned in
+ * `gdpBaselineCoverage.guard.test.ts`. SCO and WAL rows serve their latent
+ * secession bundles.
  */
 export type GdpBaselineCountry =
   "US" | "UK" | "DE" | "JP" | "IE" | "NG" | "CN" | "DD" | "RU" | "SCO" | "WAL";
@@ -175,7 +157,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     // explicit 2027 bundle, so every cell below is bundle-native.
     "1953": 57,
     "1979": 568,
-    // Re-derived after #2676 population reconciliation; regional GDP is unchanged.
+    // Re-derived after population reconciliation; regional GDP is unchanged.
     "1991": 1_865,
     "1999": 7_341,
     "2007": 21_028,
@@ -235,12 +217,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2027": 1_813,
   },
   SCO: {
-    // Scotland has ONE latent bundle (`scoRegions`, 163,000M / 5,440,000
-    // people): `expandToSubRegions` inserts it on secession, apportioning the
-    // live SCO nation-region's aggregates, so no preset seeds it directly and
-    // there is no authored national GDP to reconcile against. Every era
-    // therefore repeats the 2019 cell, the bundle's own per-capita value, so a
-    // lookup in any era resolves a literal instead of throwing on the turn.
+    // One latent bundle inserted on secession; every era repeats its 2019 value.
     "1953": 29_963,
     "1979": 29_963,
     "1991": 29_963,
@@ -251,8 +228,7 @@ const GDP_BASELINE_TABLE: Record<GdpBaselineCountry, Record<EraId, number>> = {
     "2027": 29_963,
   },
   WAL: {
-    // Wales: same single latent bundle (`walRegions`, 74,000M / 3,170,000
-    // people) and the same reasoning as SCO. Every era repeats the 2019 cell.
+    // Same as SCO: one latent bundle, every era repeats its 2019 value.
     "1953": 23_344,
     "1979": 23_344,
     "1991": 23_344,
@@ -385,4 +361,122 @@ export function hasGdpBaseline(countryId: string): boolean {
 /** Read-only view of the table for tests and diagnostics. */
 export function getGdpBaselineTable(): Record<GdpBaselineCountry, Record<EraId, number>> {
   return GDP_BASELINE_TABLE;
+}
+
+/**
+ * Baseline a regional GDP-per-capita ratio is measured against.
+ *
+ * With no live figure (previews and tests with no world) it is the static
+ * table cell, which equals the population-weighted national mean at world
+ * start. With a live national GDP per capita it IS that figure, so the ratio
+ * is regional versus national at every point in the game and income and cost
+ * scalars stop drifting to their clamps as the whole economy grows.
+ *
+ * @throws when a live figure is supplied but is not a positive finite number:
+ *   a missing national GDP must never quietly fall back to the start value.
+ */
+export function effectiveGdpBaseline(
+  countryId: string,
+  preset?: string,
+  nationalGdpPerCapita?: number
+): number {
+  if (nationalGdpPerCapita === undefined) return gdpBaselinePerCapita(countryId, preset);
+  if (!Number.isFinite(nationalGdpPerCapita) || nationalGdpPerCapita <= 0) {
+    throw new Error(
+      `effectiveGdpBaseline: invalid live national GDP per capita for "${countryId}" ` +
+        `(${String(nationalGdpPerCapita)}); refusing to fall back to the era baseline.`
+    );
+  }
+  return nationalGdpPerCapita;
+}
+
+/**
+ * Live national GDP per capita for every country present in `states`, in the
+ * same unit as `State.gdp`. Countries whose regions sum to no usable GDP are
+ * left out, so `requireNationalGdpPerCapita` throws for them.
+ */
+export function nationalGdpPerCapitaIndex(
+  states: Iterable<{ countryId?: string; gdp?: number; population: number }>
+): Map<string, number> {
+  const byCountry = new Map<string, { gdp?: number; population: number }[]>();
+  for (const s of states) {
+    const key = s.countryId ?? "US";
+    const bucket = byCountry.get(key);
+    if (bucket) bucket.push(s);
+    else byCountry.set(key, [s]);
+  }
+  const index = new Map<string, number>();
+  for (const [countryId, rows] of byCountry) {
+    const { perCapita } = aggregateNationalGdp(rows);
+    if (Number.isFinite(perCapita) && perCapita > 0) index.set(countryId, perCapita);
+  }
+  return index;
+}
+
+/** Which figure campaign money measures regions against. */
+export interface CampaignGdpBasis {
+  /** True: live national GDP per capita. False: the era table. */
+  live: boolean;
+  preset?: string;
+}
+
+/**
+ * Era-table baselines in the shape of a live index, for worlds whose campaign
+ * money still measures against the era table. Countries with no table row (or
+ * no usable cell) are left out, so `requireNationalGdpPerCapita` throws only if
+ * one of them is priced, as the era table itself does.
+ */
+export function eraGdpPerCapitaIndex(
+  countryIds: Iterable<string>,
+  preset?: string
+): Map<string, number> {
+  const index = new Map<string, number>();
+  for (const countryId of countryIds) {
+    if (index.has(countryId) || !hasGdpBaseline(countryId)) continue;
+    const baseline = gdpBaselinePerCapita(countryId, preset);
+    if (Number.isFinite(baseline) && baseline > 0) index.set(countryId, baseline);
+  }
+  return index;
+}
+
+/** The per-country figure campaign money measures against, live or from the era table. */
+export function campaignGdpPerCapitaIndex(
+  states: Iterable<{ countryId?: string; gdp?: number; population: number }>,
+  basis: CampaignGdpBasis
+): Map<string, number> {
+  if (basis.live) return nationalGdpPerCapitaIndex(states);
+  const countryIds = new Set<string>();
+  for (const s of states) countryIds.add(s.countryId ?? "US");
+  return eraGdpPerCapitaIndex(countryIds, basis.preset);
+}
+
+/**
+ * Read one country from a `nationalGdpPerCapitaIndex`.
+ *
+ * @throws when the country has no usable regional GDP. Callers pricing live
+ *   money must not continue on a guess.
+ */
+export function requireNationalGdpPerCapita(
+  index: ReadonlyMap<string, number>,
+  countryId: string
+): number {
+  const perCapita = index.get(countryId);
+  if (perCapita === undefined) {
+    throw new Error(
+      `requireNationalGdpPerCapita: no usable regional GDP for country "${countryId}"; ` +
+        `refusing to price campaign money without it.`
+    );
+  }
+  return perCapita;
+}
+
+/** Single-country form of the index lookup; throws like `requireNationalGdpPerCapita`. */
+export function nationalGdpPerCapitaFromStates(
+  states: readonly { countryId?: string; gdp?: number; population: number }[],
+  countryId: string
+): number {
+  return requireNationalGdpPerCapita(
+    nationalGdpPerCapitaIndex(states.filter((s) => (s.countryId ?? "US") === countryId)),
+    countryId
+  );
 }

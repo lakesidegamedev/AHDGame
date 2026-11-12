@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import { checkWikiDisabled } from "@/lib/api/wikiGuard";
+import { roadmapItemsCollection } from "@/lib/db/repositories/roadmapItems";
+import type { Document } from "mongodb";
+import { roadmapCategoriesCollection } from "@/lib/db/repositories/roadmapCategories";
 
 // GET /api/roadmap — Returns all public roadmap items and categories.
 // Auth: public
@@ -13,8 +16,8 @@ export async function GET() {
 
     const db = await getDb();
     const [items, categories] = await Promise.all([
-      db.collection("roadmapItems").find({}).sort({ phase: 1, sortOrder: 1 }).toArray(),
-      db.collection("roadmapCategories").find({}).sort({ sortOrder: 1 }).toArray(),
+      roadmapItemsCollection<Document>(db).find({}).sort({ phase: 1, sortOrder: 1 }).toArray(),
+      roadmapCategoriesCollection<Document>(db).find({}).sort({ sortOrder: 1 }).toArray(),
     ]);
 
     return NextResponse.json({ items, categories });

@@ -3,32 +3,30 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation } from "@/lib/db/types";
 import {
   corpLiquidCapitalToAnchor,
   fxRateForCorpFromMap,
   loadValuationFxRates,
 } from "@/lib/currency/corporationCapital";
-import { NPP_OPERATOR_TELEMETRY_COLLECTION } from "@/lib/corporations/nppOperatorTelemetry/persistence";
 import type { NppOperatorAggregate } from "@/lib/corporations/nppOperatorTelemetry/rules";
 import {
   computeNppCorporationHealth,
   type NppCorporationHealthCorporation,
 } from "@/lib/economy/nppCorporationHealth";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppOperatorDiagnosticsCollection } from "@/lib/db/repositories/nppOperatorDiagnostics";
 
 const querySchema = z.object({
   turn: z.coerce.number().int().nonnegative().optional(),
 });
 
-// GET /api/admin/economy/npp-corp-health - Return the issue #2122 regression
-// metric: per-sector cash-negative share and median liquid capital for NPP-led
-// corporations, plus the aggregate binding-gate/binding-constraint counts from
-// the persisted operator diagnostics. A historical ?turn= request has no matching
-// cash snapshot, so it returns diagnostics only and marks cash unavailable.
-// The current metric is COMPUTED here from live
-// corporation documents (this is a low-frequency admin read, not a turn hot
-// path); the binding counts are read from the turn snapshot the NPP phase
-// already flushed, so no entry/dividend formula is recomputed.
+// GET /api/admin/economy/npp-corp-health: Return per-sector cash-negative
+// share and median liquid capital for NPP-led corporations, plus aggregate
+// binding-gate/constraint counts from persisted operator diagnostics. A
+// historical ?turn= returns diagnostics only and marks cash unavailable.
+// The current metric is computed here from live corporation documents
+// (low-frequency admin read, not a turn hot path); binding counts are read
+// from the turn snapshot the NPP phase already flushed.
 // Auth: requireAdmin
 // Errors: 400, 403
 export const GET = withAdminRoute(async (_auth, request: Request) => {
@@ -40,9 +38,9 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   }
 
   const db = await getDb();
-  const diagnosticsCollection = db.collection<
+  const diagnosticsCollection = nppOperatorDiagnosticsCollection<
     NppOperatorAggregate & { _id?: string; turn?: number }
-  >(NPP_OPERATOR_TELEMETRY_COLLECTION);
+  >(db);
   if (parsed.data.turn !== undefined) {
     const diagnostics = await diagnosticsCollection.findOne({ _id: `turn:${parsed.data.turn}` });
     const counts = computeNppCorporationHealth({
@@ -65,8 +63,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   }
   // NPP-led corps are exactly the ones the NPP brain operates: `ceoType` is
   // "npp". The query filters on that rather than loading the whole NPP id set.
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {

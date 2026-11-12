@@ -5,6 +5,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { getOrganizationLegislationCollection } from "@/lib/db/collections";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
 
 /**
  * Free trade agreement override layer for the tariff system.
@@ -32,8 +33,7 @@ export async function loadActiveFtaPairs(db: Db): Promise<Set<string>> {
     col
       .find({ type: "free_trade_agreement", status: "active" }, { projection: { parties: 1 } })
       .toArray(),
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({ organizationId: "EU" }, { projection: { countryId: 1 } })
       .toArray(),
   ]);

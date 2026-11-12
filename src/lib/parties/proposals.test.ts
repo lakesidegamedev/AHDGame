@@ -1051,11 +1051,18 @@ describe("processMergeProposal (transfer semantics — seats + coalition)", () =
     });
     await processMergeProposal(db as unknown as Db, proposal, 120);
 
-    const calls = db.collectionMocks.stateRegistrationPool!.updateOne.mock.calls;
-    const dub = calls.find((c) => (c[0] as { _id: string })._id === "IE_DUB");
-    const cor = calls.find((c) => (c[0] as { _id: string })._id === "IE_COR");
-    expect((dub![1] as { $inc: { unregistered: number } }).$inc.unregistered).toBe(20);
-    expect((cor![1] as { $inc: { unregistered: number } }).$inc.unregistered).toBe(23);
+    // One batched write for every released state.
+    const bulk = db.collectionMocks.stateRegistrationPool!.bulkWrite.mock.calls;
+    expect(bulk).toHaveLength(1);
+    const ops = (
+      bulk[0][0] as {
+        updateOne: { filter: { _id: string }; update: { $inc: { unregistered: number } } };
+      }[]
+    ).map((op) => op.updateOne);
+    const dub = ops.find((op) => op.filter._id === "IE_DUB");
+    const cor = ops.find((op) => op.filter._id === "IE_COR");
+    expect(dub!.update.$inc.unregistered).toBe(20);
+    expect(cor!.update.$inc.unregistered).toBe(23);
   });
 
   it("does not release registration for rows with no registration value", async () => {

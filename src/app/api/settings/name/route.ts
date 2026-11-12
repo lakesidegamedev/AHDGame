@@ -6,6 +6,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { characterNameSchema } from "@/lib/api/schemas/settings";
 import { propagateCharacterNameChange } from "@/lib/propagateNameChange";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // POST /api/settings/name — Changes the authenticated character's name subject to a 24-hour cooldown
 // Auth: requireAuthWithCharacter
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     const characterId = user.character._id;
 
     // Update character name and timestamp
-    await db.collection("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: characterId },
       {
         $set: {

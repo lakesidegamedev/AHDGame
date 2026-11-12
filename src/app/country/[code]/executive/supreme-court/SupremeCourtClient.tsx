@@ -64,12 +64,10 @@ function ScotusHero() {
 }
 
 /**
- * SCOTUS UI (#3605, spec #3581) — US only. Court composition (bench + ideology
- * leans), the president's nomination flow, the Senate's confirmation flow, and
- * a Docket History tab. Deliberately mirrors `PresidentialCabinetClient`
- * (structure, nominate/vote plumbing) and `CabinetNominateModal`/`CabinetVoteRow`
- * (component shape) since #3605 asks for the same look and feel as cabinet
- * nomination/confirmation, not a new pattern.
+ * SCOTUS UI, US only: bench composition, presidential nomination, Senate
+ * confirmation, and Docket History. Mirrors PresidentialCabinetClient and
+ * CabinetNominateModal/CabinetVoteRow for consistent look and feel rather
+ * than inventing a new pattern.
  */
 export default function SupremeCourtClient({ countryId }: { countryId: CountryId }) {
   const code = countryId.toLowerCase();

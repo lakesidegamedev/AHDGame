@@ -2,7 +2,6 @@
 
 import { InlineError } from "@/components/ui/InlineError";
 import { useEffect, useCallback } from "react";
-import { SubsidiaryCorporationsToggle } from "@/components/admin/economy/SubsidiaryCorporationsToggle";
 import {
   useCorporationsAdminState,
   type CorpRow,
@@ -396,7 +395,6 @@ export function CorporationsAdminPanel() {
 
   return (
     <div className="space-y-6">
-      <SubsidiaryCorporationsToggle />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h2 className="text-lg font-semibold">Corporations</h2>
         <div className="flex gap-2">

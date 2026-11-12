@@ -6,6 +6,8 @@ import type { CountryId, GovernmentType } from "@/lib/constants/countries";
 import { validatePeaceTerm, type PeaceTerm } from "@/lib/military/peaceTerm";
 import { isConflictConcluded } from "@/lib/military/conflictLifecycle";
 import { opposedBelligerents, progressForSide, type Side } from "@/lib/military/occupation";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
 
 export type PeaceOfferCheck = { ok: true } | { ok: false; error: string };
 
@@ -25,19 +27,10 @@ export type PeaceOfferCheck = { ok: true } | { ok: false; error: string };
 export const PEACE_INDEMNITY_MAX_GDP_SHARE = 2;
 
 /**
- * How far the front must have moved in your favour before you may demand a
- * withdrawal that would END the war.
- *
- * Front progress from the STARTING line, 0..1, not absolute ground: an interstate
- * war opens with the defender holding all of its own soil, so an absolute reading
- * would call every invasion deep before the first shot.
- *
- * Set to the same value as `OCCUPATION.deepPushDepth`, so the rule reads as "once
- * the war is visibly winding down in your favour, you may ask them to quit" and a
- * player can see the threshold coming on the conflicts board. Kept as its OWN
- * constant rather than reusing that one: they answer different questions, and tuning
- * when a war looks like it is ending should not silently move who can be bought out
- * of it.
+ * Front progress from the STARTING line, 0..1, not absolute ground (an interstate
+ * war begins with the defender holding all its own soil). Same value as
+ * `OCCUPATION.deepPushDepth` so the threshold is visible on the conflicts board,
+ * but kept separate: they answer different questions and must be tunable apart.
  *
  * BALANCE CONSTANT. Changing it needs an issue and a simulation report.
  */
@@ -73,13 +66,11 @@ export function isOfferLive(
 /**
  * The side that would be left with nobody on it if these countries walked away, or null.
  *
- * Used to decide whether accepting a peace deal also ends the war outright. Both
- * sides can never empty at once: emptying one resolves the conflict.
+ * Used to decide whether accepting a peace deal ends the war outright. Both sides
+ * can never empty at once: emptying one resolves the conflict.
  *
- * Takes a SET, not one country. Treaty release removes an auto-joined ally at the same
- * moment as the member it was defending, so a two-country side can empty in a single
- * `acceptPeace` call. Asked about the principal alone this returned null and the war was
- * left `active` with an empty roster and no victor.
+ * Takes a SET because treaty release can drop an auto-joined ally in the same call
+ * as the member it defended, emptying a two-country side at once.
  */
 export function sideWouldEmpty(
   c: Pick<ConflictDoc, "sideA" | "sideB">,
@@ -249,18 +240,17 @@ export async function loadPartyChoicesFor(
   const out = new Map<CountryId, PeaceTermPartyChoice[]>(wanted.map((id) => [id, []]));
   if (wanted.length === 0) return out;
 
-  const parties = (await db
-    .collection("politicalParties")
-    .find(
+  const parties = await politicalPartiesCollection<Document>(db)
+    .find<{
+      countryId?: CountryId;
+      sequentialId?: number;
+      name?: string;
+      abbreviation?: string;
+    }>(
       { countryId: { $in: wanted } },
       { projection: { countryId: 1, sequentialId: 1, name: 1, abbreviation: 1 } }
     )
-    .toArray()) as unknown as Array<{
-    countryId?: CountryId;
-    sequentialId?: number;
-    name?: string;
-    abbreviation?: string;
-  }>;
+    .toArray();
 
   for (const party of parties) {
     if (typeof party.sequentialId !== "number" || !Number.isInteger(party.sequentialId)) continue;
@@ -366,45 +356,26 @@ export function validatePeaceOffer(
     return { ok: false, error: "You are on the same side of that war." };
   }
 
-  // THE SEPARATE-PEACE TREATY BAR IS GONE, deliberately, and this is where it stood.
-  //
-  // It refused any offer from a country a treaty had dragged in, so a guarantee it
-  // never chose kept it in the war until the member it came to defend settled. Its
-  // stated worry was that "an aggressor peels the coalition apart one member at a
-  // time and the guarantee is theatre" — but peeling is now a thing the aggressor
-  // must PAY for and the guest must AGREE to, which is a price rather than a
-  // formality. Enforced mutual defence still drags you in; it no longer holds you
-  // there with no way out.
-  //
-  // What replaces it is the buy-out gate below, which stops the one case the bar was
-  // really protecting: ending a war outright by cheque.
+  // What replaces the removed separate-peace treaty bar is the buy-out gate
+  // below, which stops the one case that bar really protected: ending a war
+  // outright by cheque.
 
   if (leaver !== from && leaver !== to) {
     return { ok: false, error: "Only one of the two parties can leave under a deal." };
   }
 
-  // THE BUY-OUT GATE. Asking the other side to withdraw is ordinary coalition
-  // politics right up until the withdrawal would EMPTY their side, at which point it
-  // is not a settlement at all, it is buying the war. Gated on the ground rather than
-  // forbidden: once the front is deep enough that the war is visibly going your way,
-  // demanding they quit is a real thing to demand.
+  // The buy-out gate: asking the other side to withdraw is ordinary
+  // politics until the withdrawal would empty their side, which is buying
+  // the war. Gated on the front rather than forbidden: once the war is
+  // visibly going your way, demanding they quit is a real demand.
+  // Keyed on what the departure does, not who it names, so an ally who is
+  // last standing is treated the same as the principal.
   //
-  // Keyed on what the departure DOES, not on who it names. Gating on "is the target
-  // the principal" would wave through the case where the target is a mere ally who
-  // happens to be the last one standing, which wins the war just as completely.
-  //
-  // A WHITE PEACE IS ALWAYS EXEMPT. It records no victor and moves nothing, so
-  // nothing is bought: a war fought over a question ends with the question still
-  // open rather than answered in the buyer's favour.
-  //
-  // A REUNIFICATION IS EXEMPT TOO, and for a different reason than the white peace.
-  // The white peace is exempt because it buys nothing. This one plainly does buy
-  // something, but it is not COERCIVE: the recipient must accept it, refusing costs
-  // them nothing, and what is on the table is the very question the war is being
-  // fought over rather than a cheque for it. Gating it on the front would also make
-  // the term unofferable in practice: a reunification the challenger withdraws under
-  // is barred below, so every reunification offer asks the other side to leave, and
-  // every one of them would meet this gate.
+  // White peace is exempt: it records no victor and moves nothing.
+  // Reunification is exempt because it is not coercive: refusal costs
+  // nothing and the table holds the very question the war is about.
+  // Gating it on the front would also bar it in practice, since every
+  // reunification offer asks the other side to leave.
   if (
     leaver === to &&
     term.kind !== "white_peace" &&

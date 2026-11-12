@@ -6,6 +6,9 @@ import {
   nppCanPlausiblyEndorseElection,
   withdrawNppEndorsement,
 } from "@/lib/nppEndorsements";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
 
 interface EndorsementSummary {
   created: number;
@@ -15,8 +18,7 @@ interface EndorsementSummary {
 }
 
 export async function processNppEndorsements(ctx: NPPContext): Promise<EndorsementSummary> {
-  const activeEndorsements = await ctx.db
-    .collection<NPPEndorsement>("nppEndorsements")
+  const activeEndorsements = await nppEndorsementsCollection(ctx.db)
     .find({ isActive: true })
     .toArray();
 
@@ -28,8 +30,7 @@ export async function processNppEndorsements(ctx: NPPContext): Promise<Endorseme
     ...new Set(activeEndorsements.map((endorsement) => endorsement.electionId.toString())),
   ].map((id) => new ObjectId(id));
   const [activeElections, activeCandidates] = await Promise.all([
-    ctx.db
-      .collection<Election>("elections")
+    electionsCollection(ctx.db)
       .find({ _id: { $in: electionIds }, status: "active" })
       .project<Election>({
         _id: 1,
@@ -43,8 +44,7 @@ export async function processNppEndorsements(ctx: NPPContext): Promise<Endorseme
         status: 1,
       })
       .toArray(),
-    ctx.db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(ctx.db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
   ]);

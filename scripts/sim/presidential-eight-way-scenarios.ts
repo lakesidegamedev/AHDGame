@@ -13,18 +13,19 @@
  * so it can be iterated on without touching the production suite.
  */
 
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { shiftDemographicsForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
-import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/electionEngine/constants";
-import { INDEPENDENT_VOTE_PENALTY } from "@/lib/presidentialElectionEngine";
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import { shiftElectorateForPrimary } from "@/lib/campaigns/shiftPrimaryElectorate";
+import { PRESIDENTIAL_SPOILER_RATE } from "@/lib/elections/engine/constants";
+import { INDEPENDENT_VOTE_PENALTY } from "@/lib/elections/presidential/presidentialElectionEngine";
 import {
   getDelegatesForState,
   getDefaultPrimaryAllocation,
   type PrimaryCalendarFamily,
 } from "@/lib/constants/primaryCalendar";
 import { allocateDelegates, type AllocationMethod } from "@/lib/primaryDelegateAllocation";
-import type { DemographicCategory, StateDemographics, StateDemographicGroup } from "@/lib/db/types";
-import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/electionEngine/types";
+import type { DemographicCategory, CensusGroupView, StateDemographicGroup } from "@/lib/db/types";
+import type { EnrichedCandidate, DistributeVotesOptions } from "@/lib/elections/engine/types";
 
 // ─── Fixtures: demographics + states (matches election-simulation.ts shape) ─
 
@@ -54,35 +55,35 @@ interface SimState {
   name: string;
   pop: number; // millions of eligible voters
   ev: number;
-  archetype: "blue" | "red" | "swing";
+  bloc: "blue" | "red" | "swing";
   lean: number; // -3 (deep blue) … +3 (deep red); drives state-lean multiplier
 }
 
 const STATES: SimState[] = [
-  { id: "CA", name: "California", pop: 25, ev: 54, archetype: "blue", lean: -2.0 },
-  { id: "TX", name: "Texas", pop: 19, ev: 40, archetype: "red", lean: 1.5 },
-  { id: "FL", name: "Florida", pop: 15, ev: 30, archetype: "red", lean: 0.8 },
-  { id: "NY", name: "New York", pop: 13, ev: 28, archetype: "blue", lean: -1.8 },
-  { id: "PA", name: "Pennsylvania", pop: 9, ev: 19, archetype: "swing", lean: -0.1 },
-  { id: "IL", name: "Illinois", pop: 9, ev: 19, archetype: "blue", lean: -1.4 },
-  { id: "OH", name: "Ohio", pop: 8, ev: 17, archetype: "red", lean: 0.7 },
-  { id: "GA", name: "Georgia", pop: 7, ev: 16, archetype: "swing", lean: 0.2 },
-  { id: "NC", name: "North Carolina", pop: 7, ev: 16, archetype: "swing", lean: 0.3 },
-  { id: "MI", name: "Michigan", pop: 7, ev: 15, archetype: "swing", lean: -0.2 },
-  { id: "AZ", name: "Arizona", pop: 5, ev: 11, archetype: "swing", lean: 0.1 },
-  { id: "WI", name: "Wisconsin", pop: 4, ev: 10, archetype: "swing", lean: -0.1 },
-  { id: "MN", name: "Minnesota", pop: 4, ev: 10, archetype: "blue", lean: -1.0 },
-  { id: "OK", name: "Oklahoma", pop: 3, ev: 7, archetype: "red", lean: 2.0 },
-  { id: "KS", name: "Kansas", pop: 2, ev: 6, archetype: "red", lean: 1.8 },
+  { id: "CA", name: "California", pop: 25, ev: 54, bloc: "blue", lean: -2.0 },
+  { id: "TX", name: "Texas", pop: 19, ev: 40, bloc: "red", lean: 1.5 },
+  { id: "FL", name: "Florida", pop: 15, ev: 30, bloc: "red", lean: 0.8 },
+  { id: "NY", name: "New York", pop: 13, ev: 28, bloc: "blue", lean: -1.8 },
+  { id: "PA", name: "Pennsylvania", pop: 9, ev: 19, bloc: "swing", lean: -0.1 },
+  { id: "IL", name: "Illinois", pop: 9, ev: 19, bloc: "blue", lean: -1.4 },
+  { id: "OH", name: "Ohio", pop: 8, ev: 17, bloc: "red", lean: 0.7 },
+  { id: "GA", name: "Georgia", pop: 7, ev: 16, bloc: "swing", lean: 0.2 },
+  { id: "NC", name: "North Carolina", pop: 7, ev: 16, bloc: "swing", lean: 0.3 },
+  { id: "MI", name: "Michigan", pop: 7, ev: 15, bloc: "swing", lean: -0.2 },
+  { id: "AZ", name: "Arizona", pop: 5, ev: 11, bloc: "swing", lean: 0.1 },
+  { id: "WI", name: "Wisconsin", pop: 4, ev: 10, bloc: "swing", lean: -0.1 },
+  { id: "MN", name: "Minnesota", pop: 4, ev: 10, bloc: "blue", lean: -1.0 },
+  { id: "OK", name: "Oklahoma", pop: 3, ev: 7, bloc: "red", lean: 2.0 },
+  { id: "KS", name: "Kansas", pop: 2, ev: 6, bloc: "red", lean: 1.8 },
 ];
 
 const TOTAL_EV = STATES.reduce((a, s) => a + s.ev, 0);
 const ELECTORAL_MAJORITY = Math.floor(TOTAL_EV / 2) + 1;
 
-function demographicsForState(s: SimState): StateDemographics {
-  const isBlue = s.archetype === "blue";
-  const isRed = s.archetype === "red";
-  const isSwing = s.archetype === "swing";
+function demographicsForState(s: SimState): CensusGroupView {
+  const isBlue = s.bloc === "blue";
+  const isRed = s.bloc === "red";
+  const isSwing = s.bloc === "swing";
 
   const pop: Record<string, number> = {
     low_inc: isRed ? 28 : isBlue ? 35 : 30,
@@ -116,7 +117,7 @@ function demographicsForState(s: SimState): StateDemographics {
     _id: s.id,
     categoryWeights: { income: 50, geography: 50 },
     groups,
-  } as unknown as StateDemographics;
+  } as unknown as CensusGroupView;
 }
 
 // ─── Candidates + per-party org/funds ──────────────────────────────────────
@@ -170,8 +171,8 @@ interface PartyOrg {
   org: number;
 }
 function partyOrgForState(s: SimState, party: string): PartyOrg {
-  const isBlue = s.archetype === "blue";
-  const isRed = s.archetype === "red";
+  const isBlue = s.bloc === "blue";
+  const isRed = s.bloc === "red";
   if (party === "DEM") return { org: isBlue ? 75 : isRed ? 30 : 50 };
   if (party === "REP") return { org: isRed ? 75 : isBlue ? 25 : 50 };
   // Third-party / independent: weak everywhere
@@ -261,8 +262,7 @@ function runGeneralScenario(sc: GeneralScenario): GeneralResult {
       totalPool,
       totalPool,
       state.pop * 1_000_000,
-      demos,
-      CATEGORIES,
+      electorateFromFixture(demos, CATEGORIES),
       partyOrgByParty,
       options
     );
@@ -408,8 +408,7 @@ function runPaGeneralMatchup(args: { demOrgLevel?: number; demHomeState?: string
     totalPool,
     totalPool,
     pa.pop * 1_000_000,
-    demos,
-    CATEGORIES,
+    electorateFromFixture(demos, CATEGORIES),
     partyOrgByParty,
     options
   );
@@ -466,7 +465,10 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
   for (const stateId of sc.states) {
     const state = STATES.find((s) => s.id === stateId);
     if (!state) continue;
-    const primaryDemos = shiftDemographicsForPrimary(demographicsForState(state), sc.partyPosition);
+    const primaryElectorate = shiftElectorateForPrimary(
+      electorateFromFixture(demographicsForState(state), CATEGORIES),
+      sc.partyPosition
+    );
 
     const partyOrgByParty = new Map<string, number>();
     partyOrgByParty.set(sc.party, partyOrgForState(state, sc.party).org);
@@ -509,8 +511,7 @@ function runPrimaryScenario(sc: PrimaryScenario): PrimaryResult {
       totalPool,
       totalPool,
       state.pop * 1_000_000,
-      primaryDemos,
-      CATEGORIES,
+      primaryElectorate,
       partyOrgByParty,
       options
     );

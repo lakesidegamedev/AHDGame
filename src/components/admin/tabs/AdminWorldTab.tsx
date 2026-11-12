@@ -3,8 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { DemographicsManager } from "@/components/DemographicsManager";
-import { Layer1PositionsToggle } from "@/components/positionEditor/Layer1PositionsToggle";
-import { SubNavLayout } from "./SubNavLayout";
 
 const NPPManagement = dynamic(
   () =>
@@ -62,12 +60,11 @@ export type WorldSubTab =
 
 interface AdminWorldTabProps {
   activeSub: WorldSubTab;
-  onSubChange: (sub: WorldSubTab) => void;
 }
 
-export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
+export function AdminWorldTab({ activeSub }: AdminWorldTabProps) {
   return (
-    <SubNavLayout tab="world" active={activeSub} onChange={onSubChange}>
+    <>
       <div className="space-y-6">
         {activeSub === "demographics" && (
           <div className="space-y-4">
@@ -77,15 +74,11 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
                   <h3 className="text-lg text-foreground">Position editor</h3>
                   <p className="mt-0.5 max-w-xl text-sm text-muted">
                     Author Layer-1 demographic positions and turnout by state, then apply them as
-                    global seed defaults. The toggle below gates whether a reseed derives leans from
-                    this model.
+                    global seed defaults.
                   </p>
-                  <div className="mt-3">
-                    <Layer1PositionsToggle />
-                  </div>
                 </div>
                 <Link
-                  href="/admin/position-editor"
+                  href="/control/world/position-editor"
                   className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
                 >
                   Open position editor →
@@ -103,6 +96,6 @@ export function AdminWorldTab({ activeSub, onSubChange }: AdminWorldTabProps) {
         {activeSub === "countries" && <CountryManagement />}
         {activeSub === "conflicts" && <ConflictsManager />}
       </div>
-    </SubNavLayout>
+    </>
   );
 }

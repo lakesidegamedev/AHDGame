@@ -4,20 +4,19 @@
  * after a failed election, retaining the original registered electorate.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Campaign,
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-} from "@/lib/db/types";
+import type { ElectionCandidate } from "@/lib/db/types";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { planRussianPresidentialBallot } from "./rules/presidentialSchedule";
-import {
-  RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION,
-  type RussianPresidentialResultRecord,
-} from "./presidentialElectionResult";
+import { type RussianPresidentialResultRecord } from "./presidentialElectionResult";
+import { GAME_STATE_PRE_ITERATION_FIELDS } from "@/lib/db/collections/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianPresidentialElectionResultsCollection } from "@/lib/db/repositories/russianPresidentialElectionResults";
 
 export async function materializeRussianPresidentialFollowup(input: {
   db: Db;
@@ -31,9 +30,7 @@ export async function materializeRussianPresidentialFollowup(input: {
   const { db, session, predecessorElectionId, electionId, candidateIds, turn, now } = input;
   if (!session.inTransaction() || !Number.isFinite(now.getTime()))
     throw new Error("Russian followup needs an active transaction and time");
-  const results = db.collection<RussianPresidentialResultRecord>(
-    RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION
-  );
+  const results = russianPresidentialElectionResultsCollection<RussianPresidentialResultRecord>(db);
   const result = await results.findOne(
     { _id: predecessorElectionId.toHexString(), preset: "1991-default", countryId: "RU" },
     { session }
@@ -44,30 +41,23 @@ export async function materializeRussianPresidentialFollowup(input: {
   if (result.nextElectionId) return result.nextElectionId;
   if (!Number.isSafeInteger(turn) || turn < result.resolvedOnTurn)
     throw new Error("Russian followup cannot precede its result");
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne(
-      { _id: "RU", ruPresidencyMandateSinceTurn: result.mandateSinceTurn },
-      { session, projection: { _id: 1 } }
-    );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "RU", ruPresidencyMandateSinceTurn: result.mandateSinceTurn },
+    { session, projection: { _id: 1 } }
+  );
   if (!country) throw new Error("Russian followup mandate changed");
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const predecessor = await elections.findOne(
     { _id: predecessorElectionId, countryId: "RU", electionType: "president", status: "resolved" },
     { session, projection: { cycle: 1, electionYear: 1 } }
   );
   if (!predecessor) throw new Error("Russian followup predecessor is unresolved");
-  const game = await db
-    .collection<{
-      _id: string;
-      preset?: string;
-      preIterationTurns?: number;
-      preIteration?: { active?: boolean };
-    }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, preIteration: 1, preIterationTurns: 1 } }
-    );
+  const game = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    preIterationTurns?: number;
+    preIteration?: { active?: boolean };
+  }>(db).findOne({ _id: "current" }, { session, projection: GAME_STATE_PRE_ITERATION_FIELDS });
   if (game?.preset !== "1991-default")
     throw new Error("Russian followup belongs to a different world");
   const kind = result.decision.outcome === "runoff" ? "runoff" : "repeat";
@@ -77,8 +67,7 @@ export async function materializeRussianPresidentialFollowup(input: {
     if (candidateIds[0].equals(candidateIds[1]))
       throw new Error("Runoff candidates need distinct ids");
     const finalistIds = result.decision.finalistCandidateIds;
-    const finalists = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const finalists = await electionCandidatesCollection(db)
       .find(
         {
           electionId: predecessorElectionId,
@@ -154,10 +143,8 @@ export async function materializeRussianPresidentialFollowup(input: {
     { session }
   );
   if (nextCandidates.length) {
-    await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .insertMany(nextCandidates, { session });
-    await db.collection<Campaign>("campaigns").updateMany(
+    await electionCandidatesCollection(db).insertMany(nextCandidates, { session });
+    await campaignsCollection(db).updateMany(
       {
         electionId: predecessorElectionId,
         candidateId: {
@@ -170,7 +157,7 @@ export async function materializeRussianPresidentialFollowup(input: {
       { $set: { electionId, updatedAt: now } },
       { session }
     );
-    await db.collection<ElectionVoteTally>("electionVoteTallies").insertOne(
+    await electionVoteTalliesCollection(db).insertOne(
       {
         _id: electionId,
         electionId,

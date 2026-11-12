@@ -35,7 +35,7 @@ function quoteFor(type: SharedActionType, priceLevel?: number) {
     actionType: type,
     actor: character,
     target,
-    context: { priceLevel, convertAmount: 1_000_000, rpgStatsEnabled: true },
+    context: { priceLevel, convertAmount: 1_000_000 },
   });
 }
 
@@ -105,12 +105,6 @@ describe("shared action rules entry point", () => {
     const noAmount = quoteAction({ actionType: "convertCash", actor: character });
     expect(noAmount.ok).toBe(false);
     if (!noAmount.ok) expect(noAmount.rulesVersion).toBe(RULES_VERSION);
-    const flagOff = quoteAction({
-      actionType: "debatePrep",
-      actor: character,
-      context: { rpgStatsEnabled: false },
-    });
-    expect(flagOff.ok).toBe(false);
   });
 
   it("stays host-independent", () => {

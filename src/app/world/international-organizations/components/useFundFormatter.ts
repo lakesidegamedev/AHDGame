@@ -10,17 +10,13 @@ import { formatFundAmount } from "./fundCurrency";
 /**
  * Formats a fund-currency amount in whatever currency the viewer asked for.
  *
- * Used for INFORMATIONAL money — what a nation costs, what a play landed, what a
- * bloc collects in a year. Not for balances or for anything a player types: an
- * account and an input have to stay in the units they are actually denominated
- * in, which is the same reasoning `CurrencyContext.formatPriceIn` records for
- * shares that trade on a specific exchange.
+ * Used for informational money only. Balances and inputs must stay in their
+ * denominated units; see `CurrencyContext.formatPriceIn`.
  *
- * `formatAmount` works in anchor units, so a fund-currency figure is multiplied
+ * `formatAmount` works in anchor units, so multiply the fund-currency figure
  * by the anchor-per-fund-unit rate first. That rate MUST come from the server,
- * which resolves it for the active era: deriving it here from `COUNTRY_CLIENT_CONFIGS`
- * would price a 1953 world at 1979 rates (refs #3778). Without it the fund's own
- * currency stands in, rather than a guess.
+ * which resolves it for the active era; deriving it locally would price past
+ * eras at present-day rates. Without it the fund's own currency stands in.
  */
 export function useFundFormatter(fund: {
   usdToFundRate?: number;

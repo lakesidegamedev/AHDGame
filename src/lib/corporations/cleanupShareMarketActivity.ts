@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, ShareListing, ShareOffer, ShareOrder } from "@/lib/db/types";
+import type { ShareListing, ShareOffer, ShareOrder } from "@/lib/db/types";
 import { cancelShareListingAndRefund } from "@/lib/corporations/cancelShareListing";
 import { cancelShareOrderAndRefund } from "@/lib/corporations/cancelShareOrder";
 import {
@@ -15,6 +15,11 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 export interface ShareMarketCleanupResult {
   ordersCancelled: number;
@@ -28,9 +33,7 @@ export async function cancelPendingShareOfferAndRefund(
   now: Date,
   forexEnabled: boolean
 ): Promise<boolean> {
-  const listingCorp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: offer.corporationId });
+  const listingCorp = await corporationsCollection(db).findOne({ _id: offer.corporationId });
   const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
   const refundAnchor = corpLiquidCapitalToAnchor(
     offer.escrowAmount,
@@ -40,34 +43,26 @@ export async function cancelPendingShareOfferAndRefund(
   const currentTurn = await getCurrentTurn(db);
 
   if (offer.buyerCorporationId) {
-    const buyerCorp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: offer.buyerCorporationId });
+    const buyerCorp = await corporationsCollection(db).findOne({ _id: offer.buyerCorporationId });
     if (!buyerCorp) {
-      const cancelRes = await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: offer._id, status: "pending" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      const cancelRes = await shareOffersCollection(db).updateOne(
+        { _id: offer._id, status: "pending" },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       return cancelRes.modifiedCount === 1;
     }
 
     const buyerFxRate = await getCorpFxRate(db, buyerCorp);
     const refundInBuyerCapital = anchorToCorpLiquidCapital(refundAnchor, buyerCorp, buyerFxRate);
-    const cancelRes = await db
-      .collection<ShareOffer>("shareOffers")
-      .updateOne(
-        { _id: offer._id, status: "pending" },
-        { $set: { status: "cancelled", updatedAt: now } }
-      );
+    const cancelRes = await shareOffersCollection(db).updateOne(
+      { _id: offer._id, status: "pending" },
+      { $set: { status: "cancelled", updatedAt: now } }
+    );
     if (cancelRes.modifiedCount !== 1) return false;
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: offer.buyerCorporationId },
-        { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: offer.buyerCorporationId },
+      { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
+    );
     await emitTx(db, {
       type: "share_listing_refund",
       turn: currentTurn,
@@ -91,16 +86,15 @@ export async function cancelPendingShareOfferAndRefund(
     return true;
   }
 
-  const buyerChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: offer.buyerCharacterId }, { projection: { countryId: 1, name: 1 } });
+  const buyerChar = await charactersCollection(db).findOne(
+    { _id: offer.buyerCharacterId },
+    { projection: { countryId: 1, name: 1 } }
+  );
   if (!buyerChar) {
-    const cancelRes = await db
-      .collection<ShareOffer>("shareOffers")
-      .updateOne(
-        { _id: offer._id, status: "pending" },
-        { $set: { status: "cancelled", updatedAt: now } }
-      );
+    const cancelRes = await shareOffersCollection(db).updateOne(
+      { _id: offer._id, status: "pending" },
+      { $set: { status: "cancelled", updatedAt: now } }
+    );
     return cancelRes.modifiedCount === 1;
   }
 
@@ -114,14 +108,12 @@ export async function cancelPendingShareOfferAndRefund(
     buyerFxRate = fxResult.rate;
   }
   const refundInBuyerHome = refundAnchor * buyerFxRate;
-  const cancelRes = await db
-    .collection<ShareOffer>("shareOffers")
-    .updateOne(
-      { _id: offer._id, status: "pending" },
-      { $set: { status: "cancelled", updatedAt: now } }
-    );
+  const cancelRes = await shareOffersCollection(db).updateOne(
+    { _id: offer._id, status: "pending" },
+    { $set: { status: "cancelled", updatedAt: now } }
+  );
   if (cancelRes.modifiedCount !== 1) return false;
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: offer.buyerCharacterId },
     {
       $inc: buildPersonalBalanceInc(refundInBuyerHome, buyerCurrency, forexEnabled),
@@ -152,8 +144,7 @@ export async function cancelPendingShareOfferAndRefund(
 }
 
 async function cancelOpenOrders(db: Db, filter: Record<string, unknown>): Promise<number> {
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find({ status: "open", ...filter })
     .toArray();
 
@@ -176,8 +167,7 @@ async function cancelOpenListings(
   now: Date,
   forexEnabled: boolean
 ): Promise<number> {
-  const openListings = await db
-    .collection<ShareListing>("shareListings")
+  const openListings = await shareListingsCollection(db)
     .find({ status: "open", ...filter })
     .toArray();
 
@@ -200,8 +190,7 @@ async function cancelPendingOffers(
   now: Date,
   forexEnabled: boolean
 ): Promise<number> {
-  const pendingOffers = await db
-    .collection<ShareOffer>("shareOffers")
+  const pendingOffers = await shareOffersCollection(db)
     .find({ status: "pending", ...filter })
     .toArray();
 

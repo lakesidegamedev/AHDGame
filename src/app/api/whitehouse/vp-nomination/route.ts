@@ -12,6 +12,10 @@ import { createNotification } from "@/lib/notifications";
 import { CONGRESS_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
 import type { CabinetNomination, ElectedOfficial, Character } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
@@ -45,14 +49,16 @@ export async function POST(request: Request) {
     const now = new Date();
 
     // Must be President (player character only)
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -60,18 +66,20 @@ export async function POST(request: Request) {
     }
 
     // VP seat must be vacant
-    const vpOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "vicePresident" });
+    const vpOfficial = await electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "vicePresident",
+    });
     const vpVacant = !vpOfficial || (vpOfficial.characterId === null && !vpOfficial.nppId);
     if (!vpVacant) {
       return errorResponse(400, "Vice President seat is not vacant");
     }
 
     // No existing active VP nomination
-    const existing = await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .findOne({ positionId: "vicePresident", status: { $in: ["active", "proposed"] } });
+    const existing = await cabinetNominationsCollection(db).findOne({
+      positionId: "vicePresident",
+      status: { $in: ["active", "proposed"] },
+    });
     if (existing) {
       return errorResponse(409, "A VP nomination is already pending Senate confirmation");
     }
@@ -83,14 +91,14 @@ export async function POST(request: Request) {
       return errorResponse(400, "Invalid nomineeCharacterId");
     }
 
-    const nominee = await db.collection<Character>("characters").findOne({ _id: nomineeOid });
+    const nominee = await charactersCollection(db).findOne({ _id: nomineeOid });
     if (!nominee) {
       return errorResponse(404, "Nominee character not found");
     }
     if (!nominee.userId) {
       return errorResponse(400, "Only player characters can be nominated");
     }
-    if (nominee.countryId !== "US") {
+    if (!countryHasFeature("usApi", nominee.countryId)) {
       return errorResponse(400, "Only US politicians can be nominated as Vice President");
     }
     if (nomineeOid.equals(presidentOfficial.characterId)) {
@@ -126,13 +134,12 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    const result = await db
-      .collection<CabinetNomination>("cabinetNominations")
-      .insertOne(nomination as unknown as CabinetNomination);
+    const result = await cabinetNominationsCollection(db).insertOne(
+      nomination as unknown as CabinetNomination
+    );
 
     // Notify all US senators and representatives (player characters)
-    const legislators = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const legislators = await electedOfficialsCollection(db)
       .find({
         countryId: "US",
         officeType: { $in: ["senate", "house"] },
@@ -141,8 +148,7 @@ export async function POST(request: Request) {
       })
       .toArray();
     const legislatorCharIds = legislators.map((s) => s.characterId!).filter(Boolean);
-    const legislatorChars = await db
-      .collection<Character>("characters")
+    const legislatorChars = await charactersCollection(db)
       .find({ _id: { $in: legislatorCharIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
     for (const c of legislatorChars) {

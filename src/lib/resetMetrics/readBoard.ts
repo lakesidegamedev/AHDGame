@@ -7,6 +7,8 @@ import {
   normalizeNationalMetricBoard,
   type ResetMetricSnapshot,
 } from "./rules/snapshot";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 export type ResetMetricBoardRead =
   | { status: "not_enabled" }
@@ -20,7 +22,7 @@ export async function readResetMetricBoard(
   regionId?: string,
   ready: ResetV2Readiness = RESET_V2_READY
 ): Promise<ResetMetricBoardRead> {
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -37,7 +39,7 @@ export async function readResetMetricBoard(
   const worldId = gameState?.resetWorldId;
   if (typeof worldId !== "string") return { status: "missing" };
   const id = `${countryId}:${regionId ?? "national"}`;
-  const stored = await db.collection<ResetMetricSnapshot>("resetMetricSnapshots").findOne(
+  const stored = await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db).findOne(
     { _id: id, worldId },
     {
       projection: {

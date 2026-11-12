@@ -10,6 +10,7 @@ import { getAuthAdmin } from "@/lib/auth";
 import { forbidden, unauthorized, errorResponse } from "@/lib/api/errors";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import crypto from "crypto";
+import { servicesConfig } from "@/lib/config/services";
 
 export type AdminOrApiKeyResult =
   | { ok: true; via: "session"; admin: AuthUserWithCharacter }
@@ -20,7 +21,7 @@ export async function requireAdminOrApiKey(request: Request): Promise<AdminOrApi
   // Check API key first (fast path for scripts/Claude)
   const apiKey = request.headers.get("x-api-key");
   if (apiKey) {
-    const expected = process.env.INTERNAL_API_KEY;
+    const expected = servicesConfig.internalApiKey();
     if (!expected) {
       return {
         ok: false,

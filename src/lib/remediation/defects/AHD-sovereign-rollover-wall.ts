@@ -1,48 +1,33 @@
 /**
- * Same-issuer sovereign bond series split into thousands of identical
- * documents by maturity refinancing.
+ * Same-issuer sovereign bond series split into thousands of identical documents
+ * by maturity refinancing, and the heal that folds them back together.
  *
- * WHAT WENT WRONG
+ * The split: every maturing sovereign bond is refinanced on its own (accepted
+ * float novated into one new bond, remaining float force-rolled into a second,
+ * refunding issue for missing cash). A turn with N maturities issues up to 3N
+ * par bonds, all maturing together a term later, so each wall is larger than the
+ * last and the bond phase of a wall turn becomes extremely slow.
  *
- * Every maturing sovereign bond is refinanced on its own: the pool's accepted
- * float is novated into one new bond, the rest of its float is force-rolled
- * into a second, and the cash the Treasury lacks is raised by a third, the
- * refunding issue. All three are 48-turn par bonds issued on the maturity
- * turn. A turn with N maturities therefore issues up to 3N bonds, all due on
- * the same turn a term later, and the next wall is bigger than the last.
- * Measured on the live world: 1,679 bonds issued on one turn became 3,597,
- * then 9,460, then 25,976, all maturing together. Each one costs a coupon
- * claim every turn and several journaled money moves at maturity, so the
- * bond phase of a wall turn ran for 43 minutes.
+ * `sovereignRolloverConsolidationEnabled` makes the three paths add their units to
+ * one shared replacement bond per issuer, currency, coupon, term and turn
+ * (sovereignRolloverBond.ts) instead of one bond each.
  *
- * THE CODE HALF
+ * The heal: folds already-split bonds into one bond per series. A series is every
+ * live sovereign bond with the same issuer identity, currency, coupon, issue term,
+ * maturity turn, market price and reconcile flag. The oldest bond survives and
+ * absorbs the others' face, pool float, requested units and holder positions
+ * (summed per holder, average cost weighted by units). Absorbed bonds are emptied
+ * and closed with a pointer to their survivor. Total face, units, coupon service,
+ * holder positions and balances are unchanged, so no money moves.
  *
- * `sovereignRolloverConsolidationEnabled` makes the three paths add their
- * units to one shared replacement bond per issuer, currency, coupon, term and
- * turn (sovereignRolloverBond.ts) instead of one bond each.
+ * Only plain bonds take part: no frozen maturity claim, restructure haircut,
+ * unsold primary units, underwriting offer, central-bank holding, bank lot or
+ * in-flight bank trade. Coupon claims already frozen against an absorbed bond keep
+ * their own payees and amounts.
  *
- * THIS HEAL
- *
- * Folds the bonds already split into one bond per series. A series is every
- * live sovereign bond with the same issuer identity, currency, coupon, issue
- * term, maturity turn, market price, reconcile flag and consolidation origin.
- * A scheduled primary issue is its own borrowing even when it happens to share
- * the coupon, term and turn of a shared rollover bond, so the two are never one
- * series. The oldest bond of the series survives and absorbs the others' face,
- * pool float, requested units and holder positions (summed per holder, average
- * cost weighted by units). Each absorbed bond is emptied and closed with a
- * pointer to its survivor. Total face, units, coupon service, every holder's
- * position and every balance are unchanged, so no money moves.
- *
- * Only plain bonds take part: no frozen maturity claim, no restructure
- * haircut, no unsold primary units, no underwriting offer, no central-bank
- * holding, no bank lot or in-flight bank trade. Coupon claims already frozen
- * against an absorbed bond keep their own payees and amounts and never read
- * the bond again, so they settle unchanged.
- *
- * Each series commits in one transaction, guarded on every document still
- * matching the planned figures. A series that moved after the plan is left
- * alone and reported; re-planning picks it up.
+ * Each series commits in one transaction, guarded on every document still matching
+ * the planned figures. A series that moved after the plan is skipped and reported;
+ * re-planning picks it up.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Bond, BondHolder } from "@/lib/db/types/bond";
@@ -56,6 +41,8 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export const DEFECT_ID = "AHD-sovereign-rollover-wall";
 
@@ -79,12 +66,12 @@ type SeriesBond = Pick<
   | "maturityTurns"
   | "maturityTurn"
   | "marketPrice"
-  | "sovereignRolloverConsolidated"
   | "totalIssued"
   | "publicFloat"
   | "requestedUnits"
   | "holders"
   | "updatedAt"
+  | "sovereignRolloverConsolidated"
 > & { reconcile?: boolean };
 
 export interface SeriesPlan {
@@ -137,9 +124,9 @@ function hasBankPosition(bond: Pick<Bond, "holders">): boolean {
 }
 
 async function currentTurn(db: Db): Promise<number> {
-  const state = await db
-    .collection<{ _id: string; currentTurn?: number; turn?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
+  const state = await gameStateCollection<{ _id: string; currentTurn?: number; turn?: number }>(
+    db
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1, turn: 1 } });
   return state?.currentTurn ?? state?.turn ?? 0;
 }
 
@@ -154,7 +141,9 @@ export function seriesKey(bond: SeriesBond): string {
     String(bond.maturityTurn),
     String(bond.marketPrice),
     bond.reconcile === true ? "reconcile" : "",
-    bond.sovereignRolloverConsolidated === true ? "consolidated" : "plain",
+    // The shared rollover bond and a scheduled issue of the same coupon and
+    // turn are two bonds by design, not a split series.
+    bond.sovereignRolloverConsolidated === true ? "rollover" : "",
   ].join("|");
 }
 
@@ -196,8 +185,7 @@ export function mergeHolders(bonds: readonly Pick<Bond, "holders">[]): BondHolde
 /** Read-only: every series with more than one plain bond, and what it folds into. */
 export async function surveySovereignSeries(db: Db): Promise<Payload> {
   const turn = await currentTurn(db);
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(ELIGIBLE_FILTER as never, {
       projection: {
         countryId: 1,
@@ -335,15 +323,14 @@ async function applySeries(
   turn: number,
   ctx: HealContext
 ): Promise<boolean> {
-  const bonds = db.collection<Bond>("bonds");
+  const bonds = bondsCollection(db);
   const ids = row.members.map((member) => new ObjectId(member.id));
   try {
     await runRequiredTransaction(
       async (session) => {
-        // Re-read the series inside the transaction and fold what is there
-        // now. A member that left the plain set, changed its face or float,
-        // or no longer belongs to the series aborts the whole series; a
-        // concurrent write to any member aborts the commit.
+        // Re-read the series inside the transaction and fold current state.
+        // Any member that left the set, changed its face or float, or no
+        // longer matches the series aborts the whole series.
         const live = (await bonds
           .find({ _id: { $in: ids }, ...ELIGIBLE_FILTER } as never, { session })
           .toArray()) as unknown as SeriesBond[];
@@ -443,10 +430,11 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 async function verify(db: Db): Promise<VerifyResult> {
   const { series } = await surveySovereignSeries(db);
   const remaining = series.reduce((sum, row) => sum + row.members.length - 1, 0);
-  const absorbedLive = await db
-    .collection<Bond>("bonds")
-    .countDocuments({ consolidatedIntoBondId: { $exists: true }, matured: { $ne: true } });
-  const absorbedWithFace = await db.collection<Bond>("bonds").countDocuments({
+  const absorbedLive = await bondsCollection(db).countDocuments({
+    consolidatedIntoBondId: { $exists: true },
+    matured: { $ne: true },
+  });
+  const absorbedWithFace = await bondsCollection(db).countDocuments({
     consolidatedIntoBondId: { $exists: true },
     $or: [
       { totalIssued: { $ne: 0 } },

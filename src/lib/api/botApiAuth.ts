@@ -1,5 +1,9 @@
 import crypto from "crypto";
 import { getDb } from "@/lib/mongodb";
+import { servicesConfig } from "@/lib/config/services";
+import { botApiKeysCollection } from "@/lib/db/repositories/botApiKeys";
+import type { Document } from "mongodb";
+import { botApiRequestLogCollection } from "@/lib/db/repositories/botApiRequestLog";
 
 export type BotApiScope = "campaign" | "full";
 export type BotApiSource = "env" | "user";
@@ -42,7 +46,7 @@ export async function requireBotApiAccess(
   const token = request.headers.get("X-Bot-Token");
   if (!token) return { ok: false as const, reason: "missing" };
 
-  const privateKey = process.env.DISCORD_BOT_API_KEY;
+  const privateKey = servicesConfig.discordBotApiKey();
   if (privateKey && token === privateKey) {
     return {
       ok: true as const,
@@ -52,7 +56,7 @@ export async function requireBotApiAccess(
     };
   }
 
-  const publicKey = process.env.PUBLIC_BOT_API_KEY;
+  const publicKey = servicesConfig.publicBotApiKey();
   if (publicKey && token === publicKey) {
     if (requiredScope === "full") return { ok: false as const, reason: "insufficient_scope" };
     return {
@@ -64,9 +68,10 @@ export async function requireBotApiAccess(
   }
 
   const db = await getDb();
-  const keyDoc = await db
-    .collection("botApiKeys")
-    .findOne({ tokenHash: hashToken(token), revokedAt: null });
+  const keyDoc = await botApiKeysCollection<Document>(db).findOne({
+    tokenHash: hashToken(token),
+    revokedAt: null,
+  });
   if (!keyDoc) return { ok: false as const, reason: "invalid" };
   if (!isBotApiScope(keyDoc.scope)) {
     return { ok: false as const, reason: "invalid" };
@@ -76,12 +81,10 @@ export async function requireBotApiAccess(
     return { ok: false as const, reason: "insufficient_scope" };
   }
 
-  await db
-    .collection("botApiKeys")
-    .updateOne(
-      { _id: keyDoc._id },
-      { $set: { lastUsedAt: new Date(), updatedAt: new Date() }, $inc: { requestCount: 1 } }
-    );
+  await botApiKeysCollection<Document>(db).updateOne(
+    { _id: keyDoc._id },
+    { $set: { lastUsedAt: new Date(), updatedAt: new Date() }, $inc: { requestCount: 1 } }
+  );
 
   return {
     ok: true as const,
@@ -101,5 +104,5 @@ export async function logBotApiRequest(params: {
   source: BotApiSource;
 }) {
   const db = await getDb();
-  await db.collection("botApiRequestLog").insertOne({ ...params, createdAt: new Date() });
+  await botApiRequestLogCollection<Document>(db).insertOne({ ...params, createdAt: new Date() });
 }

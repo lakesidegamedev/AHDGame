@@ -1,14 +1,27 @@
 /**
  * Shared preset-aware bundle selector.
  *
- * Seed lanes (regions, metrics, budgets, sector weights, demographics)
- * use this to pick the correct era bundle based on the reset preset.
- * When a bundle for the requested preset is missing, falls back to the
- * `2019-default` bundle. This keeps the 2019 default behavior fixed
- * while allowing 1991-default bundles to opt in incrementally.
+ * Seed lanes (regions, metrics, budgets, sector weights, demographics) use this
+ * to pick the bundle authored for the reset preset. There is no fallback: a
+ * preset without its own bundle stops the seed with a `SeedContractError`.
  */
 
-export type EraId = "1953" | "1979" | "1991" | "1999" | "2007" | "2019" | "2023" | "2027";
+import { SEED_PRESET_IDS, type SeedPresetId } from "@/lib/constants/turnTime";
+import { missingPresetEntry, SeedContractError } from "@/lib/seeds/contract/seedContractError";
+
+type EraOfPreset<P> = P extends `${infer Year}-default` ? Year : never;
+
+/**
+ * The era of every shipping preset, derived from `SEED_PRESET_IDS` so a new
+ * preset adds its era here and every `Record<EraId, ...>` table stops
+ * compiling until it covers the new era.
+ */
+export type EraId = EraOfPreset<SeedPresetId>;
+
+/** Every era id, oldest first. Non-empty tuple so it can feed `z.enum`. */
+export const SEED_ERA_IDS = SEED_PRESET_IDS.map((preset) =>
+  preset.slice(0, 4)
+) as unknown as readonly [EraId, ...EraId[]];
 
 export type ResetPresetId =
   | "1953-default"
@@ -24,99 +37,45 @@ export type ResetPresetId =
   | string;
 
 /**
- * Every 2019 fallback taken since the last reset of this list, as
- * `"label → preset"`. Module-level because seeding runs as a long batch of
- * independent lane calls and the useful artifact is the WHOLE list at the end,
- * not a line buried in the log next to each one.
+ * Variants of the 2019 world that seed its data with a different party setup.
+ * They are the same world, not other presets, so they read the 2019 bundle.
  */
-const fallbacksTaken: Array<{ label: string; preset: string }> = [];
+const PRESET_DATA_ALIASES: Readonly<Record<string, SeedPresetId>> = {
+  empty: "2019-default",
+  "2019-no-parties": "2019-default",
+};
 
-/** Snapshot of the fallbacks recorded so far (most recent last). */
-export function getPresetFallbacks(): ReadonlyArray<{ label: string; preset: string }> {
-  return [...fallbacksTaken];
+/** The preset whose authored data a world of `preset` seeds. */
+export function dataPresetFor(preset: string): string {
+  return PRESET_DATA_ALIASES[preset] ?? preset;
 }
 
 /**
- * Record a 2019 fallback taken OUTSIDE {@link selectPresetBundle} — for lanes
- * that resolve their bundle with a `switch` rather than a record lookup, and so
- * cannot route through it.
+ * The bundle authored for `preset`. Throws `SeedContractError` when the preset
+ * has none: another preset's bundle is never a substitute.
  *
- * `getPresetSeats` is the case this exists for: its `default:` branch hands back
- * the entire 2020 chamber roster for any preset it does not recognise, which is
- * how 1999/2007/2023 came to seed 1,004 seats identical to 2019-default without
- * anything saying so. Applies the same era guard — `empty` and
- * `2019-no-parties` ARE the 2019 era, so resolving to its data is the right
- * answer rather than a gap.
- */
-export function recordPresetFallback(label: string, preset: string): void {
-  if (eraForPreset(preset) !== "2019") fallbacksTaken.push({ label, preset });
-}
-
-/** Clear the record — call at the start of a seed run. */
-export function resetPresetFallbacks(): void {
-  fallbacksTaken.length = 0;
-}
-
-/**
- * Selects the bundle for the given preset, falling back to the `2019-default`
- * bundle when absent.
- *
- * THE FALLBACK IS RECORDED, NOT SILENT. It is often the right answer — Turkish
- * provinces are much the same in 1991 as in 2019, and several lanes map an era
- * to the modern bundle DELIBERATELY (`"1979-default": trRegions`), which is a
- * visible authoring decision. What was not fine is that an era with no bundle
- * quietly received 2019 data with nothing to notice, which is how a world set
- * in another decade ends up describing 2019 in places nobody checked. Every
- * fallback now names itself so the gaps can be counted and prioritised.
- *
- * `label` identifies the LANE (e.g. "seedTR:trRegions") — a report saying only
- * "something fell back" is no better than silence.
- *
- * @example
- *   const cfg = selectPresetBundle(preset, {
- *     "2019-default": NATIONAL_BUDGET_SEED_CONFIGS,
- *     "1991-default": NATIONAL_BUDGET_SEED_CONFIGS_1991,
- *   }, "budgets:national");
+ * `label` names the seed lane (e.g. "regions:TR") so the error says which
+ * dataset is missing.
  */
 export function selectPresetBundle<T>(
   preset: string,
   bundles: Partial<Record<ResetPresetId, T>>,
   label: string
 ): T {
-  const requested = bundles[preset as ResetPresetId];
-  if (requested != null) return requested;
-  const fallback = bundles["2019-default"];
-  if (fallback == null) {
-    throw new Error(
-      `selectPresetBundle: no bundle for preset "${preset}" and no 2019-default fallback (${label})`
-    );
-  }
-  // `empty` and `2019-no-parties` ARE the 2019 era — resolving to its bundle is
-  // the correct answer, not a gap, so they are not recorded.
-  if (eraForPreset(preset) !== "2019") fallbacksTaken.push({ label, preset });
-  return fallback;
+  const bundle = bundles[dataPresetFor(preset) as ResetPresetId];
+  if (bundle == null) throw missingPresetEntry(preset, label);
+  return bundle;
 }
 
 /**
- * Non-throwing variant of {@link selectPresetBundle}: returns the requested
- * preset's bundle, then the `2019-default` fallback, then `undefined` when
- * neither exists. Use this on **render/read paths** (e.g. region pages) where a
- * country authored only for older eras (1953/1979, no 2019/1991 bundle) must
- * degrade to "no data" rather than crash the page render. Seeders keep the
- * strict throwing variant so a reset still surfaces genuinely missing data.
+ * Non-throwing variant for optional overlays and render paths: the preset's own
+ * bundle, or `undefined` when it has none. Never another preset's bundle.
  */
 export function selectPresetBundleOptional<T>(
   preset: string,
-  bundles: Partial<Record<ResetPresetId, T>>,
-  label?: string
+  bundles: Partial<Record<ResetPresetId, T>>
 ): T | undefined {
-  const requested = bundles[preset as ResetPresetId];
-  if (requested != null) return requested;
-  const fallback = bundles["2019-default"];
-  if (fallback != null && label && eraForPreset(preset) !== "2019") {
-    fallbacksTaken.push({ label, preset });
-  }
-  return fallback;
+  return bundles[dataPresetFor(preset) as ResetPresetId] ?? undefined;
 }
 
 const ERA_MAP: Record<string, EraId> = {
@@ -138,6 +97,36 @@ const ERA_MAP: Record<string, EraId> = {
  */
 export function eraForPreset(preset: string): EraId {
   return ERA_MAP[preset] ?? "2019";
+}
+
+/**
+ * Strict variant of {@link eraForPreset} for seeding, world reset and preflight.
+ * A missing, blank or unknown preset stops the run with a `SeedContractError`
+ * before anything is written. Turn and runtime code keep the fail-safe
+ * `eraForPreset`, so a live world can never crash on its stored preset.
+ */
+export function strictEraForPreset(preset: string | null | undefined): EraId {
+  const era = typeof preset === "string" ? ERA_MAP[preset] : undefined;
+  if (era === undefined) throw unknownSeedPreset(preset);
+  return era;
+}
+
+/** Throws unless `preset` is a known preset id. Call before the first write. */
+export function assertKnownSeedPreset(preset: string | null | undefined): asserts preset is string {
+  strictEraForPreset(preset);
+}
+
+function unknownSeedPreset(preset: string | null | undefined): SeedContractError {
+  const shown = preset == null || preset === "" ? "(missing)" : preset;
+  return new SeedContractError(shown, [
+    {
+      dataset: "preset",
+      detail:
+        preset == null || preset === ""
+          ? "no preset given; seeding never assumes one"
+          : `"${preset}" is not a known preset`,
+    },
+  ]);
 }
 
 /**
@@ -172,7 +161,7 @@ export function presetForEra(era: EraId): ResetPresetId {
  * as such — i.e. the 1953 and 1979 eras. By the 1991 era the bloc governments had
  * collapsed (Warsaw Pact dissolved July 1991) and later eras use the successor
  * democracies + the modern Russian Federation, so those structures must NOT seed
- * there (refs #3269). This mirrors the RU-regions era gate in bootstrapGameWorld.
+ * there. This mirrors the RU-regions era gate in bootstrapGameWorld.
  */
 export function isEasternBlocEra(preset: string): boolean {
   const era = eraForPreset(preset);
@@ -180,29 +169,18 @@ export function isEasternBlocEra(preset: string): boolean {
 }
 
 /**
- * Presets whose fresh world is MEANT to start in the live pre-iteration
- * "founding" phase (`GameState.preIteration.active`), so a normal admin reset
- * produces a working founding cycle without anyone remembering to tick a flag.
+ * Presets whose fresh world starts in the pre-iteration "founding" phase
+ * (`GameState.preIteration.active`), so an admin reset yields a working
+ * founding cycle without anyone ticking a flag.
  *
- * Why this is preset-scoped rather than global: the founding phase only makes
- * sense where the authored roster deliberately leaves the playable legislatures
- * EMPTY, to be filled by the cycle-0 founding election. Measured against
- * `getPresetSeats(preset)` on this branch:
+ * Preset-scoped because founding only makes sense where the authored roster
+ * leaves the playable legislatures EMPTY, to be filled by the cycle-0
+ * founding election. 1953 and 1979 leave US/UK chambers vacant by design;
+ * 1991+ presets ship full historical rosters that seat at bootstrap, so
+ * defaulting the founding phase on would blank them.
  *
- *   1953-default   360 authored seats — US house 75 / senate 96 / governor 48
- *                  are the *priors* pool, and `bootstrapGameWorld` explicitly
- *                  skips the executive backfill under `preIteration`. Chambers
- *                  start vacant BY DESIGN and the founding election seats them.
- *   1979-default   138 authored seats — RU/DD structures only; the US/UK
- *                  chambers have no authored roster at all. Same vacant-roster
- *                  shape as 1953, so founding is required for a valid world.
- *   1991/1999/     ~1004-1015 authored seats each — every chamber ships a full
- *   2007/2019/     historical roster that seats at bootstrap. Defaulting the
- *   2023           founding phase on here would blank those rosters and replace
- *                  a correct historical world with a synthetic one. Left OFF.
- *
- * Callers treat an explicit `preIteration` option as authoritative; this only
- * supplies the default when the caller says nothing.
+ * Callers treat an explicit `preIteration` option as authoritative; this
+ * only supplies the default when the caller says nothing.
  */
 export function presetDefaultsToFoundingPhase(
   preset: string,

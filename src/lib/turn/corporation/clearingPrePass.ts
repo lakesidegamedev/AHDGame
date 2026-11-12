@@ -82,6 +82,7 @@ import { getManufacturingProductKind } from "@/lib/products/manufacturingCatalog
 import { isLegalManufacturingProductForPlant } from "@/lib/products/rules/manufacturingEligibility";
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { mediaProductOfferAvailability } from "@/lib/products/rules/mediaProductSales";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * Clearing pre-pass for the corporation turn, extracted from index.ts so the
@@ -190,9 +191,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     { corpId: string; revenueAnchor: number; commodities: string[] }
   >();
   const sectorCorpId = new Map<string, string>();
-  // Clearing book invariant breaches (issue #2054) for this turn's warning
-  // channel. Deterministic text per book, so a retried or replayed turn
-  // records each breach exactly once downstream.
+  // Clearing invariant breaches for this turn's warning channel. Deterministic text per book so replays record each breach once downstream.
   const clearingInvariantBreaches: string[] = [];
   let brandLoyaltyUpdates: CorpLoyaltyUpdate[] = [];
   if (market.clearingEnabled) {
@@ -281,23 +280,14 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           lookups.hardwareInputReliefStartTurn
         );
         // Same remap the world ledger applies (computeRawSupplyDemand): bloc
-        // media offers state broadcasting, not advertising. If the offer and
-        // the ledger disagree on the commodity, clearing's lagged-supply
-        // reconciliation misfires.
-        // A sector cannot offer a resource its state has no reserves of. Every
-        // other consumer of the supply mix already filters on state capacity
-        // (sectorTurn, the world supply ledger, the sector page), but the
-        // clearing OFFER did not, so an extraction sector in a resource-poor
-        // state put all six extraction legs on the book. The missing legs land
-        // in a book with no supply and no demand, clear at zero, and are still
-        // rate-weighted into `soldFraction`, which is what the sector page
-        // thresholds "this market is oversupplied" on. Every DD extraction
-        // sector sat at 0.435-0.498 against a 0.5 threshold and so read as
-        // permanently oversupplied on output it could never have made.
-        //
-        // The capacity filter culls what the state cannot extract. The helper
-        // no-ops for non-extraction sectors and for states with no capacity
-        // document, so nothing else moves.
+        // media offers state broadcasting, not advertising; disagreement makes
+        // clearing's lagged-supply reconciliation misfire. A sector cannot offer a
+        // resource its state has no reserves of; every other consumer of the supply
+        // mix filters on state capacity, so the OFFER must too. Missing legs land in
+        // a book with no supply and no demand, clear at zero, and are still
+        // rate-weighted into `soldFraction`, which the sector page thresholds
+        // "oversupplied" on. The helper no-ops for non-extraction sectors and for
+        // states with no capacity document.
         const rates = {
           ...baseRates,
           supply: applyExtractionResourceCapacityToSupply(
@@ -420,38 +410,19 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
             ...(sector.stateId ? { stateId: sector.stateId } : {}),
           });
         }
-        // PRODUCTION SINK for the supply-agreement shortfall leg, filled HERE
-        // rather than from clearing's offered `s.units`.
+        // Production sink for the supply-agreement shortfall leg, read from
+        // sector.producedUnits rather than clearing's offered `s.units`. Those
+        // differ: the offer excludes EXTRACTION (it stays on nameplate for
+        // lagged-supply normalization), so sourcing the sink from the offer let
+        // extraction suppliers' contract damages be assessed off a nameplate
+        // while the sink looked plants-clean. Reading producedUnits keeps the
+        // sink measured production for every sector type and the no-plants
+        // guard means what it says. Same plantsSupplyScaledUnits legs as the
+        // offer and world supply ledger.
         //
-        // The two are not the same number and must not be conflated.
-        // `computeSupplyAgreementSettlements` throws if a sink arrives without
-        // plants, because outside plants the offer is the post-normalization
-        // revenue nameplate and damages assessed off a bookkeeping figure are
-        // exactly what that guard exists to stop. Sourcing the sink from the
-        // clearing offer defeated the guard from the other side: EXTRACTION is
-        // deliberately excluded from the `producedUnits` offer below (it stays
-        // on the nameplate so the lagged-supply normalization can reconcile it),
-        // so extraction suppliers, the dominant commodity suppliers in the
-        // world, had their contract damages assessed off precisely that
-        // nameplate while the sink looked plants-clean.
-        //
-        // Reading `sector.producedUnits` directly keeps the sink measured
-        // production for EVERY sector type, so the guard means what it says and
-        // no sector type is quietly exempt from contract discipline. The same
-        // `plantsSupplyScaledUnits` legs the offer and the world supply ledger
-        // apply are applied here, and the propose-time capacity validator now
-        // sizes `volumeCap` against the same scaled quantity.
-        //
-        // A mothballed sector contributes nothing and gets no entry, which the
-        // settlement reads as zero produced (its documented meaning), a cold
-        // plant owes damages on its whole contracted volume.
-        // The achievable ceiling is accumulated for EVERY sector including
-        // mothballed ones. A cold plant produces nothing and gets no entry in
-        // the produced map (its documented "zero produced" meaning), but its
-        // ceiling is still its full capacity because mothballing is the operator's
-        // own choice and must keep owing damages on the whole contracted
-        // volume. Skipping it here would hand back the exact exploit the
-        // damages leg exists to close.
+        // Mothballed sectors: no produced entry (zero produced), but their
+        // full ceiling is still accumulated. Mothballing is the operator's
+        // choice and must keep owing damages on the whole contracted volume.
         if (supplyAgreementsEnabled && market.plantsEnabled) {
           const achievableScaled = plantsSupplyScaledUnits({
             producedUnits: sector.contractAchievableUnits,
@@ -591,49 +562,32 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           // every other clearing input). Null for a sector that has never run a
           // plants turn, the book falls back to the revenue nameplate.
           //
-          // `producedUnits` carries the REVENUE-side production legs, so the
-          // legs the supply ledger applies on top of the same units and
-          // sectorTurn's productionFactor does not (natcorpScale ×
-          // outputMultiplier × embargoSupplyFactor, plus the arsenal-retention
-          // share for output shipped to a state arsenal under a defence
-          // contract) are applied here, through the SAME shared helper the
-          // ledger uses. Without them the offer is not ledger-consistent, and
-          // clearing exempts these units from the lagged-supply normalization
-          // precisely on the claim that it is: a high-output-policy sector
-          // would under-offer by up to 15%, an embargoed one over-offered
-          // against a ledger that had already written those units off, and a
-          // contracted one over-offered output the arsenal had already taken,
-          // with nothing left to reconcile any of it.
+          // `producedUnits` carries the REVENUE-side production legs, so the supply
+          // legs the ledger applies on top (natcorpScale × outputMultiplier ×
+          // embargoSupplyFactor, plus the arsenal-retention share) must be applied here
+          // through the SAME shared helper the ledger uses. Otherwise the offer is not
+          // ledger-consistent and clearing exempts it from lagged-supply normalization
+          // on that false claim.
           //
-          // The arsenal leg reads `freshMilitaryDiversion` exactly like the
-          // ledger's sector rows do (same staleness window, same turn), so a
-          // diversion cannot be fresh on one side and expired on the other.
-          // `producedUnits` itself is gross physical output in both places;
-          // the matching cash-side deduction lives in sectorTurn's revenue
-          // leg, so nothing here double-applies.
+          // The arsenal leg reads `freshMilitaryDiversion` exactly like the ledger's
+          // sector rows (same staleness window, same turn). `producedUnits` is gross
+          // physical output in both places; the matching cash-side deduction lives in
+          // sectorTurn's revenue leg, so nothing double-applies.
           //
-          // EXTRACTION IS EXCLUDED from the clearing offer's `producedUnits`,
-          // matching computeRawSupplyDemand's deliberate `st !== "extraction"`
-          // exclusion. Under plants the sector's revenue is restated to the
-          // capacity nameplate (sectorTurn), so world supply for extraction
-          // still comes from the legacy revenue derivation with the geological
-          // rationing applied exactly once. `producedUnits` for extraction is a
-          // DIFFERENT number (rationed by the plants hard-min lambda ×
-          // throughput × policy), so offering it would flag the seller
-          // `realUnits` and switch OFF the normalization that is the only thing
-          // reconciling those two figures. Leaving it undefined keeps extraction
-          // on the nameplate offer and inside the normalization pass.
+          // EXTRACTION IS EXCLUDED, matching computeRawSupplyDemand's deliberate
+          // `st !== "extraction"` exclusion: under plants extraction's revenue is
+          // restated to the capacity nameplate, and `producedUnits` for extraction is a
+          // different (rationed) number. Offering it would set `realUnits` and switch
+          // OFF the normalization that reconciles the two. Leaving it undefined keeps
+          // extraction on the nameplate offer inside that pass.
           //
-          // Contracts still need the plants figure: `contractFillUnits` carries
-          // the same scaled plants chain without setting realUnits or replacing
-          // the nameplate offer (issue #4452 / ticket 1611).
+          // Contracts still need the plants figure: `contractFillUnits` carries the
+          // same scaled plants chain without setting realUnits or replacing the
+          // nameplate offer.
           //
-          // MOTHBALLED is checked EXPLICITLY, matching the ledger's
-          // `plantsMothballed` guard in constants/commodities. It is not
-          // redundant: without it this site depends on `producedUnits` having
-          // been persisted as 0 by a prior sectorTurn, a value written
-          // elsewhere. If that ever stops holding, a cold plant would offer
-          // units the ledger has already excluded, and `realUnits` offers are
+          // MOTHBALLED is checked EXPLICITLY, matching the ledger's `plantsMothballed`
+          // guard. Without it this site depends on `producedUnits` having been persisted
+          // as 0 by a prior sectorTurn, and a cold plant offering `realUnits` would be
           // exempt from the normalization that would otherwise catch it.
           ...(market.plantsEnabled && sector.mothballed !== true
             ? (() => {
@@ -641,12 +595,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
                   producedUnits: sector.producedUnits,
                   isNatcorp,
                   embargoSupplyFactor: sectorEmbargoSupplyFactor,
-                  // Arsenal-retention leg (issue #2054): the world supply
-                  // ledger multiplies this same share out of supply, so an
-                  // offer built without it sits in a larger basis and trips
-                  // the clearing invariant while depressing fills. Absent (no
-                  // fresh diversion) retains everything: non-contracted
-                  // sectors are byte-identical to before.
+                  // World supply ledger multiplies this share out of supply, so omitting it leaves the offer in a larger basis and trips the clearing invariant while depressing fills. Absent (no fresh diversion) retains everything, byte-identical to before.
                   militaryRetainedFraction,
                 });
                 return sector.sectorType === "extraction"
@@ -684,7 +633,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           (sector as { countryId?: string }).countryId;
         const fairnessDoctrineApplies =
           market.mediaFairnessDoctrineEnabled === true &&
-          sectorCountryId === "US" &&
+          countryHasFeature("usTurn", sectorCountryId) &&
           isFairnessDoctrineBroadcastOutlet(sector.sectorType, sector.strategyId ?? "");
         if (
           lookups.editorialAudienceLeanByState &&
@@ -762,7 +711,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           const sectorType = sectorTypeBySectorId.get(input.sectorId);
           if (!stateId || !corporationId || sectorType !== "media") continue;
           if (
-            lookups.stateCountryMap?.get(stateId) !== "US" ||
+            !countryHasFeature("usTurn", lookups.stateCountryMap?.get(stateId)) ||
             lookups.corpById.get(corporationId)?.countryOwnerId
           )
             continue;
@@ -797,16 +746,13 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           (sector.editorialAdvertisingAvailability ?? 1) * censorshipAvailability;
       }
     }
-    // Book-sanity invariant (issue #2054): the diagnostic reports the RAW
-    // revenue/base nameplate. A modest excess over lagged supply is EXPECTED
-    // and benign, the supply ledger applies scale/haircut factors the
-    // nameplate omits, and clearing reconciles the book down to supply (so
-    // fills are not depressed). Only a post-normalization breach of the
-    // canonical-basis invariant signals a genuine defect: both sides now
-    // build plants units through one basis, so a residual excess means the
-    // book and the ledger drifted apart and fills ARE depressed. Breaches go
-    // to the turn warning channel (and the health snapshot's warningCount),
-    // not just the worker log.
+    // Book-sanity invariant: the diagnostic reports RAW revenue/base nameplate.
+    // A modest excess over lagged supply is expected and benign, since the supply
+    // ledger applies scale/haircut factors the nameplate omits and clearing
+    // reconciles the book down to supply. Only a post-normalization breach of the
+    // canonical-basis invariant signals a real defect (book and ledger drifted
+    // apart, fills are depressed). Breaches go to the turn warning channel, not
+    // just the worker log.
     const bookViolations: string[] = clearingInvariantBreaches;
     // Telemetry only, and only while settlement is active: sectorTurn writes it
     // beside the fill it is NOT part of, so a player can read "nobody wanted it"

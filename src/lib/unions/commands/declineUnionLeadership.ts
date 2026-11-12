@@ -5,6 +5,7 @@ import {
   isUnionProsecutionBarred,
   UNION_PROSECUTION_MESSAGE,
 } from "@/lib/unions/unionProsecutionBar";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export type DeclineUnionLeadershipResult =
   { ok: true; status: 200 } | { ok: false; status: number; error: string };
@@ -29,12 +30,10 @@ export async function declineUnionLeadership(
     return { ok: false, status: 403, error: UNIONS_BANNED_MESSAGE };
   }
 
-  await db
-    .collection<Union>("unions")
-    .updateOne(
-      { _id: union._id, pendingLeaderCharacterId: character._id },
-      { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
-    );
+  await unionsCollection(db).updateOne(
+    { _id: union._id, pendingLeaderCharacterId: character._id },
+    { $unset: { pendingLeaderCharacterId: "" }, $set: { updatedAt: new Date() } }
+  );
 
   return { ok: true, status: 200 };
 }

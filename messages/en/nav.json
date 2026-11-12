@@ -65,8 +65,7 @@
       },
       "staff": {
         "localWorld": "Local World",
-        "adminPanel": "Admin Panel",
-        "modPanel": "Mod Panel",
+        "controlPanel": "Control Panel",
         "opsDashboard": "Ops Dashboard",
         "docs": "Docs",
         "tickets": "Tickets",
@@ -353,7 +352,18 @@
       "campaignNoSupport": "No {value}%",
       "campaignSupportLabel": "{kind, select, independence {Independence support} reunification {Reunification support} peace_agreement {Peace agreement support} other {Referendum support}}",
       "campaignVoteOnTurn": "The vote is held on turn {turn}.",
-      "campaignTurnsLeft": "{turns, plural, one {# turn remaining.} other {# turns remaining.}}"
+      "campaignTurnsLeft": "{turns, plural, one {# turn remaining.} other {# turns remaining.}}",
+      "sovereigntyDesire": "Sovereignty Desire",
+      "ottawaStance": "Ottawa stance",
+      "premierStance": "Premier stance",
+      "premierPolicy": "Premier policy",
+      "ottawaPolicy": "Ottawa policy",
+      "ottawaApproval": "Ottawa approval {value}%",
+      "canadaInflation": "Canadian inflation {value}%",
+      "federalist": "Federalist",
+      "autonomist": "Autonomist",
+      "sovereignty": "Pro-Sovereignty",
+      "quebecPolicyHelp": "Ottawa has half the direct policy and maximum approval influence of the Premier. Regional approval strengthens or weakens the Premier\u2019s stance. Ottawa approval below 50% raises sovereignty desire; above 50% lowers it, regardless of Ottawa\u2019s stance. The Autonomist stance has no direct policy effect on separation."
     },
     "settingsMenu": {
       "themes": {

@@ -11,6 +11,15 @@ import { invalidateCachedCountryState } from "@/lib/countryState/cache";
 import { getCountryStateCollection } from "@/lib/db/collections/countryState";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { StateRegistrationPool } from "@/lib/db/types/stateRegistrationPool";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 export type StartingPartiesMode = "default" | "none";
 
@@ -168,8 +177,7 @@ export async function startingArtifactFilters(
 export async function clearStartingPolitics(db: Db, preset: string): Promise<void> {
   const countries = await startingPoliticalCountries(db, preset);
   const countryFilter = startingCountryFilter(countries, true);
-  const targetNpps = await db
-    .collection<NPP>("npps")
+  const targetNpps = await nppsCollection(db)
     .find(countryFilter)
     .project<Pick<NPP, "_id">>({ _id: 1 })
     .toArray();
@@ -179,8 +187,7 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
   const keep = (id: unknown) => {
     if (id instanceof ObjectId) owners.set(id.toHexString(), id);
   };
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({})
     .project<Pick<Corporation, "ceoId" | "ceoType" | "shareholders">>({
       ceoId: 1,
@@ -192,14 +199,12 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     if (corporation.ceoType === "npp") keep(corporation.ceoId);
     for (const holder of corporation.shareholders ?? []) keep(holder.nppId);
   }
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({})
     .project<Pick<Bond, "holders">>({ holders: 1 })
     .toArray();
   for (const bond of bonds) for (const holder of bond.holders ?? []) keep(holder.nppId);
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project<Pick<CentralBank, "chairNppId" | "fomcBoard">>({ chairNppId: 1, fomcBoard: 1 })
     .toArray();
@@ -215,16 +220,14 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
       .toArray();
     for (const position of positions) keep(position.nppId);
   }
-  const accounts = await db
-    .collection<SavingsAccount>("savingsAccounts")
+  const accounts = await savingsAccountsCollection(db)
     .find({ ownerType: "npp" })
     .project<Pick<SavingsAccount, "ownerId">>({ ownerId: 1 })
     .toArray();
   for (const account of accounts) keep(account.ownerId);
   // Keep outstanding credit liabilities, but not unreferenced seeded politician wallets.
   // The no-party baseline is captured after cleanup, not during intermediate seeding.
-  const borrowers = await db
-    .collection<NPP>("npps")
+  const borrowers = await nppsCollection(db)
     .find({})
     .project<Pick<NPP, "_id" | "lineOfCredit">>({ lineOfCredit: 1 })
     .toArray();
@@ -236,8 +239,8 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     if (amounts.some((amount) => typeof amount === "number" && amount !== 0)) keep(borrower._id);
   }
   const retained = [...owners.values()];
-  await db.collection<NPP>("npps").deleteMany({ _id: { $in: targetIds, $nin: retained } });
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).deleteMany({ _id: { $in: targetIds, $nin: retained } });
+  await nppsCollection(db).updateMany(
     { _id: { $in: targetIds } },
     {
       $set: { party: "independent", currentOffice: null },
@@ -247,25 +250,24 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
   for (const collection of STARTING_POLITICAL_COLLECTIONS) {
     await db.collection(collection).deleteMany(artifactFilters[collection]);
   }
-  await db
-    .collection("electedOfficials")
-    .deleteMany({ $and: [countryFilter, STARTING_POLITICAL_OFFICIAL_FILTER] });
+  await electedOfficialsCollection<Document>(db).deleteMany({
+    $and: [countryFilter, STARTING_POLITICAL_OFFICIAL_FILTER],
+  });
   await getCountryStateCollection(db).updateMany(
     countries === null ? {} : { _id: { $in: countries } },
     { $set: { rulingPartyId: null } }
   );
   for (const countryId of countries ?? COUNTRY_ORDER) invalidateCachedCountryState(db, countryId);
-  await db.collection("governorOfficeState").updateMany(countryFilter, {
+  await governorOfficeStateCollection<Document>(db).updateMany(countryFilter, {
     $set: { characterId: null, characterName: "Vacant" },
   });
   // Party registrants become unattached voters; engagement is not changed.
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find(countryFilter)
     .project<Pick<StateRegistrationPool, "_id" | "unregistered">>({ unregistered: 1 })
     .toArray();
   if (pools.length > 0) {
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection(db).bulkWrite(
       pools.map((pool) => ({
         updateOne: {
           filter: { _id: pool._id },
@@ -283,9 +285,10 @@ export async function loadStartingPartiesMode(
   explicit?: StartingPartiesMode
 ): Promise<StartingPartiesMode> {
   if (explicit !== undefined) return resolveStartingPartiesMode(preset, explicit);
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, startingPartiesMode: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, startingPartiesMode: 1 } }
+  );
   return resolveStartingPartiesMode(
     preset,
     state?.preset === preset ? state.startingPartiesMode : "default"

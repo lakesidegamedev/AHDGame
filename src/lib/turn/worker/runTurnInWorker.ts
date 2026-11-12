@@ -5,12 +5,7 @@ import * as path from "path";
  * Parent-side wrapper that runs processTurn() inside a worker_thread, so
  * per-turn allocations live in a separate V8 heap that dies with the worker.
  *
- * Phase 1 (this file) ships the wrapper + tests as dead code — no caller
- * switches yet. Phase 2 will switch cron.ts to call this in place of the
- * direct processTurn() invocation, after sandbox deployment confirms Next.js
- * standalone tracing bundles workerEntry.ts correctly.
- *
- * Design doc: docs/plans/archive/2026-05/2026-05-25-turn-worker-thread.md
+ * No caller uses this yet; cron.ts is still calling processTurn() directly.
  */
 
 export interface WorkerLike {

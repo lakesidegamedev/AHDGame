@@ -2,27 +2,26 @@ import type { ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 /**
- * Weekly contests. Each kind runs one round at a time; when a round ends the
- * winner is paid and the next round starts from a fresh baseline.
+ * Weekly contest definitions. Each kind runs one round at a time; the winner is
+ * paid when the round ends and the next starts from a fresh baseline.
  *
- * - corp_growth_small / corp_growth_large: percent growth in market cap of a
- *   player-run private corporation, net of capital injected during the round.
- *   The two tiers split the field at the median opening value.
- * - influence_gain: National Influence gained by a player character.
- * - approval_gain: approval points gained by countries while a player leads
- *   the government, measured from when that leader took office.
- * - referrals_weekly: new players a referrer brought in during the round.
- * - legislator_bills: bills a player sponsored that were enacted during the round.
- * - wealth_growth: percent growth in a player's net worth, net of wires and loans.
- * - party_growth: members gained by a party with a player chair.
- * - rookie_influence: National Influence gained by characters under two weeks old.
- * - backbench_influence: National Influence gained by characters who opened
- *   the round in the lower half of the field.
- * - favorability_gain: favorability points gained by a player character.
+ * - corp_growth_small / corp_growth_large: percent market-cap growth of a player-run
+ *   private corporation, net of capital injected during the round. Tiers split at the
+ *   median opening value.
+ * - influence_gain / favorability_gain: points gained by a player character.
+ * - approval_gain: country approval gained while a player leads the government, from
+ *   when that leader took office.
+ * - referrals_weekly: new players a referrer brought in.
+ * - legislator_bills: player-sponsored bills enacted during the round.
+ * - wealth_growth: percent net-worth growth, net of wires and loans.
+ * - party_growth: members gained by a player-chaired party.
+ * - rookie_influence: influence gained by characters under two weeks old.
+ * - backbench_influence: influence gained by characters who opened the round in the
+ *   lower half of the field.
  * - governor_approval: state approval gained under the same player governor.
- * - kingmaker: races won this round by candidates a player endorsed.
- * - corp_comeback: percent growth for player corporations whose market cap
- *   fell at least 10% in the week before the round, net of injected capital.
+ * - kingmaker: races won by candidates a player endorsed.
+ * - corp_comeback: growth for player corporations whose market cap fell at least 10%
+ *   in the week before the round, net of injected capital.
  */
 export type ContestKind =
   | "corp_growth_small"

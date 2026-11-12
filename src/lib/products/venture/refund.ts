@@ -5,6 +5,7 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Refunds the receipt for `turn` (or any receipt when `turn` is omitted).
@@ -16,7 +17,7 @@ export async function refundVentureReceipt(
   ventureId: string,
   turn?: number
 ): Promise<boolean> {
-  const collection = db.collection<Corporation>("corporations");
+  const collection = corporationsCollection(db);
   const key = `productVentureDebitsV1.${ventureId}`;
   let receiptTurn = turn;
   let local: number | undefined;
@@ -51,7 +52,7 @@ async function clearVentureReceipt(
   ventureId: string,
   throughTurn: number
 ): Promise<void> {
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     {
       _id: corporationId,
       [`productVentureDebitsV1.${ventureId}.turn`]: { $lte: throughTurn },
@@ -72,9 +73,10 @@ export async function settleCancelledVentureReceipt(
   ventureId: string,
   lastProcessedTurn: number
 ): Promise<boolean> {
-  const row = (await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId }, { projection: { productVentureDebitsV1: 1 } })) as {
+  const row = (await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    { projection: { productVentureDebitsV1: 1 } }
+  )) as {
     productVentureDebitsV1?: Corporation["productVentureDebitsV1"];
   } | null;
   const receipt = row?.productVentureDebitsV1?.[ventureId];

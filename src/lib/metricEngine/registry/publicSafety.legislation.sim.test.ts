@@ -17,7 +17,7 @@ import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 /**
  * Legislative metric simulation — PUBLIC SAFETY category, 240 turns.
  *
- * Law: "Law Enforcement & Criminal Justice Act" (us_law_enforcement_criminal_justice),
+ * Law: Ireland's policing and public safety law (ie_garda_policing),
  * high-investment option (+1). Public-safety outcome nodes read
  * `spending.publicSafety`; the poverty↔crime cluster (social + income/poverty +
  * education) runs alongside so the lagged loop is live. Enacting the law = raising
@@ -38,7 +38,7 @@ const CLUSTER = topoSort([
   ...EDUCATION_NODES,
 ]);
 
-const law = legislationTypes.find((l) => l._id === "us_law_enforcement_criminal_justice");
+const law = legislationTypes.find((l) => l._id === "ie_garda_policing");
 const invest = law?.policyOptions?.find((o) => o.effectDirection === 1);
 
 const baselineDoc: StateMetricBaseline = {
@@ -79,9 +79,9 @@ const initial: Partial<Record<NodeId, number>> = {
 const HIGHER_BETTER: NodeId[] = ["publicSafety.policePerCapita"];
 const LOWER_BETTER: NodeId[] = ["publicSafety.crimeRate"];
 
-describe("legislation sim — public safety (Law Enforcement & Criminal Justice Act, 240 turns)", () => {
+describe("legislation sim: public safety (policing and public safety law, 240 turns)", () => {
   it("the seed law and its high-investment option exist", () => {
-    expect(law, "us_law_enforcement_criminal_justice present").toBeTruthy();
+    expect(law, "ie_garda_policing present").toBeTruthy();
     expect(invest, "an investment (+1) option exists").toBeTruthy();
   });
 
@@ -108,7 +108,7 @@ describe("legislation sim — public safety (Law Enforcement & Criminal Justice 
   it("prints the 240-turn trajectory report", () => {
     console.log(
       reportTrajectory(
-        "Public Safety — Law Enforcement & Criminal Justice Act",
+        "Public Safety — policing and public safety law",
         [...HIGHER_BETTER, ...LOWER_BETTER],
         control,
         enacted

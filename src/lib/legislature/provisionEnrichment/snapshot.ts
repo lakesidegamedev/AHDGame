@@ -10,6 +10,9 @@ import { resolveOptionLabel } from "./optionLabel";
 import { resolveProvisionPolicyOption, type ResolvableProvision } from "./resolvePolicyOption";
 import { policyStoreId, type SnapshotFields } from "./currentLaw";
 import type { FiscalScope } from "./types";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 export type SnapshottableProvision = ResolvableProvision &
   SnapshotFields & { legislationTypeId: string };
@@ -94,12 +97,10 @@ export async function snapshotBillPolicyProvisions<T extends SnapshottableProvis
   ];
 
   const [legislationTypes, currentPolicies] = await Promise.all([
-    db
-      .collection<LegislationType>("legislationTypes")
+    legislationTypesCollection(db)
       .find({ _id: { $in: equivalents } })
       .toArray(),
-    db
-      .collection<StatePolicy>("statePolicies")
+    statePoliciesCollection(db)
       .find({ stateId: policyStoreId(scope), legislationTypeId: { $in: equivalents } })
       .toArray(),
   ]);
@@ -122,8 +123,7 @@ export async function snapshotBillPolicyProvisions<T extends SnapshottableProvis
 
   const missing = canonicalIds.filter((id) => !currentPolicyIdMap.has(id));
   if (missing.length > 0) {
-    const laws = await db
-      .collection<EnactedLaw>("enactedLaws")
+    const laws = await enactedLawsCollection(db)
       .find({
         legislationTypeId: {
           $in: [...new Set(missing.flatMap((id) => getEquivalentLegislationTypeIds(id)))],

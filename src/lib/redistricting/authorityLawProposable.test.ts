@@ -15,7 +15,6 @@
  */
 import { describe, expect, it } from "vitest";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
-import { isOldLegislationTypeExcluded } from "@/lib/politicalMetrics/pipelinePreset";
 import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
 import { CATEGORY_TO_POLICY_DOMAINS, STATE_BILL_CATEGORIES } from "@shared/constants/legislation";
 import type { BillCategory } from "@shared/constants/legislation";
@@ -30,9 +29,8 @@ const LEVERS = [REDISTRICT_AUTHORITY_LAW, REDISTRICT_COMPACTNESS_LAW, REDISTRICT
 describe.each(LEVERS)("%s is proposable as a US state bill", (lawId) => {
   const lt = legislationTypes.find((t) => t._id === lawId);
 
-  it("exists in the reference catalog and survives the old-catalog exclusion sweep", () => {
+  it("exists in the reference catalog", () => {
     expect(lt).toBeDefined();
-    expect(isOldLegislationTypeExcluded(lt!)).toBe(false);
   });
 
   it("is state-scoped for the US", () => {

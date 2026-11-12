@@ -1,21 +1,11 @@
 /**
- * Central Bank Chair Turn Processing
+ * Central Bank Chair Turn Processing.
  *
- * Each turn:
- * 1. Compute chair infamy from inflation & GDP growth
- *    - High inflation → infamy up, low inflation → infamy down
- *    - Low growth → infamy up, high growth → infamy down
- *    - Natural 5% decay per turn (same as character infamy)
- *    - Positive effects (infamy reduction) are dampened at higher scrutiny:
- *      multiplier = max(0.1, 1 - chairInfamy/150)
- *    - Clamped to 0-100
+ * Chair infamy from inflation and GDP growth: high inflation or low growth raises it, low inflation or high growth lowers it, with natural 5% decay per turn (same as character infamy). Positive effects are dampened at higher scrutiny: multiplier = max(0.1, 1 - chairInfamy/150). Clamped 0-100.
  *
- * 2. Apply chair bonuses with infamy penalty
- *    - Base: +0.5 national influence per turn
- *    - If chairInfamy > 25: halve to +0.25 NPI, debit 1.5 actions
- *      (actionRefresh grants chairActionBonus = 3; net becomes 1.5)
+ * Chair bonus: +0.5 national influence per turn base; if chairInfamy > 25, halve to +0.25 NPI and debit 1.5 actions (actionRefresh grants chairActionBonus = 3, net 1.5).
  *
- * Runs after inflation recalc so inflation/GDP values are current.
+ * Runs after inflation recalc so inflation and GDP values are current.
  */
 
 import { aggregateEuroPolicyIndicators, euroPolicyBankId } from "@/lib/currency/euro/rules";
@@ -25,13 +15,10 @@ import { syncEuroMonetaryPolicy } from "@/lib/currency/euro/service";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { FederalBudget } from "@/lib/db/types/budget";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { State } from "@/lib/db/types/state";
 import { nationalOutputGap } from "@/lib/metricEngine/outputTrend";
-import type { Character } from "@/lib/db/types";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -49,6 +36,13 @@ import {
   stanceIsCorrect,
 } from "@/lib/centralBank/credibility";
 import { INFAMY_PENALTY_THRESHOLD, scrutinyReliefDampener } from "@/lib/centralBank/scrutinyRules";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /** Fallback target inflation rate — deviations drive infamy */
 const TARGET_INFLATION = 2.0;
@@ -112,8 +106,7 @@ export async function processCentralBankChairTurn(
   db: Db,
   currentTurn: number
 ): Promise<CentralBankChairTurnResult> {
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project<
       Pick<
@@ -185,8 +178,9 @@ export async function processCentralBankChairTurn(
   // Batch-fetch budgets and metrics
   const budgets =
     budgetIdSet.size > 0
-      ? await db
-          .collection<FederalBudget>("federalBudget")
+      ? await (
+          await getFederalBudgetCollection(db)
+        )
           .find(
             { _id: { $in: Array.from(budgetIdSet) } },
             { projection: { "economicFactors.inflationRate": 1, gdp: 1 } }
@@ -197,8 +191,7 @@ export async function processCentralBankChairTurn(
 
   const nationalMetricsDocs =
     nationalDocIdSet.size > 0
-      ? await db
-          .collection<StateMetrics>("macroMetrics")
+      ? await macroMetricsCollection(db)
           .find(
             { _id: { $in: Array.from(nationalDocIdSet) } },
             { projection: { "economic.gdpGrowth.value": 1, "economic.unemploymentRate.value": 1 } }
@@ -215,8 +208,9 @@ export async function processCentralBankChairTurn(
     .map((b) => b.countryId as CountryId);
   const gapRegions =
     nppCountries.length > 0
-      ? ((await db
-          .collection<State>("states")
+      ? ((await (
+          await getStatesCollection(db)
+        )
           .find(
             { countryId: { $in: nppCountries } },
             {
@@ -242,21 +236,22 @@ export async function processCentralBankChairTurn(
   // against the era-authored target, not the modern/1979 constants. Keyed on
   // the CURRENT in-game year so the target graduates as the world advances;
   // absent → modern anchors (fail-safe).
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, startingYear: 1, preset: 1, euroMonetaryUnion: 1 } }
+  );
   const currentYear = gameState?.currentYear;
   // Era START year, resolved once for the whole sweep rather than per bank:
   // `isBankGovernmentControlledLive` would cost one uncached gameState read per
   // bank, and this loop runs over every central bank in the world each turn.
   const startingYear =
     gameState?.startingYear ?? getStartingYearForPreset(gameState?.preset ?? DEFAULT_SEED_PRESET);
-  const chairGameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const chairGameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = chairGameConfig?.commandEconomyEnabled === true;
 
   const union = gameState?.euroMonetaryUnion;
@@ -453,14 +448,12 @@ export async function processCentralBankChairTurn(
   }
 
   if (bankBulkOps.length > 0) {
-    const bankWriteResult = await db
-      .collection<CentralBank>("centralBanks")
-      .bulkWrite(bankBulkOps as never);
+    const bankWriteResult = await centralBanksCollection(db).bulkWrite(bankBulkOps as never);
     bankWritesMatched = bankWriteResult.matchedCount ?? 0;
     bankWritesModified = bankWriteResult.modifiedCount ?? 0;
   }
   if (charBulkOps.length > 0) {
-    await db.collection<Character>("characters").bulkWrite(charBulkOps as never);
+    await (await getCharactersCollection(db)).bulkWrite(charBulkOps as never);
   }
 
   if (union) await syncEuroMonetaryPolicy(db, union);

@@ -1,17 +1,9 @@
 /**
- * Ireland Region Census Profiles — 1979 (pre-Tiger) era.
+ * Ireland Region Census Profiles, 1979 era.
  *
- * Era anchor: CSO Census of Population 1979 (with 1981 detail tables for
- * education/age structure). Every value is independently authored from
- * historical knowledge of each region in 1979 — NOT scaled or derived from any
- * other era file.
- *
- * 1979 Ireland: poor by Western European standards, very young (one of the
- * highest birth rates in Europe), persistent emigration, near-zero inward
- * migration, overwhelmingly Catholic and Irish-born, agrarian outside Dublin.
- * Free secondary education (1967) had not yet fed through the adult stock, so
- * primary-or-less dominates education everywhere; third level is a small
- * elite. Income tiers are era-neutral relative tiers.
+ * Anchored to CSO Census 1979 (1981 detail tables for education/age).
+ * Every value is independently authored for 1979, NOT scaled or derived
+ * from another era file. Income tiers are era-neutral relative tiers.
  */
 
 import type { IERegionLayer1 } from "@/lib/seeds/ie/ieRegionCensusData";

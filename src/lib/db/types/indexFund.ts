@@ -78,6 +78,12 @@ export interface IndexFund {
   lastRebalancedAt?: Date;
   /** Serializes non-transactional redemption fallback on standalone Mongo. */
   redemptionLock?: { token: ObjectId; expiresAt: Date };
+  /**
+   * Present only on a background country's national index: the fund
+   * holds cash marked to the country's aggregate output index, never
+   * equities or bonds, so the turn's fund passes leave it alone.
+   */
+  nationalIndex?: { entityId: string; markToken?: string };
   /** A7: failing-corporation streaks, for the incumbent grace period. */
   listingFailureStreaks?: IndexFundListingFailureStreak[];
 
@@ -161,6 +167,8 @@ export type IndexFundTransactionKind =
   | "liquidity_quote_buy"
   | "liquidity_quote_sell"
   | "capital_injection"
+  /** A national index fund marked to its country's output index. */
+  | "national_index_mark"
   // A5 sponsorship
   | "sponsor_seed_capital"
   | "expense_fee"
@@ -208,11 +216,8 @@ export interface IndexFundRedemptionQueueEntry {
    */
   unitsBurnedAtRequest?: boolean;
   /**
-   * The ₳ → native multiplier to apply when crediting this queued payout to a
-   * character/imperial wallet (ticket #857 grandfather). Blended per request:
-   * 1 for pre-fix (legacy) units, the fund's FX rate for post-fix units. Absent
-   * = pre-fix queue row → credit rate-free (× 1), matching what the holder was
-   * owed under the old symmetric-scale code. NPP credits ignore this (₳-native).
+   * The ₳ → native multiplier applied when crediting this queued payout to a
+   * wallet. Absent means credit rate-free (× 1). NPP credits ignore this.
    */
   redeemFxRate?: number;
   status: IndexFundRedemptionStatus;

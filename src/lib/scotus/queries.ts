@@ -3,10 +3,12 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { SupremeCourtSeat, DocketCase } from "@/lib/db/types/scotus";
 import { getGameState } from "@/lib/gameState";
 import { divergentDeathChance, type DivergentDeathChance } from "@/lib/scotus/tenure";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
+import { docketCasesCollection } from "@/lib/db/repositories/docketCases";
 
 /**
- * Read layer for #3598 scope item 9 (visibility). Exact UI is out of scope
- * (#3581) — these are the data functions a future page/route would call for:
+ * Read layer for visibility. Exact UI is out of scope
+ *, these are the data functions a future page/route would call for:
  *  - current Court composition (per-justice ideology, vacant seats)
  *  - full justice roster + ideology leans
  *  - history of past Docket cases and outcomes
@@ -32,11 +34,7 @@ export async function getScotusComposition(
   countryId: CountryId
 ): Promise<ScotusSeatSummary[]> {
   const [seats, gameState] = await Promise.all([
-    db
-      .collection<SupremeCourtSeat>("supremeCourtSeats")
-      .find({ countryId })
-      .sort({ seatNumber: 1 })
-      .toArray(),
+    supremeCourtSeatsCollection(db).find({ countryId }).sort({ seatNumber: 1 }).toArray(),
     getGameState(db),
   ]);
   const currentTurn = gameState?.currentTurn;
@@ -68,8 +66,7 @@ export async function getScotusCaseHistory(
   countryId: CountryId,
   preset?: string
 ): Promise<DocketCase[]> {
-  return db
-    .collection<DocketCase>("docketCases")
+  return docketCasesCollection(db)
     .find({
       countryId,
       status: "decided",
@@ -83,16 +80,18 @@ export async function getScotusCaseHistory(
 export async function getScotusUpcomingCases(
   db: Db,
   countryId: CountryId
-): Promise<Array<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear">>> {
-  return db
-    .collection<DocketCase>("docketCases")
+): Promise<
+  Array<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear" | "hearingDueTurn">>
+> {
+  return docketCasesCollection(db)
     .find({ countryId, status: "pending" })
-    .project<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear">>({
+    .project<Pick<DocketCase, "caseKey" | "title" | "axis" | "decisionYear" | "hearingDueTurn">>({
       _id: 0,
       caseKey: 1,
       title: 1,
       axis: 1,
       decisionYear: 1,
+      hearingDueTurn: 1,
     })
     .sort({ decisionYear: 1, title: 1 })
     .limit(25)

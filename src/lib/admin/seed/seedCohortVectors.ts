@@ -5,26 +5,25 @@ import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { cohortAgeShares1991 } from "@/lib/seeds/rules/cohortAgeShares1991";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
+import { presetUsesDemographicPaths } from "@/lib/demographics/rules/demographicPaths";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
 import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 /**
- * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`) —
- * the SSOT population stock the demographic turn phase evolves — for a freshly seeded/reset
- * world, and stamp the seed-time derived population metrics (`sexRatio`, `dependencyRatio`,
- * `realizedMigrationRate`) onto `stateMetrics.population` so the Live Population panel is
- * populated at turn 0 instead of waiting for the first turn.
+ * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`)
+ * for a freshly seeded or reset world, and stamp seed-time population metrics onto
+ * `stateMetrics.population` so the Live Population panel is populated at turn 0.
  *
- * Era-aware: synthesizes from each region's preset-appropriate census age-shares
- * (`getRegionCensusData`) + its seeded `population.medianAge` / `birthRate`. Uses the same
- * SSOT synthesis (`synthesizeAgeSexVector`) and derived-view helpers as the turn engine, so
- * the seeded stock is byte-identical to what the unit-tested engine produces.
+ * Synthesizes from each region's preset-appropriate census age-shares plus seeded
+ * `medianAge`/`birthRate`, using the same SSOT helpers as the turn engine so the
+ * seeded stock matches engine output.
  *
- * This is the shared core called both by `bootstrapGameWorld` (every reset) and the
- * standalone `2026-06-10-seed-cohort-vectors` migration (live worlds). `apply: false`
- * computes coverage stats without writing (the migration's dry-run). `replace: true` (the
- * reset path) also deletes every stock this run did not rebuild, so no prior-world stock can
- * survive a reset and overwrite the seeded population on the first demographic turn.
+ * `apply: false` computes coverage stats without writing. `replace: true` (reset path)
+ * also deletes every stock this run did not rebuild, so no prior-world stock survives
+ * a reset and overwrites the seeded population.
  */
 
 const DEFAULT_MEDIAN_AGE = 38;
@@ -71,12 +70,10 @@ export async function seedCohortVectors(
   }
 
   const [states, metricsDocs] = await Promise.all([
-    db
-      .collection<StateDoc>("states")
+    statesCollection<StateDoc>(db)
       .find({}, { projection: { _id: 1, countryId: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<MetricsDoc>("macroMetrics")
+    macroMetricsCollection<MetricsDoc>(db)
       .find(
         {},
         {
@@ -96,8 +93,7 @@ export async function seedCohortVectors(
   const existingDemographicIds = onlyMissing
     ? new Set(
         (
-          await db
-            .collection<Pick<RegionDemographics, "_id">>("regionDemographics")
+          await regionDemographicsCollection<Pick<RegionDemographics, "_id">>(db)
             .find(
               { _id: { $in: realStates.map((state) => String(state._id)) } },
               { projection: { _id: 1 } }
@@ -154,6 +150,7 @@ export async function seedCohortVectors(
       medianAge,
       birthRate,
       population,
+      survivalSeniorTail: presetUsesDemographicPaths(preset),
     });
 
     // People are whole; round each cell. Deterministic → idempotent on a fresh world.
@@ -221,19 +218,15 @@ export async function seedCohortVectors(
   }
 
   if (apply && opts.replace) {
-    const stale = await db
-      .collection<RegionDemographics>("regionDemographics")
-      .deleteMany({ _id: { $nin: coveredIds } });
+    const stale = await regionDemographicsCollection(db).deleteMany({ _id: { $nin: coveredIds } });
     if (stale.deletedCount > 0) log(`Removed ${stale.deletedCount} stale region cohort vectors`);
   }
 
   if (demoOps.length > 0) {
-    await db
-      .collection<RegionDemographics>("regionDemographics")
-      .bulkWrite(demoOps, { ordered: true });
+    await regionDemographicsCollection(db).bulkWrite(demoOps, { ordered: true });
   }
   if (metricOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(metricOps, { ordered: true });
+    await macroMetricsCollection(db).bulkWrite(metricOps, { ordered: true });
   }
 
   log(

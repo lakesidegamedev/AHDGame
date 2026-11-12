@@ -16,6 +16,12 @@ import { isCorporateBond } from "@/lib/bonds/sovereign";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { getGameState } from "@/lib/gameState";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import {
+  getCorporateSectorsCollection,
+  CORPORATE_SECTOR_LEAN_FIELDS,
+} from "@/lib/db/collections/corporateSectors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Bonds-only exception to escrow ring-fencing: before declaring a corp defaulted
@@ -52,36 +58,31 @@ export async function coverBondShortfallsFromEscrow(
     }
     if (corp.liquidCapital < 0) stillNegative.add(corp._id.toString());
   }
-  if (ops.length > 0) await db.collection<Corporation>("corporations").bulkWrite(ops);
+  if (ops.length > 0) await (await getCorporationsCollection(db)).bulkWrite(ops);
   return stillNegative;
 }
 
 /**
- * Narrow a set of cash-negative corp ids down to the ones that are genuinely
- * INSOLVENT, i.e. whose assets cannot cover their outstanding bond debt.
+ * Narrow cash-negative corp ids to the ones genuinely INSOLVENT: assets cannot
+ * cover outstanding bond debt.
  *
- * `liquidCapital < 0` says a corp is short of cash right now. It cannot
- * distinguish a corp that has stopped paying from one that converted its cash
- * into plant and is waiting for it to come online — the second is the normal
- * borrow-and-build pattern the game asks players to follow.
+ * `liquidCapital < 0` alone cannot distinguish a stalled payer from a corp
+ * that converted cash into plant and is waiting for it to come online (the
+ * intended borrow-and-build pattern).
  *
- * Assets are valued on the shared exit basis ({@link corpExitEquityAnchor}) —
- * the same one the restructure planner uses when it decides what to sell, and
- * the same one the issuance ceiling is capped by. That equivalence is the
- * point, in both directions: if selling assets could have covered the debt, the
- * corp was never insolvent and the default ladder — which would have attempted
- * exactly that sale — should not start; and a corp that borrowed inside its
- * ceiling cannot land here at all, because the ceiling was measured against
- * this figure (ticket #1198).
+ * Assets are valued on the shared exit basis ({@link corpExitEquityAnchor}),
+ * the same figure the restructure planner sells against and the issuance
+ * ceiling is capped by. That equivalence is the point: if selling assets could
+ * have covered the debt, the corp was never insolvent and the default ladder
+ * should not start.
  *
- * The basis includes the corp's own bond PORTFOLIO at face. It is not a
- * courtesy: `executeCorporationBondDefaultDissolution` redeems those holdings
- * into `liquidCapital` before settling, so refusing to count them here meant
- * declaring a corp unable to pay with assets the resulting liquidation would
- * have spent paying.
+ * The basis includes the corp's own bond PORTFOLIO at face, because
+ * `executeCorporationBondDefaultDissolution` redeems those into
+ * `liquidCapital` first; excluding them would declare a corp unable to pay
+ * with assets the liquidation itself would spend.
  *
- * Returns the subset that should actually default. Anything filtered out stays
- * cash-negative and under real pressure; it simply is not liquidated for it.
+ * Returns the subset that should actually default. Filtered-out corps stay
+ * cash-negative and under pressure; they are simply not liquidated for it.
  */
 export async function filterInsolventCorps(
   db: Db,
@@ -104,12 +105,10 @@ export async function filterInsolventCorps(
   const primeMap = buildPrimeRateMap(ctx.centralBanks as CentralBank[]);
 
   const ids = [...candidates].map((id) => new ObjectId(id));
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find(
-      { corporationId: { $in: ids } },
-      { projection: { buildQueue: 0, plantsPnl: 0, soldByCommodity: 0 } }
-    )
+  const sectors = await (
+    await getCorporateSectorsCollection(db)
+  )
+    .find({ corporationId: { $in: ids } }, { projection: CORPORATE_SECTOR_LEAN_FIELDS })
     .toArray();
   const sectorsByCorp = new Map<string, CorporateSector[]>();
   for (const s of sectors) {
@@ -194,23 +193,11 @@ export type BondMaturityFlow = {
 };
 
 /**
- * Phase 3.5: Roll back maturity flows for newly-defaulted issuers.
+ * Rolls back maturity flows for newly-defaulted issuers: Phase 1.5 optimistically applied face value to issuer (debit) and holders (credit), but defaulted bonds are handled by Phase 4 and holders never receive face value, so reverse those writes.
  *
- * Phase 1.5 optimistically applied maturity face value to issuers (debit)
- * and corp holders (credit) so the default check could see net flow. When
- * an issuer ends up defaulting, the bond is marked defaulted (not matured)
- * by Phase 4 and per existing semantics holders never receive face value
- * and the issuer never pays it. Reverse those optimistic writes here.
+ * Cascades: a holder corp whose post-clawback balance is negative defaults too, and its maturity flows roll back, potentially further. Each iteration processes one wave; convergence is guaranteed because each iteration adds to processedFlows, which is bounded by the number of distinct issuers with maturity flows.
  *
- * Cascade: if a holder corp's solvency depended on the rolled-back income
- * (their post-clawback balance is now negative), they default too — and
- * their own maturity flows must be rolled back, potentially cascading
- * further. The loop processes one wave of defaults per iteration and
- * terminates when no new corps fall under zero. Convergence is guaranteed
- * because each iteration adds at least one corp to `processedFlows`, which
- * is bounded by the number of distinct issuers with maturity flows.
- *
- * Mutates `defaultedCorps` in place, adding cascade-defaulted holder corps.
+ * Mutates `defaultedCorps` in place.
  */
 export async function rollbackDefaultedIssuerMaturityFlows(args: {
   db: Db;
@@ -268,12 +255,11 @@ export async function rollbackDefaultedIssuerMaturityFlows(args: {
       pending = new Set();
 
       if (rollbackOps.length > 0) {
-        await db.collection("corporations").bulkWrite(rollbackOps);
+        await corporationsCollection(db).bulkWrite(rollbackOps);
       }
 
       if (affectedHolders.size > 0) {
-        const updated = await db
-          .collection<Corporation>("corporations")
+        const updated = await corporationsCollection(db)
           .find({ _id: { $in: [...affectedHolders].map((id) => new ObjectId(id)) } })
           .project<{ _id: ObjectId; liquidCapital: number; shareEscrowBalance?: number }>({
             _id: 1,

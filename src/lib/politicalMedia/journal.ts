@@ -15,6 +15,7 @@ import {
 } from "@/lib/banking/moneyMove";
 import { AD_BONUS_CAP, adExposure, type TargetedAd } from "@/lib/campaignTargeting/rules";
 import { politicalMediaFillRatio } from "./rules";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export const POLITICAL_MEDIA_ORDER_KIND = "political-media-order";
 const POLITICAL_MEDIA_ESCROW_CURRENCY = "AHD";
@@ -312,12 +313,10 @@ async function settleMove(db: Db, move: MoneyMove): Promise<AppliedMove> {
   if (result.status !== "replayed") {
     return { status: result.status, applied: new Set(result.applied), error: result.error };
   }
-  const record = await db
-    .collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION)
-    .findOne(
-      { _id: move.key },
-      { projection: { status: 1, error: 1, "legs.applied": 1, "legs.refusal": 1 } }
-    );
+  const record = await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db).findOne(
+    { _id: move.key },
+    { projection: { status: 1, error: 1, "legs.applied": 1, "legs.refusal": 1 } }
+  );
   if (!record)
     return { status: "rejected", applied: new Set(), error: `no money move ${move.key}` };
   if (record.status === "partial") {
@@ -465,12 +464,10 @@ export async function fundPoliticalMediaOrder(
   };
   const result = await applyMoneyMove(db, move);
   if (result.status === "rejected" && result.applied.length === 0) {
-    await db
-      .collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION)
-      .updateOne(
-        { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "rejected" },
-        { $set: { "politicalMediaOrder.status": "rejected" } }
-      );
+    await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db).updateOne(
+      { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "rejected" },
+      { $set: { "politicalMediaOrder.status": "rejected" } }
+    );
   }
   return result;
 }
@@ -485,8 +482,7 @@ export async function loadPoliticalMediaOrdersForClearing(
   db: Db,
   currentTurn: number
 ): Promise<PoliticalMediaOrderForClearing[]> {
-  const rows = await db
-    .collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION)
+  const rows = await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db)
     .find(
       {
         kind: POLITICAL_MEDIA_ORDER_KIND,
@@ -545,7 +541,7 @@ export async function savePoliticalMediaSettlementPlans(
 ): Promise<Map<string, PoliticalMediaSettlementPlan>> {
   const saved = new Map<string, PoliticalMediaSettlementPlan>();
   if (plans.length === 0) return saved;
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const keys = plans.map((entry) => politicalMediaOrderKey(entry.orderId));
   const stored = new Map(
     (
@@ -630,7 +626,7 @@ export async function settlePoliticalMediaOrder(
   turn: number
 ): Promise<MoneyMoveResult[]> {
   const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const order = await orders.findOne({ _id: key, kind: POLITICAL_MEDIA_ORDER_KIND });
   const saved = order?.politicalMediaOrder;
   if (!order || order.status !== "applied" || !saved?.settlementPlan)
@@ -763,21 +759,13 @@ async function loadMissingSettlementTargets(
 }
 
 /**
- * One journaled move for a whole order: the escrow leaves once, and each payee
- * is credited once.
+ * One journaled move for a whole order: escrow leaves once, each payee is credited once.
  *
- * The per-allocation settlement spent one move per seller receipt, each with its
- * own debit from the same escrow document, so an order that paid N sellers
- * landed N receipts at thirteen round trips each. This move pays the same plan
- * through one receipt: a single debit guarded by the same escrow balance, one
- * credit per payee, the no-outlet fallback and the payer refund. Every leg nets
- * to zero and every balance guard is the one the per-seller path used.
- *
- * Credits are declared in the order the per-seller path paid them: the plan's
- * sellers, then the no-outlet fallback, then the unfilled refund. A credit whose
- * target document is gone stops the list there, so the move spends exactly what
- * the per-seller path would have spent before the same refusal, and an order
- * that stopped short keeps its settling status instead of closing over a hole.
+ * Credits are declared in the order the plan pays them: plan sellers, then the
+ * no-outlet fallback, then the unfilled refund. A credit whose target document
+ * is gone stops the list there, so the move spends exactly what the plan would
+ * have spent before the same refusal, and a short-stopped order keeps its
+ * settling status instead of closing over a hole.
  */
 function settlementMove(
   order: Pick<PoliticalMediaOrderForClearing, "orderId" | "identity" | "settlementPlan"> & {
@@ -975,17 +963,15 @@ function settlementReceipt(args: {
 }
 
 /**
- * Give back the anchor of every credit leg that did not land.
+ * Return the anchor of every credit leg that did not land.
  *
- * The preflight keeps a target that no longer exists out of the move, so a
- * credit still undelivered here is one its own document refused: a contended
- * generation, or a currency guard on the no-outlet fund. Its escrow was debited
- * for it, so the amount goes back through its own keyed receipt and the order
- * settles with that allocation unpaid. The anchor stays visible in escrow rather
- * than being retried against a guard that just rejected it, which is where the
- * per-seller path converged after the same refusal. A credit whose delivery
- * receipt is still stamped may have landed, so only reconciliation may decide
- * that one and the order stays open for another pass.
+ * A credit still undelivered here was refused by its own document (a
+ * contended generation or a currency guard on the no-outlet fund), so its
+ * escrow is returned through its own keyed receipt and the order settles
+ * with that allocation unpaid. The anchor stays visible in escrow rather
+ * than being retried against a guard that just rejected it. A credit whose
+ * delivery receipt is still stamped may have landed, so only reconciliation
+ * may decide it and the order stays open.
  */
 async function returnUndeliveredCredits(
   db: Db,
@@ -1082,7 +1068,7 @@ export async function settleLoadedPoliticalMediaOrders(
       settledKeys.push(politicalMediaOrderKey(order.orderId));
   }
   if (settledKeys.length > 0) {
-    await db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION).bulkWrite(
+    await bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db).bulkWrite(
       settledKeys.map((key) => ({
         updateOne: {
           filter: { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
@@ -1152,7 +1138,7 @@ export async function settleLoadedPoliticalMediaOrder(
 /** Apply a fully paid order's game effect once, after its seller receipts land. */
 export async function applyPoliticalMediaOrderEffect(db: Db, orderId: string): Promise<boolean> {
   const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const record = await orders.findOne({
     _id: key,
     kind: POLITICAL_MEDIA_ORDER_KIND,
@@ -1203,7 +1189,7 @@ export async function applyPoliticalMediaOrderEffects(
   orderIds: readonly string[]
 ): Promise<number> {
   if (orderIds.length === 0) return 0;
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   const records = await orders
     .find(
       {
@@ -1339,7 +1325,7 @@ async function applyPoliticalMediaOrderEffectToOrder(
   order: PoliticalMediaOrderRecord
 ): Promise<boolean> {
   const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const orders = bankMoneyMovesCollection<PoliticalMediaMoveRecord>(db);
   if (order.status !== "settled" || !order.settlementPlan) return false;
   if (order.effectApplied) return true;
 

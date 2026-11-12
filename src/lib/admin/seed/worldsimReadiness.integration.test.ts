@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import { euroMembersAtYear } from "@/lib/currency/rules/eraCurrency";
 import { tierFor } from "@/lib/world/eraRoster";
 import { getWorldEntityPresetManifest } from "@/lib/world/worldEntityManifest";
+import { NATIONAL_FIGURES_2027 } from "@/lib/seeds/reference/nationalFigures2027";
 
 vi.mock("@/lib/mongodb", async () => {
   const fixture = await import("@/lib/test-utils/__fixtures__/bootstrapProbe");
@@ -25,7 +26,9 @@ describe("2027 worldsim readiness", () => {
       .collection<{ population: number }>("states")
       .find({ countryId: "TR" })
       .toArray();
-    expect(regions.reduce((sum, region) => sum + region.population, 0)).toBe(83_400_000);
+    expect(regions.reduce((sum, region) => sum + region.population, 0)).toBe(
+      NATIONAL_FIGURES_2027.TR.population
+    );
     const { runConformanceChecks } = await import("@/lib/admin/seedDiagnostic/conformance");
     const result = await runConformanceChecks(db, { preset: "2027-default" });
     expect(result.checks.find((check) => check.id === "regions.TR.populationSum")?.severity).toBe(
@@ -36,7 +39,9 @@ describe("2027 worldsim readiness", () => {
   it("includes the five successor countries in the effective world", async () => {
     const manifest = getWorldEntityPresetManifest("2027-default");
     for (const countryId of ["RU", "PL", "HU", "RO", "BG"]) {
-      expect(tierFor("2027-default", countryId as "RU"), countryId).toBe("npp");
+      // Background since #5702: registered and seeded as countries, outside
+      // the full simulation.
+      expect(tierFor("2027-default", countryId as "RU"), countryId).toBe("background");
       const entry = manifest.entries.find((row) => row.countryId === countryId);
       expect(entry?.legacyAccess, countryId).toBe("hidden");
       expect(entry?.status, countryId).not.toBe("dissolved");

@@ -1,9 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
-import {
-  IDENTITY_OBSERVATIONS_COLLECTION,
-  type IdentityObservation,
-  type IdentityTrack,
-} from "@/lib/db/types/identityObservation";
+import { type IdentityObservation, type IdentityTrack } from "@/lib/db/types/identityObservation";
+import { identityObservationsCollection } from "@/lib/db/repositories/identityObservations";
 /**
  * The moderator panel gets NO value detail at all, not a masked address and not
  * a hash.
@@ -58,7 +55,7 @@ export async function loadIdentityHistory(
   page: number,
   { revealNetwork }: { revealNetwork: boolean }
 ): Promise<IdentityHistoryPage> {
-  const collection = db.collection<IdentityObservation>(IDENTITY_OBSERVATIONS_COLLECTION);
+  const collection = identityObservationsCollection<IdentityObservation>(db);
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
 
   const total = await collection.countDocuments({ userId, track });

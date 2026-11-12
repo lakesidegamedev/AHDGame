@@ -26,13 +26,11 @@ const TONE = {
 /**
  * What resolves at the next tick.
  *
- * A turn-based war's most useful fact is what is already committed and cannot be
- * taken back, and the record page previously said nothing about it — a pending
- * offensive appeared only inside the COMMAND panel, invisible to every seat that
- * could not declare.
+ * A turn-based war's most useful fact is what is already committed and cannot
+ * be taken back; a pending offensive is otherwise only visible inside COMMAND.
  *
- * The countdown targets the cron schedule the status bar uses, so this strip and
- * the clock at the bottom of the screen can never disagree.
+ * The countdown targets the same cron schedule as the bottom status bar, so the
+ * two clocks can never disagree.
  */
 export function NextTickStrip({ nextTurn, chips }: { nextTurn: number; chips: PendingChip[] }) {
   const gameState = useGameTurnStatus(true);

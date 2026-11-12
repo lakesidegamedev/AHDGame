@@ -36,6 +36,13 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import { corporationCeoVotesCollection } from "@/lib/db/repositories/corporationCeoVotes";
+import type { Document } from "mongodb";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -120,7 +127,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
     const nowTurn = await getCurrentTurn(db);
 
     if (sellAsCorporation) {
-      const placerCorp = await db.collection<Corporation>("corporations").findOne({
+      const placerCorp = await corporationsCollection(db).findOne({
         ...(sellerCorporationId ? { _id: new ObjectId(sellerCorporationId) } : {}),
         ceoId: character._id,
         ceoVacant: { $ne: true },
@@ -144,8 +151,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
       );
       const ownedShares = shareholderEntry?.shares ?? 0;
 
-      const openOrders = await db
-        .collection<ShareOrder>("shareOrders")
+      const openOrders = await shareOrdersCollection(db)
         .find({
           corporationId: corporation._id,
           placerCorporationId: placerCorp._id,
@@ -179,7 +185,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
       }
 
       try {
-        await db.collection<ShareListing>("shareListings").insertOne({
+        await shareListingsCollection(db).insertOne({
           _id: listingId,
           corporationId: corporation._id,
           sellerCharacterId: character._id,
@@ -213,8 +219,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
     );
     const ownedShares = shareholderEntry?.shares ?? 0;
 
-    const openOrders = await db
-      .collection<ShareOrder>("shareOrders")
+    const openOrders = await shareOrdersCollection(db)
       .find({
         corporationId: corporation._id,
         characterId: character._id,
@@ -248,12 +253,10 @@ export async function createShareListing(request: Request, { params }: RoutePara
     let negotiatedTerms: NegotiatedSaleTerms | undefined;
     let negotiatedBuyer: Pick<Character, "_id" | "userId" | "name"> | null = null;
     if (negotiated) {
-      const buyer = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: new ObjectId(negotiated.buyerCharacterId) },
-          { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
-        );
+      const buyer = await charactersCollection(db).findOne(
+        { _id: new ObjectId(negotiated.buyerCharacterId) },
+        { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
+      );
       if (!buyer) return errorResponse(404, "Buyer not found");
       const gameTime = await getGameTime();
       const guard = await checkNegotiatedSale(
@@ -314,7 +317,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
 
     let listingInserted = false;
     try {
-      await db.collection<ShareListing>("shareListings").insertOne({
+      await shareListingsCollection(db).insertOne({
         _id: listingId,
         corporationId: corporation._id,
         sellerCharacterId: character._id,
@@ -333,7 +336,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
       listingInserted = true;
 
       if (shouldVacateCeo) {
-        await db.collection("corporationCeoVotes").deleteMany({
+        await corporationCeoVotesCollection<Document>(db).deleteMany({
           corporationId: corporation._id,
         });
         await closeCeoTenure(db, corporation._id, {
@@ -343,7 +346,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
       }
     } catch (error) {
       if (listingInserted) {
-        await db.collection("shareListings").deleteOne({ _id: listingId });
+        await shareListingsCollection<Document>(db).deleteOne({ _id: listingId });
       }
 
       await creditShares(
@@ -358,9 +361,10 @@ export async function createShareListing(request: Request, { params }: RoutePara
       );
 
       if (shouldVacateCeo) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne({ _id: corporation._id }, buildCeoRestoreUpdate(corporation, new Date()));
+        await corporationsCollection(db).updateOne(
+          { _id: corporation._id },
+          buildCeoRestoreUpdate(corporation, new Date())
+        );
       }
 
       throw error;
@@ -369,8 +373,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
     if (negotiatedTerms && negotiatedBuyer) {
       const sym =
         CURRENCY_SYMBOLS[(corporation.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
-      void db
-        .collection<Omit<Notification, "_id">>("notifications")
+      void notificationsCollection<Omit<Notification, "_id">>(db)
         .insertOne({
           userId: negotiatedBuyer.userId,
           type: "share_listing_offer_received",

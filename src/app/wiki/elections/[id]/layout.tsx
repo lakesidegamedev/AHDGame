@@ -8,6 +8,8 @@ import { resolveElectionYear } from "@/lib/utils/formatters";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorContext";
 import { getWikiSiteUrl } from "@/lib/siteMetadata";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -43,7 +45,7 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const election = await db.collection<Election>("elections").findOne(
+  const election = await electionsCollection(db).findOne(
     { _id: new ObjectId(id), status: { $in: ["completed", "resolved"] } },
     {
       projection: {
@@ -61,7 +63,7 @@ export async function generateMetadata({
 
   const gameState =
     election.electionYear == null
-      ? await db.collection<GameState>("gameState").findOne(
+      ? await gameStateCollection(db).findOne(
           { _id: "current" },
           {
             projection: {

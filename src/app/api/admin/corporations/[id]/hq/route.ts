@@ -16,7 +16,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
@@ -27,7 +27,6 @@ import {
   convertCorpCurrency,
   type ConvertCorpCurrencySuccess,
 } from "@/lib/corporations/convertCorpCurrency";
-import type { Character } from "@/lib/db/types/character";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { doesCeoResideAtHeadquarters, vacateCorporationCeo } from "@/lib/corporations/ceoResidency";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
@@ -36,6 +35,10 @@ import {
   reserveSectorsForTransition,
   releaseConstructionPropertyTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 
 const schema = z.object({
   countryId: z.enum(["US", "UK", "JP", "DE"]),
@@ -52,9 +55,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     if (corp.primaryUnderwritingIncomingFunding || corp.bankUnderwritingFunding) {
@@ -64,8 +65,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
 
-    const propertySectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const propertySectors = await corporateSectorsCollection(db)
       .find({ corporationId: corp._id })
       .toArray();
     if (hasProtectedConstructionPropertyIn(propertySectors)) {
@@ -116,7 +116,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
     try {
-      const updateResult = await db.collection<Corporation>("corporations").updateOne(
+      const updateResult = await corporationsCollection(db).updateOne(
         {
           _id: new ObjectId(id),
           primaryUnderwritingIncomingFunding: { $exists: false },
@@ -149,12 +149,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (corp.ceoId && corp.ceoVacant !== true) {
       const ceoRecord =
         corp.ceoType === "imperial"
-          ? await db
-              .collection<ImperialCharacter>("imperialCharacters")
-              .findOne({ _id: corp.ceoId }, { projection: { homeState: 1 } })
-          : await db
-              .collection<Character>("characters")
-              .findOne({ _id: corp.ceoId }, { projection: { homeState: 1 } });
+          ? await imperialCharactersCollection(db).findOne(
+              { _id: corp.ceoId },
+              { projection: { homeState: 1 } }
+            )
+          : await charactersCollection(db).findOne(
+              { _id: corp.ceoId },
+              { projection: { homeState: 1 } }
+            );
       // NatCorp CEOs are HQ-state exempt (relaxed country-level residency), so an
       // HQ move within the country must not unseat them.
       if (

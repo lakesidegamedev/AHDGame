@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * `altScoringEnabled` — master flag for the weighted-evidence alt-detection
@@ -36,9 +37,10 @@ export async function isAltScoringEnabled(
   let value = true;
   try {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { altScoringEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { altScoringEnabled: 1 } }
+    );
     value = config?.altScoringEnabled !== false;
   } catch {
     value = true;

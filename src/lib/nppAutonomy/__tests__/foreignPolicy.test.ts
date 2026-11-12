@@ -35,11 +35,6 @@ interface PlannerFixture {
   recentDecisions?: Array<Record<string, unknown>>;
   militaryUnits?: Array<Record<string, unknown>>;
   approvalRating?: number;
-  /**
-   * `nppOffensiveInitiationEnabled`. Off by default, mirroring an unconfigured world:
-   * a belligerent is offered `conduct_war` only once an admin has switched it on.
-   */
-  offensiveInitiation?: boolean;
 }
 
 interface RecordedDecision {
@@ -63,7 +58,6 @@ function setup(fixture: PlannerFixture = {}): MockDb {
     _id: "current",
     nppForeignPolicyMode: fixture.mode ?? "shadow",
     nppForeignPolicyStage: fixture.stage,
-    nppOffensiveInitiationEnabled: fixture.offensiveInitiation ?? false,
   });
   db.collection("governmentFormations").findOne.mockResolvedValue({
     _id: "FR",
@@ -487,7 +481,6 @@ describe("processAutonomousForeignPolicy", () => {
       conflicts: [conflict],
       militaryUnits: [deployedUnit],
       approvalRating: 60,
-      offensiveInitiation: true,
     });
     // `seek_peace` is not behind the switch: leaving a war it cannot sustain is not
     // an offensive, so the exhausted case is deliberately left with it off.
@@ -555,7 +548,6 @@ describe("processAutonomousForeignPolicy", () => {
         },
       ],
       approvalRating: 60,
-      offensiveInitiation: true,
     });
 
     const result = await processAutonomousForeignPolicy(db as unknown as Db, "FR", 43, now);
@@ -570,46 +562,6 @@ describe("processAutonomousForeignPolicy", () => {
       )
       .map((choice) => choice.score);
     expect(conductWar?.score).toBeGreaterThan(Math.max(...routine));
-    expectNoGameplayWrites(db);
-  });
-
-  it("withholds conduct_war entirely while the admin switch is off", async () => {
-    // The switch's whole contract, and the default an unconfigured world gets. It is
-    // suppressed at candidate generation rather than refused at execution: NPP
-    // countries have no Generals or military technology behind an attack yet, and a
-    // refusal would still burn the government's one action for the slot. Same fixture
-    // as the #1233 case above with the switch left off, so the switch is the only
-    // difference between offering the attack and never mentioning it.
-    const db = setup({
-      alignments: [alignment("FR", 100, 0), alignment("RU", 0, 100)],
-      conflicts: [
-        {
-          _id: "war-for-germany",
-          name: "The War for Germany",
-          status: "active",
-          sideA: { label: "West", countries: ["FR", "US"] },
-          sideB: { label: "East", countries: ["RU"] },
-        },
-      ],
-      militaryUnits: [
-        {
-          _id: new ObjectId(),
-          countryId: "FR",
-          readiness: 72,
-          personnel: 10_000,
-          theaterId: "war-for-germany",
-          basePower: 100,
-        },
-      ],
-      approvalRating: 60,
-    });
-
-    const result = await processAutonomousForeignPolicy(db as unknown as Db, "FR", 43, now);
-
-    expect(result.choice?.type).not.toBe("conduct_war");
-    expect(recordedDecision(db).alternatives.map((choice) => choice.type)).not.toContain(
-      "conduct_war"
-    );
     expectNoGameplayWrites(db);
   });
 

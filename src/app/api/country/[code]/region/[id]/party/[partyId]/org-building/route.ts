@@ -22,6 +22,10 @@ import {
   resetPartyBudgetSpending,
   savePartyBudgetForScope,
 } from "@/lib/partyBudgetGuards";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -50,9 +54,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const authUser = auth.user;
 
-    // Party sequentialId is unique per country, so a foreign character's party
-    // id collides onto the same-id party in this country. Block cross-country
-    // actors (admins included) — Bug #0668.
+    // Party sequentialId is unique per country, so a foreign character's party id collides onto the same-id party in this country. Block cross-country actors (admins included).
     const crossCountry = crossCountryActionGuard(authUser.character, countryId);
     if (crossCountry) return crossCountry;
 
@@ -64,7 +66,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -76,9 +78,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     // Authorization: admin, national chair, state chair, vice chair, or state treasurer
     const isAdmin = authUser.isAdmin;
@@ -152,7 +152,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now
     );
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "org_building_budget_changed",
       username: authUser.username,

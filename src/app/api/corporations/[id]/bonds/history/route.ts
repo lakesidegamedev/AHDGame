@@ -6,6 +6,9 @@ import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { bondHistoryQuerySchema, type BondHistoryDirection } from "@/lib/api/schemas/bondHistory";
 import type { Bond, Corporation, FinancialTxLogEntry } from "@/lib/db/types";
 import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -46,16 +49,14 @@ void _bondTxTypesCoverage;
 /**
  * GET /api/corporations/[id]/bonds/history
  *
- * Paginated bond ledger for a corporation. `pageSize` counts TURNS per page,
- * not rows — each turn expands into N events in the response.
+ * Paginated bond ledger. `pageSize` counts TURNS, not rows: each turn expands
+ * into N events in the response.
  *
- * Server-side filter via `direction=income|payment|all`: applied BEFORE page
- * slicing, so `pageCount` and `totalTurns` reflect the filtered universe (no
- * "Page 3 of 5" with zero rows on the page).
+ * `direction=income|payment|all` filters server-side BEFORE page slicing, so
+ * `pageCount` and `totalTurns` reflect the filtered universe.
  *
- * Out-of-range page values are silently clamped to `[1, pageCount]` — the
- * client doesn't have to do a second round-trip to recover from a stale
- * `?page=999` request.
+ * Out-of-range `page` is silently clamped to `[1, pageCount]` so stale
+ * `?page=999` requests don't need a second round-trip.
  *
  * Auth: public read (parallel to /shares/history).
  * Errors: 400 (bad query), 404 (corp not found).
@@ -88,8 +89,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // 1. Distinct turns (newest first). With server-side direction filter,
     //    this returns only turns that actually have rows on the requested
     //    side — UI never sees "Page 3 of 5" with 0 visible accordions.
-    const turnAgg = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const turnAgg = await financialTxLogCollection(db)
       .aggregate<{ _id: number }>([
         { $match: matchFilter },
         { $group: { _id: "$turn" } },
@@ -109,8 +109,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const rows: FinancialTxLogEntry[] =
       pageTurns.length === 0
         ? []
-        : await db
-            .collection<FinancialTxLogEntry>("financialTxLog")
+        : await financialTxLogCollection(db)
             .find({ ...matchFilter, turn: { $in: pageTurns } })
             .sort({ createdAt: -1, _id: -1 })
             .toArray();
@@ -126,8 +125,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const bondDocs =
       bondIdStrings.length === 0
         ? []
-        : await db
-            .collection<Bond>("bonds")
+        : await bondsCollection(db)
             .find({ _id: { $in: bondIdStrings.map((s) => new ObjectId(s)) } })
             .project<
               Pick<
@@ -159,8 +157,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .map((b) => b.corporationId!);
     const corpNameById = new Map<string, string>();
     if (corpIssuerIds.length > 0) {
-      const corpDocs = await db
-        .collection<Corporation>("corporations")
+      const corpDocs = await corporationsCollection(db)
         .find({ _id: { $in: corpIssuerIds } })
         .project<Pick<Corporation, "_id" | "name">>({ _id: 1, name: 1 })
         .toArray();

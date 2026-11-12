@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Bond, CentralBank, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import {
@@ -31,9 +31,16 @@ import {
   getCorpFxRate,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
-import type { Character } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -62,8 +69,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return errorResponse(400, "National corporations cannot use bond default resolution here");
     }
 
-    const bonds = await db
-      .collection<Bond>("bonds")
+    const bonds = await bondsCollection(db)
       .find({ corporationId: corporation._id, matured: false })
       .toArray();
 
@@ -73,15 +79,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const [sectors, centralBanks, gameState, latestHistory, marketMode] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find({ corporationId: corporation._id })
-        .toArray(),
-      db.collection<CentralBank>("centralBanks").find({}).toArray(),
+      corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
+      centralBanksCollection(db).find({}).toArray(),
       getGameState(),
-      db
-        .collection("corporationHistory")
-        .findOne({ corporationId: corporation._id }, { sort: { turn: -1 } }),
+      corporationHistoryCollection<Document>(db).findOne(
+        { corporationId: corporation._id },
+        { sort: { turn: -1 } }
+      ),
       getMarketSystemModeForDb(db),
     ]);
 
@@ -152,20 +156,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .filter((id): id is ObjectId => id !== undefined);
     const [shareholderChars, imperialShareholderChars, corpShareholderDocs] = await Promise.all([
       regularShareholderIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: regularShareholderIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : [],
       imperialShareholderIds.length > 0
-        ? db
-            .collection<ImperialCharacter>("imperialCharacters")
+        ? imperialCharactersCollection(db)
             .find({ _id: { $in: imperialShareholderIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : [],
       corpShareholderIds.length > 0
-        ? db
-            .collection("corporations")
+        ? corporationsCollection(db)
             .find({ _id: { $in: corpShareholderIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : [],
@@ -243,10 +244,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({
       active: true,
       currentTurn,
-      // Return anchor-denominated liquidCapital so the client can use formatAmount()
-      // directly — matches the other monetary fields in this payload (sectorNpv,
-      // totalEquity, defaultedPrincipal, cashCost, dissolve.preview.*). Previously
-      // returned the raw native value, which displayed wrong for non-USD corps.
+      // Anchor-denominated so the client can use formatAmount() directly,
+      // matching the other monetary fields in this payload.
       liquidCapital: liquidCapitalAnchor,
       sectorNpv,
       totalEquity,

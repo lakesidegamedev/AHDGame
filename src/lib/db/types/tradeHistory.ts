@@ -2,12 +2,10 @@ import type { ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 /**
- * Why the trade was created. Drives the Transaction History UI grouping and
- * lets us distinguish volume originating from explicit player action (which
- * should move rates strongly) from income-flow auto-conversions (which move
- * rates too, but are not a trading decision).
- *
- * Legacy rows (pre-2026-04-15) leave `source` undefined; treat as "manual".
+ * Why the trade was created. Drives Transaction History UI grouping and
+ * distinguishes explicit player action (moves rates strongly) from
+ * income-flow auto-conversions (moves rates too, but not a trading decision).
+ * Undefined on legacy rows; treat as "manual".
  */
 export type TradeSource =
   | "manual" // explicit market-maker trade (Trade form)

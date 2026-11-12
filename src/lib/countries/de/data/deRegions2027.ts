@@ -4,29 +4,19 @@
  * another era's region data. All values are authored for 2027 directly.
  * Type-only imports are allowed.
  *
- * German Bundesländer for the 2027-default preset (21st Bundestag, the Merz
- * CDU/CSU-SPD "GroKo" coalition elected February 2025). All 16 states are
- * structurally stable; the era-specific values are projected 2027
- * population and projected 2026 nominal state GDP (EUR millions).
- * `houseDistricts` (Bundestag Wahlkreise) and `stateSenateSeats` (Landtag)
- * are structural and held constant across eras (they feed germanyAMS.ts;
- * the Wahlkreise sum to 299).
+ * German Bundeslaender for the 2027-default preset (21st Bundestag, the Merz
+ * CDU/CSU-SPD coalition elected February 2025). The era-specific values are
+ * projected 2027 population and projected 2026 nominal state GDP (EUR
+ * millions). houseDistricts (Bundestag Wahlkreise) and stateSenateSeats
+ * (Landtag) are structural and held constant across eras; the Wahlkreise sum
+ * to 299.
  *
  * 2027 projection assumptions (documented, not derived in code):
- * - Population: Destatis end-2024 state figures carried to 2027 (western
- *   and southern Länder still growing slightly, eastern Länder except
- *   Berlin and Brandenburg still shrinking slightly). Source: Destatis
- *   "Bevoelkerung nach Bundeslaendern"
- *   (https://www.destatis.de/EN/Themes/Society-Environment/Population/_node.html).
+ * - Population: Destatis end-2024 state figures carried to 2027.
  * - GDP: 2022 nominal state GDP carried to 2026 nominal at about 12%
- *   cumulative (Destatis VGR der Laender 2023-24 growth path). Source:
- *   Destatis "Volkswirtschaftliche Gesamtrechnungen der Laender"
- *   (https://www.destatis.de/EN/Themes/Economy/National-Accounts-Domestic-Product/_node.html).
- * - Seats: the 2023 federal electoral reform (Bundestag capped at 630,
- *   299 Wahlkreise) stays in force after the 2025 election, so the
- *   structural columns match the 2023 bundle. Source: Die Bundeswahlleiterin
- *   2025 Bundestag election results
- *   (https://www.bundeswahlleiter.de/en/bundestagswahlen/2025/ergebnisse/bund.html).
+ *   cumulative (Destatis VGR der Laender growth path).
+ * - Seats: the 2023 federal electoral reform (Bundestag capped at 630, 299
+ *   Wahlkreise) stays in force after the 2025 election.
  */
 import type { State } from "@/lib/db/types";
 

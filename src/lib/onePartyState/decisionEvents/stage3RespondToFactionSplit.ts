@@ -8,7 +8,7 @@
  */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
+import type { ElectedOfficial, NPP, PoliticalParty } from "@/lib/db/types";
 import type { DecisionHandler, DecisionOption } from "./types";
 import { adjustLeaderConfidence, installNewLeader } from "@/lib/turn/rulingPartyConfidence";
 import { adjustPopularLegitimacy } from "@/lib/turn/popularLegitimacy";
@@ -18,6 +18,10 @@ import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { appointPrimeMinister } from "@/lib/turn/parliamentaryGovernment";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getCountryState } from "@/lib/countryState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 const negotiate: DecisionOption = {
   id: "negotiate",
@@ -89,7 +93,7 @@ const concedeLeadership: DecisionOption = {
 
     // A successor must hold a legislative seat, whether player or NPP.
     const offices = await loadRuntimeCountryOffices(ctx.db, ctx.countryId);
-    const successor = await ctx.db.collection<ElectedOfficial>("electedOfficials").findOne(
+    const successor = await electedOfficialsCollection(ctx.db).findOne(
       {
         party: String(partyId),
         countryId: ctx.countryId,
@@ -111,19 +115,15 @@ const concedeLeadership: DecisionOption = {
     // subsequent reads see the new rulingPartyId.
     const runtime = await getCountryState(ctx.db, ctx.countryId);
     if (runtime.rulingPartyId !== null) {
-      await ctx.db
-        .collection<PoliticalParty>("politicalParties")
-        .updateOne(
-          { sequentialId: runtime.rulingPartyId, countryId: ctx.countryId },
-          { $set: { regimeStatus: "approved", updatedAt: new Date() } }
-        );
-    }
-    await ctx.db
-      .collection<PoliticalParty>("politicalParties")
-      .updateOne(
-        { sequentialId: partyId, countryId: ctx.countryId },
-        { $set: { regimeStatus: "ruling", updatedAt: new Date() } }
+      await politicalPartiesCollection(ctx.db).updateOne(
+        { sequentialId: runtime.rulingPartyId, countryId: ctx.countryId },
+        { $set: { regimeStatus: "approved", updatedAt: new Date() } }
       );
+    }
+    await politicalPartiesCollection(ctx.db).updateOne(
+      { sequentialId: partyId, countryId: ctx.countryId },
+      { $set: { regimeStatus: "ruling", updatedAt: new Date() } }
+    );
     const { updateCountryState } = await import("@/lib/countryState");
     await updateCountryState(ctx.db, ctx.countryId, { rulingPartyId: partyId });
 
@@ -197,32 +197,24 @@ async function reMergeDefectors(
   const now = new Date();
   // Re-assign every character whose party === defected party back to
   // the ruling party.
-  await db
-    .collection<Character>("characters")
-    .updateMany(
-      { countryId, party: String(defectedPartyId) },
-      { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
-    );
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateMany(
-      { countryId, party: String(defectedPartyId) },
-      { $set: { party: String(runtime.rulingPartyId) } }
-    );
-  await db
-    .collection<NPP>("npps")
-    .updateMany(
-      { countryId, party: String(defectedPartyId) },
-      { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
-    );
+  await charactersCollection(db).updateMany(
+    { countryId, party: String(defectedPartyId) },
+    { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
+  );
+  await electedOfficialsCollection(db).updateMany(
+    { countryId, party: String(defectedPartyId) },
+    { $set: { party: String(runtime.rulingPartyId) } }
+  );
+  await nppsCollection(db).updateMany(
+    { countryId, party: String(defectedPartyId) },
+    { $set: { party: String(runtime.rulingPartyId), updatedAt: now } }
+  );
   // Defected party is now empty — flip to banned so it doesn't linger
   // as a ghost approved party with no members.
-  await db
-    .collection<PoliticalParty>("politicalParties")
-    .updateOne(
-      { sequentialId: defectedPartyId, countryId },
-      { $set: { regimeStatus: "banned", memberCount: 0, updatedAt: now } }
-    );
+  await politicalPartiesCollection(db).updateOne(
+    { sequentialId: defectedPartyId, countryId },
+    { $set: { regimeStatus: "banned", memberCount: 0, updatedAt: now } }
+  );
 }
 
 function readDefectedPartyId(payload: Record<string, unknown>): number | null {

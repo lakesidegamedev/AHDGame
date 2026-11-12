@@ -4,18 +4,18 @@
  * capacity; rejected decisions remain visible and can be revised by legislators.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Bill,
-  Character,
-  CountryGameState,
-  Election,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
+import type { Bill, Character, GameState } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { hu1994DecisionAvailability, passesHuElectoralAmendment } from "./rules/electoralLaw";
-import type { CountryState } from "@/lib/db/types/countryState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
+import { hu1994ElectoralProposalsCollection } from "@/lib/db/repositories/hu1994ElectoralProposals";
 
 export const HU_1994_PROPOSALS_COLLECTION = "hu1994ElectoralProposals";
 const ID = "1991-default:hu-electoral:threshold1994";
@@ -36,18 +36,18 @@ export interface Hu1994ElectoralProposal {
 export class Hu1994ElectoralConflict extends Error {}
 
 async function availability(db: Db, game: Calendar, turn: number, session?: ClientSession) {
-  const current = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-    );
-  const runtime = await db
-    .collection<CountryState>("countryState")
-    .findOne({ _id: "HU" }, { session, projection: { governmentType: 1 } });
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "HU" }, { session, projection: { huElectoralLaw1994SinceTurn: 1 } });
+  const current = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
+  const runtime = await countryStateCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { governmentType: 1 } }
+  );
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { session, projection: { huElectoralLaw1994SinceTurn: 1 } }
+  );
   return hu1994DecisionAvailability({
     preset: current?.preset,
     calendarTurn: calendarTurn(turn, {
@@ -81,17 +81,15 @@ export async function materializeHu1994ElectoralProposal(input: {
     throw new Error("Hungarian electoral proposal needs a transaction, turn and time");
   const allowed = await availability(db, game, turn, session);
   if (!allowed.available) throw new Hu1994ElectoralConflict(allowed.reason);
-  const proposals = db.collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION);
+  const proposals = hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db);
   const prior = await proposals.findOne({ _id: ID }, { session });
   if (prior) {
     if (!Number.isSafeInteger(prior.revision) || prior.revision < 1)
       throw new Hu1994ElectoralConflict("Invalid electoral proposal revision");
-    const bill = await db
-      .collection<Bill>("bills")
-      .findOne(
-        { _id: prior.billId },
-        { session, projection: { countryId: 1, status: 1, hungarianElectoralMandate: 1 } }
-      );
+    const bill = await billsCollection(db).findOne(
+      { _id: prior.billId },
+      { session, projection: { countryId: 1, status: 1, hungarianElectoralMandate: 1 } }
+    );
     if (
       !bill ||
       bill.countryId !== "HU" ||
@@ -146,7 +144,7 @@ export async function materializeHu1994ElectoralProposal(input: {
   );
   if (prior && claim.matchedCount !== 1)
     throw new Hu1994ElectoralConflict("Electoral proposal changed");
-  await db.collection<Bill>("bills").insertOne(bill, { session });
+  await billsCollection(db).insertOne(bill, { session });
   return proposal;
 }
 
@@ -169,7 +167,7 @@ export async function authorizeHu1994ElectoralProposal(
 ) {
   if (!session.inTransaction())
     throw new Error("Hungarian electoral authorization needs a transaction");
-  const proposals = db.collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION);
+  const proposals = hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db);
   const proposal = await proposals.findOne({ _id: ID, status: "open" }, { session });
   if (!proposal || !(await availability(db, game, turn, session)).available) return false;
   if (
@@ -180,7 +178,7 @@ export async function authorizeHu1994ElectoralProposal(
     !Number.isFinite(now.getTime())
   )
     throw new Hu1994ElectoralConflict("Invalid electoral authorization revision or clock");
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: proposal.billId,
       countryId: "HU",
@@ -202,13 +200,11 @@ export async function authorizeHu1994ElectoralProposal(
       "Enacted amendment lacks a quorate frozen parliamentary result"
     );
   await rebindHu1994PrimaryCohorts(db, turn, now, session);
-  await db
-    .collection<CountryGameState>("countryGameStates")
-    .updateOne(
-      { _id: "HU", huElectoralLaw1994SinceTurn: { $exists: false } },
-      { $set: { huElectoralLaw1994SinceTurn: turn } },
-      { session, upsert: true }
-    );
+  await countryGameStatesCollection(db).updateOne(
+    { _id: "HU", huElectoralLaw1994SinceTurn: { $exists: false } },
+    { $set: { huElectoralLaw1994SinceTurn: turn } },
+    { session, upsert: true }
+  );
   const updated = await proposals.updateOne(
     { _id: ID, status: "open", revision: proposal.revision },
     { $set: { status: "authorized", authorizedOnTurn: turn } },
@@ -221,8 +217,7 @@ export async function authorizeHu1994ElectoralProposal(
 
 /** An existing primary can adopt the law only before any general ballot exists. */
 async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, session: ClientSession) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -257,8 +252,7 @@ async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, sessi
       : [];
   });
   if (!candidates.length) return;
-  const receipts = await db
-    .collection<{ _id: string }>("hu1991AssemblyCounts")
+  const receipts = await hu1991AssemblyCountsCollection<{ _id: string }>(db)
     .find(
       {
         _id: { $in: candidates.map((row) => row.hungarianAssemblyRound!.receiptId) },
@@ -267,8 +261,7 @@ async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, sessi
     )
     .toArray();
   const frozen = new Set(receipts.map((row) => String(row._id)));
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       {
         electionId: { $in: candidates.map((row) => row._id) },
@@ -300,14 +293,14 @@ async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, sessi
   );
   const eligible = candidates.filter((row) => eligibleCycles.includes(row.cycle));
   if (!eligible.length) return;
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateMany(
+  await electionVoteTalliesCollection(db).updateMany(
     {
       electionId: { $in: eligible.map((row) => row._id) },
     },
     { $set: { updatedAt: now } },
     { session }
   );
-  const changed = await db.collection<Election>("elections").updateMany(
+  const changed = await electionsCollection(db).updateMany(
     {
       _id: { $in: eligible.map((row) => row._id) },
       status: { $in: ["active", "upcoming"] },
@@ -323,13 +316,11 @@ async function rebindHu1994PrimaryCohorts(db: Db, turn: number, now: Date, sessi
 export async function loadHu1994ElectoralDecision(db: Db, game: Calendar, turn: number) {
   if (game.preset !== "1991-default") return null;
   const allowed = await availability(db, game, turn);
-  const proposal = await db
-    .collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID });
+  const proposal = await hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db).findOne({
+    _id: ID,
+  });
   const bill = proposal
-    ? await db
-        .collection<Bill>("bills")
-        .findOne({ _id: proposal.billId }, { projection: { status: 1 } })
+    ? await billsCollection(db).findOne({ _id: proposal.billId }, { projection: { status: 1 } })
     : null;
   return {
     kind: "threshold1994" as const,
@@ -354,14 +345,16 @@ export async function processHu1994ElectoralMandate(
   now: Date
 ) {
   if (game.preset !== "1991-default") return false;
-  const proposal = await db
-    .collection<Hu1994ElectoralProposal>(HU_1994_PROPOSALS_COLLECTION)
-    .findOne({ _id: ID, status: "open" }, { projection: { billId: 1 } });
+  const proposal = await hu1994ElectoralProposalsCollection<Hu1994ElectoralProposal>(db).findOne(
+    { _id: ID, status: "open" },
+    { projection: { billId: 1 } }
+  );
   if (
     !proposal ||
-    !(await db
-      .collection<Bill>("bills")
-      .findOne({ _id: proposal.billId, status: "signed" }, { projection: { _id: 1 } }))
+    !(await billsCollection(db).findOne(
+      { _id: proposal.billId, status: "signed" },
+      { projection: { _id: 1 } }
+    ))
   )
     return false;
   return runRequiredTransaction(

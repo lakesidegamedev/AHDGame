@@ -5,9 +5,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 import type { Party } from "../types";
 
 /**
- * Name search that yields a {@link Party}. The blacklist editor previously
- * asked the CEO to type 24-character Mongo ids, which no player can obtain
- * through the game, and rendered saved entries as raw hex.
+ * Name search that yields a {@link Party}, replacing raw Mongo id entry and
+ * raw hex rendering in the blacklist editor.
  */
 export function PartySearch({
   kind,

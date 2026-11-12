@@ -1,18 +1,15 @@
 /**
- * Cross-pressure resolver - pure functions that decide how an NPP votes on a
- * federal bill. No DB access, no random. Replaces the RNG-based ideology +
- * whip-roll path for federal bill voting.
+ * Cross-pressure resolver: pure functions deciding how an NPP votes on a
+ * federal bill. No DB access, no random.
  *
- * The model: every vote is the deterministic sum of four signed forces, each
- * clamped to [-100, +100]. Positive pulls FOR, negative pulls AGAINST. Verdict
- * thresholds: sum > +5 -> FOR, sum < -5 -> AGAINST, otherwise ABSTAIN.
+ * Each vote is the deterministic sum of four signed forces, each clamped to
+ * [-100, +100]. Positive pulls FOR, negative AGAINST. Verdict: sum > +5 -> FOR,
+ * sum < -5 -> AGAINST, otherwise ABSTAIN.
  *
- * | Force    | Where it comes from                                                 |
- * | -------- | ------------------------------------------------------------------- |
- * | ideology | NPP ideology aligned to the selected policy option vector           |
- * | whip     | Party whip + caucus whip, gated by loyalty/stubbornness             |
- * | district | Selected policy option's archetype approvals weighted by home-state |
- * | donors   | Donor base multiplied by the same policy alignment as ideology      |
+ * Forces: ideology (NPP ideology aligned to the policy option vector), whip
+ * (party + caucus whip, gated by loyalty/stubbornness), district (policy
+ * option bucket approvals weighted by home state), donors (donor base
+ * multiplied by the same policy alignment as ideology).
  */
 import { complianceFromPersonality } from "./complianceRules";
 import { europeanIntegrationSupport } from "@/lib/internationalOrganizations/europeanIntegration/rules/nationalDecisions";
@@ -26,6 +23,7 @@ import type {
   StateBill,
   StateDemographics,
 } from "@/lib/db/types";
+import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import { economicSystemReformDirection } from "@/lib/economy/economicSystemReformRules";
 import { isNewGenerationType } from "@/lib/politicalLegislation/project";
@@ -188,11 +186,9 @@ function computePolicyAlignment(
     return Math.max(-1, Math.min(1, (domainStance / 5) * provision.effectDirection));
   }
 
-  // Generation guard (political-legislation spec §6, owner ruling #13):
-  // new-generation bills never enter the inverted-polarity legacy fallback —
-  // no vector and no domain stance means alignment 0, so lean-0 laws genuinely
-  // carry no ideological force and NPPs decide them on their non-ideological
-  // heuristics (party line, sponsor relationship, whip pressure).
+  // New-generation bills skip the inverted-polarity legacy fallback:
+  // no vector and no domain stance means alignment 0, so NPPs decide
+  // them on non-ideological heuristics (party line, sponsor, whip pressure).
   if (isNewGenerationType(legislationType)) {
     return 0;
   }
@@ -305,8 +301,37 @@ export function computePartyLineForce(
 }
 
 /**
+ * Share of the state's electorate in each `dim:bucket`, from the region census.
+ * Each dimension sums to 1, so shares are divided by the dimension count to
+ * keep the total mass at 1. Ideology and the authored `positions` table are not cell dimensions and are skipped.
+ */
+function censusBucketShares(
+  state: Pick<StateDemographics, "_id" | "countryId">
+): Record<string, number> | null {
+  const census = getRegionCensusData(state.countryId, state._id, undefined) as Record<
+    string,
+    Record<string, unknown>
+  > | null;
+  if (!census) return null;
+  const dims = Object.entries(census).filter(
+    (entry): entry is [string, Record<string, number>] =>
+      entry[0] !== "ideology" && Object.values(entry[1]).every((v) => typeof v === "number")
+  );
+  if (dims.length === 0) return null;
+  const shares: Record<string, number> = {};
+  for (const [dim, buckets] of dims) {
+    const total = Object.values(buckets).reduce((sum, v) => sum + (v > 0 ? v : 0), 0);
+    if (total <= 0) continue;
+    for (const [bucket, v] of Object.entries(buckets)) {
+      if (v > 0) shares[`${dim}:${bucket}`] = v / total / dims.length;
+    }
+  }
+  return shares;
+}
+
+/**
  * District force: population-weighted approval of the bill's selected policy
- * option across the archetypes present in the NPP's home state.
+ * option across the buckets present in the NPP's home state.
  */
 export function computeDistrictForce(
   bill: CrossPressureBill,
@@ -320,25 +345,15 @@ export function computeDistrictForce(
   const option = legislationType.policyOptions?.find((o) => o.id === provision.policyOptionId);
   if (!option) return 0;
 
-  const approvals = option.archetypeApprovals ?? option.groupApprovals;
+  const approvals = option.bucketApprovals;
   if (!approvals) return 0;
 
-  const groups = homeStateDemographics.groups;
-  if (!groups) return 0;
-
-  let totalPop = 0;
-  for (const archetypeId of Object.keys(groups)) {
-    const group = groups[archetypeId];
-    if (group && Number.isFinite(group.population)) totalPop += group.population;
-  }
-  if (totalPop <= 0) return 0;
-
+  const bucketShare = censusBucketShares(homeStateDemographics);
+  if (!bucketShare) return 0;
   let weighted = 0;
-  for (const [archetypeId, approval] of Object.entries(approvals)) {
+  for (const [bucket, approval] of Object.entries(approvals)) {
     if (typeof approval !== "number" || !Number.isFinite(approval)) continue;
-    const group = groups[archetypeId];
-    if (!group) continue;
-    weighted += (group.population / totalPop) * approval;
+    weighted += (bucketShare[bucket] ?? 0) * approval;
   }
   return clamp100(weighted);
 }

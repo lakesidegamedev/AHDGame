@@ -9,7 +9,6 @@ import { MAX_WATCHLIST, WATCH_ID_PATTERNS } from "@/lib/sidebarWidgets/watchlist
 import { MAX_NAV_PINS } from "@/lib/navigation/navCustomization";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
-import { getAllDemographicCategoryKeys } from "@/lib/demographics/countryDemographics";
 
 function moderatedNameSchema(
   label: string,
@@ -253,8 +252,6 @@ export const displayCurrencyPreferenceSchema = z.object({
   ]),
 });
 
-export type DisplayCurrencyPreferenceBody = z.infer<typeof displayCurrencyPreferenceSchema>;
-
 export const MAX_TAX_RATE = 33;
 
 export const taxRateSchema = z.object({
@@ -275,21 +272,16 @@ export const partyDonateSchema = z.object({
 
 export const MAX_GOTV_PERCENT = 25;
 
-// Valid GOTV/suppression target categories. Layer-1 dimensions power new
-// selections; the legacy voter-group categories remain accepted so existing
-// live budgets can still be edited while they are migrated.
+// Valid GOTV/suppression target categories: the census bucket dimensions.
 const demographicCategories = [
-  ...new Set([
-    "race",
-    "age",
-    "education",
-    "wealth",
-    "ethnicity",
-    "income",
-    "religion",
-    "urbanization",
-    ...getAllDemographicCategoryKeys(),
-  ]),
+  "race",
+  "age",
+  "education",
+  "wealth",
+  "ethnicity",
+  "income",
+  "religion",
+  "urbanization",
 ] as [string, ...string[]];
 
 export const gotvBudgetSchema = z.object({
@@ -335,24 +327,3 @@ export const orgBuildingBudgetSchema = z.object({
       `Org building budget cannot exceed ${MAX_ORG_BUILDING_PERCENT}%`
     ),
 });
-
-export type ChangePasswordBody = z.infer<typeof changePasswordSchema>;
-export type SetPasswordBody = z.infer<typeof setPasswordSchema>;
-export type ChangeEmailBody = z.infer<typeof changeEmailSchema>;
-export type ConfirmEmailChangeBody = z.infer<typeof confirmEmailChangeSchema>;
-export type CharacterNameBody = z.infer<typeof characterNameSchema>;
-export type CreateCharacterBody = z.infer<typeof createCharacterSchema>;
-export type CharacterTransferBody = z.infer<typeof characterTransferSchema>;
-export type PartyTransferBody = z.infer<typeof partyTransferSchema>;
-export type ThemeBody = z.infer<typeof themeSchema>;
-export type PolicyShiftBody = z.infer<typeof policyShiftSchema>;
-export type ProfileBioBody = z.infer<typeof profileBioSchema>;
-export type TaxRateBody = z.infer<typeof taxRateSchema>;
-export type StatePartyTransferBody = z.infer<typeof statePartyTransferSchema>;
-export type CampaignSongBody = z.infer<typeof campaignSongSchema>;
-export type ActionsViewModeBody = z.infer<typeof actionsViewModeSchema>;
-export type GotvBudgetBody = z.infer<typeof gotvBudgetSchema>;
-export type SuppressionBudgetBody = z.infer<typeof suppressionBudgetSchema>;
-export type RegistrationBudgetBody = z.infer<typeof registrationBudgetSchema>;
-export type CharacterDemographicsBody = z.infer<typeof characterDemographicsSchema>;
-export type OrgBuildingBudgetBody = z.infer<typeof orgBuildingBudgetSchema>;

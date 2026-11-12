@@ -3,6 +3,8 @@
 import Link from "@/components/navbar/NavigationLink";
 import { useTranslations } from "next-intl";
 import { visibleWorldNavItems, type WorldNavOpts } from "@/components/navbar/worldNavItems";
+import { WorldNavBadge } from "@/components/navbar/WorldNavBadge";
+import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
 
 interface MobileWorldLinksProps extends WorldNavOpts {
   pathname: string;
@@ -20,10 +22,11 @@ function isNavActive(pathname: string, href: string): boolean {
  */
 export function MobileWorldLinks({ pathname, onNavigate, ...opts }: MobileWorldLinksProps) {
   const t = useTranslations("nav");
+  const crisisActionCount = useOptionalAuthMe()?.navData?.crisisActionCount ?? 0;
 
   return (
     <div className="ml-3 mt-0.5 space-y-0.5 border-l border-card-border/60 pl-3">
-      {visibleWorldNavItems(opts).map((item) => (
+      {visibleWorldNavItems({ ...opts, crisisActionCount }).map((item) => (
         <Link
           key={item.id}
           href={item.href}
@@ -48,6 +51,7 @@ export function MobileWorldLinks({ pathname, onNavigate, ...opts }: MobileWorldL
           }
         >
           {t(item.labelKey)}
+          <WorldNavBadge count={item.badge} />
         </Link>
       ))}
     </div>

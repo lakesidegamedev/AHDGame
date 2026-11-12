@@ -4,11 +4,10 @@ import { hasSubhourStep, type SubhourStepStamp } from "./stepFraction";
  * Start-of-hour values the :30 half step overwrote, so the turn can apply the
  * hour's step from exactly where it would have started without the tick.
  *
- * Why the turn rewinds instead of stepping the remaining fraction forward from
- * the half-way value: the inputs that drive a step (sector signal, commodity
- * prices, the clamp on inflation's per-turn move) are refreshed by the turn
- * itself, so the second half cannot be the first half's continuation without
- * changing the hour's result. Rewinding to the stored start value and taking
+ * The turn rewinds instead of stepping the remaining fraction forward from the
+ * half-way value: step inputs (sector signal, commodity prices, the inflation
+ * per-turn clamp) are refreshed by the turn itself, so the second half cannot
+ * be the first half's continuation. Rewinding to the stored start and taking
  * the full step makes "half at :30 plus remainder at the turn" equal the plain
  * hourly step by construction, rounding included.
  *

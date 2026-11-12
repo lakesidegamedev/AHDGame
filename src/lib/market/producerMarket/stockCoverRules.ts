@@ -1,19 +1,14 @@
 /**
  * Seller-side markdown on stock that does not move (gameConfig.producerStockCover).
  *
- * A producer's unsold output is carried and re-offered every turn. With no cost
- * to carry it and an ask set from its own cost, dead stock sits above every
- * buyer's ceiling forever: on c23 one Japanese food plant held 367,001 units
- * asking 340.6 against household ceilings of 320 (JP) and 265 (US), and steel
- * stock grew from 193k to 462k in 11 turns with spoilage near 0.2% a turn.
+ * Without carrying cost and with an ask set from its own cost, dead stock sits
+ * above every buyer's ceiling forever. Stock cover is carried stock divided by
+ * last turn's sales, in turns. Above `coverTurns` the ask falls with cover, down
+ * to a floor, and a small share of stock beyond the cover is written down each
+ * turn. Real sellers clear a glut by cutting price; this keeps the memory
+ * (stock and build queue persist; only ask and excess shrink).
  *
- * Stock cover is carried stock divided by last turn's sales, in turns. Above
- * `coverTurns` the ask falls with cover, down to a floor, and a small share of
- * the stock beyond the cover is written down each turn. Real sellers clear a
- * glut by cutting the price; this does the same and keeps the memory (the stock
- * and the build queue persist; only the ask and the excess shrink).
- *
- * Pure: stock, recent sales and the policy in, a price factor and write-down out.
+ * Pure: stock, recent sales and policy in, price factor and write-down out.
  */
 
 export interface StockCoverPolicy {

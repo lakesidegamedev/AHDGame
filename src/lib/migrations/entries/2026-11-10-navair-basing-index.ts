@@ -1,3 +1,4 @@
+import { getNavairBasingCollection } from "@/lib/db/collections/navairBasing";
 import type { Migration } from "../types";
 
 export const migration: Migration = {
@@ -6,9 +7,10 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     if (!ctx.dryRun)
-      await db
-        .collection("navairBasing")
-        .createIndex({ status: 1 }, { name: "navairBasing_status" });
+      await getNavairBasingCollection(db).createIndex(
+        { status: 1 },
+        { name: "navairBasing_status" }
+      );
     return {
       documentsScanned: 0,
       documentsUpdated: ctx.dryRun ? 0 : 1,

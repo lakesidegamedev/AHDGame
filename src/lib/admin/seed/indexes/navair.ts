@@ -4,17 +4,15 @@ import { ensureIndex } from "./helpers";
 /**
  * Indexes for the naval and air layer.
  *
- *   - `navairChannels` on (countryId, region), UNIQUE. `saveNavairChannels` upserts on
- *     exactly this pair every turn. Without the unique constraint two concurrent upserts
- *     for the same country and region both miss the filter and both insert, and the
- *     collection quietly grows duplicate rows. `loadNavairChannels` builds a Map keyed on
- *     the same pair, so the duplicates would not throw: one row would simply win at
- *     random each turn and a country's sea control would flicker between two histories.
- *     That is the kind of fault that looks like a balance problem for a month.
+ *   - `navairChannels` on (countryId, region), UNIQUE. `saveNavairChannels`
+ *     upserts on exactly this pair every turn; without the constraint two
+ *     concurrent upserts both insert, silently duplicating rows. The loader's
+ *     Map then lets a random row win each turn and a country's sea control
+ *     flickers between histories.
  *
- *   - `militaryUnits` on (domain), because `navairOperations` and `battleResolution` both
- *     read `{ domain: { $in: ["naval", "air"] } }` every single turn. Unindexed that is a
- *     full collection scan twice a turn, on a phase that has a turn-time budget.
+ *   - `militaryUnits` on (domain), because `navairOperations` and
+ *     `battleResolution` read `{ domain: { $in: ["naval", "air"] } }` every
+ *     turn; unindexed that is a full scan twice per turn.
  */
 export async function seedNavairIndexes(db: Db, log: (msg: string) => void) {
   log("Naval and air indexes:");

@@ -4,7 +4,9 @@ import { ObjectId } from "mongodb";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { Badge } from "@/components/ui";
-import type { Character, PartyCharter, PartyCharterStatus } from "@/lib/db/types";
+import type { PartyCharter, PartyCharterStatus } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 
 const STATUS_VARIANT: Record<PartyCharterStatus, "default" | "warning" | "success" | "error"> = {
   draft: "default",
@@ -30,8 +32,7 @@ export default async function ChartersListPage() {
   // the session user → list charters where any of those characters is
   // a founder. Multi-character users see every charter their personas
   // are involved in.
-  const ownedCharacters = await db
-    .collection<Character>("characters")
+  const ownedCharacters = await charactersCollection(db)
     .find({ userId: userObjectId })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();
@@ -39,8 +40,7 @@ export default async function ChartersListPage() {
   const ownedCharacterIdStrings = new Set(ownedCharacterIds.map((c) => c.toString()));
 
   const charters = ownedCharacterIds.length
-    ? await db
-        .collection<PartyCharter>("partyCharters")
+    ? await partyChartersCollection(db)
         .find({ foundersCharacterIds: { $in: ownedCharacterIds } })
         .sort({ createdAt: -1 })
         .limit(50)

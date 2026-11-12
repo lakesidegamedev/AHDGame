@@ -11,6 +11,8 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { computeRowRadii, getParliamentSizing } from "@/lib/charts/parliamentSizing";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export interface PartySeatsData {
   party: string;
@@ -222,9 +224,8 @@ export async function getChamberComposition(
   officialFilter.$and = [officialsCountryScope(countryId as CountryId)];
 
   const [officials, parties] = await Promise.all([
-    db.collection<ElectedOfficial>("electedOfficials").find(officialFilter).toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    electedOfficialsCollection(db).find(officialFilter).toArray(),
+    politicalPartiesCollection(db)
       .find({ countryId } as Record<string, unknown>)
       .toArray(),
   ]);

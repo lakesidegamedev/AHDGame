@@ -25,10 +25,8 @@ const INNER_H = HEIGHT - PAD_TOP - PAD_BOTTOM;
 const MEMBERSHIP_COLOR = "var(--color-info)";
 
 /**
- * History turns are stored RAW and this chart had neither the world's starting
- * year nor its founding-phase offset: every label fell back to the 2019 constant
- * and sat a game year ahead of the status bar (#1208). Both come from the shared
- * turn-status poll, which every consumer on the page already reuses.
+ * History turns are raw; starting year and founding-phase offset come from
+ * the shared turn-status poll to keep labels aligned with the status bar.
  */
 function compactTurnLabel(
   turn: number,

@@ -13,6 +13,8 @@ import {
   resetPartyBudgetSpending,
   savePartyBudgetForScope,
 } from "@/lib/partyBudgetGuards";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -85,7 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now
     );
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "registration_budget_changed",
       username: authUser.username,

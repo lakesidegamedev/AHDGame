@@ -1,24 +1,17 @@
 /**
  * Self-heal for a missing `federalBudget` document.
  *
- * A world normally gets its federalBudget docs from `seedBudgets()` during
- * full bootstrap. Worlds created via a partial seed path (e.g.
- * `scripts/seed-sandbox.ts`, which creates `centralBanks` directly via
- * `ensureCentralBank()` without ever calling `seedBudgets`) can end up with a
- * country that has a live central bank but no federal budget at all.
- * Every downstream consumer (`treasuryTurn`, `inflationRecalc`) previously
- * just skipped such a country silently (`if (!budget) continue`), so the gap
- * never surfaced as an error — `gameHealthSnapshots` showed the phase
- * "completed" every turn while the country was simply never processed.
- *
- * `ensureFederalBudget` closes the gap the moment it's noticed: create the
- * preset's default budget document on first encounter so the country starts
- * accruing fiscal history immediately, instead of forever.
+ * Worlds created via a partial seed path can have a live central bank but no
+ * federal budget, and downstream consumers silently skip such a country. This
+ * creates the preset's default budget on first encounter so the country
+ * starts accruing fiscal history immediately.
  */
 import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import { getFederalBudgetCollection } from "@/lib/db/collections/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 /** Per-process dedup so the unexpected-miss warning fires once, not every turn. */
 const warnedUnexpectedMisses = new Set<string>();
@@ -29,7 +22,7 @@ export async function ensureFederalBudget(
   preset: string
 ): Promise<FederalBudget | null> {
   const budgetId = getNationalBudgetId(countryId);
-  const existing = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const existing = await (await getFederalBudgetCollection(db)).findOne({ _id: budgetId });
   if (existing) return existing;
 
   const { getInitialNationalBudgetsForPreset } = await import("@/lib/seeds/reference/budgets");
@@ -51,19 +44,50 @@ export async function ensureFederalBudget(
   }
 
   const { _id, ...budgetData } = defaultBudget;
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne(
-      { _id },
-      { $setOnInsert: { ...budgetData, updatedAt: new Date() } },
-      { upsert: true }
-    );
+  await (
+    await getFederalBudgetCollection(db)
+  ).updateOne(
+    { _id },
+    { $setOnInsert: { ...budgetData, updatedAt: new Date() } },
+    { upsert: true }
+  );
   console.warn(
     `[ensureFederalBudget] ${countryId} had a centralBanks doc but no federalBudget ` +
       `(_id="${budgetId}") — seeded default from preset "${preset}". This world was ` +
       `likely bootstrapped via a partial seed path; check scripts/seed-sandbox.ts.`
   );
-  return db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  return (await getFederalBudgetCollection(db)).findOne({ _id: budgetId });
+}
+
+/**
+ * Self-heal many countries at once. One projected `_id` read finds the budgets
+ * that exist; only the missing ones go through `ensureFederalBudget`, so the
+ * healing write and its warning are exactly the single-country path. On the
+ * normal turn nothing is missing and this is one round trip instead of one
+ * read per country.
+ */
+export async function ensureFederalBudgets(
+  db: Db,
+  countryIds: readonly CountryId[],
+  preset: string
+): Promise<void> {
+  const unique = [...new Set(countryIds)];
+  if (unique.length === 0) return;
+  const budgetIds = unique.map((countryId) => getNationalBudgetId(countryId));
+  const present = new Set(
+    (
+      await (
+        await getFederalBudgetCollection(db)
+      )
+        .find({ _id: { $in: budgetIds } }, { projection: { _id: 1 } })
+        .toArray()
+    ).map((budget) => String(budget._id))
+  );
+  await Promise.all(
+    unique
+      .filter((_, index) => !present.has(budgetIds[index]!))
+      .map((countryId) => ensureFederalBudget(db, countryId, preset))
+  );
 }
 
 /**
@@ -72,14 +96,14 @@ export async function ensureFederalBudget(
  * as a data-integrity error instead of turns silently no-oping.
  */
 export async function findCountriesMissingFederalBudget(db: Db): Promise<string[]> {
-  const banks = await db
-    .collection("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   if (banks.length === 0) return [];
   const budgetIds = banks.map((bank) => getNationalBudgetId(bank.countryId as CountryId));
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({ _id: { $in: budgetIds } }, { projection: { _id: 1 } })
     .toArray();
   const present = new Set(budgets.map((budget) => String(budget._id)));
@@ -103,8 +127,9 @@ export async function findCountriesMissingFederalBudget(db: Db): Promise<string[
 export async function findFederalBudgetCountryMismatches(
   db: Db
 ): Promise<{ budgetId: string; expectedCountryId: string; actualCountryId: string | undefined }[]> {
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await (
+    await getFederalBudgetCollection(db)
+  )
     .find({}, { projection: { countryId: 1 } })
     .toArray();
   const mismatches: {

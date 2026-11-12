@@ -3,6 +3,9 @@ import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { SUCCESSOR_REGIONS_1991 } from "@/lib/seeds/reference/successorRegions1991";
 import { SUCCESSOR_PARTIES_1991 } from "@/lib/seeds/reference/successorParties1991";
 import { sovietUnionRegions1991 } from "@/lib/countries/ru/data/sovietUnionRegions1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * January 1991 founding footprints. The nationally organized transition parties
@@ -18,12 +21,8 @@ export async function seedSuccessorStatePartyOrg1991(
 ): Promise<void> {
   if (preset !== "1991-default") return;
   const countries = Object.keys(SUCCESSOR_REGIONS_1991) as (keyof typeof SUCCESSOR_REGIONS_1991)[];
-  if (reset)
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .deleteMany({ countryId: { $in: countries } });
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  if (reset) await statePartyOrgCollection(db).deleteMany({ countryId: { $in: countries } });
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: { $in: countries }, isDefault: true })
     .project({ countryId: 1, name: 1, sequentialId: 1 })
     .toArray();
@@ -31,8 +30,9 @@ export async function seedSuccessorStatePartyOrg1991(
   let count = 0;
   for (const countryId of countries) {
     const roster = SUCCESSOR_PARTIES_1991[countryId] ?? [];
-    const regions =
-      countryId === "RU" ? sovietUnionRegions1991 : (SUCCESSOR_REGIONS_1991[countryId] ?? []);
+    const regions = countryHasFeature("ruAdmin", countryId)
+      ? sovietUnionRegions1991
+      : (SUCCESSOR_REGIONS_1991[countryId] ?? []);
     for (const seed of roster) {
       const party = parties.find(
         (entry) => entry.countryId === countryId && entry.name === seed.name
@@ -41,13 +41,21 @@ export async function seedSuccessorStatePartyOrg1991(
       for (const region of regions) {
         // Democratic Russia and the Democratic Party of Russia organized in
         // the RSFSR, while the CPSU remained a Union-wide organization.
-        if (countryId === "RU" && seed.abbreviation !== "CPSU" && region._id.startsWith("SU_"))
+        if (
+          countryHasFeature("ruAdmin", countryId) &&
+          seed.abbreviation !== "CPSU" &&
+          region._id.startsWith("SU_")
+        )
           continue;
-        if (countryId === "YU" && !yugoslavPartyPresent(seed.abbreviation, region._id)) continue;
+        if (
+          countryHasFeature("yuAdmin", countryId) &&
+          !yugoslavPartyPresent(seed.abbreviation, region._id)
+        )
+          continue;
         const strength = seed.regimeStatus === "ruling" ? 70 : 35;
         const partyId = String(party.sequentialId);
         const _id = `${region._id}_${partyId}`;
-        await db.collection<StatePartyOrg>("statePartyOrg").updateOne(
+        await statePartyOrgCollection(db).updateOne(
           { _id },
           {
             $set: {

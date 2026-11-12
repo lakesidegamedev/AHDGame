@@ -178,24 +178,20 @@ async function mark(
 
 /** Enrol a country on the side it fought for, so later turns resolve by roster. */
 /**
- * Move the front after an engagement: shift `control`, re-derive both supplies from
- * the front's displacement, track the winding-down threshold, and stand the conflict
- * down at a pole. Returns the resulting `control` (unchanged when nothing moved) and
- * whether this engagement ended the war.
+ * Move the front after an engagement: shift `control`, re-derive both supplies
+ * from the front's displacement, track the winding-down threshold, and stand
+ * the conflict down at a pole. Returns the resulting `control` (unchanged when
+ * nothing moved) and whether this engagement ended the war.
  *
- * `standDown` is reported rather than read back off `conflict.status` because the
- * caller has already narrowed that field by testing it before the loop, so the
- * compiler cannot see that this function widens it again — and a cast to get around
- * that would be hiding the very mutation the caller needs to react to.
+ * `standDown` is reported rather than read back off `conflict.status` because
+ * the caller has already narrowed that field, so the compiler cannot see this
+ * function widens it again.
  *
- * Mutates the in-memory `conflict` with everything it writes, exactly as `joinSide`
- * does with the roster, so the rest of the tick sees a consistent document. This is
- * load-bearing, not tidiness: a tick can resolve SEVERAL offensives at one front —
- * `mergeOffensives` groups by (front, attacking side), so an attack and the enemy's
- * counter-attack are two separate offensives resolved in the same loop. Without the
- * write-back, the second one shifted from the tick's opening `control` and its write
- * overwrote the first's rather than compounding on it, so a front that was fought
- * over twice moved as if it had been fought over once.
+ * Mutates the in-memory `conflict`, exactly as `joinSide` mutates the roster,
+ * so the rest of the tick sees a consistent document. Load-bearing: a tick can
+ * resolve SEVERAL offensives at one front, and without the write-back each one
+ * shifted from the tick's opening `control`, so a front fought over twice moved
+ * as if once.
  */
 async function applyOccupation(
   db: Db,
@@ -347,9 +343,9 @@ export async function resolveBattleDeclarations(
   // load would be hundreds of round trips inside a phase that already has a turn time
   // budget. `navairOperations` wrote this earlier in the same turn.
   const navairChannels = await loadNavairChannels(db);
-  const navairUnits = (await getMilitaryUnitsCollection(db)
-    .find({ domain: { $in: ["naval", "air"] } })
-    .toArray()) as unknown as NavairUnit[];
+  const navairUnits = await getMilitaryUnitsCollection(db)
+    .find<NavairUnit>({ domain: { $in: ["naval", "air"] } })
+    .toArray();
 
   // Who fights an offensive here without declaring one: player standing orders, plus
   // the countries the NPP join switch opts in wholesale. Read ONCE for the whole tick

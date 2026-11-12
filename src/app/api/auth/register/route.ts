@@ -35,6 +35,10 @@ import { shouldGrantOwnerAdminOnRegister } from "@/lib/singleplayerOwnerAdmin";
 import { lakesideAccountFields } from "@/lib/auth/lakesideAccount";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import type { ActionAuditNet } from "@/lib/db/types/actionAuditLog";
+import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Partially redact an IP for display in forensic surfaces — never store the
  * raw address in `actionAuditLog.net` (plan §3.1 "net" doc-comment). */
@@ -64,7 +68,7 @@ export async function POST(request: Request) {
     const clientIp = await getClientIp();
 
     // Block registration during maintenance mode (both "partial" and "full").
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     if (normalizeMaintenanceMode(config?.maintenanceMode) !== "off") {
       return errorResponse(
         503,
@@ -169,7 +173,7 @@ export async function POST(request: Request) {
 
     // Block registration when test mode is enabled and no valid test secret is provided
     if (config?.testMode) {
-      const expectedSecret = process.env.TEST_SECRET;
+      const expectedSecret = authConfig.testSecret();
       if (!expectedSecret || !timingSafeCompare(testSecret ?? "", expectedSecret)) {
         recordAudit({
           source: "api",
@@ -187,10 +191,10 @@ export async function POST(request: Request) {
       }
     }
 
-    const usersCollection = db.collection("users");
+    const usersCollectionHandle = usersCollection<Document>(db);
 
     // Check if user already exists
-    const existingUser = await usersCollection.findOne({
+    const existingUser = await usersCollectionHandle.findOne({
       $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }],
     });
 
@@ -223,7 +227,9 @@ export async function POST(request: Request) {
         });
         return errorResponse(400, "Invalid referral code");
       }
-      const referrer = await usersCollection.findOne({ _id: new ObjectId(normalizedReferralCode) });
+      const referrer = await usersCollectionHandle.findOne({
+        _id: new ObjectId(normalizedReferralCode),
+      });
       if (!referrer) {
         recordAudit({
           source: "api",
@@ -248,7 +254,7 @@ export async function POST(request: Request) {
     if (
       shouldGrantOwnerAdminOnRegister({
         singleplayer: isSingleplayer(),
-        existingUserCount: await usersCollection.countDocuments(),
+        existingUserCount: await usersCollectionHandle.countDocuments(),
       })
     ) {
       // First account of a singleplayer world owns the machine: full admin
@@ -280,7 +286,7 @@ export async function POST(request: Request) {
         });
         return errorResponse(403, "Admin registration is currently disabled.");
       }
-      const adminRegKey = process.env.ADMIN_REGISTRATION_KEY;
+      const adminRegKey = authConfig.adminRegistrationKey();
       if (adminRegKey && timingSafeCompare(adminKey ?? "", adminRegKey)) {
         isAdmin = true;
       } else {
@@ -314,7 +320,7 @@ export async function POST(request: Request) {
 
     // Create player user
     const acquisition = parseAcquisition(cookieStore.get(ACQUISITION_COOKIE)?.value);
-    const result = await usersCollection.insertOne({
+    const result = await usersCollectionHandle.insertOne({
       ...(acquisition ? { acquisition } : {}),
       email: email.toLowerCase(),
       username: username.toLowerCase(),
@@ -399,7 +405,7 @@ export async function POST(request: Request) {
     if (config?.ipDetectionEnabled) {
       checkIpFireAndForget(clientIp).then((ipDetails) => {
         if (ipDetails) {
-          usersCollection
+          usersCollectionHandle
             .updateOne({ _id: result.insertedId }, { $set: { ipDetails } })
             .catch(() => {});
         }

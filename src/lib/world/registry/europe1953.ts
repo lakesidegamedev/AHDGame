@@ -1,13 +1,13 @@
 /**
- * Europe / North Atlantic — 1953 Tier-3 registry (#3728).
+ * Europe / North Atlantic 1953 Tier-3 registry.
  *
- * CountryConfig / sphere-macro pilots already cover: UK, FR, DE, DD, IT, ES, SE,
- * TR, IE, AT, HU, PL, RO, YU, BG, CS, RU. This file adds the remaining sovereigns,
- * microstates, and European dependencies.
+ * CountryConfig / sphere-macro pilots already cover: UK, FR, DE, DD, IT, ES,
+ * SE, TR, IE, AT, HU, PL, RO, YU, BG, CS, RU. This file adds the remaining
+ * sovereigns, microstates, and European dependencies.
  *
- * Assumptions: Saar listed as French-administered exceptional territory (not yet
- * returned to FRG); Trieste Free Territory dissolving 1954; Malta/Cyprus remain
- * British colonies; Vatican/monacos recognized sovereigns without UN membership.
+ * Assumptions: Saar as French-administered exceptional territory (not yet
+ * returned to FRG); Trieste Free Territory dissolving 1954; Malta/Cyprus
+ * British colonies; Vatican/Monaco sovereign without UN membership.
  */
 import type { WorldEntityManifestEntry } from "@/lib/world/worldEntityManifest";
 import {

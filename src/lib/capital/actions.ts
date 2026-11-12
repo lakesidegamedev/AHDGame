@@ -109,8 +109,7 @@ export interface CapitalActionContext {
   isRetired: boolean;
   /**
    * Target NPP's current favorability (0-100). Used to short-circuit boost/reduce
-   * when the value is already at the cap or floor — without this, players are
-   * charged actions+funds for a no-op clamped write.
+   * when already at the cap or floor, so players aren't charged for a no-op clamped write.
    */
   targetFavorability?: number;
   /** Target NPP's current political influence (0-100). Same rationale as targetFavorability. */

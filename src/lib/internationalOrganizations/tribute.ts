@@ -51,10 +51,10 @@ import {
   type InternationalOrganizationId,
 } from "@/lib/constants/internationalOrganizations";
 import { getOrganizationFundsCollection } from "@/lib/db/collections/organizationFunds";
-import type { FederalBudget } from "@/lib/db/types";
 import { loadGdpUsdMillionsByEntity } from "./entityGdp";
 import { getOrganizationFund } from "./organizationFund";
 import { tributeMembers, type AccessTable } from "./orgMembership";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface TributeResult {
   /** Total credited to the fund, in the fund's own currency. */
@@ -80,7 +80,7 @@ export async function chargeOrganizationTribute(
   // Era-aware, and doing double duty. It scopes tribute to the 1953 start, and
   // it is the same resolver `chargeOrganizationDues` uses to normalise currency
   // — reading the BASE config would price a 1953 world at 2019 rates and leave
-  // dues and tribute disagreeing about what a currency is worth (refs #3778).
+  // dues and tribute disagreeing about what a currency is worth.
   const preset = await loadWorldPreset(db);
   const rateAnnual = orgTributeRateAnnual(organizationId, preset);
   if (rateAnnual <= 0) return { ...EMPTY };
@@ -101,7 +101,7 @@ export async function chargeOrganizationTribute(
       organizationId as InternationalOrganizationId
     );
     const fundRate = getGdpAnchorRate(currencyCountryId, preset);
-    const budget = db.collection<FederalBudget>("federalBudget");
+    const budget = federalBudgetCollection(db);
     const now = new Date();
 
     // One read for the whole roll rather than one per payer: this runs inside a

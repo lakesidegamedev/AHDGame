@@ -1,4 +1,5 @@
 import { timingSafeCompare } from "@/lib/api/timingSafeCompare";
+import { servicesConfig } from "@/lib/config/services";
 
 /**
  * Validates the X-Bot-Token header against configured bot API keys.
@@ -13,11 +14,11 @@ export function requireBotToken(request: Request, allowPublicKey = true): boolea
   const token = request.headers.get("X-Bot-Token");
   if (!token) return false;
 
-  const privateKey = process.env.DISCORD_BOT_API_KEY;
+  const privateKey = servicesConfig.discordBotApiKey();
   if (privateKey && timingSafeCompare(token, privateKey)) return true;
 
   if (allowPublicKey) {
-    const publicKey = process.env.PUBLIC_BOT_API_KEY;
+    const publicKey = servicesConfig.publicBotApiKey();
     if (publicKey && timingSafeCompare(token, publicKey)) return true;
   }
 

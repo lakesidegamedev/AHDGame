@@ -1,36 +1,13 @@
 /**
- * 2024 UK Regional Vote Shares
+ * 2024 UK regional vote shares from the 4 July 2024 general election (fought
+ * on 2023 Periodic Review boundaries). Used by calculateUKStatePartyOrgs when
+ * the active preset is 2027-default.
  *
- * Vote share percentages by region from the 4 July 2024 general election
- * (fought on the 2023 Periodic Review boundaries). Used by
- * `calculateUKStatePartyOrgs` when the active preset is `2027-default`.
+ * Source: House of Commons Library briefing CBP-10009.
  *
- * Primary source: House of Commons Library briefing CBP-10009 "General
- * election 2024: Results and analysis"
- * (https://commonslibrary.parliament.uk/research-briefings/cbp-10009/).
- * English regional figures cross-checked against the per-region results
- * tables (which cite CBP-10009): East of England Con 30.6 / Lab 29.4 /
- * Reform 17.5 / LD 13.2 / Green 6.9; East Midlands Lab 35.3 / Con 29.4 /
- * Reform 18.9 / LD 6.4 / Green 6.3; London Lab 43.0 / Con 20.6 / LD 11.0 /
- * Green 10.0 / Reform 8.7; North East Lab 45.4 / Con 20.3 / Reform 19.9 /
- * Green 6.0 / LD 5.8; North West Lab 44.0 / Con 18.8 / Reform 16.6 / LD 7.8 /
- * Green 7.0; South East Con 30.6 / Lab 24.5 / LD 21.9 / Reform 14.0 /
- * Green 6.9; South West Con 28.2 / LD 24.7 / Lab 24.5 / Reform 13.8 /
- * Green 7.4; West Midlands Lab 34.0 / Con 27.6 / Reform 18.1 / LD 8.8 /
- * Green 6.5; Yorkshire and the Humber Lab 40.9 / Con 22.8 / Reform 16.7 /
- * Green 7.5 / LD 7.1. Scotland: Lab 35.3 / SNP 30.0 / Con 12.7 / LD 9.7 /
- * Reform 7.0 / Green 3.8. Wales: Lab 37.0 / Con 18.2 / Reform 16.9 /
- * Plaid 14.8 / LD 6.5 / Green 4.7. Northern Ireland: SF 27.0 / DUP 22.1 /
- * Alliance 15.0 / UUP 12.2 / SDLP 11.1 / TUV 6.2.
- *
- * Compared to the 2020 dataset: Labour landslide on a modest vote rise
- * (Conservative collapse to ~24% nationally), Reform UK at 14.3%
- * nationally and second in most English regions, SNP down to 30% in
- * Scotland, DUP down to 22% in Northern Ireland with Sinn Fein first.
- * Alliance and SDLP are not seeded as default parties, so their shares go
+ * Alliance and SDLP are not seeded as default parties, so their shares stay
  * unallocated rather than being folded into a party that did not win them.
- * NIR keeps the 2020 file's shape: mainland parties at 0 except small LD
- * and Green entries, UUP at its actual 12%.
+ * Mainland parties are zero in NI except small LD and Green entries.
  */
 
 export const UK_REGION_POLLING_2024: Record<string, Record<string, number>> = {

@@ -4,6 +4,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
+import { roadmapCategoriesCollection } from "@/lib/db/repositories/roadmapCategories";
+import type { Document } from "mongodb";
 
 const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -19,8 +21,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const categories = await db
-      .collection("roadmapCategories")
+    const categories = await roadmapCategoriesCollection<Document>(db)
       .find({})
       .sort({ sortOrder: 1 })
       .toArray();
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     const { name, subcategories } = parsed.data;
 
     const db = await getDb();
-    const col = db.collection("roadmapCategories");
+    const col = roadmapCategoriesCollection<Document>(db);
 
     // Check for duplicate name
     const existing = await col.findOne({ name: name.trim() });

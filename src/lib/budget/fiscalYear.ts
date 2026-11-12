@@ -1,11 +1,12 @@
 import { financialAusteritySpending } from "@/lib/livingConflict/rules/financialFiscal";
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
   FederalBudget,
   StateBudget,
   EconomicGrowthFactors,
   FederalBudgetSnapshot,
   EnactedLaw,
+  FiscalConsolidationRecord,
 } from "@/lib/db/types/budget";
 import type { LegislationType } from "@/lib/db/types/legislation";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -37,6 +38,7 @@ import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { getNationalDocId, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { resolvePipelineGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import { smoothNationalGdp } from "@/lib/metricEngine/gdpLevel";
+import { GDP_SMOOTHING_INERTIA, smoothNationalGdpPerTurn } from "@/lib/metricEngine/priceLevel";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import {
   getSharedFiscalYearStartTurnInYear,
@@ -45,6 +47,20 @@ import {
 import { evaluateSovereignAuctionForCountry } from "@/lib/sovereignDefault/crisisDetection";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { applyAusterityCap } from "@/lib/sovereignDefault/austerity";
+import { restructureForInterestSpiral } from "@/lib/sovereignDefault/interestSpiralRestructure";
+import { getAllCountryAccess } from "@/lib/countryAccess";
+import {
+  applyFiscalStabilizer,
+  emitFiscalConsolidationNews,
+  loadRulingEconomicPositions,
+} from "./fiscalStabilizer";
+import { shouldRestructureForInterest } from "./rules/fiscalStabilizer";
+import { backgroundBudgetDocuments, loadBackgroundBudgetSources } from "./backgroundBudget";
+import {
+  backgroundAnnualGdp,
+  closeBackgroundFiscalYear,
+} from "@/lib/world/macro/rules/backgroundBudget";
+import type { MacroCountryState } from "@/lib/world/macro/types";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { ensureBudgetDraftForFiscalYear } from "@/lib/db/collections/ukBudgets";
 import { settleRegionalBudget } from "@/lib/governmentFinance/rules/regionalSettlement";
@@ -58,14 +74,24 @@ import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import { buildResetRegionalProgramClaims } from "@/lib/resetLegislation/rules/regionalClaims";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
+import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
+import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
 // preserving existing behavior until a later wave teaches the engine divergent calendars.
 export const FISCAL_YEAR_START_TURN_IN_YEAR = getSharedFiscalYearStartTurnInYear();
-
-/** EMA weight on the prior national GDP when smoothing for debt-to-GDP (design §5.4). */
-const GDP_SMOOTHING_INERTIA = 0.7;
 
 /**
  * Check if the current turn marks the end of a fiscal year.
@@ -109,17 +135,16 @@ export async function processFiscalYear(
   newFiscalYear: number,
   currentTurn: number
 ): Promise<void> {
-  const federalBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+  const federalBudgets = await federalBudgetCollection(db).find({}).toArray();
   if (federalBudgets.length === 0) {
     console.log("[FiscalYear] No federal budget found, skipping fiscal year processing");
     return;
   }
 
-  const financeState = await db.collection<GameState>("gameState").findOne(
+  const financeState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
-        regionalLegislationFinanceEnabled: 1,
         resetWorldId: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
@@ -127,44 +152,39 @@ export async function processFiscalYear(
       },
     }
   );
-  const regionalFinanceEnabled = financeState?.regionalLegislationFinanceEnabled === true;
   const usResetLegislationV2 =
     resetSystemVersionsForCountry(financeState, RESET_V2_READY, "US").legislation === "v2";
-  const regionalLegislationTypes = regionalFinanceEnabled
-    ? await db
-        .collection<LegislationType>("legislationTypes")
-        .find(
-          {
-            $or: [
-              { countryScope: { $in: ["us", "uk", "jp"] } },
-              // Legacy records without a countryScope are US laws throughout
-              // the existing policy pipeline and receive administration
-              // metadata from the same compatibility rule.
-              { countryScope: { $exists: false } },
-            ],
-          },
-          { projection: { _id: 1, name: 1, administration: 1, policyOptions: 1 } }
-        )
-        .toArray()
-    : [];
+  const regionalLegislationTypes = await legislationTypesCollection(db)
+    .find(
+      {
+        $or: [
+          { countryScope: { $in: ["us", "uk", "jp"] } },
+          // Legacy records without a countryScope are US laws throughout
+          // the existing policy pipeline and receive administration
+          // metadata from the same compatibility rule.
+          { countryScope: { $exists: false } },
+        ],
+      },
+      { projection: { _id: 1, name: 1, administration: 1, policyOptions: 1 } }
+    )
+    .toArray();
   const regionalLegislationTypeMap = new Map(
     withLawAdministration(regionalLegislationTypes).map((type) => [type._id, type])
   );
 
   // Open the UK's annual authoring window only in worlds with a UK ledger. The
   // helper is idempotent, so a retried fiscal turn cannot replace a saved draft.
-  if (federalBudgets.some((budget) => resolveBudgetCountryId(budget) === "UK")) {
+  if (federalBudgets.some((budget) => countryHasFeature("ukLib", resolveBudgetCountryId(budget)))) {
     await ensureBudgetDraftForFiscalYear(db, newFiscalYear, new Date());
   }
 
   const [states, allStateMetrics] = await Promise.all([
-    db.collection<State>("states").find({}).toArray(),
-    db.collection<StateMetrics>("macroMetrics").find({}).toArray(),
+    statesCollection(db).find({}).toArray(),
+    macroMetricsCollection(db).find({}).toArray(),
   ]);
   const usResetRegionalPrograms =
     usResetLegislationV2 && financeState?.resetWorldId
-      ? await db
-          .collection<ResetLawProgramDocument>("resetLawPrograms")
+      ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
             { country: "US", scope: "regional", worldId: financeState.resetWorldId },
             {
@@ -192,22 +212,35 @@ export async function processFiscalYear(
       .map((m) => [String(m._id), m.economic.gdpGrowth.value])
   );
   const processedBudgetIds = new Set<string>();
+  const interestSpiralCountries = new Set<string>();
+  // Background countries keep their spiral count in macro state, so the years
+  // that tripped the restructuring travel with the country to the restructure call.
+  const backgroundSpiralYears = new Map<string, number>();
+  // Stabilizer state is written in one batch after the loop, never per country.
+  const stabilizerWrites: AnyBulkWriteOperation<FederalBudget>[] = [];
+  const consolidationNews: Array<{
+    countryId: string;
+    record: FiscalConsolidationRecord;
+    gdp: number;
+  }> = [];
 
   // Money wiring (interstate-logistics plan step 5, phase B): one flag check,
   // one FX table, one sourcingNetworkLoad read for the whole annual pass -
   // same hoist-once pattern as `refreshNationalBudgetRevenue`, never one read
   // per country in this per-budget loop.
   const [moneyWiringConfig, fxByCurrency, tariffExposureSnapshot, couponBooks] = await Promise.all([
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { interstateMoneyWiringEnabled: 1 } }),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { interstateMoneyWiringEnabled: 1, fiscalStabilizerEnabled: 1 } }
+    ),
     loadFxRatesByCurrency(db),
     loadTurnTariffInflationExposure(db, currentTurn),
-    // Debt interest is charged on the coupons the stock carries (#2089): one
+    // Debt interest is charged on the coupons the stock carries: one
     // projected read for the annual pass, never one per country.
     loadSovereignCouponBooks(db),
   ]);
   const moneyWiringEnabled = moneyWiringConfig?.interstateMoneyWiringEnabled === true;
+  const fiscalStabilizerEnabled = moneyWiringConfig?.fiscalStabilizerEnabled === true;
   const sourcedImportsByCountry = moneyWiringEnabled
     ? await loadLatestSourcedImportAggregates(db, currentTurn)
     : new Map<string, { tariffPaid: number; importValue: number }>();
@@ -217,6 +250,20 @@ export async function processFiscalYear(
   // ghost rollover would recompute revenue over nothing, evaluate sovereign
   // auctions for a state that no longer exists, and write snapshots for it.
   const registeredCountries = new Set<string>(await getRegisteredCountryIds(db));
+
+  // Fiscal stabilizer: AI-run countries enact a consolidation package at
+  // fiscal close. Player countries are never touched.
+  const countryAccess = await getAllCountryAccess(db);
+  const nppGovernedCountries = new Set<string>(
+    Object.entries(countryAccess)
+      .filter(([, access]) => access.nppGoverned)
+      .map(([id]) => id)
+  );
+  const rulingEconomicPositions = await loadRulingEconomicPositions(db, [...nppGovernedCountries]);
+  // Background countries: budget derived from the macro economy, stabilizer
+  // paid for by their own politics. Fiscal state is written back in one batch.
+  const backgroundSources = await loadBackgroundBudgetSources(db);
+  const backgroundFiscalWrites: AnyBulkWriteOperation<MacroCountryState>[] = [];
 
   for (const federalBudget of federalBudgets) {
     const budgetId = String(federalBudget._id);
@@ -236,19 +283,10 @@ export async function processFiscalYear(
     const nationalMetrics = nationalDocId
       ? (allStateMetrics.find((metric) => String(metric._id) === nationalDocId) ?? null)
       : null;
-    // Canonical national growth, not a flat 2.5. The 17 countries with no
-    // national metrics doc used to record +2.5% here while several of their
-    // economies were contracting 6-9% (CS -8.9%, HU -7.4%, RO -6.9% at turn
-    // 369). `states` and `allStateMetrics` are already loaded above, so the
-    // regional leg reuses them rather than querying per country.
-    //
-    // Blast radius is narrow and was verified live: `economicFactors.gdpGrowth`
-    // does NOT drive tax-base growth (fiscalBaseGrowth.ts builds its own factors
-    // from the national macroMetrics doc), and the fallbacks at :173/:313/:427
-    // below are unreachable while every country has regional GDP and every
-    // region has a growth metric. Its one live consumer is
-    // `moneySupply/nppPolicy.ts` (NPP open-market decisions), which was choosing
-    // operations against a fictitious +2.5%.
+    // Canonical national growth, not a flat 2.5: the no-metrics fallback
+    // misrecorded +2.5% for contracting economies. `states` and
+    // `allStateMetrics` are already loaded, so reuse them. The only live
+    // consumer is `moneySupply/nppPolicy.ts` (NPP open-market decisions).
     const countryRegionGdp = new Map(
       states
         .filter((s) => s.countryId === countryId && !NATIONAL_SCOPE_IDS.has(String(s._id)))
@@ -288,7 +326,11 @@ export async function processFiscalYear(
     economicFactors.inflationRate = newInflation;
 
     const newTaxBases = federalBudget.taxBases;
-    let newGdp = federalBudget.gdp || 27_000_000_000_000;
+    const background = backgroundSources.get(countryId) ?? null;
+    const backgroundGdp = background
+      ? backgroundAnnualGdp(background.fiscal, background.output)
+      : null;
+    let newGdp = backgroundGdp ?? (federalBudget.gdp || 27_000_000_000_000);
     // EMA-smoothed national GDP for the debt-to-GDP ratio (design §5.4) — dampens
     // year-over-year GDP swings so they can't trip a sovereign-default threshold.
     let newGdpSmoothed = smoothNationalGdp(
@@ -297,25 +339,32 @@ export async function processFiscalYear(
       GDP_SMOOTHING_INERTIA
     );
     if (federalBudget.taxBases) {
-      // Base growth moved to the per-turn `fiscalBaseGrowth` phase (the annual
-      // jump became a 1/TURNS_PER_YEAR slice each turn). fiscalYear keeps the
-      // annual GDP derivation, inflation snapshot, grants, debt, and revenue
-      // recompute — off the now per-turn-grown bases — but no longer grows them
-      // (that would double-count). `newTaxBases` stays the current bases.
-      // A1 SSOT (design §5.4): federalBudget.gdp DERIVES from Σ regional state.gdp
-      // (the engine grew each region's level per turn) rather than compounding
-      // independently. Fall back to annual compounding only for countries whose
-      // states carry no SSOT gdp yet (pre-reconciliation safety).
+      // Base growth happens in the per-turn fiscalBaseGrowth phase; growing here
+      // would double-count. newTaxBases stays the current bases.
+      // GDP derives from Σ regional state.gdp; fall back to annual compounding
+      // only when states carry no SSOT gdp yet.
       const countryStateGdpMillions = states
         .filter((s) => s.countryId === countryId && !NATIONAL_SCOPE_IDS.has(String(s._id)))
         .reduce((sum, s) => sum + (s.gdp || 0), 0);
       newGdp =
-        countryStateGdpMillions > 0
+        backgroundGdp ??
+        (countryStateGdpMillions > 0
           ? countryStateGdpMillions * 1_000_000
-          : newGdp * (1 + economicFactors.gdpGrowth / 100);
+          : newGdp * (1 + economicFactors.gdpGrowth / 100));
       newGdpSmoothed = smoothNationalGdp(federalBudget.gdpSmoothed, newGdp, GDP_SMOOTHING_INERTIA);
+      if (backgroundGdp === null && countryStateGdpMillions > 0) {
+        // One basis for every budget GDP reader: the per-turn smoothed level the
+        // metric engine keeps current, stepped once more from the live sum.
+        newGdpSmoothed = smoothNationalGdpPerTurn(
+          federalBudget.gdpSmoothed ?? federalBudget.gdp,
+          newGdp,
+          GDP_SMOOTHING_INERTIA,
+          TURNS_PER_YEAR
+        );
+        newGdp = newGdpSmoothed;
+      }
 
-      await db.collection<FederalBudget>("federalBudget").updateOne(
+      await federalBudgetCollection(db).updateOne(
         { _id: federalBudget._id },
         {
           $set: {
@@ -336,18 +385,24 @@ export async function processFiscalYear(
     }
 
     const sourcedAgg = sourcedImportsByCountry.get(countryId);
-    const federalRevenue = await calculateFederalRevenue(
-      db,
-      normalizedTaxRates,
-      budgetId,
-      undefined,
-      undefined,
-      undefined,
-      fxByCurrency,
-      sourcedAgg
-        ? { tariffPaidAnchor: sourcedAgg.tariffPaid, importValueAnchor: sourcedAgg.importValue }
-        : undefined
-    );
+    // A background budget is derived after the debt pass below; skip pricing
+    // its laws and tax bases here.
+    const backgroundOpening =
+      background && backgroundGdp !== null ? backgroundBudgetDocuments(background, 0) : null;
+    let federalRevenue = backgroundOpening
+      ? backgroundOpening.revenue
+      : await calculateFederalRevenue(
+          db,
+          normalizedTaxRates,
+          budgetId,
+          undefined,
+          undefined,
+          undefined,
+          fxByCurrency,
+          sourcedAgg
+            ? { tariffPaidAnchor: sourcedAgg.tariffPaid, importValueAnchor: sourcedAgg.importValue }
+            : undefined
+        );
 
     // Formula-grant programs (Medicaid, Highway Trust Fund, Education Block,
     // SNAP) are US-only — running them for UK/JP/DE wedges 27% of national
@@ -361,13 +416,12 @@ export async function processFiscalYear(
     const formulaGrantDistribution = isUS
       ? await processFormulaGrants(db, federalRevenue.total, countryId)
       : {};
-    const departmentGrant =
-      isUS && regionalFinanceEnabled
-        ? resolveAnnualRegionalGrantPool({
-            accounts: federalBudget.departmentAccounts ?? {},
-            currentTurn,
-          })
-        : { hasProgram: false, annualPool: 0 };
+    const departmentGrant = isUS
+      ? resolveAnnualRegionalGrantPool({
+          accounts: federalBudget.departmentAccounts ?? {},
+          currentTurn,
+        })
+      : { hasProgram: false, annualPool: 0 };
     const departmentGrantDistribution = departmentGrant.hasProgram
       ? distributeAnnualRegionalGrantPool(
           departmentGrant.annualPool,
@@ -402,15 +456,82 @@ export async function processFiscalYear(
       newGdpSmoothed,
       couponBooks.get(countryId) ?? null
     );
-    const federalSpending = await calculateFederalSpending(
-      db,
-      {
-        ...federalBudget,
-        revenue: federalRevenue,
+    let federalSpending = backgroundOpening
+      ? backgroundOpening.spending
+      : await calculateFederalSpending(
+          db,
+          {
+            ...federalBudget,
+            revenue: federalRevenue,
+            gdp: newGdp,
+          },
+          debtResult.interestPayment
+        );
+
+    // Background country: close its derived budget instead. The stabilizer
+    // plans against the macro budget and its approval cost is charged by the
+    // country's politics on the next kernel tick.
+    let backgroundPackage: FiscalConsolidationRecord | null = null;
+    if (background && backgroundGdp !== null) {
+      const closed = closeBackgroundFiscalYear({
+        fiscal: background.fiscal,
         gdp: newGdp,
-      },
-      debtResult.interestPayment
-    );
+        fiscalCapacity: background.fiscalCapacity,
+        debtInterest: debtResult.interestPayment,
+        debtToGdpRatio: debtResult.debtToGdpRatio,
+        debtThreshold: getDebtThreshold(
+          debtResult.debtToGdpRatio,
+          federalBudget.sovereignRiskAnchor
+        ),
+        governmentEconomicPosition: background.governmentEconomicPosition,
+        fiscalYear: newFiscalYear,
+        turn: currentTurn,
+        consolidate:
+          fiscalStabilizerEnabled &&
+          (federalBudget.financialCrisisAusterityUntilTurn ?? -1) < currentTurn &&
+          !federalBudget.imfSovereignBailoutActive,
+      });
+      const derived = backgroundBudgetDocuments(
+        background,
+        debtResult.interestPayment,
+        closed.fiscal
+      );
+      if (derived) {
+        federalRevenue = derived.revenue;
+        federalSpending = derived.spending;
+      }
+      backgroundFiscalWrites.push({
+        updateOne: {
+          filter: {
+            entityId: countryId,
+            simulationTier: "background-macro",
+            "dataQuality.provenance": "authored-2027",
+          },
+          update: { $set: { nationalFiscal: closed.fiscal } },
+        },
+      });
+      if (fiscalStabilizerEnabled && closed.restructure) {
+        interestSpiralCountries.add(countryId);
+        backgroundSpiralYears.set(countryId, closed.interestSpiralYears);
+      }
+      if (closed.package) {
+        backgroundPackage = {
+          fiscalYear: newFiscalYear,
+          appliedTurn: currentTurn,
+          primaryBalanceGdpShare: closed.package.primaryBalanceGdpShare,
+          targetPrimaryBalanceGdpShare: closed.package.targetPrimaryBalanceGdpShare,
+          size: closed.package.size,
+          sizeGdpShare: closed.package.sizeGdpShare,
+          plannedTaxShare: closed.package.plannedTaxShare,
+          taxRise: closed.package.taxRise,
+          spendingCut: closed.package.spendingCut,
+          unfunded: closed.package.unfunded,
+          categoryCuts: closed.package.categoryCuts,
+          taxRateTargets: closed.package.taxRateTargets,
+          approvalCost: closed.package.approvalCost,
+        };
+      }
+    }
 
     if (isUS) {
       // US still uses the formulaGrants pool for state grants and overrides
@@ -455,6 +576,41 @@ export async function processFiscalYear(
       }
     }
 
+    // Crisis austerity already forces the budget toward balance; the stabilizer
+    // runs only for AI-run countries outside it, and is cleared once players
+    // run the country so their budget is exactly what their laws price.
+    const financialAusterityActive =
+      (federalBudget.financialCrisisAusterityUntilTurn ?? -1) >= currentTurn;
+    let stabilizerSet: Record<string, unknown> = {};
+    let consolidationPackage: FiscalConsolidationRecord | null = backgroundPackage;
+    const stabilizerUnset: Record<string, ""> = {};
+    if (background) {
+      // Handled above against the derived budget.
+    } else if (!fiscalStabilizerEnabled) {
+      // Switched off: no package, no restructuring, stored state left as is.
+    } else if (nppGovernedCountries.has(countryId)) {
+      const stabilized = applyFiscalStabilizer({
+        budget: federalBudget,
+        revenue: federalRevenue,
+        spending: finalSpending,
+        gdp: newGdp,
+        debtToGdpRatio: debtResult.debtToGdpRatio,
+        rulingEconomicPosition: rulingEconomicPositions.get(countryId) ?? null,
+        fiscalYear: newFiscalYear,
+        currentTurn,
+        consolidate: !financialAusterityActive && !federalBudget.imfSovereignBailoutActive,
+      });
+      finalSpending = stabilized.spending;
+      finalSurplus = federalRevenue.total - finalSpending.total;
+      stabilizerSet = stabilized.set;
+      consolidationPackage = stabilized.package;
+      if (shouldRestructureForInterest(stabilized.interestSpiralYears)) {
+        interestSpiralCountries.add(countryId);
+      }
+    } else if (federalBudget.fiscalConsolidation) {
+      stabilizerUnset.fiscalConsolidation = "";
+    }
+
     // The legislature raises the statutory ceiling as the stock nears it; no law
     // does, so the stored limit would otherwise only ever be breached.
     const raisedCeiling = raisedDebtCeiling({
@@ -462,12 +618,10 @@ export async function processFiscalYear(
       ceiling: federalBudget.debt.ceiling,
     });
 
-    // `debt.principal` is owned by the bond ledger (see bonds/sovereignPrincipal.ts)
-    // and is deliberately absent from this write: the old rollover re-derived it
-    // from the treasury balance here, clobbering same-turn issuance/maturity state
-    // every fiscal boundary (#1975). Rate/ratio/rating below are refreshed off the
-    // bond-owned stock, never the balance.
-    await db.collection<FederalBudget>("federalBudget").updateOne(
+    // `debt.principal` is owned by the bond ledger (bonds/sovereignPrincipal.ts);
+    // never re-derive it from the balance here, or same-turn issuance/maturity is
+    // clobbered. Rate/ratio/rating below refresh off the bond-owned stock.
+    await federalBudgetCollection(db).updateOne(
       { _id: federalBudget._id },
       {
         $set: {
@@ -489,6 +643,20 @@ export async function processFiscalYear(
         },
       }
     );
+    if (Object.keys(stabilizerSet).length > 0 || Object.keys(stabilizerUnset).length > 0) {
+      stabilizerWrites.push({
+        updateOne: {
+          filter: { _id: federalBudget._id },
+          update: {
+            ...(Object.keys(stabilizerSet).length > 0 ? { $set: stabilizerSet } : {}),
+            ...(Object.keys(stabilizerUnset).length > 0 ? { $unset: stabilizerUnset } : {}),
+          },
+        },
+      });
+    }
+    if (consolidationPackage) {
+      consolidationNews.push({ countryId, record: consolidationPackage, gdp: newGdp });
+    }
 
     console.log(
       `[FiscalYear] ${countryId} FY${newFiscalYear} processed: Revenue $${(federalRevenue.total / 1e9).toFixed(1)}B, ` +
@@ -504,7 +672,8 @@ export async function processFiscalYear(
       console.log(`[FiscalYear] US debt ceiling raised to ${raisedCeiling} for FY${newFiscalYear}`);
     }
 
-    const countryStates = states.filter((state) => state.countryId === countryId);
+    // Background countries run no regional budgets.
+    const countryStates = background ? [] : states.filter((state) => state.countryId === countryId);
     for (const state of countryStates) {
       const stateId = String(state._id);
       const stateGrantAmount = grantDistribution[stateId] || 0;
@@ -519,7 +688,7 @@ export async function processFiscalYear(
         stateFactors,
         state.gdp,
         currentTurn,
-        regionalFinanceEnabled && countryId === COUNTRY_CONFIGS.US.id,
+        countryId === COUNTRY_CONFIGS.US.id,
         regionalLegislationTypeMap,
         countryId === COUNTRY_CONFIGS.US.id ? (usResetProgramsByRegion.get(stateId) ?? []) : []
       );
@@ -546,8 +715,22 @@ export async function processFiscalYear(
     processedBudgetIds.add(budgetId);
   }
 
+  if (stabilizerWrites.length > 0) {
+    await federalBudgetCollection(db).bulkWrite(stabilizerWrites);
+  }
+  if (backgroundFiscalWrites.length > 0) {
+    await macroCountriesCollection<MacroCountryState>(db).bulkWrite(backgroundFiscalWrites);
+  }
+  for (const { countryId, record, gdp } of consolidationNews) {
+    try {
+      await emitFiscalConsolidationNews(db, countryId, record, gdp);
+    } catch (err) {
+      console.error(`[FiscalYear] Consolidation news failed for ${countryId}:`, err);
+    }
+  }
+
   try {
-    const allBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
+    const allBudgets = await federalBudgetCollection(db).find({}).toArray();
     for (const budget of allBudgets) {
       if (!processedBudgetIds.has(String(budget._id))) continue;
       const countryId = resolveBudgetCountryId(budget);
@@ -568,6 +751,17 @@ export async function processFiscalYear(
       await evaluateSovereignAuctionForCountry(db, countryId, currentTurn, realtimeMs);
     } catch (err) {
       console.error(`[FiscalYear] Sovereign auction evaluation failed for ${countryId}:`, err);
+    }
+    // After the auction verdict, so a crisis the auctions fired keeps its own
+    // resolution; this only fires one for a country still outside a crisis.
+    if (interestSpiralCountries.has(countryId)) {
+      try {
+        await restructureForInterestSpiral(db, countryId, currentTurn, realtimeMs, {
+          spiralYears: backgroundSpiralYears.get(countryId),
+        });
+      } catch (err) {
+        console.error(`[FiscalYear] Interest-spiral restructuring failed for ${countryId}:`, err);
+      }
     }
   }
 }
@@ -591,9 +785,7 @@ async function processStateFiscalYear(
   legislationTypeMap: ReadonlyMap<string, LegislationType> = new Map(),
   resetPrograms: readonly ResetLawProgramDocument[] = []
 ): Promise<void> {
-  const stateBudget = await db
-    .collection<StateBudget>("stateBudgets")
-    .findOne({ _id: stateId, countryId });
+  const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
     // State budget doesn't exist yet, skip
     return;
@@ -620,20 +812,16 @@ async function processStateFiscalYear(
   const newTaxBases = stateBudget.taxBases;
   let newStateGdp = stateBudget.stateGdp || 0;
   if (stateBudget.taxBases) {
-    // Base growth moved to the per-turn `fiscalBaseGrowth` phase (grows each
-    // state's bases by that state's own factors). fiscalYear no longer grows
-    // them (double-count); it reconciles stateGdp + state revenue annually off
-    // the per-turn-grown bases (`newTaxBases` stays the current bases).
-    // A1 SSOT: stateGdp is a snapshot of `state.gdp × 1M` (the engine grew the
-    // region's level per turn). Fall back to annual compounding only when the
-    // region carries no SSOT gdp yet (pre-reconciliation safety).
+    // stateGdp is a snapshot of `state.gdp × 1M` (SSOT, grown per turn by the
+    // fiscalBaseGrowth phase). Fall back to annual compounding only when the
+    // region carries no SSOT gdp yet.
     newStateGdp =
       stateGdpMillions && stateGdpMillions > 0
         ? stateGdpMillions * 1_000_000
         : newStateGdp * (1 + economicFactors.gdpGrowth / 100);
 
     // Update tax bases in DB before revenue calculation
-    await db.collection<StateBudget>("stateBudgets").updateOne(
+    await stateBudgetsCollection(db).updateOne(
       { _id: stateId, countryId },
       {
         $set: {
@@ -755,7 +943,7 @@ async function processStateFiscalYear(
   // Update balance (accumulated surplus/deficit over time)
   const newBalance = (stateBudget.balance ?? 0) + surplus;
 
-  await db.collection<StateBudget>("stateBudgets").updateOne(
+  await stateBudgetsCollection(db).updateOne(
     { _id: stateId, countryId },
     {
       $set: {
@@ -795,9 +983,8 @@ async function applyDebtPenalties(
   }
 
   if (trustPenalty > 0) {
-    // Debt→trust now lands on the political BOARD, via the same events channel
-    // as the sovereign-default hit. It previously $inc'd a legacy path that no
-    // country has any more, so the penalty had silently stopped applying.
+    // Debt→trust lands on the political BOARD via the same events channel as
+    // the sovereign-default hit, not a legacy path.
     await applyLegacyTrustDelta(db, countryId, -trustPenalty);
   }
 }
@@ -819,15 +1006,15 @@ export async function saveFiscalYearSnapshot(
   // singleton for all of them, so both reads below were pure repetition there.
   // Omitted by the fiscal-year rollover caller, which fetches as before.
   const budget =
-    preloaded?.budget ??
-    (await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetDocId }));
+    preloaded?.budget ?? (await federalBudgetCollection(db).findOne({ _id: budgetDocId }));
   if (!budget) return;
 
   let turn = preloaded?.currentTurn;
   if (turn === undefined) {
-    const gameState = await db
-      .collection("gameState")
-      .findOne({ _id: "current" } as Record<string, unknown>, { projection: { currentTurn: 1 } });
+    const gameState = await gameStateCollection<Document>(db).findOne(
+      { _id: "current" } as Record<string, unknown>,
+      { projection: { currentTurn: 1 } }
+    );
     turn = (gameState as { currentTurn?: number } | null)?.currentTurn ?? 0;
   }
 
@@ -841,18 +1028,16 @@ export async function saveFiscalYearSnapshot(
   } else {
     lawQuery.countryId = countryId;
   }
-  const laws = await db.collection<EnactedLaw>("enactedLaws").find(lawQuery).toArray();
+  const laws = await enactedLawsCollection(db).find(lawQuery).toArray();
 
   // State grants breakdown
   const [states, stateBudgets] = await Promise.all([
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find({ countryId } as Record<string, unknown>)
       .toArray(),
     // Scope the budget fetch to the same country so a cross-country state-ID
     // collision (e.g. CN HB / DE HB) can't surface the wrong budget below.
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({ countryId } as Record<string, unknown>)
       .toArray(),
   ]);
@@ -914,9 +1099,9 @@ export async function saveFiscalYearSnapshot(
     createdAt: new Date(),
   };
 
-  await db
-    .collection<FederalBudgetSnapshot>("federalBudgetSnapshots")
-    .replaceOne({ _id: snapshot._id }, snapshot, { upsert: true });
+  await federalBudgetSnapshotsCollection(db).replaceOne({ _id: snapshot._id }, snapshot, {
+    upsert: true,
+  });
 
   console.log(`[FiscalYear] Snapshot saved: ${snapshot._id}`);
 }

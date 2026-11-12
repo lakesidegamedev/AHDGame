@@ -4,17 +4,12 @@ import { condition as c } from "@/lib/states/conditions/condition";
 /**
  * Japan's per-modifier threshold overrides and suppressions.
  *
- * Moved out of `src/lib/states/conditions/countryPatches.ts`, which now
- * forwards to this. Values unchanged.
+ * `suppress: true` removes the modifier for Japan entirely; a `conditions`
+ * list re-thresholds it. Most suppressions exist because the seed input is
+ * nationally flat, so the modifier cannot differentiate regions.
  *
- * ⚠ `suppress` AND `conditions` MEAN DIFFERENT THINGS. `suppress: true`
- * removes the modifier for Japan entirely; a `conditions` list re-thresholds it.
- * Most of Japan's suppressions are there because the seed input is nationally
- * flat -- a metric identical in all 8 regions cannot differentiate them, so the
- * modifier would fire everywhere or nowhere and say nothing either way.
- *
- * Patches apply AFTER the global and era1991 definitions, and a named modifier
- * replaces that definition's thresholds wholesale rather than merging with them.
+ * Applied AFTER global and era1991 definitions; a named modifier replaces
+ * that definition's thresholds wholesale rather than merging.
  */
 export const JP_MODIFIER_PATCHES: Record<string, CountryModifierPatch> = {
   // Nationally low / flat baselines — only fire on meaningful regional spread.

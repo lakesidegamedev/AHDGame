@@ -23,6 +23,8 @@ import { getGameTime } from "@/lib/time/gameTime";
 import { buildPrimaryViewerCampaign } from "@/lib/elections/primaryPartyDetail";
 import { loadStateTravelOptions } from "@/lib/elections/stateTravelOptions";
 import type { CampaignStatePresence } from "@/lib/elections/dto/campaignStatePresence";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export type { CampaignStatePresence };
 
@@ -37,10 +39,14 @@ export async function buildCampaignStatePresence(
 ): Promise<CampaignStatePresence | null> {
   const { election, character } = args;
   if (!election || !character) return null;
-  if (election.electionType !== "president" || election.countryId !== "US") return null;
+  if (
+    election.electionType !== "president" ||
+    !countryHasFeature("usElections", election.countryId)
+  )
+    return null;
   if (election.status !== "active") return null;
 
-  const candidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+  const candidate = await electionCandidatesCollection(db).findOne({
     electionId: election._id,
     characterId: character._id,
     status: "active",

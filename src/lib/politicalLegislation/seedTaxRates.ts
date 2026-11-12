@@ -54,4 +54,39 @@ export const SEED_TAX_RATES_1953: Record<LawCountryId, Record<SeedTaxType, numbe
     salesTax: 28, // product levy — the revenue anchor
     tariffs: 0,
   },
+  DE: {
+    incomeTax: 38,
+    domesticCorporateTax: 30,
+    foreignCorporateTax: 30,
+    payrollTax: 12,
+    salesTax: 19,
+    tariffs: 0,
+  },
+  // Canada's table is its 2027 opening, not 1953: combined federal and
+  // provincial effective rates. Income tax, corporate tax and sales tax are
+  // the blended national rates; payroll is pension plus employment insurance.
+  CA: {
+    incomeTax: 26,
+    domesticCorporateTax: 26,
+    foreignCorporateTax: 26,
+    payrollTax: 9.8,
+    salesTax: 9,
+    tariffs: 1,
+  },
+  JP: {
+    incomeTax: 33,
+    domesticCorporateTax: 30,
+    foreignCorporateTax: 30,
+    payrollTax: 15,
+    salesTax: 10,
+    tariffs: 0,
+  },
+  CN: {
+    incomeTax: 20,
+    domesticCorporateTax: 25,
+    foreignCorporateTax: 25,
+    payrollTax: 17,
+    salesTax: 13,
+    tariffs: 2,
+  },
 };

@@ -173,7 +173,7 @@ export const STARTING_STATE_1991_COUNTRIES: readonly ScenarioCountry[] = [
     countryId: "US",
     contextLabel: "102nd Congress (1991-1993)",
     posture:
-      "Democrats held a strong House majority and the Senate, with Bush in the White House. One Independent (Bernie Sanders, VT) joined the House.",
+      "Democrats held a strong House majority and the Senate, with a Republican in the White House. One Independent, from Vermont, sat in the House.",
     chambers: [
       buildChamber("House of Representatives", "House", US_HOUSE_1992),
       buildChamber("Senate", "Senate", US_SENATE_1992),
@@ -202,7 +202,7 @@ export const STARTING_STATE_1991_COUNTRIES: readonly ScenarioCountry[] = [
     countryId: "DE",
     contextLabel: "12th Bundestag (1990-1994)",
     posture:
-      "First all-German Bundestag after reunification. Kohl's CDU/CSU-FDP coalition held the chamber.",
+      "First all-German Bundestag after reunification. The CDU/CSU-FDP coalition held the chamber.",
     chambers: [
       buildChamber("Bundestag", "Bundestag", DE_BUNDESTAG_1990),
       buildChamber("Ministerpräsidenten", "Länder", DE_MINISTERPRAESIDENTEN_1992),

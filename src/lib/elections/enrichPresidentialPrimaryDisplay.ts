@@ -5,10 +5,8 @@ import {
   activePrimaryNights,
   primaryNightForParty,
 } from "@/lib/elections/liveResults/primaryNight";
-import { usesCampaignAds } from "@/lib/campaignTargeting/rules";
 import { loadCampaignProjectionContext } from "@/lib/campaignTargeting/audience";
 import type { Db } from "mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import type {
   ElectionCandidate,
   Character,
@@ -28,7 +26,7 @@ import {
 import type { PollingData } from "./electionResponseTypes";
 import { projectPrimaryByState } from "@/lib/primaryProjection";
 import { loadRegionalBonusMaps } from "@/lib/primaryRegionalBonusLoader";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine/candidateEnrichment";
 import {
   getAllStaggerStates,
   getDelegateMajority,
@@ -41,6 +39,9 @@ import {
   applyProjectedDelegateShares,
   summarizePrimaryProjection,
 } from "./presidentialPrimaryDisplay";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
 
 export async function applyPresidentialPrimaryDisplay(
   db: Db,
@@ -66,40 +67,33 @@ export async function applyPresidentialPrimaryDisplay(
   // this display path stays coherent with the race's actual calendar even if a
   // future schedule ever changes membership.
   const staggerStateIds = getAllStaggerStates(schedule);
-  const campaignContext = usesCampaignAds({ campaignRulesVersion }, candidates)
-    ? {
-        ...(await loadCampaignProjectionContext(db, staggerStateIds)),
-        campaignRulesVersion: campaignRulesVersion ?? 0,
-      }
-    : undefined;
-  const [categories, states, demographics, resolvedStatePartyOrgs, engineEnriched] =
-    await Promise.all([
-      loadDemographicCategories(db),
-      db
-        .collection<State>("states")
-        .find({ _id: { $in: staggerStateIds } })
-        .toArray(),
-      db
-        .collection<StateDemographics>("stateDemographics")
-        .find({ _id: { $in: staggerStateIds } })
-        .toArray(),
-      preloadedStatePartyOrgs.length > 0
-        ? Promise.resolve(
-            preloadedStatePartyOrgs.filter((org) => (org.countryId ?? "US") === countryId)
-          )
-        : db
-            .collection<StatePartyOrg>("statePartyOrg")
-            .find({ countryId: countryId as CountryId })
-            .toArray(),
-      // Full engine enrichment (partyInfluence + chair roles) — must match the
-      // primary map page / stagger path. Hand-building from display candidates
-      // previously dropped partyInfluence and flipped WTA projections vs
-      // `/president/primary/[partyId]`.
-      fetchEnrichedCandidates(candidates, {
-        includePartyPositions: true,
-        countryId: countryId as CountryId,
-      }),
-    ]);
+  const campaignContext = {
+    ...(await loadCampaignProjectionContext(db, staggerStateIds)),
+    campaignRulesVersion: campaignRulesVersion ?? 0,
+  };
+  const [states, demographics, resolvedStatePartyOrgs, engineEnriched] = await Promise.all([
+    statesCollection(db)
+      .find({ _id: { $in: staggerStateIds } })
+      .toArray(),
+    stateDemographicsCollection(db)
+      .find({ _id: { $in: staggerStateIds } })
+      .toArray(),
+    preloadedStatePartyOrgs.length > 0
+      ? Promise.resolve(
+          preloadedStatePartyOrgs.filter((org) => (org.countryId ?? "US") === countryId)
+        )
+      : statePartyOrgCollection(db)
+          .find({ countryId: countryId as CountryId })
+          .toArray(),
+    // Full engine enrichment (partyInfluence + chair roles) — must match the
+    // primary map page / stagger path. Hand-building from display candidates
+    // previously dropped partyInfluence and flipped WTA projections vs
+    // `/president/primary/[partyId]`.
+    fetchEnrichedCandidates(candidates, {
+      includePartyPositions: true,
+      countryId: countryId as CountryId,
+    }),
+  ]);
 
   const stateMap = new Map(states.map((state) => [state._id as string, state]));
   const demographicsMap = new Map(
@@ -250,7 +244,6 @@ export async function applyPresidentialPrimaryDisplay(
       stateIds: staggerStateIds,
       stateMap,
       demographicsMap,
-      categories,
       statePartyOrgs: statePartyOrgsForParty,
       partyPosition: {
         economicPosition: party?.economicPosition ?? 0,

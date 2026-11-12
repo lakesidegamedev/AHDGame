@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import type { Db, ObjectId } from "mongodb";
-import type { Character, GameState, User } from "@/lib/db/types";
+import type { GameState, User } from "@/lib/db/types";
 import type { DiscordBotFund, CasinoGameStats } from "@/lib/db/types/discordBotFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -10,6 +10,10 @@ import {
   refundCharacterCash,
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { discordBotFundsCollection } from "@/lib/db/repositories/discordBotFunds";
 
 /**
  * The casino house bank.
@@ -48,16 +52,17 @@ export type ResolvePlayerResult =
   { ok: true; player: CasinoPlayer } | { ok: false; status: 403 | 404; error: string };
 
 export async function resolveCasinoPlayer(db: Db, discordId: string): Promise<ResolvePlayerResult> {
-  const user = await db.collection<User>("users").findOne({ discordId });
+  const user = await usersCollection(db).findOne({ discordId });
   if (!user) return { ok: false, status: 404, error: "No user found with that Discord ID" };
   if (user.isBanned) return { ok: false, status: 403, error: "This account is banned" };
-  const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+  const character = await charactersCollection(db).findOne({ userId: user._id });
   if (!character) {
     return { ok: false, status: 404, error: "User has no character. Create a character first." };
   }
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
   const currency = getHomeCurrency(character, gameState?.preset);
   const rate = await getCurrencyFxRate(db, currency);
   return {
@@ -86,7 +91,7 @@ export function toLocal(anchorAmount: number, rate: number): number {
  * from the legacy per-currency buckets the first time a new game touches it.
  */
 export async function loadHouse(db: Db): Promise<DiscordBotFund & { anchorBalance: number }> {
-  const funds = db.collection<DiscordBotFund>("discordBotFunds");
+  const funds = discordBotFundsCollection(db);
   let fund = await funds.findOne({ name: CASINO_FUND_NAME });
   if (!fund) {
     const now = new Date();
@@ -212,7 +217,7 @@ export async function creditPlayer(
   localAmount: number
 ): Promise<boolean> {
   if (localAmount <= 0) return true;
-  const result = await db.collection<Character>("characters").updateOne(
+  const result = await charactersCollection(db).updateOne(
     { _id: player.characterId },
     {
       $inc: buildPersonalBalanceInc(localAmount, player.currency, true),
@@ -246,7 +251,7 @@ export async function applyHouseResult(
   const net = stakeAnchor - paidAnchor;
   const filter: Record<string, unknown> = { name: CASINO_FUND_NAME };
   if (net < 0) filter.anchorBalance = { $gte: -net };
-  const result = await db.collection<DiscordBotFund>("discordBotFunds").updateOne(filter, {
+  const result = await discordBotFundsCollection(db).updateOne(filter, {
     $inc: { anchorBalance: net, ...statsInc(game, stakeAnchor, paidAnchor, plays) },
     $set: { updatedAt: new Date() },
   });
@@ -261,8 +266,7 @@ export async function reverseHouseResult(
   paidAnchor: number,
   plays = 1
 ): Promise<void> {
-  await db
-    .collection<DiscordBotFund>("discordBotFunds")
+  await discordBotFundsCollection(db)
     .updateOne(
       { name: CASINO_FUND_NAME },
       {

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="Space Traffic Rules emblem">
+  <title>Space Traffic Rules</title>
+  <rect width="240" height="160" fill="#1F2233"/>
+  <g transform="translate(120 80)">
+    <circle r="52" fill="#3B3F58"/>
+    <circle r="12" fill="#E3E5F2"/>
+    <ellipse rx="42" ry="16" fill="none" stroke="#E3E5F2" stroke-width="3" transform="rotate(-20)"/>
+    <ellipse rx="42" ry="16" fill="none" stroke="#E3E5F2" stroke-width="3" transform="rotate(40)"/>
+    <circle cx="38" cy="-14" r="4" fill="#E3E5F2"/>
+  </g>
+</svg>

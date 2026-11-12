@@ -16,6 +16,9 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 
 export interface AdvertisingSupplierOption {
   id: string;
@@ -46,8 +49,7 @@ export async function countAdvertisingMediaSectorModels(
   corporationId: ObjectId,
   year: number | null | undefined
 ): Promise<AdvertisingMediaSectorModelCounts> {
-  const sectors = await db
-    .collection("corporateSectors")
+  const sectors = await corporateSectorsCollection<Document>(db)
     .find({ corporationId, sectorType: "media" } as never)
     .project<{ strategyId?: string | null }>({ strategyId: 1 })
     .toArray();
@@ -66,8 +68,7 @@ export async function listAdvertisingSuppliers(
   buyer: Corporation,
   year: number | null | undefined
 ): Promise<AdvertisingSupplierList> {
-  const groups = await db
-    .collection("corporateSectors")
+  const groups = await corporateSectorsCollection<Document>(db)
     .aggregate<{
       _id: unknown;
       sectors: number;
@@ -89,8 +90,7 @@ export async function listAdvertisingSuppliers(
     .toArray();
   const ids = groups.map((group) => group._id);
   const corps = ids.length
-    ? await db
-        .collection("corporations")
+    ? await corporationsCollection(db)
         .find({
           _id: { $in: ids as never[] },
           ceoVacant: { $ne: true },

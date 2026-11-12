@@ -1,0 +1,63 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "regionalBillAssentTitle": "Leader",
+    "legislature": {
+      "name": "Senedd Cymru",
+      "lowerChamber": {
+        "key": "senedd",
+        "name": "Senedd Cymru",
+        "shortName": "Senedd",
+        "seats": 60,
+        "description": "60 Members of the Senedd elected by the Additional Member System - 40 constituency seats plus 20 regional list seats."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "First Minister",
+        "labelPlural": "First Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "senedd",
+        "label": "Member of the Senedd",
+        "labelPlural": "Members of the Senedd",
+        "chamberKey": "senedd",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "governor",
+        "label": "Leader",
+        "labelPlural": "Leaders",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "labelPlural": "Regional Councillors",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of England",
+        "labelPlural": "Governors of the Bank of England",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true }
+  }
+}

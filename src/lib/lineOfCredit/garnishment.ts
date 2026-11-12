@@ -17,6 +17,7 @@ import {
   type LocEffect,
 } from "./settlement";
 import { isDeepStrictEqual } from "node:util";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface GarnishmentResult {
   borrowersGarnished: number;
@@ -40,8 +41,7 @@ export async function garnishLocFromIncome(
   if (!charPayments.size || !(await isLineOfCreditEnabled()))
     return { borrowersGarnished: 0, totalInternalGarnished: 0 };
   const ids = [...charPayments.keys()].filter((id) => ObjectId.isValid(id));
-  const chars = await db
-    .collection<Character & { lineOfCreditRevision?: number }>("characters")
+  const chars = await charactersCollection<Character & { lineOfCreditRevision?: number }>(db)
     .find(
       { _id: { $in: ids.map((id) => new ObjectId(id)) } },
       { projection: { _id: 1, name: 1, countryId: 1, lineOfCredit: 1, lineOfCreditRevision: 1 } }

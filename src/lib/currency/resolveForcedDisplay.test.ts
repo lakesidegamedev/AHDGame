@@ -27,8 +27,8 @@ describe("resolveForcedDisplay", () => {
   it("falls back to the baseline rate when the requested currency has no live rate entry", () => {
     const eur = resolveForcedDisplay(42, "EUR", RATES, undefined, false, BASELINES);
     expect(eur.symbol).toBe("€");
-    // CAD has no launched country config yet — stays on the last-resort path.
-    expect(resolveForcedDisplay(42, "CAD", RATES, undefined, false, BASELINES).symbol).toBe("₳");
+    // CAD has a country config but no live rate here, so it also takes the baseline path.
+    expect(resolveForcedDisplay(42, "CAD", RATES, undefined, false, BASELINES).symbol).toBe("C$");
   });
 
   it("last-resort anchor passthrough only for a currency no config knows", () => {

@@ -10,10 +10,10 @@ import {
 // UKR/BLR/BAL joined SCO/WAL as latent. The three union republics are now
 // authored countries with their own regions, chambers, budgets and map shards,
 // but they ship at Poland's standing: seeded and visible on the world map, not
-// yet offered to players.
-const LATENT: CountryId[] = ["SCO", "WAL", "BLR", "UKR", "BAL"];
+// yet offered to players. QC is Canada's latent successor, like SCO and WAL.
+const LATENT: CountryId[] = ["SCO", "WAL", "BLR", "UKR", "BAL", "QC"];
 
-describe("Latent countries (SCO/WAL/UKR/BLR/BAL) are invisible in SP1", () => {
+describe("Latent countries (SCO/WAL/UKR/BLR/BAL/QC) are invisible in SP1", () => {
   it("are both coming-soon", () => {
     for (const id of LATENT) expect(getCountryConfig(id).status).toBe("coming-soon");
   });

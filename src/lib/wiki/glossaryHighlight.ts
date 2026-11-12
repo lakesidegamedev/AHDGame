@@ -1,18 +1,11 @@
 import { WIKI_GLOSSARY } from "@/lib/seeds/wiki/glossary";
 
-export interface CompiledGlossaryTerm {
-  canonical: string;
-  definition: string;
-  /** Lowercased phrases that map to this entry, longest first. */
-  phrases: string[];
-}
-
-export interface GlossaryTextHit {
+interface GlossaryTextHit {
   type: "text";
   value: string;
 }
 
-export interface GlossaryTermHit {
+interface GlossaryTermHit {
   type: "term";
   value: string;
   canonical: string;

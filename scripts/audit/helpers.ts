@@ -7,14 +7,15 @@
  *   NPI = nationalInfluence  — national stat, uncapped. Used in presidential elections only.
  */
 
+import { electorateFromFixture } from "../../src/lib/demographics/electorateFixture";
 import { demographicCategories } from "../../src/lib/seeds/demographicCategories";
 import { stateDemographics } from "../../src/lib/seeds/stateDemographics";
 import {
   calcStateTurnout,
   distributeVotesByGroupLevelAllocation,
-} from "../../src/lib/electionEngine";
-import type { EnrichedCandidate } from "../../src/lib/electionEngine";
-import type { StateDemographics } from "../../src/lib/db/types/demographics";
+} from "../../src/lib/elections/engine";
+import type { EnrichedCandidate } from "../../src/lib/elections/engine";
+import type { CensusGroupView } from "../../src/lib/db/types/demographics";
 
 export { normalizeNPI } from "../../src/lib/utils/normalizeNPI";
 export { calcAppeal, approvalScalar, MAX_APPEAL } from "../../src/lib/utils/demographicAppeal";
@@ -37,7 +38,7 @@ export { calculateStateLean } from "../../src/lib/utils/demographics";
 
 export const categories = demographicCategories;
 
-export const STATE_DEMOGRAPHICS: Record<string, StateDemographics> = {};
+export const STATE_DEMOGRAPHICS: Record<string, CensusGroupView> = {};
 for (const sd of stateDemographics) {
   STATE_DEMOGRAPHICS[sd._id] = sd;
 }
@@ -129,15 +130,15 @@ export function runRace(
   if (!demographics) throw new Error(`No demographics for state: ${stateId}`);
 
   const population = 1_000_000;
-  const totalPool = calcStateTurnout(population, demographics, categories);
+  const electorate = electorateFromFixture(demographics, categories);
+  const totalPool = calcStateTurnout(population, electorate);
 
   const { votesPerCandidate } = distributeVotesByGroupLevelAllocation(
     candidates,
     totalPool,
     totalPool,
     population,
-    demographics,
-    categories,
+    electorate,
     partyOrgMap,
     { includeInfluenceInAppeal: false, useNationalInfluenceForReach: false }
   );
@@ -163,15 +164,15 @@ export function runPresidentialRace(
   if (!demographics) throw new Error(`No demographics for state: ${stateId}`);
 
   const population = 1_000_000;
-  const totalPool = calcStateTurnout(population, demographics, categories);
+  const electorate = electorateFromFixture(demographics, categories);
+  const totalPool = calcStateTurnout(population, electorate);
 
   const { votesPerCandidate } = distributeVotesByGroupLevelAllocation(
     candidates,
     totalPool,
     totalPool,
     population,
-    demographics,
-    categories,
+    electorate,
     partyOrgMap,
     {
       includeInfluenceInAppeal: true,

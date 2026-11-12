@@ -5,6 +5,10 @@ import { apportionHouseSeats } from "@/lib/elections/apportionment";
 import { createSystemNewsPost } from "@/lib/news";
 import { regenerateCongressionalDistricts } from "@/lib/redistricting/regenerate";
 import { getAutoNeutralizeStateIds } from "@/lib/redistricting/autoNeutralizeStates";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** Total US House seats redistributed each census (constitutional cap). */
 export const US_HOUSE_TOTAL_SEATS = 435;
@@ -73,9 +77,9 @@ export async function runCensus(
   _turn: number,
   currentYearOverride?: number
 ): Promise<CensusResult> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" } as Partial<GameState>);
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" } as Partial<GameState>);
   // Prefer the turn context's authoritative year: the persisted
   // gameState.currentYear is only stamped at turn end (#2059).
   const currentYear = currentYearOverride ?? gameState?.currentYear;
@@ -83,10 +87,12 @@ export async function runCensus(
     return { ran: false };
   }
 
-  const usStates = (await db
-    .collection("states")
-    .find({ countryId: "US" }, { projection: { _id: 1, population: 1, houseDistricts: 1 } })
-    .toArray()) as unknown as Array<{ _id: string; population?: number; houseDistricts?: number }>;
+  const usStates = await statesCollection<Document>(db)
+    .find<{ _id: string; population?: number; houseDistricts?: number }>(
+      { countryId: "US" },
+      { projection: { _id: 1, population: 1, houseDistricts: 1 } }
+    )
+    .toArray();
 
   // Apportion only over states that currently hold House seats (excludes DC etc.).
   const populations: Record<string, number> = {};
@@ -104,25 +110,12 @@ export async function runCensus(
   const ops: AnyBulkWriteOperation<State>[] = Object.entries(newSeats).map(([state, seats]) => ({
     updateOne: { filter: { _id: state }, update: { $set: { houseDistricts: seats } } },
   }));
-  if (ops.length > 0) await db.collection<State>("states").bulkWrite(ops);
+  if (ops.length > 0) await (await getStatesCollection(db)).bulkWrite(ops);
 
-  // Regenerate the maps of states whose seat count changed, plus — only when the
-  // redistricting system is on — commission-run states that auto-neutralize each
-  // census. Neutral rebuilds; a legislature-drawn trifecta may still redraw this
-  // census.
-  //
-  // The reapportioned states are redrawn REGARDLESS of the flag (#1190). A
-  // state's district docs are its delegation size of record for
-  // `districtedHouseResolution`, and they are seeded unconditionally at world
-  // seed, so leaving them at the old count on a flag-off world means the map
-  // simply disagrees with `houseDistricts`. Turning the flag on later then
-  // resurrects the exact mismatch this ticket fixes: allocation over a stale
-  // district count against a correctly-sized race. The flag gates whether
-  // districts DRIVE resolution, not whether they are accurate.
+  // Regenerate districts for states whose seat count changed, plus states that
+  // auto-neutralize each census.
   const changed = deltas.map((d) => d.state);
-  const autoNeutral = gameState?.redistrictingEnabled
-    ? await getAutoNeutralizeStateIds(db, "US")
-    : [];
+  const autoNeutral = await getAutoNeutralizeStateIds(db, "US");
   const toRegen = [...new Set([...changed, ...autoNeutral])];
   if (toRegen.length > 0) {
     await regenerateCongressionalDistricts(db, {
@@ -132,7 +125,9 @@ export async function runCensus(
     });
   }
 
-  await db.collection<GameState>("gameState").updateOne({ _id: "current" } as Partial<GameState>, {
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" } as Partial<GameState>, {
     // Stamp the year (re-fire guard) AND a compact seat-change summary the region
     // population route reads to show a per-region reapportionment notice (P1d-3).
     $set: {

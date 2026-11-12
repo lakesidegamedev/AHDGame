@@ -1,9 +1,9 @@
 import type { Db } from "mongodb";
-import { getVietnamEscalation } from "@/lib/crises/vietnamEscalation";
 import { livingVietnamAsLegacyState } from "@/lib/livingConflict/vietnamCompat";
 import { listNuclearPrograms } from "@/lib/db/collections/nuclearPrograms";
 import { getConflictsCollection, listActiveConflicts } from "@/lib/db/collections/conflicts";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
+import type { CountryId } from "@/lib/constants/countries";
 import {
   nuclearArmedCountryIds,
   warPressures,
@@ -13,6 +13,8 @@ import {
   type WarPressureInput,
   type WarPressureSummary,
 } from "./tension";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import type { Document } from "mongodb";
 
 export interface StandingPressureInputs {
   escalationLevel: number;
@@ -27,6 +29,9 @@ export interface StandingPressureSnapshot {
   pressures: TensionPressures;
   warSummary: WarPressureSummary;
   totalWarheads: number;
+  /** The wars the pressures were read from, for the 2027 bloc dyads. */
+  wars: WarPressureInput[];
+  nuclearCountries: ReadonlySet<CountryId>;
 }
 
 /** Adapt the canonical conflict document to the pressure model in one place. */
@@ -75,14 +80,13 @@ export function buildStandingPressureSnapshot(
     (sum, program) => sum + Math.max(0, program.warheads),
     0
   );
-  const warSummary = warPressures(
-    input.conflicts,
-    nuclearArmedCountryIds(input.programs),
-    input.currentTurn
-  );
+  const nuclearCountries = nuclearArmedCountryIds(input.programs);
+  const warSummary = warPressures(input.conflicts, nuclearCountries, input.currentTurn);
   return {
     totalWarheads,
     warSummary,
+    wars: input.conflicts,
+    nuclearCountries,
     pressures: {
       escalationLevel: input.escalationLevel,
       activeCrises: input.activeCrises,
@@ -98,12 +102,11 @@ export function buildStandingPressureSnapshot(
 /** Read current standing pressure, including all active crises and conflicts. */
 export async function readStandingPressureSnapshot(
   db: Db,
-  gameState: { livingConflictsEnabled?: boolean },
   currentTurn?: number
 ): Promise<StandingPressureSnapshot> {
   const [vietnam, activeCrises, programs, conflicts] = await Promise.all([
-    gameState.livingConflictsEnabled ? livingVietnamAsLegacyState(db) : getVietnamEscalation(db),
-    db.collection("crises").countDocuments({ status: "active" }),
+    livingVietnamAsLegacyState(db),
+    crisesCollection<Document>(db).countDocuments({ status: "active" }),
     listNuclearPrograms(db),
     listActiveConflicts(db),
   ]);

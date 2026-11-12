@@ -6,6 +6,7 @@ import { BR_ELECTIONS } from "@/lib/countries/br/elections";
 import { IE_ELECTIONS } from "@/lib/countries/ie/elections";
 import { CN_ELECTIONS } from "@/lib/countries/cn/elections";
 import { NG_ELECTIONS } from "@/lib/countries/ng/elections";
+import { CA_MAJOR_DEFAULT_PARTIES } from "@/lib/countries/ca/data/caParties";
 
 export interface MajorDefaultParty {
   abbr: string;
@@ -14,13 +15,14 @@ export interface MajorDefaultParty {
 
 /**
  * Major default parties by country, for seed-time tier assignment (D5, the
- * 2026-06-18 tier proposal). Any default party NOT listed here seeds **Minor**;
+ * tier proposal). Any default party NOT listed here seeds **Minor**;
  * custom parties always seed Minor.
  *
- * `presets` narrows a Major status to specific eras — needed only where a party
- * exists in BOTH presets but is Major in only one (DE Greens, BR PT). Era-
- * exclusive parties (e.g. JP JSP/CDP, IE SF, BR PMDB/PFL/PL) only seed in their
- * own preset anyway, so they need no `presets` filter.
+ * `presets` narrows a Major status to specific eras, needed only where a party
+ * seeds in eras where it is Minor (DE Greens, BR PT before 2019). Build ranges
+ * with `seedPresetsFrom` so a new preset is covered. Era-exclusive parties
+ * (e.g. JP JSP/CDP, IE SF, BR PMDB/PFL/PL) only seed in their own presets
+ * anyway, so they need no `presets` filter.
  *
  * Seed tier is only the STARTING value — the `partyTierTurn` phase recomputes
  * tier from live Org every turn, so this just sets the badge/cap at game start.
@@ -32,6 +34,7 @@ export const MAJOR_DEFAULT_PARTIES: Record<string, MajorDefaultParty[] | undefin
   JP: JP_ELECTIONS.majorDefaultParties,
   BR: BR_ELECTIONS.majorDefaultParties,
   IE: IE_ELECTIONS.majorDefaultParties,
+  CA: CA_MAJOR_DEFAULT_PARTIES,
   CN: CN_ELECTIONS.majorDefaultParties,
   NG: NG_ELECTIONS.majorDefaultParties,
 };

@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { getStatePartyOrgDocumentId } from "@/lib/db/partyLookup";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 export type SlateAssignerRole =
   "national_chair" | "national_vice_chair" | "state_chair" | "state_vice_chair";
@@ -52,9 +53,9 @@ export async function resolveSlateAuthority(args: {
     return buildAuthority("national_vice_chair");
   }
 
-  const stateParty = await args.db
-    .collection<StatePartyOrg>("statePartyOrg")
-    .findOne({ _id: getStatePartyOrgDocumentId(args.stateId, args.party) });
+  const stateParty = await statePartyOrgCollection(args.db).findOne({
+    _id: getStatePartyOrgDocumentId(args.stateId, args.party),
+  });
   if (stateParty?.chairId?.toString() === actorId) {
     return buildAuthority("state_chair");
   }

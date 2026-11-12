@@ -5,7 +5,7 @@ import {
 } from "./rules/openingInflation";
 
 /**
- * Runtime constants the 1991 opening is calibrated against (#3317):
+ * Runtime constants the 1991 opening is calibrated against:
  * MIN_INFLATION (budget/inflation.ts) and REAL_WAGE_CLAMP /
  * WAGE_INFLATION_PASSTHROUGH (metricEngine/registry/economic.ts). Copied, not
  * imported, so the seed graph stays free of the turn engine; a test pins them.

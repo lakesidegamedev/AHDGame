@@ -16,8 +16,10 @@
 import { ObjectId, type Db } from "mongodb";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
-const FUND_POSITIONS = "indexFundPositions";
 export const INDEX_FUNDS = "indexFunds";
 export const PENSION_SCHEMES = "pensionSchemes";
 
@@ -37,8 +39,7 @@ export async function loadSchemeInvestedValues(
   const byScheme = new Map<string, number>();
   if (schemeIds.length === 0) return byScheme;
 
-  const positions = await db
-    .collection<IndexFundPosition>(FUND_POSITIONS)
+  const positions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find(
       { holderKind: "pension_scheme", pensionSchemeId: { $in: schemeIds } },
       { projection: { pensionSchemeId: 1, fundId: 1, units: 1 } }
@@ -49,8 +50,7 @@ export async function loadSchemeInvestedValues(
   const fundIds = [...new Set(positions.map((p) => p.fundId.toString()))].map(
     (id) => new ObjectId(id)
   );
-  const funds = await db
-    .collection<IndexFund>(INDEX_FUNDS)
+  const funds = await indexFundsCollection<IndexFund>(db)
     .find({ _id: { $in: fundIds } }, { projection: { quotedNav: 1 } })
     .toArray();
   const navByFund = new Map(funds.map((f) => [f._id.toString(), f.quotedNav]));
@@ -83,8 +83,7 @@ export async function loadSchemeInvestedValues(
  * should not be touched every turn.
  */
 export async function refreshSchemeInvestedValues(db: Db): Promise<number> {
-  const schemes = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
+  const schemes = await pensionSchemesCollection<PensionScheme>(db)
     .find({}, { projection: { investedValueAnchor: 1 } })
     .toArray();
   if (schemes.length === 0) return 0;
@@ -103,9 +102,10 @@ export async function refreshSchemeInvestedValues(db: Db): Promise<number> {
     // same stored numbers, so a scheme whose units and NAV did not move
     // produces a byte-identical figure and is correctly skipped.
     if (next === current) continue;
-    await db
-      .collection<PensionScheme>(PENSION_SCHEMES)
-      .updateOne({ _id: scheme._id }, { $set: { investedValueAnchor: next, updatedAt: now } });
+    await pensionSchemesCollection<PensionScheme>(db).updateOne(
+      { _id: scheme._id },
+      { $set: { investedValueAnchor: next, updatedAt: now } }
+    );
     updated += 1;
   }
   return updated;

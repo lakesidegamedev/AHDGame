@@ -2,6 +2,23 @@ import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
 import type { EconomicVitalSigns } from "@/lib/db/types/economicVitalSigns";
 import { ALLOWED_FEATURE_FLAGS, METRIC_DEFINITION_VERSION } from "@/lib/clientStatistics";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
+import { countryStateCollection } from "@/lib/db/repositories/countryState";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 const ELECTION_STATUS_FIELDS = {
   upcoming: "electionCountUpcoming",
@@ -80,7 +97,7 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
     seats,
     leaders,
   ] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -93,15 +110,13 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
         },
       }
     ),
-    db.collection("politicalParties").countDocuments(),
-    db.collection("corporations").countDocuments(),
-    db.collection("npps").countDocuments(),
-    db
-      .collection("corporateSectors")
+    politicalPartiesCollection<Document>(db).countDocuments(),
+    corporationsCollection(db).countDocuments(),
+    nppsCollection<Document>(db).countDocuments(),
+    corporateSectorsCollection<Document>(db)
       .aggregate<{ total: number }>([{ $group: { _id: null, total: { $sum: "$workers" } } }])
       .toArray(),
-    db
-      .collection("electedOfficials")
+    electedOfficialsCollection<Document>(db)
       .aggregate<{ total: number; npp: number }>([
         { $match: { $or: [{ characterId: { $ne: null } }, { nppId: { $exists: true } }] } },
         {
@@ -113,19 +128,17 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
         },
       ])
       .toArray(),
-    db.collection<EconomicVitalSigns>("economicVitalSigns").findOne(
+    economicVitalSignsCollection(db).findOne(
       {},
       {
         sort: { turn: -1 },
         projection: { "goods.pooledFillRate.value": 1, "firms.lossMakingShare.value": 1 },
       }
     ),
-    db
-      .collection("states")
+    statesCollection<Document>(db)
       .find({}, { projection: { _id: 1, gdp: 1, population: 1 } })
       .toArray(),
-    db
-      .collection("macroMetrics")
+    macroMetricsCollection<Document>(db)
       .find(
         {},
         {
@@ -138,33 +151,27 @@ export async function collectLocalStatistics(db: Db): Promise<LocalStatisticsPay
         }
       )
       .toArray(),
-    db
-      .collection("countryState")
+    countryStateCollection<Document>(db)
       .find({}, { projection: { _id: 1, governmentType: 1, rulingPartyId: 1 } })
       .toArray(),
-    db
-      .collection("federalBudget")
+    federalBudgetCollection(db)
       .find({}, { projection: { "economicFactors.inflationRate": 1 } })
       .toArray(),
-    db
-      .collection("governmentApprovals")
+    governmentApprovalsCollection<Document>(db)
       .find({}, { projection: { approvalRating: 1 } })
       .toArray(),
-    db
-      .collection("elections")
+    electionsCollection<Document>(db)
       .aggregate<{ _id: string; count: number }>([
         { $group: { _id: "$status", count: { $sum: 1 } } },
       ])
       .toArray(),
-    db.collection("governmentFormations").countDocuments(),
-    db
-      .collection("parliamentSeatsHistory")
+    governmentFormationsCollection<Document>(db).countDocuments(),
+    parliamentSeatsHistoryCollection<Document>(db)
       .find({}, { projection: { turn: 1, seats: 1 } })
       .sort({ turn: -1 })
       .limit(2000)
       .toArray(),
-    db
-      .collection("countryLeaderStates")
+    countryLeaderStatesCollection<Document>(db)
       .find({}, { projection: { popularLegitimacy: 1 } })
       .toArray(),
   ]);

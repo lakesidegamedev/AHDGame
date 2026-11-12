@@ -9,6 +9,7 @@ import { computeImfFacilityPaymentTurn } from "@/lib/imf/imfFacilityMath";
 import type { ImfFacilityReceivableRow } from "@/lib/corporations/imfPortfolioReceivables";
 
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 
 const PRINCIPAL_EPS = 1e-6;
 
@@ -57,8 +58,10 @@ export async function sumImfLenderReceiptsAnchorPerTurnForReceivables(
   if (receivables.length === 0) return 0;
 
   const borrowerIds = receivables.map((r) => new ObjectId(r.borrowerCorporationId));
-  const incomeRows = await db
-    .collection<{ corporationId: ObjectId; income?: number }>("corporationHistory")
+  const incomeRows = await corporationHistoryCollection<{
+    corporationId: ObjectId;
+    income?: number;
+  }>(db)
     .aggregate<{ _id: ObjectId; income: number }>([
       { $match: { corporationId: { $in: borrowerIds } } },
       // Sort on the group key first so the {corporationId, turn} index serves

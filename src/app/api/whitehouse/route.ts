@@ -6,13 +6,19 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { ElectedOfficial, Character, PoliticalParty, CabinetNomination } from "@/lib/db/types";
+import type { ElectedOfficial, PoliticalParty, CabinetNomination } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getExecutiveTermsServed } from "@/lib/elections/executiveTermLimits";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { resolveExecutiveHolder } from "@/lib/elections/resolveExecutiveHolder";
 import { getGameTime } from "@/lib/time/gameTime";
+import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { pastRealTimestampToLarpDate } from "@/lib/utils/formatters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 // GET /api/whitehouse — Returns the current President and Vice President details along with caller admin and president flags.
 // Country-scoped via ?country= (default US) so any presidential country renders the surface.
@@ -40,17 +46,20 @@ export async function GET(request: Request) {
           ) || null
         : null;
 
-    const [presidentOfficial, vicePresidentOfficial, activeVpNomination] = await Promise.all([
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "president" }),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: "vicePresident" }),
-      db
-        .collection<CabinetNomination>("cabinetNominations")
-        .findOne({ countryId, positionId: "vicePresident", status: "active" }),
-    ]);
+    const [presidentOfficial, vicePresidentOfficial, activeVpNomination, govFormation] =
+      await Promise.all([
+        electedOfficialsCollection(db).findOne({ countryId, officeType: "president" }),
+        electedOfficialsCollection(db).findOne({ countryId, officeType: "vicePresident" }),
+        cabinetNominationsCollection(db).findOne({
+          countryId,
+          positionId: "vicePresident",
+          status: "active",
+        }),
+        getGovernmentFormationsCollection(db).findOne(
+          { _id: countryId },
+          { projection: { status: 1, caretaker: 1, succession: 1 } }
+        ),
+      ]);
 
     // Character-backed holders resolve below; NPP-backed holders (characterId
     // null, nppId set) fall through to the resolveExecutiveHolder branches.
@@ -81,14 +90,15 @@ export async function GET(request: Request) {
     let presidentCurrentTerm: number | null = null;
 
     if (presCharId) {
-      const char = await db.collection<Character>("characters").findOne({ _id: presCharId });
+      const char = await charactersCollection(db).findOne({ _id: presCharId });
       if (char) {
         presidentCurrentTerm = Math.max(1, getExecutiveTermsServed(char, countryId));
         const charCountry: CountryId = char.countryId ?? countryId;
         const party = char.party
-          ? await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ sequentialId: Number(char.party), countryId: charCountry })
+          ? await politicalPartiesCollection(db).findOne({
+              sequentialId: Number(char.party),
+              countryId: charCountry,
+            })
           : null;
         president = {
           id: presidentOfficial!._id.toString(),
@@ -129,13 +139,14 @@ export async function GET(request: Request) {
     }
 
     if (vpCharId) {
-      const char = await db.collection<Character>("characters").findOne({ _id: vpCharId });
+      const char = await charactersCollection(db).findOne({ _id: vpCharId });
       if (char) {
         const charCountry: CountryId = char.countryId ?? countryId;
         const party = char.party
-          ? await db
-              .collection<PoliticalParty>("politicalParties")
-              .findOne({ sequentialId: Number(char.party), countryId: charCountry })
+          ? await politicalPartiesCollection(db).findOne({
+              sequentialId: Number(char.party),
+              countryId: charCountry,
+            })
           : null;
         vicePresident = {
           id: vicePresidentOfficial!._id.toString(),
@@ -173,9 +184,7 @@ export async function GET(request: Request) {
     }
 
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
     const isPresident =
       !!presidentOfficial?.characterId &&
@@ -188,7 +197,7 @@ export async function GET(request: Request) {
 
     // Check if user is a senator (needed for VP nomination voting controls)
     const isSenator = myCharacter
-      ? !!(await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      ? !!(await electedOfficialsCollection(db).findOne({
           characterId: myCharacter._id,
           countryId,
           officeType: "senate",
@@ -228,6 +237,7 @@ export async function GET(request: Request) {
       isVicePresident,
       isSenator,
       vpNomination,
+      executiveStatus: executiveStatusPayload(govFormation, gameTime.currentTurn),
     });
   } catch (error) {
     return handleRouteError(error);

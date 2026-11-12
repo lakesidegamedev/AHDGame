@@ -24,6 +24,7 @@ import type {
   ResultsCandidate,
   ResultsUnit,
 } from "./types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /** Deterministic PRNG so a given seed replays the identical night. */
 export function mulberry32(seed: number): () => number {
@@ -128,7 +129,7 @@ export function simulationFrame(
 
   // US presidential races replay the real election night: poll-closing order,
   // fogged returns and worst-case-safe calls, over the compressed hour.
-  const useNight = isPresident && base.election.countryId === "US";
+  const useNight = isPresident && countryHasFeature("usElections", base.election.countryId);
   const totalEvForNight = base.election.totalEv ?? units.reduce((s, u) => s + u.weight, 0);
   const nightResult = useNight
     ? computePresidentialNight({

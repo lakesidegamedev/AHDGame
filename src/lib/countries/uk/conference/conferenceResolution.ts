@@ -9,19 +9,25 @@ import {
   getOrSeedPartyLeadership,
   historyEntry,
   pushHistoryEntry,
-} from "@/lib/uk/leadership/leadershipStore";
+} from "@/lib/countries/uk/leadership/leadershipStore";
 import { getUKPartyLeadershipCollection } from "@/lib/db/collections/ukPartyLeadership";
 import {
   LEADERSHIP_AMENDMENT_COOLDOWN_TURNS,
   validateRulesetAmendment,
-} from "@/lib/uk/leadership/rules";
-import { resolveConferenceMotion, resolvePlatformRatification } from "@/lib/uk/conference/rules";
-import { conferenceHistoryEntry, pushConferenceHistory } from "@/lib/uk/conference/conferenceStore";
+} from "@/lib/countries/uk/leadership/rules";
+import {
+  resolveConferenceMotion,
+  resolvePlatformRatification,
+} from "@/lib/countries/uk/conference/rules";
+import {
+  conferenceHistoryEntry,
+  pushConferenceHistory,
+} from "@/lib/countries/uk/conference/conferenceStore";
 import type {
   ConferenceHistoryEntry,
   ConferenceRulesMotion,
   UKPartyConference,
-} from "@/lib/uk/conference/types";
+} from "@/lib/countries/uk/conference/types";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -32,26 +38,20 @@ import {
 } from "./conferenceShared";
 
 /**
- * Receipt/void crash-concurrency contract (ticket #862 follow-up). A motion
- * marked void while its leadership receipt exists is a mislabel: the winning
- * applier created the receipt after this pass's last confirmation read and
- * crashed before marking. Completed receipts dominate voids
- * deterministically:
+ * Receipt/void concurrency contract. A motion marked void while its leadership
+ * receipt exists is a mislabel: the winning applier created the receipt after
+ * the last confirmation read and crashed before marking. Completed receipts
+ * dominate voids deterministically:
  *
  * - the mark-time recheck in computeReconcileDecisions flips any void whose
- *   receipt landed during the pass, so the mark write never stamps void over
- *   a receipt it could have seen;
+ *   receipt landed during the pass;
  * - a race-path void (CONFERENCE_RACE_VOID_REASON) stays heal-owed through
- *   conferenceResolutionNeedsHeal, so the turn driver self-revisits the row
- *   on the next tick without an explicit resolve call;
- * - the revisit confirms the void terminal (CONFERENCE_RACE_VOID_CONFIRMED)
- *   when the receipt is still absent, so retries are bounded: at most one
- *   follow-up pass per race void, then the row is quiet.
+ *   conferenceResolutionNeedsHeal, so the turn driver revisits without an
+ *   explicit resolve call;
+ * - the revisit confirms the void (CONFERENCE_RACE_VOID_CONFIRMED) if the
+ *   receipt is still absent, bounding retries to one follow-up per race void.
  *
- * Cooldown and validation voids are terminal at mark time. A cooldown void
- * implies the receipt was absent at the final check and no concurrent
- * same-motion apply could have succeeded under the active cooldown; a
- * validation void's patch could never have landed a receipt.
+ * Cooldown and validation voids are terminal at mark time.
  */
 export const CONFERENCE_RACE_VOID_REASON =
   "void: concurrent leadership-rules amendment won the cooldown race";
@@ -67,20 +67,18 @@ export async function applyPassedMotion(
   now: Date
 ): Promise<{ applied: boolean; voidReason: string | null }> {
   const collection = getUKPartyLeadershipCollection(db);
-  // Durable serialization contract for distinct motions (ticket #862
-  // follow-up). Two reconcilers must not both pass a stale cooldown check and
-  // land mutually invalid patches, while retries of the same motion stay
-  // exactly-once:
+  // Durable serialization contract for distinct motions. Two reconcilers
+  // must not both pass a stale cooldown check and land mutually invalid patches,
+  // while retries of the same motion stay exactly-once:
   //
-  // - Same motion: the motion receipt (`appliedConferenceMotionIds`, guarded
-  //   by `$ne` in the write filter) makes replays and concurrent appliers of
-  //   the SAME motion converge on applied without a second write.
-  // - Distinct motions: the cooldown travels WITH the write as a
-  //   compare-and-swap on the observed `lastAmendedTurn`. The first writer
-  //   moves it to the current turn, so every later distinct writer misses its
-  //   filter and voids on re-read instead of landing a second patch inside
-  //   the window. `{ lastAmendedTurn: null }` matches null AND missing, so a
-  //   legacy row without the field satisfies the first amendment.
+  // - Same motion: the receipt (`appliedConferenceMotionIds`, guarded by `$ne`
+  //   in the write filter) converges replays and concurrent appliers of the SAME
+  //   motion on applied without a second write.
+  // - Distinct motions: the cooldown travels WITH the write as a compare-and-swap
+  //   on the observed `lastAmendedTurn`. The first writer moves it to the current
+  //   turn, so later distinct writers miss their filter and void on re-read.
+  //   `{ lastAmendedTurn: null }` matches null AND missing, so a legacy row
+  //   without the field satisfies the first amendment.
   // - A void is returned only after confirming the receipt is still absent: a
   //   concurrent winner may have applied THIS motion between our read and our
   //   decision, and that must report applied, never void.
@@ -641,19 +639,12 @@ async function computeReconcileDecisions(
 }
 
 /**
- * Reconcile resolution side effects for a decided row (see
- * computeReconcileDecisions). Marks land in ONE batched row write guarded by
- * a compare-and-swap on the row's updatedAt: concurrent reconcilers of the
- * same row converge instead of clobbering each other's marks. The CAS loser
- * re-reads fresh and recomputes (receipts make the re-apply a no-op and
- * receipted voids adopt passed). The mark-time receipt recheck plus the
- * pending-race-void heal invariant mean a void label can never durably cover
- * a completed effect, even when the winning applier's receipt lands after
- * another pass's final confirmation read and the winner crashes before
- * marking: the next driver tick revisits the row from persisted evidence and
- * adopts the receipt (or confirms the void terminal). Attempts are bounded;
- * if contention outlasts them this call stands down and a heal resumes the
- * marks. A crash anywhere before the mark simply reconciles again.
+ * Reconciles side effects for a decided row (computeReconcileDecisions).
+ * Marks batched under a CAS on updatedAt so concurrent reconcilers
+ * converge rather than clobber; CAS loser re-reads and recomputes.
+ * The mark-time receipt recheck plus pending-race-void heal ensure a void
+ * label can never durably cover a completed effect. Attempts are bounded;
+ * on exhaustion a heal resumes the marks.
  */
 export async function reconcileConferenceEffects(
   db: Db,

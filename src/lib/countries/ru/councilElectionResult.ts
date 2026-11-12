@@ -4,18 +4,8 @@
  * actual owners, records vacancies and keeps Congress until joint chamber handover.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  CountryGameState,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-} from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  RUSSIAN_COUNCIL_OPENINGS_COLLECTION,
-  type RussianCouncilOpeningRecord,
-} from "./councilElectionOpening";
+import { type RussianCouncilOpeningRecord } from "./councilElectionOpening";
 import { loadRussianCouncilCertificationInputs } from "./councilCertificationInputs";
 import {
   resolveRussianCouncilCohort,
@@ -23,6 +13,13 @@ import {
 } from "./rules/councilCohort";
 import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { hasAuthorizedPostSovietTransition } from "./rules/postSovietTransition";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
 export const RUSSIAN_COUNCIL_RESULTS_COLLECTION = "russianCouncilElectionResults";
 export interface RussianCouncilResultRecord {
   _id: string;
@@ -61,7 +58,7 @@ export async function materializeRussianCouncilElectionResult(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Council certification needs an active transaction, turn and time");
-  const results = db.collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION);
+  const results = russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(db);
   const previous = await results.findOne({ _id: cohortId.toHexString() }, { session });
   if (previous) {
     if (
@@ -72,10 +69,11 @@ export async function materializeRussianCouncilElectionResult(input: {
       throw new Error("Council result identity changed");
     return previous;
   }
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -101,22 +99,22 @@ export async function materializeRussianCouncilElectionResult(input: {
     )
   )
     throw new Error("The first Council constitutional mandate changed");
-  const opening = await db
-    .collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION)
-    .findOne(
-      { _id: cohortId.toHexString() },
-      {
-        session,
-        projection: {
-          cohortId: 1,
-          countryId: 1,
-          preset: 1,
-          mandateSinceTurn: 1,
-          electionIds: 1,
-          registeredBySubject: 1,
-        },
-      }
-    );
+  const opening = await russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(
+    db
+  ).findOne(
+    { _id: cohortId.toHexString() },
+    {
+      session,
+      projection: {
+        cohortId: 1,
+        countryId: 1,
+        preset: 1,
+        mandateSinceTurn: 1,
+        electionIds: 1,
+        registeredBySubject: 1,
+      },
+    }
+  );
   if (
     !opening ||
     opening.countryId !== "RU" ||
@@ -130,7 +128,7 @@ export async function materializeRussianCouncilElectionResult(input: {
   const boundaries = new Map(
     planRussianCouncilDistricts(opening.registeredBySubject).map((row) => [row.seatId, row])
   );
-  const elections = db.collection<Election>("elections");
+  const elections = electionsCollection(db);
   const cohort = await elections
     .find(
       { countryId: "RU", "russianCouncilRound.cohortId": cohortId },
@@ -175,7 +173,7 @@ export async function materializeRussianCouncilElectionResult(input: {
     await loadRussianCouncilCertificationInputs({ db, session, cohort, country });
   const result = resolveRussianCouncilCohort(ballots);
   const outcomes = new Map(result.map((row) => [row.electionId, row.decision.outcome]));
-  const tallies = db.collection<ElectionVoteTally>("electionVoteTallies");
+  const tallies = electionVoteTalliesCollection(db);
   const finalized = await tallies.bulkWrite(
     counted.map((row) => {
       const ballot = ballots.find((ballot) => ballot.id === row.electionId.toHexString())!;
@@ -216,7 +214,7 @@ export async function materializeRussianCouncilElectionResult(input: {
     { session }
   );
   if (resolved.matchedCount !== 89) throw new Error("Council ballots changed during certification");
-  const retired = await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  const retired = await electionCandidatesCollection(db).updateMany(
     {
       electionId: { $in: cohort.map((row) => row._id) },
       status: "active",

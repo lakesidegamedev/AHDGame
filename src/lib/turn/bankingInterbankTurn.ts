@@ -3,13 +3,11 @@
  * out of bankingTurn.ts, which runs it every turn from processBankingTurn.
  */
 import type { Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
-import type { InterbankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
-import { MONEY_MOVE_COLLECTION, turnMoveKey } from "@/lib/banking/moneyMove";
+import { turnMoveKey } from "@/lib/banking/moneyMove";
 import {
   facilityInterestTransition,
   facilityInterestAmounts,
@@ -30,6 +28,9 @@ import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInteres
 import { discountWindowRatePercent } from "@/lib/banking/discountWindow";
 import { getCashReserves } from "@/lib/banking/bankCash";
 import type { BankingTurnSummary } from "./bankingTurn";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { interbankLoansCollection } from "@/lib/db/repositories/interbankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 /**
  * Service interbank interest from borrower to lender, and central-bank
@@ -46,8 +47,9 @@ export async function serviceInterbankAndCbMargin(
   if (propTrading) {
     // A loan may already carry this turn's stamp while its journal still owns
     // unfinished income projections. Never replay live cash legs here.
-    const pending = await db
-      .collection<{ _id: string; legs: { applied: boolean }[] }>(MONEY_MOVE_COLLECTION)
+    const pending = await bankMoneyMovesCollection<{ _id: string; legs: { applied: boolean }[] }>(
+      db
+    )
       .find(
         { ...unfinishedSettlementFilter(), kind: "interbank_interest", turn },
         { projection: { _id: 1, legs: 1 } }
@@ -61,8 +63,7 @@ export async function serviceInterbankAndCbMargin(
     }
   }
   const loans = propTrading
-    ? await db
-        .collection<InterbankLoan>("interbankLoans")
+    ? await interbankLoansCollection(db)
         .find({
           status: "current",
           lastProcessedTurn: { $ne: turn },
@@ -76,8 +77,9 @@ export async function serviceInterbankAndCbMargin(
     summary.interbankDefaultsWrittenOff += result.writtenOff;
   }
 
-  const marginBanks = await db
-    .collection<Corporation>("corporations")
+  const marginBanks = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       "bankCharter.status": "active",
       // Either central-bank facility puts a bank in this pass. Selecting on the
@@ -117,8 +119,7 @@ export async function serviceInterbankAndCbMargin(
   };
   const receipts =
     receiptKeys.length > 0
-      ? await db
-          .collection<Receipt>(MONEY_MOVE_COLLECTION)
+      ? await bankMoneyMovesCollection<Receipt>(db)
           .find(
             { _id: { $in: receiptKeys } },
             { projection: { kind: 1, turn: 1, currency: 1, legs: 1, projections: 1 } }

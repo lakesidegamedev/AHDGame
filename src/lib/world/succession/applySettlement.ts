@@ -16,17 +16,16 @@ import { materializeFederationFiscalAccounts } from "./materializeFiscalAccounts
 import { materializeFederationFederalRetirement } from "./materializeFederalRetirement";
 import { materializeProvisionalRussianCongress } from "./materializeRussianCongress";
 import { publishFederationRelocations } from "./relocationLedger";
+import { type FederationPoliticalProposalRecord } from "./politicalProposal";
 import {
-  FEDERATION_POLITICAL_PROPOSALS_COLLECTION,
-  type FederationPoliticalProposalRecord,
-} from "./politicalProposal";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  WORLD_ENTITY_STATES_COLLECTION,
   type FederationSettlementApplicationRecord,
   type RuntimeWorldEntityState,
   validateAppliedEntityStates,
 } from "./runtimeEntities";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
+import { worldEntityStatesCollection } from "@/lib/db/repositories/worldEntityStates";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export async function applyPreparedFederationSettlement(input: {
   db: Db;
@@ -47,9 +46,8 @@ export async function applyPreparedFederationSettlement(input: {
     throw new Error(
       "Federation application needs an active transaction and valid intent, turn and time"
     );
-  const applications = db.collection<FederationSettlementApplicationRecord>(
-    FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-  );
+  const applications =
+    federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(db);
   const existing = await applications.findOne(
     { presetId: "1991-default", sourceEntityId: sourceCountryId, status: "applied" },
     { session }
@@ -57,8 +55,7 @@ export async function applyPreparedFederationSettlement(input: {
   if (existing) {
     if (existing._id !== intentId || existing.appliedOnTurn !== appliedOnTurn)
       throw new Error("Federation source already has another applied settlement");
-    const states = await db
-      .collection<RuntimeWorldEntityState>(WORLD_ENTITY_STATES_COLLECTION)
+    const states = await worldEntityStatesCollection<RuntimeWorldEntityState>(db)
       .find({ applicationId: existing._id }, { session })
       .toArray();
     validateAppliedEntityStates(existing.presetId, [existing], states);
@@ -139,7 +136,7 @@ export async function applyPreparedFederationSettlement(input: {
       appliedOnTurn,
       now,
     });
-  } else if (sourceCountryId === "RU") {
+  } else if (countryHasFeature("ruLib", sourceCountryId)) {
     await materializeProvisionalRussianCongress({
       db,
       session,
@@ -159,13 +156,13 @@ export async function applyPreparedFederationSettlement(input: {
     firmOrigins,
     now,
   });
-  const completed = await db
-    .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
-    .updateOne(
-      { _id: intentId, sourceEntityId: sourceCountryId, status: "open" },
-      { $set: { status: "applied" } },
-      { session }
-    );
+  const completed = await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(
+    db
+  ).updateOne(
+    { _id: intentId, sourceEntityId: sourceCountryId, status: "open" },
+    { $set: { status: "applied" } },
+    { session }
+  );
   if (completed.matchedCount !== 1)
     throw new Error("Federation political proposal changed during settlement");
   return plan.receipt;

@@ -14,21 +14,10 @@ import {
   UK_REGIONAL_BILL_ASSENT_OFFICE_KEY,
 } from "./institutionsFacts";
 
-/**
- * The United Kingdom's institutions.
- *
- * ⚠️ THE FACTS LIVE IN `./institutionsFacts`, NOT HERE. This composes them with
- * the cabinet, and the cabinet is heavy. A registry that needs one seat id must
+/*
+ * UK institutions. Facts live in `./institutionsFacts`, not here: this
+ * composes them with the heavy cabinet, so a registry needing one seat id must
  * import from the facts module or it ships the whole cabinet to the browser.
- *
- * ⚠️ THE CABINET FILES ARE NOT RELOCATED, DELIBERATELY. `ukCabinet.ts`,
- * `ukCabinetOrders.ts` and `ukCabinetMechanics.ts` are already named for their
- * country and already exported under `UK_` symbols. Japan's equivalents moved
- * because they were about to be joined by 23 more sets in `constants/`; the UK's
- * can follow when the pattern is applied across the board, and moving them now
- * would churn imports without removing a duplicate. The forwarding is what
- * matters and it is exact: `ORDERS_BY_COUNTRY.UK` and `MECHANICS_BY_COUNTRY.UK`
- * hold these same objects.
  */
 export const UK_INSTITUTIONS: CountryInstitutions = {
   config: UK_CONFIG,

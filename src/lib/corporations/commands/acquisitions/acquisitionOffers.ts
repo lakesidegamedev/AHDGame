@@ -28,9 +28,11 @@ import {
   meetsNppAcquisitionThreshold,
   nppAcquisitionMinimumPrice,
 } from "./rules";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { acquisitionOffersCollection } from "@/lib/db/repositories/acquisitionOffers";
 
 export const ACQUISITION_OFFER_DURATION_TURNS = 24;
-const OFFERS = "acquisitionOffers";
 
 type Result<T = object> = { ok: false; error: string; status: number } | ({ ok: true } & T);
 
@@ -104,7 +106,7 @@ export async function proposeAcquisitionOffer(
   const barred = acquisitionsBarredByDivestiture(acquirer, currentTurn);
   if (barred) return { ok: false, error: barred, status: 403 };
 
-  const existing = await db.collection<AcquisitionOffer>(OFFERS).findOne({
+  const existing = await acquisitionOffersCollection<AcquisitionOffer>(db).findOne({
     acquirerCorporationId: acquirer._id,
     targetCorporationId: target._id,
     status: "pending",
@@ -120,7 +122,7 @@ export async function proposeAcquisitionOffer(
   // (player caretaker appointed, CEO flipped, nationalization, deletion).
   // Auto-accept must never absorb a corp that is no longer genuinely AI-run,
   // and the valuation must reflect current economics, not a stale read.
-  const freshTarget = await db.collection<Corporation>("corporations").findOne({ _id: target._id });
+  const freshTarget = await corporationsCollection(db).findOne({ _id: target._id });
   if (!freshTarget) return { ok: false, error: "Target corporation no longer exists", status: 404 };
   if (freshTarget.countryOwnerId || freshTarget.ownershipState === "stateOwned")
     return { ok: false, error: "State-owned corporations cannot be acquired", status: 400 };
@@ -158,7 +160,7 @@ export async function proposeAcquisitionOffer(
     if (dealError) return { ok: false, error: dealError, status: 400 };
   }
   const now = new Date();
-  const offers = db.collection<AcquisitionOffer>(OFFERS);
+  const offers = acquisitionOffersCollection<AcquisitionOffer>(db);
 
   // Human-run target (including caretaker-run player corps): unchanged flow.
   // The offer stays pending until the target's CEO accepts, and the target's
@@ -206,7 +208,7 @@ export async function proposeAcquisitionOffer(
     };
   }
 
-  // AI-run target (#217): no human can accept, so resolve deterministically
+  // AI-run target: no human can accept, so resolve deterministically
   // against the asking price (reference valuation plus the NPP premium).
   const askingPrice = nppAcquisitionMinimumPrice(valuationAnchor);
   if (!meetsNppAcquisitionThreshold(priceAnchor, valuationAnchor)) {
@@ -312,7 +314,7 @@ export async function acceptAcquisitionOffer(
   }>
 > {
   const { offer, currentTurn } = input;
-  const offers = db.collection<AcquisitionOffer>(OFFERS);
+  const offers = acquisitionOffersCollection<AcquisitionOffer>(db);
 
   if (offer.status !== "pending")
     return { ok: false, error: "This offer is no longer open", status: 409 };
@@ -321,9 +323,7 @@ export async function acceptAcquisitionOffer(
 
   // The target's cash can grow while the offer waits (a float, an injection),
   // so the price floor is checked again against the company as it is now.
-  const target = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: offer.targetCorporationId });
+  const target = await corporationsCollection(db).findOne({ _id: offer.targetCorporationId });
   if (target && !isNppAutoResolvableTarget(target)) {
     const dealError = playerTargetDealError(
       target,
@@ -409,19 +409,15 @@ export async function resolveAcquisitionOfferStatus(
       now: new Date(),
       reason: `offer ${status} while a settlement held funds`,
     });
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: offer.targetCorporationId, acquisitionSettlementId: offer._id },
-        { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
-      );
-  }
-  const claim = await db
-    .collection<AcquisitionOffer>(OFFERS)
-    .updateOne(
-      { _id: offer._id, status: "pending" },
-      { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+    await corporationsCollection(db).updateOne(
+      { _id: offer.targetCorporationId, acquisitionSettlementId: offer._id },
+      { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
     );
+  }
+  const claim = await acquisitionOffersCollection<AcquisitionOffer>(db).updateOne(
+    { _id: offer._id, status: "pending" },
+    { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+  );
   if (claim.matchedCount === 0)
     return { ok: false, error: "This offer is no longer open", status: 409 };
   return { ok: true };
@@ -445,8 +441,7 @@ export async function listDealsForCorp(
   db: Db,
   corpId: ObjectId
 ): Promise<{ incoming: DealSummary[]; outgoing: DealSummary[] }> {
-  const offers = await db
-    .collection<AcquisitionOffer>(OFFERS)
+  const offers = await acquisitionOffersCollection<AcquisitionOffer>(db)
     .find({
       status: "pending",
       $or: [{ targetCorporationId: corpId }, { acquirerCorporationId: corpId }],
@@ -455,13 +450,37 @@ export async function listDealsForCorp(
     .toArray();
   if (offers.length === 0) return { incoming: [], outgoing: [] };
 
+  // Expire stale offers lazily: the accept route refuses them but nothing else
+  // ever stamps "expired", so without this they read as pending forever.
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+  const currentTurn = gameState?.currentTurn ?? 0;
+  const staleIds = offers.filter((o) => o.expiresAtTurn < currentTurn).map((o) => o._id);
+  if (staleIds.length > 0) {
+    await acquisitionOffersCollection<AcquisitionOffer>(db).updateMany(
+      { _id: { $in: staleIds }, status: "pending" },
+      { $set: { status: "expired", updatedAt: new Date() } }
+    );
+    const live = offers.filter((o) => !staleIds.includes(o._id));
+    if (live.length === 0) return { incoming: [], outgoing: [] };
+    return listDealsFromOffers(live, db, corpId);
+  }
+
+  return listDealsFromOffers(offers, db, corpId);
+}
+
+async function listDealsFromOffers(
+  offers: AcquisitionOffer[],
+  db: Db,
+  corpId: ObjectId
+): Promise<{ incoming: DealSummary[]; outgoing: DealSummary[] }> {
   const corpIds = new Set<string>();
   for (const o of offers) {
     corpIds.add(o.acquirerCorporationId.toString());
     corpIds.add(o.targetCorporationId.toString());
   }
-  const corps = (await db
-    .collection<Corporation>("corporations")
+  const corps = (await corporationsCollection(db)
     .find({ _id: { $in: [...corpIds].map((id) => new ObjectId(id)) } })
     .project({ name: 1 })
     .toArray()) as Array<{ _id: ObjectId; name: string }>;

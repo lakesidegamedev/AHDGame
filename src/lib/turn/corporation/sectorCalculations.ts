@@ -1,3 +1,4 @@
+import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
 import { planDividendAllocation } from "@/lib/corporations/rules/dividendAllocation";
 import { hasCorporateCashPayables, corporatePayoutCash } from "./rules/corporateTaxPriority";
 import { holdingMaturationWrites } from "./holdingMaturationWrites";
@@ -129,7 +130,6 @@ export function processSectors(
   // realization + Tier 3/D1 throughput coupling. Inert (multipliers 1) when
   // disabled — the default.
   market: MarketContext = MARKET_DISABLED,
-  subsidiaryCorporationsEnabled: boolean = false,
   /** gameConfig.commandEconomyEnabled — gates the soft-budget exemptions. */
   commandEconomyEnabled: boolean = false,
   /** gameConfig.privateBankingEnabled — branch/commodity capacity split. */
@@ -168,6 +168,10 @@ export function processSectors(
   // populated in worlds where wages are off.
   const labourDemandByState = makeLabourDemandByState();
   const labourDemandWageIndexByState = new Map<string, WageIndexAccumulator>();
+  // 2027 world: workers automation methods no longer employ, per state.
+  const automationDisplacedByState = presetUsesSocietyPressures(lookups.preset)
+    ? makeLabourDemandByState()
+    : undefined;
   // v3 Phase 6: strike trigger/resolution events, for index.ts (which owns
   // db) to turn into sentiment pulses. Same "collect during the pure loop,
   // consume after" pattern as sectorFxSpreadFees below.
@@ -216,6 +220,7 @@ export function processSectors(
     labourDemandWageIndexByState,
     fundedHeadcountBySectorId:
       (lookups.fundedHeadcountStage ?? 0) >= 1 ? funded?.headcountBySectorId : undefined,
+    automationDisplacedByState,
     pendingStrikeEvents,
     pendingCapacityBindingEvents,
     sectorOps,
@@ -326,8 +331,7 @@ export function processSectors(
   const corpSnapshots: CorpSnapshot[] = [];
 
   // Per-corp earnings history (updated this turn) and growth-rate accumulators
-  // used to build the three-component share-price formula inputs after all corps
-  // have been processed.
+  // consumed by the share-price formula after all corps are processed.
   const updatedEarningsHistoryByCorpId = new Map<string, number[]>();
   const corpGrowthNumerByCorpId = new Map<string, number>();
   const corpGrowthDenomByCorpId = new Map<string, number>();
@@ -515,22 +519,13 @@ export function processSectors(
     const requestedCeoSalary =
       imfBailoutActive || cashPayables ? 0 : ceoSalaryAnchor / TURNS_PER_DAY;
 
-    // Ticket #1237: pay-time ceiling on the 150% combined-overhead rule. The
-    // set-time check in updateCorporationSettings only binds at the moment
-    // budgets are saved, so a corp whose revenue later collapses keeps charging
-    // its stored budgets against revenue it no longer earns. Marketing is
-    // clamped below (cash + delivered value) and CEO salary is clamped twice
-    // (affordability, then 1.25x revenue per Bug #0728) — logistics and R&D had
-    // no pay-time ceiling at all, which is why a 2.997e278 logistics budget
-    // wrote liquidCapital -1.33e+277 in a single turn on a corp with no sectors.
-    //
-    // The overage lands on logistics/R&D precisely because they are the two legs
-    // with no other clamp. Marketing and CEO salary are subtracted at their
-    // *requested* size, mirroring the set-time check, which also tests stored
-    // budgets rather than realized spend. Same per-turn gross-revenue basis as
-    // the salary cap below, so this ceiling is never tighter than the set-time
-    // one: a corp inside the 150% rule is charged exactly as it was before.
-    // Zero (or negative) revenue ⇒ both legs pay $0.
+    // Pay-time ceiling on the 150% combined-overhead rule. The set-time check
+    // only binds when budgets are saved, so a corp whose revenue collapses keeps
+    // charging stored budgets. Marketing and CEO salary are already clamped
+    // elsewhere; logistics and R&D had no pay-time ceiling, so the overage lands
+    // on them. Marketing and CEO salary are subtracted at requested size to mirror
+    // the set-time check. Same per-turn gross-revenue basis as the salary cap, so
+    // this ceiling is never tighter than the set-time one. Zero revenue pays $0.
     const overheadCeiling = CORP_OVERHEAD_MAX_REVENUE_MULTIPLE * Math.max(0, corpRevenue);
     const opsOverheadCeiling = Math.max(
       0,
@@ -659,11 +654,7 @@ export function processSectors(
       actualCeoSalary = requestedCeoSalary;
     }
 
-    // Bug #0728: CEO salary may not exceed 1.25x gross (sector) revenue. corpRevenue
-    // excludes bond proceeds (which land in liquidCapital) and bond coupon income (a
-    // separate line), so issuing bonds can never raise this ceiling. Zero revenue ⇒ $0.
-    // The stored ceoSalary is left intact (not zeroed) so a legitimate corp resumes
-    // paying once revenue returns. Both sides are per-turn ₳.
+    // CEO salary may not exceed 1.25x gross (sector) revenue. corpRevenue excludes bond proceeds and coupon income, so issuing bonds cannot raise this ceiling. Zero revenue means $0. Stored ceoSalary is kept intact so a legitimate corp resumes paying when revenue returns. Both sides per-turn ₳.
     const salaryRevenueCap = CEO_SALARY_MAX_REVENUE_MULTIPLE * Math.max(0, corpRevenue);
     if (actualCeoSalary > salaryRevenueCap) {
       actualCeoSalary = salaryRevenueCap;
@@ -672,12 +663,7 @@ export function processSectors(
     const totalCorpCosts = costsBeforeCeo + actualCeoSalary;
     const incomePreDividends = corpRevenue - totalCorpCosts;
 
-    // Corporate tax (territorial, per-sector): each sector pays its country's federal rate
-    // and its state's rate on its revenue-weighted apportioned share of corp income.
-    // Corp-level overhead (marketing, logistics, CEO, growth) is allocated across sectors
-    // by revenue share. Losing sectors pay 0; profitable sectors pay even if corp total is
-    // negative (nexus-based). Loss-making corps with all-negative sectors pay 0 in both tiers.
-    // See docs/plans/archive/2026-04/2026-04-18-corp-tax-apportionment-design.md.
+    // Corporate tax (territorial, per-sector): each sector pays its country's federal rate and its state's rate on its revenue-weighted apportioned share of corp income. Corp-level overhead is allocated across sectors by revenue share. Losing sectors pay 0; profitable sectors pay even if corp total is negative (nexus-based). Loss-making corps with all-negative sectors pay 0 in both tiers.
     let sectorMaintenanceTotal = 0;
     for (const s of sectorResults) {
       sectorMaintenanceTotal += s.hourlyRevenue * (1 - s.effectiveMargin / 100);
@@ -851,13 +837,10 @@ export function processSectors(
       }
     }
 
-    // State-owned enterprises pay no corporate income tax. A nationalized industry is
-    // owned by the state, and it already returns its profit to that same state through the
-    // per-turn remittance (processSoeRemittance). Levying corporate tax on top charged one
-    // profit twice to a single owner: it drained SOEs to zero and pushed the tax-driven ones
-    // (whose losses the operating-loss backstop deliberately does not cover) negative. Zero
-    // the accumulators AND the per-country maps so neither the corp's cash debit nor the
-    // government's tax-revenue credit records a charge — the remittance line is the return.
+    // State-owned enterprises pay no corporate income tax: the state already
+    // receives their profit via the per-turn remittance, so taxing on top
+    // charges one profit twice. Zero the accumulators AND the per-country maps
+    // so neither the cash debit nor the tax-revenue credit records a charge.
     if (isStateOwned(corp)) {
       totalFederalTax = 0;
       totalStateTax = 0;
@@ -927,10 +910,9 @@ export function processSectors(
     const effectiveDividendRate = shouldClearDividends ? 0 : dividendRate;
     // For pass-through structures: enforce minimum payout without overwriting the stored dividendRate.
     const minDividendPct = (corpLegalStructure.minimumDividendRate ?? 0) * 100;
-    // Subsidiary corporations (feature-gated): honor a parent-set dividend floor
-    // only while the setter still controls >50% voting power of this corp.
+    // Honor a parent-set dividend floor only while the setter still controls
+    // >50% voting power of this corp.
     const parentDividendFloorPct = activeParentDividendFloorPct({
-      enabled: subsidiaryCorporationsEnabled,
       parentDividendFloorPct: corp.parentDividendFloorPct,
       parentDividendFloorSetByCorpId: corp.parentDividendFloorSetByCorpId,
       controllingParent: getControllingCorporateParent(corp),
@@ -1085,12 +1067,7 @@ export function processSectors(
     const opIncomeByCcy = new Map<CurrencyCode, number>();
     let totalOpIncomeForCorp = 0;
 
-    // Accumulate annualized operating income by sector country and operating state for
-    // the corporate-profits tax-base blend. Uses sectorOpIncome (pre-cost-allocation) so
-    // the jurisdiction-level base tracks economic activity in the state/country, not the
-    // corp's overhead choices. Matches the apportionment model where federal and state
-    // tax both follow sector operating location.
-    // See docs/plans/archive/2026-04/2026-04-18-corp-tax-apportionment-design.md.
+    // Accumulate annualized operating income by sector country and operating state for the corporate-profits tax-base blend. Uses sectorOpIncome (pre-cost-allocation) so the jurisdiction-level base tracks economic activity, not the corp's overhead choices.
     for (const s of sectorResults) {
       const sectorOpIncome = s.hourlyRevenue * (s.effectiveMargin / 100);
       if (sectorOpIncome <= 0) continue;
@@ -1155,12 +1132,10 @@ export function processSectors(
         lookups.strengthUpkeepStage
       ) - currentMarketingStrength;
 
-    // Logistics strength: decays 5%/turn, grows with spending. No diminishing returns —
-    // the decay naturally caps accumulation. Same anchor-threshold convention.
-    // Ticket #1237: grow on what was actually charged, not what was requested —
-    // marketing above already passes its settled spend. Feeding the raw budget
-    // here let an unpayable budget buy strength for free: Tinky 3.0 banked
-    // logisticsStrength 1256 and rdScore 408 in the same turn it "spent" 1e278.
+    // Logistics strength: decays 5%/turn, grows with spending. No diminishing
+    // returns, the decay naturally caps accumulation. Same anchor-threshold
+    // convention. Grow on what was actually charged, not what was requested;
+    // feeding raw budget lets an unpayable budget buy strength for free.
     const currentLogisticsStrength = corp.logisticsStrength ?? 0;
     const newLogisticsStrength = calcLogisticsStrengthAfterTurn(
       currentLogisticsStrength,
@@ -1198,15 +1173,13 @@ export function processSectors(
       localFxRate
     );
 
-    // Per-turn escrow funding (escrow mode only): move configured cash from the
-    // treasury into the market-making escrow. Both fields are corp-local, so this
-    // is a 1:1 local move. The escrow is NOT a share-price valuation input
-    // (decoupled 2026-06-07), so funding the escrow lowers liquidCapital and thus
-    // the tangible-book floor — it is no longer price-neutral. Only the persisted
-    // liquidCapital/escrow need reflect the move here.
+    // Per-turn escrow funding (escrow mode only): move configured cash from
+    // treasury into market-making escrow. Both fields are corp-local, a 1:1
+    // local move. Escrow is not a share-price valuation input, so funding it
+    // lowers liquidCapital and the tangible-book floor: not price-neutral.
+    // Only persisted liquidCapital/escrow need reflect the move here.
     // `incomeForBalance` is the pre-settlement local-currency cash delta used
-    // by both this bulk op and the initial snapshot. The settlement pass later
-    // applies its delta to both representations before pricing and persistence.
+    // by this bulk op and the initial snapshot.
     const escrowFundingMove =
       !cashPayables &&
       !(corp.pendingOperatingCash! > 0) &&
@@ -1455,14 +1428,10 @@ export function processSectors(
             ...(participatesInMediaAdSettlement
               ? { advertisingMarketSettledTurnV1: currentTurn }
               : {}),
-            // Ticket #919: `shouldClearDividends` already zeroes THIS turn's payout
-            // (see payoutDividendRate above) whenever net income dips negative for a
-            // single turn — that's the correct, transient skip. Persisting
-            // `dividendRate: 0` here as well permanently overwrote the CEO's chosen
-            // policy after just one bad turn, silently and with no notification, so
-            // dividends stayed off forever even once the corp turned profitable
-            // again. Only an active IMF bailout (which the rate-setting API itself
-            // also blocks — see dividends/route.ts) should force-clear the stored rate.
+            // `shouldClearDividends` already zeroes THIS turn's payout when net income
+            // dips negative; persisting `dividendRate: 0` would permanently overwrite the
+            // CEO's chosen policy after one bad turn. Only an active IMF bailout should
+            // force-clear the stored rate.
             ...(imfBailoutActive ? { dividendRate: 0, lastDividendChange: now } : {}),
             ...((shouldZeroCeoSalary && !cashPayables) || imfBailoutActive ? { ceoSalary: 0 } : {}),
             ...(lossCarryforwardByCorpId.has(corpId)
@@ -1879,6 +1848,7 @@ export function processSectors(
     labourDemandWageIndexByState: new Map(
       Array.from(labourDemandWageIndexByState, ([stateId, acc]) => [stateId, resolveWageIndex(acc)])
     ),
+    ...(automationDisplacedByState ? { automationDisplacedByState } : {}),
     strikeEvents: pendingStrikeEvents,
     capacityBindingEvents: pendingCapacityBindingEvents,
     settledMarketingSpendAnchorByBuyerId: new Map(marketingSpendAnchorByBuyerId),

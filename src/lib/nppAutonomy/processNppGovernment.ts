@@ -4,9 +4,9 @@
  * Gated on `nppAutonomyAtLeast(v1)` (which also enforces the player rail: false
  * below v2 in player-enabled countries). Strategic work (policy, appointment,
  * sector-order — and future diplomacy/sphere callers of the same schedule)
- * runs on the Tier-1 six-hour stagger (#3724), not every normal turn. Economic
+ * runs on the Tier-1 six-hour stagger, not every normal turn. Economic
  * accounting stays on the every-turn path outside this module. Player-enabled
- * countries stay on caretaker technical continuity only (#3725) — no new
+ * countries stay on caretaker technical continuity only, no new
  * strategic or sphere choices from the NPP brain.
  *
  * Current V1 surface (built incrementally behind the same v1 gate):
@@ -44,7 +44,7 @@ import type { NPP } from "@/lib/db/types";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { GameState } from "@/lib/db/types/gameState";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
-import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
+import { getFullSimulationCountryIds } from "@/lib/country/countryTier";
 import { isPlannedEconomy, plannedShare } from "@/lib/constants/commandEconomy";
 import { loadConditionsSignal } from "@/lib/turn/npp/billSponsorship";
 import { getNppAutonomyLevel, nppAutonomyAtLeast, nppAutonomyLevelAtLeast } from "./featureFlag";
@@ -82,6 +82,10 @@ import {
   annualPerformanceReviewDue,
   shouldRecomputeGoverningAgenda,
 } from "./rules/agendaReview";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Routine agenda review interval, measured in game-calendar years (48 turns).
@@ -105,7 +109,7 @@ export interface NppGovernmentResult {
   ministerialOrdersIssued: number;
   /** Whether this call inserted a foreign-policy decision audit row. */
   foreignPolicyDecisionRecorded: boolean;
-  /** Why the staggered strategic batch was skipped, when applicable (#3724). */
+  /** Why the staggered strategic batch was skipped, when applicable. */
   skipReason?: Tier1DecisionSkipReason;
 }
 
@@ -175,17 +179,17 @@ async function processNppGovernmentDomestic(
     return { result: INACTIVE, foreignPolicyDue: false };
   }
 
-  // Tier-1 strategic stagger (#3724): claim the six-hour bucket before acting so
+  // Tier-1 strategic stagger: claim the six-hour bucket before acting so
   // a restarted worker cannot double-fire. Economic accounting is not gated here.
   const slot = await claimTier1NppDecisionSlot(db, countryId, currentTurn, now);
   if (!slot.run) {
     return { result: { ...INACTIVE, skipReason: slot.reason }, foreignPolicyDue: false };
   }
 
-  // Player-enabled countries: humans own country-level strategy. Do not also run
-  // NPP policy / appointment / sector-order / diplomacy / sphere (#3724+#3725).
-  // Country-level caretaker allows technical continuity only. V2.1 player-
-  // appointed caretaker ministers may still steer seats the player staffed.
+  // Player-enabled countries: humans own country-level strategy. Do not also
+  // run NPP policy, appointments, sector orders, diplomacy, or sphere logic.
+  // Caretakers provide technical continuity only; player-appointed caretakers
+  // may still steer seats the player staffed.
   if (await isCountryEnabledForPlayers(db, countryId)) {
     if (caretakerDecisionAllowed("strategic") || caretakerDecisionAllowed("sphere")) {
       throw new Error("Handoff caretaker must refuse strategic and sphere decisions");
@@ -244,10 +248,9 @@ async function processNppGovernmentDomestic(
 
   // 6. Foreign policy is owed by the caller. It stays inside the claimed Tier-1
   //    slot so each autonomous government takes at most one diplomatic ACTION
-  //    per six-hour cycle. Ballots are not rationed by that slot — a bloc vote
-  //    has a deadline and a tariff does not, and making them compete let a
-  //    member sit out every ballot it was eligible for (#1257). Shadow mode only
-  //    writes its audit decision.
+  //    per six-hour cycle. Ballots are not rationed by that slot: a bloc vote
+  //    has a deadline and a tariff does not. Shadow mode only writes its audit
+  //    decision.
   return {
     result: {
       ran: true,
@@ -289,7 +292,7 @@ async function computeAndPersistGoverningAgenda(
   const crisisIntake = await loadCrisisAgendaSignals(db, countryId);
   const conditions = await loadConditionsSignal(db, countryId);
   const existing = gov.governingAgenda;
-  // A change of governing party brings a new electoral mandate (#2321); the
+  // A change of governing party brings a new electoral mandate; the
   // incoming government should not run its predecessor's agenda until the
   // next scheduled recompute. Only a persisted mandate is compared, so a record
   // without one waits for the ordinary cadence instead of recomputing every turn.
@@ -359,12 +362,10 @@ async function computeAndPersistGoverningAgenda(
         })
       : null;
 
-  const headNpp = await db
-    .collection<NPP>("npps")
-    .findOne(
-      { _id: headNppId },
-      { projection: { personality: 1, "policies.economic": 1, "policies.social": 1 } }
-    );
+  const headNpp = await nppsCollection(db).findOne(
+    { _id: headNppId },
+    { projection: { personality: 1, "policies.economic": 1, "policies.social": 1 } }
+  );
   if (!headNpp) return false;
 
   // Fetched before the agenda (not just for the V1.6 fiscal posture below) so
@@ -375,7 +376,7 @@ async function computeAndPersistGoverningAgenda(
   // (their distress signal is shortage/overhang, read by computePlanStance
   // below, not sovereign debt), so `planned` countries pass no debt figure and
   // this driver simply stays inert for them.
-  const budget = await db.collection("federalBudget").findOne(
+  const budget = await federalBudgetCollection(db).findOne(
     { countryId },
     {
       projection: {
@@ -388,7 +389,7 @@ async function computeAndPersistGoverningAgenda(
       },
     }
   );
-  // Electoral mandate (#2321): what the governing party ran and won on. The
+  // Electoral mandate: what the governing party ran and won on. The
   // head's own ideology above is a separate input, so two governments led by
   // identical heads still diverge when their parties won on opposing platforms.
   const electoralMandate = await loadElectoralMandate(db, countryId, gov, currentTurn);
@@ -511,57 +512,44 @@ export async function runNppGovernmentPhases(gameNow: Date, currentTurn: number)
 
   // Command-economy regime context — same load pattern as centralBankChairTurn.
   // Flag default OFF: omitted/false → isPlannedEconomy is false everywhere.
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentYear: 1, preset: 1 } });
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, preset: 1 } }
+  );
   const currentYear = gameState?.currentYear;
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { commandEconomyEnabled: 1 } }
+  );
   const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
-  // REGISTERED countries only — and this loop is the one where the gate is not
-  // merely hygiene. A country dissolved by a merge reads `enabledForPlayers:
-  // false`, which to the per-country autonomy gate looks like a NON-PLAYER
-  // country and would hand the dissolved state to the FULL governing brain:
-  // agenda, cabinet formation, ministerial orders, autonomous foreign policy —
-  // a ghost government legislating and declaring for a country that no longer
-  // exists.
-  const registered = new Set(await getRegisteredCountryIds(db));
+  // REGISTERED countries only. A dissolved country reads
+  // `enabledForPlayers: false`, which the per-country gate treats as a
+  // non-player country and hands it the full governing brain, letting a ghost
+  // state legislate for a country that no longer exists. Background countries
+  // have no politicians, government or legislature for this phase to run.
+  const registered = new Set(await getFullSimulationCountryIds(db));
   const countries = (Object.keys(COUNTRY_CONFIGS) as CountryId[]).filter((countryId) =>
     registered.has(countryId)
   );
 
-  // Two passes, chosen so the outcome matches the old serial loop exactly.
+  // Two passes, matching the old serial loop's outcome.
   //
-  // Pass 1 runs steps 1-5 (executive, agenda, cabinet, ministers, caretakers)
-  // in bounded parallel lanes. That work is independent per country: every
-  // read and write is keyed to the country's own documents (its
-  // governmentFormation, countryGameStates slot claim, electedOfficials,
-  // cabinetMembers, cabinetSettings, ministerialOrders, crises, budget and
-  // metrics rows, and NPPs filtered by countryId). The one cross-country write,
-  // expireMinisterialOrders, is an idempotent sweep keyed on the shared turn, and
-  // every order issued this turn expires at least 24 turns out, so no
-  // interleaving changes what it deactivates. Autonomy level and country access
-  // snapshots are AsyncLocalStorage scopes, which every lane inherits; there is
-  // no module-level cache on this path.
+  // Pass 1 steps 1-5 run in bounded parallel lanes: all reads and writes are
+  // keyed to the country's own documents, and the one cross-country write
+  // (expireMinisterialOrders) is an idempotent turn-keyed sweep that cannot
+  // touch this turn's orders. Autonomy and access snapshots use
+  // AsyncLocalStorage, inherited per lane; no module-level cache here.
   //
-  // Pass 2 runs step 6 (foreign policy) serially in country order. It is NOT
-  // independent: one government's tariff bill, embargo, organization vote or
-  // war order is read by the next government's opinion scoring, so its order
-  // is kept. Its reads of other countries go only through those diplomatic
-  // collections, which pass 1 never writes, and pass 1 never reads what
-  // foreign policy writes, so moving every country's step 6 after every
-  // country's steps 1-5 changes nothing.
+  // Pass 2 step 6 (foreign policy) runs serially in country order: it is not
+  // independent (tariffs, embargoes, org votes and war orders feed the next
+  // country's opinion scoring), and pass 1 neither reads nor writes the
+  // diplomatic collections it depends on.
   //
-  // Failure: once a country throws, no new country starts (lanes already in
-  // flight finish their domestic step); foreign policy runs
-  // for the countries ordered before the failure (what the serial loop would
-  // have finished), then the earliest-ordered error is rethrown.
-  //
-  // Lanes run only at v6 (NPP engine 6). Below it a single lane reproduces the
-  // old serial loop exactly, including the order of the caretaker-resignation
-  // draws and which countries a failure stops.
+  // Failure: once a country throws, no new country starts; foreign policy runs
+  // for countries ordered before the failure, then the earliest error rethrows.
+  // Lanes run only at engine v6; below that a single lane reproduces the serial
+  // loop exactly, including caretaker-draw order and failure semantics.
   const lanes = nppAutonomyLevelAtLeast(await getNppAutonomyLevel(db), NPP_ENGINE_LEVEL)
     ? NPP_GOVERNMENT_LANES
     : 1;

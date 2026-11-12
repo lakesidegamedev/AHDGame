@@ -144,6 +144,8 @@ const checks = [
 // SIZE_CAP_ALLOWLIST grandfathers in currently-oversized files awaiting
 // decomposition in later phases. Do not extend the allowlist for new code —
 // add to SIZE_CAP_EXEMPT only for documented data files, with a comment.
+// The cap counts TypeScript only: a `.json` file under a `data/` directory is
+// exempt by rule, so a large table belongs in one rather than on this list.
 
 const SIZE_WARN_LOC = 1200;
 const SIZE_BLOCK_LOC = 2000;
@@ -157,137 +159,13 @@ const SIZE_CAP_EXEMPT = [
   "src/lib/constants/techTree/earlySectorFill.ts",
   "src/lib/constants/usCabinetMechanics.ts",
   "src/lib/constants/ukCabinetMechanics.ts",
-  // Japan's cabinet data moved to the country folder in D3. Scoped to the
-  // cabinet/ subdirectory on purpose: SIZE_CAP_EXEMPT is matched by SUBSTRING,
-  // so a bare "src/lib/countries/" would exempt every module the folder ever
-  // gains, including the logic ones.
-  "src/lib/countries/jp/cabinet/",
-  // Japan's relocated authored seed data (D6). Added BEFORE the move: the
-  // list holds a bare "src/lib/seeds/" and is matched by SUBSTRING, so moving
-  // seeds/jp/ out strips the exemption from all 39 files at once, and
-  // jpLegislationTypes.ts is 6,168 LOC against a 2,000 blocking cap.
-  //
-  // Scoped to data/ deliberately. A bare "src/lib/countries/" would exempt
-  // contract.ts, institutions.ts, economy.ts and every logic module the
-  // folder ever gains -- uncapping the whole thing from day one.
-  "src/lib/countries/jp/data/",
-  // The United States' relocated authored data and cabinet, added BEFORE the
-  // move for the same reason Japan's was. Two separate exemptions are being
-  // stripped here at once, and both would block the gate:
-  //
-  //   - `src/lib/seeds/` is in this list as a bare prefix, so the eight
-  //     states*.ts and eight stateMetrics*.ts files are exempt only while they
-  //     sit under it;
-  //   - `usLaws.ts` (5,321 LOC) and `usCabinetMechanics.ts` (1,915 LOC) are
-  //     exempt by EXACT path further down, so moving them exempts nothing.
-  //
-  // Scoped to data/ and cabinet/ deliberately, not a bare "src/lib/countries/us/":
-  // that would exempt institutions.ts, economy.ts and every logic module the
-  // folder ever gains, uncapping it from day one.
-  "src/lib/countries/us/data/",
-  "src/lib/countries/us/cabinet/",
-  // The United Kingdom's, added AFTER the move rather than before -- which is how
-  // `ukLaws.ts` (5,337 LOC) blocked the gate for one commit. It was exempt by
-  // EXACT path at `politicalLegislation/laws/ukLaws.ts`, and relocating it to
-  // `uk/data/` stripped that. The US entries above were added first precisely to
-  // avoid this, and the lesson did not survive the next country.
-  "src/lib/countries/uk/data/",
-  "src/lib/countries/uk/cabinet/",
-  // Germany's, added BEFORE the move this time. `deLegislationTypes.ts` is 6,108
-  // lines and is exempt today only because the list holds a bare "src/lib/seeds/";
-  // relocating it to `de/data/` strips that exemption the instant it moves, which
-  // is exactly how `ukLaws.ts` blocked the gate one country ago.
-  "src/lib/countries/de/data/",
-  "src/lib/countries/de/cabinet/",
-  // China's, before the move as well. `cnLegislationTypes.ts` is 6,168 lines and
-  // rides on the bare "src/lib/seeds/" entry until it relocates.
-  "src/lib/countries/cn/data/",
-  "src/lib/countries/cn/cabinet/",
-  // Ireland's, before the move. `ieLegislationTypes.ts` is 5,531 lines and rides
-  // on the bare "src/lib/seeds/" entry until it relocates.
-  "src/lib/countries/ie/data/",
-  "src/lib/countries/ie/cabinet/",
-  // Russia's, before the move. `ruLaws.ts` is 5,545 lines and is exempt today by
-  // EXACT path at `politicalLegislation/laws/ruLaws.ts`; relocating strips that.
-  "src/lib/countries/ru/data/",
-  "src/lib/countries/ru/cabinet/",
-  // East Germany's, before the move. `ddLaws.ts` is 5,551 lines and is exempt
-  // today by EXACT path under politicalLegislation/laws/.
-  "src/lib/countries/dd/data/",
-  "src/lib/countries/dd/cabinet/",
-  // Nigeria's, before the move. `ngLegislationTypes.ts` is 3,733 lines.
-  "src/lib/countries/ng/data/",
-  "src/lib/countries/ng/cabinet/",
-  // Brazil's, before the move. Nothing of Brazil's is over the cap today, and
-  // the entry is added anyway: every country before it that waited until after
-  // the move discovered the exemption by failing the gate.
-  "src/lib/countries/br/data/",
-  "src/lib/countries/br/cabinet/",
-  // The economy tier, all eight before the move. None is over the cap today;
-  // the entries go in first on principle, because every country that waited
-  // until after the move found out by failing the gate.
-  "src/lib/countries/fr/data/",
-  "src/lib/countries/fr/cabinet/",
-  "src/lib/countries/it/data/",
-  "src/lib/countries/it/cabinet/",
-  "src/lib/countries/es/data/",
-  "src/lib/countries/es/cabinet/",
-  "src/lib/countries/se/data/",
-  "src/lib/countries/se/cabinet/",
-  "src/lib/countries/tr/data/",
-  "src/lib/countries/tr/cabinet/",
-  "src/lib/countries/gr/data/",
-  "src/lib/countries/gr/cabinet/",
-  "src/lib/countries/at/data/",
-  "src/lib/countries/at/cabinet/",
-  "src/lib/countries/fi/data/",
-  "src/lib/countries/fi/cabinet/",
-  // The Warsaw Pact tier, all six before the move.
-  "src/lib/countries/pl/data/",
-  "src/lib/countries/pl/cabinet/",
-  "src/lib/countries/hu/data/",
-  "src/lib/countries/hu/cabinet/",
-  "src/lib/countries/ro/data/",
-  "src/lib/countries/ro/cabinet/",
-  "src/lib/countries/yu/data/",
-  "src/lib/countries/yu/cabinet/",
-  "src/lib/countries/bg/data/",
-  "src/lib/countries/bg/cabinet/",
-  "src/lib/countries/cs/data/",
-  "src/lib/countries/cs/cabinet/",
-  // The devolved nations and Soviet republics, before the move.
-  "src/lib/countries/sco/data/",
-  "src/lib/countries/sco/cabinet/",
-  "src/lib/countries/wal/data/",
-  "src/lib/countries/wal/cabinet/",
-  "src/lib/countries/blr/data/",
-  "src/lib/countries/blr/cabinet/",
-  "src/lib/countries/ukr/data/",
-  "src/lib/countries/ukr/cabinet/",
-  "src/lib/countries/bal/data/",
-  "src/lib/countries/bal/cabinet/",
   "src/lib/constants/cnCabinetMechanics.ts",
-  "src/lib/constants/historicalSeats.ts",
-  "src/lib/constants/metricDefinitions.ts",
+  "src/lib/constants/metricDefinitionsTables.ts",
   // The world alignment roster: one declarative row per entity (key, name, tier,
   // 1953 status, map feature ids, metropole) and no runtime logic. It grows by a
   // line whenever an entity gains geometry, which is data entry rather than a
   // decomposition signal — `alignmentRoster.test.ts` is what keeps it honest.
   "src/lib/constants/alignmentRoster.ts",
-  // GENERATED demographic composition weights. The generator emits a typed,
-  // reviewable table of numeric records with no runtime logic.
-  "src/lib/demographics/compositionWeights.generated.ts",
-  // GENERATED client projection of COUNTRY_CONFIGS: one typed record per country
-  // plus the per-era override rows, and no runtime logic beyond five lookup
-  // helpers. Splitting it would put one data table across several files without
-  // shrinking the browser bundle, which is the only reason it exists.
-  "src/lib/constants/countryClientConfig.ts",
-  // GENERATED chamber/office projection of the same registry, written by the
-  // same script: one typed record per country plus the per-era overlay rows,
-  // with six lookup helpers and no branching of its own. It exists so the
-  // elections, region and bill pages stop shipping the full client config; the
-  // data is the same, so splitting the table would only add files.
-  "src/lib/constants/countryOfficesClient.ts",
   // Pure-data crisis/disaster template declarations (one object per template).
   "src/lib/crises/templates.ts",
   // Pure-data tech-tree node declarations (NodeSpec records, no logic).
@@ -295,20 +173,8 @@ const SIZE_CAP_EXEMPT = [
   // Pure-data political-legislation catalogs (SP3): 109 authored laws per
   // country transcribed from the approved design docs — declarative
   // PoliticalLaw records only, validated by validate.ts, no logic.
-  "src/lib/politicalLegislation/laws/usLaws.ts",
-  "src/lib/politicalLegislation/laws/ukLaws.ts",
   "src/lib/politicalLegislation/laws/ruLaws.ts",
   "src/lib/politicalLegislation/laws/ddLaws.ts",
-  // Pure-data historical NPP rosters: one authored identity record per preset
-  // seat, validated by historicalRosters.test.ts and consumed as a lookup map.
-  "src/lib/npp/rosters/p1991-us.ts",
-  "src/lib/npp/rosters/p2019-us.ts",
-  // GENERATED pure-data political boards, emitted by
-  // scripts/debug/derive-nonplayable-boards.ts --emit and committed so the
-  // artifact is reviewable: 4 presets x 147 regions x 63 families of plain
-  // numbers, no logic. Note this is `politicalMetrics/seeds/`, which the
-  // `src/lib/seeds/` prefix above does NOT cover.
-  "src/lib/politicalMetrics/seeds/",
 ];
 
 // Files currently over the size threshold whose decomposition is tracked in
@@ -333,17 +199,88 @@ const SIZE_CAP_ALLOWLIST = new Set([
   "src/components/Navbar.tsx",
   "src/app/notifications/notificationConfig.tsx",
   "src/lib/turn/parliamentaryGovernment.ts",
-  "src/lib/constants/commodities.ts",
+  "src/lib/commodities/rules/commodityMarket.ts",
   "src/lib/corporations/queries/corporationDetail.ts",
   "src/lib/turn/suspiciousDetection.ts",
-  "src/lib/turn/perpetualElections.ts",
+  "src/lib/elections/scheduling/index.ts",
   "src/components/admin/economy/CorporationsAdminPanel.tsx",
   "src/components/admin/economy/CommoditiesAdminPanel.tsx",
 ]);
 
-function isSizeExempt(filePath) {
+/** A JSON file under a `data/` directory: data by rule, never code. */
+function isDataFile(filePath) {
   const norm = filePath.replace(/\\/g, "/");
+  return norm.endsWith(".json") && /(?:^|\/)data\//.test(norm);
+}
+
+// Authored country data and cabinet tables are exempt by rule, so a country
+// moved into its folder (or a new one) never needs a list entry. Scoped to
+// `data/` and `cabinet/` so logic modules in the folder stay capped.
+const COUNTRY_DATA_PATH = /src\/lib\/countries\/[a-z]+\/(?:data|cabinet)\//;
+
+function isSizeExempt(filePath) {
+  if (isDataFile(filePath)) return true;
+  const norm = filePath.replace(/\\/g, "/");
+  if (COUNTRY_DATA_PATH.test(norm)) return true;
   return SIZE_CAP_EXEMPT.some((suffix) => norm.includes(suffix));
+}
+
+// ---------------------------------------------------------------------------
+// Generated tables are data files
+// ---------------------------------------------------------------------------
+// A file headed "GENERATED ... do not edit" is a table, and a table written as
+// TypeScript is type-checked and bundled as code on every build. Emit it as
+// JSON under a `data/` directory with a schema instead. The allowlist holds the
+// current offenders and may only shrink; an entry whose file no longer carries
+// the header fails so the list cannot go stale.
+
+const GENERATED_HEADER = /generated\b[^\n]{0,40}do not edit/i;
+const GENERATED_HEADER_LINES = 10;
+
+const GENERATED_TS_ALLOWLIST = new Set([
+  // Country module facts and era stubs read by client-safe registries.
+  "src/lib/countries/at/geographyFacts.ts",
+  "src/lib/countries/at/institutionsFacts.ts",
+  "src/lib/countries/bg/geographyFacts.ts",
+  "src/lib/countries/bg/institutionsFacts.ts",
+  "src/lib/countries/br/geographyFacts.ts",
+  "src/lib/countries/cn/geographyFacts.ts",
+  "src/lib/countries/cs/geographyFacts.ts",
+  "src/lib/countries/dd/geographyFacts.ts",
+  "src/lib/countries/ru/economy.ts",
+  "src/lib/countries/ru/eras/2019.ts",
+  "src/lib/countries/ru/eras/2023.ts",
+  "src/lib/countries/sco/eras/1953.ts",
+  "src/lib/countries/sco/eras/1979.ts",
+  "src/lib/countries/sco/eras/1991.ts",
+  "src/lib/countries/sco/eras/1999.ts",
+  "src/lib/countries/sco/eras/2007.ts",
+  "src/lib/countries/sco/eras/2019.ts",
+  // Political-metric seed tables: candidates for the next move to data files.
+  "src/lib/politicalMetrics/seeds/approvalNeutrals.ts",
+]);
+
+function hasGeneratedHeader(file) {
+  const head = fs
+    .readFileSync(file, "utf8")
+    .split(/\r?\n/)
+    .slice(0, GENERATED_HEADER_LINES)
+    .join("\n");
+  return GENERATED_HEADER.test(head);
+}
+
+function findGeneratedTsViolations() {
+  /** @type {string[]} */
+  const unlisted = [];
+  const flagged = new Set();
+  for (const file of walkDir(path.resolve(process.cwd(), "src"))) {
+    if (!hasGeneratedHeader(file)) continue;
+    const rel = path.relative(process.cwd(), file).replace(/\\/g, "/");
+    flagged.add(rel);
+    if (!GENERATED_TS_ALLOWLIST.has(rel)) unlisted.push(rel);
+  }
+  const stale = [...GENERATED_TS_ALLOWLIST].filter((rel) => !flagged.has(rel));
+  return { unlisted, stale };
 }
 
 function findSizeViolations() {
@@ -363,6 +300,91 @@ function findSizeViolations() {
     else if (loc > SIZE_WARN_LOC) warn.push({ file, loc });
   }
   return { block, warn };
+}
+
+// ---------------------------------------------------------------------------
+// Size pins
+// ---------------------------------------------------------------------------
+// A file just under the block threshold tends to grow until it touches it.
+// Every capped file over SIZE_PIN_LOC is pinned at its size in the baseline: it
+// may shrink, never grow, and a file newly crossing SIZE_PIN_LOC fails until it
+// is decomposed. After a file shrinks, run
+// `node scripts/architecture-audit.mjs --lower-size-pins` to tighten its pin.
+
+const SIZE_PIN_LOC = 1500;
+const SIZE_PIN_BASELINE = path.join("scripts", "architecture", "fileSizePins.baseline.json");
+
+function countLoc(file) {
+  return fs.readFileSync(file, "utf8").split(/\r?\n/).length;
+}
+
+/** Capped files (not exempt, not tests, not allowlisted) over SIZE_PIN_LOC. */
+function currentPinnedSizes() {
+  /** @type {Record<string, number>} */
+  const sizes = {};
+  for (const file of walkDir(path.resolve(process.cwd(), "src"))) {
+    if (isSizeExempt(file)) continue;
+    if (/\.(test|integration\.test|spec)\.tsx?$/.test(file)) continue;
+    const rel = path.relative(process.cwd(), file).replace(/\\/g, "/");
+    if (SIZE_CAP_ALLOWLIST.has(rel)) continue;
+    const loc = countLoc(file);
+    if (loc > SIZE_PIN_LOC && loc <= SIZE_BLOCK_LOC) sizes[rel] = loc;
+  }
+  return sizes;
+}
+
+function readSizePins() {
+  const raw = JSON.parse(fs.readFileSync(SIZE_PIN_BASELINE, "utf8"));
+  return /** @type {Record<string, number>} */ (raw.files);
+}
+
+function findSizePinViolations() {
+  const pins = readSizePins();
+  /** @type {{ file: string, loc: number, pinned: number | null }[]} */
+  const violations = [];
+  for (const [file, loc] of Object.entries(currentPinnedSizes())) {
+    const pinned = pins[file] ?? null;
+    if (pinned === null || loc > pinned) violations.push({ file, loc, pinned });
+  }
+  return violations;
+}
+
+/** Lower every pin to the file's current size; drop files at or under SIZE_PIN_LOC. */
+function lowerSizePins() {
+  const pins = readSizePins();
+  const current = currentPinnedSizes();
+  /** @type {Record<string, number>} */
+  const files = {};
+  for (const [file, pinned] of Object.entries(pins).sort(([a], [b]) => a.localeCompare(b))) {
+    if (current[file] !== undefined) files[file] = Math.min(pinned, current[file]);
+  }
+  const note =
+    "Capped files over 1500 lines, pinned at their size. Pins may only go down: run `node scripts/architecture-audit.mjs --lower-size-pins` after a file shrinks.";
+  fs.writeFileSync(SIZE_PIN_BASELINE, `${JSON.stringify({ note, files }, null, 2)}\n`);
+  console.log(
+    `Size pins lowered: ${Object.keys(pins).length} -> ${Object.keys(files).length} files.`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Fat route rule
+// ---------------------------------------------------------------------------
+// A route handler should authenticate, parse and delegate. Workflow composed
+// inside `route.ts` can only be tested over HTTP; move it into a lib command
+// module (model: src/lib/corporations/commands/founding/foundCorporation.ts).
+
+const ROUTE_WARN_LOC = 300;
+
+function findFatRoutes() {
+  const root = path.resolve(process.cwd(), "src", "app");
+  /** @type {{ file: string, loc: number }[]} */
+  const fat = [];
+  for (const file of walkDir(root)) {
+    if (!/[\\/]route\.tsx?$/.test(file)) continue;
+    const loc = fs.readFileSync(file, "utf8").split(/\r?\n/).length;
+    if (loc > ROUTE_WARN_LOC) fat.push({ file, loc });
+  }
+  return fat.sort((a, b) => b.loc - a.loc);
 }
 
 // ---------------------------------------------------------------------------
@@ -905,6 +927,56 @@ function main() {
     console.log(`PASS file size <= ${SIZE_WARN_LOC} LOC`);
   }
 
+  const pinViolations = findSizePinViolations();
+  if (pinViolations.length > 0) {
+    console.log(`FAIL file grew past its size pin (${pinViolations.length})`);
+    console.log(
+      `   Files over ${SIZE_PIN_LOC} LOC may not grow. Decompose instead; see ${SIZE_PIN_BASELINE}.`
+    );
+    for (const { file, loc, pinned } of pinViolations) {
+      console.log(
+        `   ${file} (${loc} LOC, ${pinned === null ? "not pinned" : `pinned at ${pinned}`})`
+      );
+    }
+    console.log();
+    blockingCount += pinViolations.length;
+  } else {
+    console.log(`PASS files over ${SIZE_PIN_LOC} LOC stay at or under their pins`);
+  }
+
+  const generated = findGeneratedTsViolations();
+  if (generated.unlisted.length + generated.stale.length > 0) {
+    console.log(
+      `FAIL generated table written as TypeScript (${generated.unlisted.length + generated.stale.length})`
+    );
+    console.log(
+      "   Emit generated tables as JSON under a data/ directory with a schema. GENERATED_TS_ALLOWLIST may only shrink."
+    );
+    for (const rel of generated.unlisted) console.log(`   ${rel} (not allowlisted)`);
+    for (const rel of generated.stale) {
+      console.log(`   ${rel} (allowlisted but no generated header; remove the entry)`);
+    }
+    console.log();
+    blockingCount += generated.unlisted.length + generated.stale.length;
+  } else {
+    console.log("PASS generated tables are data files or allowlisted");
+  }
+
+  const fatRoutes = findFatRoutes();
+  if (fatRoutes.length > 0) {
+    console.log(`WARN route.ts > ${ROUTE_WARN_LOC} LOC (${fatRoutes.length})`);
+    console.log(
+      "   Keep the route to auth, parse and delegate; move the workflow into a lib command module."
+    );
+    for (const { file, loc } of fatRoutes) {
+      console.log(`   ${path.relative(process.cwd(), file)} (${loc} LOC)`);
+    }
+    console.log();
+    warningCount += fatRoutes.length;
+  } else {
+    console.log(`PASS route.ts <= ${ROUTE_WARN_LOC} LOC`);
+  }
+
   // ---- portable rules core ---------------------------------------------
   const portabilityViolations = findPortabilityViolations();
   if (portabilityViolations.length > 0) {
@@ -995,4 +1067,8 @@ function main() {
   }
 }
 
-main();
+if (process.argv.includes("--lower-size-pins")) {
+  lowerSizePins();
+} else {
+  main();
+}

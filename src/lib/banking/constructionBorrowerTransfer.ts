@@ -13,6 +13,8 @@ import {
   transferableConstructionClaimFilter,
 } from "./rules/constructionBorrowerTransfer";
 import { acquireConstructionLoanLock } from "./constructionLoanLock";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 type TransferSector = Pick<
   CorporateSector,
@@ -129,8 +131,7 @@ export async function prepareConstructionBorrowerTransfers(
   });
   const [turn, loans] = await Promise.all([
     input.turn ?? getCurrentTurn(db),
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find({ _id: { $in: loanIds } })
       .toArray(),
   ]);
@@ -139,7 +140,7 @@ export async function prepareConstructionBorrowerTransfers(
   const unlock = () =>
     transfers.length === 0
       ? Promise.resolve()
-      : db.collection<BankLoan>("bankLoans").bulkWrite(
+      : bankLoansCollection(db).bulkWrite(
           transfers.map((transfer) => ({
             updateOne: {
               filter: { _id: transfer.loanId, constructionSettlementOwner: transfer.key },
@@ -199,8 +200,7 @@ export async function settleConstructionBorrowerTransfers(
 ): Promise<{ moved: number }> {
   const { transfers } = plan;
   if (transfers.length === 0) return { moved: 0 };
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { _id: { $in: transfers.map((transfer) => transfer.sectorId) } },
       { projection: { corporationId: 1, constructionFinancing: 1 } }
@@ -237,7 +237,7 @@ export async function settleConstructionBorrowerTransfers(
       },
     });
   }
-  await db.collection<BankLoan>("bankLoans").bulkWrite(ops, { ordered: true });
+  await bankLoansCollection(db).bulkWrite(ops, { ordered: true });
   return { moved };
 }
 
@@ -274,8 +274,7 @@ export async function securedSiteMergeRefusal(
 ): Promise<string | null> {
   const moving = sectors.filter((sector) => !sector.corporationId.equals(toId));
   if (moving.length === 0) return null;
-  const survivors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const survivors = await corporateSectorsCollection(db)
     .find(
       {
         corporationId: toId,

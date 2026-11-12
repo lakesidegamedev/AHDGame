@@ -15,6 +15,9 @@ import { createGitHubIssue } from "@/lib/github";
 import { createNotification } from "@/lib/notifications";
 import type { Feedback, FeedbackType, BugCategory, SuggestionCategory } from "@/lib/db/types";
 import type { User } from "@/lib/db/types";
+import { servicesConfig } from "@/lib/config/services";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { feedbackCollection } from "@/lib/db/repositories/feedback";
 
 /**
  * POST /api/feedback
@@ -108,17 +111,14 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const result = await db.collection<Feedback>("feedback").insertOne(doc as Feedback);
+    const result = await feedbackCollection(db).insertOne(doc as Feedback);
 
     // Create GitHub issue if GIT_TOKEN and GITHUB_REPO are configured
     let githubIssueUrl: string | undefined;
-    if (process.env.GIT_TOKEN && process.env.GITHUB_REPO) {
+    if (servicesConfig.gitToken() && servicesConfig.githubRepo()) {
       const reporterUsername = userId
-        ? (
-            await db
-              .collection<User>("users")
-              .findOne({ _id: userId }, { projection: { username: 1 } })
-          )?.username
+        ? (await usersCollection(db).findOne({ _id: userId }, { projection: { username: 1 } }))
+            ?.username
         : null;
       const gh = await createGitHubIssue({
         issueNumber,
@@ -137,19 +137,16 @@ export async function POST(request: Request) {
       });
       if (gh) {
         githubIssueUrl = gh.url;
-        await db
-          .collection<Feedback>("feedback")
-          .updateOne(
-            { _id: result.insertedId },
-            { $set: { githubIssueUrl: gh.url, githubIssueNumber: gh.number } }
-          );
+        await feedbackCollection(db).updateOne(
+          { _id: result.insertedId },
+          { $set: { githubIssueUrl: gh.url, githubIssueNumber: gh.number } }
+        );
       }
     }
 
     // Notify all admins of the new submission (best-effort, non-blocking)
     try {
-      const admins = await db
-        .collection<User>("users")
+      const admins = await usersCollection(db)
         .find({ $or: [{ role: "admin" }, { isAdmin: true }] })
         .project({ _id: 1 })
         .toArray();

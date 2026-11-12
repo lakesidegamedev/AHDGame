@@ -7,20 +7,6 @@ import { SuperTabNav, type NavSuperTabDef } from "@/components/nav/SuperTabNav";
 export type SuperTabId =
   "overview" | "politics" | "economy" | "metrics" | "demographics" | "governance";
 
-export type LegacyTabId =
-  | "overview"
-  | "elections"
-  | "politics"
-  | "parties"
-  | "demographics"
-  | "metrics"
-  | "statistics"
-  | "budget"
-  | "laws"
-  | "economy"
-  | "resources"
-  | "admin";
-
 interface SubTabDef {
   id: string;
   label: string;

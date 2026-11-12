@@ -24,22 +24,12 @@ export interface SoeBackingSweepArgs {
   mark: (label: string) => void;
 }
 
-/**
- * Phase 3a/3a prime: SOE loss backing plus profit remittance, then fold both
- * cash legs into the in memory snapshots before history persistence.
- *
- * Lives in its own module because the corporation turn index crossed the 2000
- * line architecture cap: this sweep is one coherent unit (back both SOE cash
- * legs, fold them, emit the aggregate audit row) with a single return, so it
- * extracts cleanly. Runs after sector/corp writes so liquidCapital reflects
- * this turn's result. The realized per-corp operating result comes from this
- * turn's own snapshots (the same income that moved liquidCapital); it is the
- * coverable basis, with the margin estimate only as fallback (#2043).
- * Remittance runs after backing so it only acts on a positive balance.
- * Both legs share one treasury cash accounting batch, flushed even if a later
- * leg fails. Returns the deterministic aggregate audit row, or null when
- * neither leg moved anything.
- */
+/* SOE loss backing then profit remittance, folding both cash legs into the
+ * in-memory snapshots before history persistence. Remittance runs after
+ * backing so it only acts on positive balance. Coverable basis is this
+ * turn's realized income, with margin estimate as fallback. Both legs share
+ * one treasury cash batch, flushed even if a later leg fails. Returns the
+ * aggregate audit row, or null when neither leg moved anything. */
 export async function runSoeBackingSweep(
   args: SoeBackingSweepArgs
 ): Promise<ActionAuditInput | null> {

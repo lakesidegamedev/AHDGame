@@ -1,27 +1,28 @@
 import type { Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 /**
- * Phase 7: Auto-resolve lingering corporate defaults.
+ * Auto-resolve lingering corporate defaults.
  *
- * A corp that defaulted on a PRIOR turn (defaultedAtTurn < turn) has already
- * had at least one turn for its CEO to act in the crisis modal — so it can no
- * longer dodge resolution by simply closing the tab. Resolution order:
+ * A corp that defaulted on a PRIOR turn (defaultedAtTurn < turn) has already had
+ * a turn for its CEO to act in the crisis modal, so it can no longer dodge
+ * resolution by closing the tab. Resolution order:
  *   1. REFINANCE (no sale): issue a replacement bond and roll holders in when
- *      the corp is within its leverage limits & refinance cap. Preserves every
- *      sector — the least destructive outcome.
+ *      within leverage limits and the refinance cap. Preserves every sector.
  *   2. RESTRUCTURE (sell): if refinance is infeasible, sell the minimum set of
  *      sectors that repays bondholders in full.
  *   3. STAND for dissolution: if neither works, the default stands for the CEO
- *      to dissolve & settle.
+ *      to dissolve and settle.
  * National and IMF-managed corps are never auto-resolved. Every auto-resolution
- * now notifies the owning CEO and writes an audit row (ticket #900: the silent
- * sector sales that nobody was told about).
+ * notifies the owning CEO and writes an audit row.
  */
 export async function autoResolveLingeringDefaults(args: {
   db: Db;
@@ -32,7 +33,7 @@ export async function autoResolveLingeringDefaults(args: {
   let bondsAutoRestructured = 0;
   let bondsAutoRefinanced = 0;
   const phase7Notifications: NotificationInput[] = [];
-  const lingeringDefaultCorpIds = await db.collection<Bond>("bonds").distinct("corporationId", {
+  const lingeringDefaultCorpIds = await bondsCollection(db).distinct("corporationId", {
     matured: false,
     defaulted: true,
     defaultedAtTurn: { $lt: turn },
@@ -48,18 +49,13 @@ export async function autoResolveLingeringDefaults(args: {
       import("@/lib/bonds/executeCorporationBondRefinance"),
       import("@/lib/corporations/settlementLock"),
     ]);
-    const candidateCorps = await db
-      .collection<Corporation>("corporations")
+    const candidateCorps = await corporationsCollection(db)
       .find({ _id: { $in: lingeringDefaultCorpIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const auditRows: Record<string, unknown>[] = [];
-    // Forensics/alt-detection audit spine (plan §3.1, T2.7) — the "silent
-    // state change" scenario: an auto-restructure/refinance mutates a
-    // player's corp (sells sectors, replaces a bond) with nobody having
-    // acted. `adminLogs` above already covers this (ticket #900), but it
-    // isn't queryable from the unified spine/Forensic Explorer, so mirror
-    // each row into `actionAuditEntries` and flush with ONE `recordAuditBulk`
-    // call after the loop (never per-corp DB round trips).
+    // Mirror each auto-restructure/refinance row into `actionAuditEntries`
+    // so state changes with no actor are queryable from the unified audit spine.
+    // Flush with ONE `recordAuditBulk` call after the loop, never per-corp.
     const actionAuditEntries: ActionAuditInput[] = [];
     for (const corp of candidateCorps) {
       if (corp.countryOwnerId || corp.imfBailoutActive === true) continue;
@@ -68,8 +64,7 @@ export async function autoResolveLingeringDefaults(args: {
       // replacement bond's term (defaults to 96 / 2yr when none is a valid
       // BondMaturityTurns) so a refinanced long-dated bond isn't silently
       // shortened.
-      const corpDefaultedBonds = await db
-        .collection<Bond>("bonds")
+      const corpDefaultedBonds = await bondsCollection(db)
         .find({ corporationId: corp._id, matured: false, defaulted: true })
         .project({ maturityTurns: 1 })
         .toArray();
@@ -208,7 +203,7 @@ export async function autoResolveLingeringDefaults(args: {
 
     if (auditRows.length > 0) {
       try {
-        await db.collection("adminLogs").insertMany(auditRows);
+        await adminLogsCollection<Document>(db).insertMany(auditRows);
       } catch (err) {
         // Audit is best-effort; never crash a turn over the log write.
         console.error("[bondTurn] Phase 7 audit log insert failed:", err);

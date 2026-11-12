@@ -6,7 +6,7 @@ import { requireModerator } from "@/lib/api/requireModerator";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createModAuditLog } from "@/lib/modAuditLog";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 
 const reviewSchema = z.object({
   flagIndex: z.number().int().min(0),
@@ -35,9 +35,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { flagIndex, dismissed } = parsed.data;
     const db = await getDb();
 
-    const entry = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
-      .findOne({ _id: new ObjectId(id) });
+    const entry = await financialTxLogCollection(db).findOne({ _id: new ObjectId(id) });
 
     if (!entry) {
       return errorResponse(404, "Log entry not found");
@@ -55,7 +53,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       index === flagIndex ? !dismissed : !flag.dismissed
     );
 
-    await db.collection<FinancialTxLogEntry>("financialTxLog").updateOne(
+    await financialTxLogCollection(db).updateOne(
       { _id: new ObjectId(id) },
       {
         $set: {

@@ -10,8 +10,11 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminRemoveOfficialSchema } from "@/lib/api/schemas/admin";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, Character, NPP } from "@/lib/db/types";
+import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function POST(
   request: Request,
@@ -39,7 +42,7 @@ export async function POST(
     const now = new Date();
 
     // Find the official
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       _id: new ObjectId(officialId),
       state: stateId,
     });
@@ -53,17 +56,19 @@ export async function POST(
 
     // Clear the character/NPP's currentOffice
     if (official.characterId) {
-      await db
-        .collection<Character>("characters")
-        .updateOne({ _id: official.characterId }, { $unset: { currentOffice: "" } });
+      await charactersCollection(db).updateOne(
+        { _id: official.characterId },
+        { $unset: { currentOffice: "" } }
+      );
     } else if (official.nppId) {
-      await db
-        .collection<NPP>("npps")
-        .updateOne({ _id: official.nppId }, { $unset: { currentOffice: "" } });
+      await nppsCollection(db).updateOne(
+        { _id: official.nppId },
+        { $unset: { currentOffice: "" } }
+      );
     }
 
     // Clear the official record (set to vacant)
-    await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+    await electedOfficialsCollection(db).updateOne(
       { _id: official._id },
       {
         $set: {

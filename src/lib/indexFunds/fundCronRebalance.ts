@@ -52,6 +52,9 @@ import { loadEquityPoolsByCurrency } from "@/lib/equities/marketPool";
 import type { EquityMarketPool } from "@/lib/db/types";
 import { emitTx, emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import { isStaggeredTurn } from "@/lib/turn/staggerPhase";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export type FundCronResult = {
   fundsProcessed: number;
@@ -107,7 +110,7 @@ const NO_REBALANCE: RebalanceOutcome = {
 // ── Helper: Load exchange rates ───────────────────────────────────────
 
 export async function loadExchangeRates(db: Db): Promise<Partial<Record<string, number>>> {
-  const docs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const docs = await exchangeRatesCollection(db).find({}).toArray();
   return Object.fromEntries(docs.map((r) => [r.currencyCode, r.rate]));
 }
 
@@ -168,8 +171,7 @@ export async function loadOpenBuyBidsByFundId(
 ): Promise<Map<string, ShareOrder[]>> {
   const byFundId = new Map<string, ShareOrder[]>();
   if (fundIds.length === 0) return byFundId;
-  const orders = await db
-    .collection<ShareOrder>("shareOrders")
+  const orders = await shareOrdersCollection(db)
     .find({ placerFundId: { $in: fundIds }, type: "buy", status: "open" })
     .toArray();
   for (const order of orders) {
@@ -184,8 +186,7 @@ export async function loadOpenBuyBidsByFundId(
 
 /** All exchange-listed corporations eligible for index composition (market-cap ranked). */
 export async function loadIndexFundCandidateCorporations(db: Db): Promise<EligibleCorpRow[]> {
-  const corps = await db
-    .collection<CorpRow>("corporations")
+  const corps = await corporationsCollection<CorpRow>(db)
     .find(INDEX_FUND_CORP_QUERY)
     .project(INDEX_FUND_CORP_PROJECTION)
     .toArray();
@@ -354,8 +355,7 @@ export async function rebalanceFundToTarget(
   // Cancel stale or off-basket open bids for this fund before placing new ones.
   const allOpenFundBids =
     shared?.openBids ??
-    (await db
-      .collection<ShareOrder>("shareOrders")
+    (await shareOrdersCollection(db)
       .find({ placerFundId: fund._id, type: "buy", status: "open" })
       .toArray());
 

@@ -1,22 +1,18 @@
 /**
- * Sovereign default — crisis auto-action timer.
+ * Sovereign default crisis auto-action timer.
  *
- * When a player-controlled executive has not proposed a resolution within the
- * 12-hour window (EXECUTIVE_DECISION_HOURS), `crisisAutoActionAt` is set on
- * the federalBudget document at crisis-fire time. This module is called each
- * bond turn to detect expired timers and auto-trigger Repudiate as the safety
- * net — keeping countries from getting permanently stuck in `crisisPending`.
- *
- * Design reference: docs/plans/archive/2026-05/2026-05-04-sovereign-default-design.md
- * Section 6.1 (auto-repudiate fallback).
+ * If a player executive has not acted within EXECUTIVE_DECISION_HOURS of
+ * crisis fire, auto-trigger Repudiate so countries cannot stay stuck in
+ * `crisisPending`.
  */
 
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { applyRepudiateResolution } from "./resolution/repudiate";
 import type { CountryId } from "@/lib/constants/countries";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 export interface CrisisAutoActionReport {
   countriesChecked: number;
@@ -43,8 +39,7 @@ export async function processCrisisAutoActions(
   // Find all federalBudget rows in crisisPending with an expired timer.
   // Disabled countries are gated from entering crisisPending (crisisDetection.ts
   // access guard), so scanning all is safe.
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find({
       sovereignCrisisState: "crisisPending",
       // Turn-first expiry (freezes on pause) with a wall-clock fallback for any
@@ -65,19 +60,18 @@ export async function processCrisisAutoActions(
     const countryCode = budget.countryId as CountryId;
 
     // Find the open SovereignCrisisDecision for this country.
-    const decision = await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .findOne({ countryCode, state: "open" });
+    const decision = await sovereignCrisisDecisionsCollection(db).findOne({
+      countryCode,
+      state: "open",
+    });
 
     if (!decision) {
       // Decision row is missing or already in a terminal state — clear the timer
       // so we don't attempt again next turn.
-      await db
-        .collection<FederalBudget>("federalBudget")
-        .updateOne(
-          { _id: getNationalBudgetId(countryCode) },
-          { $set: { crisisAutoActionAt: null } }
-        );
+      await federalBudgetCollection(db).updateOne(
+        { _id: getNationalBudgetId(countryCode) },
+        { $set: { crisisAutoActionAt: null } }
+      );
       console.warn(
         `[crisisAutoAction] ${countryCode}: crisisAutoActionAt expired but no open decision found — cleared timer`
       );

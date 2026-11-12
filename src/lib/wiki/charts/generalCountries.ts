@@ -1,11 +1,11 @@
 import type { WikiChartBuilder, WikiChartSpec } from "./types";
-import { largestRemainderSeats } from "@/lib/turn/election/seatAllocation";
-import { getMultiSeatMinShare } from "@/lib/turn/election/rules/seatEligibility";
+import { largestRemainderSeats } from "@/lib/elections/resolution/seatAllocation";
+import { getMultiSeatMinShare } from "@/lib/elections/rules/seatEligibility";
 import {
   allocateViaSainteLague,
   BUNDESTAG_VOTE_THRESHOLD,
   DIRECT_MANDATE_EXCEPTION,
-} from "@/lib/turn/election/sainteLagueAllocation";
+} from "@/lib/elections/resolution/sainteLagueAllocation";
 import {
   UK_COMMONS_SEATS,
   UK_REGIONAL_COUNCIL_SEATS,

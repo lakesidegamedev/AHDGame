@@ -12,6 +12,7 @@ import {
   crisisAgendaSignalsFromCrises,
   type CrisisAgendaIntake,
 } from "./rules/crisisAgendaSignals";
+import { crisesCollection } from "@/lib/db/repositories/crises";
 
 export type { CrisisAgendaIntake };
 
@@ -20,8 +21,7 @@ export async function loadCrisisAgendaSignals(
   db: Db,
   countryId: CountryId
 ): Promise<CrisisAgendaIntake> {
-  const crises = await db
-    .collection<Crisis>("crises")
+  const crises = await crisesCollection(db)
     .find(
       { status: "active", $or: [{ countryIds: countryId }, { scope: "global" }] },
       {

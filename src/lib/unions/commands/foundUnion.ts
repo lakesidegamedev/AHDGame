@@ -33,6 +33,8 @@ import {
 } from "@/lib/unions/unionProsecutionBar";
 import { rejectIfTurnProcessing } from "./unionActions";
 import type { UnionActionResult } from "./unionActions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 export { MAX_UNION_NAME_LENGTH, MIN_UNION_NAME_LENGTH };
 
@@ -101,8 +103,7 @@ export async function foundUnion(
   // Duplicate check is scoped to (countryId, sectorType): the same name is
   // fine in a different country or a different industry, but two rival
   // unions organizing the same industry in the same country cannot share one.
-  const existingNames = await db
-    .collection<Union>("unions")
+  const existingNames = await unionsCollection(db)
     .find(
       { countryId: input.countryId, ...operatingSectorIdentity(input.sectorType) },
       { projection: { name: 1 } }
@@ -157,7 +158,7 @@ export async function foundUnion(
 
   // ONE guarded write for both costs: partial payment is unrepresentable, and
   // a concurrent spend that drains either balance loses the race outright.
-  const spend = await db.collection<Character>("characters").findOneAndUpdate(
+  const spend = await charactersCollection(db).findOneAndUpdate(
     {
       _id: character._id,
       actions: { $gte: UNION_FOUNDING_ACTION_COST },
@@ -182,7 +183,7 @@ export async function foundUnion(
 
   /** Undo the combined spend when a later step fails, so nothing is charged for nothing. */
   const refundFoundingCost = async () => {
-    await db.collection<Character>("characters").updateOne(
+    await charactersCollection(db).updateOne(
       { _id: character._id },
       {
         $inc: {
@@ -195,7 +196,7 @@ export async function foundUnion(
 
   const now = new Date();
   try {
-    const insertResult = await db.collection<Union>("unions").insertOne({
+    const insertResult = await unionsCollection(db).insertOne({
       _id: new ObjectId(),
       countryId: input.countryId,
       ...operatingSectorIdentity(input.sectorType),
@@ -218,7 +219,7 @@ export async function foundUnion(
     // Claim leadership under the same guarded filter acceptUnionLeadership
     // uses, so a concurrent leadership win elsewhere cannot leave one
     // character heading two unions. A lost race unwinds the founding.
-    const claim = await db.collection<Character>("characters").updateOne(
+    const claim = await charactersCollection(db).updateOne(
       {
         _id: character._id,
         $or: [{ unionLeaderOf: null }, { unionLeaderOf: { $exists: false } }],
@@ -226,7 +227,7 @@ export async function foundUnion(
       { $set: { unionLeaderOf: insertResult.insertedId, updatedAt: now } }
     );
     if (claim.modifiedCount === 0) {
-      await db.collection<Union>("unions").deleteOne({ _id: insertResult.insertedId });
+      await unionsCollection(db).deleteOne({ _id: insertResult.insertedId });
       await refundFoundingCost();
       return {
         ok: false,

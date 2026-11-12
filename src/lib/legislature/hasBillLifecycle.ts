@@ -3,20 +3,13 @@ import { BILL_LIFECYCLE_COUNTRY_IDS } from "./billLifecycleCountries";
 
 /**
  * Does this country's national bills get processed by an engine?
- *
- * 27 countries do: the 26 in `COUNTRY_BILL_PHASES`, PLUS the United States, whose
- * lifecycle is invoked directly from `billLifecycle.ts` and is therefore absent from
- * that table. A bare table lookup silently excludes the US — which is why this is a
- * named helper rather than an inline check.
- *
- * Used to gate spawning a mirrored bill: minting one for a country no engine walks
- * leaves a permanent `active_both` zombie on the floor, with nothing to close it and
- * nothing that reports it.
- *
- * Reads the id set rather than the operational table on purpose: the table binds a
- * runner per country, so importing it here would put the whole turn engine behind
- * every caller that merely wants to ask the question. The test beside
- * this file pins the set to the table, both ways, so they cannot drift.
+ * 26 countries are in `COUNTRY_BILL_PHASES`, plus the US whose lifecycle is
+ * invoked directly from `billLifecycle.ts`. A bare table lookup silently
+ * excludes the US, which is why this is a named helper.
+ * Minting a bill for a country no engine walks leaves a permanent zombie with
+ * nothing to close or report it.
+ * Reads the id set, not the operational table, so callers don't pull the turn
+ * engine in; a test pins the set to the table both ways.
  */
 export function hasBillLifecycle(countryId: CountryId): boolean {
   return BILL_LIFECYCLE_COUNTRY_IDS.has(countryId);

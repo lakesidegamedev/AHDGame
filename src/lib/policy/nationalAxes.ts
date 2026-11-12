@@ -1,17 +1,13 @@
 import { POLICY_INTEGER_AXIS_RANGE } from "@/lib/utils/politics";
 
 /**
- * National Ideology axes — SSOT for the "Social Axis" / "Economic Axis"
- * figures on the country lander and National Policy mastheads.
+ * SSOT for the Social and Economic Axis figures.
  *
- * Semantics (locked at design review, 2026-06-11):
- * - Equal weight: every implemented national law is one vote.
- * - Explicit values count, including 0 (a genuinely centrist law pulls the
- *   average toward center); a record missing an axis (`has*` false) is
- *   excluded from that axis only — mirrors the policy API's
- *   `hasEconomic`/`hasSocial` flags.
- * - Tariff and subsidy records never contribute.
- * - Display goes through the existing PositionLabel / bucket utilities.
+ * Every implemented national law is one vote. Explicit values count,
+ * including 0; a record missing an axis is excluded from that axis only,
+ * mirroring the policy API's hasEconomic/hasSocial flags. Tariff and
+ * subsidy records never contribute. Display goes through PositionLabel /
+ * bucket utilities.
  */
 
 /** Minimal shape of a national policy row as served by the policy API. */

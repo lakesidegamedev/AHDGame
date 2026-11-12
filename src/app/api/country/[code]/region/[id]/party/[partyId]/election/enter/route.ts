@@ -6,7 +6,11 @@ import { logRequest } from "@/lib/api/requestLog";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { statePartyEnterSchema } from "@/lib/api/schemas/elections";
 import { validateStatePartyElectionAccess } from "@/lib/utils/statePartyElectionValidation";
-import { notifyCandidacyDeclared, POSITION_LABELS, ALL_POSITIONS } from "@/lib/statePartyElections";
+import {
+  notifyCandidacyDeclared,
+  POSITION_LABELS,
+  ALL_POSITIONS,
+} from "@/lib/elections/party/statePartyElections";
 import { isInNewCharacterCooldown } from "@/lib/auth/newCharacterCooldown";
 import type { StatePartyCandidate, StatePartyElection } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -19,6 +23,10 @@ import {
 } from "@/lib/parties/leadershipTenure";
 import { isActiveStatePartyCandidateDuplicateKey } from "@/lib/elections/duplicateKey";
 import { CANONICAL_VOTING_ELECTION_SORT } from "@/lib/elections/canonicalVotingElection";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
+import { statePartyElectionsCollection } from "@/lib/db/repositories/statePartyElections";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -70,9 +78,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     // founding chair races — so brand-new players can seat state leadership.
     if (!election.founding) {
       // 24h new-character cooldown on state leadership actions.
-      const userDoc = await db
-        .collection("users")
-        .findOne({ _id: character.userId }, { projection: { createdAt: 1 } });
+      const userDoc = await usersCollection<Document>(db).findOne(
+        { _id: character.userId },
+        { projection: { createdAt: 1 } }
+      );
       const cooldown = isInNewCharacterCooldown({
         userCreatedAt: userDoc?.createdAt ?? new Date(0),
         characterCreatedAt: character.createdAt,
@@ -118,21 +127,20 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const existingCandidate = await db
-      .collection<StatePartyCandidate>("statePartyCandidates")
-      .findOne({ electionId: election._id, characterId: character._id });
+    const existingCandidate = await statePartyCandidatesCollection(db).findOne({
+      electionId: election._id,
+      characterId: character._id,
+    });
 
     if (withdraw) {
       if (!existingCandidate || existingCandidate.status === "withdrawn") {
         logRequest("POST", path, 400, Date.now() - start);
         return errorResponse(400, "You are not an active candidate in this election");
       }
-      await db
-        .collection<StatePartyCandidate>("statePartyCandidates")
-        .updateOne(
-          { _id: existingCandidate._id },
-          { $set: { status: "withdrawn", withdrawnAt: now } }
-        );
+      await statePartyCandidatesCollection(db).updateOne(
+        { _id: existingCandidate._id },
+        { $set: { status: "withdrawn", withdrawnAt: now } }
+      );
       logRequest("POST", path, 200, Date.now() - start);
       return NextResponse.json({
         success: true,
@@ -143,19 +151,19 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Entering — check they aren't already running for another position in this election cycle
     for (const otherPos of ALL_POSITIONS) {
       if (otherPos === position) continue;
-      const otherElection = await db
-        .collection<StatePartyElection>("statePartyElections")
-        .findOne(
-          { stateId, partyId, position: otherPos, status: "voting" },
-          { sort: CANONICAL_VOTING_ELECTION_SORT }
-        );
+      const otherElection = await statePartyElectionsCollection(db).findOne(
+        { stateId, partyId, position: otherPos, status: "voting" },
+        { sort: CANONICAL_VOTING_ELECTION_SORT }
+      );
       if (
         otherElection &&
         !hasTurnBackedWindowClosed(otherElection, gameTime.currentTurn, gameTime.effectiveNow)
       ) {
-        const otherCand = await db
-          .collection<StatePartyCandidate>("statePartyCandidates")
-          .findOne({ electionId: otherElection._id, characterId: character._id, status: "active" });
+        const otherCand = await statePartyCandidatesCollection(db).findOne({
+          electionId: otherElection._id,
+          characterId: character._id,
+          status: "active",
+        });
         if (otherCand) {
           logRequest("POST", path, 400, Date.now() - start);
           return errorResponse(
@@ -172,12 +180,10 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(400, "You are already a candidate in this election");
       }
       // Re-enter
-      await db
-        .collection<StatePartyCandidate>("statePartyCandidates")
-        .updateOne(
-          { _id: existingCandidate._id },
-          { $set: { status: "active", enteredAt: now }, $unset: { withdrawnAt: "" } }
-        );
+      await statePartyCandidatesCollection(db).updateOne(
+        { _id: existingCandidate._id },
+        { $set: { status: "active", enteredAt: now }, $unset: { withdrawnAt: "" } }
+      );
       logRequest("POST", path, 200, Date.now() - start);
       return NextResponse.json({
         success: true,
@@ -198,12 +204,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     try {
-      await db.collection("statePartyCandidates").insertOne(newCandidate);
+      await statePartyCandidatesCollection<Document>(db).insertOne(newCandidate);
     } catch (error) {
       if (isActiveStatePartyCandidateDuplicateKey(error)) {
-        const activeCandidate = await db
-          .collection<StatePartyCandidate>("statePartyCandidates")
-          .findOne({ stateId, partyId, characterId: character._id, status: "active" });
+        const activeCandidate = await statePartyCandidatesCollection(db).findOne({
+          stateId,
+          partyId,
+          characterId: character._id,
+          status: "active",
+        });
 
         if (activeCandidate?.electionId.equals(election._id)) {
           logRequest("POST", path, 400, Date.now() - start);

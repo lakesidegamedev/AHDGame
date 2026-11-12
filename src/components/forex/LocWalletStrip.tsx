@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { centralBankUrl } from "@/lib/urls";
 

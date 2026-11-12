@@ -3,6 +3,8 @@ import { matureHoldingTerms, type ShareHoldingTerms } from "@/lib/corporations/r
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { Corporation, ShareOrder } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 /**
  * A single open share order belonging to the authenticated character, enriched
@@ -37,8 +39,7 @@ export async function getMyOpenShareOrders(
   db: Db,
   characterId: ObjectId
 ): Promise<MyOpenShareOrder[]> {
-  const orders = await db
-    .collection<ShareOrder>("shareOrders")
+  const orders = await shareOrdersCollection(db)
     .find({ characterId, status: "open" })
     .sort({ createdAt: -1 })
     .toArray();
@@ -52,8 +53,7 @@ export async function getMyOpenShareOrders(
     new Map(orders.map((o) => [o.corporationId.toString(), o.corporationId])).values()
   );
 
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find({ _id: { $in: corpIds } })
     .project<
       Pick<Corporation, "_id" | "name" | "tickerSymbol" | "sequentialId" | "liquidCurrencyCode">

@@ -4,10 +4,8 @@
  * (= `states._id`, matching `src/lib/seeds/blr/blrRegions.ts` /
  * `blrRegions1953.ts`).
  *
- * One image per oblast rather than one for the whole republic: the region set
- * used to be a single placeholder region (`BLR_BEL`), and a single national
- * image made sense then. It does not now - six regions sharing one photo of Mir
- * Castle reads as a rendering bug, not a design.
+ * One image per oblast: sharing a single national image across six regions
+ * reads as a rendering bug.
  */
 const BLR_REGION_IMAGES: Record<string, string> = {
   // Minsk — the rebuilt Stalinist-era centre, Independence Avenue.

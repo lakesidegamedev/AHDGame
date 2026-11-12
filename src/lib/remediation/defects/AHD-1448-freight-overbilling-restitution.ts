@@ -2,7 +2,6 @@ import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ExchangeRate } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -16,39 +15,26 @@ import {
   FREIGHT_OVERBILLING_WINDOW,
   FREIGHT_OVERBILLING_BY_CORPORATION,
 } from "./AHD-1448-freight-overbilling-restitution.data";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /**
- * Ticket #1448. Canonical freight billing charged every buyer a full day's
- * shipping bill on every hourly turn.
+ * Restitution for freight overbilling: the sourcing pass settles the commodity
+ * ledger in units-per-day, so `sourcingNetworkLoad` freight bills are daily
+ * money, but `resolveSectorFreightBillingLegs` charged the full daily amount on
+ * every hourly turn, overcharging 23/24 of each day's bill.
  *
- * The sourcing pass settles the world commodity ledger, which counts units per
- * day, so the state freight bills on `sourcingNetworkLoad` are daily money.
- * `resolveSectorFreightBillingLegs` treated the apportioned share as per-turn
- * money: it added the whole daily amount to every turn's costs. Each turn
- * overcharged 23/24 of that day's bill. Fixed in PR #3758, which spreads the
- * daily amount over TURNS_PER_DAY.
+ * Credits every overcharged corporation once. The matching surplus paid to
+ * logistics haulers is deliberately NOT clawed back, so this is an intentional
+ * mint. The credit is the gross overcharge, not netted for any tax saving.
  *
- * Owner decision 2026-10-09: credit every overcharged corporation once, and do
- * NOT claw back the matching surplus that logistics haulers were paid. That
- * makes this a deliberate mint, like the other restitution heals.
- *
- * The amounts are pinned in the companion data file, not recomputed here,
- * because no per-sector freight history was ever persisted: each sector only
- * carries its latest charge. They were rebuilt offline from the 50
- * `sourcingNetworkLoad` documents (turns 28 to 77) by re-running the turn's own
- * apportionment (`apportionFreightBilling`) per document. Each corporation turn
- * reads the previous turn's document, and turn 79 was the first to bill at the
- * daily rate (the ticket's sector: 19,456 a day, down from about 475,000), so
- * the window is corporation turns 29 to 78. Documents 28 to 30 aged out of the
- * collection before the final run; their rebuilt charges come from the first
- * run of the same rebuild a few hours earlier. Turns before PR #3475 reached the turn worker
- * split each state bill over corporate demand only, and turns before PR #3530
- * had no goods-value cap, so those turns were rebuilt under the rules they
- * actually ran. The rebuild of the last document matched the charges the turn
- * persisted: 371 of 503 sectors within 5%, aggregate within 0.6%. Sector
- * demand uses each sector's current units, so a sector's early turns are an
- * estimate. The credit is the gross overcharge; it is not netted for the tax
- * the extra cost happened to save.
+ * Amounts live in the companion data file, not recomputed here, because no
+ * per-sector freight history was persisted. They were rebuilt offline from the
+ * 50 `sourcingNetworkLoad` documents (corporation turns 29 to 78) by re-running
+ * each turn's own `apportionFreightBilling`. Sectors use current demand units,
+ * so early turns are an estimate; the rebuild of the last document matched
+ * 371 of 503 sectors within 5%, aggregate within 0.6%.
  */
 export const DEFECT_ID = "AHD-1448-freight-overbilling-restitution";
 
@@ -88,8 +74,7 @@ function hasMarker(doc: CorporationDoc | undefined): boolean {
 
 async function loadCorporations(db: Db): Promise<Map<string, CorporationDoc>> {
   const ids = FREIGHT_OVERBILLING_BY_CORPORATION.map((row) => new ObjectId(row.corporationId));
-  const docs = await db
-    .collection<CorporationDoc>("corporations")
+  const docs = await corporationsCollection<CorporationDoc>(db)
     .find(
       { _id: { $in: ids } },
       { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1, remediation: 1 } }
@@ -99,7 +84,7 @@ async function loadCorporations(db: Db): Promise<Map<string, CorporationDoc>> {
 }
 
 async function loadRatesByCurrency(db: Db): Promise<Map<string, number>> {
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   return new Map(rates.map((rate) => [String(rate.currencyCode), rate.rate]));
 }
 
@@ -193,7 +178,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   for (const credit of credits) {
     // Marker and increment in ONE update, under a filter that demands the
     // marker's absence, so a concurrent or repeated run credits nobody twice.
-    const res = await db.collection("corporations").updateOne(
+    const res = await corporationsCollection(db).updateOne(
       { _id: new ObjectId(credit.corporationId), [MARKER_PATH]: { $exists: false } },
       {
         $inc: { liquidCapital: credit.creditLocal },
@@ -244,8 +229,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   // emitTxBulk mints its own ids: read them back so a rollback can delete them.
   const insertedTxIds = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

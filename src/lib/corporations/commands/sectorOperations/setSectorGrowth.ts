@@ -7,7 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { setGrowthRateSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Character, CorporateSector, State } from "@/lib/db/types";
+import type { CorporateSector, State } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { fetchSectorMarketSharePercent } from "@/lib/corporations/marketShare";
 import { growthCostFor, resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
@@ -15,6 +15,9 @@ import { getCorpTechGrowthCostMultiplier } from "@/lib/corporations/techTree/cor
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -75,7 +78,7 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const sector = await corporateSectorsCollection(db).findOne({
       _id: new ObjectId(sectorId),
       corporationId: corporation._id,
     });
@@ -90,14 +93,13 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
     const activeGrowthRate = sector.currentGrowthRate ?? sector.growthRate ?? 0;
     // Host country, not the corporation's domicile: this feeds the prime rate
     // the growth-cost quote is discounted at and the country stamped on the
-    // action log. The old chain fell through to the corp and then to a literal
-    // "US", which quoted a foreign operation at American rates (ticket #1271,
-    // the same defect `buildCapacity` and `expandSector` carried). State first,
-    // matching `getSectorOperatingCountryId`: a stored `countryId` left stale by
-    // a region changing hands is the case that precedence exists for.
-    const sectorState = await db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+    // action log. State first, matching `getSectorOperatingCountryId`: a stored
+    // `countryId` left stale by a region changing hands is the case that
+    // precedence exists for.
+    const sectorState = await statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { countryId: 1 } }
+    );
     const countryId = sectorState?.countryId ?? sector.countryId ?? corporation.countryId;
     const primeRate = await resolveCountryPrimeRate(db, countryId);
     // Dominance penalty: dominant sectors (>{@link DOMINANCE_MARKET_SHARE_THRESHOLD}%
@@ -108,9 +110,10 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
     // CEO Business Acumen lowers growth cost (and softens high rates) — read it so
     // the persisted/previewed cost matches what the turn engine will charge.
     const ceoChar = corporation.ceoId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: corporation.ceoId },
+          { projection: { "stats.businessAcumen": 1 } }
+        )
       : null;
     const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
     // Sector tech-tree growth-cost discount (scoped to this sector's type), so
@@ -147,7 +150,7 @@ export async function setSectorGrowth(request: Request, { params }: RouteParams)
       });
     }
 
-    await db.collection<CorporateSector>("corporateSectors").updateOne(
+    await corporateSectorsCollection(db).updateOne(
       { _id: sector._id },
       {
         $set: {

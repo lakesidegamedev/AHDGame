@@ -158,4 +158,3 @@ export interface PartyCharter {
 // 336-turn cooldown). Non-platform amendments (rename, electionMethod,
 // electionDuration, merge) flow through their respective CommitteeProposal
 // types. See
-// `docs/plans/archive/2026-05/2026-05-22-amendments-via-committee-proposals.md`.

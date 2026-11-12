@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import type { Filter } from "mongodb";
 import type { StatePartyOrg } from "@/lib/db/types";
 import { applyOrganizationDecay } from "@/lib/parties/rules/organizationBucket";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 /**
  * Process party org changes for all state parties each turn.
@@ -12,7 +13,7 @@ import { applyOrganizationDecay } from "@/lib/parties/rules/organizationBucket";
  */
 export async function processPartyOrgTurn(currentTurn: number, now = new Date()): Promise<void> {
   const db = await getDb();
-  const statePartyOrgCol = db.collection<StatePartyOrg>("statePartyOrg");
+  const statePartyOrgCol = statePartyOrgCollection(db);
 
   const allSpo = await statePartyOrgCol
     .find({})

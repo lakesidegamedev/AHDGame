@@ -1,0 +1,113 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Grand National Assembly",
+      "lowerChamber": {
+        "key": "milletMeclisi",
+        "name": "National Assembly",
+        "shortName": "Meclis",
+        "seats": 450,
+        "description": "450 deputies elected by proportional representation (D'Hondt) for four-year terms."
+      },
+      "upperChamber": {
+        "key": "senato",
+        "name": "Senate of the Republic",
+        "shortName": "Senato",
+        "seats": 184,
+        "description": "184 senators (the Cumhuriyet Senatosu, abolished after the 1980 coup), partly elected and partly appointed.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "labelPlural": "Prime Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "milletMeclisi",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "senator",
+        "label": "Senator",
+        "labelPlural": "Senators",
+        "chamberKey": "senato",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Central Bank of Turkey",
+        "labelPlural": "Governors of the Central Bank of Turkey",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Grand National Assembly",
+        "lowerChamber": {
+          "key": "milletMeclisi",
+          "name": "Grand National Assembly",
+          "shortName": "Meclis",
+          "seats": 487,
+          "description": "487 deputies of the unicameral Türkiye Büyük Millet Meclisi (1950 election size; Senate created only by the 1961 constitution)."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "president",
+          "label": "President",
+          "labelPlural": "Presidents",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "deputy",
+          "label": "Deputy",
+          "labelPlural": "Deputies",
+          "chamberKey": "milletMeclisi",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Central Bank of Turkey",
+          "labelPlural": "Governors of the Central Bank of Turkey",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "upperElectionSystem": null
+    }
+  }
+}

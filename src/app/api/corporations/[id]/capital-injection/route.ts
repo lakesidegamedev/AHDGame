@@ -21,10 +21,11 @@ import {
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import type { Character, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const schema = z.object({
   /** Amount in the character's home currency. */
@@ -88,9 +89,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     const currentTurn = gameState?.currentTurn ?? 0;
 
     // Load CEO character to get cash balance and home currency.
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ userId: new ObjectId(auth.user.userId) });
+    const character = await charactersCollection(db).findOne({
+      userId: new ObjectId(auth.user.userId),
+    });
     if (!character) {
       return errorResponse(404, "Character not found");
     }
@@ -139,12 +140,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const now = new Date();
     try {
       // Credit the corp's liquid capital
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corporation._id },
-          { $inc: { liquidCapital: amountInCorpCapital }, $set: { updatedAt: now } }
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $inc: { liquidCapital: amountInCorpCapital }, $set: { updatedAt: now } }
+      );
     } catch (err) {
       // Refund the CEO if the corp credit fails
       await refundCharacterCash(

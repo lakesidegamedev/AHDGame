@@ -4,12 +4,14 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import type { Character } from "@/lib/db/types";
 import type { User } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { optimizeImage, IMAGE_PRESETS } from "@/lib/imageOptimize";
 import { isR2Enabled, uploadFile, deleteByPrefix } from "@/lib/r2";
 import { parseFormData } from "@/lib/api/validate";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_SIZE = 4 * 1024 * 1024; // 4 MB (wider hero assets)
@@ -44,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: new ObjectId(authUser.userId) });
+    const user = await usersCollection(db).findOne({ _id: new ObjectId(authUser.userId) });
     const isImperialMode = user?.activeCharacterType === "imperial";
 
     // Resolve target: imperial character or regular character
@@ -52,9 +54,10 @@ export async function POST(request: Request) {
     let targetCollection: "characters" | "imperialCharacters";
 
     if (isImperialMode && user?.activeImperialCharacterId) {
-      const imperial = await db
-        .collection<ImperialCharacter>("imperialCharacters")
-        .findOne({ _id: user.activeImperialCharacterId, userId: new ObjectId(authUser.userId) });
+      const imperial = await imperialCharactersCollection(db).findOne({
+        _id: user.activeImperialCharacterId,
+        userId: new ObjectId(authUser.userId),
+      });
       if (!imperial) {
         return errorResponse(400, "No imperial character found");
       }
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
       const characterQuery = user?.activeCharacterId
         ? { _id: user.activeCharacterId, userId: new ObjectId(authUser.userId) }
         : { userId: new ObjectId(authUser.userId) };
-      const character = await db.collection<Character>("characters").findOne(characterQuery);
+      const character = await charactersCollection(db).findOne(characterQuery);
       if (!character) {
         return errorResponse(400, "No character found");
       }

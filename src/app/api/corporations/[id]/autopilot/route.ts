@@ -15,7 +15,7 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { validateAutopilotToggle, type AutopilotToggleError } from "@/lib/corporations/autopilot";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -52,7 +52,7 @@ async function toggle(request: Request, { params }: RouteParams, enable: boolean
   if (error) return errorResponse(400, TOGGLE_ERROR[error]);
 
   const now = new Date();
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   // Re-assert the seat in the write: a CEO change between the read and this
   // update must not let the previous owner flip the switch.
   const seated = {

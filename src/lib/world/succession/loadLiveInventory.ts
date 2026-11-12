@@ -1,6 +1,5 @@
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { State } from "@/lib/db/types/state";
@@ -8,6 +7,10 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import type { SuccessionCustodyAsset } from "./rules/custody";
 import type { SuccessionRegion } from "./rules/territory";
 import { buildSourceRegionHierarchy } from "./sourceRegionHierarchy";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
 
 export interface LiveSuccessionInventory {
   sourceRegions: SuccessionRegion[];
@@ -23,14 +26,12 @@ export async function loadLiveSuccessionInventory(
   sourceCountryId: CountryId,
   session?: ClientSession
 ): Promise<LiveSuccessionInventory> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   const { topLevel, topLevelFor } = buildSourceRegionHierarchy(states);
 
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find(
       {
         $or: [
@@ -47,14 +48,12 @@ export async function loadLiveSuccessionInventory(
     )
     .map((corp) => corp._id);
   const sectors = publicCorporationIds.length
-    ? await db
-        .collection<CorporateSector>("corporateSectors")
+    ? await corporateSectorsCollection(db)
         .find({ corporationId: { $in: publicCorporationIds } }, { session })
         .toArray()
     : [];
   const corporationsWithSites = new Set(sectors.map((sector) => sector.corporationId.toString()));
-  const units = await db
-    .collection<MilitaryUnit>("militaryUnits")
+  const units = await militaryUnitsCollection(db)
     .find({ countryId: sourceCountryId }, { session })
     .toArray();
   return {

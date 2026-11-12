@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import type { Document } from "mongodb";
 
 /**
  * Drop synthetic bondAllocations ledger rows and restore that principal to
@@ -10,8 +12,7 @@ async function migrateIndexFundsToRealBonds(
   db: Db,
   ctx: MigrationContext
 ): Promise<MigrationResult> {
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find({ bondAllocations: { $exists: true, $ne: [] } })
     .toArray();
 
@@ -31,17 +32,15 @@ async function migrateIndexFundsToRealBonds(
       0
     );
     if (syntheticPrincipal <= 0) {
-      await db
-        .collection("indexFunds")
-        .updateOne(
-          { _id: fund._id },
-          { $unset: { bondAllocations: "" }, $set: { updatedAt: new Date() } }
-        );
+      await indexFundsCollection<Document>(db).updateOne(
+        { _id: fund._id },
+        { $unset: { bondAllocations: "" }, $set: { updatedAt: new Date() } }
+      );
       updated++;
       continue;
     }
 
-    await db.collection("indexFunds").updateOne(
+    await indexFundsCollection<Document>(db).updateOne(
       { _id: fund._id },
       {
         $inc: { cashAnchor: syntheticPrincipal },

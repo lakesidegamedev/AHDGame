@@ -18,7 +18,6 @@ import { createExecutiveEndorsement } from "@/lib/governorOffice/endorsements/cr
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { GOVERNOR_ENDORSEMENT_ACTION_COST } from "@/lib/constants/governorOffice";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ExecutiveEndorsement,
@@ -27,6 +26,13 @@ import type {
   State,
 } from "@/lib/db/types";
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { executiveEndorsementsCollection } from "@/lib/db/repositories/executiveEndorsements";
 
 // Re-uses electionLabels via the constants/countries re-export.
 // Import resolved inline above to keep this file self-contained.
@@ -108,14 +114,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const [activeEndorsements, racesInSelectedState, states, officeState, myParty] =
       await Promise.all([
-        db
-          .collection<ExecutiveEndorsement>("executiveEndorsements")
+        executiveEndorsementsCollection(db)
           .find({ countryId, endorsedByCharacterId: characterId, isActive: true })
           .sort({ createdAt: -1 })
           .toArray(),
         selectedState
-          ? db
-              .collection<Election>("elections")
+          ? electionsCollection(db)
               .find({
                 countryId,
                 state: selectedState,
@@ -124,23 +128,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
               })
               .toArray()
           : Promise.resolve([]),
-        db
-          .collection<State>("states")
+        statesCollection(db)
           .find({ countryId })
           .project<{ _id: string; name: string }>({ _id: 1, name: 1 })
           .sort({ name: 1 })
           .toArray(),
-        db.collection<GovernorOfficeState>("governorOfficeState").findOne({ countryId, stateId }),
-        db
-          .collection<{ _id: ObjectId; party?: string }>("characters")
+        governorOfficeStateCollection(db).findOne({ countryId, stateId }),
+        charactersCollection<{ _id: ObjectId; party?: string }>(db)
           .findOne({ _id: characterId }, { projection: { party: 1 } })
           .then((c) => c?.party ?? null),
       ]);
 
     const electionIds = racesInSelectedState.map((e) => e._id);
     const stateCandidates = electionIds.length
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds }, status: "active" })
           .toArray()
       : [];
@@ -154,8 +155,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       ),
     ];
     const playerCharacters = playerCharacterIds.length
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: playerCharacterIds } })
           .project<{ _id: ObjectId; party?: string }>({ _id: 1, party: 1 })
           .toArray()
@@ -164,8 +164,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       playerCharacters.map((c) => [c._id.toString(), c.party ?? null])
     );
 
-    const partyDocs = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyDocs = await politicalPartiesCollection(db)
       .find({ countryId })
       .project<{ sequentialId: number; name: string; color: string; logoUrl?: string }>({
         sequentialId: 1,

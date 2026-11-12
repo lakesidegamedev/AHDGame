@@ -10,6 +10,7 @@ import { getGameState } from "@/lib/gameState";
 import { LEGAL_STRUCTURES } from "@/lib/constants/legalStructures";
 import type { LegalStructureId } from "@/lib/constants/legalStructures";
 import { isListedOnlyStructure } from "@/lib/corporations/legalStructure";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const Schema = z.object({ legalStructure: z.string() });
 
@@ -67,11 +68,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid legal structure for this corporation's country.");
     }
 
-    // This route is private-only (public corps are blocked above), so a
-    // listed-only form (PLC, AG, SA Aberta, …) cannot be elected here — it is
-    // acquired by taking the corporation public, not by restructuring.
-    // State patronage forms are for state-owned companies only; a private
-    // owner cannot elect a state tax preference.
+    // This route is private-only, so listed-only forms (acquired by going
+    // public) and state patronage forms (state-owned only) cannot be elected
+    // here.
     if (structure.id === "cn_soe" && !corporation.countryOwnerId) {
       return errorResponse(400, `${structure.name} is only available to state-owned companies.`);
     }
@@ -83,7 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    await db.collection("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corporation._id },
       {
         $set: {

@@ -9,6 +9,7 @@ import {
   safeLakesideLoginReturn,
 } from "@/lib/auth/lakesideLoginReturn";
 import { randomBytes } from "crypto";
+import { authConfig } from "@/lib/config/auth";
 
 // GET /api/auth/google/login — Initiates the Google OAuth flow for login by redirecting to Google's authorization page.
 // Auth: public
@@ -19,8 +20,8 @@ export async function GET(request: Request) {
   const limit = checkRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
   if (!limit.ok) return rateLimitResponse(limit.retryAfter);
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const clientId = authConfig.googleClientId();
+    const redirectUri = authConfig.googleRedirectUri();
 
     if (!clientId || !redirectUri) {
       return NextResponse.redirect(new URL("/login?google=error&reason=not_configured", baseUrl));

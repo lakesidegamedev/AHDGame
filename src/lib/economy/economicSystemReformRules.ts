@@ -2,15 +2,12 @@
  * Pure rules for the `economic_system_reform` bill provision.
  *
  * A planned economy's marketization dial otherwise moves only by endogenous
- * drift, which a government can barely steer: the policy-stance term is worth at
- * most 0.12 points a turn and a chartered party line moves one step per 336
- * turns, so a reforming leadership in a command economy could not reach private
- * enterprise (COMMAND_CEILING) within an era. A reform law sets a legislated
- * target instead. The turn engine ramps the dial toward it at
- * {@link ECONOMIC_REFORM_RAMP_PER_TURN}, so every band transition (dual-track
- * machinery, currency un-pegging, hard budgets) still runs through the same code
- * paths a scheduled transition does. Once the target is reached the law becomes
- * the dial's resting point in place of the era schedule.
+ * drift, which a government can barely steer, so a reforming leadership could
+ * not reach private enterprise within an era. A reform law sets a legislated
+ * target instead, and the turn engine ramps the dial toward it at
+ * ECONOMIC_REFORM_RAMP_PER_TURN so every band transition still runs through the
+ * scheduled-transition code paths. Once reached, the target becomes the dial's
+ * resting point in place of the era schedule.
  *
  * Client-safe: no Mongo imports.
  */

@@ -3,6 +3,10 @@ import { ObjectId } from "mongodb";
 import type { Migration } from "../types";
 import { getContestRoundsCollection } from "@/lib/contests/collection";
 import { CONTEST_ACHIEVEMENTS } from "@/lib/contests/achievementDefinitions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import type { Document } from "mongodb";
+import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 
 /** Only establish ownership from recorded identities, never from a name match. */
 export const migration: Migration = {
@@ -11,12 +15,10 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     const [live, retired, rounds] = await Promise.all([
-      db
-        .collection("characters")
+      charactersCollection(db)
         .find({ userId: { $exists: true } }, { projection: { userId: 1 } })
         .toArray(),
-      db
-        .collection("retiredCharacters")
+      retiredCharactersCollection<Document>(db)
         .find({}, { projection: { characterId: 1, userId: 1 } })
         .toArray(),
       getContestRoundsCollection(db)
@@ -47,7 +49,7 @@ export const migration: Migration = {
       await archiveRetiredCareerLegislation(db, await loadCareerLegislation(db));
       if (updates.length) await getContestRoundsCollection(db).bulkWrite(updates);
       const now = new Date();
-      await db.collection("achievements").bulkWrite(
+      await achievementsCollection<Document>(db).bulkWrite(
         CONTEST_ACHIEVEMENTS.map((definition, index) => ({
           updateOne: {
             filter: { slug: definition.slug },

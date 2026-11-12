@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { GameState, NppAutonomyLevel } from "@/lib/db/types/gameState";
 import { isSingleplayer } from "@/lib/singleplayer";
 import type { Migration, MigrationResult } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Hosted levels this migration raises. Lower levels and "off" were chosen on purpose. */
 const RAISED_LEVELS: readonly NppAutonomyLevel[] = ["v4", "v5"];
@@ -22,12 +23,10 @@ export const migration: Migration = {
       return { documentsScanned: 0, documentsUpdated: 0, notes: ["singleplayer: level kept"] };
     }
 
-    const state = await db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { nppAutonomyLevel: 1, singleplayerConfig: 1, currentTurn: 1 } }
-      );
+    const state = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { nppAutonomyLevel: 1, singleplayerConfig: 1, currentTurn: 1 } }
+    );
     if (!state) {
       return { documentsScanned: 0, documentsUpdated: 0, notes: ["gameState is absent"] };
     }
@@ -57,7 +56,7 @@ export const migration: Migration = {
     }
 
     const nowIso = new Date().toISOString();
-    const result = await db.collection<GameState>("gameState").updateOne(
+    const result = await gameStateCollection(db).updateOne(
       {
         _id: "current",
         nppAutonomyLevel: { $in: [...RAISED_LEVELS] },

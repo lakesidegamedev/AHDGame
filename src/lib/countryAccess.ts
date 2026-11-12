@@ -1,28 +1,18 @@
 /**
  * Country access control utilities.
  *
- * Determines which countries are accessible to players based on a two-tier
- * resolution: DB documents in `countryGameStates` override the static config
- * defaults in `COUNTRY_CONFIGS`. Fields fall back independently, so an admin
- * can override just `status` or just `enabledForPlayers` without touching the
- * other field.
+ * Resolves access in two tiers: DB documents in `countryGameStates` override
+ * static `COUNTRY_CONFIGS` defaults. Fields fall back independently, so an
+ * admin can override just `status` or just `enabledForPlayers`. The collection
+ * is lazy; a missing document falls back to the config's `status` ("active" =
+ * enabled, anything else disabled).
  *
- * The `countryGameStates` collection is created lazily — documents only exist
- * once an admin has toggled a setting. A missing document always falls back to
- * the config's `status` field, treating "active" as enabled and everything
- * else as disabled.
+ * Every registered country that is not `enabledForPlayers` is browsable
+ * read-only, including political pages; per-action APIs still require
+ * citizenship/office. Only unregistered countries stay fully hidden.
  *
- * Econ-only nations: every REGISTERED country that is not `enabledForPlayers`
- * is browsable read-only — all of its pages, political ones included. Players
- * cannot act there (the per-action APIs require citizenship/office), but they
- * can see the parties, the legislature, and the elections behind the economy
- * they are investing in. Only an unregistered country (a latent secession
- * target such as SCO/WAL, absent from `COUNTRY_ORDER` until its activation
- * writes a row) stays fully hidden.
- *
- * `economyPreview` no longer gates routes. It survives as the switch that wires
- * a country's economy into the cross-country market lists — see
- * `getEconomyVisibleCountryIds`.
+ * `economyPreview` no longer gates routes; it wires a country's economy into
+ * cross-country market lists via `getEconomyVisibleCountryIds`.
  */
 
 import { AsyncLocalStorage } from "async_hooks";
@@ -40,6 +30,13 @@ import {
   type CountryRequirementLevel,
 } from "@/lib/world/countryRequirementLevel";
 import { NPP_AUTONOMY_LEVEL_RANK } from "@/lib/nppAutonomy/levels";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import {
+  isSeededInWorld,
+  ROW_GATED_COUNTRY_IDS,
+  seededInWorld,
+} from "@/lib/country/rules/seededRegistration";
 
 export interface CountryAccess {
   enabledForPlayers: boolean;
@@ -83,9 +80,10 @@ export interface CountryAccess {
  * dependency-free `levels` module so it can never fall behind a new tier.
  */
 async function readGlobalNppLevelRank(db: Db): Promise<number> {
-  const doc = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1 } });
+  const doc = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppAutonomyLevel: 1, nppAutonomyEnabled: 1 } }
+  );
   const level = doc?.nppAutonomyLevel ?? (doc?.nppAutonomyEnabled === true ? "v0" : "off");
   return NPP_AUTONOMY_LEVEL_RANK[level] ?? 0;
 }
@@ -105,10 +103,9 @@ export async function getCountryAccess(countryId: CountryId): Promise<CountryAcc
 
 /**
  * Boolean shortcut around `getCountryAccessFromDb`. Phase 10 allowlist gates
- * call this from every player-facing layout / admin tool / API route that
- * used to hardcode a `["US", "UK", "DE", "JP"]`-style array. The admin
- * panel writes `countryGameStates` rows; this helper reads them so a flip
- * activates a country with no code redeploy.
+ * call this from player-facing layouts, admin tools, and API routes. The admin
+ * panel writes `countryGameStates` rows; this reads them so a flip activates a
+ * country with no redeploy.
  */
 export async function isCountryEnabledForPlayers(db: Db, countryId: CountryId): Promise<boolean> {
   const access = await getCountryAccessFromDb(db, countryId);
@@ -138,6 +135,13 @@ export async function withCountryAccessSnapshot<T>(db: Db, fn: () => Promise<T>)
   return countryAccessSnapshot.run(await getAllCountryAccess(db), fn);
 }
 
+/** A row-gated country this world never seeded. Reads only when the row is missing. */
+async function unseededHere(db: Db, countryId: string, doc: unknown): Promise<boolean> {
+  if (doc != null || !ROW_GATED_COUNTRY_IDS.has(countryId)) return false;
+  const anyRow = await countryGameStatesCollection(db).findOne({}, { projection: { _id: 1 } });
+  return !isSeededInWorld(countryId, false, anyRow != null);
+}
+
 /**
  * `Db`-injecting variant of `getCountryAccess`. Use from contexts that already
  * hold a `Db` reference (per-turn processors, evaluators) so we don't ping the
@@ -155,24 +159,21 @@ export async function getCountryAccessFromDb(db: Db, countryId: CountryId): Prom
   const cached = snapshot?.[countryId];
   if (cached) return cached;
 
-  const doc = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: countryId });
+  const doc = await countryGameStatesCollection(db).findOne({ _id: countryId });
 
-  // A DISSOLVED country is not merely disabled — it is out of the registry, the
-  // same answer `registeredBase()` gives the list paths. Without this, the
-  // single-country path contradicts the list paths: a merged country's page
-  // stays browsable "econ-only", its election gates read it as NPP-governed,
-  // and per-country processing that consults access keeps simulating a state
-  // that no longer exists.
+  // A DISSOLVED country is out of the registry, matching `registeredBase()` for
+  // list paths. Otherwise the single-country path contradicts them: a merged
+  // country's page stays browsable "econ-only", its election gates read it as
+  // NPP-governed, and per-country processing keeps simulating a dead state.
   //
-  // A country ABSENT FROM THIS ERA is unregistered for the same reason and must
-  // take the same branch. The two causes stay distinct in the data (see
-  // `absentInEra` in gameState.ts — conflating them would break merge
-  // idempotency) but they produce the identical access answer, and splitting
-  // them here is what would let `/country/dd` keep rendering econ-only in a 1991
-  // world while every list path had already dropped it.
-  if (doc?.dissolvedTurn != null || doc?.absentInEra === true) {
+  // An era-ABSENT country is unregistered for the same reason and takes the
+  // same branch. The causes stay distinct in the data (see `absentInEra`) to
+  // preserve merge idempotency, but produce the identical access answer.
+  if (
+    doc?.dissolvedTurn != null ||
+    doc?.absentInEra === true ||
+    (await unseededHere(db, countryId, doc))
+  ) {
     return {
       enabledForPlayers: false,
       // `dissolvedTurn` is deliberately NOT a `CountryStatus` member (see the
@@ -240,7 +241,10 @@ function registeredBase(docs: CountryGameState[]): CountryId[] {
   // conflating the two would break merge idempotency (see CountryGameState).
   // Undefined reads as registered, so rows predating the field are unaffected.
   const absent = new Set(docs.filter((d) => d.absentInEra === true).map((d) => String(d._id)));
-  return [...COUNTRY_ORDER, ...activeExtra].filter((id) => !dissolved.has(id) && !absent.has(id));
+  return seededInWorld(
+    [...COUNTRY_ORDER, ...activeExtra].filter((id) => !dissolved.has(id) && !absent.has(id)),
+    new Set(docs.map((d) => String(d._id)))
+  );
 }
 
 /**
@@ -252,7 +256,7 @@ function registeredBase(docs: CountryGameState[]): CountryId[] {
  */
 export async function getAllCountryAccess(dbArg?: Db): Promise<Record<CountryId, CountryAccess>> {
   const db = dbArg ?? (await getDb());
-  const docs = await db.collection<CountryGameState>("countryGameStates").find({}).toArray();
+  const docs = await countryGameStatesCollection(db).find({}).toArray();
   const docMap = new Map(docs.map((d) => [d._id, d]));
   const globalNppRank = await readGlobalNppLevelRank(db);
 
@@ -301,31 +305,24 @@ export async function getEnabledCountryIds(): Promise<CountryId[]> {
 /**
  * Countries the ENGINE is simulating, as opposed to countries players may join.
  *
- * `getEnabledCountryIdsFromDb` answers "can a player enter this country", which
- * is the wrong question for world-level subsystems: auto-disasters, auto-crises
- * and international-organisation broadcasts should fire in every country the
- * turn engine is actually running, whether or not it is open to players. Those
- * three all used the player predicate, so a sandbox that deliberately closes
- * every country to players (the sim harness must, because `isNppAutonomyActive`
- * refuses to seat governments in player-enabled countries) silently produced
- * ZERO disasters and ZERO crises for an entire run while reporting every phase
- * completed.
+ * World-level subsystems (auto-disasters, auto-crises, IO broadcasts) must fire
+ * in every simulated country, not just player-enterable ones, or a world with
+ * no player-enabled countries silently produces zero events.
  *
- * Resolution: a runtime `countryGameStates.status` if present, else the
- * compiled-in config status; `enabledForPlayers: true` additionally qualifies a
- * country (a world with players in it must be simulated even if its status was
- * never flipped from "coming-soon"). The sandbox case above still works: the
- * harness closes countries by NOT setting `enabledForPlayers`, while their
- * status keeps them simulated.
+ * Status is the runtime `countryGameStates.status` if present, else the
+ * compiled-in config status. `enabledForPlayers: true` also qualifies a country
+ * (a world with players must be simulated even if status was never flipped).
  */
 export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
-  const docs = await db
-    .collection<CountryGameState>("countryGameStates")
-    .find({}, { projection: { _id: 1, status: 1, enabledForPlayers: 1 } })
+  const docs = await countryGameStatesCollection(db)
+    .find({}, { projection: { _id: 1, status: 1, enabledForPlayers: 1, backgroundCountry: 1 } })
     .toArray();
   const byId = new Map(docs.map((d) => [String(d._id), d]));
   return registeredBase(docs).filter((countryId) => {
     const doc = byId.get(countryId);
+    // A background country is registered but outside the full
+    // simulation: no crises, disasters or health rows for it.
+    if (doc?.backgroundCountry === true) return false;
     const resolved = doc?.status ?? COUNTRY_CONFIGS[countryId].status;
     // `enabledForPlayers: true` is how live worlds opened countries before the
     // status field was consistently set (config may still say "coming-soon").
@@ -337,7 +334,7 @@ export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
 }
 
 export async function getEnabledCountryIdsFromDb(db: Db): Promise<CountryId[]> {
-  const docs = await db.collection<CountryGameState>("countryGameStates").find({}).toArray();
+  const docs = await countryGameStatesCollection(db).find({}).toArray();
 
   const docMap = new Map(docs.map((d) => [d._id, d]));
 
@@ -358,7 +355,7 @@ export async function getEnabledCountryIdsFromDb(db: Db): Promise<CountryId[]> {
  */
 export async function getEconomyVisibleCountryIds(): Promise<CountryId[]> {
   const db = await getDb();
-  const docs = await db.collection<CountryGameState>("countryGameStates").find({}).toArray();
+  const docs = await countryGameStatesCollection(db).find({}).toArray();
 
   const docMap = new Map(docs.map((d) => [d._id, d]));
 

@@ -52,7 +52,7 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { loadOrgFoundingContext } from "@/lib/internationalOrganizations/founding";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
-import { DIRECTIVE_DURATION_TURNS } from "@/lib/constants/orgDirectives";
+import { directiveDurationTurns } from "@/lib/constants/orgDirectives";
 import { JOINT_STATEMENT_DURATION_TURNS } from "@/lib/internationalOrganizations/jointStatement";
 import {
   admitMember,
@@ -60,6 +60,12 @@ import {
 } from "@/lib/internationalOrganizations/joinApplication";
 import { nppGovernedMembers } from "@/lib/internationalOrganizations/ballotRoll";
 import { castAutonomousOrgVotes } from "@/lib/nppAutonomy/autonomousOrgVoting";
+import {
+  backgroundMembersOf,
+  castBackgroundOrgVotes,
+} from "@/lib/internationalOrganizations/backgroundOrgVoting";
+import { backgroundVotesOn } from "@/lib/internationalOrganizations/rules/backgroundOrgVote";
+import { loadCountryTiers, type CountryTierSnapshot } from "@/lib/country/countryTier";
 import { reconcileAutonomousWarEntryBills } from "@/lib/internationalOrganizations/reconcileAutonomousWarEntry";
 import {
   loadOrganizationWarPlanningContext,
@@ -70,51 +76,53 @@ import {
   applyResolutionEffect,
   captureDiplomaticExpiry,
 } from "./internationalOrganizationsEffects";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import type { Document } from "mongodb";
 
-/**
+/*
  * Voting roster for one ballot. Shadow/off preserve the player-only baseline.
- * Active mode adds modelled members that have a formed NPP government and a
- * legislature capable of resolving the consequences of their vote — except on
- * the player-only ballots `ballotIsPlayerOnly` names.
+ * Active mode adds modelled members with a formed NPP government and a
+ * legislature able to resolve the consequences of their vote, except on the
+ * player-only ballots `ballotIsPlayerOnly` names.
  *
- * ADMISSION, WAR DECLARATION, AND WAR ENTRY KEEP THE PLAYER-ONLY ROLL, whatever
- * the rollout mode.
- * That is the rule `orgMembership.ts` already states for client states, and it
- * is here for the same reason: on those ballots a member is asked to consent to
- * someone else's business, and its silence is indistinguishable from a veto. An
- * NPP government plans once every six turns and executes a single ranked action,
- * so across a 24-turn ballot it has four contested chances to vote. Seating it
- * there made every Warsaw Pact admission unwinnable: China closed 5-of-7 and
- * North Korea 2-of-7 with no "no" votes cast at all, purely because Poland and
- * Czechoslovakia never got round to it (ticket #1257).
+ * ADMISSION, WAR DECLARATION, AND WAR ENTRY KEEP THE PLAYER-ONLY ROLL whatever
+ * the rollout mode. On those ballots a member consents to someone else's
+ * business, and its silence is indistinguishable from a veto. An NPP
+ * government plans once every six turns and executes a single ranked action, so
+ * across a 24-turn ballot it has only four contested chances to vote.
  *
- * Everything else keeps the wider roll and the modelled bloc keeps its say. On a
- * majority ballot a silence costs a yes and nothing worse; on an FTA the voters
- * ARE the parties, each deciding its own agreement, and narrowing that would
- * leave a deal between two modelled neighbours with no voters at all.
+ * On a majority ballot a silence costs a yes and nothing worse; on an FTA the
+ * voters ARE the parties and narrowing that would leave a deal between two
+ * modelled neighbours with no voters at all.
+ *
+ * Background members sit on the same wider roll; `castBackgroundOrgVotes`
+ * scripts their vote on every ballot `backgroundVotesOn` names.
  */
 async function ballotVotingMembers(
   db: Db,
   organizationId: string,
-  kind: OrgBallotKind
+  kind: OrgBallotKind,
+  tiers?: CountryTierSnapshot
 ): Promise<CountryId[]> {
   const players = await votingMembers(db, organizationId);
   if (ballotIsPlayerOnly(kind)) return players;
-  return legislatingMembers(db, organizationId, players);
+  const legislating = await legislatingMembers(db, organizationId, players);
+  if (!tiers || tiers.backgroundIds.length === 0 || !backgroundVotesOn(kind)) return legislating;
+  const background = backgroundMembersOf(await getMembers(db, organizationId), tiers);
+  return Array.from(new Set([...legislating, ...background]));
 }
 
 /**
- * Members that can be ASKED TO LEGISLATE: player-enabled members, plus — in
- * active mode — modelled members whose formed NPP government can sponsor a bill
+ * Members that can be ASKED TO LEGISLATE: player-enabled members, plus, in
+ * active mode, modelled members whose formed NPP government can sponsor a bill
  * through a real legislature.
  *
- * This is deliberately NOT the same list as the player-only ballot roll. Being
- * unable to reliably *vote within a deadline* is what disqualifies an NPP member
- * from an admission, declaration, or entry resolution; it says nothing about
- * whether that country can be handed a war-entry bill once the bloc has already
- * decided. `join_conflict` needs exactly this wider set (bloc war entry, #1067):
- * France's NPP premier sponsors her own ratification bill even though France
- * holds no ballot on the resolution that produced it.
+ * Deliberately not the player-only ballot roll: inability to vote within a
+ * deadline disqualifies an NPP from an admission, declaration, or entry
+ * resolution, but not from being handed a war-entry bill. `join_conflict`
+ * needs this wider set: France's NPP premier sponsors her own ratification
+ * bill even though France holds no ballot on the resolution that produced it.
  */
 async function legislatingMembers(
   db: Db,
@@ -129,18 +137,15 @@ async function legislatingMembers(
 /**
  * International-organizations turn phase.
  *
- * Three independent sub-resolvers run sequentially against the same DB so each
- * later step sees the membership changes the earlier step committed (e.g. an
- * EU admission in step 1 enlarges the voter pool that step 2 measures FTA
- * unanimity against). Inter-org effects are not concurrent within the phase.
+ * Three sub-resolvers run sequentially against the same DB so each sees the
+ * membership changes the prior step committed (e.g. an EU admission enlarges
+ * the voter pool for FTA unanimity). They do not run concurrently.
  *
  *   1. Resolve expired membership proposals (unanimous current members).
- *   2. Resolve expired org legislation: FTAs activate when every named party
- *      voted "yes". Non-party members of the host org are not bound and have
- *      no vote. Active FTAs are the data the tariff override layer reads each
- *      turn.
- *   3. Resolve expired leadership elections: simple majority of current
- *      members elects; ties leave the seat unchanged.
+ *   2. Resolve expired legislation: FTAs activate when every named party
+ *      voted yes; non-party org members are not bound and do not vote.
+ *   3. Resolve expired leadership elections: simple majority; ties leave the
+ *      seat unchanged.
  */
 export async function processInternationalOrganizationsTurn(
   db: Db,
@@ -157,6 +162,7 @@ export async function processInternationalOrganizationsTurn(
   duesCharged: number;
   tributeCharged: number;
   autonomousVotesCast: number;
+  backgroundVotesCast: number;
   closeTimeBallotsCast?: number;
 }> {
   await reconcileEuropeanTreatyLive(db, currentTurn);
@@ -169,14 +175,19 @@ export async function processInternationalOrganizationsTurn(
   // instead of silently vetoing every membership proposal and FTA. No-op when
   // the autonomy flag is off or no member is autonomy-active.
   const autonomousVotesCast = await castAutonomousOrgVotes(db, currentTurn);
+  // Background countries (#5702) vote by script, once per ballot, before any
+  // ballot is tallied. One tier read; nothing more in a world without them.
+  const tiers = await loadCountryTiers(db);
+  const backgroundVotesCast = await castBackgroundOrgVotes(db, currentTurn, tiers);
   const proposalsResolved = await resolveExpiredMembershipProposals(db, currentTurn);
   const legislationResolved = await resolveExpiredOrganizationLegislation(
     db,
     currentTurn,
-    cashContext
+    cashContext,
+    tiers
   );
   await reconcileAutonomousWarEntryBills(db);
-  const electionsResolved = await resolveExpiredLeadershipElections(db, currentTurn);
+  const electionsResolved = await resolveExpiredLeadershipElections(db, currentTurn, tiers);
   const sanctionsExpired = await expireActiveSanctions(db, currentTurn);
   const directivesExpired = await expireActiveDirectives(db, currentTurn);
   const jointStatementsExpired = await expireActiveJointStatements(db, currentTurn);
@@ -194,6 +205,7 @@ export async function processInternationalOrganizationsTurn(
     duesCharged,
     tributeCharged,
     autonomousVotesCast,
+    backgroundVotesCast,
   };
 }
 
@@ -215,7 +227,9 @@ export async function foundDueOrganizations(db: Db, currentTurn: number): Promis
     (await ensureEuropeanIntegrationState(
       db,
       preset,
-      (await db.collection("organizationMemberships").countDocuments({ organizationId: "EU" })) > 0
+      (await organizationMembershipsCollection<Document>(db).countDocuments({
+        organizationId: "EU",
+      })) > 0
     ));
 
   let founded = 0;
@@ -241,8 +255,7 @@ export async function foundDueOrganizations(db: Db, currentTurn: number): Promis
 
     // "World news": countryHistory is per-country, so broadcast the founding
     // to every player-enabled country's history.
-    const countries = await db
-      .collection<{ _id: CountryId }>("countryGameStates")
+    const countries = await countryGameStatesCollection<{ _id: CountryId }>(db)
       .find({ enabledForPlayers: true })
       .project<{ _id: CountryId }>({ _id: 1 })
       .toArray();
@@ -308,19 +321,15 @@ async function chargeAllOrganizationContributions(
   let duesCharged = 0;
   let tributeCharged = 0;
   for (const orgId of orgIds) {
-    // ─── Every member contributes exactly once (#1156) ──────────────────────
+    // ─── Every member contributes exactly once ─────────────────────────────
     //
     // `orgMembership` partitions the roll into voters (dues) and everyone else
-    // (tribute), and its docblock promises "nobody is billed twice and nobody
-    // is billed not at all". The second half was not true: tribute exists only
-    // for the two armed blocs, so in EVERY other organisation the non-voting
-    // members were assessed nothing at all and sat on the roll for free. That
-    // is what players saw as members who never pay dues.
-    //
-    // Where the organisation levies tribute the partition stands untouched.
-    // Where it does not, non-voting members are assessed ordinary dues like
-    // anyone else — they are still members, they still have an economy, and
-    // there is no second instrument to catch them.
+    // (tribute). Tribute only exists for the two armed blocs, so in every other
+    // organisation non-voting members were assessed nothing and sat on the roll
+    // free. Where the organisation levies tribute the partition stands; where
+    // it does not, non-voting members are assessed ordinary dues like anyone
+    // else (they are still members with an economy, and no other instrument
+    // catches them).
     const duesPayers = (await leviesTributeFor(orgId))
       ? (votersByOrg.get(orgId) ?? [])
       : [...(votersByOrg.get(orgId) ?? []), ...(nonVotersByOrg.get(orgId) ?? [])];
@@ -434,111 +443,118 @@ async function resolveExpiredMembershipProposals(db: Db, currentTurn: number): P
   const now = new Date();
 
   for (const proposal of expired) {
-    const proposingCountryId = proposal.proposingCountryId as CountryId;
+    try {
+      const proposingCountryId = proposal.proposingCountryId as CountryId;
 
-    // Founding applications: the org-vote gate was waived at application time
-    // (org had 0 members; orgApproved is pre-set true). Recomputing it from
-    // votes here would overwrite the waiver with a failed 0-voter tally, so
-    // just poll the domestic bill via the arbiter until it resolves.
-    if (proposal.orgVoteExempt) {
-      await resolveJoinApplication(db, proposal._id, currentTurn);
-      resolved++;
-      continue;
-    }
+      // Founding applications: the org-vote gate was waived at application time
+      // (org had 0 members; orgApproved is pre-set true). Recomputing it from
+      // votes here would overwrite the waiver with a failed 0-voter tally, so
+      // just poll the domestic bill via the arbiter until it resolves.
+      if (proposal.orgVoteExempt) {
+        await resolveJoinApplication(db, proposal._id, currentTurn);
+        resolved++;
+        continue;
+      }
 
-    const members = await getMembers(db, proposal.organizationId);
-    // Only player-enabled members have a vote: a client state cannot withhold a
-    // unanimous "yes" it was never entitled to cast, which is what keeps
-    // unanimity workable once an alliance takes on clients. An NPP-governed
-    // member is silent for the same practical reason and is excluded on the same
-    // grounds — see `ballotVotingMembers`.
-    const voters = (
-      await ballotVotingMembers(db, proposal.organizationId, "membership_proposal")
-    ).filter((m: string) => m !== proposingCountryId);
+      const members = await getMembers(db, proposal.organizationId);
+      // Only player-enabled members have a vote: a client state cannot withhold a
+      // unanimous "yes" it was never entitled to cast, which is what keeps
+      // unanimity workable once an alliance takes on clients. An NPP-governed
+      // member is silent for the same practical reason and is excluded on the same
+      // grounds — see `ballotVotingMembers`.
+      const voters = (
+        await ballotVotingMembers(db, proposal.organizationId, "membership_proposal")
+      ).filter((m: string) => m !== proposingCountryId);
 
-    // Close-time ballots (active mode): a silent autonomy-active voter is the
-    // planner having never reached this item, not a deliberate nay. Cast its
-    // ballot before the tally, or one busy six-hour cycle vetoes the bloc.
-    await fillSilentBallots(
-      db,
-      [proposal],
-      () => voters,
-      () => proposingCountryId,
-      async (item, vote) => upsertPendingOrganizationVote(col, item._id, vote),
-      currentTurn
-    );
-    const uniqueVotes = dedupeOrganizationVotes(proposal.votes as ProposalVoteRecord[]);
-
-    // Unanimous current members must vote "yes". Abstain or no-vote counts as
-    // non-approval. Empty voter set (e.g., applying to a 0-member org) cannot
-    // succeed under unanimity — `ballotPasses` blocks a zero-size ballot rather
-    // than silently admitting, so only the founding waiver reads through.
-    let approved = false;
-    if (voters.length === 0) {
-      approved = members.includes(proposingCountryId);
-    } else {
-      const yesVoters = new Set<string>(
-        uniqueVotes
-          .filter((v: ProposalVoteRecord) => v.vote === "yes")
-          .map((v: ProposalVoteRecord) => v.countryId)
-      );
-      const yes = voters.filter((c: string) => yesVoters.has(c)).length;
-      approved = ballotPasses("membership_proposal", voters.length, yes);
-    }
-
-    // Parallel join (has a linked domestic Join bill): record the member-vote
-    // result and let the arbiter admit (both gates passed) or cancel the
-    // counterpart. The legacy single-gate path below is kept for proposals with
-    // no linked bill.
-    if (proposal.domesticBillId) {
-      await col.updateOne({ _id: proposal._id }, { $set: { orgApproved: approved } });
-      await resolveJoinApplication(db, proposal._id, currentTurn);
-      resolved++;
-      continue;
-    }
-
-    if (approved) {
-      // admitMember idempotently upserts the membership AND clears any prior
-      // withdrawal tombstone, so a re-admitted founder is no longer suppressed
-      // by the self-heal and a future withdrawal can re-tombstone it.
-      await admitMember(db, proposal.organizationId, proposingCountryId, currentTurn);
-      await col.updateOne(
-        { _id: proposal._id },
-        {
-          $set: {
-            status: "approved",
-            resolvedAt: now,
-            resolvedOnTurn: currentTurn,
-          },
-        }
-      );
-      await recordOrgHistoryEvent(
+      // Close-time ballots (active mode): a silent autonomy-active voter is the
+      // planner having never reached this item, not a deliberate nay. Cast its
+      // ballot before the tally, or one busy six-hour cycle vetoes the bloc.
+      await fillSilentBallots(
         db,
-        proposingCountryId,
-        currentTurn,
-        `${countryName(proposingCountryId)} admitted to ${proposal.organizationId}.`,
-        { organizationId: proposal.organizationId }
+        [proposal],
+        () => voters,
+        () => proposingCountryId,
+        async (item, vote) => upsertPendingOrganizationVote(col, item._id, vote),
+        currentTurn
       );
-    } else {
-      await col.updateOne(
-        { _id: proposal._id },
-        {
-          $set: {
-            status: voters.length === 0 ? "expired" : "rejected",
-            resolvedAt: now,
-            resolvedOnTurn: currentTurn,
-          },
-        }
-      );
-      await recordOrgHistoryEvent(
-        db,
-        proposingCountryId,
-        currentTurn,
-        `${countryName(proposingCountryId)}'s application to ${proposal.organizationId} was rejected.`,
-        { organizationId: proposal.organizationId }
+      const uniqueVotes = dedupeOrganizationVotes(proposal.votes as ProposalVoteRecord[]);
+
+      // Unanimous current members must vote "yes". Abstain or no-vote counts as
+      // non-approval. Empty voter set (e.g., applying to a 0-member org) cannot
+      // succeed under unanimity — `ballotPasses` blocks a zero-size ballot rather
+      // than silently admitting, so only the founding waiver reads through.
+      let approved = false;
+      if (voters.length === 0) {
+        approved = members.includes(proposingCountryId);
+      } else {
+        const yesVoters = new Set<string>(
+          uniqueVotes
+            .filter((v: ProposalVoteRecord) => v.vote === "yes")
+            .map((v: ProposalVoteRecord) => v.countryId)
+        );
+        const yes = voters.filter((c: string) => yesVoters.has(c)).length;
+        approved = ballotPasses("membership_proposal", voters.length, yes);
+      }
+
+      // Parallel join (has a linked domestic Join bill): record the member-vote
+      // result and let the arbiter admit (both gates passed) or cancel the
+      // counterpart. The legacy single-gate path below is kept for proposals with
+      // no linked bill.
+      if (proposal.domesticBillId) {
+        await col.updateOne({ _id: proposal._id }, { $set: { orgApproved: approved } });
+        await resolveJoinApplication(db, proposal._id, currentTurn);
+        resolved++;
+        continue;
+      }
+
+      if (approved) {
+        // admitMember idempotently upserts the membership AND clears any prior
+        // withdrawal tombstone, so a re-admitted founder is no longer suppressed
+        // by the self-heal and a future withdrawal can re-tombstone it.
+        await admitMember(db, proposal.organizationId, proposingCountryId, currentTurn);
+        await col.updateOne(
+          { _id: proposal._id },
+          {
+            $set: {
+              status: "approved",
+              resolvedAt: now,
+              resolvedOnTurn: currentTurn,
+            },
+          }
+        );
+        await recordOrgHistoryEvent(
+          db,
+          proposingCountryId,
+          currentTurn,
+          `${countryName(proposingCountryId)} admitted to ${proposal.organizationId}.`,
+          { organizationId: proposal.organizationId }
+        );
+      } else {
+        await col.updateOne(
+          { _id: proposal._id },
+          {
+            $set: {
+              status: voters.length === 0 ? "expired" : "rejected",
+              resolvedAt: now,
+              resolvedOnTurn: currentTurn,
+            },
+          }
+        );
+        await recordOrgHistoryEvent(
+          db,
+          proposingCountryId,
+          currentTurn,
+          `${countryName(proposingCountryId)}'s application to ${proposal.organizationId} was rejected.`,
+          { organizationId: proposal.organizationId }
+        );
+      }
+      resolved++;
+    } catch (error) {
+      console.error(
+        `[internationalOrganizationsPhase] membership proposal ${proposal._id} failed:`,
+        error
       );
     }
-    resolved++;
   }
 
   // Poll still-pending parallel joins so a linked Join-bill pass/fail (which can
@@ -549,7 +565,11 @@ async function resolveExpiredMembershipProposals(db: Db, currentTurn: number): P
     .toArray();
   for (const p of pendingJoins) {
     if (!p.domesticBillId) continue;
-    await resolveJoinApplication(db, p._id, currentTurn);
+    try {
+      await resolveJoinApplication(db, p._id, currentTurn);
+    } catch (error) {
+      console.error(`[internationalOrganizationsPhase] join application ${p._id} failed:`, error);
+    }
   }
 
   return resolved;
@@ -558,7 +578,8 @@ async function resolveExpiredMembershipProposals(db: Db, currentTurn: number): P
 async function resolveExpiredOrganizationLegislation(
   db: Db,
   currentTurn: number,
-  cashContext: OrganizationCashContext | null
+  cashContext: OrganizationCashContext | null,
+  tiers?: CountryTierSnapshot
 ): Promise<number> {
   const col = await getOrganizationLegislationCollection(db);
   const expired = await col
@@ -574,178 +595,195 @@ async function resolveExpiredOrganizationLegislation(
   let organizationWarPlanningContext: Promise<OrganizationWarPlanningContext> | undefined;
 
   for (const item of expired) {
-    const parties = (item.parties as OrgMemberId[] | undefined) ?? [];
-    // The roll is kind-aware. A declaration or join-conflict resolution is
-    // player-enabled members only: it asks a member to consent to a war it is
-    // not otherwise in, and silence under unanimity would veto it. Everything else here seats the
-    // modelled NPP bloc too — majority resolutions, where a silence costs a yes
-    // rather than vetoing, and FTAs, which are unanimous but voted only by their
-    // own named parties, each ratifying an agreement it is itself signing.
-    // Either way the agreement still *binds* every party once ratified, so only
-    // the ballot is narrowed here, not the effect below.
-    const members = await ballotVotingMembers(db, item.organizationId, item.type);
-    const voterSet = new Set<string>(members);
-    const votingParties = parties.filter((p): p is CountryId => voterSet.has(p));
-    // Close-time ballots (active mode): fill a silent autonomy-active voter
-    // before the tally. An FTA is voted by its parties, any other resolution by
-    // the whole voting roll — the same split resolutionPasses applies.
-    await fillSilentBallots(
-      db,
-      [item],
-      () => (item.type === "free_trade_agreement" ? votingParties : members),
-      () => null,
-      async (doc, vote) => upsertPendingOrganizationVote(col, doc._id, vote),
-      currentTurn
-    );
-    const uniqueVotes = dedupeOrganizationVotes(item.votes as ProposalVoteRecord[]);
-    // The UN's founding members hold a permanent-member veto; no other org does.
-    const permanentMembers =
-      item.organizationId === "UN" ? INTERNATIONAL_ORGANIZATIONS.UN.foundingMembers : [];
-    const approved = resolutionPasses({
-      type: item.type,
-      members,
-      parties: votingParties,
-      votes: uniqueVotes,
-      permanentMembers,
-    });
-
-    if (approved) {
-      const sanctionsExpiresOnTurn =
-        item.type === "sanctions" ? currentTurn + SANCTIONS_DURATION_TURNS : undefined;
-      const directiveExpiresOnTurn =
-        item.type === "directive" ? currentTurn + DIRECTIVE_DURATION_TURNS : undefined;
-      const jointStatementExpiresOnTurn =
-        item.type === "joint_statement" ? currentTurn + JOINT_STATEMENT_DURATION_TURNS : undefined;
-      const agencyExpiresOnTurn =
-        item.type === "fund_agency" ? currentTurn + AGENCY_FUNDING_DURATION_TURNS : undefined;
-      const activation = {
-        status: "active" as const,
-        enactedAt: now,
-        enactedOnTurn: currentTurn,
-        ...(sanctionsExpiresOnTurn !== undefined ? { sanctionsExpiresOnTurn } : {}),
-        ...(directiveExpiresOnTurn !== undefined ? { directiveExpiresOnTurn } : {}),
-        ...(jointStatementExpiresOnTurn !== undefined ? { jointStatementExpiresOnTurn } : {}),
-        ...(agencyExpiresOnTurn !== undefined ? { agencyExpiresOnTurn } : {}),
-      };
-      // Declaration enactment can create a conflict and fan national bills out
-      // across several countries. Keep it pending until all idempotent effects
-      // finish so a transient DB failure is retried next turn instead of leaving
-      // a permanently partial coalition. Existing resolution effects retain their
-      // historical activate-then-apply ordering.
-      if (item.type !== "declare_war") {
-        await col.updateOne({ _id: item._id }, { $set: activation });
-      }
-      // Resolution effects land on countries the game models; a macro-tier
-      // member has no economy or metrics for a sanction or an aid package to
-      // touch.
-      // Effects land on every member the game models, voting or not — a client
-      // state is still bound by its bloc's sanctions.
-      const effectMembers = (await getMembers(db, item.organizationId)).filter(
-        (m): m is CountryId => m in COUNTRY_CONFIGS
-      );
-      // THREE different rolls, and they are three because they answer three
-      // different questions. `effectMembers` is bound by the result (sanctions
-      // and aid reach a client state too). `members`, computed above, is who
-      // VOTED. `legislating` is who can be asked to pass a bill about it — the
-      // one join_conflict needs, and the reason it is not `members`: an NPP
-      // government is off the unanimity ballot because it cannot be relied on to
-      // vote before the deadline, which is no reason to spare it the war it is
-      // now in.
-      const legislating =
-        item.type === "join_conflict" ? await legislatingMembers(db, item.organizationId) : members;
-      const warPlanningContext =
-        item.type === "declare_war"
-          ? await (organizationWarPlanningContext ??= loadOrganizationWarPlanningContext(
-              db,
-              currentTurn
-            ))
-          : undefined;
-      const effectApplied = await applyResolutionEffect(
+    try {
+      const parties = (item.parties as OrgMemberId[] | undefined) ?? [];
+      // The roll is kind-aware. A declaration or join-conflict resolution is
+      // player-enabled members only: it asks a member to consent to a war it is
+      // not otherwise in, and silence under unanimity would veto it. Everything else here seats the
+      // modelled NPP bloc too — majority resolutions, where a silence costs a yes
+      // rather than vetoing, and FTAs, which are unanimous but voted only by their
+      // own named parties, each ratifying an agreement it is itself signing.
+      // Either way the agreement still *binds* every party once ratified, so only
+      // the ballot is narrowed here, not the effect below.
+      const members = await ballotVotingMembers(db, item.organizationId, item.type, tiers);
+      const voterSet = new Set<string>(members);
+      const votingParties = parties.filter((p): p is CountryId => voterSet.has(p));
+      // Close-time ballots (active mode): fill a silent autonomy-active voter
+      // before the tally. An FTA is voted by its parties, any other resolution by
+      // the whole voting roll — the same split resolutionPasses applies.
+      await fillSilentBallots(
         db,
-        item,
-        effectMembers,
-        currentTurn,
-        sanctionsExpiresOnTurn,
-        legislating,
-        foundingContext,
-        cashContext,
-        warPlanningContext
+        [item],
+        () => (item.type === "free_trade_agreement" ? votingParties : members),
+        () => null,
+        async (doc, vote) => upsertPendingOrganizationVote(col, doc._id, vote),
+        currentTurn
       );
-      if (item.type === "declare_war") {
-        await col.updateOne(
-          { _id: item._id, status: "pending" },
-          effectApplied === false
-            ? { $set: { status: "expired" } }
-            : {
-                $set: {
-                  ...activation,
-                  status: "terminated",
-                  terminatedAt: now,
-                },
-              }
+      const uniqueVotes = dedupeOrganizationVotes(item.votes as ProposalVoteRecord[]);
+      // The UN's founding members hold a permanent-member veto; no other org does.
+      const permanentMembers =
+        item.organizationId === "UN" ? INTERNATIONAL_ORGANIZATIONS.UN.foundingMembers : [];
+      const approved = resolutionPasses({
+        type: item.type,
+        members,
+        parties: votingParties,
+        votes: uniqueVotes,
+        permanentMembers,
+      });
+
+      if (approved) {
+        const sanctionsExpiresOnTurn =
+          item.type === "sanctions" ? currentTurn + SANCTIONS_DURATION_TURNS : undefined;
+        const directiveExpiresOnTurn =
+          item.type === "directive"
+            ? currentTurn + directiveDurationTurns(item.directiveKey)
+            : undefined;
+        const jointStatementExpiresOnTurn =
+          item.type === "joint_statement"
+            ? currentTurn + JOINT_STATEMENT_DURATION_TURNS
+            : undefined;
+        const agencyExpiresOnTurn =
+          item.type === "fund_agency" ? currentTurn + AGENCY_FUNDING_DURATION_TURNS : undefined;
+        const activation = {
+          status: "active" as const,
+          enactedAt: now,
+          enactedOnTurn: currentTurn,
+          ...(sanctionsExpiresOnTurn !== undefined ? { sanctionsExpiresOnTurn } : {}),
+          ...(directiveExpiresOnTurn !== undefined ? { directiveExpiresOnTurn } : {}),
+          ...(jointStatementExpiresOnTurn !== undefined ? { jointStatementExpiresOnTurn } : {}),
+          ...(agencyExpiresOnTurn !== undefined ? { agencyExpiresOnTurn } : {}),
+        };
+        // Declaration enactment can create a conflict and fan national bills out
+        // across several countries. Keep it pending until all idempotent effects
+        // finish so a transient DB failure is retried next turn instead of leaving
+        // a permanently partial coalition. Existing resolution effects retain their
+        // historical activate-then-apply ordering.
+        if (item.type !== "declare_war") {
+          await col.updateOne({ _id: item._id }, { $set: activation });
+        }
+        // Resolution effects land on countries the game models; a macro-tier
+        // member has no economy or metrics for a sanction or an aid package to
+        // touch.
+        // Effects land on every member the game models, voting or not — a client
+        // state is still bound by its bloc's sanctions.
+        const effectMembers = (await getMembers(db, item.organizationId)).filter(
+          (m): m is CountryId => m in COUNTRY_CONFIGS
         );
-      }
-      if (item.type === "free_trade_agreement") {
-        const partyNames = parties
-          .map((p: string) => COUNTRY_CONFIGS[p as CountryId]?.name ?? p)
-          .join(", ");
-        // Country history is a player-facing timeline, so it only takes ids the
-        // game renders a country page for; a macro party is still bound, it
-        // simply has no page to log the ratification on.
-        for (const partyCountry of parties.filter((p): p is CountryId => p in COUNTRY_CONFIGS)) {
+        // THREE different rolls, and they are three because they answer three
+        // different questions. `effectMembers` is bound by the result (sanctions
+        // and aid reach a client state too). `members`, computed above, is who
+        // VOTED. `legislating` is who can be asked to pass a bill about it — the
+        // one join_conflict needs, and the reason it is not `members`: an NPP
+        // government is off the unanimity ballot because it cannot be relied on to
+        // vote before the deadline, which is no reason to spare it the war it is
+        // now in.
+        const legislating =
+          item.type === "join_conflict"
+            ? await legislatingMembers(db, item.organizationId)
+            : members;
+        const warPlanningContext =
+          item.type === "declare_war"
+            ? await (organizationWarPlanningContext ??= loadOrganizationWarPlanningContext(
+                db,
+                currentTurn
+              ))
+            : undefined;
+        const effectApplied = await applyResolutionEffect(
+          db,
+          item,
+          effectMembers,
+          currentTurn,
+          sanctionsExpiresOnTurn,
+          legislating,
+          foundingContext,
+          cashContext,
+          warPlanningContext
+        );
+        if (item.type === "declare_war") {
+          await col.updateOne(
+            { _id: item._id, status: "pending" },
+            effectApplied === false
+              ? { $set: { status: "expired" } }
+              : {
+                  $set: {
+                    ...activation,
+                    status: "terminated",
+                    terminatedAt: now,
+                  },
+                }
+          );
+        }
+        if (item.type === "free_trade_agreement") {
+          const partyNames = parties
+            .map((p: string) => COUNTRY_CONFIGS[p as CountryId]?.name ?? p)
+            .join(", ");
+          // Country history is a player-facing timeline, so it only takes ids the
+          // game renders a country page for; a macro party is still bound, it
+          // simply has no page to log the ratification on.
+          for (const partyCountry of parties.filter((p): p is CountryId => p in COUNTRY_CONFIGS)) {
+            await recordOrgHistoryEvent(
+              db,
+              partyCountry,
+              currentTurn,
+              `${item.organizationId} ratified a free-trade agreement: ${partyNames}.`,
+              { organizationId: item.organizationId, legislationId: item._id.toString() }
+            );
+          }
+        }
+      } else {
+        await col.updateOne(
+          { _id: item._id },
+          {
+            $set: {
+              status: "rejected",
+              enactedAt: undefined,
+              enactedOnTurn: undefined,
+            },
+          }
+        );
+        await captureServerGameEvent({
+          db,
+          turn: currentTurn,
+          event: "diplomacy_resolved",
+          distinctId: "system:turn-processor",
+          insertId: `diplomacy_resolved:${item._id}:${currentTurn}`,
+          nationId: item.proposingCountryId,
+          properties: {
+            proposal_id: item._id.toString(),
+            organization_id: item.organizationId,
+            action_type: item.type,
+            outcome: "rejected",
+          },
+        });
+        // A resolution that fails leaves the pending list without explanation
+        // otherwise, and under a roll-based threshold failing is ordinary. The
+        // proposer is the one country guaranteed to have a page to log it on.
+        if (item.proposingCountryId in COUNTRY_CONFIGS) {
           await recordOrgHistoryEvent(
             db,
-            partyCountry,
+            item.proposingCountryId,
             currentTurn,
-            `${item.organizationId} ratified a free-trade agreement: ${partyNames}.`,
+            `${item.organizationId} rejected ${item.title}.`,
             { organizationId: item.organizationId, legislationId: item._id.toString() }
           );
         }
       }
-    } else {
-      await col.updateOne(
-        { _id: item._id },
-        {
-          $set: {
-            status: "rejected",
-            enactedAt: undefined,
-            enactedOnTurn: undefined,
-          },
-        }
+      resolved++;
+    } catch (error) {
+      console.error(
+        `[internationalOrganizationsPhase] organization legislation ${item._id} failed:`,
+        error
       );
-      await captureServerGameEvent({
-        db,
-        turn: currentTurn,
-        event: "diplomacy_resolved",
-        distinctId: "system:turn-processor",
-        insertId: `diplomacy_resolved:${item._id}:${currentTurn}`,
-        nationId: item.proposingCountryId,
-        properties: {
-          proposal_id: item._id.toString(),
-          organization_id: item.organizationId,
-          action_type: item.type,
-          outcome: "rejected",
-        },
-      });
-      // A resolution that fails leaves the pending list without explanation
-      // otherwise, and under a roll-based threshold failing is ordinary. The
-      // proposer is the one country guaranteed to have a page to log it on.
-      if (item.proposingCountryId in COUNTRY_CONFIGS) {
-        await recordOrgHistoryEvent(
-          db,
-          item.proposingCountryId,
-          currentTurn,
-          `${item.organizationId} rejected ${item.title}.`,
-          { organizationId: item.organizationId, legislationId: item._id.toString() }
-        );
-      }
     }
-    resolved++;
   }
   return resolved;
 }
 
-async function resolveExpiredLeadershipElections(db: Db, currentTurn: number): Promise<number> {
+async function resolveExpiredLeadershipElections(
+  db: Db,
+  currentTurn: number,
+  tiers?: CountryTierSnapshot
+): Promise<number> {
   const electionsCol = await getOrganizationLeadershipElectionsCollection(db);
   const leadershipCol = await getOrganizationLeadershipCollection(db);
   const expired = await electionsCol
@@ -760,92 +798,104 @@ async function resolveExpiredLeadershipElections(db: Db, currentTurn: number): P
   const now = new Date();
 
   for (const election of expired) {
-    // Electing a chair is a vote like any other, so the roll is the voting one.
-    // This also keeps the quorum honest: a silent client state would otherwise
-    // count toward turnout it can never supply.
-    const members = await ballotVotingMembers(db, election.organizationId, "leadership_election");
-    // Close-time ballots (active mode): fill a silent autonomy-active voter
-    // before the tally; a candidate does not vote on its own election.
-    await fillSilentBallots(
-      db,
-      [election],
-      () => members,
-      (doc) => doc.candidateCountryId,
-      async (doc, vote) => upsertPendingOrganizationVote(electionsCol, doc._id, vote),
-      currentTurn
-    );
-    const uniqueVotes = dedupeOrganizationVotes(election.votes as ProposalVoteRecord[]);
-    // Only an active "yes" counts. A member who abstains or never votes withholds
-    // consent exactly as a "no" does, so the denominator is the roll rather than
-    // the turnout.
-    let yes = 0;
-    for (const v of uniqueVotes) {
-      if (!members.includes(v.countryId)) continue;
-      if (v.vote === "yes") yes++;
-    }
-    // A majority of the voting roll seats the chair. Falling short leaves the
-    // seat unchanged — the org continues operating with the prior holder (or
-    // vacant) until a future election decides.
-    const elected = ballotPasses("leadership_election", members.length, yes);
-
-    if (elected) {
-      const orgDef = await loadOrganizationDef(db, election.organizationId, foundingContext);
-      const termTurns = orgDef?.leadership.termTurns ?? 96;
-      await leadershipCol.updateOne(
-        { organizationId: election.organizationId },
-        {
-          $set: {
-            holderCharacterId: election.candidateCharacterId,
-            holderCharacterName: election.candidateCharacterName,
-            holderCountryId: election.candidateCountryId,
-            electedAt: now,
-            electedOnTurn: currentTurn,
-            termEndsOnTurn: currentTurn + termTurns,
-            updatedAt: now,
-          },
-        },
-        { upsert: true }
-      );
-      await electionsCol.updateOne(
-        { _id: election._id },
-        {
-          $set: {
-            status: "elected",
-            resolvedAt: now,
-            resolvedOnTurn: currentTurn,
-          },
-        }
-      );
-      await recordOrgHistoryEvent(
+    try {
+      // Electing a chair is a vote like any other, so the roll is the voting one.
+      // This also keeps the quorum honest: a silent client state would otherwise
+      // count toward turnout it can never supply.
+      const members = await ballotVotingMembers(
         db,
-        election.candidateCountryId as CountryId,
-        currentTurn,
-        `${election.candidateCharacterName} elected ${orgDef?.leadership.title ?? "leader"} of ${election.organizationId}.`,
-        { organizationId: election.organizationId, electionId: election._id.toString() }
+        election.organizationId,
+        "leadership_election",
+        tiers
       );
-    } else {
-      await electionsCol.updateOne(
-        { _id: election._id },
-        {
-          $set: {
-            status: "rejected",
-            resolvedAt: now,
-            resolvedOnTurn: currentTurn,
+      // Close-time ballots (active mode): fill a silent autonomy-active voter
+      // before the tally; a candidate does not vote on its own election.
+      await fillSilentBallots(
+        db,
+        [election],
+        () => members,
+        (doc) => doc.candidateCountryId,
+        async (doc, vote) => upsertPendingOrganizationVote(electionsCol, doc._id, vote),
+        currentTurn
+      );
+      const uniqueVotes = dedupeOrganizationVotes(election.votes as ProposalVoteRecord[]);
+      // Only an active "yes" counts. A member who abstains or never votes withholds
+      // consent exactly as a "no" does, so the denominator is the roll rather than
+      // the turnout.
+      let yes = 0;
+      for (const v of uniqueVotes) {
+        if (!members.includes(v.countryId)) continue;
+        if (v.vote === "yes") yes++;
+      }
+      // A majority of the voting roll seats the chair. Falling short leaves the
+      // seat unchanged — the org continues operating with the prior holder (or
+      // vacant) until a future election decides.
+      const elected = ballotPasses("leadership_election", members.length, yes);
+
+      if (elected) {
+        const orgDef = await loadOrganizationDef(db, election.organizationId, foundingContext);
+        const termTurns = orgDef?.leadership.termTurns ?? 96;
+        await leadershipCol.updateOne(
+          { organizationId: election.organizationId },
+          {
+            $set: {
+              holderCharacterId: election.candidateCharacterId,
+              holderCharacterName: election.candidateCharacterName,
+              holderCountryId: election.candidateCountryId,
+              electedAt: now,
+              electedOnTurn: currentTurn,
+              termEndsOnTurn: currentTurn + termTurns,
+              updatedAt: now,
+            },
           },
-        }
-      );
-      const orgDef = await loadOrganizationDef(db, election.organizationId, foundingContext);
-      if (election.candidateCountryId in COUNTRY_CONFIGS) {
+          { upsert: true }
+        );
+        await electionsCol.updateOne(
+          { _id: election._id },
+          {
+            $set: {
+              status: "elected",
+              resolvedAt: now,
+              resolvedOnTurn: currentTurn,
+            },
+          }
+        );
         await recordOrgHistoryEvent(
           db,
           election.candidateCountryId as CountryId,
           currentTurn,
-          `${election.candidateCharacterName} was not elected ${orgDef?.leadership.title ?? "leader"} of ${election.organizationId}.`,
+          `${election.candidateCharacterName} elected ${orgDef?.leadership.title ?? "leader"} of ${election.organizationId}.`,
           { organizationId: election.organizationId, electionId: election._id.toString() }
         );
+      } else {
+        await electionsCol.updateOne(
+          { _id: election._id },
+          {
+            $set: {
+              status: "rejected",
+              resolvedAt: now,
+              resolvedOnTurn: currentTurn,
+            },
+          }
+        );
+        const orgDef = await loadOrganizationDef(db, election.organizationId, foundingContext);
+        if (election.candidateCountryId in COUNTRY_CONFIGS) {
+          await recordOrgHistoryEvent(
+            db,
+            election.candidateCountryId as CountryId,
+            currentTurn,
+            `${election.candidateCharacterName} was not elected ${orgDef?.leadership.title ?? "leader"} of ${election.organizationId}.`,
+            { organizationId: election.organizationId, electionId: election._id.toString() }
+          );
+        }
       }
+      resolved++;
+    } catch (error) {
+      console.error(
+        `[internationalOrganizationsPhase] leadership election ${election._id} failed:`,
+        error
+      );
     }
-    resolved++;
   }
   return resolved;
 }

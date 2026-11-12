@@ -16,7 +16,9 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { buildPartyCaucusHealthSnapshot } from "@/lib/caucus/caucusHealth";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import type { Caucus, CaucusMembership } from "@/lib/db/types";
-import type { Character } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 // GET /api/country/[code]/parties/[id]/caucuses — List caucuses for a party with member counts
 // Auth: requireAuth
@@ -61,8 +63,7 @@ export async function GET(
       .filter((value): value is NonNullable<typeof value> => !!value);
     const chairs =
       chairIds.length > 0
-        ? await db
-            .collection<Character>("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: chairIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : [];
@@ -167,7 +168,7 @@ export async function POST(
 
     // Founder can't already chair another active caucus in this party (one
     // caucus per chair, mirroring one caucus per member).
-    const existingChair = await db.collection<Caucus>("caucuses").findOne({
+    const existingChair = await caucusesCollection(db).findOne({
       countryId,
       partyId,
       chairId: auth.user.character._id,
@@ -180,15 +181,15 @@ export async function POST(
       );
     }
 
-    // The character also can't already be a member of any other active caucus
-    // in the party — one caucus per Character (Phase 1 invariant).
+    // One caucus per Character (Phase 1 invariant): the character can't
+    // already be in an active caucus in the party.
     //
-    // Self-heal stale pointers left behind by older party-switch paths that
-    // moved `character.party` without clearing caucus membership / factionId
-    // (ticket #1030). If the pointed-at caucus is not an active caucus of
-    // *this* party, drop the leftover membership and continue.
+    // Self-heal stale pointers left by older party-switch paths that moved
+    // `character.party` without clearing caucus membership / factionId. If the
+    // pointed-at caucus is not an active caucus of *this* party, drop the
+    // leftover membership and continue.
     if (auth.user.character.factionId) {
-      const pointedCaucus = await db.collection<Caucus>("caucuses").findOne({
+      const pointedCaucus = await caucusesCollection(db).findOne({
         _id: auth.user.character.factionId,
         disbandedAt: null,
       });
@@ -208,12 +209,10 @@ export async function POST(
       // Defensive: if membership was already closed but factionId lingered,
       // cleanup won't clear it (it only clears when an active membership is
       // found). Force-clear the stale pointer so founding can proceed.
-      await db
-        .collection<Character>("characters")
-        .updateOne(
-          { _id: auth.user.character._id, factionId: auth.user.character.factionId },
-          { $set: { factionId: null, updatedAt: new Date() } }
-        );
+      await charactersCollection(db).updateOne(
+        { _id: auth.user.character._id, factionId: auth.user.character.factionId },
+        { $set: { factionId: null, updatedAt: new Date() } }
+      );
     }
 
     let slug: string;
@@ -225,7 +224,7 @@ export async function POST(
     }
 
     // Active-slug collision check.
-    const slugCollision = await db.collection<Caucus>("caucuses").findOne({
+    const slugCollision = await caucusesCollection(db).findOne({
       countryId,
       partyId,
       slug,
@@ -264,14 +263,14 @@ export async function POST(
       updatedAt: now,
     };
 
-    await db.collection<Caucus>("caucuses").insertOne(caucus);
+    await caucusesCollection(db).insertOne(caucus);
 
     // Reclaim the slug from any prior caucus's previousSlugs in this party so
     // the resolver routes the new owner correctly.
     await reclaimSlug(db, countryId, partyId, slug, caucusId);
 
     // Add the founder as the chair-role member and stamp factionId on the Character.
-    await db.collection<CaucusMembership>("caucusMemberships").insertOne({
+    await caucusMembershipsCollection(db).insertOne({
       _id: new ObjectId(),
       caucusId,
       countryId,
@@ -287,12 +286,10 @@ export async function POST(
       createdAt: now,
       updatedAt: now,
     });
-    await db
-      .collection("characters")
-      .updateOne(
-        { _id: auth.user.character._id },
-        { $set: { factionId: caucusId, updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: auth.user.character._id },
+      { $set: { factionId: caucusId, updatedAt: now } }
+    );
 
     return NextResponse.json({
       success: true,

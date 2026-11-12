@@ -7,12 +7,17 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { findPartyBySequentialId, getStatePartyOrgDocumentId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, State, StatePartyOrg } from "@/lib/db/types";
+import type { State, StatePartyOrg } from "@/lib/db/types";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
   getPartyTenure,
   STATE_LEADERSHIP_RELOCATION_DELAY_TURNS,
 } from "@/lib/parties/leadershipTenure";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -52,7 +57,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
@@ -63,9 +68,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
     if (!stateParty) {
       return errorResponse(404, "Party has no presence in this state");
     }
@@ -89,9 +92,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         return errorResponse(400, "Malformed campaigner id");
       }
 
-      const character = await db
-        .collection<Character>("characters")
-        .findOne({ _id: campaignerObjectId });
+      const character = await charactersCollection(db).findOne({ _id: campaignerObjectId });
       if (!character) {
         return errorResponse(400, "Character not found");
       }
@@ -128,14 +129,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const now = new Date();
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne(
-        { _id: statePartyKey },
-        { $set: { campaignerId: campaignerObjectId, updatedAt: now } }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: statePartyKey },
+      { $set: { campaignerId: campaignerObjectId, updatedAt: now } }
+    );
 
-    await db.collection("adminLogs").insertOne({
+    await adminLogsCollection<Document>(db).insertOne({
       category: "system",
       action: "state_campaigner_changed",
       username: authUser.username,

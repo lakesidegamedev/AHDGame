@@ -1,57 +1,11 @@
 import type { Db } from "mongodb";
 import type { GameIteration } from "@/lib/db/types/gameState";
 import type { Election, ElectionCandidate, PrimaryResultEntry } from "@/lib/db/types";
+import { ANALYTICS_ELECTION_TYPES } from "./electionTypes";
 import { captureServerGameEvent } from "./serverPosthog";
 
-const ELECTION_TYPES = new Set([
-  "president",
-  "presidential",
-  "house",
-  "senate",
-  "stateSenate",
-  "governor",
-  "special_governor",
-  "commons",
-  "snap_commons",
-  "special_commons",
-  "primeMinister",
-  "holyrood",
-  "senedd",
-  "regionalCouncil",
-  "shugiin",
-  "snap_shugiin",
-  "sangiin",
-  "bundestag",
-  "assembleeNationale",
-  "cameraDeputati",
-  "chamber",
-  "congresoDiputados",
-  "dail",
-  "landAssembly",
-  "snap_bundestag",
-  "landtag",
-  "localCouncil",
-  "milletMeclisi",
-  "nationalitiesDeputy",
-  "npcDelegate",
-  "peoplesCongress",
-  "republicSupremeSoviet",
-  "riksdag",
-  "seanad",
-  "senat",
-  "senato",
-  "specialElection",
-  "supremeSoviet",
-  "supremeSovietDeputy",
-  "uachtaran",
-  "volkskammerDeputy",
-  "presidential_primary",
-  "party_leadership",
-  "unknown",
-]);
-
 function safeElectionType(value: string): string {
-  return ELECTION_TYPES.has(value) ? value : "unknown";
+  return ANALYTICS_ELECTION_TYPES.has(value) ? value : "unknown";
 }
 
 function percentage(value: number): number {

@@ -6,8 +6,11 @@ import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/ra
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
-import type { Character, User, PoliticalParty } from "@/lib/db/types";
+import type { User, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -65,8 +68,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch extra to account for banned user filtering
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find(query)
       .sort({ [sortField]: -1 })
       .limit(limit * 2)
@@ -78,8 +80,7 @@ export async function GET(request: Request) {
 
     const userIds = characters.map((c) => c.userId);
     type UserProjection = Pick<User, "_id" | "isBanned">;
-    const userDocs = await db
-      .collection<UserProjection>("users")
+    const userDocs = await usersCollection<UserProjection>(db)
       .find({ _id: { $in: userIds } })
       .project<UserProjection>({ _id: 1, isBanned: 1 })
       .toArray();
@@ -100,8 +101,7 @@ export async function GET(request: Request) {
     }
     const parties =
       partyLookups.length > 0
-        ? await db
-            .collection<PoliticalParty>("politicalParties")
+        ? await politicalPartiesCollection(db)
             .find({
               $or: partyLookups.map((l) => ({
                 countryId: l.countryId,

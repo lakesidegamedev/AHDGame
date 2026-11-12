@@ -14,6 +14,7 @@ import {
   POLL_BANNER_URL_MAX,
 } from "@/lib/pollBanner";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * The url is checked twice on purpose. The `.refine` below runs on ANY
@@ -65,7 +66,7 @@ const patchSchema = z
  */
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {
@@ -105,7 +106,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   // No $unset on the "off" branch, unlike maintenance: switching the banner
   // off is routine and the same survey often goes back up, so the drafted
   // text and link are kept exactly as typed.
-  await db.collection<GameConfig>("gameConfig").updateOne(
+  await gameConfigCollection(db).updateOne(
     { _id: "default" },
     {
       $set: {

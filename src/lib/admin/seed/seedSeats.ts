@@ -25,60 +25,15 @@ import { IE_GEOGRAPHY } from "@/lib/countries/ie/geography";
 import { NG_GEOGRAPHY } from "@/lib/countries/ng/geography";
 import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/countries/ie/data/ieLocalCouncilSeats";
+import { US_STATE_NAMES } from "@/lib/constants/usStateNames";
+import { CA_REGION_NAMES } from "@/lib/countries/ca/geographyFacts";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 // State name lookup for display names
-const STATE_NAMES: Record<string, string> = {
-  AL: "Alabama",
-  AK: "Alaska",
-  AZ: "Arizona",
-  AR: "Arkansas",
-  CA: "California",
-  CO: "Colorado",
-  CT: "Connecticut",
-  DE: "Delaware",
-  FL: "Florida",
-  GA: "Georgia",
-  HI: "Hawaii",
-  ID: "Idaho",
-  IL: "Illinois",
-  IN: "Indiana",
-  IA: "Iowa",
-  KS: "Kansas",
-  KY: "Kentucky",
-  LA: "Louisiana",
-  ME: "Maine",
-  MD: "Maryland",
-  MA: "Massachusetts",
-  MI: "Michigan",
-  MN: "Minnesota",
-  MS: "Mississippi",
-  MO: "Missouri",
-  MT: "Montana",
-  NE: "Nebraska",
-  NV: "Nevada",
-  NH: "New Hampshire",
-  NJ: "New Jersey",
-  NM: "New Mexico",
-  NY: "New York",
-  NC: "North Carolina",
-  ND: "North Dakota",
-  OH: "Ohio",
-  OK: "Oklahoma",
-  OR: "Oregon",
-  PA: "Pennsylvania",
-  RI: "Rhode Island",
-  SC: "South Carolina",
-  SD: "South Dakota",
-  TN: "Tennessee",
-  TX: "Texas",
-  UT: "Utah",
-  VT: "Vermont",
-  VA: "Virginia",
-  WA: "Washington",
-  WV: "West Virginia",
-  WI: "Wisconsin",
-  WY: "Wyoming",
-};
+const STATE_NAMES = US_STATE_NAMES;
 
 /**
  * The United Kingdom's region names, forwarded to its country folder, where they
@@ -93,6 +48,7 @@ export const REGION_NAME_MAPS: Partial<Record<CountryId, Record<string, string>>
   NG: NG_GEOGRAPHY.regionNames,
   CN: CN_GEOGRAPHY.regionNames,
   IE: IE_GEOGRAPHY.regionNames,
+  CA: CA_REGION_NAMES,
 };
 
 function getStateName(state: string, ctryId: CountryId): string {
@@ -170,7 +126,7 @@ function buildDisplayName(
   if (electionType === "president") {
     return "U.S. President";
   }
-  if (countryId === "IE" && electionType === "governor") {
+  if (countryHasFeature("ieAdmin", countryId) && electionType === "governor") {
     const stateName = getStateName(state, countryId);
     return `${stateName} — ${ieGovernorLabelForRegion(state)}`;
   }
@@ -193,7 +149,7 @@ function buildShortName(
   }
   // For IE Cathaoirleach (recycled `governor`), use a 3-letter "Cth" tag
   // so the seat-listing short form reads "DUB Cth" rather than "DUB Gov".
-  if (countryId === "IE" && electionType === "governor") {
+  if (countryHasFeature("ieAdmin", countryId) && electionType === "governor") {
     const localRegion = getLocalRegionId(state, countryId);
     return `${localRegion} Cth`;
   }
@@ -309,7 +265,7 @@ export async function seedSeats(
   log: (msg: string) => void,
   preset: string
 ): Promise<void> {
-  const col = db.collection<Seat>("seats");
+  const col = seatsCollection(db);
   const now = new Date();
   // House seat counts per state depend on the preset's apportionment era.
   const houseSeatsByState = getHouseSeats(preset);
@@ -324,8 +280,7 @@ export async function seedSeats(
   // live delegation size off the state docs. Without this a reset of a world
   // that admitted Alaska in 1959 would silently strip its seats back out.
   const admittedHouseSeats = new Map<string, number>();
-  const usStateDocs = (await db
-    .collection("states")
+  const usStateDocs = (await statesCollection<Document>(db)
     .find({ countryId: "US" }, { projection: { _id: 1, houseDistricts: 1, admittedYear: 1 } })
     .toArray()) as unknown as Array<{
     _id: string;

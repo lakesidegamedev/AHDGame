@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { baselineFor, validateAnchorTable } from "@/lib/politicalMetrics/seeds/baselineAnchors";
 import { NATIONAL_BASELINES_1953 } from "@/lib/politicalMetrics/seeds/nationalBaselines1953";
 import { POLITICAL_METRIC_COUNTRY_IDS, type PoliticalMetricId } from "@/lib/politicalMetrics/types";
-import { getCatalog, baselineLevelFor } from "@/lib/politicalLegislation/catalog";
+import { getCatalog, getEraCatalog, baselineLevelFor } from "@/lib/politicalLegislation/catalog";
 import { LAW_COUNTRY_IDS } from "@/lib/politicalLegislation/types";
 
 describe("1953 parity", () => {
@@ -25,9 +25,10 @@ describe("1953 parity", () => {
     }
   });
 
-  it("every law is active at 1953 and seeds at its authored baseline level", () => {
+  it("every law but the later-era sidecar is active at 1953 and seeds at its authored baseline level", () => {
     for (const countryId of LAW_COUNTRY_IDS) {
-      const unfiltered = getCatalog(countryId);
+      const laterEra = new Set(getEraCatalog(countryId).map((l) => l.id));
+      const unfiltered = getCatalog(countryId).filter((l) => !laterEra.has(l.id));
       const at1953 = getCatalog(countryId, 1953);
       expect(at1953.map((l) => l.id)).toEqual(unfiltered.map((l) => l.id));
       for (const law of at1953) {

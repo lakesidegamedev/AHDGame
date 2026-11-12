@@ -1,23 +1,13 @@
 /**
- * East Germany corporation seed constants.
+ * DD is a command economy with no private corporations; its producing base is
+ * state-owned. This OID trio identifies the bare sovereign issuer, which
+ * `seedSovereignBondInstruments` resolves to hang bond tranches off. Without
+ * it, seeded DDM debt points at a corporation that does not exist.
  *
- * DD is a command economy and deliberately has **no PRIVATE corporations** —
- * its producing base is state-owned. What this OID trio identifies is the
- * bare sovereign issuer, because `seedSovereignBondInstruments` resolves the
- * country-owned corporation to hang bond tranches off. Without one it falls
- * back to `new ObjectId()`, and DD's seeded DDM 3B of debt ends up pointing at
- * a corporation that does not exist.
- *
- * So this is the bare issuer only: `generateCountryOwnedSeedData` emits it with
- * `sectors: []`, exactly like the other sovereign-issuer-only countries.
- *
- * As of ticket #1014, DD's PRODUCING base is a SEPARATE stack of one SOE
- * corporation per CorporationType (full sector board, with plants capacity) —
- * see `WARSAW_PACT_SOE_SPEC` in `seeds/reference/budgets.ts` and
- * `COMMAND_ECONOMY_SOE_SECTORS.DD` in `constants/commandEconomy.ts`. Those
- * SOEs carry their own disjoint ids (the `0x1500` band via
- * `SOE_ID_BASE_BY_COUNTRY.DD`) and are never the primary/issuer corporation —
- * this bare shell stays the single `isPrimaryNationalCorporation` entity.
+ * The issuer is emitted with `sectors: []` and stays the single
+ * `isPrimaryNationalCorporation` entity. DD's producing base is a separate
+ * stack of one SOE per CorporationType with its own ids; those SOEs are never
+ * the primary/issuer corporation.
  */
 
 /** Placeholder ObjectId string for the DD sovereign corporation. */

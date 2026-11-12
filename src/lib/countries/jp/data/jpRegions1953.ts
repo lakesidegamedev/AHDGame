@@ -1,17 +1,12 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT be derived from
- * another era's region data. All values are authored for 1953 directly.
- * Type-only imports are allowed.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA. Each era seed is
+ * self-contained; type-only imports are allowed.
  *
- * Japan regions for the 1953-default preset (26th Shugiin election, April 1953 —
- * Yoshida Liberal Party era; Korean War armistice; early reconstruction).
- * The 8 game regions are structurally stable; era-specific values are 1950-census
- * population (first postwar census), ~1953 regional GDP in **USD millions**
- * (USD-anchored like US/DE — refs #3498; ¥9.3T national / 360 JPY/USD Bretton
- * Woods ≈ $25.8B), and the **466-seat** Shugiin distribution of the 1953 election.
- * Okinawa was under US occupation until 1972 but is included for structural
- * model integrity.
+ * Japan regions for the 1953-default preset (26th Shugiin election, April 1953).
+ * Values: 1950-census population, ~1953 regional GDP in USD millions (USD-anchored
+ * like US/DE; 9.3T JPY national at 360 JPY/USD ~ $25.8B), and the 466-seat
+ * Shugiin distribution of the 1953 election. Okinawa was under US occupation
+ * until 1972 but is included for structural model integrity.
  */
 import type { State } from "@/lib/db/types";
 

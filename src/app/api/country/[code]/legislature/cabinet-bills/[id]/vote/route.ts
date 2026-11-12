@@ -12,6 +12,9 @@ import { checkLegislationFreeze } from "@/lib/api/parliamentaryFreeze";
 import { ObjectId } from "mongodb";
 import type { Bill } from "@/lib/db/types";
 import { z } from "zod";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import type { Document } from "mongodb";
 
 const cabinetVoteSchema = z.object({
   vote: z.enum(["for", "against"]),
@@ -51,23 +54,27 @@ export async function POST(
     const db = await getDb();
 
     // Find the cabinet bill
-    const bill = await db
-      .collection<Bill>("bills")
-      .findOne({ _id: new ObjectId(id), countryId, status: "cabinet_review" });
+    const bill = await billsCollection(db).findOne({
+      _id: new ObjectId(id),
+      countryId,
+      status: "cabinet_review",
+    });
     if (!bill) {
       return NextResponse.json(notFound("Cabinet bill not found or not in review").toJson(), {
         status: 404,
       });
     }
 
-    // Check voter is PM or player-held cabinet member. The ballot below is
-    // keyed by character id (issue #2049), so a dual-office holder casts one
-    // vote no matter how many rows they hold.
+    // Ballot is keyed by character id, so a dual-office holder casts one vote
+    // no matter how many rows they hold.
     const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
     const isPM = gov?.pmCharacterId?.toString() === character._id.toString();
 
     const cabinetMember = !isPM
-      ? await db.collection("cabinetMembers").findOne({ characterId: character._id, countryId })
+      ? await cabinetMembersCollection<Document>(db).findOne({
+          characterId: character._id,
+          countryId,
+        })
       : null;
 
     if (!isPM && !cabinetMember) {
@@ -94,7 +101,7 @@ export async function POST(
 
     // Cast vote
     const incField = vote === "for" ? "votesFor" : "votesAgainst";
-    const voteResult = await db.collection<Bill>("bills").updateOne(
+    const voteResult = await billsCollection(db).updateOne(
       {
         _id: bill._id,
         status: "cabinet_review",

@@ -8,6 +8,12 @@ import {
   CAMPAIGN_STRENGTH_LEADER_PULLBACK_MAX_PER_TURN,
 } from "@/lib/campaigns/campaignStrength";
 import type { GameState } from "@/lib/db/types/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import type { Document } from "mongodb";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -28,7 +34,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const db = await getDb();
     const oid = new ObjectId(campaignId);
-    const campaign = await db.collection("campaigns").findOne({ _id: oid });
+    const campaign = await campaignsCollection<Document>(db).findOne({ _id: oid });
     if (!campaign) {
       return errorResponse(404, "Campaign not found");
     }
@@ -39,8 +45,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Compute current pullback for this campaign if we have an election context
     let pullbackPerTurn = 0;
     if (electionId) {
-      const electionCampaigns = await db
-        .collection("campaigns")
+      const electionCampaigns = await campaignsCollection<Document>(db)
         .find({ electionId: campaign.electionId, status: { $ne: "archived" } })
         .project({ _id: 1, campaignStrength: 1, status: 1, electionId: 1 })
         .toArray();
@@ -56,8 +61,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Aggregate contributions from activityLog
-    const contributions = await db
-      .collection("activityLog")
+    const contributions = await activityLogCollection<Document>(db)
       .aggregate<{
         _id: { characterId?: string; characterName?: string };
         totalAdded: number;
@@ -88,8 +92,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .filter((id): id is string => Boolean(id));
     const charDocs =
       characterIds.length > 0
-        ? await db
-            .collection("characters")
+        ? await charactersCollection(db)
             .find({ _id: { $in: characterIds.map((id: string) => new ObjectId(id)) } })
             .project({ _id: 1, name: 1, party: 1 })
             .toArray()
@@ -100,8 +103,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const allPartyIds = [...new Set([...charPartyMap.values()].filter(Boolean))];
     const parties =
       allPartyIds.length > 0
-        ? await db
-            .collection("politicalParties")
+        ? await politicalPartiesCollection<Document>(db)
             .find({
               countryId: "US",
               sequentialId: { $in: allPartyIds.map((id: string) => Number(id)) },
@@ -155,15 +157,12 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Compute change vs last turn from activityLog
     const gameStateDoc =
-      (await db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" as GameState["_id"] })) ??
-      (await db.collection<GameState>("gameState").findOne({ _id: "main" as GameState["_id"] }));
+      (await gameStateCollection(db).findOne({ _id: "current" as GameState["_id"] })) ??
+      (await gameStateCollection(db).findOne({ _id: "main" as GameState["_id"] }));
     const currentTurn = (gameStateDoc?.currentTurn as number) ?? 0;
 
     // Sum contributions this turn
-    const thisTurnContribAgg = await db
-      .collection("activityLog")
+    const thisTurnContribAgg = await activityLogCollection<Document>(db)
       .aggregate([
         {
           $match: {

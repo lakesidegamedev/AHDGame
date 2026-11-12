@@ -1,22 +1,20 @@
 /**
  * CN regional budget constraint system.
  *
- * Runs every turn alongside UK, JP, and DE budget processing. Calculates each
- * CN macro-region's budget from two sources:
+ * Calculates each CN macro-region's budget from:
  *
  *   1. EIT local share (企业所得税地方分成): 40% of Enterprise Income Tax
- *      collected in-territory, derived from enacted cn_enterprise_income_tax
- *      rate × regional GDP × corporate profit ratio.
+ *      collected in-territory, from enacted corporate tax rate ×
+ *      regional GDP × corporate profit ratio.
  *   2. Central transfer grant (中央转移支付): Finance Minister-controlled
  *      redistribution from a national pool, or an equal 1/7th split by default.
- *   3. Provincial Resource Tax revenue (资源税): per-region rate set by the
- *      enacted cn_provincial_resource_tax policy × regional GDP × resource-
- *      extraction proxy (analogous to DE's Hebesatz-driven tradeTaxRevenue).
+ *   3. Provincial Resource Tax revenue (资源税): per-region rate from the
+ *      enacted cn_provincial_resource_tax policy × regional GDP ×
+ *      resource-extraction proxy.
  *
- * Enacted regional spending (non-tax provincial legislation types — added in
- * PR4-5 of the CN legislation overhaul) is compared against total revenue.
- * Regions in deficit for more than one turn trigger forced austerity (most
- * expensive programme downgraded one tier).
+ * Enacted regional spending (non-tax provincial legislation) is compared
+ * against total revenue. Regions in deficit more than one turn trigger forced
+ * austerity (most expensive programme downgraded one tier).
  */
 
 import type { Db } from "mongodb";
@@ -28,6 +26,13 @@ import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { CabinetSetting } from "@/lib/db/types/cabinetSetting";
 import { loadAnnualSubsidyCostMaps } from "@/lib/subsidies/subsidyBudgetCosts";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { resolvePrimaryTaxRate } from "./rules/primaryTaxRate";
+import { cabinetSettingsCollection } from "@/lib/db/repositories/cabinetSettings";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 
 // ── Pure calculation ─────────────────────────────────────────────────────────
 
@@ -193,15 +198,10 @@ export async function processCNRegionalBudgets(
 }
 
 /**
- * Every country whose config carries `onePartyRegionalBudget`, in one pass —
- * what the turn phase calls. Driving off the config rather than a hardcoded
- * list is the point: a one-party country that populates the field is processed
- * without further wiring.
- *
- * CN is currently the only one. DD was evaluated and deliberately left on the
- * Länder revenue-sharing model instead — this model's only regional revenue term
- * multiplies by the country's primary tax rate, and DD authors that at 0%, so it
- * would have funded nothing. See `processLaenderRegionalBudgets` (#1323).
+ * Every country whose config carries `onePartyRegionalBudget`, in one pass.
+ * Driving off the config rather than a hardcoded list is the point: a
+ * one-party country that populates the field is processed without further
+ * wiring.
  *
  * Countries are independent (each touches only its own regions' docs), so the
  * per-country passes run concurrently.
@@ -227,15 +227,12 @@ export async function processAllOnePartyRegionalBudgets(
 
 /**
  * Regional budgets for any one-party country whose `CountryConfig` carries
- * `onePartyRegionalBudget` — the "local retention + central transfer" shape
- * that field was always documented to serve ("a future second one-party
- * country with the same shape can populate this and pick up the processor
- * without code changes"). Generalised while fixing #1323; CN remains the only
- * country on this model.
+ * `onePartyRegionalBudget` (local retention plus central transfer). CN is the
+ * only country on this model.
  *
- * A country wires itself in by populating the config plus the two id
- * conventions this reads: `<lowercase id>_national` for national policy rows
- * and `<ID>_minister_of_finance` for the allocation cabinet setting.
+ * A country wires itself in by populating the config plus two id conventions:
+ * `<lowercase id>_national` for national policy rows and
+ * `<ID>_minister_of_finance` for the allocation cabinet setting.
  */
 export async function processOnePartyRegionalBudgets(
   db: Db,
@@ -243,18 +240,17 @@ export async function processOnePartyRegionalBudgets(
   turnNumber: number,
   preset?: string
 ): Promise<{ regionsProcessed: number }> {
-  // Read the country's budget knobs from CountryConfig. If the field is absent
-  // (not a one-party country, or misconfigured), bail rather than fall back to
-  // magic numbers. `preset` is threaded through so era-specific knobs (e.g. the
-  // 1953-scaled centralTransferPerCapita in ERA_COUNTRY_CONFIG_OVERRIDES)
-  // apply — without it every era shares the modern/1991 CNY-calibrated
-  // constant, which is ~35x too large against the USD-anchored 1953 CN budget
-  // (fiscal-scale audit, 2026-07-28).
+  // Read budget knobs from CountryConfig. If absent (not a one-party country
+  // or misconfigured), bail rather than fall back to magic numbers. `preset`
+  // is threaded through so era-specific knobs apply; without it every era
+  // shares the modern/1991 CNY-calibrated constant, which is ~35x too large
+  // against the USD-anchored 1953 CN budget.
+
   const countryConfig = getCountryConfig(countryId, preset);
   const budgetKnobs = countryConfig.onePartyRegionalBudget;
   if (!budgetKnobs) return { regionsProcessed: 0 };
 
-  const regions = await db.collection<State>("states").find({ countryId }).toArray();
+  const regions = await statesCollection(db).find({ countryId }).toArray();
   if (regions.length === 0) return { regionsProcessed: 0 };
 
   const budgetConfig: OnePartyBudgetConfig = {
@@ -271,13 +267,11 @@ export async function processOnePartyRegionalBudgets(
 
   const regionIds = regions.map((r) => r._id as string);
 
-  const allRegionalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const allRegionalPolicies = await statePoliciesCollection(db)
     .find({ stateId: { $in: regionIds } })
     .toArray();
 
-  const nationalPolicies = await db
-    .collection<StatePolicy>("statePolicies")
+  const nationalPolicies = await statePoliciesCollection(db)
     .find({ stateId: `${countryId.toLowerCase()}_national` })
     .toArray();
 
@@ -288,17 +282,29 @@ export async function processOnePartyRegionalBudgets(
     ]),
   ];
 
-  const legTypes = await db
-    // full-read(legislationTypes): policyOptions tables price every regional law
-    .collection<LegislationType>("legislationTypes")
+  const legTypes = await legislationTypesCollection(db)
     .find({ _id: { $in: allLegTypeIds } })
     .toArray();
   const legTypeMap = new Map(legTypes.map((lt) => [lt._id, lt]));
 
-  const eitPolicy = nationalPolicies.find(
-    (p) => p.legislationTypeId === budgetKnobs.primaryTaxLegislationKey
+  const enactedTax = (legislationTypeId: string | undefined) => {
+    const policy = legislationTypeId
+      ? nationalPolicies.find((p) => p.legislationTypeId === legislationTypeId)
+      : undefined;
+    return policy
+      ? { policyOptionId: policy.policyOptionId, law: legTypeMap.get(policy.legislationTypeId) }
+      : undefined;
+  };
+  const nationalBudget = await federalBudgetCollection(db).findOne(
+    { _id: countryId },
+    { projection: { taxRates: 1 } }
   );
-  const eitRate = getTaxRateFromPolicy(eitPolicy, legTypeMap) || budgetKnobs.defaultTaxRate;
+  const eitRate = resolvePrimaryTaxRate({
+    current: enactedTax(budgetKnobs.primaryTaxLegislationKey),
+    legacy: enactedTax(budgetKnobs.savedWorldPrimaryTaxLegislationKey),
+    nationalRate: nationalBudget?.taxRates?.domesticCorporateTax,
+    defaultRate: budgetKnobs.defaultTaxRate,
+  });
 
   const nationalPopulation = regions.reduce((sum, r) => sum + r.population, 0);
 
@@ -309,16 +315,15 @@ export async function processOnePartyRegionalBudgets(
     policiesByRegion.set(policy.stateId, existing);
   }
 
-  const existingBudgets = await db
-    .collection<RegionalBudget>("regionalBudgets")
+  const existingBudgets = await regionalBudgetsCollection(db)
     .find({ _id: { $in: regionIds } })
     .toArray();
   const budgetMap = new Map(existingBudgets.map((b) => [b._id, b]));
 
   // Finance Minister cabinet setting controls central transfer distribution
-  const ministerSetting = await db
-    .collection<CabinetSetting>("cabinetSettings")
-    .findOne({ _id: `${countryId}_minister_of_finance` });
+  const ministerSetting = await cabinetSettingsCollection(db).findOne({
+    _id: `${countryId}_minister_of_finance`,
+  });
   const allocationPercents = ministerSetting?.allocationPercents ?? null;
 
   let regionsProcessed = 0;
@@ -435,15 +440,10 @@ export async function processOnePartyRegionalBudgets(
         filter: { _id: region._id },
         // `$unset` the shapes this processor does NOT own. `RegionalBudget` is a
         // union of per-country field sets, and `buildRegionalRevenueShape`
-        // dispatches on WHICH FIELDS ARE PRESENT, checking the DE branch
-        // (`incomeTaxShare`/`vatShare`) before the CN one. A region that changes
-        // model keeps its old fields under a plain `$set`, so it would carry two
-        // shapes at once and readers would resolve the stale one: DD's Länder
-        // still hold the DE fields their budgets froze with on turn 550, and
-        // would have reported the old `federalEqualizationGrant` as income while
-        // the national budget booked `centralTransferGrant` as the expense —
-        // reopening the very mismatch this processor was wired up to close
-        // (#1323). Clearing them leaves exactly one shape on the document.
+        // dispatches on WHICH FIELDS ARE PRESENT, checking the DE branch before
+        // the CN one. A region that changes model keeps its old fields under a
+        // plain `$set`, so it would carry two shapes and readers could resolve
+        // the stale one. Clearing them leaves exactly one shape on the document.
         update: {
           $set: budgetDoc,
           $unset: FOREIGN_SHAPE_FIELDS,
@@ -456,10 +456,10 @@ export async function processOnePartyRegionalBudgets(
   }
 
   if (statePolicyOps.length > 0) {
-    await db.collection<StatePolicy>("statePolicies").bulkWrite(statePolicyOps);
+    await statePoliciesCollection(db).bulkWrite(statePolicyOps);
   }
   if (regionalBudgetOps.length > 0) {
-    await db.collection<RegionalBudget>("regionalBudgets").bulkWrite(regionalBudgetOps);
+    await regionalBudgetsCollection(db).bulkWrite(regionalBudgetOps);
   }
 
   return { regionsProcessed };

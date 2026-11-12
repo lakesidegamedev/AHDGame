@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { getFederalMultiplier } from "@shared/constants/formulas";
 
 // The drift helper hits the DB; stub it to null (non-devolved region) so the tick-rate
@@ -31,29 +30,39 @@ describe("computeStateTickRates — country-aware national scope multiplier", ()
     db.collection("legislationTypes");
   });
 
-  it("displays a UK national policy's tick with the UK 1/12 multiplier, not the US 1/50", async () => {
-    const ukChildcare = legislationTypes.find((l) => l._id === "uk_childcare");
-    expect(ukChildcare, "uk_childcare seed present").toBeTruthy();
+  it("divides a national policy's tick by its own country's region count, not the US 1/50", async () => {
+    const rate = 0.75;
+    const natalist = {
+      _id: "jp_test_natalist",
+      countryScope: "jp",
+      name: "Test Natalist Act",
+      policyOptions: [
+        {
+          id: "jp_test_natalist_strong",
+          name: "Strong",
+          effectDirection: 1,
+          metricEffects: [{ category: "population", metricId: "birthRate", ratePerTurn: rate }],
+        },
+      ],
+    };
 
     db.collectionMocks.statePolicies.find.mockReturnValue(
       cursor([
         {
-          stateId: "uk_national",
-          legislationTypeId: "uk_childcare",
-          policyOptionId: "unmatched", // effectDirection fallback → strongest left option
+          stateId: "jp_national",
+          legislationTypeId: "jp_test_natalist",
+          policyOptionId: "jp_test_natalist_strong",
           effectDirection: 1,
         },
       ])
     );
-    db.collectionMocks.states.findOne.mockResolvedValue({ _id: "LON", countryId: "UK" });
-    db.collectionMocks.legislationTypes.find.mockReturnValue(cursor([ukChildcare]));
+    db.collectionMocks.states.findOne.mockResolvedValue({ _id: "KAN", countryId: "JP" });
+    db.collectionMocks.legislationTypes.find.mockReturnValue(cursor([natalist]));
 
     const { computeStateTickRates } = await import("./stateTickRates");
-    const rates = await computeStateTickRates(db as unknown as Db, "LON", "UK");
+    const rates = await computeStateTickRates(db as unknown as Db, "KAN", "JP");
 
-    const strongest = 0.75; // UK_BIRTH_RATE_TICK_RATES_7[0]
-    expect(rates.population?.birthRate).toBeCloseTo(strongest * getFederalMultiplier("UK"), 6);
-    // Guard against the old hardcoded 1/50: that would yield ~0.015, well below this.
-    expect(rates.population?.birthRate ?? 0).toBeGreaterThan(strongest * (1 / 50) + 0.001);
+    expect(getFederalMultiplier("JP")).not.toBe(getFederalMultiplier("US"));
+    expect(rates.population?.birthRate).toBeCloseTo(rate * getFederalMultiplier("JP"), 6);
   });
 });

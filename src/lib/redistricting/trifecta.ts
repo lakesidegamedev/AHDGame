@@ -3,6 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getSubNationalLegislatureKey } from "@/lib/constants/countries";
 import { getCurrentOfficeHolder } from "@/lib/governorOffice/queries";
 import type { ElectedOfficial } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /** Party (sequentialId string) holding > 50% of seats, or null. */
 export function chamberMajorityParty(
@@ -36,8 +37,7 @@ export async function checkStateTrifecta(
   const governorParty = governor?.party ?? null;
 
   const chamberKey = getSubNationalLegislatureKey(countryId as CountryId);
-  const officials = (await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = (await electedOfficialsCollection(db)
     .find({
       officeType: chamberKey,
       state: stateId.toUpperCase(),

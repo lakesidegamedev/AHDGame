@@ -1,5 +1,5 @@
 /**
- * Ticket 1122 follow-up: the sector page reads the engine's booked profit
+ * The sector page reads the engine's booked profit
  * instead of reconstructing it from a capped percentage.
  *
  * The two fixtures are the owner's live prod sectors, at their real values:

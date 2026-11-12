@@ -1,36 +1,29 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * UK region demographics — 1991 era (John Major's first years; run-up to the
- * 1992 general election).
+ * UK region demographics, 1991 era.
  *
- * Every region × group value here was authored INDEPENDENTLY from the
- * historical record of early-1990s Britain — NOT derived by scaling the 2019
- * file or the old 1991 multiplier table. The same 12 region IDs and 12
- * voter-group IDs are used; populations sum to 100 per region.
+ * Every region x group value was authored INDEPENDENTLY from the early-1990s
+ * historical record, NOT derived by scaling the 2019 file. The same 12 region
+ * IDs and 12 voter-group IDs are used; populations sum to 100 per region.
  *
  * Era anchors:
- * - Deindustrialization well underway (manufacturing ~22% of GDP, down from
- *   the 1970s but far above 2019): post_industrial_workers still the largest
- *   bloc in the North, Scotland, and Wales, but well below 1979 levels and
- *   less monolithically left — Essex-man working-class Toryism is real
- *   (economicLean softened toward -2/-3, turnout off its 1979 peak).
- * - Right-to-Buy created a new suburban/estate homeowner bloc: the
- *   suburban_homeowners group is markedly larger than in 1979, especially in
- *   the South East, East, and Midlands — the core of Major's 1992 coalition.
- * - Greens tiny: the 1989 Euro-election blip (15%) had collapsed by 1991 —
- *   pinned at 1-2 everywhere.
- * - No UKIP, no Referendum Party yet: populist_right is fringe (~1-2), except
- *   Northern Ireland where it continues to model hardline unionism.
+ * - Deindustrialization underway (manufacturing ~22% of GDP):
+ *   post_industrial_workers still the largest bloc in the North, Scotland, and
+ *   Wales, but below 1979 levels and less monolithically left.
+ * - Right-to-Buy created a new suburban/estate homeowner bloc:
+ *   suburban_homeowners is markedly larger than in 1979.
+ * - Greens tiny: the 1989 Euro-election blip had collapsed.
+ * - No UKIP or Referendum Party yet: populist_right is fringe (~1-2), except
+ *   Northern Ireland where it models hardline unionism.
  * - Pre-Blair urban progressives modest; ethnic-minority population ~5-6%
  *   nationally, concentrated in London, the West Midlands, and northern
  *   textile towns.
- * - Liberal Democrats newly merged (1988) and recovering: moderate_centrists
- *   solid in the South West and southern England.
- * - Turnout still healthy (77.7% at the 1992 GE); pensioner turnout very
- *   high, young turnout lower than 1979 but well above modern lows.
+ * - Liberal Democrats newly merged and recovering: moderate_centrists solid in
+ *   the South West and southern England.
+ * - Turnout still healthy (77.7% at the 1992 GE).
  */
-export const ukRegionDemographics1991: StateDemographics[] = [
+export const ukRegionDemographics1991: CensusGroupView[] = [
   // ── London ─────────────────────────────────────────────────────────────────
   // Docklands redevelopment, Big Bang finance boom and bust, growing graduate
   // professional class; inner boroughs solidly Labour, suburbs Tory.

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
+import { oneRowPerTurn } from "@/lib/elections/rules/turnSlice";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkWikiDisabled } from "@/lib/api/wikiGuard";
 import { ObjectId } from "mongodb";
@@ -17,6 +17,13 @@ import type {
   PoliticalParty,
   GameState,
 } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "President",
@@ -67,23 +74,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const db = await getDb();
 
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: electionId, status: { $in: ["completed", "resolved"] } });
+    const election = await electionsCollection(db).findOne({
+      _id: electionId,
+      status: { $in: ["completed", "resolved"] },
+    });
 
     if (!election) {
       return errorResponse(404, "Election not found");
     }
 
     // For completed elections, fetch ALL candidates (active + withdrawn) to show who ran
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
-      .find({ electionId })
-      .toArray();
+    const candidates = await electionCandidatesCollection(db).find({ electionId }).toArray();
 
     const gameStatePromise =
       election.electionYear == null
-        ? db.collection<GameState>("gameState").findOne(
+        ? gameStateCollection(db).findOne(
             { _id: "current" },
             {
               projection: {
@@ -97,13 +102,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         : Promise.resolve(null);
 
     const [state, voteTally, parties, gameState] = await Promise.all([
-      db
-        .collection<State>("states")
-        .findOne({ _id: election.state, countryId: election.countryId }),
-      db.collection<ElectionVoteTally>("electionVoteTallies").findOne({ electionId }),
+      statesCollection(db).findOne({ _id: election.state, countryId: election.countryId }),
+      electionVoteTalliesCollection(db).findOne({ electionId }),
       // Filter parties by election's country to avoid cross-country sequential ID collisions
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId: election.countryId ?? "US" })
         .project({ sequentialId: 1, name: 1, color: 1, abbreviation: 1 })
         .toArray(),
@@ -112,8 +114,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     // Fetch primary snapshots: full history for trend chart + latest for results fallback
     const [allPrimarySnapshots] = await Promise.all([
-      db
-        .collection<PrimarySnapshot>("primarySnapshots")
+      primarySnapshotsCollection(db)
         .find({ electionId }, { sort: { recordedAt: 1 } })
         .limit(96)
         .project<Pick<PrimarySnapshot, "recordedAt" | "byParty" | "turn" | "slicePart">>({
@@ -169,11 +170,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       );
     } else {
       if (lastPrimarySnapshot) {
-        // Snapshots record standings, not outcomes, so the winners have to be
-        // derived. This used to hardcode `i === 0`, which showed the 2nd and
-        // 3rd nominees of a multi-winner race (UK/JP/DE legislatures,
-        // one-party states) as primary losers even though they contested the
-        // general.
+        // Snapshots record standings, not outcomes, so winners must be derived.
+        // Advancing count is per country and election type: multi-winner races
+        // (UK/JP/DE legislatures, one-party states) advance more than one.
         const maxAdvancing = getPrimaryWinnersForElection(
           (election.countryId ?? "US") as CountryId,
           election.electionType

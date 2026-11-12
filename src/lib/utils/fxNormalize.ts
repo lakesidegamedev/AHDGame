@@ -4,13 +4,10 @@
  * CNY 7.2, BRL 5.0); these are seed-time base rates, not the live exchange rate.
  */
 /**
- * Static base exchange rates (local currency per 1 USD).
- * Sourced from exchangeRates.baseRate at game seed time.
- * Used to normalize currency-valued state metrics to USD for
- * cross-country scoring and margin calculations.
- *
- * Live rates fluctuate ±10% around these; for threshold scoring
- * the difference is negligible.
+ * Static base exchange rates (local currency per 1 USD), seeded from
+ * exchangeRates.baseRate. Used to normalize currency-valued state metrics to
+ * USD for cross-country scoring and margins. Live rates fluctuate around
+ * these; for threshold scoring the difference is negligible.
  */
 const BASE_RATES_USD: Record<string, number> = {
   US: 1,

@@ -43,9 +43,7 @@ beforeEach(() => {
   memory = createInMemoryDb();
   memory.seed("corporations", [parent, sub]);
   memory.seed("states", [{ _id: "US-PA", name: "Pennsylvania", countryId: "US" }]);
-  memory.seed("gameState", [
-    { _id: "current", currentTurn: 40, subsidiaryCorporationsEnabled: true },
-  ]);
+  memory.seed("gameState", [{ _id: "current", currentTurn: 40 }]);
   db = memory as unknown as Db;
   vi.clearAllMocks();
 });
@@ -112,7 +110,7 @@ describe("group management authorization and persistence", () => {
       forecast: null,
     });
     const child = await doc(subId),
-      groups = await loadGroupDirectionMembership(db, true, [child]);
+      groups = await loadGroupDirectionMembership(db, [child]);
     const root = groups?.rootByCorpId.get(subId.toString());
     expect(groups?.eligibleManagementRoots?.has(root!)).toBe(true);
     expect(
@@ -367,17 +365,6 @@ describe("group management authorization and persistence", () => {
       })
     ).toEqual({ ok: true });
     expect((await doc(subId)).groupDirection?.response).toBe("declined");
-  });
-  it("fails closed when subsidiary management is disabled", async () => {
-    await memory
-      .collection("gameState")
-      .updateOne({ _id: "current" }, { $set: { subsidiaryCorporationsEnabled: false } });
-    expect(
-      await updateGroupManagement(db, await doc(rootId), parentUser.toString(), {
-        action: "identity",
-        name: "Hidden",
-      })
-    ).toMatchObject({ ok: false, status: 409 });
   });
 });
 

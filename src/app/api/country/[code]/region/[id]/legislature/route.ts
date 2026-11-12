@@ -9,6 +9,12 @@ import {
 import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import type { State, ElectedOfficial, PoliticalParty, Character, NPP } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/country/[code]/region/[id]/legislature — Return the state senate composition and current officials for a region
 // Auth: public
@@ -27,21 +33,17 @@ export async function GET(
 
     const db = await getDb();
 
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }
 
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({ officeType: getSubNationalLegislatureKey(countryId), state: stateId })
       .toArray();
 
     // Filter parties by country to avoid cross-country sequential ID collisions
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
-      .find({ countryId })
-      .toArray();
+    const parties = await politicalPartiesCollection(db).find({ countryId }).toArray();
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
 
     const composition: Record<
@@ -69,8 +71,8 @@ export async function GET(
     }
 
     let governor = null;
-    if (countryId !== "UK") {
-      governor = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    if (!countryHasFeature("ukApi", countryId)) {
+      governor = await electedOfficialsCollection(db).findOne({
         officeType: "governor",
         state: stateId,
         characterId: { $ne: null },
@@ -86,8 +88,7 @@ export async function GET(
 
     const [characters, npps] = await Promise.all([
       characterIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: characterIds } },
               { projection: { _id: 1, sequentialId: 1, avatarUrl: 1 } }
@@ -95,8 +96,7 @@ export async function GET(
             .toArray()
         : Promise.resolve([]),
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find(
               { _id: { $in: nppIds } },
               { projection: { _id: 1, sequentialId: 1, avatarUrl: 1 } }

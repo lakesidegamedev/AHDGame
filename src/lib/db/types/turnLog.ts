@@ -50,7 +50,7 @@ export interface TurnLog {
    */
   nppEngineVersion?: string;
   /**
-   * Anti-abuse scans run after the turn commits (#2694): financialSuspectScan,
+   * Anti-abuse scans run after the turn commits: financialSuspectScan,
    * auditAnomalyScan, suspiciousDetection. Absent on off-cadence turns.
    */
   postTurnScans?: {
@@ -122,6 +122,15 @@ export interface TurnLog {
       speakerVotesCast: number;
     } | null;
 
+    countryBriefs?: { countries: number; briefs: number } | null;
+
+    nppPartyRenewal?: {
+      countries: number;
+      splinters: number;
+      foundings: number;
+      folds: number;
+    } | null;
+
     billLifecycle: {
       billsProcessed: number;
       billsPassed: number;
@@ -174,7 +183,7 @@ export interface TurnLog {
       surpriseCase?: {
         spawned: boolean;
         caseKey?: string;
-        majoritySide?: -1 | 0 | 1;
+        decided?: number;
       };
       nominations: {
         nominationsProcessed: number;
@@ -203,6 +212,7 @@ export interface TurnLog {
       swept: number;
       offered: number;
       skippedOffers: number;
+      exhaustedOffers?: number;
     } | null;
 
     worldEventsMaintenance: {
@@ -293,7 +303,7 @@ export interface TurnLog {
       statesProcessed: number;
     } | null;
 
-    archetypeApprovalDecay: {
+    bucketApprovalDecay: {
       charactersProcessed: number;
       nppsProcessed: number;
     } | null;
@@ -412,6 +422,12 @@ export interface TurnLog {
       /** Phase 2: scheme assets put into index funds this turn. */
       investedAnchor: number;
       schemesInvesting: number;
+    } | null;
+
+    /** Frontier programme races: winners named and licences issued this turn. */
+    frontierRaces?: {
+      racesWon: number;
+      licencesIssued: number;
     } | null;
 
     bankSolvencyTurn: {
@@ -638,6 +654,13 @@ export interface TurnLog {
       crisisesProcessed: number;
     } | null;
 
+    crisisV2Turn?: {
+      processed: number;
+      failed: number;
+      resolved: number;
+      opened: number;
+    } | null;
+
     ministerialOrders?: {
       ordersExpired: number;
       ordersActive: number;
@@ -716,7 +739,7 @@ export interface TurnLog {
     tradeGrowthMirror?: { countriesUpdated: number } | null;
 
     /**
-     * Bretton Woods exit tracker (issue #7). Runs after inflationRecalc (whose
+     * Bretton Woods exit tracker. Runs after inflationRecalc (whose
      * settled US rate the gold-cover drain reads) and before forexTurn (which
      * applies the persisted regime's band and drift). Zeroes when the gate is
      * off: disabled, full cover, nothing suspended or floated.

@@ -22,6 +22,22 @@ import {
   capitalGainsTaxRate,
 } from "./rules/capitalGainsTax";
 import { incomeTaxPaymentLegs, planIncomePayout } from "./rules/incomePayout";
+import { resolvePriceIndex } from "@/lib/metricEngine/rules/priceLevel";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
+import { playerIncomeTaxBatchesCollection } from "@/lib/db/repositories/playerIncomeTaxBatches";
 
 export interface IncomeCredit {
   characterId: ObjectId;
@@ -72,15 +88,13 @@ export async function creditIncomeAfterTax(
   const fingerprint = hash(JSON.stringify(credits));
   return runRequiredTransaction(
     async (session) => {
-      const state = await db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { session, projection: { resetWorldId: 1, forexEnabled: 1, stockHoldingTaxStartTurn: 1 } }
-        );
+      const state = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { session, projection: { resetWorldId: 1, forexEnabled: 1, stockHoldingTaxStartTurn: 1 } }
+      );
       const worldId = state?.resetWorldId ?? "legacy";
       const key = `income-payout:${worldId}:${turn}:${source}`;
-      const receipts = db.collection<PayoutReceipt>("playerIncomeTaxBatches");
+      const receipts = playerIncomeTaxBatchesCollection<PayoutReceipt>(db);
       const receiptId = `income-payout:${worldId}:${source}`;
       const previous = await receipts.findOne({ _id: receiptId }, { session });
       if (previous && previous.turn > turn)
@@ -101,8 +115,7 @@ export async function creditIncomeAfterTax(
         income: true,
         session,
       });
-      const exchange = await db
-        .collection("exchangeRates")
+      const exchange = await exchangeRatesCollection<Document>(db)
         .find(
           {},
           {
@@ -112,15 +125,14 @@ export async function creditIncomeAfterTax(
         )
         .toArray();
       const rates = new Map<string, number>(exchange.map((row) => [row.currencyCode, row.rate]));
-      const config = await db.collection<GameConfig>("gameConfig").findOne(
+      const config = await gameConfigCollection(db).findOne(
         { _id: "default" },
         {
           session,
           projection: { treasuryCashLedgerEnabled: 1, ledgerShadow: 1, turnLengthMinutes: 1 },
         }
       );
-      const regularActors = await db
-        .collection<Character>("characters")
+      const regularActors = await charactersCollection(db)
         .find(
           {
             _id: {
@@ -132,8 +144,7 @@ export async function creditIncomeAfterTax(
           { session, projection: { name: 1, pendingStockTaxReceipts: 1 } }
         )
         .toArray();
-      const imperialActors = await db
-        .collection<Character>("imperialCharacters")
+      const imperialActors = await imperialCharactersCollection<Character>(db)
         .find(
           {
             _id: {
@@ -153,8 +164,7 @@ export async function creditIncomeAfterTax(
           (actor) => ["imperialCharacters:" + actor._id.toHexString(), actor.name] as const
         ),
       ]);
-      const earnings: EarningsEntry[] = await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+      const earnings: EarningsEntry[] = await financialTxLogCollection(db)
         .find(
           {
             subjectType: "character",
@@ -177,8 +187,7 @@ export async function creditIncomeAfterTax(
           }
         )
         .toArray();
-      const medians = await db
-        .collection("macroMetrics")
+      const medians = await macroMetricsCollection<Document>(db)
         .find(
           {},
           {
@@ -187,6 +196,13 @@ export async function creditIncomeAfterTax(
           }
         )
         .toArray();
+      const priceIndexByCountry = new Map(
+        (
+          await federalBudgetCollection(db)
+            .find({}, { session, projection: { countryId: 1, priceIndex: 1 } })
+            .toArray()
+        ).map((row) => [String(row.countryId), resolvePriceIndex(row.priceIndex)])
+      );
       const medianByState = new Map(
         medians.map((row) => [
           String(row._id),
@@ -253,11 +269,11 @@ export async function creditIncomeAfterTax(
             Math.min(12, turn - (context.taxStartTurn ?? turn) + 1),
             TURNS_PER_YEAR
           ),
-          median
+          median,
+          priceIndexByCountry.get(context.countryId)
         );
       }
-      const debts = await db
-        .collection<Assessment>("playerIncomeTaxAssessments")
+      const debts = await playerIncomeTaxAssessmentsCollection<Assessment>(db)
         .find(
           {
             worldId,
@@ -569,38 +585,44 @@ export async function creditIncomeAfterTax(
         });
       }
       if (walletOps.characters.length) {
-        const credited = await db
-          .collection<IncomeWallet>("characters")
-          .bulkWrite(walletOps.characters, { session });
+        const credited = await charactersCollection<IncomeWallet>(db).bulkWrite(
+          walletOps.characters,
+          { session }
+        );
         if (credited.matchedCount !== walletOps.characters.length)
           throw new Error("Income recipient changed");
       }
       if (walletOps.imperialCharacters.length) {
-        const credited = await db
-          .collection<IncomeWallet>("imperialCharacters")
-          .bulkWrite(walletOps.imperialCharacters, { session });
+        const credited = await imperialCharactersCollection<IncomeWallet>(db).bulkWrite(
+          walletOps.imperialCharacters,
+          { session }
+        );
         if (credited.matchedCount !== walletOps.imperialCharacters.length)
           throw new Error("Income recipient changed");
       }
       if (savingsOps.length) {
-        const saved = await db.collection("savingsAccounts").bulkWrite(savingsOps, { session });
+        const saved = await savingsAccountsCollection<Document>(db).bulkWrite(savingsOps, {
+          session,
+        });
         if (saved.matchedCount !== savingsOps.length)
           throw new Error("Income savings account unavailable");
       }
       if (centralBankOps.length) {
-        const saved = await db.collection("centralBanks").bulkWrite(centralBankOps, { session });
+        const saved = await centralBanksCollection<Document>(db).bulkWrite(centralBankOps, {
+          session,
+        });
         if (saved.matchedCount !== centralBankOps.length)
           throw new Error("Income central bank unavailable");
       }
       if (bankOps.length) {
-        const saved = await db.collection("corporations").bulkWrite(bankOps, { session });
+        const saved = await corporationsCollection<Document>(db).bulkWrite(bankOps, { session });
         if (saved.matchedCount !== bankOps.length)
           throw new Error("Bank cannot fund income withholding");
       }
       if (assessments.length)
-        await db
-          .collection<Assessment>("playerIncomeTaxAssessments")
-          .bulkWrite(assessments, { session });
+        await playerIncomeTaxAssessmentsCollection<Assessment>(db).bulkWrite(assessments, {
+          session,
+        });
       const nationalOps = [...national]
         .filter(([, row]) => row.amount > 0)
         .map(([id, row]) => ({
@@ -615,7 +637,7 @@ export async function creditIncomeAfterTax(
           },
         }));
       if (nationalOps.length) {
-        const saved = await db.collection("federalBudget").bulkWrite(nationalOps, { session });
+        const saved = await federalBudgetCollection(db).bulkWrite(nationalOps, { session });
         if (saved.matchedCount !== nationalOps.length)
           throw new Error("Income tax national treasury unavailable");
       }
@@ -628,17 +650,19 @@ export async function creditIncomeAfterTax(
           },
         }));
       if (regionalOps.length) {
-        const saved = await db.collection("stateBudgets").bulkWrite(regionalOps, { session });
+        const saved = await stateBudgetsCollection<Document>(db).bulkWrite(regionalOps, {
+          session,
+        });
         if (saved.matchedCount !== regionalOps.length)
           throw new Error("Income tax regional treasury unavailable");
       }
       if (logs.length)
-        await db.collection("financialTxLog").bulkWrite(
+        await financialTxLogCollection<Document>(db).bulkWrite(
           logs.map((document) => ({ insertOne: { document } })),
           { session }
         );
       if (ledger.length)
-        await db.collection("ledgerEntries").bulkWrite(
+        await ledgerEntriesCollection<Document>(db).bulkWrite(
           ledger.map((document) => ({ insertOne: { document } })),
           { session }
         );

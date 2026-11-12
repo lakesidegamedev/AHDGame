@@ -3,7 +3,7 @@
  * resumeLiquidityAdvances completes admitted commands after interrupted delivery.
  */
 import { type Db, type Document } from "mongodb";
-import type { CentralBank, Corporation, GameConfig, MonetaryOperationRecord } from "@/lib/db/types";
+import type { CentralBank, MonetaryOperationRecord } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -22,6 +22,12 @@ import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { allocateLiquidityAdvance } from "./rules/liquidityAdvance";
 import { releaseMonetaryCommandReservation } from "./commandReservation";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { monetaryOperationCommandsCollection } from "@/lib/db/repositories/monetaryOperationCommands";
+import { bankLiquidityOperationsCollection } from "@/lib/db/repositories/bankLiquidityOperations";
 
 const COLLECTION = "bankLiquidityOperations";
 export class LiquidityAdvanceRejected extends Error {}
@@ -63,7 +69,9 @@ export async function existingLiquidityAdvance(
   db: Db,
   input: Pick<LiquidityAdvanceCommand, "operationId" | "countryId" | "amount" | "reason">
 ): Promise<boolean> {
-  const receipt = await db.collection<Receipt>(COLLECTION).findOne({ _id: input.operationId });
+  const receipt = await bankLiquidityOperationsCollection<Receipt>(db).findOne({
+    _id: input.operationId,
+  });
   if (!receipt) return false;
   matches(receipt, input);
   return receipt.status !== "rejected";
@@ -80,24 +88,26 @@ export async function executeLiquidityAdvance(
   )
     throw new LiquidityAdvanceRejected("Valid operation ID and positive whole amount required");
   if (
-    await db
-      .collection<{ _id: string }>("monetaryOperationCommands")
-      .findOne({ _id: input.operationId }, { projection: { _id: 1 } })
+    await monetaryOperationCommandsCollection<{ _id: string }>(db).findOne(
+      { _id: input.operationId },
+      { projection: { _id: 1 } }
+    )
   )
     throw new LiquidityAdvanceRejected("Operation ID already belongs to another monetary command");
-  const receipts = db.collection<Receipt>(COLLECTION);
+  const receipts = bankLiquidityOperationsCollection<Receipt>(db);
   let receipt = await receipts.findOne({ _id: input.operationId });
   if (!receipt) {
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { privateBankingEnabled: 1 } });
-    const currencyQuote = await db
-      .collection<{ _id: string; currencyCode?: CurrencyCode }>("exchangeRates")
-      .findOne({ _id: input.countryId }, { projection: { currencyCode: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { privateBankingEnabled: 1 } }
+    );
+    const currencyQuote = await exchangeRatesCollection<{
+      _id: string;
+      currencyCode?: CurrencyCode;
+    }>(db).findOne({ _id: input.countryId }, { projection: { currencyCode: 1 } });
     const currency = currencyQuote?.currencyCode ?? COUNTRY_CURRENCY_MAP[input.countryId];
     const banks = (await isPrivateBankingEnabled(config))
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find(
             { "bankCharter.status": "active", "bankCharter.currency": currency },
             { projection: { _id: 1, name: 1, "bankCharter.totalDeposits": 1 } }
@@ -175,7 +185,7 @@ async function finishLiquidityAdvance(
   receipt: Receipt,
   cooldownTurns: number
 ): Promise<MonetaryOperationRecord> {
-  const receipts = db.collection<Receipt>(COLLECTION);
+  const receipts = bankLiquidityOperationsCollection<Receipt>(db);
   if (receipt.status === "applied" && receipt.result) {
     await releaseMonetaryCommandReservation(db, receipt.bankId, receipt._id);
     return receipt.result;
@@ -185,12 +195,12 @@ async function finishLiquidityAdvance(
     throw new LiquidityAdvanceRejected(receipt.error ?? "Liquidity command was rejected");
   }
   const { command, bankId, currency } = receipt;
-  const banks = db.collection<
+  const banks = centralBanksCollection<
     Omit<CentralBank, "lastMonetaryOperationTurn"> & {
       lastMonetaryOperationTurn?: number | null;
       pendingLiquidityOperationId?: string;
     }
-  >("centralBanks");
+  >(db);
   if (receipt.status === "planning") {
     const already = await banks.findOne(
       { _id: bankId, pendingLiquidityOperationId: receipt._id },
@@ -404,8 +414,7 @@ async function finishLiquidityAdvance(
 
 /** Recover durable pending commands before new banking flows inspect their cash. */
 export async function resumeLiquidityAdvances(db: Db, cooldownTurns: number): Promise<void> {
-  const pending = await db
-    .collection<Receipt>(COLLECTION)
+  const pending = await bankLiquidityOperationsCollection<Receipt>(db)
     .find({ status: { $in: ["planning", "admitted"] } })
     .limit(100)
     .toArray();
@@ -413,9 +422,10 @@ export async function resumeLiquidityAdvances(db: Db, cooldownTurns: number): Pr
     try {
       await finishLiquidityAdvance(db, receipt, cooldownTurns);
     } catch (error) {
-      const current = await db
-        .collection<Receipt>(COLLECTION)
-        .findOne({ _id: receipt._id }, { projection: { status: 1 } });
+      const current = await bankLiquidityOperationsCollection<Receipt>(db).findOne(
+        { _id: receipt._id },
+        { projection: { status: 1 } }
+      );
       if (current?.status !== "rejected") throw error;
     }
   }

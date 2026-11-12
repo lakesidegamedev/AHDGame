@@ -10,6 +10,11 @@ import type { CountryId } from "@/lib/constants/countries";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { planCorporateTaxPriority } from "./rules/corporateTaxPriority";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { producerEconomyAccountsCollection } from "@/lib/db/repositories/producerEconomyAccounts";
 const idFor = (value: string) =>
   new ObjectId(createHash("sha256").update(value).digest("hex").slice(0, 24));
 
@@ -54,13 +59,11 @@ async function settleCorporateTaxPriorityBatch(
         (row) =>
           `corporate-tax-priority:${turn}:${row.corpId}${source === "dividend" ? ":dividend" : ""}`
       );
-      const prior = await db
-        .collection<{ _id: string }>("bankMoneyMoves")
+      const prior = await bankMoneyMovesCollection<{ _id: string }>(db)
         .find({ _id: { $in: keys } }, { session, projection: { _id: 1 } })
         .toArray();
       const done = new Set(prior.map((row) => row._id));
-      const corporations = await db
-        .collection<Corporation>("corporations")
+      const corporations = await corporationsCollection(db)
         .find(
           { _id: { $in: rows.map((row) => row.corpId) } },
           {
@@ -246,9 +249,7 @@ async function settleCorporateTaxPriorityBatch(
         });
       }
       if (corpOps.length) {
-        const updated = await db
-          .collection<Corporation>("corporations")
-          .bulkWrite(corpOps, { session });
+        const updated = await corporationsCollection(db).bulkWrite(corpOps, { session });
         if (updated.matchedCount !== corpOps.length)
           throw new Error("Corporate tax payer disappeared");
       }
@@ -262,7 +263,7 @@ async function settleCorporateTaxPriorityBatch(
         },
       }));
       if (treasuryOps.length) {
-        const updated = await db.collection("federalBudget").bulkWrite(treasuryOps, { session });
+        const updated = await federalBudgetCollection(db).bulkWrite(treasuryOps, { session });
         if (updated.matchedCount !== treasuryOps.length)
           throw new Error("Corporate tax Treasury unavailable");
       }
@@ -277,19 +278,20 @@ async function settleCorporateTaxPriorityBatch(
             update: { $inc: { cash: target.amount } },
           },
         }));
-        const updated = await db
-          .collection("producerEconomyAccounts")
-          .bulkWrite(operations, { session });
+        const updated = await producerEconomyAccountsCollection<Document>(db).bulkWrite(
+          operations,
+          { session }
+        );
         if (updated.matchedCount !== operations.length)
           throw new Error("Corporate distribution recipient unavailable");
       }
       if (ledger.length)
-        await db.collection("ledgerEntries").bulkWrite(
+        await ledgerEntriesCollection<Document>(db).bulkWrite(
           ledger.map((document) => ({ insertOne: { document } })),
           { session }
         );
       if (receipts.length)
-        await db.collection("bankMoneyMoves").bulkWrite(
+        await bankMoneyMovesCollection<Document>(db).bulkWrite(
           receipts.map((document) => ({ insertOne: { document } })),
           { session }
         );

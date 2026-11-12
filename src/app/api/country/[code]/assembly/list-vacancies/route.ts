@@ -13,6 +13,7 @@ import {
   loadHu1991ListVacancies,
   loadHu1991ListReplacementHistory,
 } from "@/lib/countries/hu/listVacancies1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 type Context = { params: Promise<{ code: string }> };
 const schema = z
@@ -27,7 +28,7 @@ export async function GET(_request: Request, { params }: Context) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    if ((await params).code.toUpperCase() !== "HU")
+    if (!countryHasFeature("huApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Hungarian list mandate here");
     const db = await getDb();
     const game = await getGameState(db);
@@ -50,7 +51,7 @@ export async function POST(request: Request, { params }: Context) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    if ((await params).code.toUpperCase() !== "HU")
+    if (!countryHasFeature("huApi", (await params).code.toUpperCase()))
       return errorResponse(404, "No Hungarian list mandate here");
     const limit = checkRateLimit(`hu-list-vacancy:${auth.user.userId}`, 5, 60_000);
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);
@@ -61,7 +62,7 @@ export async function POST(request: Request, { params }: Context) {
     if (game?.preset !== "1991-default")
       return errorResponse(409, "No original Hungarian party list in this world");
     const character = await getCharacterByUserId(db, auth.user.userId);
-    if (auth.user.isAdmin !== true && character?.countryId !== "HU")
+    if (auth.user.isAdmin !== true && !countryHasFeature("huApi", character?.countryId))
       return errorResponse(403, "A Hungarian party chair must designate its deputy");
     const installed = await designateHu1991ListDeputy({
       db,

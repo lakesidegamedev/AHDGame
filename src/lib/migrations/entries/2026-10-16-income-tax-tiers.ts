@@ -13,6 +13,14 @@ import {
 } from "@/lib/budget/rules/incomeTaxTiers";
 import { refreshIncomeTaxShares } from "@/lib/budget/incomeTaxShares";
 import type { Migration } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import type { Document } from "mongodb";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 export const migration: Migration = {
   id: "2026-10-16-income-tax-tiers",
@@ -20,20 +28,19 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db, ctx) {
     const [national, regional, types, policies, state, characters, imperials] = await Promise.all([
-      db.collection<FederalBudget>("federalBudget").find({}).toArray(),
-      db.collection<StateBudget>("stateBudgets").find({}).toArray(),
-      db
-        .collection<LegislationType>("legislationTypes")
+      federalBudgetCollection(db).find({}).toArray(),
+      stateBudgetsCollection(db).find({}).toArray(),
+      legislationTypesCollection(db)
         .find({
           $or: [{ "taxRateChange.taxType": "incomeTax" }, { "taxSlider.taxType": "incomeTax" }],
         })
         .toArray(),
-      db.collection<StatePolicy>("statePolicies").find({}).toArray(),
-      db.collection<{ _id: string; currentTurn: number }>("gameState").findOne({ _id: "current" }),
-      db.collection("characters").countDocuments({ incomeTaxStartTurn: { $exists: false } }),
-      db
-        .collection("imperialCharacters")
-        .countDocuments({ incomeTaxStartTurn: { $exists: false } }),
+      statePoliciesCollection(db).find({}).toArray(),
+      gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({ _id: "current" }),
+      charactersCollection(db).countDocuments({ incomeTaxStartTurn: { $exists: false } }),
+      imperialCharactersCollection<Document>(db).countDocuments({
+        incomeTaxStartTurn: { $exists: false },
+      }),
     ]);
     for (const budget of [...national, ...regional])
       if (budget.taxRates) initializeIncomeTaxRates(budget.taxRates);
@@ -86,7 +93,7 @@ export const migration: Migration = {
       ]);
     }
     if (clones.length)
-      await db.collection<LegislationType>("legislationTypes").bulkWrite(
+      await legislationTypesCollection(db).bulkWrite(
         clones.map((type) => ({
           updateOne: {
             filter: { _id: type._id },
@@ -133,8 +140,8 @@ export const migration: Migration = {
         });
       }
     }
-    if (policyOps.length) await db.collection<StatePolicy>("statePolicies").bulkWrite(policyOps);
-    await db.collection("characters").updateMany({}, [
+    if (policyOps.length) await statePoliciesCollection(db).bulkWrite(policyOps);
+    await charactersCollection(db).updateMany({}, [
       {
         $set: {
           initialIncomeTier: {
@@ -165,7 +172,7 @@ export const migration: Migration = {
         },
       },
     ]);
-    await db.collection("imperialCharacters").updateMany({}, [
+    await imperialCharactersCollection<Document>(db).updateMany({}, [
       {
         $set: {
           initialIncomeTier: { $ifNull: ["$initialIncomeTier", "high"] },

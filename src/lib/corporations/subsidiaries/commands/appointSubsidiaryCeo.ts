@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, NPP } from "@/lib/db/types";
+import type { Corporation, NPP } from "@/lib/db/types";
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
 import {
@@ -16,6 +16,9 @@ import { canActOnCorporationAsParent } from "../authorization";
 import { subsidiaryCeoBlockMessage, subsidiaryCeoBlockReason } from "../helpers";
 import { collectSiblingSubsidiaryCeoUserIds, resolveParentCeoUserId } from "../parentContext";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export interface AppointSubsidiaryCeoInput {
   sub: Corporation;
@@ -44,9 +47,7 @@ export async function appointSubsidiaryCeo(
 
   const controllingParent = await resolveControllingCorporateParent(db, sub);
   if (!controllingParent) return fail("This corporation is no longer a subsidiary.", 409);
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId });
+  const parent = await corporationsCollection(db).findOne({ _id: controllingParent.corporationId });
   if (!parent) return fail("Parent corporation not found.", 404);
 
   if (ceoType === "npp") {
@@ -62,9 +63,10 @@ export async function appointSubsidiaryCeo(
       });
       const nppId = pickCaretakerNpp(affiliations, forcedNppId, sectorLane);
       if (!nppId) return fail("No eligible NPP is available to caretake this subsidiary.");
-      const npp = await db
-        .collection<NPP>("npps")
-        .findOne({ _id: new ObjectId(nppId) }, { projection: { name: 1 } });
+      const npp = await nppsCollection(db).findOne(
+        { _id: new ObjectId(nppId) },
+        { projection: { name: 1 } }
+      );
       if (!npp) return fail("No eligible NPP is available to caretake this subsidiary.");
 
       await installCaretakerForVacantCorp(db, { corp: sub, nppId, turn, now });
@@ -89,9 +91,10 @@ export async function appointSubsidiaryCeo(
 
   // Character path.
   if (!characterId) return fail("A character is required to appoint a human CEO.");
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { userId: 1, homeState: 1, countryId: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { userId: 1, homeState: 1, countryId: 1 } }
+  );
   if (!character || !character.userId) {
     return fail("The selected character cannot serve as CEO (no owning player).");
   }
@@ -117,7 +120,7 @@ export async function appointSubsidiaryCeo(
 
   // Reseat: close the current holder's tenure, then set the new human CEO.
   const previousCeoId = sub.ceoId;
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: sub._id },
     {
       $set: {

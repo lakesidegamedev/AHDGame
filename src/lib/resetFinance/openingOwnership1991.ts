@@ -1,6 +1,7 @@
 import { openingLawReferences } from "@/lib/resetLegislation/openingLaw";
 import { openingFiscalBooks1991, type ResetOpeningCountry } from "./opening1991";
 import { reconcileOpeningOwnership } from "./rules/openingOwnership";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export function openingFiscalOwnership1991() {
   const books = openingFiscalBooks1991();
@@ -46,7 +47,7 @@ export function openingNamedGrantClaims1991(): Record<ResetOpeningCountry, Recor
           // Both it and Japan's allocation tax need a separate transfer-change
           // path before any ordinary law option may replace them.
           const namedUkGrant =
-            country === "UK" &&
+            countryHasFeature("ukSeeds", country) &&
             source.sourceId === "uk_local_government_funding" &&
             source.fiscalRole === "single-booked-owner";
           if (source.replacementRestriction !== "protected-transfer" && !namedUkGrant) continue;

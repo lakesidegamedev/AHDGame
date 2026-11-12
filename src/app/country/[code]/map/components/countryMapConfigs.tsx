@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
+import type { State } from "@/lib/db/types";
 import { UK_REGIONS, UK_NATIONS } from "@/lib/constants/uk";
 import { BRITISH_ISLES_GEO_URL, UK_REGION_CODES } from "@/lib/maps/britishIslesGeometry";
 import { GERMANY_GEO_URL, GERMANY_REGION_CODES } from "@/lib/maps/germanyGeometry";
@@ -19,6 +20,8 @@ import { cnRegions } from "@/lib/seeds/cn/cnRegions";
 import { brRegions } from "@/lib/seeds/br/brRegions";
 import { ngRegions } from "@/lib/seeds/ng/ngRegions";
 import { NIGERIA_GEO_URL, NG_REGION_CODES } from "@/lib/maps/nigeriaGeometry";
+import { caRegions2027 } from "@/lib/countries/ca/data/caRegions2027";
+import { CANADA_GEO_URL, CA_REGION_CODES } from "@/lib/countries/ca/data/canadaGeometry";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import {
@@ -645,8 +648,17 @@ const NG_MODES: MapModeConfig[] = [
   },
 ];
 
-function buildNGRegionData(args: BuildRegionDataArgs): Record<string, MapRegionCell> {
-  if (args.mode === "logistics") return logisticsRegionData(ngRegions, args.freightData);
+type ZoneRegion = Pick<State, "_id" | "name" | "houseDistricts" | "stateSenateSeats">;
+
+/**
+ * Party org, lower house, senate, regional executive, approval and lean cells
+ * for a map whose regions are plain region documents (NG zones, CA provinces).
+ */
+function buildZoneRegionData(
+  regions: ReadonlyArray<ZoneRegion>,
+  args: BuildRegionDataArgs
+): Record<string, MapRegionCell> {
+  if (args.mode === "logistics") return logisticsRegionData(regions, args.freightData);
   const result: Record<string, MapRegionCell> = {};
   const partyOrg = args.mapData?.partyOrg ?? {};
   const house = args.mapData?.house ?? {};
@@ -656,7 +668,7 @@ function buildNGRegionData(args: BuildRegionDataArgs): Record<string, MapRegionC
   const lean = args.mapData?.lean ?? {};
   const leanHalf = leanHalfRange(lean, args.leanAxis);
 
-  for (const region of ngRegions) {
+  for (const region of regions) {
     const id = region._id;
     const name = region.name;
     if (args.mode === "sectorBonuses") {
@@ -705,6 +717,25 @@ function buildNGRegionData(args: BuildRegionDataArgs): Record<string, MapRegionC
   }
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// CA — thirteen provinces and territories; House of Commons and Premiers.
+// ---------------------------------------------------------------------------
+const CA_MODES: MapModeConfig[] = [
+  { id: "partyOrg", label: "Party org", description: "Leading party organization per province" },
+  { id: "house", label: "Commons", description: "House of Commons seats by party" },
+  { id: "governor", label: "Premier", description: "Premier by party" },
+  { id: "approval", label: "Approval", description: "Government approval heatmap" },
+  { id: "lean", label: "Lean", description: "Combined, economic, or social lean per province" },
+  { id: "sectorBonuses", label: "Sectors", description: "Sector specialization by province" },
+  {
+    id: "logistics",
+    label: "Logistics",
+    description: "Freight capacity and open logistics market",
+  },
+];
+
+const totalCaCommons = caRegions2027.reduce((s, r) => s + (r.houseDistricts ?? 0), 0);
 
 export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapConfig> = {
   UK: {
@@ -860,6 +891,33 @@ export const COUNTRY_MAP_CONFIGS: Record<ParliamentaryMapCountryId, CountryMapCo
     aspectRatio: "480/340",
     mapMaxWidth: "420px",
     mapMinHeight: "260px",
-    buildRegionData: buildNGRegionData,
+    buildRegionData: (args) => buildZoneRegionData(ngRegions, args),
+  },
+  CA: {
+    countryId: "CA",
+    modes: CA_MODES,
+    defaultMode: "partyOrg",
+    regions: caRegions2027.map((r) => ({
+      id: r._id,
+      name: r.name,
+      secondaryLabel: `${r.houseDistricts} MPs`,
+    })),
+    regionListHeading: "All provinces and territories",
+    headerSubtitle: `${caRegions2027.length} provinces and territories · ${totalCaCommons} MPs`,
+    renderPaths: ({ regionData, onRegionClick, regionCodes }) => (
+      <RegionalGeoMap
+        zoomable
+        sourceUrl={CANADA_GEO_URL}
+        regionCodes={regionCodes ?? [...CA_REGION_CODES]}
+        regionData={regionData}
+        onRegionClick={onRegionClick}
+        width={480}
+        height={340}
+      />
+    ),
+    aspectRatio: "480/340",
+    mapMaxWidth: "420px",
+    mapMinHeight: "260px",
+    buildRegionData: (args) => buildZoneRegionData(caRegions2027, args),
   },
 };

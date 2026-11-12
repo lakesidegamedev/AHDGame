@@ -1,13 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
-import type { User } from "@/lib/db/types/user";
-import type { Corporation } from "@/lib/db/types/corporation";
-import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
-import type { StockExchangeSnapshot } from "@/lib/db/types/stockExchangeSnapshot";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
-import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
 import { loadWatchlist } from "./data/watchlist";
 import { loadKeirPet } from "./keirPet";
@@ -20,6 +15,13 @@ import { loadSinceAway } from "./data/sinceAway";
 import { loadSectorHeatmap } from "./data/sectorHeatmap";
 import { loadNetWorth } from "./data/netWorth";
 import { loadCommodityBoard } from "./data/commodityBoard";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
+import type { Document } from "mongodb";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
+import { playerContentReportsCollection } from "@/lib/db/repositories/playerContentReports";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -80,18 +82,16 @@ function percentChange(current: number, previous: number | undefined): number | 
 }
 
 async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWidgetData | null> {
-  const user = await db
-    .collection<User>("users")
-    .findOne(
-      { _id: new ObjectId(viewer.userId) },
-      { projection: { activeCharacterId: 1, activeCharacterType: 1, activeImperialCharacterId: 1 } }
-    );
+  const user = await usersCollection(db).findOne(
+    { _id: new ObjectId(viewer.userId) },
+    { projection: { activeCharacterId: 1, activeCharacterType: 1, activeImperialCharacterId: 1 } }
+  );
   const ceoId =
     user?.activeCharacterType === "imperial"
       ? user.activeImperialCharacterId
       : user?.activeCharacterId;
   if (!ceoId) return null;
-  const corp = await db.collection<Corporation>("corporations").findOne(
+  const corp = await corporationsCollection(db).findOne(
     { ceoId, ceoVacant: { $ne: true }, imfInstitution: { $ne: true } },
     {
       projection: {
@@ -107,8 +107,7 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
     }
   );
   if (!corp) return null;
-  const history = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const history = await corporationHistoryCollection(db)
     .find(
       { corporationId: corp._id },
       { projection: { turn: 1, sharePrice: 1, liquidCapital: 1, revenue: 1, income: 1 } }
@@ -139,17 +138,14 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
 
 async function loadTicker(db: Db, exchange: string): Promise<StockTickerWidgetData | null> {
   if (!EXCHANGE_API_KEYS.has(exchange)) return null;
-  const snapshot = await db
-    .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-    .findOne(
-      { _id: exchange },
-      { projection: { exchangeName: 1, turn: 1, listings: { $slice: TICKER_ROWS } } }
-    );
+  const snapshot = await stockExchangeSnapshotsCollection(db).findOne(
+    { _id: exchange },
+    { projection: { exchangeName: 1, turn: 1, listings: { $slice: TICKER_ROWS } } }
+  );
   if (!snapshot) return null;
   const listings = snapshot.listings ?? [];
   // One read for every row's recent history, bounded by a turn floor.
-  const history = await db
-    .collection<CorporationHistory>("corporationHistory")
+  const history = await corporationHistoryCollection(db)
     .find(
       {
         corporationId: { $in: listings.map((row) => row._id) },
@@ -193,9 +189,9 @@ async function loadStaffQueues(
 ): Promise<StaffQueuesWidgetData | null> {
   if (!viewer.isAdmin && !viewer.isModerator) return null;
   const [wikiReview, altClusters, playerReports] = await Promise.all([
-    db.collection("wikiPages").countDocuments({ status: "pending_review" }),
+    wikiPagesCollection<Document>(db).countDocuments({ status: "pending_review" }),
     getAltClustersCollection(db).then((clusters) => clusters.countDocuments({ status: "open" })),
-    db.collection(PLAYER_CONTENT_REPORTS).countDocuments({ status: "pending" }),
+    playerContentReportsCollection<Document>(db).countDocuments({ status: "pending" }),
   ]);
   return { admin: viewer.isAdmin, wikiReview, altClusters, playerReports };
 }

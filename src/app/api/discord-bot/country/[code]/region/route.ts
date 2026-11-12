@@ -6,6 +6,9 @@ import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/ra
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
 import type { State, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -43,8 +46,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const db = await getDb();
 
     const [state, officials] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: stateId, countryId }),
-      db.collection<ElectedOfficial>("electedOfficials").find({ state: stateId }).toArray(),
+      statesCollection(db).findOne({ _id: stateId, countryId }),
+      electedOfficialsCollection(db).find({ state: stateId }).toArray(),
     ]);
 
     if (!state) {
@@ -56,8 +59,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       ...new Set(officials.map((o) => o.party).filter((p): p is string => Boolean(p))),
     ];
     const partySeqIds = partyIds.map(Number).filter(Boolean);
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: partySeqIds }, countryId })
       .toArray();
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));

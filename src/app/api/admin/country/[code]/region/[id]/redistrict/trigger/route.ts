@@ -2,12 +2,12 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
-import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { regenerateCongressionalDistricts } from "@/lib/redistricting/regenerate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { regionRedistrictUrl } from "@/lib/urls";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // POST /api/admin/country/[code]/region/[id]/redistrict/trigger — reset a state's
 // district map to a neutral baseline and open it for manual redraw.
@@ -25,20 +25,12 @@ export const POST = withAdminRoute(
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country code");
     }
-    if (countryId !== "US") {
+    if (!countryHasFeature("usApi", countryId)) {
       return errorResponse(400, "Redistricting is only available for US states");
     }
 
-    const gs = await getGameState();
-    if (!isRedistrictingEnabled(gs)) {
-      return errorResponse(
-        400,
-        "Redistricting is not enabled — turn it on in the admin dashboard first"
-      );
-    }
-
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

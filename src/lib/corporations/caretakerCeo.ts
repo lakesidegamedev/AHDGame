@@ -6,28 +6,26 @@
  * Vacant corps get a caretaker the same way (installCaretakerForVacantCorp).
  */
 /**
- * Caretaker CEO — NPP-autonomy V2.1.
+ * Caretaker CEO: a player corp owner may hand day-to-day operation of their
+ * own corporation to an autonomous NPP caretaker.
  *
- * A player corp owner (the sitting CEO) may hand day-to-day operation of their
- * own corporation to an autonomous NPP "caretaker". The corp then runs through
- * the existing, fully-clamped NPP corp brain (`processNppCorporationDecisions`
- * → `ceoArchetype`) exactly like a spawned NPP corp — same `SAFE_*` bounds, so
- * no autonomous lever can drive the corp into the ground.
+ * The corp runs through the existing, fully-clamped NPP corp brain
+ * (`processNppCorporationDecisions` -> `ceoArchetype`) exactly like a spawned
+ * NPP corp, with the same `SAFE_*` bounds.
  *
- * The defining property (vs. a spawned NPP corp) is that this is **player-
- * appointed and player-revoked**: `corp.userId` deliberately stays the
- * appointing owner, so they keep `requireCeo` authorization and private-data
- * access and can reclaim the seat at any time. We stash the displaced human CEO
- * in `corp.caretakerCeo` so dismissal restores them exactly.
+ * Unlike a spawned NPP corp, this is player-appointed and player-revoked:
+ * `corp.userId` deliberately stays the appointing owner so they keep
+ * `requireCeo` authorization and private-data access and can reclaim the seat
+ * at any time. The displaced human CEO is stashed in `corp.caretakerCeo` so
+ * dismissal restores them exactly.
  *
  * This module is the mechanism only; the feature gate
- * (`nppAutonomyAtLeast(corp.countryId, "v1")` — true for autonomy countries at
- * v1 and player countries at v2) lives at the call site.
+ * (`nppAutonomyAtLeast(corp.countryId, "v1")`) lives at the call site.
  */
 
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, Corporation, NPP } from "@/lib/db/types";
+import type { Corporation, NPP } from "@/lib/db/types";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { openCeoTenure, closeCeoTenure } from "./ceoHistory";
 import { chooseNppCorpCeo, type NppCorpCeoAffiliation } from "@/lib/admin/nppCorpCeoSelection";
@@ -40,6 +38,9 @@ import {
 import { subsidiaryReclaimBlocked } from "@/lib/corporations/subsidiaries/parentContext";
 import { characterCeoResidencyFailure } from "@/lib/corporations/ceoEligibilityRules";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Reason a caretaker appointment was rejected (pure, before any I/O). */
 export type CaretakerAppointmentError =
@@ -51,12 +52,7 @@ export type CaretakerAppointmentError =
   | "no-eligible-npp"
   | "npp-not-eligible";
 
-/**
- * Cooldown, in turns (= real hours), that must elapse after an owner reclaims
- * control before a new caretaker may be installed. 3 days × 24 turns/day = 72.
- * Stops a corp from flipping between owner and caretaker turn-to-turn to game
- * whichever operator is momentarily advantageous.
- */
+/* Cooldown, in turns (= real hours), after an owner reclaims control before a new caretaker may be installed. Prevents flipping between owner and caretaker to game whichever operator is advantageous. */
 export const CARETAKER_REAPPOINT_COOLDOWN_TURNS = 3 * TURNS_PER_DAY;
 
 /**
@@ -138,15 +134,12 @@ export interface AppointCaretakerCeoResult {
 }
 
 /**
- * Install an NPP caretaker as operator of `corp`. The corp keeps its owner
- * (`userId`) and shareholders untouched; only operation moves to the NPP.
- *
- * Steps, mirroring the player CEO-accept/admin-appoint writes:
- *  - close the outgoing human CEO's open tenure, open an `npp` tenure;
- *  - set `ceoType:"npp"` + `ceoId` to the NPP, stash the displaced human in
- *    `caretakerCeo`, and zero `ceoSalary` (an absent human draws no pay, and we
- *    do not gift the player's configured salary to the NPP — salary on
- *    `ceoType:"npp"` corps accrues to NPP funds).
+ * Install an NPP caretaker as operator of `corp`. Owner (`userId`) and
+ * shareholders are untouched; only operation moves to the NPP.
+ *  - close the outgoing human CEO's tenure, open an `npp` tenure;
+ *  - set `ceoType:"npp"` + `ceoId`, stash displaced human in `caretakerCeo`,
+ *    zero `ceoSalary` (absent human draws no pay; NPP salaries accrue to NPP
+ *    funds, not the player's configured salary).
  */
 export async function appointCaretakerCeo(
   db: Db,
@@ -168,12 +161,10 @@ export async function appointCaretakerCeo(
   if (!nppId) return { ok: false, error: forcedNppId ? "npp-not-eligible" : "no-eligible-npp" };
 
   const nppOid = new ObjectId(nppId);
-  const npp = await db
-    .collection<NPP>("npps")
-    .findOne({ _id: nppOid }, { projection: { name: 1 } });
+  const npp = await nppsCollection(db).findOne({ _id: nppOid }, { projection: { name: 1 } });
   if (!npp) return { ok: false, error: "npp-not-eligible" };
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: {
@@ -222,9 +213,10 @@ export async function dismissCaretakerCeo(
 
   const { underlyingCharacterId, underlyingUserId, appointmentSource } = corp.caretakerCeo;
   const underlyingCharacter = underlyingCharacterId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: underlyingCharacterId }, { projection: { homeState: 1, countryId: 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: underlyingCharacterId },
+        { projection: { homeState: 1, countryId: 1 } }
+      )
     : null;
   const eligibleUnderlyingCharacter =
     underlyingCharacter &&
@@ -249,7 +241,7 @@ export async function dismissCaretakerCeo(
   if (!eligibleUnderlyingCharacter) {
     // No human remains eligible at this headquarters, so release the NPP but
     // leave a plain vacant seat rather than restoring an out-of-location CEO.
-    await db.collection<Corporation>("corporations").updateOne(
+    await corporationsCollection(db).updateOne(
       { _id: corp._id },
       {
         $set: {
@@ -272,7 +264,7 @@ export async function dismissCaretakerCeo(
     return { ok: true };
   }
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: {
@@ -352,9 +344,7 @@ export async function installCaretakerForVacantCorp(
   const { corp, nppId, turn, now } = args;
   const nppOid = new ObjectId(nppId);
   const { set, unset } = buildVacantCaretakerCeoUpdate(corp, nppOid, turn, now);
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: corp._id }, { $set: set, $unset: unset });
+  await corporationsCollection(db).updateOne({ _id: corp._id }, { $set: set, $unset: unset });
   if (corp.ceoId != null) await closeCeoTenure(db, corp._id, { holderId: corp.ceoId, turn });
   await openCeoTenure(db, corp._id, { holderId: nppOid, ceoType: "npp", turn });
 }
@@ -370,7 +360,7 @@ export async function reseatStrandedCaretaker(
 ): Promise<void> {
   const { corp, nppId, turn, now } = args;
   const nppOid = new ObjectId(nppId);
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: corp._id },
     {
       $set: { ceoId: nppOid, ceoType: "npp", ceoVacant: false, ceoSalary: 0, updatedAt: now },

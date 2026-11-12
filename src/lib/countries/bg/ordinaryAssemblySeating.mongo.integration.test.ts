@@ -6,12 +6,12 @@ import { BG_ORDINARY_ASSEMBLY_SEATS } from "./rules/assemblyTransition";
 import {
   readBgOrdinaryElectionPlan,
   BG_ORDINARY_PLANS_COLLECTION,
-} from "@/lib/turn/election/bgOrdinaryEligibility";
+} from "@/lib/elections/resolution/bgOrdinaryEligibility";
 import { resolveGeneralElections } from "@/lib/turn/electionResolution";
 import { getDb, getMongoClient } from "@/lib/mongodb";
 
 vi.mock("@/lib/news", () => ({ generateElectionNews: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("@/lib/turn/election/electionNotifications", () => ({
+vi.mock("@/lib/elections/resolution/electionNotifications", () => ({
   sendBatchedElectionResults: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAuditBulk: vi.fn() }));

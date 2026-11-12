@@ -8,10 +8,9 @@ import {
   canCharacterInteract,
   resolveCharacterRoles,
   isMultiResponderNode,
+  decisionAnsweredByLever,
 } from "@/lib/crises/interactionEngine";
-import { isCrisisInteractionEnabled, isCrisisAidBillsEnabled } from "@/lib/crises/featureFlag";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { ObjectId } from "mongodb";
 import {
   campaignBriefForGlobalResponder,
@@ -20,6 +19,10 @@ import {
   visibleGlobalResponses,
 } from "@/lib/livingConflict/globalResponse";
 import { getGameState } from "@/lib/gameState";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisAidCommitmentsCollection } from "@/lib/db/repositories/crisisAidCommitments";
+import type { Document } from "mongodb";
 
 /**
  * GET /api/crises/[id]/interaction
@@ -39,27 +42,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const db = await getDb();
-    const crisis = await db.collection<Crisis>("crises").findOne({ _id: new ObjectId(id) });
+    const crisis = await crisesCollection(db).findOne({ _id: new ObjectId(id) });
     if (!crisis) {
       return errorResponse(404, "Crisis not found");
     }
 
     const characterRoles = await resolveCharacterRoles(db, character);
 
-    // Respect the crisis-interaction feature flag so the detail-page decision
-    // panel hides in lockstep with the /actions dashboard card when the system
-    // is toggled off (both surfaces gate on the same flag).
-    const interactionEnabled = await isCrisisInteractionEnabled();
-
-    // Get interaction if exists (and the system is enabled)
     let interaction: CrisisInteraction | null = null;
-    if (interactionEnabled && crisis.interactionDefinition) {
+    if (crisis.interactionDefinition) {
       interaction = await getCrisisInteraction(db, new ObjectId(id));
     }
 
-    const visibleDecisionTree = interactionEnabled
-      ? crisis.interactionDefinition?.decisionTree
-      : undefined;
+    const visibleDecisionTree = crisis.interactionDefinition?.decisionTree;
 
     const activeNode = interaction
       ? (interaction.decisionTree.find((n) => n.nodeId === interaction.currentNodeId) ??
@@ -76,12 +71,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         ? (interaction!.leaderResponses ?? []).some((r) => r.countryId === character.countryId)
         : false;
 
-    // An interaction keeps the `aid` node type it was promoted to even after
-    // crisisAidBillsEnabled is turned off, but the panel then renders neither
-    // the aid slider nor the option grid and the command path refuses it, so the
-    // node is not actually interactable. Read the flag only when a node is aid.
-    const aidBillsEnabled = activeNode?.type === "aid" ? await isCrisisAidBillsEnabled() : false;
-
     const canInteract =
       crisis.interactionDefinition && interaction && activeNode && !interaction.resolvedAt
         ? canCharacterInteract(
@@ -97,7 +86,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             crisisDecisionRegion(character)
           ) &&
           !alreadyResponded &&
-          (activeNode.type !== "aid" || aidBillsEnabled) &&
+          !decisionAnsweredByLever(crisis, interaction.decisionTree, activeNode) &&
           (!crisis.globalResponse || !!globalResponseRoleFor(crisis, character.countryId))
         : false;
 
@@ -135,15 +124,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const currentNode = interaction?.decisionTree.find(
       (n) => n.nodeId === interaction.currentNodeId
     );
-    if (currentNode?.type === "aid" && aidBillsEnabled && character.countryId) {
-      const budget = await db
-        .collection<FederalBudget>("federalBudget")
-        .findOne({ countryId: character.countryId });
+    if (currentNode?.type === "aid" && character.countryId) {
+      const budget = await federalBudgetCollection(db).findOne({ countryId: character.countryId });
       const senderGdp =
         budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
-      const pledged = await db
-        .collection("crisisAidCommitments")
-        .findOne({ crisisId: new ObjectId(id), senderCountryId: character.countryId });
+      const pledged = await crisisAidCommitmentsCollection<Document>(db).findOne({
+        crisisId: new ObjectId(id),
+        senderCountryId: character.countryId,
+      });
       aidContext = {
         senderGdp,
         senderTreasuryBalance: budget?.treasuryBalance ?? 0,

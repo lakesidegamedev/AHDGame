@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
-import { requireCorpDealsEnabled } from "@/lib/api/requireCorpDeals";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -14,8 +13,6 @@ import {
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
-import { getGameStateCollection } from "@/lib/db/collections";
-import type { Corporation } from "@/lib/db/types";
 import type { AcquisitionOffer } from "@/lib/db/types/acquisitionOffer";
 import {
   proposeAcquisitionOffer,
@@ -23,7 +20,8 @@ import {
   resolveAcquisitionOfferStatus,
   listDealsForCorp,
 } from "@/lib/corporations/commands/acquisitions/acquisitionOffers";
-import { isSubsidiaryAcquisitionAvailable } from "@/lib/corporations/commands/acquisitions/subsidiaryOutcome";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { acquisitionOffersCollection } from "@/lib/db/repositories/acquisitionOffers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -51,16 +49,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(resolved.corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const gs = await getGameStateCollection(db);
-    const flagDoc = await gs.findOne({ _id: "current" }, { projection: { corpDealsEnabled: 1 } });
-    const enabled = Boolean(flagDoc?.corpDealsEnabled);
-    if (!enabled) return NextResponse.json({ enabled: false, incoming: [], outgoing: [] });
-
-    const [deals, subsidiaryAvailable] = await Promise.all([
-      listDealsForCorp(db, resolved.corporation._id),
-      isSubsidiaryAcquisitionAvailable(db),
-    ]);
-    return NextResponse.json({ enabled: true, subsidiaryAvailable, ...deals });
+    const deals = await listDealsForCorp(db, resolved.corporation._id);
+    return NextResponse.json({ enabled: true, ...deals });
   } catch (error) {
     return handleRouteError(error);
   }
@@ -79,8 +69,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
-    const dealsGuard = await requireCorpDealsEnabled(db);
-    if (dealsGuard) return dealsGuard;
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
@@ -99,7 +87,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (body.action === "propose") {
       const targetQuery = corporationQueryFromParamId(body.targetCorporationId ?? "");
       if (!targetQuery) return errorResponse(400, "Invalid target corporation");
-      const target = await db.collection<Corporation>("corporations").findOne(targetQuery);
+      const target = await corporationsCollection(db).findOne(targetQuery);
       if (!target) return errorResponse(404, "Target corporation not found");
 
       const result = await proposeAcquisitionOffer(db, {
@@ -129,9 +117,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (body.action === "accept" || body.action === "reject" || body.action === "withdraw") {
       if (!body.offerId || !ObjectId.isValid(body.offerId))
         return errorResponse(400, "Invalid offer id");
-      const offer = await db
-        .collection<AcquisitionOffer>("acquisitionOffers")
-        .findOne({ _id: new ObjectId(body.offerId) });
+      const offer = await acquisitionOffersCollection(db).findOne({
+        _id: new ObjectId(body.offerId),
+      });
       if (!offer) return errorResponse(404, "Offer not found");
 
       if (body.action === "withdraw") {

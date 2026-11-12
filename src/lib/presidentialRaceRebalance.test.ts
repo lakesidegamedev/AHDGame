@@ -3,6 +3,7 @@
  * Uses real seed data: demographicCategories, stateDemographics, party positions.
  * Covers candidates at different stat levels (influence, favorability, policy alignment).
  */
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import {
@@ -10,7 +11,7 @@ import {
   calcStateTurnout,
   turnVoteWeight,
   type EnrichedCandidate,
-} from "@/lib/electionEngine";
+} from "@/lib/elections/engine";
 import {
   calcPresidentPrimaryScore,
   PRESIDENT_PRIMARY_PARTY_INFLUENCE_WEIGHT,
@@ -69,7 +70,10 @@ describe("Presidential race — vote distribution with real data", () => {
     const stateId = "CA";
     const demographics = getDemographics(stateId)!;
     const statePopulation = 39_538_223; // from src/lib/seeds/reference/states.ts
-    const totalPool = calcStateTurnout(statePopulation, demographics, categories);
+    const totalPool = calcStateTurnout(
+      statePopulation,
+      electorateFromFixture(demographics, categories)
+    );
     const turnPool = turnVoteWeight(12, 6, totalPool);
     const strengthMultiplier = 1.5; // (1 + 0.5 approval)
     const effectiveTurnPool = turnPool * strengthMultiplier;
@@ -109,8 +113,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        demographics,
-        categories,
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -149,8 +152,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        demographics,
-        categories,
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -188,8 +190,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        demographics,
-        categories,
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -226,8 +227,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        demographics,
-        categories,
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -240,7 +240,10 @@ describe("Presidential race — vote distribution with real data", () => {
     const stateId = "TX";
     const demographics = getDemographics(stateId)!;
     const statePopulation = 29_145_505;
-    const totalPool = calcStateTurnout(statePopulation, demographics, categories);
+    const totalPool = calcStateTurnout(
+      statePopulation,
+      electorateFromFixture(demographics, categories)
+    );
     const turnPool = turnVoteWeight(12, 6, totalPool);
     const effectiveTurnPool = turnPool * 1.5;
 
@@ -279,8 +282,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        demographics,
-        categories,
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -319,8 +321,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        demographics,
-        categories,
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -333,7 +334,10 @@ describe("Presidential race — vote distribution with real data", () => {
     const stateId = "PA";
     const demographics = getDemographics(stateId)!;
     const statePopulation = 13_002_700;
-    const totalPool = calcStateTurnout(statePopulation, demographics, categories);
+    const totalPool = calcStateTurnout(
+      statePopulation,
+      electorateFromFixture(demographics, categories)
+    );
     const turnPool = turnVoteWeight(12, 6, totalPool);
     const effectiveTurnPool = turnPool * 1.5;
 
@@ -371,8 +375,7 @@ describe("Presidential race — vote distribution with real data", () => {
         effectiveTurnPool,
         totalPool,
         statePopulation,
-        demographics,
-        categories,
+        electorateFromFixture(demographics, categories),
         partyOrgByParty,
         presidentialOptions
       );
@@ -808,7 +811,8 @@ describe("Presidential general election — full path (accumulatePresidentVoteTu
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, now);
 
     expect(updateOne).toHaveBeenCalledTimes(1);
@@ -850,7 +854,8 @@ describe("Presidential general election — full path (accumulatePresidentVoteTu
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];
@@ -892,7 +897,8 @@ describe("Presidential general election — full path (accumulatePresidentVoteTu
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];

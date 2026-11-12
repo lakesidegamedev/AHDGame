@@ -40,7 +40,7 @@ export function buildCommonsCarveUpSlices(election: ElectionDisplay): {
         candidateId,
         candidateName: candidate.characterName,
         color: candidate.partyColor ?? "#9CA3AF",
-        archetype: candidate.partyName,
+        partyLabel: candidate.partyName,
         pct: Math.max(0, pct),
       });
     }
@@ -60,7 +60,7 @@ export function buildCommonsCarveUpSlices(election: ElectionDisplay): {
         candidateId,
         candidateName: candidate.characterName,
         color: candidate.partyColor ?? "#9CA3AF",
-        archetype: candidate.partyName,
+        partyLabel: candidate.partyName,
         pct: (seats / election.totalSeats) * 100,
       });
     }
@@ -75,7 +75,7 @@ export function buildCommonsCarveUpSlices(election: ElectionDisplay): {
       candidateId: c.id,
       candidateName: c.characterName,
       color: c.partyColor ?? "#9CA3AF",
-      archetype: c.partyName,
+      partyLabel: c.partyName,
       pct: even,
     })),
     topDemographics,

@@ -14,6 +14,9 @@ import {
 import { isEasternBlocEra } from "@/lib/seeds/presetSelector";
 import type { CountryId } from "@/lib/constants/countries";
 import { countryCorporationSeeds, type CountryCorporationSeed } from "./rules/countryCorporations";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 type Log = (message: string) => void;
 
@@ -47,10 +50,12 @@ const SUCCESSOR_ISSUER_NAMES: Readonly<Record<string, { name: string; descriptio
 
 /** Source entities of the federation settlements applied in this world. */
 export async function loadDissolvedFederations(db: Db, preset: string): Promise<string[]> {
-  const rows = await db
-    .collection<{ _id: string; sourceEntityId: string; presetId: string; status: string }>(
-      "federationSettlementApplications"
-    )
+  const rows = await federationSettlementApplicationsCollection<{
+    _id: string;
+    sourceEntityId: string;
+    presetId: string;
+    status: string;
+  }>(db)
     .find({ presetId: preset, status: "applied" }, { projection: { sourceEntityId: 1 } })
     .toArray();
   return [...new Set(rows.map((row) => row.sourceEntityId))];
@@ -114,8 +119,7 @@ export async function reseedCountryOwnedCorporations(
   commandEconomyEnabled: boolean,
   log: Log
 ): Promise<{ countries: number; corporations: number; sectors: number }> {
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { _id: 1, countryId: 1, population: 1, gdp: 1 } })
     .toArray();
   const byCountry = new Map<
@@ -143,8 +147,7 @@ export async function reseedCountryOwnedCorporations(
   });
   const liveCurrencies = new Map(
     (
-      await db
-        .collection<{ countryId: string; currencyCode?: string }>("federalBudget")
+      await federalBudgetCollection<{ countryId: string; currencyCode?: string }>(db)
         .find(
           { countryId: { $in: dissolvedFederations } },
           { projection: { countryId: 1, currencyCode: 1 } }

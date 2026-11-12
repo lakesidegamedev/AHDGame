@@ -210,6 +210,23 @@ describe("allocateProportionalShareTotals", () => {
     expect(shareholders.reduce((s, h) => s + h.shares, 0) + publicFloat).toBe(1_000_000);
   });
 
+  it("preserves NPP holders through a reverse split", () => {
+    const character = new ObjectId();
+    const npp = new ObjectId();
+    const corp = baseCorp({
+      totalShares: 10_000_000,
+      publicFloat: 0,
+      shareholders: [
+        { characterId: character, shares: 9_000_000 },
+        { nppId: npp, shares: 1_000_000 },
+      ],
+    });
+    const { shareholders } = allocateProportionalShareTotals(corp, 1_000_000);
+    const nppEntry = shareholders.find((h) => h.nppId?.toString() === npp.toString());
+    expect(nppEntry?.shares).toBe(100_000);
+    expect(findDroppedShareholders(corp.shareholders ?? [], shareholders)).toEqual([]);
+  });
+
   it("preserves fund holders through a reverse split (splits must not confiscate index funds)", () => {
     const character = new ObjectId();
     const fund = new ObjectId();

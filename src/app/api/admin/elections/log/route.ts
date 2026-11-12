@@ -1,19 +1,13 @@
 /**
  * GET /api/admin/elections/log
  *
- * Returns a structured election event log for the admin panel.
- * Each entry represents one election and includes:
- *  - Primary results per party (scores, %, advance/eliminate events)
- *  - General election results (votes, %, seats if applicable)
- *  - Resolved office assignments
+ * Structured election event log for the admin panel: one entry per election
+ * with primary results per party, general results, and resolved office
+ * assignments.
  *
- * Query params:
- *  ?q=         free-text search (state, candidate name)
- *  ?type=      senate | house | stateSenate | governor
- *  ?status=    upcoming | active | completed
- *  ?state=     two-letter state abbreviation
- *  ?page=      1-based page (default 1)
- *  ?limit=     results per page (default 50, max 200)
+ * Query: ?q (free-text: state, candidate), ?type (senate|house|stateSenate|
+ * governor), ?status (upcoming|active|completed), ?state (2-letter),
+ * ?page (1-based, default 1), ?limit (default 50, max 200).
  */
 
 import { NextResponse } from "next/server";
@@ -51,6 +45,13 @@ export type {
   ElectionLogEntry,
 } from "@/lib/elections/electionResponseTypes";
 import { countedTurns } from "@/lib/elections/snapshotTurns";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { primarySnapshotsCollection } from "@/lib/db/repositories/primarySnapshots";
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
@@ -78,8 +79,7 @@ export async function GET(request: Request) {
     if (status) query.status = status;
     if (state) query.state = state.toUpperCase();
 
-    const allElections = await db
-      .collection<Election>("elections")
+    const allElections = await electionsCollection(db)
       .find(query)
       .sort({ updatedAt: -1, state: 1 })
       .toArray();
@@ -89,26 +89,22 @@ export async function GET(request: Request) {
 
     const [allCandidates, allTallies, latestSnapshotRows, allParties, allStates] =
       await Promise.all([
-        db
-          .collection<ElectionCandidate>("electionCandidates")
+        electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds } })
           .toArray(),
-        db
-          .collection<ElectionVoteTally>("electionVoteTallies")
+        electionVoteTalliesCollection(db)
           .find({ electionId: { $in: electionIds } })
           .toArray(),
         // One document per election — avoid loading every snapshot row (was O(total snapshots))
-        db
-          .collection<PrimarySnapshot>("primarySnapshots")
+        primarySnapshotsCollection(db)
           .aggregate<{ _id: ObjectId; doc: PrimarySnapshot }>([
             { $match: { electionId: { $in: electionIds } } },
             { $sort: { recordedAt: -1 } },
             { $group: { _id: "$electionId", doc: { $first: "$$ROOT" } } },
           ])
           .toArray(),
-        db.collection("politicalParties").find({}).toArray(),
-        db
-          .collection("states")
+        politicalPartiesCollection<Document>(db).find({}).toArray(),
+        statesCollection<Document>(db)
           .find({}, { projection: { _id: 1, name: 1 } })
           .toArray(),
       ]);

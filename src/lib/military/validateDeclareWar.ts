@@ -6,19 +6,17 @@ import { isSelectableWarGoal, WAR_DECLARATION_COOLDOWN_TURNS } from "@/lib/milit
 import { isCountryEnabledForPlayers } from "@/lib/countryAccess";
 import { allianceBarBetween } from "@/lib/military/allianceBar";
 import type { Bill } from "@/lib/db/types/legislation";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 export type DeclareWarCheck = { ok: true } | { ok: false; status: number; error: string };
 
 /**
  * Every check a war declaration must clear, in ONE place.
  *
- * Both proposal paths call this. `cabinet-bills` — the route the executive actually
- * uses — builds its provision array directly and never runs `validateBillProvisions`,
- * so keeping these checks only in that validator would leave every one of them
- * unenforced on the path players take. The conquest reservation in particular is
- * only meaningful if it holds here.
- *
- * Spec: docs/superpowers/specs/2026-08-04-war-declaration-legislation-design.md
+ * Both proposal paths call this. `cabinet-bills` builds its provision array directly
+ * and never runs `validateBillProvisions`, so checks kept only there would be
+ * unenforced on the path players take. The conquest reservation only holds if it
+ * holds here.
  */
 export async function validateDeclareWar(
   db: Db,
@@ -72,8 +70,7 @@ export async function validateDeclareWar(
   // a declaration the chambers rejected still spent the country's capital, so
   // re-filing it immediately would make the vote meaningless.
   if (currentTurn != null) {
-    const last = await db
-      .collection<Bill>("bills")
+    const last = await billsCollection(db)
       .find({ countryId: sourceCountry, "provisions.type": "declare_war" })
       .sort({ proposedTurn: -1 })
       .limit(1)

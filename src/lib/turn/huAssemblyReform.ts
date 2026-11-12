@@ -1,13 +1,18 @@
 import type { Db } from "mongodb";
-import type { State, ElectedOfficial, Election, CountryGameState } from "@/lib/db/types";
+import type { State, CountryGameState } from "@/lib/db/types";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { apportionSeats as apportionRegionSeats } from "@/lib/seeds/reference/rules/apportionSeats";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 
-export const HU_REFORM_YEAR = 2014;
-export const HU_REFORM_SEATS = 199;
+const HU_REFORM_SEATS = 199;
 
 export function hu2014RegionSeats(regions: State[]): Record<string, number> {
   if (regions.length === 0 || regions.some((region) => !(region.population > 0))) {
@@ -33,33 +38,35 @@ export async function runHuAssemblyReform(
   now: Date
 ): Promise<boolean> {
   if (currentYear < 2012) return false;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, huAssemblyReformedAtYear: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+  );
   if (game?.preset !== "1991-default" || game.huAssemblyReformedAtYear != null) return false;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { projection: { huElectoralSystem2011SinceTurn: 1 } }
+  );
   if (country?.huElectoralSystem2011SinceTurn == null) return false;
   return runRequiredTransaction(
     async (session) => {
-      const current = await db
-        .collection<GameState>("gameState")
-        .findOne(
-          { _id: "current" },
-          { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
-        );
+      const current = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { session, projection: { preset: 1, huAssemblyReformedAtYear: 1 } }
+      );
       if (current?.preset !== "1991-default" || current.huAssemblyReformedAtYear != null)
         return false;
-      const regions = await db
-        .collection<State>("states")
+      const regions = await (
+        await getStatesCollection(db)
+      )
         .find(
           { countryId: "HU" },
           { session, projection: { _id: 1, population: 1, houseDistricts: 1 } }
         )
         .toArray();
-      const resolved = await db
-        .collection<Election>("elections")
+      const resolved = await (
+        await getElectionsCollection(db)
+      )
         .find(
           {
             countryId: "HU",
@@ -87,8 +94,9 @@ export async function runHuAssemblyReform(
         regions.some((region) => !capacities.has(String(region._id)))
       )
         return false;
-      const officials = await db
-        .collection<ElectedOfficial>("electedOfficials")
+      const officials = await (
+        await getElectedOfficialsCollection(db)
+      )
         .find(
           {
             countryId: "HU",
@@ -115,14 +123,16 @@ export async function runHuAssemblyReform(
         if (installed !== capacities.get(String(region._id))) return false;
       }
       // Lock the already installed mandates against concurrent seat changes.
-      await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .updateMany(
-          { _id: { $in: officials.map((row) => row._id) } },
-          { $set: { updatedAt: now } },
-          { session }
-        );
-      await db.collection<State>("states").bulkWrite(
+      await (
+        await getElectedOfficialsCollection(db)
+      ).updateMany(
+        { _id: { $in: officials.map((row) => row._id) } },
+        { $set: { updatedAt: now } },
+        { session }
+      );
+      await (
+        await getStatesCollection(db)
+      ).bulkWrite(
         regions.map((region) => ({
           updateOne: {
             filter: { _id: region._id },
@@ -131,20 +141,16 @@ export async function runHuAssemblyReform(
         })),
         { session }
       );
-      await db
-        .collection<GovernmentFormation>("governmentFormations")
-        .updateOne(
-          { _id: "HU" },
-          { $set: { totalSeats: HU_REFORM_SEATS, majorityThreshold: 100, updatedAt: now } },
-          { session }
-        );
-      const changed = await db
-        .collection<GameState>("gameState")
-        .updateOne(
-          { _id: "current", huAssemblyReformedAtYear: { $exists: false } },
-          { $set: { huAssemblyReformedAtYear: currentYear, updatedAt: now } },
-          { session }
-        );
+      await governmentFormationsCollection(db).updateOne(
+        { _id: "HU" },
+        { $set: { totalSeats: HU_REFORM_SEATS, majorityThreshold: 100, updatedAt: now } },
+        { session }
+      );
+      const changed = await gameStateCollection(db).updateOne(
+        { _id: "current", huAssemblyReformedAtYear: { $exists: false } },
+        { $set: { huAssemblyReformedAtYear: currentYear, updatedAt: now } },
+        { session }
+      );
       if (changed.modifiedCount !== 1) throw new Error("Hungarian Assembly completion changed");
       return true;
     },

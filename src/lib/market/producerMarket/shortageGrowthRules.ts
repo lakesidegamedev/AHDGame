@@ -1,16 +1,15 @@
 /**
- * Shortage growth (funded-market cutover). Under the demand plan a line that
- * sells out at a profit grows a fixed step a turn, while a glut drops it to the
- * probe run at once. A line knocked to the floor by one bad turn therefore
- * needs a couple of dozen turns to climb back even when funded buyers ask for
- * many times what the market supplies, and the wages that run would pay never
- * reach households.
+ * Shortage growth. Under the demand plan a line that sells out at a profit grows
+ * a fixed step a turn, while a glut drops it to the probe run at once. A line
+ * knocked to the floor by one bad turn therefore needs a couple dozen turns to
+ * climb back even when funded buyers ask for many times what the market
+ * supplies, and the wages that run would pay never reach households.
  *
  * Here the step follows the measured shortage of the line's own book: units
  * funded buyers asked for over units delivered, from last turn's settled
  * orders. A sold-out line grows by that ratio, at least the normal step and at
  * most SHORTAGE_GROWTH_CAP a turn, so a deep shortage refills capacity in a
- * few turns without one turn's reading overshooting into a glut.
+ * few turns without overshooting into a glut.
  *
  * Pure: settled order outcomes in, pressure per book out; pressure in, growth out.
  */

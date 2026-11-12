@@ -7,6 +7,7 @@ import { PRIORITY_COUNTRIES, type PriorityReference } from "./catalog";
 import { YEAR_2000_PRIORITIES } from "./year2000";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface PriorityContext {
   year?: number | null;
@@ -20,12 +21,10 @@ export function priorityWorldContext(
     preset?: string;
     currentYear?: number;
     startingYear?: number;
-    eraSystemEnabled?: boolean;
   } | null
 ) {
   const anchor = Number(eraForPreset(world?.preset ?? DEFAULT_SEED_PRESET));
-  const liveYear =
-    world?.eraSystemEnabled && Number.isFinite(world.currentYear) ? world.currentYear! : null;
+  const liveYear = Number.isFinite(world?.currentYear) ? world!.currentYear! : null;
   return {
     yearContext: { year: liveYear, startingYear: world?.startingYear ?? anchor },
     priorityYear: liveYear ?? anchor,
@@ -37,6 +36,23 @@ export interface PriorityLaw {
   countryScope?: string;
   name: string;
   policyOptions: readonly { id: string; name: string }[];
+}
+
+/**
+ * Option list a priority can name. Program laws list their levels; tax laws
+ * list their slider waypoints as `rate_<n>` options.
+ */
+export function priorityOptionsFor(law: {
+  policyOptions?: readonly { id: string; name: string }[];
+  taxSlider?: { waypoints: readonly { rate: number; label: string }[] };
+}): { id: string; name: string }[] {
+  if (law.taxSlider) {
+    return law.taxSlider.waypoints.map((w) => ({
+      id: `rate_${w.rate}`,
+      name: `${w.rate}% (${w.label})`,
+    }));
+  }
+  return (law.policyOptions ?? []).map(({ id, name }) => ({ id, name }));
 }
 
 export interface LegislativePriority extends PriorityReference {
@@ -58,10 +74,9 @@ export interface LegislativePrioritySelection {
 export function isPriorityTarget(countryId: string, regionId: string, bucketId: string): boolean {
   const countryKey = countryId.toUpperCase();
   const config = PRIORITY_COUNTRIES[countryKey];
-  const dimensions =
-    countryKey === "US"
-      ? ["race", "age", "education", "wealth"]
-      : ["ethnicity", "age", "education", "income"];
+  const dimensions = countryHasFeature("usLib", countryKey)
+    ? ["race", "age", "education", "wealth"]
+    : ["ethnicity", "age", "education", "income"];
   return Boolean(
     dimensions.includes(bucketId.split(":")[0]) &&
     config?.regions[regionId.toUpperCase()] &&

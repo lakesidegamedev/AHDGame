@@ -21,6 +21,7 @@ import {
   SUBSIDIARY_CAPITAL_INJECTION_MAX_PCT_OF_PARENT_LIQUID,
 } from "../constants";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface CapitalInjectionInput {
   sub: Corporation;
@@ -50,9 +51,7 @@ export async function capitalInjection(
 
   const controllingParent = await resolveControllingCorporateParent(db, sub);
   if (!controllingParent) return fail("This corporation is no longer a subsidiary.", 409);
-  const parent = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: controllingParent.corporationId });
+  const parent = await corporationsCollection(db).findOne({ _id: controllingParent.corporationId });
   if (!parent) return fail("Parent corporation not found.", 404);
   const transferRestriction = await controllerTransferBarrierError(db, parent, turn, now);
   if (transferRestriction) return fail(transferRestriction, 403);
@@ -105,9 +104,10 @@ export async function capitalInjection(
     throw err;
   }
 
-  await db
-    .collection<Corporation>("corporations")
-    .updateOne({ _id: sub._id }, { $set: { lastCapitalInjectionTurn: turn, updatedAt: now } });
+  await corporationsCollection(db).updateOne(
+    { _id: sub._id },
+    { $set: { lastCapitalInjectionTurn: turn, updatedAt: now } }
+  );
 
   const parentCurrency = resolveCorpLiquidCurrencyCode(parent) ?? "USD";
   const subCurrency = resolveCorpLiquidCurrencyCode(sub) ?? "USD";

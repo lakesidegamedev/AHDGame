@@ -23,7 +23,7 @@ describe("doctrine tree data", () => {
       (p) => p.id === "maneuver"
     );
     expect(maneuver?.nodes[0]?.name).toBe("General Staff Planning");
-    expect(DECADES.length).toBe(15);
+    expect(DECADES.length).toBe(16);
   });
 
   it("seeds a default adopted set and points", () => {
@@ -103,6 +103,15 @@ describe("natMods + helpers", () => {
     expect(doctrineEraForYear(1979)).toBe(7); // "1970s"
     expect(doctrineEraForYear(1945)).toBe(4); // "1940s"
     expect(doctrineEraForYear(2019)).toBe(11); // "2010s"
+  });
+  it("doctrineEraForYear has a real 2050s tier with adoptable nodes", () => {
+    expect(doctrineEraForYear(2050)).toBe(15);
+    expect(DECADES[doctrineEraForYear(2055)]).toBe("2050s");
+    expect(doctrineEraForYear(2049)).toBe(14);
+    const f = findNode("maneuver-15")!;
+    expect(f.node.name).toBe("Convergent Maneuver");
+    expect(nodeStatus({ "maneuver-14": 1 }, f.path, f.node, 14)).toBe("future");
+    expect(nodeStatus({ "maneuver-14": 1 }, f.path, f.node, 15)).toBe("available");
   });
   it("doctrineEraForYear clamps below 1900 and above the last decade", () => {
     expect(doctrineEraForYear(1850)).toBe(0);

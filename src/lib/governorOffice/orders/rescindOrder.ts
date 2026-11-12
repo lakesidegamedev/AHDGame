@@ -2,6 +2,9 @@ import type { Db, ObjectId } from "mongodb";
 import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildOrderRevertPolicyFields } from "./revertPolicy";
+import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
 export interface RescindOrderInput {
   orderId: ObjectId;
@@ -19,9 +22,7 @@ export async function rescindOrder(
   db: Db,
   input: RescindOrderInput
 ): Promise<{ status: number; body: { success?: boolean; error?: string } }> {
-  const order = await db
-    .collection<GovernorExecutiveOrder>("governorExecutiveOrders")
-    .findOne({ _id: input.orderId });
+  const order = await governorExecutiveOrdersCollection(db).findOne({ _id: input.orderId });
   if (!order) return { status: 404, body: { error: "Order not found." } };
   if (order.status !== "active") {
     return { status: 400, body: { error: `Order is already ${order.status}.` } };
@@ -29,7 +30,7 @@ export async function rescindOrder(
 
   const currentTurn = await getCurrentTurn(db);
   const now = new Date();
-  const policy = await db.collection<StatePolicy>("statePolicies").findOne({
+  const policy = await statePoliciesCollection(db).findOne({
     stateId: order.stateId,
     legislationTypeId: order.legislationTypeId,
   });
@@ -44,10 +45,11 @@ export async function rescindOrder(
     // State Policy page which matches by axes) read the correct base option.
     // effectDirection comes from the type's own ladder (5-level new-generation
     // ladders center at 2 — the old hardcoded center-3 misdirects them).
-    const legislationType = await db
-      .collection<LegislationType>("legislationTypes")
-      .findOne({ _id: order.legislationTypeId }, { projection: { policyOptions: 1 } });
-    await db.collection<StatePolicy>("statePolicies").updateOne(
+    const legislationType = await legislationTypesCollection(db).findOne(
+      { _id: order.legislationTypeId },
+      { projection: { policyOptions: 1 } }
+    );
+    await statePoliciesCollection(db).updateOne(
       { stateId: order.stateId, legislationTypeId: order.legislationTypeId },
       {
         $set: {
@@ -58,7 +60,7 @@ export async function rescindOrder(
   }
   // else: policy was overwritten by a bill; leave bill's effect in place.
 
-  await db.collection<GovernorExecutiveOrder>("governorExecutiveOrders").updateOne(
+  await governorExecutiveOrdersCollection(db).updateOne(
     { _id: order._id! },
     {
       $set: {

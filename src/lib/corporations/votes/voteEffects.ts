@@ -15,6 +15,9 @@ import {
   refundPreparedEquityPlacement,
 } from "@/lib/equities/primaryMarket";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
+import type { Document } from "mongodb";
 
 export async function applyPassedVoteEffects(opts: {
   db: Db;
@@ -30,7 +33,7 @@ export async function applyPassedVoteEffects(opts: {
     case "governance_change": {
       // State patronage forms are for state-owned companies only.
       if (vote.payload.newLegalStructure === "cn_soe" && !corporation.countryOwnerId) return;
-      await db.collection("corporations").updateOne(
+      await corporationsCollection(db).updateOne(
         { _id: corporation._id },
         {
           $set: {
@@ -62,13 +65,11 @@ export async function applyPassedVoteEffects(opts: {
         isPrivate: corporation.isPrivate === true,
       });
       // Cancel all other open votes — they are invalidated by the country change
-      await db
-        .collection("corporationVotes")
-        .updateMany(
-          { corporationId: corporation._id, status: "open", _id: { $ne: vote._id } },
-          { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
-        );
-      await db.collection("corporations").updateOne(
+      await corporationVotesCollection<Document>(db).updateMany(
+        { corporationId: corporation._id, status: "open", _id: { $ne: vote._id } },
+        { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
+      );
+      await corporationsCollection(db).updateOne(
         { _id: corporation._id },
         {
           $set: {
@@ -100,7 +101,7 @@ export async function applyPassedVoteEffects(opts: {
       // underwrite remain authorized but non-outstanding and place over time.
       let update;
       try {
-        update = await db.collection<Corporation>("corporations").updateOne(
+        update = await corporationsCollection(db).updateOne(
           {
             _id: corporation._id,
             "pendingShareIssuance.remainingShares": { $not: { $gt: 0 } },
@@ -208,9 +209,9 @@ export async function applyPassedVoteEffects(opts: {
       // Single atomic pipeline update: stamp the multiplier and mark the CEO's
       // current shares as supershares. The $exists guard makes a double-apply
       // (or a race with an IPO-path adoption) a no-op.
-      await db
-        .collection("corporations")
-        .updateOne({ _id: corporation._id, superShareMultiplier: { $exists: false } }, [
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id, superShareMultiplier: { $exists: false } },
+        [
           {
             $set: {
               superShareMultiplier: multiplier,
@@ -230,7 +231,8 @@ export async function applyPassedVoteEffects(opts: {
               },
             },
           },
-        ]);
+        ]
+      );
       break;
     }
 
@@ -239,13 +241,15 @@ export async function applyPassedVoteEffects(opts: {
       if (!newTicker) return;
       // Double-check uniqueness at resolution time — another corp may have claimed
       // the ticker between proposal and vote close.
-      const conflict = await db
-        .collection("corporations")
-        .findOne({ tickerSymbol: newTicker, _id: { $ne: corporation._id } });
+      const conflict = await corporationsCollection(db).findOne({
+        tickerSymbol: newTicker,
+        _id: { $ne: corporation._id },
+      });
       if (conflict) return;
-      await db
-        .collection("corporations")
-        .updateOne({ _id: corporation._id }, { $set: { tickerSymbol: newTicker, updatedAt: now } });
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $set: { tickerSymbol: newTicker, updatedAt: now } }
+      );
       break;
     }
 
@@ -256,9 +260,10 @@ export async function applyPassedVoteEffects(opts: {
       }
       // Salary stays suspended during IMF restructuring whatever the vote said.
       if (corporation.imfBailoutActive) return;
-      await db
-        .collection("corporations")
-        .updateOne({ _id: corporation._id }, { $set: { ceoSalary: newCeoSalary, updatedAt: now } });
+      await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $set: { ceoSalary: newCeoSalary, updatedAt: now } }
+      );
       break;
     }
 

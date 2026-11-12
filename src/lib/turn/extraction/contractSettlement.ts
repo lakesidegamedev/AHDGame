@@ -23,7 +23,7 @@ import {
   COMMODITY_BASE_PRICES,
   COMMODITY_LABELS,
 } from "@/lib/constants/commodities";
-import type { ExtractableResource, CommodityType } from "@/lib/constants/commodities";
+import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
 import { CONTRACT_DEFAULT_MISSED_PAYMENTS } from "@/lib/constants/prospecting";
 import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
@@ -34,6 +34,10 @@ import {
   type SettlementResult,
 } from "@/lib/banking/settlementJournal";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
 export interface ContractSettlementResult {
   contractsSettled: number;
@@ -146,9 +150,10 @@ function parseFrozenRoyaltyQuote(receipt: FundedRoyaltyReceipt): FrozenRoyaltyQu
 }
 
 async function loadFundedRoyaltyReceipt(db: Db, key: string): Promise<FundedRoyaltyReceipt | null> {
-  return db
-    .collection<FundedRoyaltyReceipt>("bankMoneyMoves")
-    .findOne({ _id: key }, { projection: { _id: 1, turn: 1, event: 1 } });
+  return bankMoneyMovesCollection<FundedRoyaltyReceipt>(db).findOne(
+    { _id: key },
+    { projection: { _id: 1, turn: 1, event: 1 } }
+  );
 }
 
 async function resumeFrozenRoyaltyReceipt(db: Db, key: string): Promise<FrozenRoyaltyQuote> {
@@ -280,15 +285,13 @@ export async function settleExtractionContracts(
   const capCol = await getStateResourceCapacityCollection(db);
   const [capDocs, priceDocs, fxByCurrency, thresholds, stateBudgets] = await Promise.all([
     capCol.find({ stateId: { $in: stateIds } }).toArray(),
-    db
-      .collection<CommodityPrice>("commodityPrices")
-      .find({ commodity: { $in: EXTRACTABLE_RESOURCES as unknown as CommodityType[] } })
+    commodityPricesCollection(db)
+      .find({ commodity: { $in: [...EXTRACTABLE_RESOURCES] } })
       .toArray(),
     loadFxRatesByCurrency(db),
     loadTxThresholds(db),
     treasuryCashLedgerEnabled
-      ? db
-          .collection<StateBudget>("stateBudgets")
+      ? stateBudgetsCollection(db)
           .find({ _id: { $in: [...new Set(activeContracts.map((contract) => contract.stateId))] } })
           .toArray()
       : Promise.resolve([] as StateBudget[]),
@@ -304,8 +307,7 @@ export async function settleExtractionContracts(
     ? activeContracts.map((contract) => `extraction-royalty:${contract._id.toString()}:${turn}`)
     : [];
   const royaltyReceipts = treasuryCashLedgerEnabled
-    ? await db
-        .collection<FundedRoyaltyReceipt>("bankMoneyMoves")
+    ? await bankMoneyMovesCollection<FundedRoyaltyReceipt>(db)
         .find({ _id: { $in: royaltyReceiptKeys } }, { projection: { _id: 1, turn: 1, event: 1 } })
         .toArray()
     : [];
@@ -316,8 +318,7 @@ export async function settleExtractionContracts(
   );
   const corpById = new Map<string, Corporation>();
   if (corpIds.length > 0) {
-    const corps = await db
-      .collection<Corporation>("corporations")
+    const corps = await corporationsCollection(db)
       .find(
         { _id: { $in: corpIds } },
         {
@@ -336,6 +337,7 @@ export async function settleExtractionContracts(
 
   const notifications: NotificationInput[] = [];
   const txEntries: Parameters<typeof emitTxBulk>[1] = [];
+  const orphanedContractIds: ObjectId[] = [];
 
   for (const contract of activeContracts) {
     // Term expiry takes precedence — an expiring contract is not charged.
@@ -375,6 +377,14 @@ export async function settleExtractionContracts(
       result.royaltiesPaid += 1;
       result.totalRoyaltyAnchor += resumed.anchorAmount;
       result.contractsSettled += 1;
+      continue;
+    }
+
+    // A dissolved or absorbed contractor can never pay or extract again, but
+    // an active contract keeps counting against the state's contract cap and
+    // reserving deposit capacity. Close it once its holder is gone.
+    if (!corpById.has(contract.corporationId.toString())) {
+      orphanedContractIds.push(contract._id);
       continue;
     }
 
@@ -445,22 +455,7 @@ export async function settleExtractionContracts(
     }
 
     const corp = corpById.get(contract.corporationId.toString());
-    if (!corp) {
-      // Corp vanished (dissolved); leave the contract for revoke/cleanup elsewhere.
-      if (fundedNational) {
-        await contractsCol.updateOne(
-          {
-            _id: contract._id,
-            status: "active",
-            revokedTurn: { $exists: false },
-            $or: [{ lastRoyaltyTurn: { $lt: turn } }, { lastRoyaltyTurn: { $exists: false } }],
-          },
-          { $set: { lastRoyaltyTurn: turn, updatedAt: now } }
-        );
-      }
-      result.contractsSettled += 1;
-      continue;
-    }
+    if (!corp) continue;
 
     const corpCode = resolveCorpLiquidCurrencyCode(corp);
     const corpFxRate = corpCode
@@ -642,12 +637,10 @@ export async function settleExtractionContracts(
     }
 
     // Atomic guarded debit: only succeeds if the corp can cover the payment.
-    const debit = await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corp._id, liquidCapital: { $gte: amountCorp } },
-        { $inc: { liquidCapital: -amountCorp }, $set: { updatedAt: now } }
-      );
+    const debit = await corporationsCollection(db).updateOne(
+      { _id: corp._id, liquidCapital: { $gte: amountCorp } },
+      { $inc: { liquidCapital: -amountCorp }, $set: { updatedAt: now } }
+    );
 
     if (debit.modifiedCount === 0) {
       // Insufficient funds → missed payment; default at the threshold.
@@ -711,7 +704,7 @@ export async function settleExtractionContracts(
         // State issuer → persistent state-budget royalty revenue line. $inc both
         // the dedicated field and total; calculateStateRevenue preserves + refolds
         // resourceRoyalties on the annual recompute so this survives.
-        const stateCredit = await db.collection<StateBudget>("stateBudgets").updateOne(
+        const stateCredit = await stateBudgetsCollection(db).updateOne(
           { _id: contract.stateId, countryId },
           {
             $inc: { "revenue.resourceRoyalties": amountLocal, "revenue.total": amountLocal },
@@ -775,12 +768,10 @@ export async function settleExtractionContracts(
       // lastRoyaltyTurn (or $unset when it was absent) and prior missedPayments
       // when the stamp reset it. Then keep the phase alive for the remaining
       // contracts — one issuer failure must not kill the whole settlement run.
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: corp._id },
-          { $inc: { liquidCapital: amountCorp }, $set: { updatedAt: now } }
-        );
+      await corporationsCollection(db).updateOne(
+        { _id: corp._id },
+        { $inc: { liquidCapital: amountCorp }, $set: { updatedAt: now } }
+      );
       await contractsCol.updateOne(
         { _id: contract._id },
         {
@@ -807,6 +798,14 @@ export async function settleExtractionContracts(
     result.royaltiesPaid += 1;
     result.totalRoyaltyAnchor += dueAnchor;
     result.contractsSettled += 1;
+  }
+
+  if (orphanedContractIds.length > 0) {
+    const closed = await contractsCol.updateMany(
+      { _id: { $in: orphanedContractIds }, revokedTurn: { $exists: false } },
+      { $set: { status: "expired", revokedTurn: turn, updatedAt: now } }
+    );
+    result.contractsExpired += closed.modifiedCount;
   }
 
   if (txEntries.length > 0) await emitTxBulk(db, txEntries, thresholds);

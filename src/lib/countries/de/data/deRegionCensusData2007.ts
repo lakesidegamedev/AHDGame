@@ -1,20 +1,16 @@
 /**
- * Germany Region Census Profiles — 2007 (pre-crash export boom).
+ * Germany Region Census Profiles , 2007 (pre-crash export boom).
  *
- * 2007-era companion to {@link deRegionCensusData} (the 2019 profiles).
- * All values independently authored from 2007 historical knowledge of each
- * Land — never derived by scaling another era's file.
+ * All values independently authored from 2007 knowledge of each Land, never
+ * derived by scaling another era's file.
  *
- * Era anchor: first Merkel grand coalition; Hartz-IV reform aftermath (a
- * visible low-income/ALG-II stratum in the West, deep in the East) combined
- * with the strongest export boom since reunification — southern Länder near
- * full employment while NW's Ruhr and the eastern Länder still carried
- * double-digit unemployment. Eastern emigration had passed its peak but the
- * age structure was now visibly aged. The Mikrozensus first measured
- * "Migrationshintergrund" in 2005: western shares had grown via family
- * reunification and EU-2004 eastern enlargement; MENA shares were still
- * pre-2015 modest. Tertiary attainment was climbing (Bologna expansion),
- * Lehre still dominant.
+ * Era anchor: Hartz-IV aftermath (visible low-income stratum, deeper in the
+ * East) plus the strongest export boom since reunification. Southern Länder
+ * near full employment while the Ruhr and eastern Länder still carried
+ * double-digit unemployment. Eastern emigration past its peak but age structure
+ * visibly aged. Migration shares grown via family reunification and EU-2004
+ * enlargement; MENA still pre-2015 modest. Tertiary attainment climbing, Lehre
+ * still dominant.
  */
 
 import type { DERegionLayer1 } from "@/lib/seeds/de/deRegionCensusData";

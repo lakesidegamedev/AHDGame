@@ -27,6 +27,8 @@ import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { getCountryState } from "@/lib/countryState";
 import { ParliamentaryGovernmentActions } from "./components/ParliamentaryGovernmentActions";
 import { ExecutiveTabsClient } from "./ExecutiveTabsClient";
+import { ExecutiveStatusBanner } from "@/app/whitehouse/ExecutiveStatusBanner";
+import { executiveStatusPayload } from "@/lib/elections/rules/successionFill";
 import { formationTurnToLarpDate } from "@/lib/government/formationDate";
 import {
   checkAppointmentEligibility,
@@ -48,6 +50,12 @@ import {
   getConfidenceConsequenceLevel,
   CONFIDENCE_CONSEQUENCE_DESCRIPTIONS,
 } from "@/lib/onePartyState/rulingPartyPriorities";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 
 type PartyRowMeta = {
   seqKey: string;
@@ -120,7 +128,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   const pmCharId = govFormation?.pmCharacterId ?? null;
   let premier: Character | null = null;
   if (pmCharId) {
-    premier = await db.collection<Character>("characters").findOne({ _id: pmCharId });
+    premier = await charactersCollection(db).findOne({ _id: pmCharId });
   }
 
   // Ceremonial Head of State — resolved via the config's isHeadOfState office
@@ -129,15 +137,11 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   // the Premier (head of government) above. May be null when unseated.
   const hosOfficeType = getHeadOfStateOfficeType(config);
   const presidentOfficial = hosOfficeType
-    ? await db
-        .collection<ElectedOfficial>("electedOfficials")
-        .findOne({ countryId, officeType: hosOfficeType })
+    ? await electedOfficialsCollection(db).findOne({ countryId, officeType: hosOfficeType })
     : null;
   let president: Character | null = null;
   if (presidentOfficial?.characterId) {
-    president = await db
-      .collection<Character>("characters")
-      .findOne({ _id: presidentOfficial.characterId });
+    president = await charactersCollection(db).findOne({ _id: presidentOfficial.characterId });
   }
 
   // Chamber-leadership offices (CN: NPCSC Chairman, CPPCC Chairman) — read-only
@@ -147,11 +151,11 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     if (!role) return null;
     // The surface stores the role as a plain string (constants stay decoupled
     // from db types); narrow it at the query boundary.
-    const leader = await db
-      .collection<CongressLeader>("congressLeaders")
-      .findOne({ role: role as CongressLeader["role"] });
+    const leader = await congressLeadersCollection(db).findOne({
+      role: role as CongressLeader["role"],
+    });
     if (!leader?.characterId) return null;
-    return db.collection<Character>("characters").findOne({ _id: leader.characterId });
+    return charactersCollection(db).findOne({ _id: leader.characterId });
   }
   const legislatureChair = await resolveCongressLeader(
     surface.legislatureChairPlaque?.congressLeaderRole
@@ -337,7 +341,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   let viewerIsNpcDelegate = false;
   let viewerIsJointDeputy = false;
   if (user?.character) {
-    const seatRecord = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const seatRecord = await electedOfficialsCollection(db).findOne({
       characterId: user.character._id,
       countryId,
       officeType: lowerChamberKey,
@@ -345,7 +349,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     viewerIsNpcDelegate = seatRecord != null;
     // Joint-sitting eligibility (head-of-state votes): a seat in EITHER chamber.
     if (usesHosAppointment) {
-      const jointSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      const jointSeat = await electedOfficialsCollection(db).findOne({
         characterId: user.character._id,
         countryId,
         officeType: { $in: getJointSittingOfficeTypes(countryId) },
@@ -384,9 +388,9 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     !govFormation.activeVoteId
   ) {
     const NO_CONFIDENCE_COOLDOWN_TURNS = 48;
-    const gameState = await db
-      .collection<{ _id: string; currentTurn: number }>("gameState")
-      .findOne({ _id: "current" });
+    const gameState = await gameStateCollection<{ _id: string; currentTurn: number }>(db).findOne({
+      _id: "current",
+    });
     const currentTurn = gameState?.currentTurn ?? 0;
 
     const lastVote = await getNoConfidenceVotesCollection(db)
@@ -405,8 +409,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     viewerMayProposeNoConfidence = noConfidenceCooldownTurns === null;
   }
 
-  const allLowerOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const allLowerOfficials = await electedOfficialsCollection(db)
     .find({ officeType: lowerChamberKey, countryId })
     .toArray();
 
@@ -423,8 +426,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       sortedParties.map(([key]) => Number.parseInt(key, 10)).filter((n) => !Number.isNaN(n))
     ),
   ];
-  const partyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyDocs = await politicalPartiesCollection(db)
     .find({ countryId, sequentialId: { $in: partySeqNums } })
     .toArray();
   const partyBySeq = new Map(partyDocs.map((party) => [String(party.sequentialId), party]));
@@ -439,7 +441,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
   const governingPartyDoc =
     govPartyId && !Number.isNaN(Number.parseInt(govPartyId, 10))
       ? (partyBySeq.get(govPartyId) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: Number.parseInt(govPartyId, 10),
         })))
@@ -451,7 +453,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     if (!Number.isNaN(seq)) {
       premierPartyDoc =
         partyBySeq.get(premier.party) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: seq,
         }));
@@ -475,7 +477,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       partyBySeq
     );
     if (result) {
-      oppositionLeaderChar = await db.collection<Character>("characters").findOne({
+      oppositionLeaderChar = await charactersCollection(db).findOne({
         _id: result.chairId,
       });
       oppositionPartyDoc = result.partyDoc;
@@ -539,7 +541,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
     if (!Number.isNaN(seq)) {
       presidentPartyDoc =
         partyBySeq.get(presidentOfficial.party) ??
-        (await db.collection<PoliticalParty>("politicalParties").findOne({
+        (await politicalPartiesCollection(db).findOne({
           countryId,
           sequentialId: seq,
         }));
@@ -891,6 +893,9 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
       quickLinksMode="hub"
       countryId={countryId}
     >
+      <ExecutiveStatusBanner
+        status={executiveStatusPayload(govFormation, executiveGameTime.currentTurn)}
+      />
       <ExecutiveTabsClient
         countryId={countryId}
         viewerIsLeader={viewerIsLeader}
@@ -899,7 +904,7 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
         chrome={{
           governmentType: config.governmentType,
           executiveTermLimit: getExecutiveTermLimit(countryId),
-          hasDevolution: config.id === "UK",
+          hasDevolution: countryHasFeature("ukUi", config.id),
           ordersLabel: getExecutiveOrderNamePlural(countryId),
           legislatureName: config.legislature.name,
           legislaturePath: config.legislature.path,

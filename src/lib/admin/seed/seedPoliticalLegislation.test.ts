@@ -146,16 +146,28 @@ describe("seedPoliticalLegislationBaseline", () => {
   it("seeds one policy record per program law and enacted laws above level 0", async () => {
     await seedPoliticalLegislationBaseline(db as unknown as Db, vi.fn(), 1953);
     const policyUpserts = bulkOps(db.collectionMocks.statePolicies.bulkWrite);
-    // 104 national program laws × 4 countries, + 6 DD Land laws × 6 Länder,
+    // 104 national program laws × 5 countries, + 6 DD Land laws × 6 Länder,
     // + one level-0 regional default per `both` law per region (US/UK/RU have
     // one region each in the mock, DD six). Derived rather than hardcoded so
     // adding a law to a catalog updates the expectation with it.
-    const regionCount: Record<string, number> = { US: 1, UK: 1, RU: 1, DD: 6 };
+    const regionCount: Record<string, number> = {
+      US: 1,
+      UK: 1,
+      RU: 1,
+      DD: 6,
+      DE: 1,
+      CA: 1,
+      JP: 1,
+      CN: 1,
+    };
     const regionalDefaults = LAW_COUNTRY_IDS.reduce(
       (sum, cc) => sum + regionalDefaultLaws(cc, 1953).length * regionCount[cc],
       0
     );
-    expect(policyUpserts.length).toBe(416 + 36 + regionalDefaults);
+    const nationalPrograms = LAW_COUNTRY_IDS.flatMap((cc) =>
+      getCatalog(cc, 1953).filter((l) => l.kind !== "tax" && l.allowedScope !== "regional")
+    ).length;
+    expect(policyUpserts.length).toBe(nationalPrograms + 36 + regionalDefaults);
     const stateScoped = policyUpserts.filter((c) => (c[0] as { scope?: string }).scope === "state");
     expect(stateScoped.length).toBe(36 + regionalDefaults);
     const lawReplaces = bulkOps(db.collectionMocks.enactedLaws.bulkWrite);
@@ -184,7 +196,11 @@ describe("seedPoliticalLegislationBaseline", () => {
       US: ["US-1"],
       UK: ["UK-1"],
       RU: ["RU-1"],
+      DE: ["DE-1"],
+      JP: ["JP-1"],
+      CN: ["CN-1"],
       DD: ["BEO", "MV", "BB", "ST", "SN", "TH"],
+      CA: ["CA-1"],
     };
     for (const countryId of LAW_COUNTRY_IDS) {
       for (const law of regionalDefaultLaws(countryId, 1953)) {
@@ -252,6 +268,10 @@ describe("seedPoliticalLegislationBaseline", () => {
       "UK",
       "RU",
       "DD",
+      "DE",
+      "CA",
+      "JP",
+      "CN",
     ]);
   });
 });

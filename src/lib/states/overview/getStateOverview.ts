@@ -1,18 +1,9 @@
 /**
- * Server-side aggregator for the State Overview tab (Phase 1).
+ * Server-side aggregator for the State Overview tab.
  *
- * Reads:
- *   - statePartyOrg (per-state-per-party Org / Reg)
- *   - politicalParties (party abbreviation + color for display)
- *   - states (state GDP for the Economy summary)
- *   - electedOfficials (regional executive — via getRegionalExecutive)
- *   - elections + electionCandidates + electionVoteTally (Contested
- *     Primaries + Race Watchlist)
- *
- * Phase 1 ships placeholders for extended economy (gdpDeltaPct /
- * unemployment / sectors). Phase 4+ wires those.
- *
- * See plan §"Phase 1 — Task 1.2".
+ * Reads statePartyOrg, politicalParties, states, electedOfficials (regional
+ * executive), and elections data (Contested Primaries + Race Watchlist).
+ * Extended economy fields are placeholders pending later phases.
  */
 
 import type { Db } from "mongodb";
@@ -44,6 +35,14 @@ import type {
   StateOverviewResult,
 } from "./types";
 import { raceHref } from "@/lib/campaignManager/links";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 const NEUTRAL_PARTY_COLOR = "#6b6b7a";
 
@@ -101,22 +100,21 @@ export async function getStateOverview(
     metricsDoc,
     gameStateDoc,
   ] = await Promise.all([
-    db.collection<StatePartyOrg>("statePartyOrg").find({ countryId, stateId }).toArray(),
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
-    db.collection<State>("states").findOne({ _id: stateId, countryId }),
+    statePartyOrgCollection(db).find({ countryId, stateId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
+    statesCollection(db).findOne({ _id: stateId, countryId }),
     getRegionalExecutive(db, countryId, stateId),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({
         countryId,
         state: stateId,
         status: { $in: ["active", "upcoming"] },
       })
       .toArray(),
-    db.collection<StateRegistrationPool>("stateRegistrationPool").findOne({ countryId, stateId }),
+    stateRegistrationPoolCollection(db).findOne({ countryId, stateId }),
     // SP5: merged two-store view.
     findMergedRegionMetrics(db, { _id: stateId, countryId }),
-    db.collection<{ _id: string; currentTurn?: number }>("gameState").findOne({ _id: "current" }),
+    gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne({ _id: "current" }),
   ]);
 
   const currentTurn = gameStateDoc?.currentTurn ?? null;
@@ -222,19 +220,13 @@ export async function getStateOverview(
 }
 
 /**
- * Pick the state's top sectors. Prefers the live per-turn
- * `topSectorsCache` (computed by `processTopSectorsRecompute`) and
- * falls back to the seed `sectorSpecializations` when the cache is
- * empty — fresh-reset worlds and states with no corporate activity yet
- * still get a populated card.
+ * Pick the state's top sectors. Prefers the live per-turn `topSectorsCache`
+ * (from `processTopSectorsRecompute`) and falls back to seed
+ * `sectorSpecializations` when empty, so fresh-reset worlds still populate.
  *
- * `specializationBonus` is `"primary"` / `"secondary"` when a live top
- * sector matches the state's seed spec (and carries the +10pp / +5pp
- * regional margin bonus), and `null` otherwise. The fallback path
- * tags its two synthesized rows directly.
- *
- * `share` stays at `0` — the UI only renders the sector list, not the
- * share, so a real revenue figure is a future enhancement.
+ * `specializationBonus` is `"primary"`/`"secondary"` when a live sector
+ * matches the seed spec (and carries its regional margin bonus), else null.
+ * `share` stays 0 because the UI only renders the sector list.
  */
 function buildTopSectors(
   stateDoc: State | null
@@ -295,12 +287,10 @@ async function buildElectionDerived(args: {
 
   const electionIds = activeElections.map((e) => e._id);
   const [candidates, tallies] = await Promise.all([
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .find({ electionId: { $in: electionIds }, status: "active" })
       .toArray(),
-    db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    electionVoteTalliesCollection(db)
       .find({ electionId: { $in: electionIds } })
       .toArray(),
   ]);

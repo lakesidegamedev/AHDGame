@@ -2,7 +2,6 @@ import type { EasternBlocSeedConfig } from "@/lib/admin/seed/seedEasternBloc";
 import { csRegions } from "@/lib/seeds/cs/csRegions";
 import { csRegions1953 } from "@/lib/seeds/cs/csRegions1953";
 import { csParties } from "@/lib/seeds/cs/csParties";
-import { makeEasternBlocCategories } from "@/lib/seeds/shared/easternBlocModel";
 import {
   makeEasternBlocStateMetrics,
   makeEasternBlocBaselines,
@@ -55,10 +54,8 @@ export function getCsSeedConfig(preset: string): EasternBlocSeedConfig {
   );
   return {
     countryId: "CS",
-    categoryId: "cs_voterGroups",
     regions,
     parties: csParties,
-    categories: makeEasternBlocCategories("cs_voterGroups", "Czechoslovakia Voter Groups"),
     metrics,
     baselines: makeEasternBlocBaselines(metrics),
   };

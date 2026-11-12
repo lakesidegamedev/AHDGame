@@ -89,19 +89,14 @@ export const UPGRADE_COSTS = {
 export type UpgradeCategory = keyof typeof UPGRADE_COSTS;
 
 // ---------------------------------------------------------------------------
-// Strategic Operations v2 — branch-tree investment model
+// Strategic operations branch-tree investment model
 //
-// Each lever becomes a tier-1 "starter" unlock plus three independently-
-// levelled branch sub-tracks (a/b/c, each 0..OPS_MAX_BRANCH_LEVEL). The
-// starter reproduces the old level-1 effect; branches extend it along three
-// distinct channels. `effectType` tells the effect code (campaignTurn,
-// income, presidentialElectionEngine) which channel a branch feeds; `magnitude`
-// is the CUMULATIVE effect value at that tier (not per-tier delta) so consumers
-// read the current tier's magnitude directly. `lumpSum` (anchor $) is the
-// one-time payout/hit applied AT PURCHASE for on-purchase effect types.
-//
-// First-pass magnitudes preserve each lever's rough power ceiling from the old
-// linear table; final balance is worldsim-validated before ship.
+// Each lever is a tier-1 starter unlock plus three independently-levelled
+// branch sub-tracks (a/b/c, each 0..OPS_MAX_BRANCH_LEVEL). `effectType` tells
+// the effect code which channel a branch feeds; `magnitude` is the CUMULATIVE
+// effect at that tier (not a per-tier delta), so consumers read the current
+// tier's magnitude directly. `lumpSum` (anchor $) is the one-time payout/hit
+// applied AT PURCHASE for on-purchase effect types.
 // ---------------------------------------------------------------------------
 
 export const OPS_MAX_BRANCH_LEVEL = 3;
@@ -617,18 +612,14 @@ export const GENERAL_PHASE_UPGRADE_MULTIPLIER = 1.5;
 
 /**
  * Returns the fully-adjusted cost to buy the next level of `category`, applying
- * the `GENERAL_PHASE_UPGRADE_MULTIPLIER` surcharge on funds and actions when the
- * race is in its general-election phase.
+ * the `GENERAL_PHASE_UPGRADE_MULTIPLIER` surcharge on funds and actions during
+ * the general-election phase.
  *
- * This is the single source of truth for what an upgrade costs. The server gate
- * and the campaign UI both call it so the "Upgrade" button only enables when the
- * upgrade is genuinely affordable (previously the UI showed the un-surcharged
- * base cost in the general phase, enabling a button the gate then rejected with
- * "Insufficient funds").
+ * Single source of truth: the server gate and UI both call it so the Upgrade
+ * button only enables when genuinely affordable.
  *
- * `maintenance` is deliberately NOT surcharged — it is a recurring per-turn cost
- * (see `getMaintenanceCost`), so the displayed figure matches what is charged
- * each turn rather than the one-time upgrade price.
+ * `maintenance` is deliberately NOT surcharged, since it is a recurring
+ * per-turn cost rather than the one-time upgrade price.
  *
  * Returns null for an out-of-range level (mirrors `getUpgradeCost`).
  */

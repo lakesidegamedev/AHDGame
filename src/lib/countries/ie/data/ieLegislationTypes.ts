@@ -7,47 +7,22 @@ import {
 
 /**
  * Weight-sign convention for `effectTargetsWeighted` on IE legislation
- * (verified against `shared/constants/formulas.ts:calculatePolicyContribution`
- * and `src/lib/policyEffects.ts:calculateMetricTarget`, corrected 2026-05-28
- * after auditing peer seeds — the original PR1 doc had the sign flipped):
+ * (matches `calculatePolicyContribution` and `calculateMetricTarget`).
  *
- *   Engine formula per target:
- *     contribution = effectDirection × weight × MAX × scope × effectSign
- *     where effectSign = isHigherBetter ? +1 : -1
- *     and the engine adds `contribution` directly to `baseline`.
+ * The engine adds `effectDirection x weight x MAX x scope x effectSign` to the
+ * baseline, where `effectSign = isHigherBetter ? +1 : -1`. Non-tax option
+ * helpers set `effectDirection`: left = +1, right = -1, center = 0. Tax
+ * `taxRateOptions` pre-invert it (left = -1, right = +1), so the stance label
+ * tracks political content, not rate level.
  *
- *   `effectDirection` is set by the option helpers via stance:
- *     - Non-tax `policyOptions`: left = +1, right = -1, center = 0
- *     - Tax `taxRateOptions`: left = -1, right = +1, center = 0
- *       (The stance label tracks political content, not rate level — e.g.
- *       "VAT abolition" is `stance: "left"` even at rate=0%, and "Maximum
- *       Consumption Tax Act" at rate=35% is `stance: "right"` despite being
- *       a high rate.)
+ * Practical rule for non-tax targets: a POSITIVE weight means LEFT-stance
+ * pushes this metric toward its better direction, NEGATIVE means toward its
+ * worse (trade-off). The engine's `effectSign` handles higher/lower-better
+ * polarity, so you only pick the sign of `weight`.
  *
- *   Practical rule when designing `effectTargetsWeighted` (NON-TAX):
- *     • Ask: "Does LEFT-stance push this metric toward its better direction,
- *       or toward its worse direction?"
- *     • POSITIVE weight = LEFT-stance favors this metric's BETTER direction
- *       (and RIGHT-stance favors the worse direction).
- *     • NEGATIVE weight = LEFT-stance favors this metric's WORSE direction
- *       (typically a trade-off — e.g. LEFT spending hurts `budgetBalance`).
- *     • The engine's `effectSign` handles the higher/lower-better polarity
- *       inversion automatically — you only choose the sign of `weight`.
- *
- *   Worked examples:
- *     • Healthcare LEFT = NHS Universal → boosts `lifeExpectancy` (higher
- *       is better) → weight POSITIVE.
- *     • Climate LEFT = strong action → cuts `carbonEmissions` (lower is
- *       better) → weight POSITIVE (engine inverts via effectSign).
- *     • Pensions LEFT = Universal Basic Pension → hurts `budgetBalance`
- *       (higher is better, but LEFT spends more) → weight NEGATIVE.
- *
- *   For TAX (taxRateOptions) types the helper pre-inverts effectDirection,
- *   so the rule reads as "RIGHT-stance (low rate) favors better → POSITIVE".
- *
- *   Peer seeds JP and DE follow this math-correct convention. The CN seed
- *   and the original IE PR2-PR4 weights followed the inverted convention
- *   and were corrected in the same audit pass.
+ * Examples: NHS boosts `lifeExpectancy` -> positive; climate cuts
+ * `carbonEmissions` (lower is better) -> positive; UBP hurts `budgetBalance`
+ * -> negative.
  */
 
 function dailCommitteePositions(domainLabel: string): LegislationType["positions"] {
@@ -5434,25 +5409,13 @@ export const ieLegislationTypes: LegislationType[] = [
   },
 ];
 
-// ════════════════════════════════════════════════════════════════════════════
-//  Default spending calibration (added 2026-06-03, fix/default-laws)
-// ────────────────────────────────────────────────────────────────────────────
-//  Attach `budgetCategory` + per-capita costs to IE spending programs so the
-//  national budget seeds a full set of expenditure lines (mirrors how US/UK/JP
-//  seed default spending). Without this, IE generated no spending laws and its
-//  budget showed 0 expenditure.
-//
-//  Index 3 (the seeded default per COUNTRY_POLICY_CONFIGS.ie) anchors each
-//  baseline; the curve grades costs toward the higher-spending option
-//  (EXPANSION = bigger government at the left/idx-0 end; HAWKISH = at the
-//  right/idx-6 end, used for defence/security where "more" sits right).
-//  Baselines are EUR per capita; their Σ(baseline × population) per category is
-//  reconciled into NATIONAL_BUDGET_SEED_CONFIGS.IE.baselineSpendingByCategory.
-//
-//  Regulatory / rule-only types (minimum wage, electoral reform, ethics,
-//  neutrality, gender equality, immigration rules, drug/curriculum policy) are
-//  intentionally omitted — no standing expenditure line, matching US/UK.
-// ════════════════════════════════════════════════════════════════════════════
+// Per-capita baselines (EUR) and curves for IE spending programs, so the
+// national budget seeds expenditure lines like US/UK/JP. Index 3 anchors each
+// baseline; EXPANSION grades toward bigger government at idx-0, HAWKISH at
+// idx-6 (defence/security). Baselines are reconciled into
+// NATIONAL_BUDGET_SEED_CONFIGS.IE.baselineSpendingByCategory. Rule-only types
+// (minimum wage, electoral reform, ethics, neutrality, etc.) are intentionally
+// omitted, matching US/UK.
 const IE_EXPANSION_CURVE = [1.6, 1.35, 1.15, 1.0, 0.8, 0.6, 0.4];
 const IE_HAWKISH_CURVE = [0.4, 0.6, 0.8, 1.0, 1.15, 1.35, 1.6];
 

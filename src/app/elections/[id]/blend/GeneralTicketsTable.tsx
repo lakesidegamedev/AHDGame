@@ -11,14 +11,9 @@ import type { GeneralTicketVM } from "./generalBlendViewModel";
 
 /**
  * The presidential general screen's tickets: standing and campaign operations
- * in one place.
- *
- * These were two surfaces for the same people. "The tickets" carried the
- * projected electoral votes, share and popular vote; "Campaign operations", a
- * separate panel further down, carried the manager, funds, actions and levels
- * and the link into the campaign. A reader comparing two tickets had to hold
- * one list in their head while reading the other. Each ticket is now one row
- * (desktop) or one card (phone) carrying both.
+ * in one place. Each ticket is one row (desktop) or one card (phone) carrying
+ * projected electoral votes, share, popular vote, manager, funds, actions,
+ * levels, and the link into the campaign.
  *
  * Campaigns arrive from a separate endpoint and are joined on
  * `GeneralTicketVM.candidateKey`. A ticket without a campaign, or one still

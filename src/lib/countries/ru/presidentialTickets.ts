@@ -1,12 +1,14 @@
 /**
  * Russian direct candidates register a president and vice-president ticket.
- * prepareRussianPresidentialTickets preserves a chosen player running mate and
- * fills an unpaired ticket from a distinct same-party NPC before counting begins.
+ * A chosen player running mate is preserved; an unpaired ticket is filled
+ * from a distinct same-party NPC.
  */
 import { type Db, type ClientSession } from "mongodb";
 import type { Election, ElectionCandidate, NPP } from "@/lib/db/types";
 import { chooseRussianNpcRunningMate } from "./rules/presidentialTicket";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 export async function materializeRussianPresidentialTickets(input: {
   db: Db;
   session: ClientSession;
@@ -21,8 +23,7 @@ export async function materializeRussianPresidentialTickets(input: {
     !election.russianPresidentialRound
   )
     return;
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: election._id, status: "active", russianTicketLocked: { $ne: true } },
       {
@@ -41,8 +42,7 @@ export async function materializeRussianPresidentialTickets(input: {
   const missing = candidates.filter((c) => !c.runningMateId && !c.russianRunningMateNppId);
   if (!candidates.length) return;
   const pool = missing.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           {
             countryId: "RU",
@@ -105,9 +105,7 @@ export async function materializeRussianPresidentialTickets(input: {
       },
     });
   }
-  const saved = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .bulkWrite(writes, { session });
+  const saved = await electionCandidatesCollection(db).bulkWrite(writes, { session });
   if (saved.matchedCount !== writes.length)
     throw new Error("Russian presidential ticket changed during registration");
 }

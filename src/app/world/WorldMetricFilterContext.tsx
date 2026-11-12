@@ -23,6 +23,8 @@ const COUNTRY_ID_TO_ISO: Record<CountryId, string> = {
   DE: "276",
   JP: "392",
   IE: "372",
+  CA: "124",
+  QC: "124", // shares the Canadian code; not rendered until independence
   BR: "076",
   CN: "156",
   NG: "566",
@@ -78,14 +80,9 @@ type WorldMetricFilterContextValue = {
 const WorldMetricFilterContext = createContext<WorldMetricFilterContextValue | null>(null);
 
 export function WorldMetricFilterProvider({ children }: { children: ReactNode }) {
-  // East / West / Non-Aligned is the default view of the world: the first thing
-  // a player should read off the globe is who is on whose side.
-  //
-  // Only where there ARE sides, though. A 2019 world has no blocs, so this used
-  // to boot into a mode whose lookup is empty — tier colours under a West/East/
-  // Non-Aligned legend, describing something not on the screen. Falls back to
-  // the tier view there, which is what that world's default always should have
-  // been.
+  // East / West / Non-Aligned is the default world view: players should first
+  // read who is on whose side. But only where blocs exist; worlds without bloc
+  // data have an empty lookup, so fall back to the tier view there.
   const preset = useActivePreset();
   const [metricFilter, setMetricFilter] = useState<MetricFilter>(() =>
     hasBlocData(preset) ? { type: "blocs" } : { type: "none" }

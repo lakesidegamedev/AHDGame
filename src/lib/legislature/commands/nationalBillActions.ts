@@ -33,6 +33,14 @@ import { statMultiplier } from "@/lib/stats/statMultiplier";
 import { NEUTRAL_STAT, USE_GROWTH_INCREMENT } from "@/lib/stats/statsConstants";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export type NationalBillActionInput =
   | { action: "vote"; vote: "for" | "against" | "abstain" }
@@ -93,9 +101,10 @@ export async function performNationalBillAction(
   // lifts the banned-party restriction.
   const runtimeState = await getCountryState(db, countryId);
   if (runtimeState.governmentType === "onePartyState" && character.party) {
-    const voterParty = await db
-      .collection<PoliticalParty>("politicalParties")
-      .findOne({ sequentialId: parseInt(character.party, 10), countryId });
+    const voterParty = await politicalPartiesCollection(db).findOne({
+      sequentialId: parseInt(character.party, 10),
+      countryId,
+    });
     // RUNTIME shape, not `config`. `isBannedParty` re-tests `isOnePartyState`
     // itself, and the static config never learns about a conversion — so passing
     // it here would make this whole guard inert for a country converted at
@@ -158,7 +167,10 @@ export async function performNationalBillAction(
       const isPM = govFormation?.pmCharacterId?.equals(character._id) ?? false;
       const cabinetMember = isPM
         ? null
-        : await db.collection("cabinetMembers").findOne({ characterId: character._id, countryId });
+        : await cabinetMembersCollection<Document>(db).findOne({
+            characterId: character._id,
+            countryId,
+          });
 
       if (!isPM && !cabinetMember) {
         return {
@@ -174,7 +186,7 @@ export async function performNationalBillAction(
         };
       }
 
-      const voteResult = await db.collection<Bill>("bills").updateOne(
+      const voteResult = await billsCollection(db).updateOne(
         {
           _id: bill._id,
           status: "cabinet_review",
@@ -225,7 +237,7 @@ export async function performNationalBillAction(
       };
     }
     const officeTypeFilter = isConcurrent ? { $in: chamberOfficeTypes } : chamberOfficeType;
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: officeTypeFilter,
       countryId,
@@ -274,7 +286,7 @@ export async function performNationalBillAction(
     }
 
     if (isOtherChamber || concurrentField === "otherChamberVotes") {
-      const voteResult = await db.collection<Bill>("bills").updateOne(
+      const voteResult = await billsCollection(db).updateOne(
         // BOTH filters accept `active_both`: the upper voter reaches this branch and the
         // lower voter the one below, so teaching only one leaves half the chamber with
         // "this bill changed before your vote could be recorded".
@@ -306,7 +318,7 @@ export async function performNationalBillAction(
         "otherChamberWhippedFromVote"
       );
     } else {
-      const voteResult = await db.collection<Bill>("bills").updateOne(
+      const voteResult = await billsCollection(db).updateOne(
         {
           _id: bill._id,
           status: isConcurrent ? "active_both" : isJpOverride ? "override_shugiin" : "active",
@@ -424,7 +436,7 @@ export async function performNationalBillAction(
       };
     }
 
-    const memberOfEither = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const memberOfEither = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: { $in: chamberOfficeTypes },
       countryId,
@@ -438,7 +450,7 @@ export async function performNationalBillAction(
 
     const charKey = character._id.toString();
     const overrideWeight = memberOfEither.seatsHeld ?? 1;
-    const voteResult = await db.collection<Bill>("bills").updateOne(
+    const voteResult = await billsCollection(db).updateOne(
       { _id: bill._id, status: "veto_override" },
       buildEmbeddedVoteTallyUpdate({
         voteField: "vetoOverrideVotes",
@@ -518,7 +530,7 @@ export async function performNationalBillAction(
         body: { error: "Cannot co-sponsor a bill that is no longer active." },
       };
     }
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: { $in: chamberOfficeTypes },
       countryId,
@@ -530,7 +542,7 @@ export async function performNationalBillAction(
       };
     }
 
-    await db.collection<Bill>("bills").updateOne(
+    await billsCollection(db).updateOne(
       { _id: bill._id },
       {
         $push: { coSponsors: { characterId: character._id, characterName: character.name } },
@@ -569,7 +581,7 @@ export async function performNationalBillAction(
       };
     }
 
-    await db.collection<Bill>("bills").updateOne(
+    await billsCollection(db).updateOne(
       { _id: bill._id },
       {
         $pull: { coSponsors: { characterId: character._id } },
@@ -591,9 +603,10 @@ export async function performNationalBillAction(
         },
       };
     }
-    await db
-      .collection<Bill>("bills")
-      .updateOne({ _id: bill._id }, { $set: { status: "withdrawn", updatedAt: now } });
+    await billsCollection(db).updateOne(
+      { _id: bill._id },
+      { $set: { status: "withdrawn", updatedAt: now } }
+    );
 
     await captureBillStatusChanged({
       db,
@@ -623,7 +636,7 @@ export async function performNationalBillAction(
   }
 
   if (action === "presidential_action") {
-    const presOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const presOfficial = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: "president",
       countryId,
@@ -651,7 +664,7 @@ export async function performNationalBillAction(
   }
 
   if (action === "filibuster") {
-    if (countryId !== "US") {
+    if (!countryHasFeature("usLib", countryId)) {
       return {
         status: 400,
         body: { error: "Filibuster is only available in the US Senate." },
@@ -683,7 +696,7 @@ export async function performNationalBillAction(
       };
     }
 
-    const senateOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const senateOfficial = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: "senate",
       countryId,
@@ -692,9 +705,10 @@ export async function performNationalBillAction(
       return { status: 403, body: { error: "Only US Senators can invoke the filibuster." } };
     }
 
-    const filibusterPolicy = await db
-      .collection("statePolicies")
-      .findOne({ stateId: "federal", legislationTypeId: "senate_filibuster_rules" });
+    const filibusterPolicy = await statePoliciesCollection<Document>(db).findOne({
+      stateId: "federal",
+      legislationTypeId: "senate_filibuster_rules",
+    });
     if (filibusterPolicy && filibusterPolicy.effectDirection === -1) {
       return {
         status: 409,
@@ -745,7 +759,7 @@ export async function performNationalBillAction(
       invokedAt: now,
     };
 
-    const spendResult = await db.collection("characters").updateOne(
+    const spendResult = await charactersCollection<Document>(db).updateOne(
       {
         _id: character._id,
         actions: { $gte: filibusterActionCost },
@@ -767,7 +781,7 @@ export async function performNationalBillAction(
       };
     }
 
-    const filibusterResult = await db.collection<Bill>("bills").updateOne(
+    const filibusterResult = await billsCollection(db).updateOne(
       {
         _id: bill._id,
         "filibusterInvocations.characterId": { $ne: character._id.toString() },
@@ -802,12 +816,10 @@ export async function performNationalBillAction(
     );
 
     if (filibusterResult.modifiedCount === 0) {
-      await db
-        .collection("characters")
-        .updateOne(
-          { _id: character._id },
-          { $inc: { actions: filibusterActionCost, politicalInfluence: filibusterNpiCost } }
-        );
+      await charactersCollection<Document>(db).updateOne(
+        { _id: character._id },
+        { $inc: { actions: filibusterActionCost, politicalInfluence: filibusterNpiCost } }
+      );
       return {
         status: 409,
         body: {
@@ -817,9 +829,10 @@ export async function performNationalBillAction(
     }
 
     if (bill.sponsorId) {
-      const sponsorChar = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsorChar = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsorChar) {
         await createNotification({
           userId: sponsorChar.userId,

@@ -1,20 +1,12 @@
-// Alt-detection compute runner (forensics/alt-detection rework plan §3.2,
-// Phase 6 T6.1). Invoked from the HOURLY CRON (`src/lib/cron.ts`), NOT a
-// turn phase — an owner decision to keep the alt-scoring compute cost off
-// the turn loop (see plan §7 open question 3). Best-effort: gated on
-// `isAltScoringEnabled()`, and the whole entry point is wrapped so a throw
-// here never propagates to the caller.
+// Alt-detection compute runner. Invoked from the hourly cron (`src/lib/cron.ts`),
+// not a turn phase, to keep alt-scoring cost off the turn loop. Best-effort:
+// gated on `isAltScoringEnabled()`, and a throw here never propagates.
 //
-// Pipeline: select a bounded candidate `users` set (never a full scan) →
-// assemble each candidate's `AltCandidateFacet` from `users`/`activityLog`/
-// `financialTxLog`/`actionAuditLog` → `buildAltLinks` (Phase 5 `signals.ts`
-// registry + noisy-OR scorer) → `buildAltClusters` (connected components) →
-// UPSERT `altLinks`/`altClusters`, preserving any existing cluster's
-// moderator-set `status`/`reviewedBy`/`reviewNote` across recomputes.
+// Recomputes preserve existing clusters' moderator-set `status`/`reviewedBy`/
+// `reviewNote`.
 
 import { ObjectId, type Db } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
-import type { Character } from "@/lib/db/types/character";
 import type { User } from "@/lib/db/types/user";
 import type { ActionLog } from "@/lib/db/types/gameState";
 import type { ActionAuditCategory } from "@/lib/db/types/actionAuditLog";
@@ -23,7 +15,6 @@ import type {
   ActivityLogFundEvent,
   ActivityLogProfileEvent,
 } from "@/lib/db/types/activityLog";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import { getGameState } from "@/lib/gameState";
 import { isAltScoringEnabled } from "./featureFlag";
@@ -52,6 +43,15 @@ import {
   pruneStaleMatches,
   writeRunRecord,
 } from "./runPersist";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { suspiciousCharactersCollection } from "@/lib/db/repositories/suspiciousCharacters";
+import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
 
 // ─── Tunables ────────────────────────────────────────────────────────────
 
@@ -183,18 +183,17 @@ async function selectCandidateUserIds(
 
   const [recentLogins, recentTurnSummaryUserIds, actionActiveUserIds, flaggedCharacters] =
     await Promise.all([
-      db
-        .collection<ActivityLogAuth>("activityLog")
+      activityLogCollection<ActivityLogAuth>(db)
         .find({ type: "login", timestamp: { $gte: since } }, { projection: { userId: 1 } })
         .toArray(),
-      db
-        .collection("activityLog")
-        .distinct("userId", { type: "turn_summary", timestamp: { $gte: since } }),
-      db.collection("actionLogs").distinct("userId", {
+      activityLogCollection<Document>(db).distinct("userId", {
+        type: "turn_summary",
+        timestamp: { $gte: since },
+      }),
+      actionLogsCollection<Document>(db).distinct("userId", {
         createdAt: { $gte: since },
       }),
-      db
-        .collection<{ userId: ObjectId }>("suspiciousCharacters")
+      suspiciousCharactersCollection<{ userId: ObjectId }>(db)
         .find({}, { projection: { userId: 1 } })
         .toArray(),
     ]);
@@ -213,8 +212,7 @@ async function selectCandidateUserIds(
   // with a seed — this is how a burner with no independent activity signal
   // (never logs in during the window, no actionLogs) still enters the pool
   // when its operator does.
-  const seedUsers = await db
-    .collection<User>("users")
+  const seedUsers = await usersCollection(db)
     .find(
       { _id: { $in: seedUserIds } },
       {
@@ -264,8 +262,7 @@ async function selectCandidateUserIds(
   if (deviceKeys.size > 0) orClauses.push({ deviceKey: { $in: [...deviceKeys] } });
 
   if (orClauses.length > 0) {
-    const expansionMatches = await db
-      .collection<User>("users")
+    const expansionMatches = await usersCollection(db)
       .find({ $or: orClauses }, { projection: { _id: 1 } })
       .limit(MAX_CANDIDATES)
       .toArray();
@@ -282,7 +279,7 @@ async function selectCandidateUserIds(
   // neither be flagged nor drag a real user into a cluster by sitting between
   // them.
   if (seedIds.size > 0) {
-    const syntheticUserIds = await db.collection<Character>("characters").distinct("userId", {
+    const syntheticUserIds = await charactersCollection(db).distinct("userId", {
       isSynthetic: true,
       userId: { $in: [...seedIds].map((id) => new ObjectId(id)) },
     });
@@ -376,12 +373,10 @@ async function buildCandidateFacets(
   const since = new Date(now.getTime() - CANDIDATE_LOOKBACK_MS);
 
   const [users, characters] = await Promise.all([
-    db
-      .collection<User>("users")
+    usersCollection(db)
       .find({ _id: { $in: candidateUserIds } })
       .toArray(),
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .find({ userId: { $in: candidateUserIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray(),
   ]);
@@ -453,8 +448,7 @@ async function buildCandidateFacets(
   }
 
   if (candidateUserIds.length > 0) {
-    const loginLogs = await db
-      .collection<ActivityLogAuth>("activityLog")
+    const loginLogs = await activityLogCollection<ActivityLogAuth>(db)
       .find({
         type: "login",
         userId: { $in: candidateUserIds },
@@ -484,8 +478,7 @@ async function buildCandidateFacets(
   const fundingEventsByUser = new Map<string, AltFundingEvent[]>();
   if (candidateCharacterIds.length > 0) {
     const [donations, transfers] = await Promise.all([
-      db
-        .collection<ActivityLogFundEvent>("activityLog")
+      activityLogCollection<ActivityLogFundEvent>(db)
         .find({
           type: "fund_event",
           fundEventType: "party_donation",
@@ -494,8 +487,7 @@ async function buildCandidateFacets(
           fromType: "character",
         })
         .toArray(),
-      db
-        .collection<ActivityLogFundEvent>("activityLog")
+      activityLogCollection<ActivityLogFundEvent>(db)
         .find({
           type: "fund_event",
           fundEventType: "party_transfer",
@@ -553,8 +545,7 @@ async function buildCandidateFacets(
   // ── wire edges: direct character-to-character money flow ─────────────
   const wireEdgesByUser = new Map<string, Map<string, AltWireObservation>>();
   if (candidateCharacterIds.length > 0) {
-    const wireRows = await db
-      .collection<FinancialTxLogEntry>("financialTxLog")
+    const wireRows = await financialTxLogCollection(db)
       .find({
         type: { $in: ["wire_transfer_in", "wire_transfer_out"] },
         subjectType: "character",
@@ -569,8 +560,7 @@ async function buildCandidateFacets(
       if (cpId && !charToUser.has(cpId)) unresolvedCounterpartyIds.add(cpId);
     }
     if (unresolvedCounterpartyIds.size > 0) {
-      const extraChars = await db
-        .collection<Character>("characters")
+      const extraChars = await charactersCollection(db)
         .find(
           { _id: { $in: [...unresolvedCounterpartyIds].map((id) => new ObjectId(id)) } },
           { projection: { _id: 1, userId: 1 } }
@@ -634,8 +624,7 @@ async function buildCandidateFacets(
   };
 
   if (candidateUserIds.length > 0) {
-    const switches = await db
-      .collection<ActivityLogProfileEvent>("activityLog")
+    const switches = await activityLogCollection<ActivityLogProfileEvent>(db)
       .find({
         type: "party_change",
         userId: { $in: candidateUserIds },
@@ -685,8 +674,7 @@ async function buildCandidateFacets(
   }
 
   if (candidateUserIds.length > 0) {
-    const actionRows = await db
-      .collection<ActionLog>("actionLogs")
+    const actionRows = await actionLogsCollection(db)
       .find(
         { userId: { $in: candidateUserIds }, createdAt: { $gte: since } },
         { projection: { userId: 1, createdAt: 1, targetState: 1 }, limit: MAX_ACTION_ROWS }
@@ -733,8 +721,7 @@ async function buildCandidateFacets(
   // write time and can't feed the CF-edge/subnet checks that need a raw IP.
   try {
     if (candidateUserIds.length > 0) {
-      const auditRows = await db
-        .collection<ActionAuditRecord>("actionAuditLog")
+      const auditRows = await actionAuditLogCollection(db)
         .find(
           {
             source: "api",
@@ -877,8 +864,7 @@ export async function runAltScoring(
 
     const [gameState, configDoc] = await Promise.all([
       getGameState(db).catch(() => null),
-      db
-        .collection<AltScoringConfigDoc>("gameConfig")
+      gameConfigCollection<AltScoringConfigDoc>(db)
         .findOne({ _id: "default" }, { projection: { altScoring: 1 } })
         .catch(() => null),
     ]);

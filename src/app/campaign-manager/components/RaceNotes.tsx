@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { BLEND } from "@/components/blend/tokens";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
-import { ELECTION_DAY_TURNS } from "@/lib/electionEngine/voteCalculations";
+import { ELECTION_DAY_TURNS } from "@/lib/elections/engine/voteCalculations";
 import type { CmStage } from "@/lib/campaignManager/rules";
 
 // The statutory map reads the 72 KB 1994 constituency table, so it loads only

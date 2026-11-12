@@ -35,7 +35,7 @@ describe("canSupply", () => {
     expect(canSupply({ countryId: "UK", liquidCurrencyCode: "GBP" }, "US")).toBe(false);
   });
 
-  // Ticket #1087. A missing `liquidCurrencyCode` was read as USD, which hid every non-US
+  // A missing `liquidCurrencyCode` was read as USD, which hid every non-US
   // domestic plant - including Soviet state industry - from the award picker entirely.
   it("infers a missing currency from the corp's country rather than assuming USD", () => {
     expect(canSupply({ countryId: "UK" }, "UK")).toBe(true);
@@ -151,7 +151,7 @@ describe("resolveFillEligibility", () => {
     expect(half.projectedLotsPerTurn).toBeCloseTo(full.projectedLotsPerTurn / 2, 9);
   });
 
-  // #1083: a plant serving two domains splits its output. The default allocation must keep
+  // A plant serving two domains splits its output. The default allocation must keep
   // reproducing that split exactly, or every live two-domain contract changes rate on deploy.
   it("splits a two-domain plant's default projection between its domains", () => {
     const sector = plant({ strategyId: "standard" });

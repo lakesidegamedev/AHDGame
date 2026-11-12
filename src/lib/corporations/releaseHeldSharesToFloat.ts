@@ -4,8 +4,8 @@
  * see releaseCorporationHeldSharesToFloat. Unrelated holders are untouched.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
 import { casReleaseIssuerFloat } from "./releaseSharesConservation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface ReleaseCorporationHeldSharesResult {
   /** Total shares credited to issuers' public floats. */
@@ -47,7 +47,7 @@ export async function releaseCorporationHeldSharesToFloat(
   holderCorporationId: ObjectId,
   now: Date = new Date()
 ): Promise<ReleaseCorporationHeldSharesResult> {
-  const corps = db.collection<Corporation>("corporations");
+  const corps = corporationsCollection(db);
 
   const held = await corps
     .find(

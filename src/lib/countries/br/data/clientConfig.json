@@ -1,0 +1,144 @@
+{
+  "config": {
+    "id": "BR",
+    "name": "Brazil",
+    "code": "BR",
+    "status": "coming-soon",
+    "flagEmoji": "🇧🇷",
+    "regionLabel": "State",
+    "regionLabelPlural": "States",
+    "executiveTitle": "President",
+    "executiveRealmPhrase": "Brazil",
+    "executiveLabel": "Palácio do Planalto",
+    "executivePath": "/country/br/executive",
+    "governmentType": "presidential",
+    "governmentTypeLabel": "Presidential Republic",
+    "descriptor": "A federal presidential republic where the directly elected President governs alongside a National Congress of 513 deputies and 81 senators across five macro-regions.",
+    "heroImage": "https://flagcdn.com/w640/br.png",
+    "overviewPath": "/country/br",
+    "mapPath": "/country/br/map",
+    "currencyCode": "BRL",
+    "centralGovernmentLabel": "Federal Transfers",
+    "exchangeName": "B3",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "majorPartyIds": ["pt", "pl"],
+    "partyCreationNPPs": { "statesRequired": 3, "lockHomeState": true, "nppsPerState": 2 },
+    "executiveTermLimit": {
+      "officeKey": "president",
+      "maxTermsPerCharacter": 2,
+      "blocksRunningMateSelection": true
+    },
+    "legislature": {
+      "name": "National Congress",
+      "path": "/country/br/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "chamber",
+        "name": "Chamber of Deputies",
+        "shortName": "Chamber",
+        "seats": 513,
+        "description": "513 deputies elected by open-list proportional representation from 27 multi-member constituencies. Four-year terms."
+      },
+      "upperChamber": {
+        "key": "senate",
+        "name": "Federal Senate",
+        "shortName": "Senate",
+        "seats": 81,
+        "description": "81 senators - three per state - serving eight-year staggered terms. Reviews legislation from the Chamber.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "vicePresident",
+        "label": "Vice President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Vice Presidents"
+      },
+      {
+        "key": "senate",
+        "label": "Senator",
+        "chamberKey": "senate",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Senators"
+      },
+      {
+        "key": "chamber",
+        "label": "Federal Deputy",
+        "chamberKey": "chamber",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Federal Deputies"
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Governors"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the BCB",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the BCB"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "fptp",
+      "headOfState": "fptp"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "upperElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Banco Central do Brasil",
+      "abbreviation": "BCB",
+      "heroImage": "/api/images/hero/banco-central-do-brasil",
+      "defaultPrimeRate": 8
+    },
+    "usdExchangeRate": 0.2
+  },
+  "eraOverrides": {
+    "1979-default": {
+      "electionSystems": {
+        "lowerChamber": "pr_hareQuota",
+        "upperChamber": "fptp",
+        "headOfState": "parliamentary"
+      }
+    },
+    "1953-default": {
+      "legislature": {
+        "name": "National Congress",
+        "path": "/country/br/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "chamber",
+          "name": "Chamber of Deputies",
+          "shortName": "Chamber",
+          "seats": 304,
+          "description": "304 deputies of the 1950 legislature elected by open-list proportional representation."
+        },
+        "upperChamber": {
+          "key": "senate",
+          "name": "Federal Senate",
+          "shortName": "Senate",
+          "seats": 81,
+          "description": "81 senators - three per state - serving eight-year staggered terms. Reviews legislation from the Chamber.",
+          "elected": true
+        }
+      },
+      "usdExchangeRate": 0.05319148936170213
+    }
+  }
+}

@@ -8,16 +8,15 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine";
 import {
   calcPresidentPrimaryScore,
   effectivePartyInfluenceForPresidentialPrimary,
   buildPartyChairMaps,
   resolvePartyChairPrimaryRole,
 } from "@/lib/primaryScore";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   NPP,
@@ -27,6 +26,15 @@ import type {
 import { createInitialCampaign } from "@/lib/campaigns/createInitialCampaign";
 import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameTime } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,7 +61,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Game turn drives the turn-first primary-close mutation below.
     const { currentTurn } = await getGameTime();
 
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 
@@ -69,15 +77,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Cannot start general for completed or cancelled election");
     }
 
-    const candidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const candidates = await electionCandidatesCollection(db)
       .find({ electionId: electionObjectId, status: "active" })
       .toArray();
 
     // Filter parties by election's countryId to avoid cross-country collisions
     const electionCountryId = election.countryId ?? "US";
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ countryId: electionCountryId })
       .toArray();
     const partyMap = new Map(parties.map((p) => [String(p.sequentialId), p]));
@@ -94,18 +100,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       const nppIds = candidates.filter((c) => c.isNPP && c.nppId).map((c) => c.nppId!);
       const [chars, electionNpps, statePartyOrgs] = await Promise.all([
         characterIds.length > 0
-          ? db
-              .collection<Character>("characters")
+          ? charactersCollection(db)
               .find({ _id: { $in: characterIds } })
               .toArray()
           : [],
         nppIds.length > 0
-          ? db
-              .collection<NPP>("npps")
+          ? nppsCollection(db)
               .find({ _id: { $in: nppIds } })
               .toArray()
           : [],
-        db.collection<StatePartyOrg>("statePartyOrg").find({}).toArray(),
+        statePartyOrgCollection(db).find({}).toArray(),
       ]);
       const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
       // Dead leftover: presidential NPP scoring reads from `enriched`, not this map. Cleanup tracked.
@@ -134,9 +138,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           .map((c) => {
             const ec = enriched.find((e) => e.candidateId === c._id.toString());
             if (!ec) return { candidateId: c._id.toString(), score: 0 };
-            // Party influence (candidate's own party clout), NPPs have none. See #934.
-            // National chairs get +25% on the value used for primary calcs.
-            // State chairs get no boost on the national snapshot (geographic only).
+            // Party influence is the candidate's own party clout; NPPs have none. National chairs get +25% for primary calcs; state chairs get no national-snapshot boost (geographic only).
             const rawPartyInfluence = c.isNPP
               ? 0
               : (charMap.get(c.characterId.toString())?.partyInfluence ?? 0);
@@ -168,12 +170,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       if (loserIds.length > 0) {
-        await db
-          .collection("electionCandidates")
-          .updateMany(
-            { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
-            { $set: { status: "withdrawn", withdrawnAt: now } }
-          );
+        await electionCandidatesCollection<Document>(db).updateMany(
+          { _id: { $in: loserIds.map((id) => new ObjectId(id)) } },
+          { $set: { status: "withdrawn", withdrawnAt: now } }
+        );
         eliminated = loserIds.length;
 
         // Archive (not delete) campaign documents for eliminated primary
@@ -183,7 +183,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           .filter((c) => loserIds.includes(c._id.toString()) && c.characterId && !c.isNPP)
           .map((c) => c.characterId!);
         if (loserCharIds.length > 0) {
-          await db.collection("campaigns").updateMany(
+          await campaignsCollection<Document>(db).updateMany(
             {
               electionId: electionObjectId,
               candidateId: { $in: loserCharIds },
@@ -202,20 +202,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    const generalCandidates = await db
-      .collection<ElectionCandidate>("electionCandidates")
+    const generalCandidates = await electionCandidatesCollection(db)
       .find({ electionId: electionObjectId, status: "active" })
       .toArray();
 
-    const existingTally = await db
-      .collection("electionVoteTallies")
-      .findOne({ electionId: electionObjectId });
+    const existingTally = await electionVoteTalliesCollection<Document>(db).findOne({
+      electionId: electionObjectId,
+    });
 
     if (!existingTally && generalCandidates.length > 0) {
       await initPresidentVoteTally(electionObjectId, generalCandidates);
     }
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionObjectId },
       {
         // primaryEndTurn = currentTurn so the turn-first resolver treats the

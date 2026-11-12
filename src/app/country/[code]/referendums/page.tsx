@@ -16,6 +16,7 @@ import { HubCards, type HubCampaign } from "@/components/referendum/campaignsPan
 import { HubArena } from "@/components/referendum/campaignsPanel/HubArena";
 import { HubBriefing } from "@/components/referendum/campaignsPanel/HubBriefing";
 import { CampaignStatusPill } from "@/components/referendum/campaignsPanel/CampaignStatusPill";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 const LAYOUTS: HubLayout[] = ["cards", "arena", "briefing"];
 
@@ -43,8 +44,7 @@ export default async function ReferendumsIndexPage({
   // Region display names for every listed row.
   const regionIds = [...new Set([...active, ...past].map((r) => r.regionId))];
   const states = regionIds.length
-    ? await db
-        .collection<State>("states")
+    ? await statesCollection(db)
         .find({ _id: { $in: regionIds }, countryId })
         .toArray()
     : [];

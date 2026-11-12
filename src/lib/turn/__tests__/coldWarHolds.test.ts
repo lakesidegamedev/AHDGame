@@ -46,14 +46,12 @@ const held = (over: Record<string, unknown> = {}) => ({
 describe("resolveColdWarHolds", () => {
   let db: MockDb;
 
-  function seed(rows: unknown[], conflictsEnabled = true, intOrgAlignmentEnabled = true) {
+  function seed(rows: unknown[]) {
     db = createMockDb();
     db.collection("conflicts");
     db.collection("gameState");
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
-      conflictsEnabled,
-      intOrgAlignmentEnabled,
       currentYear: 1955,
     });
     db.collectionMocks.conflicts.find.mockReturnValue({
@@ -83,15 +81,6 @@ describe("resolveColdWarHolds", () => {
       // Poles are era state — unlike the accession org, which comes from the preset.
       year: 1955,
     });
-  });
-
-  it("still admits the hosts when the alignment subsystem is off", async () => {
-    // The two gates are separate: intOrgAlignmentEnabled governs the influence
-    // meter, not the war. With it off the countries still change hands.
-    await resolveColdWarHolds(seed([held()], true, false) as unknown as Db, TURN);
-
-    expect(admitMember).toHaveBeenCalledTimes(1);
-    expect(applyConflictOutcomeAlignment).not.toHaveBeenCalled();
   });
 
   it("takes EVERY host entity into the winning bloc's organisation", async () => {
@@ -174,14 +163,5 @@ describe("resolveColdWarHolds", () => {
     expect(resolveConflict).not.toHaveBeenCalled();
     expect(admitMember).not.toHaveBeenCalled();
     expect(applyConflictOutcomeAlignment).not.toHaveBeenCalled();
-  });
-
-  it("reads conflictsEnabled at the step itself", async () => {
-    // The FIRST conflict turn-step with no upstream gate: it is reached from
-    // poleSinceTurn alone, with no declaration upstream of it to have been refused.
-    const res = await resolveColdWarHolds(seed([held()], false) as unknown as Db, TURN);
-
-    expect(res.resolved).toBe(0);
-    expect(resolveConflict).not.toHaveBeenCalled();
   });
 });

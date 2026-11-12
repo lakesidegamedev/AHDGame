@@ -47,7 +47,6 @@ import { CandidateFile, type CandidateFileRequirement } from "./CandidateFile";
 import { OnePartyStateNotice } from "./OnePartyStateNotice";
 import { useImagePick, uploadCharacterImage, settleWithin } from "./useImagePick";
 import { EDUCATION_OPTIONS, GENDER_OPTIONS, RACE_OPTIONS, labelFor } from "./creatorOptions";
-import { generateUniqueNPPNameAndGender } from "@/lib/npp/nameGenerator";
 import { buildConversationSteps, type ConversationStepId } from "./conversationSteps";
 import { ConversationShell } from "./ConversationShell";
 import { useStartingPartyOptions } from "./useStartingPartyOptions";
@@ -187,14 +186,10 @@ export default function CreateCharacterClient() {
   // RPG stat allocation: opens with every stat on the floor, 21 points to spend.
   const [stats, setStats] = useState(defaultStatBuild());
 
-  // Steps 4 and 5 both open on a legal default (dead centre of the compass,
-  // Independent). They used to be badged complete before the player had looked
-  // at them, which let someone sail past the party step into a character who
-  // cannot stand for most offices. Neither counts as answered until touched.
+  // Steps 4 and 5 open on a legal default (compass centre, Independent); neither counts as answered until touched, so the player cannot skip past the party step into an unviable character.
   const [compassTouched, setCompassTouched] = useState(false);
   const [partyTouched, setPartyTouched] = useState(false);
   // Gated behind the RPG-stats feature flag (from /api/auth/me).
-  const [rpgStatsEnabled, setRpgStatsEnabled] = useState(false);
   // Guided chat is opt-in and persisted. The classic all-steps form stays the
   // default, so current player behavior is unchanged unless chosen.
   const [chatMode, setChatMode] = useState(false);
@@ -339,7 +334,6 @@ export default function CreateCharacterClient() {
           router.replace("/profile");
           return;
         }
-        setRpgStatsEnabled(data.user.rpgStatsEnabled === true);
         // Capture Discord linking state
         if (data.user.discordId) {
           dispatchDiscord({ type: "linked" });
@@ -474,15 +468,16 @@ export default function CreateCharacterClient() {
 
   /**
    * Randomize picks the country first, then draws the name from that
-   * country's NPP pool — the same pools the game names every NPP from. The
-   * randomizer used to carry its own thirty US first names and thirty US
-   * surnames, so rolling Japan or Turkey handed you an American name.
+   * country's NPP pool so names match the chosen country.
    */
-  const handleRandomize = useCallback(() => {
+  const handleRandomize = useCallback(async () => {
     if (!countryOptions || countryOptions.length === 0) return;
     const randomCountry = pick(countryOptions);
     const cId = randomCountry.id;
 
+    // Every country's name pools are loaded on the first roll rather than
+    // shipped with the page, since most players never press Randomize.
+    const { generateUniqueNPPNameAndGender } = await import("@/lib/npp/nameGenerator");
     // The generated gender is carried into demographics so the name and the
     // character it describes agree.
     const generated =
@@ -580,7 +575,7 @@ export default function CreateCharacterClient() {
       return;
     }
 
-    if (rpgStatsEnabled && pointsRemaining(stats) !== 0) {
+    if (pointsRemaining(stats) !== 0) {
       setError("Please allocate all of your stat points before continuing");
       setIsLoading(false);
       return;
@@ -604,7 +599,7 @@ export default function CreateCharacterClient() {
           party: formData.party,
           policies: formData.policyPositions,
           demographics: formData.demographics,
-          ...(rpgStatsEnabled ? { stats } : {}),
+          stats,
         }),
       });
 
@@ -771,17 +766,11 @@ export default function CreateCharacterClient() {
         : "Pick a party, or choose Independent on purpose",
       met: noPartiesAvailable || partyTouched,
     },
-    ...(rpgStatsEnabled
-      ? [
-          {
-            key: "stats",
-            label: `Allocate ${statPointsLeft} remaining stat point${
-              statPointsLeft === 1 ? "" : "s"
-            }`,
-            met: statPointsLeft === 0,
-          },
-        ]
-      : []),
+    {
+      key: "stats",
+      label: `Allocate ${statPointsLeft} remaining stat point${statPointsLeft === 1 ? "" : "s"}`,
+      met: statPointsLeft === 0,
+    },
   ];
 
   const countriesLoading = countryOptions === undefined;
@@ -1087,7 +1076,7 @@ export default function CreateCharacterClient() {
     </StepPanel>
   );
 
-  const statsPanel = rpgStatsEnabled ? (
+  const statsPanel = (
     <StepPanel
       step={6}
       title="Stats"
@@ -1096,7 +1085,7 @@ export default function CreateCharacterClient() {
     >
       <StatPointAllocator value={stats} onChange={setStats} />
     </StepPanel>
-  ) : null;
+  );
 
   const discordPanel = (
     <DiscordLinkSection
@@ -1193,7 +1182,6 @@ export default function CreateCharacterClient() {
 
   const conversationSteps = buildConversationSteps({
     regionNoun,
-    rpgStatsEnabled,
     partySelectorVisible,
     complete: {
       country: Boolean(country),
@@ -1214,7 +1202,7 @@ export default function CreateCharacterClient() {
         : formData.party === "independent"
           ? "Independent"
           : (selectedParty?.name ?? "Independent"),
-      stats: rpgStatsEnabled && statPointsLeft === 0 ? "Allocated" : null,
+      stats: statPointsLeft === 0 ? "Allocated" : null,
       review: null,
     },
   });

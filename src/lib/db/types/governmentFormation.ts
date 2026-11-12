@@ -1,12 +1,15 @@
 import { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ReshuffleRecord } from "@/lib/uk/cabinet/reshuffleLimit";
+import type { ReshuffleRecord } from "@/lib/countries/uk/cabinet/reshuffleLimit";
 import type { WhippedFromVoteMap } from "./legislation";
 import type { GoverningAgenda } from "@/lib/nppAutonomy/governingAgenda";
 import type { PersistedCommandStance, PersistedFiscalStance } from "@/lib/nppAutonomy/fiscalStance";
 import type { GoverningGoalState } from "@/lib/nppAutonomy/v5/rules/governingGoals";
 import type { PersistedReshuffleGuardState } from "@/lib/nppAutonomy/rules/reshuffleGuard";
 import type { MandateDomains } from "@/lib/nppAutonomy/rules/electoralMandate";
+import type { CoalitionRefusal } from "@/lib/government/rules/coalitionRefusals";
+import type { CaretakerState } from "@/lib/elections/rules/caretaker";
+import type { SuccessionFill } from "@/lib/elections/rules/executiveSuccession";
 
 // --- GovernmentFormation ---
 
@@ -49,6 +52,16 @@ export interface GovernmentFormation {
   governingPartyId: string | null; // party of the sitting executive; presumptive largest party while pending
   coalitionId: number | null; // coalition sequentialId if formed via coalition
   coalitionPartyIds: string[] | null;
+  /**
+   * Coalition refusals in force, seeded from the preset's authored list the
+   * first time the country is processed. Absent when nothing was authored.
+   */
+  coalitionRefusals?: CoalitionRefusal[];
+  /**
+   * The lower-chamber election the refusals were last advanced past, and the
+   * seats by party abbreviation it left, so the next election can tell who lost.
+   */
+  coalitionRefusalElection?: { key: string; seats: Record<string, number> } | null;
   /** Explicit parliamentary tolerance, distinct from cabinet support. */
   confidenceAbstentionPartyIds?: string[]; // party sequentialIds in supporting coalition
   totalSeatsSupporting: number;
@@ -80,12 +93,7 @@ export interface GovernmentFormation {
   /** Bounded history for the executive confidence trend chart. */
   confidenceGaugeHistory?: GovernmentConfidencePoint[];
 
-  // Cabinet reshuffle log (epic #856, ticket #859). Additive record of used
-  // once-per-parliament-per-government reshuffle tokens, read by
-  // `canReshuffle` in `src/lib/uk/cabinet/reshuffleLimit.ts`. Election-reset
-  // and vacate paths `$set` specific fields, so entries survive across
-  // parliaments and governments and are told apart by their ids. Runtime —
-  // wiped on world reset with the rest of this collection.
+  // Additive record of once-per-parliament-per-government reshuffle tokens, read by `canReshuffle`. Entries are told apart by id since election-reset and vacate paths only $set specific fields.
   reshuffleLog?: ReshuffleRecord[];
 
   // Snap election tracking — applies to any parliamentary country
@@ -137,7 +145,7 @@ export interface GovernmentFormation {
   fiscalStance?: PersistedFiscalStance | null;
 
   /**
-   * The governing party's electoral mandate (#2321): bounded domain emphasis
+   * The governing party's electoral mandate: bounded domain emphasis
    * derived from its locked manifesto pledges and platform, scaled by its
    * chamber share. Recomputed with the agenda and fed into it, so an
    * autonomous government's priorities follow what its party won on.
@@ -164,7 +172,7 @@ export interface GovernmentFormation {
   governingGoals?: GoverningGoalState | null;
 
   /**
-   * NPP Autonomy reshuffle-guard state (#1994): government-level last
+   * NPP Autonomy reshuffle-guard state: government-level last
    * reshuffle turn, per-portfolio consecutive-replacement history, and the
    * most recent replacement's reason/tenure/shortfall for observability.
    * Written only by `runMinisterialGovernance` on an actual replacement (or
@@ -173,6 +181,21 @@ export interface GovernmentFormation {
    * Never consulted by caretaker or player-controlled paths.
    */
   ministerialReshuffle?: PersistedReshuffleGuardState | null;
+
+  /** Set when a dissolution leaves the outgoing government in caretaker mode; ignored once a government is formed. */
+  caretaker?: CaretakerState | null;
+  /** Open succession for a vacant national executive office; cleared when it is filled. */
+  succession?: ExecutiveSuccessionState | null;
+}
+
+export interface ExecutiveSuccessionState {
+  office: string;
+  fill: SuccessionFill;
+  actingLabel: string;
+  vacatedTurn: number;
+  actingUntilTurn: number;
+  fillByTurn: number;
+  overdue: boolean;
 }
 
 export interface GovernmentConfidencePoint {
@@ -217,7 +240,7 @@ export interface PMAppointmentVote {
   votes: Record<string, "aye" | "nay">; // keyed by characterId or nppId string
   whippedFromVote?: WhippedFromVoteMap;
 
-  // S#17: true when auto-filed as a post-election confidence motion.
+  // True when auto-filed as a post-election confidence motion.
   // Distinct failure semantics: a failed motion with no alternative
   // seated triggers unformGovernmentAndVacatePM.
   isConfidenceMotion?: boolean;

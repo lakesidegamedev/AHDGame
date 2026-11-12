@@ -5,14 +5,7 @@ import { generateRecommendations, type ActionRecommendation } from "@/lib/action
 import { hasVotedOnAnyBill } from "@/lib/onboarding/checklist";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type {
-  Character,
-  State,
-  PartyBudget,
-  PoliticalParty,
-  StatePartyOrg,
-  Corporation,
-} from "@/lib/db/types";
+import type { Character, State, PartyBudget, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import type { ElectionCandidate } from "@/lib/db/types/election";
 import { type CountryId } from "@/lib/constants/countries";
 import { findPartyBudgetForScope } from "@/lib/partyBudgetGuards";
@@ -25,6 +18,15 @@ import {
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
+import { nationalPartyLeadershipCollection } from "@/lib/db/repositories/nationalPartyLeadership";
 
 interface StateEconomySector {
   type: string;
@@ -65,22 +67,20 @@ async function fetchStateEconomy(
   stateName: string,
   countryId: CountryId
 ): Promise<StateEconomyData> {
-  const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId });
   if (!state) {
     return { stateId, stateName, countryId, sectors: [] };
   }
 
-  const sectors = await db
-    .collection<{
-      corporationId: ObjectId;
-      sectorType: string;
-      revenue: number;
-    }>("corporateSectors")
+  const sectors = await corporateSectorsCollection<{
+    corporationId: ObjectId;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({ stateId })
     .toArray();
 
-  const unownedSectors = await db
-    .collection<{ sectorType: string; revenue: number }>("unownedSectors")
+  const unownedSectors = await unownedSectorsCollection<{ sectorType: string; revenue: number }>(db)
     .find({ stateId })
     .toArray();
 
@@ -91,8 +91,7 @@ async function fetchStateEconomy(
   const corpIds = corpIdsInState.filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id));
   const [corpsForFx, fxByCurrency] = await Promise.all([
     corpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: corpIds } })
           .project<{ _id: ObjectId } & CorpCapitalCurrencyInfo>({
             _id: 1,
@@ -180,8 +179,7 @@ async function fetchMarketPositions(
   db: Awaited<ReturnType<typeof getDb>>,
   character: Character
 ): Promise<CorpMarketPosition[]> {
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({ ceoId: new ObjectId(character._id) })
     .project<{ _id: ObjectId; type: string; name: string } & CorpCapitalCurrencyInfo>({
       _id: 1,
@@ -197,14 +195,13 @@ async function fetchMarketPositions(
   const corpIds = corporations.map((c) => c._id);
   const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
 
-  const sectors = await db
-    .collection<{
-      _id: ObjectId;
-      corporationId: ObjectId;
-      stateId: string;
-      sectorType: string;
-      revenue: number;
-    }>("corporateSectors")
+  const sectors = await corporateSectorsCollection<{
+    _id: ObjectId;
+    corporationId: ObjectId;
+    stateId: string;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({ corporationId: { $in: corpIds } })
     .toArray();
 
@@ -218,10 +215,12 @@ async function fetchMarketPositions(
 
   // Find sibling corps competing in these state+sectorType slots so market-share
   // math normalizes every revenue figure — not just the character's own corps.
-  const siblingSectors = await db
-    .collection<{ corporationId: ObjectId; stateId: string; sectorType: string; revenue: number }>(
-      "corporateSectors"
-    )
+  const siblingSectors = await corporateSectorsCollection<{
+    corporationId: ObjectId;
+    stateId: string;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({
       $or: Array.from(stateSectorKeys).map((key) => {
         const [stateId, sectorType] = key.split(":");
@@ -235,8 +234,7 @@ async function fetchMarketPositions(
   ).filter((id) => ObjectId.isValid(id));
   const [siblingCorpsForFx, fxByCurrency] = await Promise.all([
     siblingCorpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: siblingCorpIds.map((id) => new ObjectId(id)) } })
           .project<{ _id: ObjectId } & CorpCapitalCurrencyInfo>({
             _id: 1,
@@ -267,8 +265,11 @@ async function fetchMarketPositions(
   }
 
   // Fetch only the unowned sectors that match the user's state+sectorType combinations
-  const unownedSectors = await db
-    .collection<{ stateId: string; sectorType: string; revenue: number }>("unownedSectors")
+  const unownedSectors = await unownedSectorsCollection<{
+    stateId: string;
+    sectorType: string;
+    revenue: number;
+  }>(db)
     .find({
       $or: Array.from(stateSectorKeys).map((key) => {
         const [stateId, sectorType] = key.split(":");
@@ -362,25 +363,22 @@ export async function loadRecommendationsForUser(
   // the "vote on a bill" suggestion never auto-completed.
   const [hasVoted, hasActiveCandidacy] = await Promise.all([
     hasVotedOnAnyBill(db, character._id),
-    db
-      .collection<ElectionCandidate>("electionCandidates")
+    electionCandidatesCollection(db)
       .countDocuments({ characterId: character._id }, { limit: 1 })
       .then((n) => n > 0),
   ]);
 
   // Fetch all required data in parallel
   const [homeState, party, statePartyOrg] = await Promise.all([
-    db
-      .collection<State>("states")
-      .findOne({ _id: character.homeState, countryId: character.countryId }),
+    statesCollection(db).findOne({ _id: character.homeState, countryId: character.countryId }),
     character.party
-      ? db.collection<PoliticalParty>("politicalParties").findOne({
+      ? politicalPartiesCollection(db).findOne({
           sequentialId: Number(character.party),
           countryId: character.countryId,
         })
       : null,
     character.party
-      ? db.collection<StatePartyOrg>("statePartyOrg").findOne({
+      ? statePartyOrgCollection(db).findOne({
           countryId: character.countryId,
           stateId: character.homeState,
           partyId: character.party,
@@ -390,7 +388,7 @@ export async function loadRecommendationsForUser(
 
   // "Market opportunity" recommendations were about splitting the unowned pool.
   // Under plants that mechanic is retired — you expand by BUILDING PLANTS, which
-  // the per-sector build flow already surfaces (ticket #1145) — so skip the
+  // the per-sector build flow already surfaces, so skip the
   // pool-split economy fetch entirely and don't recommend a dead action.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
@@ -419,7 +417,7 @@ export async function loadRecommendationsForUser(
   // Fetch party budget if member
   let partyBudget: PartyBudget | null = null;
   if (party) {
-    partyBudget = await findPartyBudgetForScope(db.collection<PartyBudget>("partyBudget"), {
+    partyBudget = await findPartyBudgetForScope(partyBudgetCollection(db), {
       partyId: String(party.sequentialId),
       countryId: party.countryId,
       scope: "national",
@@ -428,15 +426,14 @@ export async function loadRecommendationsForUser(
 
   // Fetch user's corporations (for sector types + image checks)
   const userCorpSectorTypes: string[] = [];
-  const corporations = await db
-    .collection<{
-      _id: ObjectId;
-      type: string;
-      secondaryType?: string | null;
-      name: string;
-      logoUrl?: string;
-      headerImageUrl?: string;
-    }>("corporations")
+  const corporations = await corporationsCollection<{
+    _id: ObjectId;
+    type: string;
+    secondaryType?: string | null;
+    name: string;
+    logoUrl?: string;
+    headerImageUrl?: string;
+  }>(db)
     .find({ ceoId: new ObjectId(character._id) })
     .toArray();
   for (const corp of corporations) {
@@ -457,8 +454,7 @@ export async function loadRecommendationsForUser(
   }> = [];
   if (character.party) {
     // Check state-level vacancies - only in user's home state
-    const stateOrgs = await db
-      .collection<StatePartyOrg>("statePartyOrg")
+    const stateOrgs = await statePartyOrgCollection(db)
       .find({
         partyId: character.party,
         stateId: character.homeState,
@@ -491,14 +487,12 @@ export async function loadRecommendationsForUser(
       }
     }
     // Check national-level vacancies
-    const nationalLeadership = await db
-      .collection<{
-        partyId: string;
-        chairId?: ObjectId | null;
-        viceChairId?: ObjectId | null;
-        treasurerId?: ObjectId | null;
-      }>("nationalPartyLeadership")
-      .findOne({ partyId: character.party });
+    const nationalLeadership = await nationalPartyLeadershipCollection<{
+      partyId: string;
+      chairId?: ObjectId | null;
+      viceChairId?: ObjectId | null;
+      treasurerId?: ObjectId | null;
+    }>(db).findOne({ partyId: character.party });
     if (nationalLeadership) {
       if (!nationalLeadership.chairId) {
         vacantPositions.push({

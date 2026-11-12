@@ -11,7 +11,7 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { FederalBudget, SovereignCrisisState } from "@/lib/db/types/budget";
+import type { SovereignCrisisState } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getNationalBudgetId, calculateSovereignRolloverAmount } from "@/lib/bonds/sovereign";
 import { applyExchangeRateDepreciation } from "../sideEffects/fxDepreciation";
@@ -20,6 +20,8 @@ import { applyExecutivePoliticalImpact } from "../political/executivePoliticalIm
 import { triggerSystemNoConfidence } from "../political/triggerSystemNoConfidence";
 import { emitCivilUnrestEvents } from "../political/civilUnrestEvents";
 import { MONETIZE_GATE_INFLATION, INFLATION_SHOCK_MULTIPLIER } from "../constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const MONETIZE_FX_COUPLING = 0.4;
 
@@ -53,7 +55,7 @@ export async function applyMonetizeResolution(
   const { countryCode, currentTurn, realtimeMs, decisionId } = input;
 
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return { ok: false, reason: "no-budget" };
 
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
@@ -103,9 +105,7 @@ export async function applyMonetizeResolution(
     crisisLegislativeDeadlineAt: null,
   };
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: update });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: update });
 
   if (!input.skipDecisionUpdate) {
     const decisionUpdate: Partial<SovereignCrisisDecision> = {
@@ -115,18 +115,17 @@ export async function applyMonetizeResolution(
       resolvedAt: new Date(realtimeMs),
       resolvedReason: "Sovereign debt monetized (phase 6 auto-ratify)",
     };
-    await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne({ _id: decisionId }, { $set: decisionUpdate });
+    await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decisionId },
+      { $set: decisionUpdate }
+    );
   }
 
   await emitMonetizedNews(countryCode, currentTurn, printedAmount, inflationShockPp);
 
   // Phase 11b: executive personal political impact (inflation always wrecks
   // incumbents).
-  const decision = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-    .findOne({ _id: decisionId });
+  const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "monetize");
 
   // Phase 11b: parliamentary countries auto-trigger no-confidence after Monetize.

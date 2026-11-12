@@ -12,6 +12,7 @@ import type {
   LeaderConfidenceHistoryEntry,
 } from "@/lib/db/types/countryLeaderState";
 import { logWireEvent } from "@/lib/wireEvent";
+import { logger } from "@/lib/observability/logger";
 import { getCountryConfig } from "@/lib/constants/countries";
 import type { CountryId } from "@/lib/constants/countries";
 import { readInvestorConfidence, writeInvestorConfidence } from "../investorConfidence";
@@ -34,6 +35,9 @@ import type {
   ConsequenceResult,
   PrivatizationConsequenceContext,
 } from "./types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { countryLeaderStatesCollection } from "@/lib/db/repositories/countryLeaderStates";
 
 export async function applyNationalizationConsequences(
   db: Db,
@@ -121,7 +125,9 @@ export async function applyNationalizationConsequences(
           tensionDelta
         );
       } catch (err) {
-        console.error("[nationalization] tension event for a foreign taking failed:", err);
+        logger.error("nationalization", "Tension event for a foreign taking failed", err, {
+          countryId: ctx.countryId,
+        });
       }
     }
   }
@@ -147,9 +153,10 @@ function countryName(countryId: CountryId): string {
 
 /** Active regime's governing party id (most-recently-updated leader-state). */
 async function resolveActiveGoverningPartyId(db: Db, countryId: CountryId): Promise<string | null> {
-  const leader = await db
-    .collection<CountryLeaderState>("countryLeaderStates")
-    .findOne({ countryId }, { sort: { updatedAt: -1 } });
+  const leader = await countryLeaderStatesCollection(db).findOne(
+    { countryId },
+    { sort: { updatedAt: -1 } }
+  );
   return leader?.governingPartyId ?? null;
 }
 
@@ -209,8 +216,7 @@ async function applyPublicTrustNudge(
   await applyLegacyTrustDelta(db, countryId, delta);
 
   // The reported nudges stay per-region so callers keep their existing shape.
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1 } })
     .toArray();
   return states.map((s) => ({
@@ -228,7 +234,7 @@ async function applyLegitimacyDelta(
   turn: number,
   reason: string = "nationalization"
 ): Promise<void> {
-  const coll = db.collection<CountryLeaderState>("countryLeaderStates");
+  const coll = countryLeaderStatesCollection(db);
   // A country accumulates one leader-state doc per leader over time; target the
   // ACTIVE regime (most-recently-updated), not an arbitrary/stale former leader.
   const leader = await coll.findOne({ countryId }, { sort: { updatedAt: -1 } });
@@ -267,9 +273,10 @@ async function resolveIdeologyMultiplier(
   if (!governingPartyId) return computeIdeologyMultiplier(null);
   const seq = Number(governingPartyId);
   if (!Number.isFinite(seq)) return computeIdeologyMultiplier(null);
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId, sequentialId: seq }, { projection: { economicPosition: 1 } });
+  const party = await politicalPartiesCollection(db).findOne(
+    { countryId, sequentialId: seq },
+    { projection: { economicPosition: 1 } }
+  );
   if (!party || typeof party.economicPosition !== "number") return computeIdeologyMultiplier(null);
   return computeIdeologyMultiplier(party.economicPosition / 5); // [-5,5] → [-1,1]
 }

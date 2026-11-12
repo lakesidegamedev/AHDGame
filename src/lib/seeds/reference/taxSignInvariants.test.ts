@@ -101,6 +101,8 @@ describe("tax legislation: economic sign invariants", () => {
         (lt.effectTargetsWeighted ?? []).some((t: any) => t.metricId === inv.metric)
     );
 
+    if (bills.length === 0) continue;
+
     describe(`${inv.taxTypes.join("/")} · ${inv.metric} (${inv.why})`, () => {
       for (const lt of bills) {
         const target = (lt.effectTargetsWeighted as any[]).find((t) => t.metricId === inv.metric);

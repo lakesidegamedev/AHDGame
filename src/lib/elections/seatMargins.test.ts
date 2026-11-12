@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { largestRemainderSeats } from "@/lib/turn/election/seatAllocation";
+import { largestRemainderSeats } from "@/lib/elections/resolution/seatAllocation";
 import { computeSeatMargins, seatMarginFor, type SeatProjection } from "./seatMargins";
 
 /** Hamilton / largest remainder with no threshold, the engine's own core. */

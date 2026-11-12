@@ -1,0 +1,196 @@
+import type { DeLawText } from "./deLawTextTypes";
+
+export const DE_LAW_TEXT_EDUCATION: Record<string, DeLawText> = {
+  "education.universalSchooling.primary": [
+    "School Attendance and Education Act",
+    "Who is schooled, for how long, and at whose expense.",
+    4,
+    [
+      ["No National Settlement", "Schooling is left to families and local bodies."],
+      ["Compulsory Primary", "Every child attends primary school."],
+      ["Compulsory Secondary", "Attendance runs through lower secondary school."],
+      [
+        "Full Secondary Guarantee",
+        "Every young person is guaranteed a place through upper secondary or vocational training.",
+      ],
+      [
+        "Comprehensive Guarantee",
+        "Free schooling from early years to completion, with support for every learner.",
+      ],
+    ],
+  ],
+  "education.teacherCorps.primary": [
+    "Teacher Training and School Buildings Act",
+    "Teacher supply, pay and the school estate behind the classroom door.",
+    2,
+    [
+      ["No Programmes", "Schools hire and build as they can."],
+      ["Emergency Hiring", "Lateral entry and short courses fill the worst vacancies."],
+      ["Teachers and Buildings", "Training places and a school renovation fund run side by side."],
+      [
+        "National Teaching Service",
+        "Competitive pay and a state-wide training pipeline keep classrooms staffed.",
+      ],
+      [
+        "Full Staffing Guarantee",
+        "Every classroom is staffed and every building is kept to standard.",
+      ],
+    ],
+  ],
+  "education.adultSkills.primary": [
+    "Vocational Training and Apprenticeship Act",
+    "The dual system of apprenticeships and the retraining of working adults.",
+    3,
+    [
+      ["No Provision", "Training is left to employers."],
+      ["Evening Courses", "Adult education centres offer evening courses."],
+      ["Dual Training System", "Apprenticeships combine firm placement with vocational school."],
+      [
+        "National Training System",
+        "Chambers, firms and the state run certified training for every trade.",
+      ],
+      [
+        "Universal Skills Guarantee",
+        "Every worker has a right to retraining throughout working life.",
+      ],
+    ],
+  ],
+  "education.attainment.primary": [
+    "Literacy and Attainment Standards Act",
+    "Raising what the average school leaver can actually do.",
+    2,
+    [
+      ["No Programmes", "No national effort targets attainment."],
+      ["Literacy Campaigns", "Reading and numeracy campaigns target weak schools."],
+      ["Completion Programmes", "Support keeps pupils from leaving without a certificate."],
+      ["Attainment Standards", "National standards and extra funds lift low performing schools."],
+      [
+        "Universal Attainment Drive",
+        "Every school is held to and funded for a high common standard.",
+      ],
+    ],
+  ],
+  "education.research.primary": [
+    "Research Funding and Science Act",
+    "Research societies, institutes and the funding behind German science.",
+    3,
+    [
+      ["No Funding", "Research depends on private money alone."],
+      ["Research Grants", "A national research foundation awards competitive grants."],
+      [
+        "Research Institutes",
+        "Max Planck, Fraunhofer and Helmholtz style institutes receive steady funds.",
+      ],
+      [
+        "National Research Drive",
+        "Excellence initiatives concentrate funds in leading universities.",
+      ],
+      ["Scientific Mobilization", "Science is a national priority with large long term budgets."],
+    ],
+  ],
+  "education.standards.primary": [
+    "School Inspection and Examination Act",
+    "Inspectors, final examinations and the way pupils are sorted.",
+    3,
+    [
+      ["No National Standards", "Each school sets its own bar."],
+      ["School Inspection", "Inspectors visit schools and report."],
+      ["Common Examinations", "A shared final examination gives certificates the same meaning."],
+      ["Certificate Regime", "National standards and regular testing apply at every stage."],
+      [
+        "Rigorous National Regime",
+        "Strict national standards, testing and consequences bind every school.",
+      ],
+    ],
+  ],
+  "education.choice.primary": [
+    "Independent Schools and School Choice Act",
+    "How far public money follows families into independent schools.",
+    2,
+    [
+      ["Assigned Places Only", "Pupils attend the school assigned by catchment."],
+      ["Recognized Independents", "Independent schools may operate with limited support."],
+      [
+        "Subsidized Independents",
+        "The state pays part of the cost of recognized independent schools.",
+      ],
+      [
+        "Broad Choice Support",
+        "Families may pick among public, church and independent schools with funds following.",
+      ],
+      ["Full Choice System", "Funding follows every pupil to the school the family chooses."],
+    ],
+  ],
+  "sec.jobCentreReintegration": [
+    "Reintegration and Retraining Act",
+    "What the long term unemployed and those leaving service are owed to get back to work.",
+    3,
+    [
+      ["No Scheme", "People leaving work or service get no organized help."],
+      ["Transition Payments", "Short payments bridge the gap to a new job."],
+      ["Training and Placement", "Retraining and job placement are offered to those who qualify."],
+      [
+        "Full Reintegration Programme",
+        "Personal case workers, training and subsidized work run together.",
+      ],
+      [
+        "Lifelong Programme",
+        "A standing guarantee of retraining and placement applies at every stage of life.",
+      ],
+    ],
+  ],
+  "sec.universityPact": [
+    "University Funding Pact Act",
+    "Federal and Land funding agreements that keep the universities running.",
+    3,
+    [
+      ["No Pact", "Universities depend on their own Land alone."],
+      ["Basic Funding", "A base grant covers teaching costs."],
+      ["Joint Pact", "Federal and Land governments co-fund places and research."],
+      ["Expanded Pact", "More places, better ratios and excellence funding are secured."],
+      ["National University Push", "Long term guarantees make universities a national priority."],
+    ],
+  ],
+  "sec.schoolMealsAndAllDayCare": [
+    "School Meals and All Day Care Act",
+    "Hot lunches, after school care and the full school day.",
+    1,
+    [
+      ["No Provision", "Schools end at midday and lunch is the family's job."],
+      ["Meals in Schools", "Some schools offer subsidized lunches."],
+      ["Meals and Care Service", "Lunch and after school care are widely available."],
+      ["Universal Free Provision", "Every pupil is entitled to a free lunch and a day care place."],
+      [
+        "Full Welfare in Schools",
+        "Meals, care, health checks and support are part of every school day.",
+      ],
+    ],
+  ],
+  "sec.vocationalStandards": [
+    "Vocational Qualification Standards Act",
+    "What a certificate proves, from the trade chamber to the national framework.",
+    3,
+    [
+      ["No Standards", "Qualifications mean what the issuer says."],
+      ["Model Standards", "Model curricula guide the chambers."],
+      ["Certificate System", "Recognized certificates carry the same weight across the country."],
+      [
+        "National Qualification Framework",
+        "Every qualification is placed on a national scale and recognized abroad.",
+      ],
+      ["Universal Standards", "One standard governs all vocational and academic credentials."],
+    ],
+  ],
+  "sec.privateSchoolSubsidy": [
+    "Private School Subsidy Act",
+    "Public money for church and independent schools and the pupils who attend them.",
+    2,
+    [
+      ["No Programmes", "Private schools are on their own."],
+      ["Subsidy Fund", "A modest fund supports recognized private schools."],
+      ["Subsidy System", "Statutory subsidies cover a share of teaching costs."],
+      ["Broad Choice Support", "Subsidies and grants make private places widely affordable."],
+      ["Full Choice Funding", "Private schools are funded close to the public level."],
+    ],
+  ],
+};

@@ -22,6 +22,7 @@ import { PRESET_YEAR, DEFAULT_PRESET } from "@/lib/constants/alignmentSeeds";
 import { loadAlignmentTopology } from "@/lib/alignment/topology";
 import { resolveAlignmentEra } from "@/lib/constants/alignmentEras";
 import { INTERNATIONAL_ORGANIZATIONS } from "@/lib/constants/internationalOrganizations";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /**
  * Parallel-join coordination. A country is admitted only when BOTH gates pass:
@@ -86,21 +87,16 @@ export async function admitMember(
 /**
  * ONE COUNTRY, ONE BLOC. Give up the rival alliance's row before taking this one.
  *
- * Called from `admitMember` rather than from its callers because that is the one
- * chokepoint every accession runs through — the org turn phase, the parallel-join
- * arbiter, a proxy war's prize and the settlement actuation all land here, and a
- * rule enforced at four call sites is a rule that will be missed at the fifth.
+ * Called from `admitMember` because that is the single chokepoint every
+ * accession runs through; a rule enforced at four call sites will be missed
+ * at the fifth.
  *
- * ⚠️ BEFORE the insert, not after. `loadBlocMembership` writes `out[countryId] =
- * bloc` once per row with no precedence, so a country holding a row in both poles
- * reads as whichever document Mongo happened to return last — its own bloc becomes
- * a coin flip that resolves differently on successive reads, and every military and
- * alignment call downstream reads that map. A throw between the two steps must
- * therefore leave the country in NEITHER pole, which is wrong but deterministic and
- * legible to an admin, rather than in BOTH. `settlement/actuate.ts` reached the same
- * conclusion for reunification and orders its own withdrawal first for this reason.
+ * ⚠️ BEFORE the insert. `loadBlocMembership` writes `out[countryId] = bloc`
+ * per row with no precedence, so a country in both poles reads as whichever
+ * doc Mongo returns last. A throw between the two steps must leave the
+ * country in NEITHER pole (wrong but deterministic) rather than BOTH.
  *
- * Silent no-op for an org that does not govern accession: joining the UN costs a
+ * Silent no-op for orgs that do not govern accession: joining the UN costs a
  * country nothing it already holds.
  */
 async function leaveRivalBlocs(
@@ -144,24 +140,21 @@ async function leaveRivalBlocs(
 }
 
 /**
- * An organisation does not sanction its own member, so admitting one settles the
- * quarrel: terminate any sanctions this org still holds against the joiner and
+ * An organisation does not sanction its own member, so admitting one settles
+ * the quarrel: terminate any sanctions this org holds against the joiner and
  * lift the embargoes they fanned out.
  *
- * `proposeLegislation` refuses to TABLE sanctions against a member, which closes
- * that state at one door; accession is the other one, and nothing was watching
- * it. Left alone the resolution stays `active`, so every other member goes on
- * embargoing a country it has just voted in, and the alignment phase goes on
- * docking the bloc's own standing for sanctioning one of its own.
+ * `proposeLegislation` refuses to TABLE sanctions against a member; accession
+ * is the other door, and nothing was watching it. Otherwise other members go
+ * on embargoing a country they just voted in, and the alignment phase docks
+ * the bloc's own standing for sanctioning one of its own.
  *
- * ⚠️ BEFORE the insert, for the reason `leaveRivalBlocs` above is: a throw
- * between the two steps must leave a non-member whose sanctions were lifted
- * early — untidy, but nothing a player can see is wrong — rather than a member
- * under its own organisation's embargo, which is the state this exists to
- * prevent.
+ * ⚠️ BEFORE the insert, like `leaveRivalBlocs`: a throw between the two steps
+ * must leave a non-member whose sanctions were lifted early, not a member
+ * under its own organisation's embargo.
  *
- * Same teardown as `expireActiveSanctions` in the org turn phase: lift the
- * embargoes, then mark the resolution terminated.
+ * Same teardown as `expireActiveSanctions`: lift embargoes, then mark the
+ * resolution terminated.
  */
 async function liftOwnSanctionsAgainst(
   db: Db,
@@ -207,9 +200,10 @@ export async function resolveJoinApplication(
   // Read the linked Join bill's live status (poll).
   let billStatus: string | undefined;
   if (proposal.domesticBillId) {
-    const bill = await db
-      .collection<Bill>("bills")
-      .findOne({ _id: proposal.domesticBillId }, { projection: { status: 1 } });
+    const bill = await billsCollection(db).findOne(
+      { _id: proposal.domesticBillId },
+      { projection: { status: 1 } }
+    );
     billStatus = bill?.status;
   }
 
@@ -238,12 +232,10 @@ export async function resolveJoinApplication(
     );
     // Cancel the linked bill only if it's still in progress (i.e. the org side failed).
     if (proposal.domesticBillId && !domesticFailed) {
-      await db
-        .collection<Bill>("bills")
-        .updateOne(
-          { _id: proposal.domesticBillId, status: { $nin: BILL_FAILED_STATUS_LIST } },
-          { $set: { status: "failed", updatedAt: new Date() } }
-        );
+      await billsCollection(db).updateOne(
+        { _id: proposal.domesticBillId, status: { $nin: BILL_FAILED_STATUS_LIST } },
+        { $set: { status: "failed", updatedAt: new Date() } }
+      );
     }
     await recordOrgHistoryEvent(
       db,

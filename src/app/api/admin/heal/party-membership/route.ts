@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import type { Character, NPP, PoliticalParty, State } from "@/lib/db/types";
+import type { NPP, PoliticalParty, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // Map old slug values to party names for migration
 const SLUG_TO_NAME: Record<string, string> = {
@@ -53,23 +57,20 @@ export async function GET() {
     const db = await getDb();
 
     // Build state → countryId lookup for getCountryFromState
-    const allStates = await db
-      .collection<State>("states")
+    const allStates = await statesCollection(db)
       .find({})
       .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
       .toArray();
     stateCountryMap = new Map(allStates.map((s) => [s._id, s.countryId]));
 
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
     ]);
 
     // Build party lookup maps - key by country:sequentialId for uniqueness
@@ -245,23 +246,20 @@ export async function POST() {
     const db = await getDb();
 
     // Build state → countryId lookup for getCountryFromState
-    const allStates2 = await db
-      .collection<State>("states")
+    const allStates2 = await statesCollection(db)
       .find({})
       .project<{ _id: string; countryId: CountryId }>({ _id: 1, countryId: 1 })
       .toArray();
     stateCountryMap = new Map(allStates2.map((s) => [s._id, s.countryId]));
 
     const [characters, npps, parties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ party: { $exists: true, $ne: "independent" } })
         .toArray(),
-      db.collection<PoliticalParty>("politicalParties").find({}).toArray(),
+      politicalPartiesCollection(db).find({}).toArray(),
     ]);
 
     // Build party lookup maps - key by country:sequentialId for uniqueness
@@ -334,18 +332,17 @@ export async function POST() {
       const suggestedParty = findSuggestedParty(char.party, currentParty, memberCountry);
 
       if (suggestedParty) {
-        await db
-          .collection<Character>("characters")
-          .updateOne(
-            { _id: char._id },
-            { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
-          );
+        await charactersCollection(db).updateOne(
+          { _id: char._id },
+          { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
+        );
         charactersFixed++;
       } else {
         // No matching party found - set to independent
-        await db
-          .collection<Character>("characters")
-          .updateOne({ _id: char._id }, { $set: { party: "independent", updatedAt: new Date() } });
+        await charactersCollection(db).updateOne(
+          { _id: char._id },
+          { $set: { party: "independent", updatedAt: new Date() } }
+        );
         charactersSetIndependent++;
       }
     }
@@ -370,17 +367,16 @@ export async function POST() {
       const suggestedParty = findSuggestedParty(npp.party, currentParty, memberCountry);
 
       if (suggestedParty) {
-        await db
-          .collection<NPP>("npps")
-          .updateOne(
-            { _id: npp._id },
-            { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
-          );
+        await nppsCollection(db).updateOne(
+          { _id: npp._id },
+          { $set: { party: String(suggestedParty.sequentialId), updatedAt: new Date() } }
+        );
         nppsFixed++;
       } else {
-        await db
-          .collection<NPP>("npps")
-          .updateOne({ _id: npp._id }, { $set: { party: "independent", updatedAt: new Date() } });
+        await nppsCollection(db).updateOne(
+          { _id: npp._id },
+          { $set: { party: "independent", updatedAt: new Date() } }
+        );
         nppsSetIndependent++;
       }
     }

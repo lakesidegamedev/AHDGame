@@ -2,6 +2,7 @@ import { effectiveInterventionPolicy } from "@/lib/currency/intervention/rules";
 import type { Db } from "mongodb";
 import type { ExchangeRate } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 function percentChange(value: number, base: number): number | null {
   if (!Number.isFinite(value) || !Number.isFinite(base) || base === 0) return null;
@@ -54,17 +55,11 @@ function mapRate(row: ExchangeRate, historyLimit = 0) {
 }
 
 export async function queryForexRates(db: Db) {
-  const rows = await db
-    .collection<ExchangeRate>("exchangeRates")
-    .find({})
-    .sort({ currencyCode: 1 })
-    .toArray();
+  const rows = await exchangeRatesCollection(db).find({}).sort({ currencyCode: 1 }).toArray();
   return { found: rows.length > 0, currencies: rows.map((row) => mapRate(row)) };
 }
 
 export async function queryForexCurrency(db: Db, currency: CurrencyCode, historyLimit = 48) {
-  const row = await db
-    .collection<ExchangeRate>("exchangeRates")
-    .findOne({ currencyCode: currency });
+  const row = await exchangeRatesCollection(db).findOne({ currencyCode: currency });
   return row ? mapRate(row, historyLimit) : null;
 }

@@ -12,6 +12,8 @@ import {
   getConstituenciesForUkRegion,
 } from "@/lib/constituencies/ukWestminster2024";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type CommonsOffice = {
   type: "commons";
@@ -43,9 +45,9 @@ function isCommonsOffice(office: Character["currentOffice"]): office is CommonsO
 }
 
 function isPrimeMinisterOffice(office: Character["currentOffice"]): office is PrimeMinisterOffice {
-  // Prime Minister `state` is optional (OfficeType) and omitted by admin
-  // appointments, so eligibility must not require it (issue #2115). The
-  // claimable region resolves from office.state, else the holder's homeState.
+  // Prime Minister `state` is optional and omitted by admin appointments,
+  // so eligibility must not require it. The claimable region resolves from
+  // office.state, else the holder's homeState.
   return !!office && office.type === "primeMinister";
 }
 
@@ -65,7 +67,7 @@ function isUkCabinetOffice(office: Character["currentOffice"]): office is UkCabi
 // when they leave cabinet. The constituency lives on that retained record.
 async function findRetainedCommonsSeat(characterId: ObjectId) {
   const db = await getDb();
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     officeType: "commons",
     countryId: "UK",
     characterId,
@@ -186,7 +188,7 @@ export async function POST(request: Request) {
     const characterId = new ObjectId(character._id);
 
     // Check no other official already holds this constituency
-    const existing = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const existing = await electedOfficialsCollection(db).findOne({
       countryId: "UK",
       constituencyId,
       characterId: { $ne: characterId },
@@ -208,7 +210,7 @@ export async function POST(request: Request) {
 
     if (isCommonsOffice(office)) {
       // Commons: update the electedOfficials record then the character
-      const officialUpdate = await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+      const officialUpdate = await electedOfficialsCollection(db).updateOne(
         {
           officeType: "commons",
           countryId: "UK",
@@ -227,7 +229,7 @@ export async function POST(request: Request) {
         return NextResponse.json(notFound("Commons seat not found").toJson(), { status: 404 });
       }
 
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: characterId },
         {
           $set: {
@@ -237,7 +239,7 @@ export async function POST(request: Request) {
         }
       );
 
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         {
           _id: characterId,
           careerHistory: {
@@ -268,7 +270,7 @@ export async function POST(request: Request) {
       );
     } else {
       // Prime Minister: no electedOfficials record — update character directly
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         { _id: characterId },
         {
           $set: {
@@ -278,7 +280,7 @@ export async function POST(request: Request) {
         }
       );
 
-      await db.collection<Character>("characters").updateOne(
+      await charactersCollection(db).updateOne(
         {
           _id: characterId,
           careerHistory: {
@@ -338,7 +340,7 @@ async function selectCabinetMinisterConstituency(characterId: ObjectId, constitu
   }
 
   const db = await getDb();
-  const existing = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const existing = await electedOfficialsCollection(db).findOne({
     countryId: "UK",
     constituencyId,
     characterId: { $ne: characterId },
@@ -359,7 +361,7 @@ async function selectCabinetMinisterConstituency(characterId: ObjectId, constitu
   const officeLabel = getOfficeLabel(seatOffice, "UK");
   const now = new Date();
 
-  const officialUpdate = await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  const officialUpdate = await electedOfficialsCollection(db).updateOne(
     { officeType: "commons", countryId: "UK", state: regionId, characterId },
     {
       $set: {
@@ -373,7 +375,7 @@ async function selectCabinetMinisterConstituency(characterId: ObjectId, constitu
     return NextResponse.json(notFound("Commons seat not found").toJson(), { status: 404 });
   }
 
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     {
       _id: characterId,
       careerHistory: {

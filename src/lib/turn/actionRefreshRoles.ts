@@ -5,8 +5,6 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import type { LeadershipRole } from "@/lib/db/types/leadership";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
@@ -16,6 +14,12 @@ import { loadOrganizationHeads } from "@/lib/internationalOrganizations/orgHeadA
 import { resolveOppositionLeaderFromState } from "@/lib/parliament/oppositionLeader";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import type { PoliticalParty } from "@/lib/db/types/party";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 /** CEOs of the largest listed corporations in a country earn the major tier. */
 export const MAJOR_CEO_RANK = 10;
@@ -51,8 +55,7 @@ export interface OppositionRoles {
  */
 export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
   const [formations, governments] = await Promise.all([
-    db
-      .collection<GovernmentFormation>("governmentFormations")
+    governmentFormationsCollection(db)
       .find(
         {},
         {
@@ -66,8 +69,7 @@ export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
         }
       )
       .toArray(),
-    db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
+    parliamentaryGovernmentsCollection(db)
       .find({}, { projection: { _id: 1, governingPartyId: 1, coalitionPartyIds: 1 } })
       .toArray(),
   ]);
@@ -86,17 +88,13 @@ export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
   }
   const lowerOfficeTypes = [...new Set(lowerOfficeByCountry.values())];
   const [officials, partyDocs] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    (await getElectedOfficialsCollection(db))
       .find(
         { countryId: { $in: countryIds }, officeType: { $in: lowerOfficeTypes } },
         { projection: { countryId: 1, officeType: 1, party: 1, seatsHeld: 1 } }
       )
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
-      .find({ countryId: { $in: countryIds } })
-      .toArray(),
+    (await getPoliticalPartiesCollection(db)).find({ countryId: { $in: countryIds } }).toArray(),
   ]);
   const seatTallyByCountry = new Map<string, Record<string, number>>();
   for (const official of officials) {
@@ -146,8 +144,9 @@ export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
 export async function loadPresidingOfficerRoles(
   db: Db
 ): Promise<{ characterId: ObjectId; role: LeadershipRole }[]> {
-  const rows = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const rows = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find(
       { officeType: { $in: ["speaker", "senatePresident"] }, characterId: { $ne: null } },
       { projection: { characterId: 1, officeType: 1 } }
@@ -169,8 +168,7 @@ export async function loadPresidingOfficerRoles(
 
 /** Character ids of every seated state party chair. */
 export async function loadStatePartyChairIds(db: Db): Promise<Set<string>> {
-  const rows = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const rows = await statePartyOrgCollection(db)
     .find({ chairId: { $ne: null } }, { projection: { chairId: 1 } })
     .toArray();
   return new Set(rows.flatMap((r) => (r.chairId ? [r.chairId.toString()] : [])));
@@ -197,8 +195,9 @@ export interface CeoCandidate {
  * most the standard tier: the major tier is for running it yourself.
  */
 export async function loadCeoCandidates(db: Db): Promise<Map<string, CeoCandidate>> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await (
+    await getCorporationsCollection(db)
+  )
     .find(
       { isPrivate: { $ne: true }, imfInstitution: { $ne: true } },
       {

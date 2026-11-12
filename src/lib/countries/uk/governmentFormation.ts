@@ -12,7 +12,6 @@
 
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character } from "@/lib/db/types";
 import type { UKGovernment } from "@/lib/db/types/ukGovernment";
 import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
 import type { PoliticalParty } from "@/lib/db/types/party";
@@ -23,10 +22,10 @@ import { lowerChamberMajorityThreshold } from "@/lib/legislature/lowerChamberSea
 import {
   getUkConfidenceErosionScale,
   tickConfidenceForGov,
-} from "@/lib/uk/confidence/confidenceGaugeStore";
+} from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { loadUkBrokenPromiseMeter } from "@/lib/countries/uk/manifesto/deliveryMeter";
-import { tickNhsFromBudget } from "@/lib/uk/nhs/nhsStore";
+import { tickNhsFromBudget } from "@/lib/countries/uk/nhs/nhsStore";
 import { triggerSnapElection } from "@/lib/turn/snapElection";
 import { canDissolveOnConfidence } from "@/lib/turn/rules/snapElection";
 import { getGameState } from "@/lib/gameState";
@@ -38,6 +37,11 @@ import {
   updateParliamentaryGovernmentSeats,
   resetParliamentaryGovernmentAfterElection,
 } from "@/lib/turn/parliamentaryGovernment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
+import { ukGovernmentCollection } from "@/lib/db/repositories/ukGovernment";
 
 // ---------------------------------------------------------------------------
 // Exported helpers — delegate to shared system, maintain original signatures
@@ -80,26 +84,17 @@ export async function updateGovernmentSeats(): Promise<void> {
     await updateParliamentaryGovernmentSeats(db, "UK");
   }
 
-  // Per-turn gauges run on EVERY turn. They used to live at the tail of the
-  // one-time seed above, which the existing-doc branch returned before
-  // reaching, so on a live world neither the confidence gauge nor NHS quality
-  // ever ticked and both collections stayed empty while the UI showed defaults.
+  // Per-turn gauges run on EVERY turn, independent of the one-time seed.
   await tickUkGovernmentGauges(db, new Date());
 }
 
 /**
- * Confidence gauge and NHS quality per-turn drift (epic #856). Exported so the
- * turn test can drive it directly. When the gauge bottoms out AND
- * `UK_CONFIDENCE_GAUGE_DISSOLUTION=1`, Parliament is dissolved through the
- * shared snap-election path (bypassing the PM's allowance: this is the House
- * withdrawing confidence, not the PM spending a snap). The gauge carries
- * through the election and changes when the incoming government forms. Off by default; the gauge still accrues and is
- * observable.
+ * Confidence gauge and NHS quality per-turn drift. Dissolves Parliament via the shared snap-election path (House withdrawing confidence, not the PM's snap) when the gauge bottoms out and UK_CONFIDENCE_GAUGE_DISSOLUTION=1; the gauge persists through the election. Off by default but still accrues and is observable.
  */
 export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
   const nhsGameState = await getGameState(db);
   const [approvalDoc, brokenPromiseMeter] = await Promise.all([
-    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: "UK" }),
+    governmentApprovalsCollection(db).findOne({ _id: "UK" }),
     loadUkBrokenPromiseMeter(db),
   ]);
   if (approvalDoc) {
@@ -167,20 +162,16 @@ async function seedGovernmentFormation(db: Db): Promise<void> {
   const totalSeats = getTotalUkCommonsSeats(await getGameStatePreset(db));
   const majorityThreshold = lowerChamberMajorityThreshold(totalSeats);
 
-  const ukGov = await db.collection<UKGovernment>("ukGovernment").findOne({ _id: "current" });
-  const parlGov = await db
-    .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-    .findOne({ _id: "UK" });
+  const ukGov = await ukGovernmentCollection<UKGovernment>(db).findOne({ _id: "current" });
+  const parlGov = await parliamentaryGovernmentsCollection(db).findOne({ _id: "UK" });
   const legacyPmId = ukGov?.pmCharacterId ?? parlGov?.pmCharacterId ?? null;
 
-  const pmChar = legacyPmId
-    ? await db.collection<Character>("characters").findOne({ _id: legacyPmId })
-    : null;
+  const pmChar = legacyPmId ? await charactersCollection(db).findOne({ _id: legacyPmId }) : null;
 
   if (legacyPmId && pmChar) {
     const pmParty =
       pmChar?.party != null
-        ? await db.collection<PoliticalParty>("politicalParties").findOne({
+        ? await politicalPartiesCollection(db).findOne({
             sequentialId:
               typeof pmChar.party === "number" ? pmChar.party : parseInt(String(pmChar.party), 10),
             countryId: "UK",

@@ -79,14 +79,14 @@ export const TRADE_EXPORT_PREMIUM_RATE = 6;
 export const TRADE_EXPORT_PREMIUM_CAP = 6;
 
 /**
- * Trade-exposure embargo model (feature-gated on `embargoTradeExposureEnabled`).
+ * Trade-exposure embargo model.
  *
  * Legacy behaviour: a TOTAL embargo (commodity "all", mode "block") mothballs
  * every sector a target-nation corporation runs in the source country — revenue
  * AND cost zeroed, the whole operation goes dark including its domestic host
  * sales. That is both economically wrong (an embargo restricts cross-border
  * flows, not a locally-operating subsidiary's domestic commerce) and invisible
- * in the corp Financials (ticket #935).
+ * in the corp Financials.
  *
  * New behaviour: the embargo strips only the sector's cross-border leg. The
  * sector keeps operating on domestic host demand; revenue is scaled by

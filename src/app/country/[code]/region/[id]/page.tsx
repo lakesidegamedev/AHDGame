@@ -15,11 +15,9 @@ import {
 } from "@/lib/constants/countries";
 import { UK_REGIONS, UK_NATIONS } from "@/lib/constants/uk";
 import { getAuthUserWithCharacter } from "@/lib/auth";
-import { isOnboardingChecklistEnabled } from "@/lib/onboarding/featureFlag";
 import { isOnboardingDismissed } from "@/lib/onboarding/checklist";
 import { OnboardingStepTracker } from "@/components/onboarding/OnboardingStepTracker";
 import { resolveOfficeAccess } from "@/lib/governorOffice/access";
-import { calculateStateLean } from "@/lib/utils/demographics";
 import { isRegionalConditionsOverviewEnabled } from "@/lib/states/conditions/featureFlag";
 import { formatPopulation, formatGDP } from "@/lib/utils/formatters";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
@@ -55,6 +53,12 @@ import {
 } from "./regionData";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getRegionOfficialBuckets } from "@/lib/legislature/chamberOfficeType";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -77,9 +81,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const stateId = id;
   const db = await getDb();
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, countryId: countryId });
+  const state = await statesCollection(db).findOne({ _id: stateId, countryId: countryId });
   if (!state) return {};
   const config = getCountryConfig(countryId);
   return {
@@ -122,21 +124,17 @@ async function renderUKRegion(regionCode: string) {
     getRegionTurnout(stateId, "UK"),
     getStateOverview(db, { countryId: "UK", stateId }),
     // Independent of every other query — batch it instead of a trailing RTT (O2).
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
-    db
-      .collection<StateDemographics>("demographicDefaults")
-      .findOne(
-        { _id: stateId },
-        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
+    demographicDefaultsCollection(db).findOne(
+      { _id: stateId },
+      { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+    ),
   ]);
 
-  const { demographics, categories } = demographicsData;
+  const { demographics } = demographicsData;
   const governmentApproval = approvalData?.approval ?? null;
   const approvalBase = approvalData?.baseApproval ?? null;
   const approvalModifiers = approvalData?.modifiers ?? [];
@@ -149,9 +147,7 @@ async function renderUKRegion(regionCode: string) {
           economicLean: state.cachedEconomicLean,
           socialLean: state.cachedSocialLean,
         }
-      : demographics
-        ? calculateStateLean(demographics, categories)
-        : null;
+      : null;
   const isZeroed = calculatedLeans?.economicLean === 0 && calculatedLeans?.socialLean === 0;
   if (!calculatedLeans || isZeroed) {
     calculatedLeans =
@@ -258,7 +254,10 @@ async function renderUKRegion(regionCode: string) {
     : null;
   // English non-London regions have no devolved executive — hide the chip.
   const showUKExecutive =
-    stateId === "SCO" || stateId === "WAL" || stateId === "NIR" || stateId === "LON";
+    countryHasFeature("scoUi", stateId) ||
+    countryHasFeature("walUi", stateId) ||
+    stateId === "NIR" ||
+    stateId === "LON";
 
   // Office-link visibility: holder OR authorized party officer of an NPP-held
   // First Minister's office (state Chair/Vice; national Chair/Vice when neither).
@@ -268,9 +267,10 @@ async function renderUKRegion(regionCode: string) {
 
   // Bug #0668: treat a viewer from another country as unaffiliated for this UK
   // region so cross-country party-id collisions don't surface party actions.
-  const gameConfig = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } });
+  const gameConfig = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { regionalConditionsOverviewEnabled: 1 } }
+  );
   const regionalConditionsOverviewEnabled = await isRegionalConditionsOverviewEnabled(gameConfig);
 
   const viewerPartyIdForRegion = isSameCountry(userData?.character, { countryId: "UK" })
@@ -284,7 +284,6 @@ async function renderUKRegion(regionCode: string) {
         nation={nation}
         state={serializedState}
         demographics={serializedDemographics}
-        categories={categories}
         censusData={censusData}
         partyOrg={serializedPartyOrg}
         calculatedLeans={calculatedLeans}
@@ -350,21 +349,18 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
     getStateOverview(db, { countryId, stateId }),
     getStatePartyBudgets(db, countryId, stateId),
     getStateRegLedger(db, { countryId, stateId }),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
-      ),
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } }),
-    db
-      .collection<StateDemographics>("demographicDefaults")
-      .findOne(
-        { _id: stateId },
-        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, startingYear: 1 } }
+    ),
+    gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { regionalConditionsOverviewEnabled: 1 } }
+    ),
+    demographicDefaultsCollection(db).findOne(
+      { _id: stateId },
+      { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+    ),
   ]);
 
   const activePreset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
@@ -394,8 +390,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
       // major parties and are the only records that reliably carry econ/social
       // positions; the semantic `majorPartyIds` codes have no PoliticalParty field
       // to match against, so we select by `isDefault` here.
-      db
-        .collection<PoliticalParty>("politicalParties")
+      politicalPartiesCollection(db)
         .find({ countryId, isDefault: true })
         .project<
           Pick<
@@ -442,7 +437,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
   const governmentApproval = approvalData?.approval ?? null;
   const approvalBaseScore = approvalData?.baseApproval ?? null;
   const approvalModifiers = approvalData?.modifiers ?? [];
-  const { demographics, categories } = demographicsData;
+  const { demographics } = demographicsData;
 
   // Calculate state leans from demographics or fallback to legacy/cached values
   let calculatedLeans =
@@ -451,9 +446,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
           economicLean: state.cachedEconomicLean,
           socialLean: state.cachedSocialLean,
         }
-      : demographics
-        ? calculateStateLean(demographics, categories)
-        : null;
+      : null;
   const isZeroed = calculatedLeans?.economicLean === 0 && calculatedLeans?.socialLean === 0;
 
   if (!calculatedLeans || isZeroed) {
@@ -572,12 +565,11 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
 
   const regionUrl = buildRegionUrl(countryId, regionCode);
 
-  // Bug #0668: party sequentialIds collide across countries, so a foreign
-  // viewer's party id can map onto a same-id local party — surfacing the
-  // Contest panel / Quick Actions / budget cards for the wrong country. Treat
-  // the viewer as unaffiliated for this region when they belong to a different
-  // country. (`isSameCountry` resolves a missing country to "US", preserving
-  // legacy US characters.)
+  // Party sequentialIds collide across countries, so a foreign viewer's
+  // party id can map onto a same-id local party. Treat the viewer as
+  // unaffiliated for this region when they belong to a different country.
+  // (`isSameCountry` resolves a missing country to "US", preserving legacy
+  // US characters.)
   const viewerPartyIdForRegion = isSameCountry(userData?.character, { countryId })
     ? (userData?.character?.party ?? null)
     : null;
@@ -625,7 +617,9 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
           }
           motto={STATE_MOTTOS[state._id] ?? null}
           comprising={
-            countryId === "IE" ? (IE_REGION_CONSTITUENT_COUNCILS[state._id] ?? null) : null
+            countryHasFeature("ieUi", countryId)
+              ? (IE_REGION_CONSTITUENT_COUNCILS[state._id] ?? null)
+              : null
           }
           relocate={{
             userHomeState: userData?.character?.homeState,
@@ -642,7 +636,6 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
             players={serializedPlayers}
             npps={serializedNPPs}
             demographics={serializedDemographics}
-            categories={categories}
             censusData={getRegionCensusData(countryId, state._id, activePreset)}
             calculatedLeans={calculatedLeans}
             regionParties={regionParties}
@@ -668,9 +661,9 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
 // ── Page component ──
 
 /**
- * Whether to record the "scout-state" onboarding step for this viewer: flag
- * on, this is the viewer's own home region, checklist not dismissed, and the
- * step not yet stored.
+ * Whether to record the "scout-state" onboarding step for this viewer: this is
+ * the viewer's own home region, checklist not dismissed, and the step not yet
+ * stored.
  */
 async function shouldTrackScoutState(countryId: CountryId, regionCode: string): Promise<boolean> {
   try {
@@ -679,8 +672,7 @@ async function shouldTrackScoutState(countryId: CountryId, regionCode: string): 
     if (!character) return false;
     if (character.countryId !== countryId || character.homeState !== regionCode) return false;
     if (isOnboardingDismissed(character)) return false;
-    if (character.onboarding?.steps?.["scout-state"] !== undefined) return false;
-    return isOnboardingChecklistEnabled();
+    return character.onboarding?.steps?.["scout-state"] === undefined;
   } catch {
     return false;
   }

@@ -24,10 +24,14 @@ import {
 import type {
   CppccChairElection,
   CppccChairNomination,
-  Character,
   CongressLeader,
   ElectedOfficial,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { cppccChairNominationsCollection } from "@/lib/db/repositories/cppccChairNominations";
+import { cppccChairElectionsCollection } from "@/lib/db/repositories/cppccChairElections";
 
 const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — parity with US Speaker
 
@@ -37,25 +41,21 @@ const ELECTION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — parity with US
  * expired), this is a no-op.
  */
 export async function triggerCppccChairElectionAfterReconcile(db: Db, now: Date): Promise<void> {
-  const existing = await db
-    .collection<CppccChairElection>("cppccChairElections")
-    .findOne({ _id: "current" });
+  const existing = await cppccChairElectionsCollection(db).findOne({ _id: "current" });
   const currentTurn = (await getGameTime()).currentTurn;
   if (existing?.status === "voting" && !isLeadershipElectionClosed(existing, currentTurn, now)) {
     return; // already running — leave it
   }
 
   // Clear any stale nominations from a prior cycle.
-  await db
-    .collection<CppccChairNomination>("cppccChairNominations")
-    .updateMany(
-      { status: { $in: ["open", "voting"] } },
-      { $set: { status: "failed", updatedAt: now } }
-    );
+  await cppccChairNominationsCollection(db).updateMany(
+    { status: { $in: ["open", "voting"] } },
+    { $set: { status: "failed", updatedAt: now } }
+  );
 
   const endsAt = new Date(now.getTime() + ELECTION_DURATION_MS);
   const endsOnTurn = currentTurn + ELECTION_DURATION_MS / 3_600_000;
-  await db.collection<CppccChairElection>("cppccChairElections").updateOne(
+  await cppccChairElectionsCollection(db).updateOne(
     { _id: "current" },
     {
       $set: {
@@ -81,26 +81,22 @@ export async function triggerCppccChairElectionAfterReconcile(db: Db, now: Date)
     majorityBloc: npc.majorityBloc,
   });
 
-  const incumbent = await db
-    .collection<CongressLeader>("congressLeaders")
-    .findOne({ role: "chair_cppcc" });
+  const incumbent = await congressLeadersCollection(db).findOne({ role: "chair_cppcc" });
 
   if (incumbent?.characterId) {
-    const hasSeat = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const hasSeat = await electedOfficialsCollection(db).findOne({
       officeType: "npcDelegate",
       characterId: incumbent.characterId,
       countryId: "CN",
     });
     if (hasSeat) {
-      const char = await db
-        .collection<Character>("characters")
-        .findOne(
-          { _id: incumbent.characterId },
-          { projection: { party: 1, homeState: 1, name: 1 } }
-        );
+      const char = await charactersCollection(db).findOne(
+        { _id: incumbent.characterId },
+        { projection: { party: 1, homeState: 1, name: 1 } }
+      );
       const incumbentParty = char?.party ?? incumbent.party ?? null;
       if (incumbentParty && isPartyEligible(policy, incumbentParty, chamberCtx)) {
-        await db.collection<CppccChairNomination>("cppccChairNominations").insertOne({
+        await cppccChairNominationsCollection(db).insertOne({
           _id: new ObjectId(),
           nomineeId: incumbent.characterId,
           nomineeName: incumbent.characterName,

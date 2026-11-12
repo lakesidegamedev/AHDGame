@@ -1,0 +1,156 @@
+{
+  "config": {
+    "id": "US",
+    "name": "United States",
+    "code": "US",
+    "status": "active",
+    "flagEmoji": "🇺🇸",
+    "regionLabel": "State",
+    "regionLabelPlural": "States",
+    "executiveTitle": "President",
+    "executiveRealmPhrase": "the United States",
+    "executiveLabel": "White House",
+    "executivePath": "/country/us/executive",
+    "governmentType": "presidential",
+    "governmentTypeLabel": "Presidential Republic",
+    "descriptor": "A federal presidential republic with 50 states, a bicameral Congress, and a directly elected President who serves as both head of state and government.",
+    "heroImage": "https://flagcdn.com/w640/us.png",
+    "overviewHeroImage": "/api/images/hero/us-overview-mount-rushmore",
+    "overviewPath": "/country/us",
+    "mapPath": "/country/us/map",
+    "currencyCode": "USD",
+    "centralGovernmentLabel": "Federal Grants",
+    "exchangeName": "NYSE",
+    "financeMinisterCabinetId": "secretary_of_treasury",
+    "majorPartyIds": ["democrat", "republican"],
+    "partyCreationNPPs": { "statesRequired": 4, "lockHomeState": true, "nppsPerState": 2 },
+    "executiveTermLimit": {
+      "officeKey": "president",
+      "maxTermsPerCharacter": 2,
+      "blocksRunningMateSelection": true
+    },
+    "legislature": {
+      "name": "Congress",
+      "path": "/country/us/legislature",
+      "bicameral": true,
+      "lowerChamber": {
+        "key": "house",
+        "name": "House of Representatives",
+        "shortName": "House",
+        "seats": 435,
+        "description": "435 representatives, two-year terms. All revenue bills originate here."
+      },
+      "upperChamber": {
+        "key": "senate",
+        "name": "Senate",
+        "shortName": "Senate",
+        "seats": 100,
+        "description": "100 senators, six-year staggered terms. Confirms judges and cabinet.",
+        "elected": true,
+        "regionElectedClasses": true
+      }
+    },
+    "subNationalChamber": {
+      "key": "stateSenate",
+      "name": "State Senate",
+      "shortName": "State Senate"
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "vicePresident",
+        "label": "Vice President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Vice Presidents"
+      },
+      {
+        "key": "senate",
+        "label": "Senator",
+        "chamberKey": "senate",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Senators"
+      },
+      {
+        "key": "house",
+        "label": "Representative",
+        "chamberKey": "house",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Representatives"
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Governors"
+      },
+      {
+        "key": "stateSenate",
+        "label": "State Senator",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "State Senators"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Federal Reserve Chair",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Federal Reserve Chairs"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "upperChamber": "fptp",
+      "subNationalChamber": "pr_hareQuota",
+      "subNationalExecutive": "fptp",
+      "headOfState": "electoralCollege"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "upperElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Federal Reserve",
+      "abbreviation": "Fed",
+      "heroImage": "/api/images/hero/federal-reserve",
+      "heroAlt": "Marriner S. Eccles Federal Reserve Board Building, Washington D.C.",
+      "defaultPrimeRate": 3
+    },
+    "usdExchangeRate": 1
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Congress",
+        "path": "/country/us/legislature",
+        "bicameral": true,
+        "lowerChamber": {
+          "key": "house",
+          "name": "House of Representatives",
+          "shortName": "House",
+          "seats": 435,
+          "description": "435 representatives, two-year terms. All revenue bills originate here."
+        },
+        "upperChamber": {
+          "key": "senate",
+          "name": "Senate",
+          "shortName": "Senate",
+          "seats": 96,
+          "description": "96 senators from 48 states, six-year staggered terms.",
+          "elected": true,
+          "regionElectedClasses": true
+        }
+      }
+    }
+  },
+  "nationalAddressName": "State of the Union",
+  "regionalAssentOfficeKey": "governor"
+}

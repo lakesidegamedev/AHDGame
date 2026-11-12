@@ -13,17 +13,25 @@ import type {
   StateRegistrationPool,
 } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { HU_1991_TERRITORIAL_DISTRICTS } from "./data/electoralDistricts1991";
 import { hu2014RegionSeats } from "@/lib/turn/huAssemblyReform";
 import { huAssemblyElectionSystem } from "./rules/electoralTransition2011";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
 export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number, now: Date) {
   if (game.preset !== "1991-default") return false;
-  const country = await db
-    .collection<CountryGameState>("countryGameStates")
-    .findOne({ _id: "HU" }, { projection: { huElectoralSystem2011SinceTurn: 1 } });
+  const country = await countryGameStatesCollection(db).findOne(
+    { _id: "HU" },
+    { projection: { huElectoralSystem2011SinceTurn: 1 } }
+  );
   if (
     huAssemblyElectionSystem({
       calendarTurn: calendarTurn(turn, {
@@ -35,7 +43,7 @@ export async function bindHu2011Campaigns(db: Db, game: GameState, turn: number,
     }) !== "mixed-2011-v1"
   )
     return false;
-  const pending = await db.collection<Election>("elections").findOne(
+  const pending = await electionsCollection(db).findOne(
     {
       countryId: "HU",
       electionType: "nationalAssembly",
@@ -72,8 +80,7 @@ async function materializeHu2011PrimaryCohorts(
   session: ClientSession,
   authorizedOnTurn?: number
 ) {
-  const polls = await db
-    .collection<Election>("elections")
+  const polls = await electionsCollection(db)
     .find(
       {
         countryId: "HU",
@@ -114,8 +121,7 @@ async function materializeHu2011PrimaryCohorts(
       : [];
   });
   if (!candidates.length) return;
-  const receipts = await db
-    .collection<{ _id: string }>("hu1991AssemblyCounts")
+  const receipts = await hu1991AssemblyCountsCollection<{ _id: string }>(db)
     .find(
       {
         _id: {
@@ -128,8 +134,7 @@ async function materializeHu2011PrimaryCohorts(
     )
     .toArray();
   const frozen = new Set(receipts.map((row) => String(row._id)));
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find(
       {
         electionId: { $in: candidates.map((row) => row._id) },
@@ -161,22 +166,17 @@ async function materializeHu2011PrimaryCohorts(
   );
   const eligible = candidates.filter((row) => eligibleCycles.includes(row.cycle));
   if (!eligible.length) return;
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateMany(
+  await electionVoteTalliesCollection(db).updateMany(
     {
       electionId: { $in: eligible.map((row) => row._id) },
     },
     { $set: { updatedAt: now, hungarianAssemblyBallot: true } },
     { session }
   );
-  const regions = await db
-    .collection<State>("states")
-    .find(
-      { countryId: "HU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+  const regions = await statesCollection(db)
+    .find({ countryId: "HU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "HU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   if (new Set(pools.map((row) => row.stateId)).size !== pools.length)
@@ -203,7 +203,7 @@ async function materializeHu2011PrimaryCohorts(
   const capacities = hu2014RegionSeats(regions);
   if (Object.keys(capacities).length !== 6)
     throw new Error("Modern Hungarian binding needs six regions");
-  const changed = await db.collection<Election>("elections").bulkWrite(
+  const changed = await electionsCollection(db).bulkWrite(
     eligible.map((row) => ({
       updateOne: {
         filter: {

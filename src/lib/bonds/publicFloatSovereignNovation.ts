@@ -3,13 +3,12 @@
  * the funded maturity path pays only the frozen residual cash claim.
  */
 import { type Db } from "mongodb";
-import type { Bond, CentralBank } from "@/lib/db/types";
+import type { Bond } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, type BondMaturityTurns } from "@/lib/db/types/bond";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
-import type { FederalBudget } from "@/lib/db/types";
 import { readPoolForPrimary } from "@/lib/bonds/primaryMarket";
 import {
   planPublicFloatNovation,
@@ -19,6 +18,9 @@ import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { primaryDocumentId } from "./sovereignPrimarySettlement";
 import { frozenClaimPoolCashPerFace } from "./sovereignMaturityPayoutTargets";
 import { sovereignRolloverBondId, sovereignRolloverBondUpsert } from "./sovereignRolloverBond";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 type Disposition = NonNullable<MaturityClaim["publicFloatDisposition"]>;
@@ -67,12 +69,13 @@ async function freezeDisposition(
   const [pool, centralBank, budget] = await Promise.all([
     readPoolForPrimary(db, claim.currencyCode),
     countryId
-      ? db
-          .collection<CentralBank>("centralBanks")
-          .findOne({ _id: getBankId(countryId) }, { projection: { primeRate: 1 } })
+      ? centralBanksCollection(db).findOne(
+          { _id: getBankId(countryId) },
+          { projection: { primeRate: 1 } }
+        )
       : Promise.resolve(null),
     countryId
-      ? db.collection<FederalBudget>("federalBudget").findOne({ _id: nationalBudgetId(countryId) })
+      ? federalBudgetCollection(db).findOne({ _id: nationalBudgetId(countryId) })
       : Promise.resolve(null),
   ]);
   const budgetCurrencyCode = countryId
@@ -149,7 +152,7 @@ async function freezeDisposition(
         ),
       }
     : refusedPublicFloatDisposition(plan, allowNovation);
-  await db.collection<Bond>("bonds").updateOne(
+  await bondsCollection(db).updateOne(
     {
       _id: bond._id,
       "sovereignMaturityClaim.id": claim.id,
@@ -157,9 +160,10 @@ async function freezeDisposition(
     },
     { $set: { "sovereignMaturityClaim.publicFloatDisposition": disposition, updatedAt: now } }
   );
-  const saved = await db
-    .collection<Bond>("bonds")
-    .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+  const saved = await bondsCollection(db).findOne(
+    { _id: bond._id },
+    { projection: { sovereignMaturityClaim: 1 } }
+  );
   const frozen = saved?.sovereignMaturityClaim;
   if (!frozen || frozen.id !== claim.id || !frozen.publicFloatDisposition)
     throw new Error("Sovereign maturity disposition could not be frozen");
@@ -186,7 +190,7 @@ async function applyDisposition(
       disposition.sourceRestructureHaircutPercent === null
         ? { restructureHaircutPercent: null }
         : { restructureHaircutPercent: disposition.sourceRestructureHaircutPercent };
-    const source = await db.collection<Bond>("bonds").findOne({
+    const source = await bondsCollection(db).findOne({
       _id: bond._id,
       issuerType: "sovereign",
       countryId: disposition.sourceCountryId,
@@ -286,18 +290,20 @@ async function applyDisposition(
           );
           if (!shared.filter._id.equals(disposition.replacementBondId))
             throw new Error("Consolidated novation replacement identity changed after reservation");
-          await db
-            .collection<Bond>("bonds")
-            .updateOne(shared.filter, shared.update, { upsert: true, session });
+          await bondsCollection(db).updateOne(shared.filter, shared.update, {
+            upsert: true,
+            session,
+          });
         } else {
-          const inserted = await db
-            .collection<Bond>("bonds")
-            .insertOne({ _id: disposition.replacementBondId!, ...replacement } as Bond, {
+          const inserted = await bondsCollection(db).insertOne(
+            { _id: disposition.replacementBondId!, ...replacement } as Bond,
+            {
               session,
-            });
+            }
+          );
           void inserted;
         }
-        const sourceUpdate = await db.collection<Bond>("bonds").updateOne(
+        const sourceUpdate = await bondsCollection(db).updateOne(
           {
             _id: bond._id,
             issuerType: "sovereign",
@@ -325,7 +331,7 @@ async function applyDisposition(
         );
         if (sourceUpdate.matchedCount !== 1)
           throw new Error("Sovereign public-float source changed before novation commit");
-        const budgetUpdate = await db.collection<FederalBudget>("federalBudget").updateOne(
+        const budgetUpdate = await federalBudgetCollection(db).updateOne(
           {
             _id: disposition.budgetId,
             countryId: disposition.budgetCountryId,
@@ -345,7 +351,7 @@ async function applyDisposition(
         );
         if (budgetUpdate.matchedCount !== 1)
           throw new Error("Sovereign budget disappeared before public-float novation commit");
-        const claimUpdate = await db.collection<Bond>("bonds").updateOne(
+        const claimUpdate = await bondsCollection(db).updateOne(
           {
             _id: bond._id,
             "sovereignMaturityClaim.id": claim.id,
@@ -365,16 +371,18 @@ async function applyDisposition(
       { client }
     );
   } catch (error) {
-    const latest = await db
-      .collection<Bond>("bonds")
-      .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+    const latest = await bondsCollection(db).findOne(
+      { _id: bond._id },
+      { projection: { sovereignMaturityClaim: 1 } }
+    );
     const latestClaim = latest?.sovereignMaturityClaim;
     if (latestClaim?.id !== claim.id || latestClaim.publicFloatDisposition?.status !== "applied")
       throw error;
   }
-  const saved = await db
-    .collection<Bond>("bonds")
-    .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+  const saved = await bondsCollection(db).findOne(
+    { _id: bond._id },
+    { projection: { sovereignMaturityClaim: 1 } }
+  );
   const applied = saved?.sovereignMaturityClaim;
   if (!applied || applied.id !== claim.id || applied.publicFloatDisposition?.status !== "applied")
     throw new Error("Public-float novation receipt did not publish after settlement");

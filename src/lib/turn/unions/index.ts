@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import { ObjectId } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Character, CorporateSector, State, Union, User } from "@/lib/db/types";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CountryId } from "@/lib/constants/countries";
 import type { UnionOrganizer } from "@/lib/db/types/union";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
@@ -39,6 +39,13 @@ import { getBannedUnionCountryIds } from "@/lib/labour/unionLaws";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { processLabourRelationsTurn } from "./labourRelationsTurn";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
 
 export interface UnionsTurnResult {
   unionsProcessed: number;
@@ -51,42 +58,23 @@ export interface UnionsTurnResult {
 }
 
 /**
- * Give every sector that nobody represents to the seeded union for its
- * (countryId, sectorType), and report how many were adopted.
+ * Adopt every unrepresented sector into the seeded union for its
+ * (countryId, sectorType) and return how many were adopted.
  *
- * Union dues v1 replaced implicit coverage (a union covered every sector
- * matching its country and industry) with an explicit
- * `CorporateSector.representingUnionId` pointer, but nothing ever populated
- * that pointer for the sectors that already existed. The result on a live world
- * was that NO sector pointed at any union, so every union had 0 members, 0
- * average wage, no dues base, and an approval target stuck at the 55 base: the
- * union pages showed no workers, approval was identical everywhere, and
- * switching services on changed nothing because there were no represented
- * sectors to change.
+ * Runs in the turn rather than as a one-shot migration because sectors are
+ * created in several places that know nothing about unions.
  *
- * Doing this in the turn rather than as a one-shot migration is deliberate.
- * Sectors are created in several places (world seeding, NPP founding, player
- * expansion), and none of them know about unions, so a migration would fix
- * today's world and silently leak new unrepresented sectors forever. This is
- * the same "conversion not reinvention" shape as the roster backfill above.
- *
- * Only NPC SEEDED unions adopt: `foundedByCharacterId` is null (the one
- * roster union per industry) AND the union is not player-led. Vacant and
- * NPP-led seeded unions still cover new shops so the world does not leak
- * unrepresented sectors. A player who claimed the Newspaper Guild must
- * organize new shops, not inherit every NPP expansion for free.
- * A sector already pointing somewhere is never touched, so a rival that won a
- * shop keeps it, and losing a raid does not hand the shop back on the next turn.
+ * Only NPC seeded unions adopt (foundedByCharacterId null and not
+ * player-led); a player-claimed union must organize new shops itself. A
+ * sector already pointing at a union is never touched.
  */
 export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
-  const unrepresented = await db
-    .collection<CorporateSector>("corporateSectors")
+  const unrepresented = await corporateSectorsCollection(db)
     .find({ representingUnionId: null }, { projection: { _id: 1, countryId: 1, sectorType: 1 } })
     .toArray();
   if (unrepresented.length === 0) return 0;
 
-  const seededUnions = await db
-    .collection<Union>("unions")
+  const seededUnions = await unionsCollection(db)
     .find(
       // Seeded roster only. Vacant (`ownerId: null`) and NPP-led still adopt;
       // a player-claimed seeded union must organize new shops itself.
@@ -114,46 +102,30 @@ export async function adoptUnrepresentedSectors(db: Db): Promise<number> {
     });
   }
   if (ops.length === 0) return 0;
-  const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
+  const result = await corporateSectorsCollection(db).bulkWrite(ops);
   return result.modifiedCount ?? 0;
 }
 
 /**
  * Union dues v1 turn-processing pass, for every OWNED, non-suspended union:
- * resolve the sectors it represents (`CorporateSector.representingUnionId`),
- * derive real `members` and their member-weighted `averageAnnualWage` from
- * those sectors, credit `duesIncomePerTurn`, debit `servicesCostPerTurn`,
- * debit political contributions (a share of remaining free cash flow, paid
- * to organizers by influence), and trend `approval` toward `approvalTarget`.
- * Unowned unions are skipped entirely: no treasury/approval changes, so
- * Phase 5's NPC drift stays untouched for the sectors they represent
- * ("conversion not reinvention").
+ * resolve represented sectors (`CorporateSector.representingUnionId`), derive `members`
+ * and member-weighted `averageAnnualWage`, credit `duesIncomePerTurn`, debit
+ * `servicesCostPerTurn`, debit political contributions (share of free cash flow to
+ * organizers by influence), and trend `approval` toward `approvalTarget`.
+ * Unowned unions are skipped entirely so Phase 5's NPC drift stays untouched.
  *
- * The service bill NEVER pushes the treasury negative: if this turn's dues
- * income can't cover it, next turn's services lapse without a charge or
- * entitlement. Approval and all other service effects use this turn's prepaid
- * receipt, not the next purchase.
+ * The service bill NEVER pushes the treasury negative: if this turn's dues cannot cover it,
+ * next turn's services lapse without charge. Approval and other service effects use this
+ * turn's prepaid receipt, not the next purchase.
  *
- * Also auto-vacates leadership for leaders inactive beyond
- * `INACTIVE_CEO_TURN_THRESHOLD` turns, reuses the exact same constant and
- * `User.lastActivity`/`createdAt` signal as `inactiveCeoSectorShed.ts`'s CEO
- * analog (code-review fix #5: unions previously had no vacancy mechanism at
- * all, unlike CEOs, so one inactive leader permanently locked an industry).
- * A vacated union is excluded from this turn's dues/services/approval (it's
- * no longer owned as of this turn).
+ * Also auto-vacates leadership for leaders inactive beyond `INACTIVE_CEO_TURN_THRESHOLD`,
+ * mirroring `inactiveCeoSectorShed.ts` (uses `User.lastActivity`/`createdAt`). A vacated
+ * union is excluded from this turn's processing.
  *
- * Gated on `labourSystemMode >= "full"` (code-review fix #10), previously
- * this ran unconditionally, so disabling the feature after testing still
- * silently moved every union's treasury/approval forever with no way for a
- * (now locked-out) leader to counteract it. Skipping while disabled freezes
- * state instead.
+ * Gated on `labourSystemMode >= "full"`; when disabled, union state is frozen.
  *
- * Registered in `src/simulation/phases/turnPhaseRegistry.ts` immediately
- * after `"corporationTurn"`, reads sector `unionization`/`workers`/
- * `wagePerWorker` state that phase writes this same turn, though this pass
- * itself only touches `unions`/`characters` documents (and reads
- * `corporateSectors`), and writes a `union_contribution` financialTxLog row
- * per organizer payout.
+ * Registered immediately after `"corporationTurn"` and reads sector state that phase
+ * writes this same turn.
  */
 
 export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTurnResult> {
@@ -183,21 +155,18 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   // missing slots and preserves every existing (possibly claimed) union.
   // Comparing against the expected total, not just 0, is what heals a partial
   // roster, a single stray doc must never permanently block the backfill.
-  const unionCount = await db.collection<Union>("unions").countDocuments({});
-  const seededCountryIds = await db
-    .collection<State>("states")
-    .distinct("countryId", { _id: { $not: /^NATIONAL_/ } });
+  const unionCount = await unionsCollection(db).countDocuments({});
+  const preset = await getGameStatePresetOrDefault(db);
+  // Same country set seedUnions writes: background countries (#5702) have none.
+  const seededCountryIds = (
+    await statesCollection(db).distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
+  ).filter((countryId) => !isBackgroundInPreset(preset, countryId));
   const expectedUnionCount = seededCountryIds.length * OPERATING_SECTOR_TYPES.length;
   if (unionCount < expectedUnionCount) {
     console.warn(
       `[unionsTurn] labourSystemMode is 'full' but union roster is incomplete (${unionCount}/${expectedUnionCount}), backfilling via seedUnions(reset:false)`
     );
-    await seedUnions(
-      db,
-      (msg) => console.warn(`[unionsTurn] ${msg}`),
-      await getGameStatePresetOrDefault(db),
-      false
-    );
+    await seedUnions(db, (msg) => console.warn(`[unionsTurn] ${msg}`), preset, false);
   }
 
   // Union strength decay. Unlike dues and pressure this runs for EVERY union,
@@ -207,8 +176,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   // weights have to decay in step with the pool they came from or the two
   // numbers drift apart. Suspended unions stay frozen, same as dues.
   const bannedUnionCountryIds = await getBannedUnionCountryIds(db);
-  const enforcementBudgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const enforcementBudgets = await federalBudgetCollection(db)
     .find({ unionsBanned: true }, { projection: { countryId: 1, unionEnforcementPosture: 1 } })
     .toArray();
   const enforcementPostures = new Map(
@@ -220,24 +188,18 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   const bannedCountryList = Array.from(bannedUnionCountryIds);
   const suspendedUnionFilter =
     bannedCountryList.length > 0 ? { countryId: { $in: bannedCountryList } } : { suspended: true };
-  const suspendedUnionIds = await db
-    .collection<Union>("unions")
-    .distinct("_id", suspendedUnionFilter);
+  const suspendedUnionIds = await unionsCollection(db).distinct("_id", suspendedUnionFilter);
   const strengthDecayMultiplier = 1 - UNION_STRENGTH_DECAY_PER_TURN;
   const decayStamp = new Date();
   await Promise.all([
-    db
-      .collection<Union>("unions")
-      .updateMany(
-        { _id: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
-        { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
-      ),
-    db
-      .collection<UnionOrganizer>("unionOrganizers")
-      .updateMany(
-        { unionId: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
-        { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
-      ),
+    unionsCollection(db).updateMany(
+      { _id: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
+      { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
+    ),
+    unionOrganizersCollection(db).updateMany(
+      { unionId: { $nin: suspendedUnionIds }, strength: { $gt: 0 } },
+      { $mul: { strength: strengthDecayMultiplier }, $set: { updatedAt: decayStamp } }
+    ),
   ]);
 
   // Illicit unions under ban: heat decay, detection rolls, and exposure
@@ -260,8 +222,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
     );
   }
 
-  const owned = await db
-    .collection<Union>("unions")
+  const owned = await unionsCollection(db)
     .find(
       // Union ban (player suggestion #93): suspended unions (country under an
       // enacted ban) are frozen, no dues, no services, no approval trend, no
@@ -299,8 +260,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   // lastActivity/createdAt lookup exactly.
   const ownerIds = owned.map((u) => u.ownerId).filter((id): id is ObjectId => id != null);
   const owners = ownerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find({ _id: { $in: ownerIds } }, { projection: { _id: 1, userId: 1 } })
         .toArray()
     : [];
@@ -309,8 +269,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
     (s) => new ObjectId(s)
   );
   const users = userIds.length
-    ? await db
-        .collection<User>("users")
+    ? await usersCollection(db)
         .find({ _id: { $in: userIds } })
         .project<{ _id: ObjectId; lastActivity?: Date; createdAt?: Date }>({
           _id: 1,
@@ -348,21 +307,19 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
   }
 
   if (vacatedUnionIds.length > 0) {
-    await db
-      .collection<Union>("unions")
-      .updateMany({ _id: { $in: vacatedUnionIds } }, { $set: { ownerId: null, updatedAt: now } });
-    await db
-      .collection<Character>("characters")
-      .updateMany(
-        { _id: { $in: vacatedCharacterIds } },
-        { $set: { unionLeaderOf: null, updatedAt: now } }
-      );
+    await unionsCollection(db).updateMany(
+      { _id: { $in: vacatedUnionIds } },
+      { $set: { ownerId: null, updatedAt: now } }
+    );
+    await charactersCollection(db).updateMany(
+      { _id: { $in: vacatedCharacterIds } },
+      { $set: { unionLeaderOf: null, updatedAt: now } }
+    );
   }
 
   if (stillOwned.length > 0) {
     const stillOwnedIds = stillOwned.map((u) => u._id);
-    const representedSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const representedSectors = await corporateSectorsCollection(db)
       .find(
         { representingUnionId: { $in: stillOwnedIds } },
         { projection: { representingUnionId: 1, workers: 1, unionization: 1, wagePerWorker: 1 } }
@@ -376,8 +333,7 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
       else sectorsByUnionId.set(key, [sector]);
     }
 
-    const organizers = await db
-      .collection<UnionOrganizer>("unionOrganizers")
+    const organizers = await unionOrganizersCollection(db)
       .find(
         { unionId: { $in: stillOwnedIds }, strength: { $gt: 0 } },
         { projection: { unionId: 1, characterId: 1, strength: 1 } }
@@ -486,16 +442,15 @@ export async function processUnionsTurn(db: Db, turn?: number): Promise<UnionsTu
         },
       };
     });
-    await db.collection<Union>("unions").bulkWrite(ops);
+    await unionsCollection(db).bulkWrite(ops);
     if (characterOps.length > 0) {
-      await db.collection<Character>("characters").bulkWrite(characterOps);
+      await charactersCollection(db).bulkWrite(characterOps);
     }
     if (contributionTx.length > 0) {
       const payoutIds = [
         ...new Set(contributionTx.map((entry) => entry.subjectId!.toString())),
       ].map((id) => new ObjectId(id));
-      const named = await db
-        .collection<Character>("characters")
+      const named = await charactersCollection(db)
         .find({ _id: { $in: payoutIds } }, { projection: { _id: 1, name: 1 } })
         .toArray();
       const nameById = new Map(

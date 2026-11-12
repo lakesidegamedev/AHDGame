@@ -16,6 +16,7 @@ import { isAdoptedByName } from "@/lib/military/doctrineTree";
 import { NUCLEAR_CAPABLE, NUCLEAR_ENTRY_DOCTRINE_NODE } from "@/lib/military/nuclearProgram";
 import { resolveGameYear } from "@/lib/era/era";
 import { errorResponse } from "@/lib/api/errors";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface NuclearRouteParams {
   params: Promise<{ code: string; positionId: string }>;
@@ -86,24 +87,20 @@ export async function requireDefenceHolder(
 }
 
 interface GameStateSlice {
-  coldWarEnabled?: boolean;
   currentYear?: number;
   currentTurn?: number;
   startingYear?: number;
 }
 
 export async function loadGameStateSlice(db: Db): Promise<GameStateSlice | null> {
-  return db
-    .collection<GameStateSlice & { _id: string }>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { coldWarEnabled: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
-    );
+  return gameStateCollection<GameStateSlice & { _id: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, currentTurn: 1, startingYear: 1 } }
+  );
 }
 
 export interface NuclearEligibility {
   capable: boolean;
-  coldWarEnabled: boolean;
   doctrineAdopted: boolean;
   eligible: boolean;
 }
@@ -111,8 +108,7 @@ export interface NuclearEligibility {
 /** The programme's three entry gates, as the GET surface reports them. */
 export async function resolveEligibility(
   db: Db,
-  countryId: CountryId,
-  coldWarEnabled: boolean
+  countryId: CountryId
 ): Promise<NuclearEligibility> {
   // Capable = the era's named set OR a live programme with anything adopted.
   // The second arm is the covert breakout: a nation that already detonated a
@@ -124,25 +120,18 @@ export async function resolveEligibility(
   const doctrineAdopted = isAdoptedByName(doctrine.adopted, NUCLEAR_ENTRY_DOCTRINE_NODE);
   return {
     capable,
-    coldWarEnabled,
     doctrineAdopted,
-    eligible: capable && coldWarEnabled && doctrineAdopted,
+    eligible: capable && doctrineAdopted,
   };
 }
 
 /**
  * The mutation routes' hard gate: every ineligibility is a refusal, with the
- * subsystem toggle a 404 (the doctrine route's convention for a disabled
- * subsystem) and the in-world gates a 403/409.
+ * in-world gates a 403/409.
  */
 export async function requireEligible(db: Db, countryId: CountryId) {
   const gs = (await loadGameStateSlice(db)) ?? {};
-  if (gs.coldWarEnabled !== true) {
-    return {
-      error: errorResponse(404, "Cold War subsystem disabled"),
-    } as const;
-  }
-  const eligibility = await resolveEligibility(db, countryId, true);
+  const eligibility = await resolveEligibility(db, countryId);
   if (!eligibility.capable) {
     return {
       error: errorResponse(403, "This nation cannot open a nuclear programme in this era."),

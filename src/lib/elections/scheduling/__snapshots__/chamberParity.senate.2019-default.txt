@@ -1,0 +1,219 @@
+## fresh-t1 fr.senat
+FR/senat/FR_ARA c1 y2024 active seats=36 turns=1/72/96 dur=48/24 seat=FR-senat-FR_ARA shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+FR/senat/FR_CEN c1 y2024 active seats=26 turns=1/72/96 dur=48/24 seat=FR-senat-FR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+FR/senat/FR_EST c1 y2024 active seats=34 turns=1/72/96 dur=48/24 seat=FR-senat-FR_EST shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+FR/senat/FR_IDF c1 y2024 active seats=59 turns=1/72/96 dur=48/24 seat=FR-senat-FR_IDF shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+FR/senat/FR_MED c1 y2024 active seats=33 turns=1/72/96 dur=48/24 seat=FR-senat-FR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+FR/senat/FR_NOR c1 y2024 active seats=32 turns=1/72/96 dur=48/24 seat=FR-senat-FR_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+FR/senat/FR_OUE c1 y2024 active seats=49 turns=1/72/96 dur=48/24 seat=FR-senat-FR_OUE shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+FR/senat/FR_SOU c1 y2024 active seats=36 turns=1/72/96 dur=48/24 seat=FR-senat-FR_SOU shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+## fresh-t1 it.senato
+IT/senato/IT_CAM c1 y2024 active seats=31 turns=1/168/192 dur=48/24 seat=IT-senato-IT_CAM shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+IT/senato/IT_LAZ c1 y2024 active seats=28 turns=1/168/192 dur=48/24 seat=IT-senato-IT_LAZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+IT/senato/IT_NE c1 y2024 active seats=58 turns=1/168/192 dur=48/24 seat=IT-senato-IT_NE shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+IT/senato/IT_NW c1 y2024 active seats=84 turns=1/168/192 dur=48/24 seat=IT-senato-IT_NW shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+IT/senato/IT_SAR c1 y2024 active seats=10 turns=1/168/192 dur=48/24 seat=IT-senato-IT_SAR shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+IT/senato/IT_SIC c1 y2024 active seats=26 turns=1/168/192 dur=48/24 seat=IT-senato-IT_SIC shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+IT/senato/IT_SUD c1 y2024 active seats=45 turns=1/168/192 dur=48/24 seat=IT-senato-IT_SUD shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+IT/senato/IT_TUS c1 y2024 active seats=33 turns=1/168/192 dur=48/24 seat=IT-senato-IT_TUS shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T11:00:00.000Z|2026-11-16T11:00:00.000Z
+## fresh-t1 es.senado
+ES/senado/ES_AND c1 y2024 active seats=40 turns=1/216/240 dur=48/24 seat=ES-senado-ES_AND shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+ES/senado/ES_CAT c1 y2024 active seats=32 turns=1/216/240 dur=48/24 seat=ES-senado-ES_CAT shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+ES/senado/ES_CEN c1 y2024 active seats=30 turns=1/216/240 dur=48/24 seat=ES-senado-ES_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+ES/senado/ES_GAL c1 y2024 active seats=18 turns=1/216/240 dur=48/24 seat=ES-senado-ES_GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+ES/senado/ES_MAD c1 y2024 active seats=26 turns=1/216/240 dur=48/24 seat=ES-senado-ES_MAD shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+ES/senado/ES_NOR c1 y2024 active seats=22 turns=1/216/240 dur=48/24 seat=ES-senado-ES_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+ES/senado/ES_PVB c1 y2024 active seats=16 turns=1/216/240 dur=48/24 seat=ES-senado-ES_PVB shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+ES/senado/ES_VAL c1 y2024 active seats=24 turns=1/216/240 dur=48/24 seat=ES-senado-ES_VAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+## fresh-t1 tr.senato
+(none)
+## fresh-t300 fr.senat
+FR/senat/FR_ARA c2 y2028 active seats=36 turns=300/504/528 dur=48/24 seat=FR-senat-FR_ARA shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+FR/senat/FR_CEN c2 y2028 active seats=26 turns=300/504/528 dur=48/24 seat=FR-senat-FR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+FR/senat/FR_EST c2 y2028 active seats=34 turns=300/504/528 dur=48/24 seat=FR-senat-FR_EST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+FR/senat/FR_IDF c2 y2028 active seats=59 turns=300/504/528 dur=48/24 seat=FR-senat-FR_IDF shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+FR/senat/FR_MED c2 y2028 active seats=33 turns=300/504/528 dur=48/24 seat=FR-senat-FR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+FR/senat/FR_NOR c2 y2028 active seats=32 turns=300/504/528 dur=48/24 seat=FR-senat-FR_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+FR/senat/FR_OUE c2 y2028 active seats=49 turns=300/504/528 dur=48/24 seat=FR-senat-FR_OUE shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+FR/senat/FR_SOU c2 y2028 active seats=36 turns=300/504/528 dur=48/24 seat=FR-senat-FR_SOU shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T00:00:00.000Z|2026-11-18T00:00:00.000Z
+## fresh-t300 it.senato
+IT/senato/IT_CAM c2 y2028 active seats=31 turns=300/408/432 dur=48/24 seat=IT-senato-IT_CAM shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+IT/senato/IT_LAZ c2 y2028 active seats=28 turns=300/408/432 dur=48/24 seat=IT-senato-IT_LAZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+IT/senato/IT_NE c2 y2028 active seats=58 turns=300/408/432 dur=48/24 seat=IT-senato-IT_NE shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+IT/senato/IT_NW c2 y2028 active seats=84 turns=300/408/432 dur=48/24 seat=IT-senato-IT_NW shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+IT/senato/IT_SAR c2 y2028 active seats=10 turns=300/408/432 dur=48/24 seat=IT-senato-IT_SAR shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+IT/senato/IT_SIC c2 y2028 active seats=26 turns=300/408/432 dur=48/24 seat=IT-senato-IT_SIC shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+IT/senato/IT_SUD c2 y2028 active seats=45 turns=300/408/432 dur=48/24 seat=IT-senato-IT_SUD shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+IT/senato/IT_TUS c2 y2028 active seats=33 turns=300/408/432 dur=48/24 seat=IT-senato-IT_TUS shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+## fresh-t300 es.senado
+ES/senado/ES_AND c2 y2028 active seats=40 turns=300/408/432 dur=48/24 seat=ES-senado-ES_AND shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+ES/senado/ES_CAT c2 y2028 active seats=32 turns=300/408/432 dur=48/24 seat=ES-senado-ES_CAT shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+ES/senado/ES_CEN c2 y2028 active seats=30 turns=300/408/432 dur=48/24 seat=ES-senado-ES_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+ES/senado/ES_GAL c2 y2028 active seats=18 turns=300/408/432 dur=48/24 seat=ES-senado-ES_GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+ES/senado/ES_MAD c2 y2028 active seats=26 turns=300/408/432 dur=48/24 seat=ES-senado-ES_MAD shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+ES/senado/ES_NOR c2 y2028 active seats=22 turns=300/408/432 dur=48/24 seat=ES-senado-ES_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+ES/senado/ES_PVB c2 y2028 active seats=16 turns=300/408/432 dur=48/24 seat=ES-senado-ES_PVB shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+ES/senado/ES_VAL c2 y2028 active seats=24 turns=300/408/432 dur=48/24 seat=ES-senado-ES_VAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+## fresh-t300 tr.senato
+(none)
+## after-cycle1-t120 fr.senat
+FR/senat/FR_ARA c2 y2028 active seats=36 turns=120/504/528 dur=48/24 seat=FR-senat-FR_ARA shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+FR/senat/FR_CEN c2 y2028 active seats=26 turns=120/504/528 dur=48/24 seat=FR-senat-FR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+FR/senat/FR_EST c2 y2028 active seats=34 turns=120/504/528 dur=48/24 seat=FR-senat-FR_EST shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+FR/senat/FR_IDF c2 y2028 active seats=59 turns=120/504/528 dur=48/24 seat=FR-senat-FR_IDF shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+FR/senat/FR_MED c2 y2028 active seats=33 turns=120/504/528 dur=48/24 seat=FR-senat-FR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+FR/senat/FR_NOR c2 y2028 active seats=32 turns=120/504/528 dur=48/24 seat=FR-senat-FR_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+FR/senat/FR_OUE c2 y2028 active seats=49 turns=120/504/528 dur=48/24 seat=FR-senat-FR_OUE shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+FR/senat/FR_SOU c2 y2028 active seats=36 turns=120/504/528 dur=48/24 seat=FR-senat-FR_SOU shift=- t=2026-11-08T12:00:00.000Z|2026-11-24T12:00:00.000Z|2026-11-25T12:00:00.000Z
+## after-cycle1-t120 it.senato
+IT/senato/IT_CAM c2 y2028 active seats=31 turns=120/408/432 dur=48/24 seat=IT-senato-IT_CAM shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+IT/senato/IT_LAZ c2 y2028 active seats=28 turns=120/408/432 dur=48/24 seat=IT-senato-IT_LAZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+IT/senato/IT_NE c2 y2028 active seats=58 turns=120/408/432 dur=48/24 seat=IT-senato-IT_NE shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+IT/senato/IT_NW c2 y2028 active seats=84 turns=120/408/432 dur=48/24 seat=IT-senato-IT_NW shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+IT/senato/IT_SAR c2 y2028 active seats=10 turns=120/408/432 dur=48/24 seat=IT-senato-IT_SAR shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+IT/senato/IT_SIC c2 y2028 active seats=26 turns=120/408/432 dur=48/24 seat=IT-senato-IT_SIC shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+IT/senato/IT_SUD c2 y2028 active seats=45 turns=120/408/432 dur=48/24 seat=IT-senato-IT_SUD shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+IT/senato/IT_TUS c2 y2028 active seats=33 turns=120/408/432 dur=48/24 seat=IT-senato-IT_TUS shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+## after-cycle1-t120 es.senado
+ES/senado/ES_AND c2 y2028 active seats=40 turns=120/408/432 dur=48/24 seat=ES-senado-ES_AND shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+ES/senado/ES_CAT c2 y2028 active seats=32 turns=120/408/432 dur=48/24 seat=ES-senado-ES_CAT shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+ES/senado/ES_CEN c2 y2028 active seats=30 turns=120/408/432 dur=48/24 seat=ES-senado-ES_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+ES/senado/ES_GAL c2 y2028 active seats=18 turns=120/408/432 dur=48/24 seat=ES-senado-ES_GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+ES/senado/ES_MAD c2 y2028 active seats=26 turns=120/408/432 dur=48/24 seat=ES-senado-ES_MAD shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+ES/senado/ES_NOR c2 y2028 active seats=22 turns=120/408/432 dur=48/24 seat=ES-senado-ES_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+ES/senado/ES_PVB c2 y2028 active seats=16 turns=120/408/432 dur=48/24 seat=ES-senado-ES_PVB shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+ES/senado/ES_VAL c2 y2028 active seats=24 turns=120/408/432 dur=48/24 seat=ES-senado-ES_VAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+## after-cycle1-t120 tr.senato
+(none)
+## after-cycle1-t700 fr.senat
+FR/senat/FR_ARA c4 y2036 active seats=36 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_ARA shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+FR/senat/FR_CEN c4 y2036 active seats=26 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+FR/senat/FR_EST c4 y2036 active seats=34 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_EST shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+FR/senat/FR_IDF c4 y2036 active seats=59 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_IDF shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+FR/senat/FR_MED c4 y2036 active seats=33 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_MED shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+FR/senat/FR_NOR c4 y2036 active seats=32 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+FR/senat/FR_OUE c4 y2036 active seats=49 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_OUE shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+FR/senat/FR_SOU c4 y2036 active seats=36 turns=700/1368/1392 dur=48/24 seat=FR-senat-FR_SOU shift=- t=2026-11-08T12:00:00.000Z|2026-12-06T08:00:00.000Z|2026-12-07T08:00:00.000Z
+## after-cycle1-t700 it.senato
+IT/senato/IT_CAM c4 y2036 active seats=31 turns=700/888/912 dur=48/24 seat=IT-senato-IT_CAM shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+IT/senato/IT_LAZ c4 y2036 active seats=28 turns=700/888/912 dur=48/24 seat=IT-senato-IT_LAZ shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+IT/senato/IT_NE c4 y2036 active seats=58 turns=700/888/912 dur=48/24 seat=IT-senato-IT_NE shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+IT/senato/IT_NW c4 y2036 active seats=84 turns=700/888/912 dur=48/24 seat=IT-senato-IT_NW shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+IT/senato/IT_SAR c4 y2036 active seats=10 turns=700/888/912 dur=48/24 seat=IT-senato-IT_SAR shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+IT/senato/IT_SIC c4 y2036 active seats=26 turns=700/888/912 dur=48/24 seat=IT-senato-IT_SIC shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+IT/senato/IT_SUD c4 y2036 active seats=45 turns=700/888/912 dur=48/24 seat=IT-senato-IT_SUD shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+IT/senato/IT_TUS c4 y2036 active seats=33 turns=700/888/912 dur=48/24 seat=IT-senato-IT_TUS shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T08:00:00.000Z|2026-11-17T08:00:00.000Z
+## after-cycle1-t700 es.senado
+ES/senado/ES_AND c4 y2036 active seats=40 turns=700/792/816 dur=48/24 seat=ES-senado-ES_AND shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+ES/senado/ES_CAT c4 y2036 active seats=32 turns=700/792/816 dur=48/24 seat=ES-senado-ES_CAT shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+ES/senado/ES_CEN c4 y2036 active seats=30 turns=700/792/816 dur=48/24 seat=ES-senado-ES_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+ES/senado/ES_GAL c4 y2036 active seats=18 turns=700/792/816 dur=48/24 seat=ES-senado-ES_GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+ES/senado/ES_MAD c4 y2036 active seats=26 turns=700/792/816 dur=48/24 seat=ES-senado-ES_MAD shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+ES/senado/ES_NOR c4 y2036 active seats=22 turns=700/792/816 dur=48/24 seat=ES-senado-ES_NOR shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+ES/senado/ES_PVB c4 y2036 active seats=16 turns=700/792/816 dur=48/24 seat=ES-senado-ES_PVB shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+ES/senado/ES_VAL c4 y2036 active seats=24 turns=700/792/816 dur=48/24 seat=ES-senado-ES_VAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## after-cycle1-t700 tr.senato
+(none)
+## all-live fr.senat
+heal seats=26
+heal seats=32
+heal seats=33
+heal seats=34
+heal seats=36
+heal seats=36
+heal seats=49
+heal seats=59
+## all-live it.senato
+heal seats=10
+heal seats=26
+heal seats=28
+heal seats=31
+heal seats=33
+heal seats=45
+heal seats=58
+heal seats=84
+## all-live es.senado
+heal seats=16
+heal seats=18
+heal seats=22
+heal seats=24
+heal seats=26
+heal seats=30
+heal seats=32
+heal seats=40
+## all-live tr.senato
+(none)
+## late-joiner fr.senat
+FR/senat/FR_CEN c2 y2028 active seats=26 turns=450/504/528 dur=48/24 seat=FR-senat-FR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T18:00:00.000Z|2026-11-11T18:00:00.000Z
+heal seats=32
+heal seats=33
+heal seats=34
+heal seats=36
+heal seats=36
+heal seats=49
+heal seats=59
+## late-joiner it.senato
+IT/senato/IT_SAR c3 y2032 active seats=10 turns=450/648/672 dur=48/24 seat=IT-senato-IT_SAR shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+heal seats=26
+heal seats=28
+heal seats=31
+heal seats=33
+heal seats=45
+heal seats=58
+heal seats=84
+## late-joiner es.senado
+ES/senado/ES_CEN c3 y2032 active seats=30 turns=450/600/624 dur=48/24 seat=ES-senado-ES_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+heal seats=16
+heal seats=18
+heal seats=22
+heal seats=24
+heal seats=26
+heal seats=32
+heal seats=40
+## late-joiner tr.senato
+(none)
+## late-joiner-with-history fr.senat
+FR/senat/FR_CEN c2 y2028 active seats=26 turns=450/504/528 dur=48/24 seat=FR-senat-FR_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-10T18:00:00.000Z|2026-11-11T18:00:00.000Z
+heal seats=32
+heal seats=33
+heal seats=34
+heal seats=36
+heal seats=36
+heal seats=49
+heal seats=59
+## late-joiner-with-history it.senato
+IT/senato/IT_SAR c3 y2032 active seats=10 turns=450/648/672 dur=48/24 seat=IT-senato-IT_SAR shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+heal seats=26
+heal seats=28
+heal seats=31
+heal seats=33
+heal seats=45
+heal seats=58
+heal seats=84
+## late-joiner-with-history es.senado
+ES/senado/ES_CEN c3 y2032 active seats=30 turns=450/600/624 dur=48/24 seat=ES-senado-ES_CEN shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+heal seats=16
+heal seats=18
+heal seats=22
+heal seats=24
+heal seats=26
+heal seats=32
+heal seats=40
+## late-joiner-with-history tr.senato
+(none)
+## resolved-this-turn fr.senat
+(none)
+## resolved-this-turn it.senato
+(none)
+## resolved-this-turn es.senado
+(none)
+## resolved-this-turn tr.senato
+(none)
+## gate-closed fr.senat
+(none)
+## gate-closed it.senato
+(none)
+## gate-closed es.senado
+(none)
+## gate-closed tr.senato
+(none)

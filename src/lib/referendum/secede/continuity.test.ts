@@ -188,7 +188,12 @@ describe("independence continuity", () => {
         },
       },
     };
-    const row = splitRegionalFinance(source, "SCO", "LOT", 0.25);
+    const row = splitRegionalFinance(
+      source,
+      { countryId: "SCO", fromCountryId: "UK", regionId: "SCO" },
+      "LOT",
+      0.25
+    );
     expect(row).toMatchObject({
       stateId: "LOT",
       fundedBillCosts: 25,

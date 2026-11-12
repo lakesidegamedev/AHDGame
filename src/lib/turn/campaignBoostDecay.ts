@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { decayBoostMap } from "@/lib/redistricting/campaignBoost";
 import type { Election } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * Decay Campaign Here boosts toward 0 each turn. Intentionally flag-agnostic:
@@ -17,8 +18,7 @@ export async function processCampaignBoostDecay(
 ): Promise<{ electionsDecayed: number }> {
   const db = injectedDb ?? (await getDb());
 
-  const elections = (await db
-    .collection<Election>("elections")
+  const elections = (await electionsCollection(db)
     .find({
       electionType: "house",
       status: { $in: ["active", "upcoming"] },
@@ -30,9 +30,10 @@ export async function processCampaignBoostDecay(
   for (const e of elections) {
     if (!e.districtCampaignBoosts) continue;
     const next = decayBoostMap(e.districtCampaignBoosts);
-    await db
-      .collection<Election>("elections")
-      .updateOne({ _id: e._id }, { $set: { districtCampaignBoosts: next, updatedAt: now } });
+    await electionsCollection(db).updateOne(
+      { _id: e._id },
+      { $set: { districtCampaignBoosts: next, updatedAt: now } }
+    );
     decayed += 1;
   }
   return { electionsDecayed: decayed };

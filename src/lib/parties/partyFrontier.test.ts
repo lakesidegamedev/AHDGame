@@ -12,6 +12,7 @@ import {
 } from "@/lib/parties/partyFrontier";
 import { connectedGrowthFrontier } from "@/lib/parties/rules/territory";
 import { STATE_ADJACENCY } from "@/lib/constants/stateAdjacency";
+import { annexedNeighbours } from "./rules/annexedAdjacency";
 
 describe("expandFrontier", () => {
   it.each(["DON", "KIL"])("connects Ulster to Irish parties in %s", (region) => {
@@ -119,7 +120,26 @@ describe("batched party frontiers", () => {
       },
       { projection: { party: 1, homeState: 1 } }
     );
-    expect(db.collection).toHaveBeenCalledTimes(4);
+    // Regions, three presence reads, and one party renewal read for re-entry.
+    expect(db.collection).toHaveBeenCalledTimes(5);
+  });
+
+  it("adds regions a party held within the last two renewal cycles", async () => {
+    const db = makeDb();
+    setMockCollection("states", {
+      find: vi.fn(() => ({
+        toArray: async () => Object.keys(STATE_ADJACENCY.US).map((id) => ({ _id: id })),
+      })),
+    });
+    setMockCollection("characters", {
+      find: vi.fn(() => ({ toArray: async () => [{ party: "1", homeState: "NY" }] })),
+    });
+    setMockCollection("partyRenewalStates", {
+      findOne: vi.fn().mockResolvedValue({ cycleIndex: 4, heldRegions: { "1": { CA: 3, TX: 1 } } }),
+    });
+    const result = await getPartyFrontiers(db, "US", ["1"]);
+    expect(result.get("1")).toContain("CA");
+    expect(result.get("1")).not.toContain("TX");
   });
 });
 
@@ -160,6 +180,7 @@ function setMockCollection(name: string, overrides: Record<string, unknown> = {}
   const defaults: Record<string, Mock> = {
     distinct: vi.fn().mockResolvedValue([]),
     find: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([]) })),
+    findOne: vi.fn().mockResolvedValue(null),
     aggregate: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([]) })),
     ...overrides,
   };

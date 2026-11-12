@@ -1,6 +1,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { PlayerMail } from "@/lib/db/types";
 import { serializePlayerMail, type PlayerMailView } from "@/lib/mail/dto/playerMailView";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
 interface InboxFacet {
   mails: PlayerMail[];
@@ -32,8 +33,7 @@ export async function getInboxMailPage(
   offset: number,
   limit: number
 ): Promise<InboxMailPage> {
-  const [result] = await db
-    .collection<PlayerMail>("playerMail")
+  const [result] = await playerMailCollection(db)
     .aggregate<InboxFacet>([
       {
         $match: { toUserId: userId, deletedByRecipient: false, blockedByRecipient: { $ne: true } },
@@ -66,8 +66,7 @@ export async function getSentMailPage(
   offset: number,
   limit: number
 ): Promise<SentMailPage> {
-  const [result] = await db
-    .collection<PlayerMail>("playerMail")
+  const [result] = await playerMailCollection(db)
     .aggregate<SentFacet>([
       { $match: { fromCharacterId: characterId, deletedBySender: false } },
       {

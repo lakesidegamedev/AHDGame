@@ -128,41 +128,17 @@ describe("modern transition parties", () => {
 });
 
 describe("modern transition demographics", () => {
-  it("seeds a modern PL voter category and 8 region demographics, never communist archetypes", async () => {
+  it("seeds 8 PL region demographics from the census, with no voter-group category", async () => {
     const { db, collections } = makeDb();
     await seedModernTransitionDemographics(db, true, noop, "2027-default", "PL");
-    expect(collections["demographicCategories"]!.deleteMany).toHaveBeenCalled();
-    expect(collections["demographicCategories"]!.updateOne).toHaveBeenCalledTimes(1);
-    const catSet = collections["demographicCategories"]!.updateOne.mock.calls[0]![1] as {
-      $set: { groups: Array<{ id: string }> };
-    };
-    const groupIds = catSet.$set.groups.map((g) => g.id);
-    expect(groupIds).toEqual([
-      "rural_conservative",
-      "urban_civic",
-      "agrarian_centre",
-      "progressive_left",
-      "libertarian_nationalist",
-      "silesian_minority",
-    ]);
-    expect(groupIds).not.toContain("party_nomenklatura");
+    expect(collections["demographicCategories"]).toBeUndefined();
     expect(collections["stateDemographics"]!.updateOne).toHaveBeenCalledTimes(8);
   });
 
-  it("seeds a modern RO voter category and 7 region demographics", async () => {
+  it("seeds 7 RO region demographics from the census, with no voter-group category", async () => {
     const { db, collections } = makeDb();
     await seedModernTransitionDemographics(db, true, noop, "2027-default", "RO");
-    const catSet = collections["demographicCategories"]!.updateOne.mock.calls[0]![1] as {
-      $set: { groups: Array<{ id: string }> };
-    };
-    expect(catSet.$set.groups.map((g) => g.id)).toEqual([
-      "social_rural",
-      "urban_reformist",
-      "nationalist_populist",
-      "liberal_centre",
-      "hungarian_minority",
-      "green_youth",
-    ]);
+    expect(collections["demographicCategories"]).toBeUndefined();
     expect(collections["stateDemographics"]!.updateOne).toHaveBeenCalledTimes(7);
   });
 });
@@ -274,14 +250,13 @@ describe("full 2027 driver", () => {
       await seedModernTransitionCountry(db, false, noop, "2027-default", country);
       expect(collections["states"]!.bulkWrite).toHaveBeenCalledTimes(1);
       expect(collections["politicalParties"]!.insertOne).toHaveBeenCalled();
-      expect(collections["demographicCategories"]!.updateOne).toHaveBeenCalledTimes(1);
       expect(collections["stateDemographics"]!.updateOne).toHaveBeenCalled();
       expect(collections["macroMetrics"]!.bulkWrite).toHaveBeenCalledTimes(1);
       expect(collections["stateBaselines"]!.updateOne).toHaveBeenCalled();
       expect(collections["governmentFormations"]!.updateOne).toHaveBeenCalledTimes(1);
     }
   });
-  it("seeds Russia's adult-census demographics without Soviet groups", async () => {
+  it("seeds Russia's adult-census demographics with no voter-group category", async () => {
     const { db, collections } = makeDb([
       { name: "United Russia", countryId: "RU", sequentialId: 1 },
     ]);
@@ -297,13 +272,8 @@ describe("full 2027 driver", () => {
     expect(collections["stateBaselines"]!.updateOne).toHaveBeenCalledTimes(10);
     expect(collections["statePartyOrg"]!.updateOne).toHaveBeenCalledTimes(10);
     expect(collections["stateDemographics"]!.deleteMany).toHaveBeenCalledWith({ countryId: "RU" });
-    expect(collections["demographicCategories"]!.updateOne).toHaveBeenCalledTimes(1);
     expect(collections["stateDemographics"]!.updateOne).toHaveBeenCalledTimes(10);
-    const category = collections["demographicCategories"]!.updateOne.mock.calls[0]![1].$set as {
-      groups: Array<{ id: string }>;
-    };
-    expect(category.groups).toHaveLength(8);
-    expect(category.groups.map((group) => group.id)).not.toContain("party_nomenklatura");
+    expect(collections["demographicCategories"]).toBeUndefined();
     expect(collections["governmentFormations"]).toBeUndefined();
   });
   it("opens a neutral 2027 Russian Duma formation without a Soviet premier", async () => {

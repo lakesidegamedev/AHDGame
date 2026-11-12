@@ -5,7 +5,7 @@ import { logWarning } from "@/lib/utils/errorLog";
  * A country may hold only ONE active law per legislation type (and one per type
  * per state for state scope). Data races have left multiple concurrent
  * unrepealed rows of the same type, which the spending sums then multi-count
- * (#3148 — IE had 3 live ie_healthcare_policy rows). Keep only the
+ * (e.g. IE had 3 live ie_healthcare_policy rows). Keep only the
  * most-recently-enacted law per (legislationTypeId, stateId) so each policy is
  * costed once. A healthy world (0-1 rows per key) is unaffected.
  *

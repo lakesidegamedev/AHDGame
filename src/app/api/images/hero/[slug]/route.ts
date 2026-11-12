@@ -14,6 +14,15 @@ const HERO_URLS: Record<string, string> = {
     "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Palace_of_Westminster%2C_London_-_Feb_2007.jpg/1280px-Palace_of_Westminster%2C_London_-_Feb_2007.jpg",
   "downing-street":
     "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Larry_the_Cat_walking_towards_the_door_of_no10_downing_st.jpg/1280px-Larry_the_Cat_walking_towards_the_door_of_no10_downing_st.jpg",
+  // Parliament Hill, Ottawa: the CA executive and Commons.
+  "parliament-hill":
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Parliament_Hill,_Ottawa.jpg?width=1280",
+  // Bank of Canada head office, Wellington Street, Ottawa.
+  "bank-of-canada":
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Bank_of_Canada.jpg?width=1280",
+  // Parliament Building (Hotel du Parlement), Quebec City: the QC executive and Assembly.
+  "quebec-parliament":
+    "https://commons.wikimedia.org/wiki/Special:FilePath/H%C3%B4tel_du_Parlement_du_Qu%C3%A9bec.jpg?width=1280",
   // First Minister's official residence, 6 Charlotte Square, Edinburgh.
   "bute-house": "https://commons.wikimedia.org/wiki/Special:FilePath/Bute_House.jpg?width=1280",
   // Senedd, home of the Welsh Government / Welsh Parliament, Cardiff Bay.

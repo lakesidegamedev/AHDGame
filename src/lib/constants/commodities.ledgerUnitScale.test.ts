@@ -151,7 +151,7 @@ describe("computeRawSupplyDemand - ledgerUnitScale (ticket #1027 phase 2)", () =
       energy.supply * PLANTS_LEDGER_DEMAND_SUPPLY_CAP
     );
     expect(energy.demand).toBeCloseTo(energy.supply * PLANTS_LEDGER_DEMAND_SUPPLY_CAP, 6);
-    // The truncated amount is recorded so the real gap stays visible (#1460).
+    // The truncated amount is recorded so the real gap stays visible.
     const truncated = scaled.demandTruncated.get("energy") ?? 0;
     expect(truncated).toBeGreaterThan(0);
     expect(energy.demand + truncated).toBeGreaterThan(

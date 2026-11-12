@@ -20,6 +20,13 @@ import {
   getLiveUpperChamberSeats,
 } from "@/lib/legislature/lowerChamberSeats";
 import type { PoliticalParty, ElectedOfficial, State, Character, NPP } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -32,17 +39,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const db = await getDb();
     const [preset, countryState] = await Promise.all([
       getGameStatePreset(db),
-      countryId === "RU"
-        ? db
-            .collection<{
-              _id: string;
-              ruSovietSuccessionSinceTurn?: number;
-              ruProvisionalCongressSeats?: number;
-              ruPresidencySinceTurn?: number;
-              ruCongressDissolvedSinceTurn?: number;
-              ruFederalAssemblySinceTurn?: number;
-            }>("countryGameStates")
-            .findOne({ _id: "RU" })
+      countryHasFeature("ruApi", countryId)
+        ? countryGameStatesCollection<{
+            _id: string;
+            ruSovietSuccessionSinceTurn?: number;
+            ruProvisionalCongressSeats?: number;
+            ruPresidencySinceTurn?: number;
+            ruCongressDissolvedSinceTurn?: number;
+            ruFederalAssemblySinceTurn?: number;
+          }>(db).findOne({ _id: "RU" })
         : Promise.resolve(null),
     ]);
     const config = getCountryConfigForRuntime(countryId, preset, countryState);
@@ -81,10 +86,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       getOfficeTypeForChamber(countryId, chamber);
     const officialFilter: Record<string, unknown> = { officeType: resolvedOfficeType, countryId };
 
-    const allOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .find(officialFilter)
-      .toArray();
+    const allOfficials = await electedOfficialsCollection(db).find(officialFilter).toArray();
     const officials = allOfficials.filter(
       (o) =>
         (o.characterId != null || o.nppId != null) &&
@@ -104,8 +106,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // Get party details — filter by countryId to avoid cross-country collisions
     const partySeqIds = Array.from(partySeats.keys()).map(Number).filter(Boolean);
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: partySeqIds }, countryId })
       .toArray();
 
@@ -128,8 +129,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // Look up region display names for all member states
     const memberStateIds = [...new Set(officials.map((o) => o.state).filter(Boolean))];
-    const stateDocs = await db
-      .collection<State>("states")
+    const stateDocs = await statesCollection(db)
       .find({ _id: { $in: memberStateIds as string[] } }, { projection: { name: 1 } })
       .toArray();
     const stateNameMap = new Map(stateDocs.map((s) => [s._id as string, s.name]));
@@ -144,8 +144,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     const [playerDocs, nppDocs] = await Promise.all([
       playerIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find(
               { _id: { $in: playerIds } },
               { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }
@@ -153,8 +152,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
             .toArray()
         : [],
       nppIds.length > 0
-        ? db
-            .collection<NPP>("npps")
+        ? nppsCollection(db)
             .find(
               { _id: { $in: nppIds } },
               { projection: { _id: 1, avatarUrl: 1, sequentialId: 1 } }

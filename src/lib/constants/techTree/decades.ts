@@ -1,17 +1,10 @@
 /**
  * Decade brackets for the sector tech trees.
  *
- * Each corporation sector tree is organised into six decade tiers. A tier
- * becomes researchable once the game world's `currentYear` reaches its
- * `startYear`; earlier decades than the world's starting decade are treated as
- * ungated baseline and never appear (per design: "only the current decade
- * onward is researchable"). Future decades stay locked until the clock arrives.
- *
- * `currentYear` is derived from the active reset preset's `startingYear`
- * (1979, 1991, 1999, 2007, 2019, …) plus elapsed game years — see
- * `src/lib/time/gameTime.ts`. The brackets below are intentionally aligned to
- * the canonical reset eras so a 1979-start world walks the whole tree while a
- * 2019-start world only ever sees the final two tiers.
+ * Each sector tree has six decade tiers. A tier becomes researchable once
+ * `currentYear` reaches its `startYear`; earlier decades are ungated baseline
+ * and never appear. `currentYear` is the reset preset's `startingYear` plus
+ * elapsed game years (see `src/lib/time/gameTime.ts`).
  */
 
 export interface TechDecade {
@@ -36,6 +29,8 @@ export const TECH_DECADES: readonly TechDecade[] = [
   { id: "2009", label: "2009–2019", startYear: 2009, endYear: 2019 },
   { id: "2019", label: "2019–2029", startYear: 2019, endYear: 2029 },
   { id: "2029", label: "2029–2039", startYear: 2029, endYear: 2039 },
+  { id: "2039", label: "2039-2049", startYear: 2039, endYear: 2049 },
+  { id: "2049", label: "2049-2059", startYear: 2049, endYear: 2059 },
 ] as const;
 
 export type TechDecadeId = (typeof TECH_DECADES)[number]["id"];
@@ -45,13 +40,23 @@ export function getDecadeById(decadeId: string): TechDecade | undefined {
   return TECH_DECADES.find((d) => d.id === decadeId);
 }
 
+/** Exclusive upper bound reported for the open-ended last tier. */
+const OPEN_ENDED_END_YEAR = 2100;
+
 /**
  * The decade bracket a given calendar year falls into. Years before the first
- * bracket clamp to the earliest; years past the last clamp to the latest.
+ * bracket clamp to the earliest. Past the last authored tier the last tier
+ * stays current (same id, so stored unlocks keep working) but is reported as an
+ * open-ended bracket (e.g. "2039+") instead of its stale authored range.
  */
 export function getDecadeForYear(year: number): TechDecade {
   for (let i = TECH_DECADES.length - 1; i >= 0; i--) {
-    if (year >= TECH_DECADES[i].startYear) return TECH_DECADES[i];
+    const decade = TECH_DECADES[i];
+    if (year < decade.startYear) continue;
+    if (i === TECH_DECADES.length - 1 && year >= decade.endYear) {
+      return { ...decade, label: `${decade.startYear}+`, endYear: OPEN_ENDED_END_YEAR };
+    }
+    return decade;
   }
   return TECH_DECADES[0];
 }

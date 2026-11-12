@@ -14,6 +14,7 @@ import type { CountryId } from "./countries";
 import { JP_IDENTITY } from "@/lib/countries/jp/identity";
 import { US_IDENTITY } from "@/lib/countries/us/identity";
 import { UK_IDENTITY } from "@/lib/countries/uk/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 import { DE_IDENTITY } from "@/lib/countries/de/identity";
 import { CN_IDENTITY } from "@/lib/countries/cn/identity";
 import { IE_IDENTITY } from "@/lib/countries/ie/identity";
@@ -60,6 +61,7 @@ export const EXECUTIVE_SEALS: Partial<Record<CountryId, ExecutiveSeal>> = {
   CN: CN_IDENTITY.executiveSeal,
   BR: BR_IDENTITY.executiveSeal,
   NG: NG_IDENTITY.executiveSeal,
+  CA: CA_IDENTITY.executiveSeal,
   // ── 1979 Cold-War roster. Wikimedia thumb paths derived from md5(filename).
   // Seals degrade to the generated NationalSeal if a URL fails, so period-emblem
   // filenames that have since moved fall back cleanly.

@@ -381,6 +381,11 @@ export const YUGOSLAVIA_DEF: LivingConflictDef = {
   name: "Yugoslav Dissolution",
   fromYear: 1991,
   untilYear: 2010,
+  // A surviving federation in the authored 2027 world is an explicit
+  // counterfactual, not a replay of the historical 1991-2010 window.
+  presetOpeningWindows: [
+    { preset: "2027-default", disposition: "counterfactual", fromYear: 2027, untilYear: 2027 },
+  ],
   autoOpen: true,
   hostCountry: "YU",
   participants: {

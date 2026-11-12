@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { states } from "@/lib/countries/us/data/usStates";
 import { getCountryLayer1Model } from "@/lib/seeds/international";
 import { getTurnoutTargetsForCountry } from "../turnoutTargets";
 import { PRIORITY_COUNTRIES } from "./catalog";
+import { priorityLaws } from "./profile";
 import { resolveLegislativePriorities, type PriorityLaw } from "./rules";
 
-const laws: ReadonlyMap<string, PriorityLaw> = new Map(
-  legislationTypes.map((law) => [law._id, { ...law, policyOptions: law.policyOptions ?? [] }])
-);
+const laws: ReadonlyMap<string, PriorityLaw> = priorityLaws;
 const eras = ["1953", "1979", "1991", "1999", "2007", "2019", "2023", "2027"] as const;
 const requestedDimensions = new Set(["race", "ethnicity", "age", "education", "wealth", "income"]);
 
@@ -60,21 +58,23 @@ describe("electorate legislative priorities", () => {
   it("gives the same group different regional priorities with authored local emphasis", () => {
     const primary = (cc: string, region: string, group: string) =>
       resolveLegislativePriorities(cc, region, group, laws)!.primary.lawTypeId;
-    expect(primary("US", "CA", "age:young")).toBe("us_state_housing");
-    expect(primary("US", "MI", "age:young")).toBe("us_state_labor");
-    expect(primary("UK", "LON", "education:degree_plus")).toBe("uk_regional_housing_development");
-    expect(primary("UK", "SCO", "education:degree_plus")).toBe("uk_tuition_fees");
-    expect(primary("JP", "KAN", "age:senior")).toBe("jp_pension");
-    expect(primary("JP", "SHI", "age:senior")).toBe("jp_elder_care");
+    expect(primary("US", "CA", "age:young")).toBe("us.infrastructure.publicHousing.primary");
+    expect(primary("US", "MI", "age:young")).toBe("us.sec.laborManagementRelations");
+    expect(primary("UK", "LON", "education:degree_plus")).toBe(
+      "uk.infrastructure.publicHousing.primary"
+    );
+    expect(primary("UK", "SCO", "education:degree_plus")).toBe("uk.sec.universityGrants");
+    expect(primary("JP", "KAN", "age:senior")).toBe("jp.health.socialInsurance.primary");
+    expect(primary("JP", "SHI", "age:senior")).toBe("jp.sec.pensionCoverageExtension");
   });
 
   it("distinguishes groups in the same region", () => {
     const young = resolveLegislativePriorities("US", "CA", "age:young", laws)!;
     const senior = resolveLegislativePriorities("US", "CA", "age:senior", laws)!;
     const rich = resolveLegislativePriorities("US", "CA", "wealth:high", laws)!;
-    expect(young.primary.lawTypeId).toBe("us_state_housing");
-    expect(senior.primary.lawTypeId).toBe("us_social_security");
-    expect(rich.primary.policyOptionName).toBe("5%");
+    expect(young.primary.lawTypeId).toBe("us.infrastructure.publicHousing.primary");
+    expect(senior.primary.lawTypeId).toBe("us.health.socialInsurance.primary");
+    expect(rich.primary.policyOptionName).toBe("5% (Modest Schedule)");
   });
 
   it("is deterministic, case tolerant for country/region and independent of catalog order", () => {
@@ -100,7 +100,10 @@ describe("electorate legislative priorities", () => {
       "Invalid legislative priority"
     );
     const changed = new Map(laws);
-    changed.set("us_state_housing", { ...laws.get("us_state_housing")!, policyOptions: [] });
+    changed.set("us.infrastructure.publicHousing.primary", {
+      ...laws.get("us.infrastructure.publicHousing.primary")!,
+      policyOptions: [],
+    });
     expect(() => resolveLegislativePriorities("US", "CA", "age:young", changed)).toThrow(
       "Invalid legislative priority"
     );

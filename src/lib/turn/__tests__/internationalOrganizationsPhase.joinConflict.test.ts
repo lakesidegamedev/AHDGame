@@ -61,6 +61,17 @@ vi.mock("@/lib/db/collections", () => ({
   getOrganizationProposalsCollection: vi.fn(),
   getOrganizationFundsCollection: vi.fn(),
 }));
+
+// Background countries (#5702) vote through their own suite; these bare db
+// stubs model a world without any.
+vi.mock("@/lib/country/countryTier", () => ({
+  loadCountryTiers: vi.fn().mockResolvedValue({
+    tierOf: () => "npp",
+    registeredIds: [],
+    fullSimulationIds: [],
+    backgroundIds: [],
+  }),
+}));
 vi.mock("@/lib/internationalOrganizations/service", () => ({
   getMembers: vi.fn(async () => roster),
   loadOrganizationDef: vi.fn(),
@@ -494,7 +505,6 @@ describe("join_conflict enactment", () => {
     const access = await import("@/lib/countryAccess");
     vi.mocked(access.getAllCountryAccess).mockResolvedValue(accessSilencing("FR") as never);
     planOrganizationWarDeclarationFromDb.mockResolvedValue({
-      conflictsEnabled: true,
       targetEnabled: true,
       playerLegislation: ["US", "UK"],
       automaticNpp: ["FR"],
@@ -529,42 +539,6 @@ describe("join_conflict enactment", () => {
     );
   });
 
-  it("lets a declaration lapse when conflicts are disabled before close", async () => {
-    roster = ["US", "UK"];
-    resolutionFixture = {
-      _id: new ObjectId("507f1f77bcf86cd799439099"),
-      organizationId: "NATO",
-      type: "declare_war",
-      warDeclarationTargetCountryId: "CN",
-      warDeclarationGoal: "punitive",
-      parties: [],
-      proposingCountryId: "US",
-      proposedByCharacterId: new ObjectId("507f1f77bcf86cd799439092"),
-      status: "pending",
-      closesOnTurn: 10,
-      votes: [
-        { countryId: "US", vote: "yes" },
-        { countryId: "UK", vote: "yes" },
-      ],
-    };
-    planOrganizationWarDeclarationFromDb.mockResolvedValue({
-      conflictsEnabled: false,
-      targetEnabled: true,
-      playerLegislation: ["US", "UK"],
-      automaticNpp: [],
-      excluded: [],
-    });
-
-    await runPhase(["US", "UK"]);
-
-    expect(enactAutomaticOrganizationWar).not.toHaveBeenCalled();
-    expect(buildOrganizationWarDeclarationBills).not.toHaveBeenCalled();
-    expect(legislationUpdateOne).toHaveBeenCalledWith(
-      { _id: new ObjectId("507f1f77bcf86cd799439099"), status: "pending" },
-      { $set: { status: "expired" } }
-    );
-  });
-
   it("keeps a declaration pending when national bill creation fails", async () => {
     roster = ["US"];
     resolutionFixture = {
@@ -581,7 +555,6 @@ describe("join_conflict enactment", () => {
       votes: [{ countryId: "US", vote: "yes" }],
     };
     planOrganizationWarDeclarationFromDb.mockResolvedValue({
-      conflictsEnabled: true,
       targetEnabled: true,
       playerLegislation: ["US"],
       automaticNpp: [],
@@ -594,7 +567,8 @@ describe("join_conflict enactment", () => {
       new Error("transient write failure")
     );
 
-    await expect(runPhase(["US"])).rejects.toThrow("transient write failure");
+    // Per-resolution isolation logs the failure and leaves the row for next turn.
+    await runPhase(["US"]);
 
     expect(
       legislationUpdateOne.mock.calls.some(

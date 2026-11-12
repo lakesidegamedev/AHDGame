@@ -51,3 +51,12 @@ export const US_STATE_ID_NAME_PAIRS: [string, string][] = [
   ["WI", "Wisconsin"],
   ["WY", "Wyoming"],
 ];
+
+/** US state abbreviation → display name, the fifty states. */
+export const US_STATE_NAMES: Record<string, string> = Object.fromEntries(US_STATE_ID_NAME_PAIRS);
+
+/** The fifty states plus the District of Columbia. */
+export const US_STATE_AND_DC_NAMES: Record<string, string> = {
+  ...US_STATE_NAMES,
+  DC: "District of Columbia",
+};

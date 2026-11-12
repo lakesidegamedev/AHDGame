@@ -1,8 +1,7 @@
 /**
- * What an NPP operator may do for a corporation. One policy covers an NPP that
- * steps in for a player (autopilot, caretaker) and one that runs a corporation
- * long term (an NPP CEO, including a subsidiary's). A role's default reproduces
- * its behavior before policies existed; an owner policy overrides it per action.
+ * What an NPP operator may do for a corporation. Covers both short-term
+ * stand-ins (autopilot, caretaker) and long-term NPP CEOs. A role's default
+ * applies unless an owner policy overrides it per action.
  */
 import type {
   CorpOperatorAction,

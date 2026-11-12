@@ -10,11 +10,13 @@ import type { AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, notFound } from "@/lib/api/errors";
-import type { Corporation, Character } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { dividendShareBasis, dividendShareFraction } from "@/lib/corporations/rules/dividendShares";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,9 +26,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params;
     const db = await getDb();
 
-    const corp = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: new ObjectId(id) });
+    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
     if (!corp) throw notFound("Corporation not found");
 
     const dividendRate = corp.dividendRate ?? 0;
@@ -77,13 +77,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     );
 
     await Promise.all([
-      db.collection<Character>("characters").bulkWrite(charOps),
-      db
-        .collection<Corporation>("corporations")
-        .updateOne(
-          { _id: new ObjectId(id) },
-          { $inc: { liquidCapital: -totalPayout }, $set: { updatedAt: new Date() } }
-        ),
+      charactersCollection(db).bulkWrite(charOps),
+      corporationsCollection(db).updateOne(
+        { _id: new ObjectId(id) },
+        { $inc: { liquidCapital: -totalPayout }, $set: { updatedAt: new Date() } }
+      ),
     ]);
 
     return NextResponse.json({ success: true, paid: totalPayout, recipients: charPayouts.size });

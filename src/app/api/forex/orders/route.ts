@@ -23,6 +23,10 @@ import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction"
 import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
 import type { CurrencyOrder, CurrencyOrderStatus, GameConfig, GameState } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const limitOrderSchema = z
   .object({
@@ -57,8 +61,7 @@ async function handleGET(request: Request) {
         ? { $in: ["filled", "cancelled", "expired"] as CurrencyOrderStatus[] }
         : { $in: ["open", "partial", "processing"] as CurrencyOrderStatus[] };
 
-    const orders = await db
-      .collection<CurrencyOrder>("currencyOrders")
+    const orders = await currencyOrdersCollection(db)
       .find({
         characterId: auth.user.character._id,
         status: statusFilter,
@@ -117,7 +120,7 @@ export async function POST(request: Request) {
     if (barrier) return barrier;
 
     const db = await getDb();
-    const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gs = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gs?.currentTurn ?? 0;
     if (euroLedgerCrossRate(gs?.euroMonetaryUnion, fromCurrency, toCurrency) != null) {
       throw badRequest(
@@ -126,9 +129,10 @@ export async function POST(request: Request) {
     }
 
     // Non-convertible command currencies cannot be limit-traded on the open market.
-    const gameConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+    const gameConfig = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { commandEconomyEnabled: 1 } }
+    );
     const blocked = nonConvertibleTradeCurrency(
       [fromCurrency, toCurrency],
       gs?.currentYear,
@@ -164,13 +168,11 @@ export async function POST(request: Request) {
     let insertedId: ObjectId | null = null;
     await runWithOptionalTransaction(
       async (session) => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne(
-            { _id: character._id, [balanceField]: { $gte: amount } },
-            { $inc: escrowInc },
-            { session }
-          );
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc },
+          { session }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -178,15 +180,17 @@ export async function POST(request: Request) {
           );
         }
 
-        const result: InsertOneResult<CurrencyOrder> = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .insertOne(order as CurrencyOrder, { session });
+        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
+          order as CurrencyOrder,
+          { session }
+        );
         insertedId = result.insertedId;
       },
       async () => {
-        const escrowResult = await db
-          .collection("characters")
-          .updateOne({ _id: character._id, [balanceField]: { $gte: amount } }, { $inc: escrowInc });
+        const escrowResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [balanceField]: { $gte: amount } },
+          { $inc: escrowInc }
+        );
         if (escrowResult.modifiedCount === 0) {
           const balance = getPersonalBalance(character, fromCurrency, true);
           throw badRequest(
@@ -195,17 +199,15 @@ export async function POST(request: Request) {
         }
 
         try {
-          const result: InsertOneResult<CurrencyOrder> = await db
-            .collection<CurrencyOrder>("currencyOrders")
-            .insertOne(order as CurrencyOrder);
+          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(
+            db
+          ).insertOne(order as CurrencyOrder);
           insertedId = result.insertedId;
         } catch (error) {
-          await db
-            .collection("characters")
-            .updateOne(
-              { _id: character._id },
-              { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
+          );
           throw error;
         }
       }

@@ -1,7 +1,7 @@
 import type { WorldEntityId, WorldEntityRegion } from "@/lib/world/worldEntityManifest";
 
 /**
- * Explicit expected-1953-entity checklist per region (#3728).
+ * Explicit expected-1953-entity checklist per region.
  *
  * This is the coverage gate — not derived from the manifest. Omitting an ID
  * here or in the manifest fails the registry tests. Includes Tier-3 rows and

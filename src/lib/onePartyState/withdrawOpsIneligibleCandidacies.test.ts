@@ -3,7 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { withdrawOpsIneligibleCandidacies } from "./withdrawOpsIneligibleCandidacies";
 
-vi.mock("@/lib/electionEngine/tallyCleaner", () => ({
+vi.mock("@/lib/elections/engine/tallyCleaner", () => ({
   removeWithdrawnCandidateFromTally: vi.fn(),
 }));
 
@@ -68,7 +68,8 @@ describe("withdrawOpsIneligibleCandidacies", () => {
     );
     db.collectionMocks.electionCandidates.updateMany.mockResolvedValue({ modifiedCount: 1 });
 
-    const { removeWithdrawnCandidateFromTally } = await import("@/lib/electionEngine/tallyCleaner");
+    const { removeWithdrawnCandidateFromTally } =
+      await import("@/lib/elections/engine/tallyCleaner");
     const result = await withdrawOpsIneligibleCandidacies(db as unknown as Db, now);
 
     expect(result).toEqual({ withdrawn: 1 });

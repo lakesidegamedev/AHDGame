@@ -242,10 +242,6 @@ export function buildPrimeRateByState(
   return primeRateByState;
 }
 
-export interface ExtractionRevenueInputs {
-  extractionInputs: ExtractionSectorInput[];
-}
-
 /**
  * Per-sector revenue-nameplate output per extractable resource, in ledger
  * units. Also resolves sectorId -> realized/nameplate extraction output and
@@ -385,14 +381,10 @@ export function accumulatePlantsUnits(
       sector.mediaDiscriminator
     );
     const supplyRates = rates.supply ?? {};
-    // Same legs the ledger applies on top of producedUnits (natcorpScale x
-    // embargoSupplyFactor; the production-policy output curve is already in
-    // `producedUnits` since ticket #1072), taken from the shared
-    // `plantsSupplyScaledUnits` instead of re-derived here — that helper is
-    // the single source of the chain and computeRawSupplyDemand plus the
-    // clearing offer both call it. The chain is linear in `producedUnits`, so
-    // the sold leg is the SAME call with soldUnits substituted; that is what
-    // keeps produced and sold in identical units.
+    // Same legs the ledger applies on top of producedUnits
+    // (natcorpScale x embargoSupplyFactor), via the shared
+    // `plantsSupplyScaledUnits` helper. The chain is linear in `producedUnits`,
+    // so the sold leg is the same call with soldUnits, keeping both in identical units.
     const scaleArgs = {
       isNatcorp: sector.isNatcorp,
       embargoSupplyFactor: sector.embargoSupplyFactor,

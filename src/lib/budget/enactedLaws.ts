@@ -5,6 +5,7 @@ import type { Bill, LegislationPolicyOption, LegislationType } from "@/lib/db/ty
 import type { CountryId } from "@/lib/constants/countries";
 import { resolvePolicyOptionJurisdiction } from "@/lib/legislature/jurisdiction";
 import { withAuthoredOptionJurisdiction } from "@/lib/governmentFinance/lawAdministrationCatalog";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 const COUNTRY_SCOPE_TO_ID: Record<string, CountryId> = {
   us: "US",
@@ -43,9 +44,7 @@ export async function recordEnactedLaw(
     repealQuery.$or = [{ stateId: { $exists: false } }, { stateId: null }];
   }
 
-  await db
-    .collection<EnactedLaw>("enactedLaws")
-    .updateMany(repealQuery, { $set: { repealedAt: new Date() } });
+  await enactedLawsCollection(db).updateMany(repealQuery, { $set: { repealedAt: new Date() } });
 
   const enactedLaw: EnactedLaw = {
     _id: new ObjectId(),
@@ -94,6 +93,6 @@ export async function recordEnactedLaw(
     ...(source !== undefined && { source }),
   };
 
-  await db.collection<EnactedLaw>("enactedLaws").insertOne(enactedLaw);
+  await enactedLawsCollection(db).insertOne(enactedLaw);
   return enactedLaw;
 }

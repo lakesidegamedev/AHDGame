@@ -17,6 +17,10 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareListingsCollection } from "@/lib/db/repositories/shareListings";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 export interface CancelListingResult {
   ok: true;
@@ -41,21 +45,17 @@ type PreparedRefund = {
 };
 
 async function restoreListingOpen(db: Db, listingId: ShareListing["_id"], now: Date) {
-  await db
-    .collection<ShareListing>("shareListings")
-    .updateOne(
-      { _id: listingId, status: "cancelled" },
-      { $set: { status: "open", updatedAt: now } }
-    );
+  await shareListingsCollection(db).updateOne(
+    { _id: listingId, status: "cancelled" },
+    { $set: { status: "open", updatedAt: now } }
+  );
 }
 
 async function restoreOfferPending(db: Db, offerId: ShareOffer["_id"], now: Date) {
-  await db
-    .collection<ShareOffer>("shareOffers")
-    .updateOne(
-      { _id: offerId, status: "cancelled" },
-      { $set: { status: "pending", updatedAt: now } }
-    );
+  await shareOffersCollection(db).updateOne(
+    { _id: offerId, status: "cancelled" },
+    { $set: { status: "pending", updatedAt: now } }
+  );
 }
 
 /**
@@ -77,7 +77,7 @@ export async function cancelShareListingAndRefund(
 ): Promise<CancelListingResult | CancelListingError> {
   if (listing.status !== "open") return { ok: false, error: "Listing is not open" };
 
-  const listingClaim = await db.collection<ShareListing>("shareListings").updateOne(
+  const listingClaim = await shareListingsCollection(db).updateOne(
     {
       _id: listing._id,
       status: "open",
@@ -91,14 +91,13 @@ export async function cancelShareListingAndRefund(
     return { ok: false, error: "Listing is not open" };
   }
 
-  const pendingOffers = await db
-    .collection<ShareOffer>("shareOffers")
+  const pendingOffers = await shareOffersCollection(db)
     .find({ listingId: listing._id, status: "pending" })
     .toArray();
 
   const listingCorpDoc =
     listingCorpDocOverride ??
-    (await db.collection<Corporation>("corporations").findOne({ _id: listing.corporationId }));
+    (await corporationsCollection(db).findOne({ _id: listing.corporationId }));
   const listingCorpFxRate = await getCorpFxRate(db, listingCorpDoc ?? {});
 
   const buyerCorpIds = [
@@ -118,14 +117,12 @@ export async function cancelShareListingAndRefund(
 
   const [buyerCorpDocs, buyerCharDocs, fxByCurrency] = await Promise.all([
     buyerCorpIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find({ _id: { $in: buyerCorpIds.map((id) => new ObjectId(id)) } })
           .toArray()
       : Promise.resolve([] as Corporation[]),
     buyerCharIds.length > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: buyerCharIds.map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, countryId: 1, name: 1 } }
@@ -195,18 +192,16 @@ export async function cancelShareListingAndRefund(
   let sharesReturned = 0;
   try {
     for (const refund of preparedRefunds) {
-      const offerClaim = await db
-        .collection<ShareOffer>("shareOffers")
-        .updateOne(
-          { _id: refund.offer._id, status: "pending" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+      const offerClaim = await shareOffersCollection(db).updateOne(
+        { _id: refund.offer._id, status: "pending" },
+        { $set: { status: "cancelled", updatedAt: now } }
+      );
       if (offerClaim.matchedCount === 0) {
         continue;
       }
 
       if (refund.subjectType === "corporation") {
-        const refundResult = await db.collection<Corporation>("corporations").updateOne(
+        const refundResult = await corporationsCollection(db).updateOne(
           { _id: refund.subjectId },
           {
             $inc: { liquidCapital: refund.refundAmount },
@@ -217,7 +212,7 @@ export async function cancelShareListingAndRefund(
           throw new Error("Buyer corporation not found");
         }
       } else {
-        const refundResult = await db.collection<Character>("characters").updateOne(
+        const refundResult = await charactersCollection(db).updateOne(
           { _id: refund.subjectId },
           {
             $inc: buildPersonalBalanceInc(refund.refundAmount, refund.currencyCode, forexEnabled),
@@ -232,7 +227,7 @@ export async function cancelShareListingAndRefund(
       refundedOffers++;
       refundRollbacks.push(async () => {
         if (refund.subjectType === "corporation") {
-          await db.collection<Corporation>("corporations").updateOne(
+          await corporationsCollection(db).updateOne(
             { _id: refund.subjectId },
             {
               $inc: { liquidCapital: -refund.refundAmount },
@@ -240,7 +235,7 @@ export async function cancelShareListingAndRefund(
             }
           );
         } else {
-          await db.collection<Character>("characters").updateOne(
+          await charactersCollection(db).updateOne(
             { _id: refund.subjectId },
             {
               $inc: buildPersonalBalanceInc(
@@ -278,7 +273,7 @@ export async function cancelShareListingAndRefund(
 
     if (listing.sharesRemaining > 0) {
       if (listing.sellerCorporationId) {
-        const targetCorp = await db.collection<Corporation>("corporations").findOne(
+        const targetCorp = await corporationsCollection(db).findOne(
           {
             _id: listing.corporationId,
             "shareholders.corporationId": listing.sellerCorporationId,
@@ -299,12 +294,10 @@ export async function cancelShareListingAndRefund(
           throw new Error("Failed to restore seller corporation shares");
         }
       } else {
-        const targetCorp = await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
-            { projection: { "shareholders.$": 1 } }
-          );
+        const targetCorp = await corporationsCollection(db).findOne(
+          { _id: listing.corporationId, "shareholders.characterId": listing.sellerCharacterId },
+          { projection: { "shareholders.$": 1 } }
+        );
         const returnPrice =
           targetCorp?.shareholders?.[0]?.avgCostPerShare ?? listing.marketPriceAtCreation;
         const restored = await creditShares(

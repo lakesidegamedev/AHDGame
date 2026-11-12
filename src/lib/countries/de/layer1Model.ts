@@ -1,30 +1,11 @@
-/**
- * Germany (DE) Layer-1 demographic model — census-consuming build.
+/*
+ * Germany (DE) Layer-1 demographic model. Dims: ethnicity, age, education,
+ * income, urbanization. Land and archetype leans emerge from census times
+ * positions and are never hand-calibrated.
  *
- * Architecture (mirrors getUkModel):
- *   - dims: ["ethnicity","age","education","income","urbanization"]
- *   - census: real per-Land profiles from deRegionCensusData*.ts (16 Bundesländer)
- *   - composition: maps each of the 12 DE archetypes (de_voterGroups) to census dim/key weights
- *   - positions: per-era, reflecting documented German political history
- *   - Land/archetype leans EMERGE from census × positions — never hand-calibrated,
- *     never fit to existing seed leans.
- *
- * Historical complications encoded:
- *   - 1979 = WEST Germany (FRG) only. The Eastern Länder (SN/TH/ST/BB/MV and East
- *     Berlin) did NOT vote in FRG elections until 1990. The 1979 census file still
- *     carries DDR-era profiles for those Länder; their 1979 positions are therefore
- *     a best-effort GDR/early-reunification approximation and should be read with
- *     that caveat. Emergent 1979 leans for the East are NOT historically meaningful
- *     for FRG electoral purposes.
- *   - Post-1990 East (SN/TH/ST/BB/MV): economically LEFT (PDS/Linke legacy) but
- *     increasingly socially RIGHT / protest-populist (AfD) from 2013 onward — by
- *     2019/2023 the dominant signal is social-right.
- *   - Bavaria (BY) & Baden-Württemberg (BW): Catholic, affluent, Mittelstand →
- *     CDU/CSU conservative (RIGHT) across all eras.
- *   - City-states Berlin (BE), Hamburg (HH), Bremen (BRE): urban, secular,
- *     educated → LEFT.
- *
- * Era-fact anchors validated in de.test.ts (NEVER vs existing seed leans).
+ * 1979 covers WEST Germany only. Eastern Laender did not vote in FRG elections
+ * until 1990; their 1979 positions are best-effort GDR approximations and the
+ * emergent 1979 East leans are not meaningful for FRG purposes.
  */
 
 import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
@@ -269,7 +250,7 @@ const COMPOSITION: Record<GroupId, CountryLayer1Model["composition"][string]> = 
   },
 };
 
-// ── Default leans (archetype priors, from deDemographicCategories.ts) ─────────
+// ── Default leans (archetype priors, from the country Layer-1 model) ─────────
 
 const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number }> = {
   katholische_konservative: { economicLean: 2, socialLean: 2 },
@@ -291,36 +272,11 @@ const DEFAULT_LEANS: Record<GroupId, { economicLean: number; socialLean: number 
 // Scale: economicLean -5 (redistribution) to +5 (free market)
 //        socialLean   -5 (progressive) to +5 (traditional/authoritarian)
 //
-// Historical basis:
-//   1979: WEST Germany only (Schmidt SPD chancellorship; CDU/CSU opposition under
-//         Kohl). Class politics dominant: vocational/industrial workers economically
-//         LEFT (SPD), high income RIGHT (CDU/FDP). Catholic rural strongly social-
-//         right. Few graduates; no Green movement yet (Greens founded 1980) — degree
-//         is mildly right (elite professionals), NOT yet a progressive marker.
-//         East Länder data is DDR-era; positions are best-effort, not FRG-meaningful.
-//
-//   1991: Reunification year (Kohl). East absorbed; eastern workers economically
-//         anxious (LEFT econ via PDS legacy) but culturally conservative. West stable.
-//         Greens emerging — degree begins a leftward/progressive drift. Income still
-//         the main economic cleavage.
-//
-//   1999: Red-Green era (Schröder/Fischer, govt formed 1998). Graduate expansion;
-//         degree/abitur now clearly progressive (Green/SPD). East: deindustrialised,
-//         PDS-strong (econ LEFT) and still socially conservative.
-//
-//   2007: First Merkel grand coalition; export boom; Hartz-IV aftermath. Die Linke
-//         formed 2007 (PDS+WASG) — eastern econ-left consolidated. Degree firmly
-//         progressive. Low income econ-left (Hartz losers). Social-right of the East
-//         hardening but pre-AfD.
-//
-//   2019: Post-2015-refugee realignment. AfD entrenched (entered Bundestag 2017).
-//         Eastern German + low income + vocational now strongly SOCIAL-RIGHT (AfD
-//         protest) while still econ-left. Degree strongly progressive (Green surge).
-//         Urban strongly LEFT; rural social-right.
-//
-//   2023: Ampel era; cost-of-living; AfD polling ~20%+, strongest in the East.
-//         Same structure as 2019, social-right of East/low-income intensified;
-//         degree/urban progressive deepened.
+// Each era's positions are calibrated to the party system and cleavage
+// structure of that period (e.g. 1979: Schmidt SPD, class politics dominant,
+// no Green movement yet, so degree is not a progressive marker; 2019: post
+// refugee realignment, eastern and low-income vocational strongly social-right
+// while still econ-left, degree strongly progressive).
 
 type DimPositions = Record<string, DemographicPosition>;
 type EraPositions = Record<string, DimPositions>;

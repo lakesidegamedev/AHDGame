@@ -1,5 +1,5 @@
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import { constantPriceOutput } from "./rules/outputVolume";
+import { outputVolumeOnBasis, resolveOutputBasis } from "./rules/outputVolume";
 import type { Db } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import { warDamageByCountry, type WarDamage } from "@/lib/military/warDamage";
@@ -20,17 +20,17 @@ import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { FiscalRatios } from "./fiscalMirror";
 import type { GameConfig } from "@/lib/db/types";
 import { isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
-
-/**
- * A cross-collection rollup computed once per turn and fed to registry nodes
- * via `{provider: "<name>"}` inputs (spec P0 R1). Nodes never do their own
- * cross-collection DB reads — that is what keeps "add a metric = add an entry"
- * true for sector/stock-integrating nodes.
- */
-export interface ExternalAggregateProvider<T> {
-  name: string;
-  run(db: Db): Promise<T>;
-}
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { organizationMembershipsCollection } from "@/lib/db/repositories/organizationMemberships";
+import { conflictsCollection } from "@/lib/db/repositories/conflicts";
 
 export interface SectorRevenueTax {
   /** Per-state owned-sector revenue (FX-normalized to ₳) + growth rate. */
@@ -42,7 +42,7 @@ export interface SectorRevenueTax {
       /** Operating lane, so lane-keyed tables (carbon mix, model alignment) resolve. */
       sectorType?: OperatingSectorType;
       realizedRevenue?: number;
-      /** Host-currency nameplate — plants GDP signal (ticket #1084). */
+      /** Host-currency nameplate, plants GDP signal. */
       hostRevenue: number;
       /** Host-currency realized revenue when the sector has one. */
       hostRealizedRevenue?: number;
@@ -84,8 +84,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
     stateBudgets,
     marketConfig,
   ] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
+    corporateSectorsCollection(db)
       .find({})
       .project<
         Pick<
@@ -131,8 +130,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         corporationId: 1,
       })
       .toArray(),
-    db
-      .collection<UnownedSector>("unownedSectors")
+    unownedSectorsCollection(db)
       .find({})
       .project<
         Pick<
@@ -147,8 +145,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
         mediaDiscriminator: 1,
       })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({})
       .project<Pick<Corporation, "_id" | "countryId">>({
         _id: 1,
@@ -156,16 +153,14 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       })
       .toArray(),
     loadValuationFxRates(db),
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "taxRates">>({
         countryId: 1,
         taxRates: 1,
       })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    stateBudgetsCollection(db)
       .find({})
       .project<Pick<StateBudget, "_id" | "taxRates">>({
         taxRates: 1,
@@ -173,11 +168,12 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       .toArray(),
     // P2/D7: market mode via the SAME db handle (mock-db safe — mirrors the
     // labourSystemMode read in the engine phase), not the global getDb().
-    db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { marketSystemMode: 1 } })
+    gameConfigCollection(db)
+      .findOne({ _id: "default" }, { projection: { marketSystemMode: 1, outputBasis: 1 } })
       .catch(() => null),
   ]);
+
+  const outputBasis = resolveOutputBasis(marketConfig?.outputBasis);
 
   const plantsEnabled = marketAtLeast(
     isMarketSystemMode(marketConfig?.marketSystemMode) ? marketConfig.marketSystemMode : "off",
@@ -185,10 +181,10 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
   );
 
   // Host-currency lookup: sector economic fields are stored in the HOST state's
-  // currency (PR #3466), not the owning corp's. Convert to ₳ with the host rate
+  // currency, not the owning corp's. Convert to ₳ with the host rate
   // so a foreign owner's FX cannot revalue host-market earnings. Raw host
   // amounts ride along for the plants GDP signal, which must compare
-  // host-to-host so FX noise cannot annualize into phantom growth (#1084).
+  // host-to-host so FX noise cannot annualize into phantom growth.
   const corpById = new Map(corporations.map((c) => [c._id.toString(), c]));
 
   const ownedByState = new Map<
@@ -225,7 +221,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
       hostRealized !== undefined
         ? readCorpEconomicAnchor(hostRealized, hostCode, hostRate)
         : undefined;
-    const outputVolume = plantsEnabled ? constantPriceOutput(sector, turn) : null;
+    const outputVolume = plantsEnabled ? outputVolumeOnBasis(sector, turn, outputBasis) : null;
     const list = ownedByState.get(sector.stateId) ?? [];
     // Fallback chain: new field → legacy field → 0 (undefined would propagate NaN).
     const growth = sector.currentGrowthRate ?? sector.growthRate ?? 0;
@@ -287,8 +283,7 @@ export async function sectorRevenueTaxProvider(db: Db, turn = 0): Promise<Sector
  * cross-turn cycle rather than a same-turn one.
  */
 export async function governmentApprovalProvider(db: Db): Promise<Map<string, number>> {
-  const docs = await db
-    .collection<{ _id: string; approvalRating?: number }>("governmentApprovals")
+  const docs = await governmentApprovalsCollection<{ _id: string; approvalRating?: number }>(db)
     .find({})
     .project<{ _id: string; approvalRating?: number }>({ approvalRating: 1 })
     .toArray();
@@ -304,29 +299,24 @@ export async function governmentApprovalProvider(db: Db): Promise<Map<string, nu
 const clampRange = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /**
- * Provider #3 (📊 budget-sync): per-country real fiscal ratios from
- * `federalBudget`, so the readout metrics (debtToGdp / budgetBalance /
- * schuldenbremseHeadroom) MIRROR reality instead of drifting from a seed.
- * debtToGdp reads the canonical outstanding sovereign stock (haircut-adjusted
- * active non-defaulted face, see bonds/sovereignPrincipal.ts), never
- * `treasuryBalance` and never `deriveFiscalState`: cash and bond debt are
- * separate positions, so a negative balance is not debt (refs #1975). The
- * ratio basis is `resolveRatioGdp` (smoothed GDP), the same denominator the
- * stored `debtToGdpRatio` uses. Clamped to the metric bounds here;
- * `fiscalMirror` only rounds + persist-gates downstream.
+ * Provider #3 (budget-sync): per-country real fiscal ratios from
+ * `federalBudget`, so readout metrics mirror reality instead of drifting from
+ * a seed. debtToGdp reads the canonical outstanding sovereign stock
+ * (haircut-adjusted active non-defaulted face, see
+ * bonds/sovereignPrincipal.ts), never `treasuryBalance` and never
+ * `deriveFiscalState`: cash and bond debt are separate positions, so a
+ * negative balance is not debt. Uses `resolveRatioGdp` (smoothed GDP), the same
+ * denominator as the stored `debtToGdpRatio`. Clamped to metric bounds here;
+ * `fiscalMirror` only rounds and persist-gates downstream.
  *
- * Empty-ledger rule: a country with no bond rows holds no stock (repudiated,
- * merged away, or never indebted), so its debtToGdp is 0 even when the budget
- * still carries a stored principal or a negative cash balance. Those are
- * drift the end-of-turn reconcile heals, not debt, and the readout must agree
- * with the stored value AFTER the reconcile, not mirror the drift. There is
- * deliberately no fallback to the stored `debt.principal`: a second source
- * for the same number is what #1975 removes.
+ * Empty-ledger rule: a country with no bond rows holds no stock, so its
+ * debtToGdp is 0 even when the budget carries a stored principal or negative
+ * cash balance. Those are drift the end-of-turn reconcile heals, not debt, and
+ * there is deliberately no fallback to stored `debt.principal`.
  */
 export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRatios>> {
   const [budgets, bonds] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<
         Pick<FederalBudget, "_id" | "countryId" | "gdp" | "gdpSmoothed" | "revenue" | "spending">
@@ -338,8 +328,7 @@ export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRa
         spending: 1,
       })
       .toArray(),
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find({ issuerType: "sovereign", matured: false, defaulted: false })
       .project<
         Pick<
@@ -355,7 +344,7 @@ export async function fiscalRatiosProvider(db: Db): Promise<Map<string, FiscalRa
         countryId: 1,
         // The outstanding helper re-checks these query-filtered fields, so
         // they must be projected: a doc arriving without `issuerType` reads
-        // as non-sovereign and contributes 0 (refs #1975).
+        // as non-sovereign and contributes 0.
         issuerType: 1,
         matured: 1,
         defaulted: 1,
@@ -429,8 +418,7 @@ export interface FiscalTradeInputs {
 
 export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, FiscalTradeInputs>> {
   const [budgets, exRates, ftaPairs, memberships] = await Promise.all([
-    db
-      .collection<FederalBudget>("federalBudget")
+    federalBudgetCollection(db)
       .find({})
       .project<Pick<FederalBudget, "_id" | "countryId" | "taxRates" | "economicFactors">>({
         countryId: 1,
@@ -438,8 +426,7 @@ export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, Fis
         economicFactors: 1,
       })
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({})
       .project<Pick<ExchangeRate, "_id" | "countryId" | "rate" | "baseRate">>({
         countryId: 1,
@@ -448,8 +435,7 @@ export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, Fis
       })
       .toArray(),
     loadActiveFtaPairs(db), // enacted org `free_trade_agreement` legislation (SSOT)
-    db
-      .collection<OrganizationMembership>("organizationMemberships")
+    organizationMembershipsCollection(db)
       .find({})
       .project<Pick<OrganizationMembership, "_id" | "countryId" | "organizationId">>({
         countryId: 1,
@@ -503,8 +489,7 @@ export async function fiscalTradeInputsProvider(db: Db): Promise<Map<string, Fis
  * are simply absent from the map and the consuming nodes fall through to zero.
  */
 export async function warDamageProvider(db: Db): Promise<Map<string, WarDamage>> {
-  const conflicts = await db
-    .collection<ConflictDoc>("conflicts")
+  const conflicts = await conflictsCollection(db)
     .find({ status: { $ne: "resolved" } })
     .project<
       Pick<ConflictDoc, "status" | "hostCountry" | "hostEntities" | "control" | "controlStart">

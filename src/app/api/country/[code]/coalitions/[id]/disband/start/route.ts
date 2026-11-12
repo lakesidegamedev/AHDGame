@@ -5,10 +5,12 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { createNotification } from "@/lib/notifications";
 import type { Coalition } from "@/lib/db/types/coalition";
 import type { PoliticalParty } from "@/lib/db/types/party";
-import type { Character } from "@/lib/db/types/character";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getGameTime } from "@/lib/time/gameTime";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const DISBAND_VOTE_DURATION_HOURS = 24;
 const DISBAND_VOTE_DURATION_MS = DISBAND_VOTE_DURATION_HOURS * 60 * 60 * 1000;
@@ -44,9 +46,7 @@ export async function POST(
     const db = await getDb();
     const gameTime = await getGameTime();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId, countryId });
+    const coalition = await coalitionsCollection(db).findOne({ sequentialId, countryId });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -77,14 +77,14 @@ export async function POST(
       votes: [],
     };
 
-    await db
-      .collection<Coalition>("coalitions")
-      .updateOne({ _id: coalition._id }, { $set: { disbandVote, updatedAt: now } });
+    await coalitionsCollection(db).updateOne(
+      { _id: coalition._id },
+      { $set: { disbandVote, updatedAt: now } }
+    );
 
     // Notify all member party chairs
     const memberPartyIds = coalition.members.map((m) => m.partyId);
-    const memberParties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const memberParties = await politicalPartiesCollection(db)
       .find({ _id: { $in: memberPartyIds } }, { projection: { _id: 1, chairId: 1 } })
       .toArray();
 
@@ -92,8 +92,7 @@ export async function POST(
       .map((p) => p.chairId)
       .filter((cid): cid is NonNullable<typeof cid> => cid != null);
 
-    const chairCharacters = await db
-      .collection<Character>("characters")
+    const chairCharacters = await charactersCollection(db)
       .find({ _id: { $in: chairCharacterIds } }, { projection: { _id: 1, userId: 1 } })
       .toArray();
 

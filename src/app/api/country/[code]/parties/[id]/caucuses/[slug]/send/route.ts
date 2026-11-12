@@ -8,7 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { sendFundsSchema } from "@/lib/api/schemas/send";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { findCaucusBySlug, listCaucusMemberships } from "@/lib/db/caucusLookup";
-import type { Caucus, Character, AdminLog } from "@/lib/db/types";
+import type { Caucus, AdminLog } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -27,6 +27,11 @@ import {
 } from "@/lib/parties/leadershipElectionFreeze";
 import { getGameTime } from "@/lib/time/gameTime";
 import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import { activityLogCollection } from "@/lib/db/repositories/activityLog";
+import type { Document } from "mongodb";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; slug: string }>;
@@ -96,7 +101,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Character is not an active player member of this caucus");
     }
 
-    const targetCharacter = await db.collection<Character>("characters").findOne({
+    const targetCharacter = await charactersCollection(db).findOne({
       _id: targetCharacterOid,
       countryId,
       party: partyIdStr,
@@ -150,17 +155,21 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendInTransaction = async (session: ClientSession) => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: sendAmount } }, caucusDebit, { session });
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: sendAmount } },
+        caucusDebit,
+        { session }
+      );
 
       if (debitResult.matchedCount === 0) {
         throw badRequest("Insufficient caucus funds");
       }
 
-      const creditResult = await db
-        .collection<Character>("characters")
-        .updateOne({ _id: targetCharacterOid }, characterCredit, { session });
+      const creditResult = await charactersCollection(db).updateOne(
+        { _id: targetCharacterOid },
+        characterCredit,
+        { session }
+      );
 
       if (creditResult.matchedCount === 0) {
         throw notFound("Character not found");
@@ -168,26 +177,23 @@ export async function POST(request: Request, { params }: RouteParams) {
     };
 
     const applySendWithoutTransaction = async () => {
-      const debitResult = await db
-        .collection<Caucus>("caucuses")
-        .updateOne({ _id: caucus._id, treasury: { $gte: sendAmount } }, caucusDebit);
+      const debitResult = await caucusesCollection(db).updateOne(
+        { _id: caucus._id, treasury: { $gte: sendAmount } },
+        caucusDebit
+      );
 
       if (debitResult.matchedCount === 0) {
         return errorResponse(400, "Insufficient caucus funds");
       }
 
-      // The debit has landed and there is no transaction to roll back, so
-      // every exit from here on must either complete the credit or put the
-      // money back. A THROWN credit was previously not compensated at all:
-      // it escaped with the caucus treasury already short.
+      // The debit has landed and there is no transaction to roll back, so every exit
+      // from here must either complete the credit or refund the debit.
       const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
         try {
-          const refundResult = await db
-            .collection<Caucus>("caucuses")
-            .updateOne(
-              { _id: caucus._id },
-              { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
-            );
+          const refundResult = await caucusesCollection(db).updateOne(
+            { _id: caucus._id },
+            { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
+          );
           if (refundResult.matchedCount !== 1) {
             throw new Error("Caucus treasury no longer exists during refund");
           }
@@ -216,9 +222,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       let creditResult;
       try {
-        creditResult = await db
-          .collection<Character>("characters")
-          .updateOne({ _id: targetCharacterOid }, characterCredit);
+        creditResult = await charactersCollection(db).updateOne(
+          { _id: targetCharacterOid },
+          characterCredit
+        );
       } catch (creditError) {
         await refundDebit("credit threw", creditError);
         throw creditError;
@@ -263,7 +270,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       adminUsername: authUser.username,
       details: `Sent $${sendAmount.toLocaleString()} from caucus ${caucus.name} to ${targetCharacter.name}`,
     };
-    await db.collection<AdminLog>("adminLogs").insertOne(adminLog);
+    await adminLogsCollection(db).insertOne(adminLog);
 
     await emitTreasuryTransaction({
       db,
@@ -291,7 +298,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       now,
     });
 
-    void db.collection("activityLog").insertOne({
+    void activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(authUser.userId),

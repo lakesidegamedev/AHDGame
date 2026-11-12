@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { orgBuildSizeMultiplier } from "./buildOrgFunding";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * Resolves Build Org's per-state price multiplier from live population.
@@ -44,8 +45,7 @@ async function countryNormalizer(db: Db, countryId: CountryId): Promise<number |
   const now = Date.now();
   if (hit && hit.expiresAt > now) return hit.value;
 
-  const rows = await db
-    .collection<State>("states")
+  const rows = await statesCollection(db)
     .find({ countryId }, { projection: { population: 1 } })
     .toArray();
 
@@ -75,8 +75,7 @@ export async function resolveAllOrgBuildSizeMultipliers(
 ): Promise<Map<string, number>> {
   const multipliers = new Map<string, number>();
   const normalizer = await countryNormalizer(db, countryId);
-  const rows = await db
-    .collection<State>("states")
+  const rows = await statesCollection(db)
     .find({ countryId }, { projection: { population: 1 } })
     .toArray();
   for (const row of rows) {
@@ -102,9 +101,10 @@ export async function resolveOrgBuildSizeMultiplier(
   const normalizer = await countryNormalizer(db, countryId);
   if (normalizer === null) return 1;
 
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, countryId }, { projection: { population: 1 } });
+  const state = await statesCollection(db).findOne(
+    { _id: stateId, countryId },
+    { projection: { population: 1 } }
+  );
   if (!state) return 1;
 
   return orgBuildSizeMultiplier(state.population, normalizer);

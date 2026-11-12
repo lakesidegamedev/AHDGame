@@ -1,5 +1,5 @@
 import * as mongoConnection from "@/lib/mongodb";
-import { ensureSecededChamberElections } from "@/lib/turn/perpetualElections/shared";
+import { ensureSecededChamberElections } from "@/lib/elections/scheduling/shared";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
 import { processReferendumLifecycle } from "./processReferendumLifecycle";
 import { processIndependenceDesireDrift } from "@/lib/turn/independenceDesireDrift";

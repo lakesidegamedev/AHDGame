@@ -1,26 +1,17 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * Nigeria geo-political zone demographic composition using the 8 NG voter
- * archetypes.
+ * Nigeria geo-political zone demographics using the 8 NG voter archetypes.
  *
- * Each region defines the population share of each archetype (summing to 100%)
- * plus baseline lean and turnout values. Regional character is expressed
- * through the population mix, not archetype-specific lean variation.
+ * Each region sets the population share of each archetype (summing to 100%)
+ * plus baseline lean and turnout values. `categoryWeights: { ng_voterGroups: 100 }`
+ * references the profile in the country Layer-1 model.
  *
- * `categoryWeights: { ng_voterGroups: 100 }` references the profile defined
- * in ngDemographicCategories.ts.
- *
- * Mix calibration is based on:
- * - 2019 / 2023 INEC presidential election results by geo-political zone
- * - NPC 2006 Census + NBS demographic projections
- * - Afrobarometer and NOI Polls regional polling
- *
- * Design principle: every archetype has a non-zero population in every zone —
- * regional character comes from mix weight, not exclusion. This is the STATIC
- * fallback used when the Layer-1 positions flag is off.
+ * Every archetype has a non-zero population in every zone: regional character
+ * comes from mix weight, not exclusion. STATIC fallback used when the Layer-1
+ * positions flag is off.
  */
-export const ngRegionDemographics: StateDemographics[] = [
+export const ngRegionDemographics: CensusGroupView[] = [
   // ── North-West ──────────────────────────────────────────────────────────────
 
   // North-West: Hausa-Fulani caliphate heartland; overwhelmingly Muslim and
@@ -132,9 +123,7 @@ export const ngRegionDemographics: StateDemographics[] = [
 
   // ── South-East ──────────────────────────────────────────────────────────────
 
-  // South-East: Igbo heartland; overwhelmingly Christian; commercially oriented;
-  // APGA/Ohanaeze; strong sense of federal marginalisation; historically PDP
-  // but volatile; highest tertiary attainment outside South-West.
+  // South-East: Igbo heartland; overwhelmingly Christian; commercially oriented; APGA/Ohanaeze; strong federal marginalisation; historically PDP but volatile; highest tertiary attainment outside South-West.
   {
     _id: "SOUTH_EAST",
     countryId: "NG",

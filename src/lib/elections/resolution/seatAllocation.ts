@@ -1,0 +1,375 @@
+import { HOUSE_SEATS, UK_COMMONS_SEATS, UK_REGIONAL_COUNCIL_SEATS } from "@/lib/constants";
+import { allocateBlocListSeats } from "./blocListAllocation";
+import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
+import { getMultiSeatMinShare } from "@/lib/elections/rules/seatEligibility";
+import { type ElectionMethod } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+
+export { getMultiSeatMinShare } from "@/lib/elections/rules/seatEligibility";
+
+export interface RankedCandidate {
+  id: string;
+  votes: number;
+  /** NPP entries represent bounded slates; player entries represent one person. */
+  isNPP?: boolean;
+  /**
+   * Party identifier (optional). When present, the minimum-share eligibility
+   * gate is computed on the PARTY's aggregate share — all same-party
+   * candidates' votes pooled — instead of the candidate's individual share.
+   * "independent" (and missing) parties are never pooled: each such candidate
+   * remains its own eligibility group, which reproduces the legacy
+   * per-candidate behavior for callers that don't pass a party.
+   */
+  party?: string;
+}
+
+/** Rank individual ballots, expanding each NPP entry into a bounded virtual slate. */
+export function sntvSeats(
+  candidates: ReadonlyArray<Pick<RankedCandidate, "id" | "votes" | "isNPP">>,
+  totalSeats: number
+): Record<string, number> {
+  const seats: Record<string, number> = {};
+  for (const { id } of candidates) seats[id] = 0;
+  if (totalSeats <= 0) return seats;
+
+  const nppVotes = candidates.reduce((sum, c) => sum + (c.isNPP ? Math.max(0, c.votes) : 0), 0);
+  const virtualBallot: Array<{ id: string; slot: number; votes: number }> = [];
+  for (const candidate of candidates) {
+    if (candidate.votes <= 0) continue;
+    if (!candidate.isNPP) {
+      virtualBallot.push({ id: candidate.id, slot: 0, votes: candidate.votes });
+      continue;
+    }
+    // Each NPP is a slate representative, not a single MP. Nomination count
+    // follows its share of the NPP vote with 25% overcapacity so the chamber
+    // can fill while players can displace individual virtual candidates.
+    const slateSize = Math.min(
+      totalSeats,
+      Math.max(1, Math.ceil((1.25 * totalSeats * candidate.votes) / nppVotes))
+    );
+    for (let slot = 0; slot < slateSize; slot++) {
+      // A deterministic range of individual candidate strengths conserves
+      // the slate's aggregate vote and permits interleaving between parties.
+      const weight = slateSize === 1 ? 1 : 1.5 - slot / (slateSize - 1);
+      virtualBallot.push({
+        id: candidate.id,
+        slot,
+        votes: (candidate.votes * weight) / slateSize,
+      });
+    }
+  }
+  virtualBallot.sort((a, b) => b.votes - a.votes || a.id.localeCompare(b.id) || a.slot - b.slot);
+  for (const { id } of virtualBallot.slice(0, totalSeats)) {
+    seats[id]++;
+  }
+  return seats;
+}
+
+/**
+ * Eligibility group for the minimum-share gate: same-party candidates pool
+ * their votes; independents / party-less candidates stand alone.
+ */
+function eligibilityGroupKey(c: RankedCandidate): string {
+  return c.party && c.party !== "independent" ? `party:${c.party}` : `cand:${c.id}`;
+}
+
+// Shared apportionment core
+
+/** A candidate entering apportionment: an id, its votes, and its party (if any). */
+export interface ApportionmentCandidate {
+  id: string;
+  votes: number;
+  party?: string | null;
+}
+
+export interface LargestRemainderOptions {
+  /** Minimum party-pooled vote share to enter the allocation pool. */
+  minShare: number;
+  /**
+   * Denominator for the eligibility gate. The resolver measures against all
+   * votes cast in the race; the projection measures against active-candidate
+   * votes only. Those are legitimately different numbers, so the caller owns it.
+   */
+  totalVotesForShare: number;
+}
+
+export interface LargestRemainderResult {
+  /** Seats per candidate id. Every input id is present; non-pool ids are 0. */
+  seats: Record<string, number>;
+  /** Candidate ids that entered the allocation pool, in pool order. */
+  poolIds: string[];
+  /** Summed votes of the allocation pool. Zero means nothing was allocated. */
+  poolVotes: number;
+  /** True when the eligibility gate admitted nobody and ranked order was used. */
+  usedFallback: boolean;
+}
+
+/**
+ * The one implementation of the multi-seat apportionment rule: party-pooled
+ * minimum-share eligibility, the degenerate ranked-order fallback, and
+ * Hamilton / Largest-Remainder assignment.
+ *
+ * Resolution and projection must agree exactly or projected seats differ
+ * from the seats the race resolves to. Keep this shared rather than
+ * re-coding a copy, which is how the two drifted before.
+ *
+ * Callers keep their own surrounding concerns: the resolver's bloc-list path,
+ * 2-seat House rule, over-allocation cap and single-seat path stay in
+ * `allocateSeats`; the projection's multi-seat gate and null returns stay in
+ * `computeSeatEstimates`.
+ */
+export function largestRemainderSeats(
+  candidates: ReadonlyArray<ApportionmentCandidate>,
+  totalSeats: number,
+  opts: LargestRemainderOptions
+): LargestRemainderResult {
+  const seats: Record<string, number> = {};
+  for (const c of candidates) seats[c.id] = 0;
+  if (candidates.length === 0 || totalSeats <= 0) {
+    return { seats, poolIds: [], poolVotes: 0, usedFallback: false };
+  }
+
+  const groupKey = (c: ApportionmentCandidate) =>
+    c.party && c.party !== "independent" ? `party:${c.party}` : `cand:${c.id}`;
+
+  // Same-party candidates pool their votes against the threshold, so a party
+  // splitting 22% across two candidates clears a 20% gate while a 0.8% fringe
+  // candidate cannot.
+  const votesByGroup = new Map<string, number>();
+  for (const c of candidates) {
+    const k = groupKey(c);
+    votesByGroup.set(k, (votesByGroup.get(k) ?? 0) + c.votes);
+  }
+  const eligible =
+    opts.totalVotesForShare > 0
+      ? candidates.filter(
+          (c) => (votesByGroup.get(groupKey(c)) ?? 0) / opts.totalVotesForShare >= opts.minShare
+        )
+      : [];
+
+  // Sub-threshold candidates are never re-admitted alongside eligible ones.
+  // The fallback survives only for the degenerate case where NOBODY clears the
+  // gate: fill in ranked order.
+  const usedFallback = eligible.length === 0;
+  const pool = usedFallback
+    ? [...candidates]
+        .sort((a, b) => b.votes - a.votes)
+        .slice(0, Math.min(totalSeats, candidates.length))
+    : admitUntilMajority(candidates, eligible, votesByGroup, groupKey, opts.totalVotesForShare);
+
+  const poolVotes = pool.reduce((sum, c) => sum + c.votes, 0);
+  if (pool.length === 0 || poolVotes === 0) {
+    return { seats, poolIds: pool.map((c) => c.id), poolVotes, usedFallback };
+  }
+
+  const assigned = pool.map((c) => {
+    const exact = (c.votes / poolVotes) * totalSeats;
+    return { id: c.id, seats: Math.floor(exact), remainder: exact % 1 };
+  });
+  const remaining = totalSeats - assigned.reduce((s, a) => s + a.seats, 0);
+  assigned.sort((a, b) => b.remainder - a.remainder);
+  // Wraps: LR guarantees `remaining < pool.length`, but wrapping keeps every
+  // seat assigned rather than silently dropping any if that ever stops holding.
+  for (let i = 0; i < remaining; i++) assigned[i % assigned.length].seats++;
+  for (const a of assigned) seats[a.id] = a.seats;
+
+  return { seats, poolIds: pool.map((c) => c.id), poolVotes, usedFallback };
+}
+
+/**
+ * A multi-seat bloc is never apportioned on the votes of less than half the
+ * electorate. When the gate leaves a pool that holds under 50% of the votes
+ * (typically one plurality party in a fragmented field), the next-strongest
+ * party groups are readmitted until the pool holds a majority. Without this a
+ * party on a quarter of the vote took the whole bloc, and a few cycles of that
+ * turned multi-party countries into one-party legislatures.
+ */
+function admitUntilMajority(
+  candidates: ReadonlyArray<ApportionmentCandidate>,
+  eligible: ApportionmentCandidate[],
+  votesByGroup: ReadonlyMap<string, number>,
+  groupKey: (c: ApportionmentCandidate) => string,
+  totalVotesForShare: number
+): ApportionmentCandidate[] {
+  if (totalVotesForShare <= 0) return eligible;
+  const admitted = new Set(eligible.map(groupKey));
+  let poolShare = 0;
+  for (const k of admitted) poolShare += votesByGroup.get(k) ?? 0;
+  if (poolShare / totalVotesForShare >= 0.5) return eligible;
+
+  const waiting = [...votesByGroup.entries()]
+    .filter(([k, v]) => !admitted.has(k) && v > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  for (const [k, v] of waiting) {
+    if (poolShare / totalVotesForShare >= 0.5) break;
+    admitted.add(k);
+    poolShare += v;
+  }
+  return candidates.filter((c) => admitted.has(groupKey(c)));
+}
+
+export interface SeatAllocationResult {
+  isMultiSeat: boolean;
+  authoritativeSeats: number;
+  seatsEstimate: Record<string, number>;
+  winners: [string, number][];
+  losers: string[];
+}
+
+/** Shared multi-seat gate for resolution and every live projection surface. */
+export function isMultiSeatElection(electionType: string, totalSeats: number): boolean {
+  return MULTI_SEAT_TYPES.has(electionType) || (electionType === "senate" && totalSeats > 1);
+}
+
+/**
+ * Allocate seats proportionally (Largest Remainder method) for multi-seat races,
+ * or assign a single seat to the top vote-getter for single-seat races.
+ */
+export function allocateSeats(
+  electionType: string,
+  state: string | undefined,
+  totalSeats: number,
+  ranked: RankedCandidate[],
+  totalVotesCast: number,
+  houseSeats: Record<string, number> = HOUSE_SEATS,
+  /**
+   * Bloc-list quota (party sequentialId to share) for National Front chambers.
+   * When supplied on a multi-seat race the party split comes from the quota
+   * instead of the vote, and only the split INSIDE each party's block is
+   * decided by votes. See `@/lib/elections/resolution/blocListAllocation`. Undefined
+   * (every country but the DDR today) leaves the proportional path untouched.
+   */
+  blocListShares?: Readonly<Record<string, number>>,
+  /**
+   * Preset-aware Commons seat map. Defaults to the modern 650-seat
+   * `UK_COMMONS_SEATS`; pass `getUkCommonsSeats(preset)` so a 1953 world
+   * allocates the 625-seat redistribution.
+   */
+  commonsSeats: Record<string, number> = UK_COMMONS_SEATS,
+  /** Country scope for rules shared by election types in multiple countries. */
+  countryId?: string,
+  allocationMethod?: ElectionMethod
+): SeatAllocationResult {
+  // US senate is single-seat (totalSeats=1) so it is unaffected. Nigeria's
+  // Senate is multi-seat per zone (18-21), so a "senate" race with more than
+  // one seat allocates proportionally like any multi-seat chamber.
+  const isMultiSeat = isMultiSeatElection(electionType, totalSeats);
+
+  // Use authoritative seat count for House/Commons to prevent over-allocation.
+  // `houseSeats` defaults to the 2020-census `HOUSE_SEATS`; pass
+  // `getHouseSeats(preset)` to allocate with the active preset's apportionment
+  // (e.g. the 1990 census for a 1991 game). Commons likewise: pass
+  // `getUkCommonsSeats(preset)` so 1953 worlds do not seat the modern 650 map.
+  const authoritativeSeats =
+    electionType === "house"
+      ? (houseSeats[state!] ?? totalSeats)
+      : electionType === "commons" || electionType === "snap_commons"
+        ? (commonsSeats[state!] ?? totalSeats)
+        : electionType === "regionalCouncil"
+          ? (UK_REGIONAL_COUNCIL_SEATS[state!] ?? totalSeats)
+          : totalSeats;
+
+  const seatsEstimate: Record<string, number> = {};
+  // Deployed 1991 JP races may still carry the former SNTV snapshot until the
+  // perpetual-election healer runs. Interpret those documents through the
+  // current proportional rule so projections and final resolution agree
+  // throughout the rollout.
+  const isJapanShugiin =
+    countryId === COUNTRY_CLIENT_CONFIGS.JP.id &&
+    (electionType === "shugiin" || electionType === "snap_shugiin");
+
+  if (isMultiSeat && allocationMethod === "sntv" && !isJapanShugiin) {
+    // Player candidates win at most one seat; NPP entries represent finite
+    // slates of virtual individuals. There is no proportional seat quota.
+    Object.assign(seatsEstimate, sntvSeats(ranked, authoritativeSeats));
+  } else if (isMultiSeat && blocListShares) {
+    // Bloc-list chamber: the quota decides the party split outright, so none of
+    // the eligibility and threshold machinery below applies. There
+    // is no cross-party contest to threshold.
+    const blocSeats = allocateBlocListSeats(authoritativeSeats, blocListShares, ranked);
+    for (const { id } of ranked) seatsEstimate[id] = blocSeats[id] ?? 0;
+  } else if (isMultiSeat) {
+    for (const { id } of ranked) seatsEstimate[id] = 0;
+
+    // Eligibility is a PARTY-level gate when `party` is provided: same-party
+    // candidates pool their votes against the threshold, so a party splitting
+    // 22% across two candidates clears a 20% gate while a 0.8% fringe
+    // candidate can no longer sneak in. Callers without party data fall back
+    // to the legacy per-candidate share.
+    const minShare = getMultiSeatMinShare(electionType, authoritativeSeats, countryId);
+    const votesByGroup = new Map<string, number>();
+    for (const c of ranked) {
+      const k = eligibilityGroupKey(c);
+      votesByGroup.set(k, (votesByGroup.get(k) ?? 0) + c.votes);
+    }
+    const eligible = ranked.filter(
+      (c) => (votesByGroup.get(eligibilityGroupKey(c)) ?? 0) / totalVotesCast >= minShare
+    );
+
+    // 2-seat House: winner takes both when no opponent reaches threshold; otherwise split 1-1.
+    if (electionType === "house" && authoritativeSeats === 2) {
+      if (eligible.length >= 2) {
+        seatsEstimate[eligible[0].id] = 1;
+        seatsEstimate[eligible[1].id] = 1;
+      } else {
+        seatsEstimate[ranked[0].id] = 2;
+      }
+    } else {
+      // Eligibility, ranked-order fallback and Largest Remainder live in
+      // `largestRemainderSeats` so the projection engine runs the identical rule.
+      const { seats, poolIds, poolVotes } = largestRemainderSeats(ranked, authoritativeSeats, {
+        minShare,
+        totalVotesForShare: totalVotesCast,
+      });
+      if (poolIds.length === 1 || poolVotes === 0) {
+        // Only give all seats to one candidate if they're truly the only
+        // option. A zero-vote pool cannot be apportioned at all, so seat the
+        // leading candidate rather than nobody.
+        seatsEstimate[poolIds[0] ?? ranked[0].id] = authoritativeSeats;
+      } else {
+        for (const [id, count] of Object.entries(seats)) seatsEstimate[id] = count;
+      }
+    }
+
+    // Safety check: ensure total allocated seats doesn't exceed authoritative count
+    const totalAllocated = Object.values(seatsEstimate).reduce((s, v) => s + v, 0);
+    if (totalAllocated > authoritativeSeats) {
+      console.warn(
+        `[Turn] Election (${electionType}/${state}): allocated ${totalAllocated} seats but state only has ${authoritativeSeats}. Capping.`
+      );
+      // Scale down proportionally
+      const scale = authoritativeSeats / totalAllocated;
+      let allocated = 0;
+      const entries = Object.entries(seatsEstimate)
+        .filter(([, s]) => s > 0)
+        .sort((a, b) => b[1] - a[1]);
+      for (const [id, seats] of entries) {
+        const scaled = Math.floor(seats * scale);
+        seatsEstimate[id] = scaled;
+        allocated += scaled;
+      }
+      // Give remaining to top candidates
+      let remaining = authoritativeSeats - allocated;
+      for (const [id] of entries) {
+        if (remaining <= 0) break;
+        seatsEstimate[id]++;
+        remaining--;
+      }
+    }
+  } else {
+    seatsEstimate[ranked[0].id] = 1;
+    for (let i = 1; i < ranked.length; i++) seatsEstimate[ranked[i].id] = 0;
+  }
+
+  const winners: [string, number][] = isMultiSeat
+    ? (Object.entries(seatsEstimate).filter(([, s]) => s > 0) as [string, number][])
+    : [[ranked[0].id, 1]];
+
+  const losers: string[] = isMultiSeat
+    ? Object.entries(seatsEstimate)
+        .filter(([, s]) => s === 0)
+        .map(([id]) => id)
+    : ranked.slice(1).map((r) => r.id);
+
+  return { isMultiSeat, authoritativeSeats, seatsEstimate, winners, losers };
+}

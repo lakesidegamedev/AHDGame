@@ -14,6 +14,7 @@ import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCr
 import type { Db } from "mongodb";
 import type { TurnExecutionContext } from "@/simulation/engine/types";
 import type { TurnEngine } from "@/simulation/engine/turnEngine";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export async function buildTurnExecutionContext(input: {
   db: Db;
@@ -51,17 +52,8 @@ export async function buildTurnExecutionContext(input: {
 
   const nextTurnTime = nextScheduledTurnAfter(realNow, resolveTurnCronMinute(), gameState.fastMode);
 
-  // Turn-init projections (#2166): the full character/state documents are never
-  // needed here. The turn path reads only:
-  // - characters: processActionRefresh (currentOffice, countryId, actions,
-  //   stats, statXp, debateDecayAnchor, politicalInfluence, nationalInfluence,
-  //   infamy, favorability, party), processFundGeneration (homeState,
-  //   donorBaseLevel, currentOffice, countryId, politicalInfluence, party,
-  //   name), processPartyInfluenceTurn (countryId, party, policies,
-  //   partyInfluence, infamy, stats). turnSystem.ts uses characters.length.
-  // - states: processFundGeneration (population, gdp, countryId),
-  //   processNppFundGeneration (population, countryId), processPartyGOTV
-  //   (population, gdp, votingEligiblePopulation).
+  // Turn-init projection: the turn path reads only the fields listed in the
+  // projection below; full documents are never needed here.
   const charactersCollection = await getCharactersCollection(db);
   const characters = await charactersCollection
     .find(
@@ -88,8 +80,7 @@ export async function buildTurnExecutionContext(input: {
       }
     )
     .toArray();
-  const states = await db
-    .collection<State>("states")
+  const states = await statesCollection(db)
     .find({}, { projection: { countryId: 1, population: 1, gdp: 1, votingEligiblePopulation: 1 } })
     .toArray();
   const stateMap = new Map(states.map((state) => [state._id, state]));
@@ -153,7 +144,7 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     fiscalYear: null,
     policyEffects: null,
     demographicEffects: null,
-    archetypeApprovalDecay: null,
+    bucketApprovalDecay: null,
     nationalMetrics: null,
     metricHistory: null,
     approvalSnapshot: null,
@@ -166,6 +157,7 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     npcBankPolicyTurn: null,
     bankingTurn: null,
     pensionTurn: null,
+    frontierRaces: null,
     bankSolvencyTurn: null,
     treasuryTurn: null,
     indexFunds: null,
@@ -185,6 +177,7 @@ function createInitialTurnLogPhases(): TurnLog["phases"] {
     jpRegionalBudgetProcessing: null,
     deRegionalBudgetProcessing: null,
     crisisTurn: null,
+    crisisV2Turn: null,
     ministerialOrders: null,
     officeStateSeed: null,
     governorAPRegen: null,

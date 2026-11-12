@@ -1,24 +1,17 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * China macro-region demographic composition using the 7 CN voter archetypes.
  *
- * Each region defines the population share of each archetype (summing to 100%)
- * plus baseline lean and turnout values. Regional character is expressed
- * through the population mix, not archetype-specific lean variation.
+ * Each region defines population shares (summing to 100%) plus baseline lean
+ * and turnout. Regional character comes from the population mix, not archetype-
+ * specific lean variation. Every archetype has a non-zero population in every
+ * region.
  *
- * `categoryWeights: { cn_voterGroups: 100 }` references the profile defined
- * in cnDemographicCategories.ts.
- *
- * Mix calibration is based on:
- * - Regional GDP, urbanization, and industrial composition data
- * - NBS (National Bureau of Statistics) 2022 population profiles
- * - Hukou registration and migrant worker flow estimates
- *
- * Design principle: every archetype has a non-zero population in every
- * region — regional character comes from mix weight, not exclusion.
+ * `categoryWeights: { cn_voterGroups: 100 }` references the profile in
+ * the country Layer-1 model.
  */
-export const cnRegionDemographics: StateDemographics[] = [
+export const cnRegionDemographics: CensusGroupView[] = [
   // ── Dongbei (Northeast) ────────────────────────────────────────────────────
   // Aging rust belt with heavy industrial worker concentration and legacy
   // state enterprise party cadre presence. Low youth retention.

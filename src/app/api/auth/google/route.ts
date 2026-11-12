@@ -15,6 +15,8 @@ import { getBaseUrl, getClientIp } from "@/lib/utils/network";
 import { AUTH_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { withNoStore } from "@/lib/api/withNoStore";
 import { randomBytes } from "crypto";
+import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/auth/google — Initiates the Google OAuth flow to link a Google account to the signed-in user.
 // Auth: required (redirects to /login when unauthenticated)
@@ -32,8 +34,8 @@ export const GET = withNoStore(async function GET(request: Request) {
       return NextResponse.redirect(new URL("/login", baseUrl));
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const clientId = authConfig.googleClientId();
+    const redirectUri = authConfig.googleRedirectUri();
 
     if (!clientId || !redirectUri) {
       return NextResponse.redirect(
@@ -44,7 +46,7 @@ export const GET = withNoStore(async function GET(request: Request) {
     // Link start requires the fresh current account/session, not the cached
     // grant alone: the sealed link context below binds this binding.
     const db = await getDb();
-    const account = await db.collection<User>("users").findOne({ _id: new ObjectId(user.userId) });
+    const account = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
     const auth = await verifyAuth();
     if (!account || !auth || !credentialSessionIsCurrent(user.userId, account, auth)) {
       return NextResponse.redirect(new URL("/login", baseUrl));

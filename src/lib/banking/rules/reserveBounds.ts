@@ -2,20 +2,12 @@
  * Reserve-requirement bounds and era defaults, in a module a CLIENT component
  * can import.
  *
- * These four numbers used to live in `reserves.ts` next to the functions that
- * enforce them, which reads well and broke the production build. `reserves.ts`
- * imports `mongodb`, `gdpAnchorRate` and the banking feature flag, and
- * `gdpAnchorRate` reaches the turn engine, which reaches `sharp`. So the one
- * line in `CentralBankReserveTab.tsx` importing two constants pulled that whole
- * graph into the browser bundle, and Turbopack failed the build on `fs`, `net`,
- * `dns`, `async_hooks`, `child_process`, `tls` and a non-placeable `sharp`
- * binary. Twenty-four errors, all from one import of two numbers.
- *
  * Nothing here may import anything that touches the database, the filesystem or
- * the turn engine. Values only.
+ * the turn engine. Values only. Pulling those into a client import graph breaks
+ * the browser bundle build.
  *
- * `reserves.ts` re-exports these, so every server-side caller is unchanged and
- * there is still one definition of each number.
+ * `reserves.ts` re-exports these, so there is still one definition of each
+ * number.
  */
 
 /**

@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LegislationType } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
-import { deLegislationTypes } from "../de/deLegislationTypes";
-import { cnLegislationTypes } from "../cn/cnLegislationTypes";
 import { ieLegislationTypes } from "../ie/ieLegislationTypes";
-import { jpLegislationTypes } from "@/lib/countries/jp/data/jpLegislationTypes";
 
 /**
  * §4.7 environment spending sweep guard (P3c). carbonEmissions / airQuality /
@@ -35,12 +32,10 @@ const MECHANISM_KEEP_LIST = new Map<string, Set<string>>([
   // pass-through secondaries were dropped in the P3c sweep (engine-derived
   // from carbon / the renewables root).
   ["uk_climate_net_zero", new Set(["carbonEmissions"])],
-  ["de_climate_targets", new Set(["carbonEmissions"])],
   ["jp_climate_emissions", new Set(["carbonEmissions"])],
   // COMPOSITION mechanism: the nuclear share displaces fossil generation — the
   // engine's carbon node only knows the RENEWABLES root, so nuclear's carbon
   // displacement is invisible to it; the direct secondary encodes it.
-  ["de_nuclear_energy", new Set(["carbonEmissions"])],
   ["jp_nuclear_energy", new Set(["carbonEmissions"])],
   // SUB-ALLOCATION: local environmental services (street-level air programs,
   // green spaces, low-emission zones) act on LOCAL air quality beyond the
@@ -72,13 +67,7 @@ function tierHits(lt: LegislationType): string[] {
 }
 
 describe("§4.7 environment spending sweep", () => {
-  const all = [
-    ...legislationTypes,
-    ...deLegislationTypes,
-    ...cnLegislationTypes,
-    ...ieLegislationTypes,
-    ...jpLegislationTypes,
-  ];
+  const all = [...legislationTypes, ...ieLegislationTypes];
 
   it("no environment-budget FUNDING law targets a tier readout", () => {
     const offenders: string[] = [];

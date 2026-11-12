@@ -9,8 +9,10 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import type { Character, User } from "@/lib/db/types";
 import { validateStatAllocation } from "@/lib/stats/validateStatAllocation";
-import { isRpgStatsEnabled } from "@/lib/stats/featureFlag";
 import { suggestStatBuild, type SuggestBuildInput } from "@/lib/stats/suggestedBuild";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const allocateStatsSchema = z.object({
   stats: z.record(z.string(), z.number()),
@@ -19,13 +21,14 @@ const allocateStatsSchema = z.object({
 /** Resolve the requesting user's active character. */
 async function loadActiveCharacter(userId: string) {
   const db = await getDb();
-  const userDoc = await db
-    .collection<User>("users")
-    .findOne({ _id: new ObjectId(userId) }, { projection: { activeCharacterId: 1 } });
+  const userDoc = await usersCollection(db).findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { activeCharacterId: 1 } }
+  );
   const query = userDoc?.activeCharacterId
     ? { _id: userDoc.activeCharacterId, userId: new ObjectId(userId) }
     : { userId: new ObjectId(userId) };
-  const character = await db.collection<Character>("characters").findOne(query);
+  const character = await charactersCollection(db).findOne(query);
   return { db, character };
 }
 
@@ -34,7 +37,7 @@ async function buildSuggestion(
   db: Awaited<ReturnType<typeof getDb>>,
   character: Character
 ): Promise<ReturnType<typeof suggestStatBuild>> {
-  const corpsOwned = await db.collection("corporations").countDocuments({
+  const corpsOwned = await corporationsCollection(db).countDocuments({
     ceoId: character._id,
     $or: [{ ceoType: "character" }, { ceoType: { $exists: false } }],
   });
@@ -51,17 +54,13 @@ async function buildSuggestion(
   return suggestStatBuild(input);
 }
 
-// GET /api/character/allocate-stats — Returns a suggested 28-point build for the
-// active character (used to pre-fill the grandfather allocation modal).
-// Auth: requireHumanSession. Errors: 401, 403, 404, 409.
+// GET /api/character/allocate-stats: suggested 28-point build for the
+// active character; pre-fills the grandfather allocation modal.
+// Auth: requireHumanSession. Errors: 401, 404, 409.
 async function handleGET(request: Request) {
   try {
     const auth = await requireHumanSession(request);
     if (!auth.ok) return auth.response;
-
-    if (!(await isRpgStatsEnabled())) {
-      return errorResponse(403, "The stat system is not currently enabled.");
-    }
 
     const { db, character } = await loadActiveCharacter(auth.user.userId);
     if (!character) {
@@ -82,7 +81,7 @@ export const GET = withNoStore(handleGET);
 
 // POST /api/character/allocate-stats — Commits a one-time 28-point stat allocation
 // for a grandfathered character.
-// Auth: requireHumanSession. Errors: 400, 401, 403, 404, 409, 429.
+// Auth: requireHumanSession. Errors: 400, 401, 404, 409, 429.
 export async function POST(request: Request) {
   try {
     const auth = await requireHumanSession(request);
@@ -90,10 +89,6 @@ export async function POST(request: Request) {
 
     const rateLimit = checkRateLimit(`api/character/allocate-stats:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
-
-    if (!(await isRpgStatsEnabled())) {
-      return errorResponse(403, "The stat system is not currently enabled.");
-    }
 
     const parsed = await parseJsonBody(request, allocateStatsSchema);
     if (!parsed.success) {
@@ -114,7 +109,7 @@ export async function POST(request: Request) {
     }
 
     // Atomic guard: only allocate if still unallocated (prevents double-submit).
-    const result = await db.collection<Character>("characters").updateOne(
+    const result = await charactersCollection(db).updateOne(
       { _id: character._id, statsAllocated: { $ne: true } },
       {
         $set: {

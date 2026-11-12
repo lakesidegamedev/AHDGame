@@ -3,6 +3,8 @@ import {
   getWorldEntityPresetManifest,
   type WorldEntityManifestEntry,
 } from "@/lib/world/worldEntityManifest";
+import { worldEntityStatesCollection } from "@/lib/db/repositories/worldEntityStates";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export const WORLD_ENTITY_STATES_COLLECTION = "worldEntityStates";
 export const FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION = "federationSettlementApplications";
@@ -124,30 +126,27 @@ export async function loadRuntimeWorldEntities(
   db: Db,
   presetId: string
 ): Promise<WorldEntityManifestEntry[]> {
-  const applications = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .find(
-      { presetId, status: "applied" },
-      {
-        projection: {
-          _id: 1,
-          presetId: 1,
-          settlementId: 1,
-          revision: 1,
-          sourceEntityId: 1,
-          entityIds: 1,
-          status: 1,
-          appliedOnTurn: 1,
-        },
-      }
-    )
-    .toArray();
+  const applications =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(db)
+      .find(
+        { presetId, status: "applied" },
+        {
+          projection: {
+            _id: 1,
+            presetId: 1,
+            settlementId: 1,
+            revision: 1,
+            sourceEntityId: 1,
+            entityIds: 1,
+            status: 1,
+            appliedOnTurn: 1,
+          },
+        }
+      )
+      .toArray();
   if (applications.length === 0) return overlayRuntimeWorldEntities(presetId, [], new Set());
   const appliedIds = applications.map((application) => application._id);
-  const states = await db
-    .collection<RuntimeWorldEntityState>(WORLD_ENTITY_STATES_COLLECTION)
+  const states = await worldEntityStatesCollection<RuntimeWorldEntityState>(db)
     .find({ presetId, applicationId: { $in: appliedIds } })
     .toArray();
   return overlayRuntimeWorldEntities(

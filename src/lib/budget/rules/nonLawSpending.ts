@@ -34,17 +34,15 @@ export const NON_LAW_CALIBRATION_VERSION = "opening-envelope-v2";
  * Countries outside the player law book (LAW_COUNTRY_IDS) carry a handful of
  * seed laws that price only part of what their government spends, plus a
  * seeded general-government envelope (baselineSpendingByCategory and
- * baselineStateGrants). Once the law book takes over, spending fell to the law
- * book alone: in the live 1991 world Germany went from 33% to 12% of GDP and
- * China from 18% to 7% while revenue stayed whole, leaving surpluses no
- * government runs. The gap becomes a fixed share of GDP, the same mechanism the
- * calibrated Russian envelope uses, so later law changes still move spending.
+ * baselineStateGrants). Once the law book takes over, spending falls to the law
+ * book alone while revenue stays whole, leaving surpluses no government runs.
+ * The gap becomes a fixed share of GDP, the same mechanism the calibrated
+ * Russian envelope uses, so later law changes still move spending.
  *
  * The gap is filled only up to what the country can afford at opening: receipts
  * plus the small opening deficit, after debt service (the same envelope
  * fitOpeningFiscalEnvelope sizes openings with). A stale seeded envelope larger
- * than receipts, such as Brazil's pre-fix 1991 book, must not open a deficit of
- * a fifth of GDP.
+ * than receipts must not open a deficit of a fifth of GDP.
  *
  * Returns 0 when there is no gap worth booking, undefined when the inputs are
  * unusable.
@@ -71,15 +69,13 @@ export function calibrateNonLawSpendingShare(args: {
 }
 
 /**
- * Non-law spending (SUR, or the budget's own currency) that tops a country's
- * law-priced spending up to its authored total envelope at seed.
+ * Non-law spending (SUR or the budget's own currency) that tops law-priced
+ * spending up to a country's authored total envelope at seed.
  *
- * A planned-economy union grant pool is booked back as `spending.stateGrants`
- * once the regional budgets exist, but they do not exist yet while the seed
- * measures the book. Counting only the booked grants left the pool out of the
- * measurement, so the residual absorbed it and the pool was then booked a
- * second time on the first turns (live Russia: the 106B pool, 4.6% of GDP).
- * The unbooked part of the pool is therefore taken off the residual.
+ * Planned-economy union grant pools are not yet booked as
+ * `spending.stateGrants` when the seed measures the book (regional budgets
+ * do not exist yet), so the unbooked part is subtracted off the residual to
+ * avoid double-counting the pool on the first turns.
  *
  * A negative result means the law book and debt service alone already exceed
  * the envelope; the caller decides how to fail.

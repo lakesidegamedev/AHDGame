@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { primaryBallotWindow } from "@/lib/turn/primaryBallots";
-import { turnVoteWeight } from "@/lib/electionEngine/voteCalculations";
+import { turnVoteWeight } from "@/lib/elections/engine/voteCalculations";
 import { canonicalTurnsForCycle, pickNextCanonicalCycle } from "./canonicalCycle";
 
 describe("standard election timing integration", () => {

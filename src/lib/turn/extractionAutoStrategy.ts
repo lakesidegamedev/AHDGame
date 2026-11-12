@@ -12,13 +12,14 @@ import type {
   SectorBuildOrder,
   StateResourceCapacity,
 } from "@/lib/db/types";
-import type { GameState, NppEntryViabilityMode } from "@/lib/db/types/gameState";
+import type { NppEntryViabilityMode } from "@/lib/db/types/gameState";
 import {
   EXTRACTABLE_RESOURCES,
   type CommodityType,
   type ExtractableResource,
 } from "@/lib/constants/commodities";
 import { SECTOR_STRATEGIES, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
+import { isUngatedStrategy } from "@/lib/constants/techTree/strategyAvailability";
 import {
   getExtractionStrategyResources,
   isExtractionStrategyZeroYield,
@@ -47,6 +48,12 @@ import {
 import { loadPrivateEnterpriseBlockedCountries } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ESSENTIAL_SHORTAGE_SCORE } from "@/lib/turn/npp/marketSignals";
 import { isParentDirectedStrategyProtected } from "@/lib/turn/npp/rules/parentDirectedStrategy";
+import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import { getCorporateSectorsCollection } from "@/lib/db/collections/corporateSectors";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 const NPC_CORPORATION_USER_ID = new ObjectId("000000000000000000000000");
 
@@ -106,38 +113,36 @@ function capacityRescaleUpdate(
 }
 
 /**
- * Extraction auto strategy adoption ("C3", Phase 1a of the extraction-capacity
- * remediation). Capacity is enforced per state, and the shortage commodities
- * (copper/rare_earth/timber) have large idle headroom in states where broad-mix
- * ("standard") miners sit — they extract copper at rate 0.15 instead of the
- * focused 0.72. This phase nudges NPP-owned standard extraction sectors that
- * sit on a shortage deposit *with per-state headroom* onto the matching focused
- * mining strategy, gradually, so real utilization rises and the capacity haircut
- * recedes at its source (rather than being masked by the Phase-0 floor).
+ * Extraction auto strategy adoption. Capacity is enforced per state, and the
+ * shortage commodities (copper/rare_earth/timber) have large idle headroom in
+ * states where broad-mix ("standard") miners sit: they extract copper at rate
+ * 0.15 instead of the focused 0.72. Pass 1 nudges NPP-owned standard extraction
+ * sectors that sit on a shortage deposit with per-state headroom onto the
+ * matching focused mining strategy, gradually, so real utilization rises and the
+ * capacity haircut recedes at its source rather than being masked by the floor.
  *
  * Self-limiting: only global-shortage resources (S/D < SHORTAGE_SD) are targeted
  * and only states with headroom (stateSupply < capacity) are eligible, both read
- * fresh each run — so as conversions lift supply the resource stops qualifying,
- * which doubles as a glut guard. Gated on gameState.extractionAutoStrategyEnabled.
+ * fresh each run, so as conversions lift supply the resource stops qualifying,
+ * which doubles as a glut guard.
  *
- * Pass 2 (t899 misallocation remediation): NPP-run miners are additionally
- * re-scored every run by normalized expected contribution: damped output prices,
- * deposit headroom, lagged aggregate sellability and input availability, with
- * variable input bills in plants mode. Below clearing, prices are global; at
- * clearing and above, reachable prices fall back to global prices.
- * Off retains the legacy raw-price score. A meaningfully better recipe can move
- * a miner out of an unsupported deposit. Player-CEO sectors are never touched
- * by either retool pass. Same flag/cadence as pass 1.
+ * Pass 2: NPP-run miners are additionally re-scored every run by normalized
+ * expected contribution: damped output prices, deposit headroom, lagged aggregate
+ * sellability and input availability, with variable input bills in plants mode.
+ * Below clearing, prices are global; at clearing and above, reachable prices fall
+ * back to global prices. Off retains the legacy raw-price score. A meaningfully
+ * better recipe can move a miner out of an unsupported deposit. Player-CEO
+ * sectors are never touched by either retool pass. Same flag and cadence as pass 1.
  *
- * Pass 3 places a new NPP extraction corporation through the shared founding
- * core when a genuine global shortage has idle state deposit capacity and the
- * state has no extraction sector that can be re-pointed. Placement has its own
- * cap, separate from retools, because each placement creates a corporation.
+ * Pass 3 places a new NPP extraction corporation through the shared founding core
+ * when a genuine global shortage has idle state deposit capacity and the state has
+ * no extraction sector that can be re-pointed. Placement has its own cap, separate
+ * from retools, because each placement creates a corporation.
  *
- * There is no generic (non-extraction) pass here. That used to start a
- * transition + 24-turn cooldown on global prices before `nppCorporationBehavior`
- * section 2e could re-score the same sector on reachable prices. Generic
- * retools belong to 2e.
+ * There is no generic (non-extraction) pass here: a generic retool would start a
+ * transition and 24-turn cooldown on global prices before
+ * `nppCorporationBehavior` section 2e re-scores the same sector on reachable
+ * prices. Generic retools belong to 2e.
  */
 export const EXTRACTION_AUTO_STRATEGY_CADENCE_TURNS = 1;
 // Seven direct shortage retools plus the existing three expected-revenue
@@ -273,7 +278,7 @@ export function focusedStrategyByResource(): Map<
     { id: string; supply: Partial<Record<string, number>> }
   >();
   for (const strat of SECTOR_STRATEGIES.extraction ?? []) {
-    if (strat.id === "standard") continue;
+    if (strat.id === "standard" || !isUngatedStrategy(strat)) continue;
     for (const r of getExtractionStrategyResources(strat)) {
       const rate = strat.supply[r] ?? 0;
       const cur = out.get(r);
@@ -313,35 +318,31 @@ export async function processExtractionAutoStrategy(
   db: Db,
   currentTurn: number,
   preloadedGameState?: {
-    extractionAutoStrategyEnabled?: boolean;
     lastExtractionAutoStrategyTurn?: number;
     nppEntryViabilityMode?: NppEntryViabilityMode;
   }
 ): Promise<ExtractionAutoStrategyResult> {
-  if (!preloadedGameState?.extractionAutoStrategyEnabled) {
-    return { converted: 0, byResource: {}, skippedReason: "disabled" };
-  }
-  const lastTurn = preloadedGameState.lastExtractionAutoStrategyTurn ?? 0;
+  const lastTurn = preloadedGameState?.lastExtractionAutoStrategyTurn ?? 0;
   if (currentTurn - lastTurn < EXTRACTION_AUTO_STRATEGY_CADENCE_TURNS) {
     return { converted: 0, byResource: {}, skippedReason: "cadence" };
   }
   const placementViabilityMode = nppEntryViabilityModeFrom(
-    preloadedGameState.nppEntryViabilityMode
+    preloadedGameState?.nppEntryViabilityMode
   );
 
   // Resolved ONCE per run and threaded into both passes' rescale calls — the
   // D9 capacity renormalization below is plants-only.
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { marketSystemMode: 1, freightSettlementMode: 1, marketGovernorCap: 1 } }
-    );
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { marketSystemMode: 1, freightSettlementMode: 1, marketGovernorCap: 1 } }
+  );
   const marketMode = isMarketSystemMode(config?.marketSystemMode) ? config.marketSystemMode : "off";
   const plantsEnabled = marketAtLeast(marketMode, "plants");
   const clearingEnabled = marketAtLeast(marketMode, "clearing");
   const localInputsEnabled = clearingEnabled && config?.freightSettlementMode === "active";
-  const strategies = SECTOR_STRATEGIES.extraction ?? [];
+  // The autopilot skips the per-corporation tech check, so it only picks
+  // methods with no tech gate.
+  const strategies = (SECTOR_STRATEGIES.extraction ?? []).filter(isUngatedStrategy);
   const strategyCommodities = new Set<CommodityType>(EXTRACTABLE_RESOURCES);
   for (const strategy of strategies) {
     for (const commodity of [...Object.keys(strategy.supply), ...Object.keys(strategy.demand)]) {
@@ -349,8 +350,7 @@ export async function processExtractionAutoStrategy(
     }
   }
 
-  const prices = await db
-    .collection<CommodityPrice>("commodityPrices")
+  const prices = await commodityPricesCollection(db)
     .find({ commodity: { $in: [...strategyCommodities] } })
     .project<ExtractionPriceDoc>({
       commodity: 1,
@@ -401,8 +401,7 @@ export async function processExtractionAutoStrategy(
     stateSupplyByResource.set(r, cp.stateSupply ?? {});
   }
 
-  const caps = await db
-    .collection<StateResourceCapacity>("stateResourceCapacity")
+  const caps = await stateResourceCapacityCollection(db)
     .find({})
     .project({ stateId: 1, countryId: 1, resources: 1 })
     .toArray();
@@ -413,8 +412,9 @@ export async function processExtractionAutoStrategy(
     Corporation,
     "_id" | "countryId" | "type" | "ceoType" | "userId" | "caretakerCeo" | "earningsHistory"
   >;
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       ceoType: "npp",
       userId: NPC_CORPORATION_USER_ID,
@@ -469,8 +469,9 @@ export async function processExtractionAutoStrategy(
     | "buildQueue"
     | "otherOpexPerUnitAnchor"
   >;
-  const candidates = await db
-    .collection<CorporateSector>("corporateSectors")
+  const candidates = await (
+    await getCorporateSectorsCollection(db)
+  )
     .find({ sectorType: "extraction" })
     .project<CandidateSector>({
       _id: 1,
@@ -546,7 +547,9 @@ export async function processExtractionAutoStrategy(
     // NPP-owned miners; charging 25% of daily revenue would deepen the very
     // insolvencies this is trying to relieve. The 12-turn transition blend and
     // its −5% margin penalty (getEffectiveStrategyRates) still apply.
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await (
+      await getCorporateSectorsCollection(db)
+    ).bulkWrite(
       chosen.map((p) => ({
         updateOne: {
           filter: { _id: p.sector._id },
@@ -608,8 +611,9 @@ export async function processExtractionAutoStrategy(
       | "clearingStartTurn"
       | "throughputStartTurn"
     >;
-    const nppSectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const nppSectors = await (
+      await getCorporateSectorsCollection(db)
+    )
       .find({
         sectorType: "extraction",
         corporationId: { $in: npcCorps.map((c) => c._id as ObjectId) },
@@ -660,6 +664,12 @@ export async function processExtractionAutoStrategy(
       if (s.transitionCooldownUntilTurn != null && currentTurn < s.transitionCooldownUntilTurn)
         continue;
       if (isParentDirectedStrategyProtected(s, currentTurn)) continue;
+      // A mine on a gated method (space resources) chose it through the tech
+      // tree; the autopilot cannot score it, so it leaves the mine alone.
+      const onGated = (SECTOR_STRATEGIES.extraction ?? []).some(
+        (x) => x.id === s.strategyId && !isUngatedStrategy(x)
+      );
+      if (onGated) continue;
       const countryId = s.countryId ?? nppCountryById.get(s.corporationId?.toString() ?? "");
       const priceRatioOf: LaggedPriceRatioFn = (commodity) =>
         laggedPriceRatioForCountry(priceByCommodity.get(commodity), countryId);
@@ -756,7 +766,9 @@ export async function processExtractionAutoStrategy(
       const now = new Date();
       // Same no-retool-cost rationale as pass 1: these are NPP-run miners the
       // system is steering; transition blend + −5% margin penalty still apply.
-      await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      await (
+        await getCorporateSectorsCollection(db)
+      ).bulkWrite(
         chosenSwitches.map((p) => ({
           updateOne: {
             filter: { _id: p.sector._id },
@@ -800,8 +812,9 @@ export async function processExtractionAutoStrategy(
   // its recipe extracts produces nothing and still buys inputs and pays
   // labour, and state companies are exempt from every other mothball path, so
   // this is the only exit. Mothballed, never retooled; a minister can restart.
-  const stateCompanies = await db
-    .collection<Corporation>("corporations")
+  const stateCompanies = await (
+    await getCorporationsCollection(db)
+  )
     .find({
       $or: [{ countryOwnerId: { $type: "string", $not: /^$/ } }, { ownershipState: "stateOwned" }],
       ceoVacant: true,
@@ -810,8 +823,9 @@ export async function processExtractionAutoStrategy(
     .project<Pick<Corporation, "_id">>({ _id: 1 })
     .toArray();
   if (stateCompanies.length > 0) {
-    const stateCompanySectors = await db
-      .collection<CorporateSector>("corporateSectors")
+    const stateCompanySectors = await (
+      await getCorporateSectorsCollection(db)
+    )
       .find({
         sectorType: "extraction",
         corporationId: { $in: stateCompanies.map((c) => c._id as ObjectId) },
@@ -826,7 +840,9 @@ export async function processExtractionAutoStrategy(
       .toArray();
     for (const sector of stateCompanySectors) {
       const stateRes = capByState.get(sector.stateId);
-      const recipe = strategies.find((x) => x.id === (sector.strategyId ?? "standard"));
+      const recipe = (SECTOR_STRATEGIES.extraction ?? []).find(
+        (x) => x.id === (sector.strategyId ?? "standard")
+      );
       if (stateRes === undefined || !recipe) continue;
       if (!isExtractionStrategyZeroYield(recipe, stateRes)) continue;
       deadDepositMothballs.push(sector);
@@ -843,7 +859,9 @@ export async function processExtractionAutoStrategy(
     .slice(0, EXTRACTION_DEAD_DEPOSIT_MOTHBALL_MAX_PER_RUN);
   if (mothballs.length > 0) {
     const now = new Date();
-    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    await (
+      await getCorporateSectorsCollection(db)
+    ).bulkWrite(
       mothballs.map((sector) => ({
         updateOne: {
           filter: { _id: sector._id },
@@ -982,7 +1000,7 @@ export async function processExtractionAutoStrategy(
 }
 
 async function stampRun(db: Db, currentTurn: number): Promise<void> {
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" }, { $set: { lastExtractionAutoStrategyTurn: currentTurn } });
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" }, { $set: { lastExtractionAutoStrategyTurn: currentTurn } });
 }

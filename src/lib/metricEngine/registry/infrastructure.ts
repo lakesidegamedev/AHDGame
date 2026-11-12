@@ -16,30 +16,8 @@ import type { EngineNodeContext, RegistryNode } from "../types";
  */
 
 // Per-capita infrastructure spend at which the channel reaches half its response.
-//
-// Recalibrated per ticket #826 item 14 (spend-response recalibration pass,
-// infrastructure category). The old value (2) saturated the response near
-// ~99.8-99.96% at realistic US spend, so infra bills barely moved
-// roadCondition/waterQuality/etc — confirmed live in prod (roadCondition
-// simBaseline ~94.8, waterQuality/broadbandAccess ~99.7-99.9 across states
-// with an 8x population range).
-//
-// Real per-capita range (US, GDP cost-scale-adjusted via
-// src/lib/budget/costs.ts COST_SCALE_ANCHORS.US, scaleHigh=1.27 at 2023
-// GDP/capita):
-//   - Baseline (today's enacted defaults): us_transportation + us_broadband_energy
-//     nominal $636 + $339 = $975/capita x 1.27 = ~$1238/capita.
-//   - Max (all 4 infrastructure-domain bills — us_transportation,
-//     us_broadband_energy, us_state_transportation, us_state_utilities — enacted
-//     at their most-expansive option): (1273+679+1273+764) x 1.27 = ~$5066/capita.
-//   - Min (all 4 eliminated): $0/capita.
-// (See src/lib/seeds/reference/legislationTypes.ts for the per-option
-// per-capita cost arrays.)
-//
-// 1200 sits near the empirically-confirmed current baseline (~$1238/capita),
-// putting baseline spend near the middle of the response curve (~51%) instead
-// of pinned at the ceiling (~99.8%), while max realistic spend now reaches
-// ~81% — a real ~30-point spread a player's bills can move.
+// Chosen so realistic per-capita spend (~$1238 baseline, ~$5066 max) lands mid-curve
+// instead of pinned near the ceiling: baseline ~51%, max ~81%.
 const INFRA_SPEND_HALF_SAT = 1200;
 
 const spendResp = (ctx: EngineNodeContext): number =>
@@ -95,27 +73,20 @@ export const ROAD_FREIGHT_MAX_BONUS = 6;
 export const ROAD_FREIGHT_MAX_PENALTY = 4;
 
 /**
- * Freight adequacy term for the road-condition target (ticket #1143).
+ * Freight adequacy term for the road-condition target.
  *
- * Same shape, and the same rationale, as `gridEnergyAdequacyTerm` (suggestion
- * #90) — but for freight → transport instead of generation → grid. Before this,
- * `roadCondition` (and `transportEfficiency`, which composites it) moved ONLY on
- * government infrastructure spending. A player could build the logistics sector
- * every turn and watch the road/transport reading sit still, while
- * `getRoadConditionMarginModifier` taxed every ROAD_CONDITION_SECTORS
- * corporation in the state — manufacturing among them — for the low reading.
- * The player-visible symptom (ticket #1143): the region shows freight
- * over-supplied while Manufacturing is penalized for "low logistics," two
- * screens that never reconciled because logistics-sector output was not an input
- * to the metric the penalty reads.
+ * Same shape and rationale as `gridEnergyAdequacyTerm`, but for freight →
+ * transport. Without it, `roadCondition` (and `transportEfficiency`) moved only
+ * on government infrastructure spending, so building the logistics sector did
+ * nothing while `getRoadConditionMarginModifier` taxed ROAD_CONDITION_SECTORS
+ * corporations for the low reading.
  *
- * Logistics-sector revenue share is the freight-provisioning proxy (mirrors the
- * energy term's revenue-share model): an oversupplied freight sector still earns
- * revenue, so its share is high → bonus → the road/logistics-cost line the
- * corporation sees improves. A thin logistics sector → penalty.
+ * Logistics-sector revenue share is the freight-provisioning proxy: a healthy
+ * freight sector earns revenue, so its share is high → bonus. A thin logistics
+ * sector → penalty.
  *
- * Returns 0 with no sector data, so a region the provider cannot see keeps
- * exactly its old spending-only target.
+ * Returns 0 with no sector data, so a region the provider cannot see keeps exactly
+ * its old spending-only target.
  */
 export function freightLogisticsAdequacyTerm(
   rows: Array<{ revenue: number; sectorType?: string }>
@@ -146,9 +117,9 @@ export const roadConditionNode: RegistryNode = {
   categoryId: "infrastructure",
   metricId: "roadCondition",
   kind: "derived",
-  // Maintenance-decay off infrastructure spend, plus the region's own freight
-  // provisioning (ticket #1143) so logistics-sector build-out lifts the metric
-  // the corp margin penalty reads.
+  // Maintenance decay off infrastructure spend, plus the region's own freight
+  // provisioning, so logistics build-out lifts the metric the corp margin
+  // penalty reads.
   inputs: [
     { spending: "infrastructure" },
     { provider: "sectorRevenueTax" },
@@ -243,18 +214,12 @@ export const GRID_ENERGY_MAX_BONUS = 0.8;
 export const GRID_ENERGY_MAX_PENALTY = 0.5;
 
 /**
- * Generation adequacy term for the grid target (suggestion #90).
+ * Generation adequacy term for the grid target.
  *
- * Before this, `powerGridReliability` moved on infrastructure SPENDING and
- * lagged renewables and nothing else. An Energy Secretary could build
- * generation every turn for a game decade and watch the number sit still,
- * because no amount of installed energy capacity was an input to the grid
- * metric — while `getGridReliabilityMarginModifier` taxed every corporation in
- * the state for the resulting low reading. Generation was disconnected from the
- * one metric it should obviously drive.
- *
- * Returns 0 with no sector data, so a region the provider cannot see keeps
- * exactly its old spending-only target.
+ * Without it, `powerGridReliability` reacts only to infrastructure spending, so
+ * installed generation never moves the metric that `getGridReliabilityMarginModifier`
+ * penalizes every corporation for. Returns 0 with no sector data, so a region the
+ * provider cannot see keeps its spending-only target.
  */
 export function gridEnergyAdequacyTerm(
   rows: Array<{ revenue: number; sectorType?: string }>
@@ -287,7 +252,7 @@ export const powerGridReliabilityNode: RegistryNode = {
   kind: "derived",
   // Maintenance-decay, a small renewables-modernization term (lagged — grid
   // investment follows the energy transition; Environment animates in P3), and
-  // the region's own generation adequacy (suggestion #90).
+  // the region's own generation adequacy.
   inputs: [
     { spending: "infrastructure" },
     { lagged: "environment.renewableEnergy" },

@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character, ElectedOfficial, State } from "@/lib/db/types";
-import type { EnactedLaw, FederalBudget } from "@/lib/db/types/budget";
+import type { ElectedOfficial, State } from "@/lib/db/types";
+import type { EnactedLaw } from "@/lib/db/types/budget";
 import {
   getLegislationTypeById,
   canonicalizeLegislationTypeId,
@@ -16,6 +16,11 @@ import {
 } from "@/lib/policy/nationalPolicyRecords";
 import { loadResetLawProvenance } from "@/lib/policy/resetLawPolicyRecords";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
 /** Per-law provenance for the statute book's mono sublines + fiscal chips. */
 export interface PolicyProvenance {
@@ -32,13 +37,15 @@ async function resolveCurrentEra(
 ): Promise<{ label: string; sinceDate: string | null; sinceTurn: number | null } | null> {
   const config = COUNTRY_CONFIGS[countryId];
   if (config.governmentType === "presidential") {
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president" });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+    });
     if (!presidentOfficial?.characterId) return null;
-    const character = await db
-      .collection<Character>("characters")
-      .findOne({ _id: presidentOfficial.characterId }, { projection: { name: 1 } });
+    const character = await charactersCollection(db).findOne(
+      { _id: presidentOfficial.characterId },
+      { projection: { name: 1 } }
+    );
     if (!character) return null;
     const lastName = character.name.split(" ").slice(-1)[0];
     return {
@@ -66,8 +73,7 @@ export async function loadPolicyRecordPayload(countryId: CountryId) {
 
   const [types, laws, budget, states, era, eraCtx, nationalMedianIncome] = await Promise.all([
     loadCountryLegislationTypes(db, countryId),
-    db
-      .collection<EnactedLaw>("enactedLaws")
+    enactedLawsCollection(db)
       .find({
         scope: "national",
         ...nationalLawCountryQuery(countryId),
@@ -75,11 +81,10 @@ export async function loadPolicyRecordPayload(countryId: CountryId) {
       })
       .sort({ enactedAt: 1 })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .findOne({ _id: countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId }),
-    db
-      .collection<State>("states")
+    federalBudgetCollection(db).findOne({
+      _id: countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId,
+    }),
+    statesCollection(db)
       .find({ countryId }, { projection: { population: 1 } })
       .toArray(),
     resolveCurrentEra(db, countryId),

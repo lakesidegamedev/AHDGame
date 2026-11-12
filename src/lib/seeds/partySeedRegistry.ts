@@ -1,17 +1,13 @@
 /**
  * The one place that maps a country to its authored party seeds.
  *
- * This mapping used to live in `countryReadinessContract.ts` as
- * `AUTHORED_PARTY_SEED_MODULES`, covering 14 of the 24 registered countries.
- * That partial coverage is why `probeParties` short-circuited on
- * `COUNTRY_READINESS_EXPECTATIONS` — a country-keyed lookup that ignores the
- * preset entirely, and so reported a 2019 Russia as having the CPSU. A complete
- * registry removes the reason for the short-circuit.
+ * Exists so `probeParties` need not short-circuit on
+ * `COUNTRY_READINESS_EXPECTATIONS`, a country-keyed lookup that ignores the
+ * preset and would report e.g. a 2019 Russia as having the CPSU.
  *
- * Static imports, matching how `seedDiagnostic/expectations.ts` already pulls
- * every era's region and census bundle: the readiness contract is consumed by an
- * admin route, not a player-facing page, and lazy thunks would make every
- * consumer async for no benefit.
+ * Static imports, matching `seedDiagnostic/expectations.ts`: the readiness
+ * contract is consumed by an admin route, not a player page, so lazy thunks
+ * would make every consumer async for no benefit.
  */
 import type { CountryId } from "@/lib/constants/countries";
 import { politicalParties, type PartySeed } from "@/lib/seeds/reference/politicalParties";
@@ -21,6 +17,7 @@ import { jpParties } from "@/lib/countries/jp/data/jpParties";
 import { cnParties } from "@/lib/seeds/cn/cnParties";
 import { ruParties } from "@/lib/seeds/ru/ruParties";
 import { ieParties } from "@/lib/seeds/ie/ieParties";
+import { caParties } from "@/lib/countries/ca/data/caParties";
 import { brParties } from "@/lib/seeds/br/brParties";
 import { ngParties } from "@/lib/seeds/ng/ngParties";
 import { frParties } from "@/lib/seeds/fr/frParties";
@@ -54,6 +51,8 @@ export const PARTY_SEED_MODULES: Partial<Record<CountryId, readonly PartySeed[]>
   CN: cnParties,
   RU: ruParties,
   IE: ieParties,
+  // Canada: seeds nothing until the era roster promotes it.
+  CA: caParties,
   BR: brParties,
   NG: ngParties,
   FR: frParties,
@@ -88,8 +87,8 @@ export const PARTY_SEED_MODULES: Partial<Record<CountryId, readonly PartySeed[]>
 export function partySeedsForPreset(countryId: CountryId, presetId: string): PartySeed[] {
   // Authored reference data can lead runtime availability. An absent country
   // must still seed nothing until the era roster promotes the complete country
-  // pack; otherwise party-only content recreates the half-present world that
-  // the roster contract exists to prevent (#2289).
+  // pack; otherwise party-only content recreates the half-present world the
+  // roster contract exists to prevent.
   if (isShippingPreset(presetId) && tierFor(presetId, countryId) === "absent") return [];
   const seeds = [
     ...(PARTY_SEED_MODULES[countryId] ?? []),

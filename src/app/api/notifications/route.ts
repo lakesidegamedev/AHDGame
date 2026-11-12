@@ -14,12 +14,14 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { notificationsPatchSchema } from "@/lib/api/schemas/notifications";
 import type { Notification } from "@/lib/db/types";
 import type { User } from "@/lib/db/types/user";
-import type { Character } from "@/lib/db/types/character";
 import {
   getNotificationBundleUserIds,
   resolveAccountFilter,
   resolveCharacterProfileFilter,
 } from "@/lib/notifications/notificationBundle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
 
 const notificationsDeleteSchema = z.object({
   id: z.string().optional(),
@@ -28,16 +30,13 @@ const notificationsDeleteSchema = z.object({
 });
 
 async function loadBundleContext(db: Db, userId: ObjectId) {
-  const user = await db
-    .collection<User>("users")
-    .findOne(
-      { _id: userId },
-      { projection: { _id: 1, notificationBundleUserIds: 1, notificationPreferences: 1 } }
-    );
+  const user = await usersCollection(db).findOne(
+    { _id: userId },
+    { projection: { _id: 1, notificationBundleUserIds: 1, notificationPreferences: 1 } }
+  );
   if (!user) return null;
   const bundleUserIds = getNotificationBundleUserIds(user);
-  const labelDocs = await db
-    .collection<User>("users")
+  const labelDocs = await usersCollection(db)
     .find({ _id: { $in: bundleUserIds } })
     .project<{ _id: ObjectId; username: string; displayName: string }>({
       username: 1,
@@ -87,8 +86,7 @@ export const GET = withNoStore(async (request: Request) => {
     }
     const queryUserIds = accountResolution.userIds;
 
-    const profileScopeCharacters = await db
-      .collection<Character>("characters")
+    const profileScopeCharacters = await charactersCollection(db)
       .find(
         { userId: { $in: queryUserIds } },
         { projection: { _id: 1, name: 1, userId: 1, avatarUrl: 1 } }
@@ -132,15 +130,13 @@ export const GET = withNoStore(async (request: Request) => {
     }
 
     const [unreadByUserAgg, unreadByCharacterAgg, listResult] = await Promise.all([
-      db
-        .collection<Notification>("notifications")
+      notificationsCollection(db)
         .aggregate<{ _id: ObjectId; count: number }>([
           { $match: { userId: { $in: bundleUserIds }, ...visibility, read: false } },
           { $group: { _id: "$userId", count: { $sum: 1 } } },
         ])
         .toArray(),
-      db
-        .collection<Notification>("notifications")
+      notificationsCollection(db)
         .aggregate<{ _id: string; count: number }>([
           {
             $match: {
@@ -153,8 +149,7 @@ export const GET = withNoStore(async (request: Request) => {
           { $group: { _id: "$metadata.recipientCharacterId", count: { $sum: 1 } } },
         ])
         .toArray(),
-      db
-        .collection<Notification>("notifications")
+      notificationsCollection(db)
         .aggregate<FacetResult>([
           { $match: query },
           {
@@ -250,12 +245,10 @@ export async function PATCH(request: Request) {
     const db = await getDb();
     const userId = new ObjectId(auth.user.userId);
 
-    const user = await db
-      .collection<User>("users")
-      .findOne(
-        { _id: userId },
-        { projection: { _id: 1, notificationBundleUserIds: 1, notificationPreferences: 1 } }
-      );
+    const user = await usersCollection(db).findOne(
+      { _id: userId },
+      { projection: { _id: 1, notificationBundleUserIds: 1, notificationPreferences: 1 } }
+    );
     if (!user) {
       return errorResponse(404, "User not found");
     }
@@ -266,12 +259,10 @@ export async function PATCH(request: Request) {
       const objectIds = ids
         .map((i) => parseObjectId(i))
         .filter((oid): oid is ObjectId => oid !== null);
-      await db
-        .collection<Notification>("notifications")
-        .updateMany(
-          { _id: { $in: objectIds }, userId: { $in: bundleUserIds } },
-          { $set: { read: true } }
-        );
+      await notificationsCollection(db).updateMany(
+        { _id: { $in: objectIds }, userId: { $in: bundleUserIds } },
+        { $set: { read: true } }
+      );
     } else if (id) {
       const notificationOid = parseObjectId(id);
       if (!notificationOid) {
@@ -279,7 +270,7 @@ export async function PATCH(request: Request) {
       }
       const action = parsed.data.action ?? "read";
       const filter = { _id: notificationOid, userId: { $in: bundleUserIds } };
-      const col = db.collection<Notification>("notifications");
+      const col = notificationsCollection(db);
       if (action === "read") {
         await col.updateOne(filter, { $set: { read: true } });
       } else if (action === "archive") {
@@ -309,17 +300,16 @@ export async function PATCH(request: Request) {
         if (!charOid) {
           return errorResponse(400, "Invalid character id");
         }
-        const owningChar = await db
-          .collection<Character>("characters")
-          .findOne({ _id: charOid, userId: { $in: scopeIds } }, { projection: { _id: 1 } });
+        const owningChar = await charactersCollection(db).findOne(
+          { _id: charOid, userId: { $in: scopeIds } },
+          { projection: { _id: 1 } }
+        );
         if (!owningChar) {
           return errorResponse(400, "Character not in scope");
         }
         filter["metadata.recipientCharacterId"] = forCharacterId;
       }
-      await db
-        .collection<Notification>("notifications")
-        .updateMany(filter, { $set: { read: true } });
+      await notificationsCollection(db).updateMany(filter, { $set: { read: true } });
     }
 
     return NextResponse.json({ success: true });
@@ -348,26 +338,22 @@ export async function DELETE(request: Request) {
     const db = await getDb();
     const userId = new ObjectId(auth.user.userId);
 
-    const user = await db
-      .collection<User>("users")
-      .findOne(
-        { _id: userId },
-        { projection: { _id: 1, notificationBundleUserIds: 1, notificationPreferences: 1 } }
-      );
+    const user = await usersCollection(db).findOne(
+      { _id: userId },
+      { projection: { _id: 1, notificationBundleUserIds: 1, notificationPreferences: 1 } }
+    );
     if (!user) {
       return errorResponse(404, "User not found");
     }
     const bundleUserIds = getNotificationBundleUserIds(user);
 
     if (deleteAll) {
-      await db
-        .collection<Notification>("notifications")
-        .deleteMany({ userId: { $in: bundleUserIds }, read: true });
+      await notificationsCollection(db).deleteMany({ userId: { $in: bundleUserIds }, read: true });
     } else if (ids && ids.length > 0) {
       const objectIds = ids
         .map((i) => parseObjectId(i))
         .filter((oid): oid is ObjectId => oid !== null);
-      await db.collection<Notification>("notifications").deleteMany({
+      await notificationsCollection(db).deleteMany({
         _id: { $in: objectIds },
         userId: { $in: bundleUserIds },
       });
@@ -376,7 +362,7 @@ export async function DELETE(request: Request) {
       if (!notificationOid) {
         return errorResponse(400, "Invalid notification ID");
       }
-      await db.collection<Notification>("notifications").deleteOne({
+      await notificationsCollection(db).deleteOne({
         _id: notificationOid,
         userId: { $in: bundleUserIds },
       });

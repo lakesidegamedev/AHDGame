@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { serverEnv } from "@/lib/config/read";
 
 /**
  * Authenticated source-server client for the private enrollment coordinator.
@@ -84,7 +85,7 @@ function requiredBaseUrl(value: string | undefined): string {
 }
 
 export function loadMigrationCoordinatorConfig(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = serverEnv()
 ): MigrationCoordinatorConfig {
   return Object.freeze({
     baseUrl: requiredBaseUrl(env.AHD_MIGRATION_COORDINATOR_URL),

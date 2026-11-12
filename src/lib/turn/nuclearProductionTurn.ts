@@ -8,6 +8,7 @@ import {
   getDefenseAppropriation,
   uncommittedFrom,
 } from "@/lib/db/collections/defenseAppropriation";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 export interface NuclearProductionResult {
   warheadsBuilt: number;
@@ -17,44 +18,34 @@ export interface NuclearProductionResult {
 const NOTHING: NuclearProductionResult = { warheadsBuilt: 0, spent: 0 };
 
 /**
- * Per-turn: build the warheads the defence seat has ordered, paid for out of
- * the same defence appropriation the recruit/refit/contract flows spend from.
+ * Per-turn: build ordered warheads from the defence appropriation, sharing it
+ * with recruit/refit/contract flows.
  *
- * The order of operations is the money-conservation pattern the routes use:
- * size the build against the UNCOMMITTED balance (never money a live contract
- * has already reserved), take the cash through the guarded `debitAppropriation`
- * so a concurrent spend loses cleanly instead of overdrawing, and only then
- * credit the stockpile. A failed programme write refunds the debit - warheads a
- * nation paid for must exist, and money warheads never consumed must return.
+ * Money conservation: size against the UNCOMMITTED balance (never reserved
+ * contract money), debit via guarded `debitAppropriation` so concurrent spends
+ * fail cleanly rather than overdraw, then credit the stockpile. If the
+ * programme write fails, refund the debit.
  *
- * `accrueWarheads` already clamps the ordered rate to the adopted device tier's
- * cap and to what the balance affords, so a starved budget builds fewer (or
- * zero) warheads rather than going into arrears; there is no overdraft for new
- * production, same as procurement.
+ * `accrueWarheads` clamps the rate to the adopted device tier cap and affordable
+ * balance, so a starved budget builds fewer or zero warheads, never arrears.
  *
- * Skips while `defenceProcurementPaused` - the stockpile is procurement by
- * another name and the kill switch must cover it - and while the Cold War
- * subsystem is off. The `_year` slot is reserved for era-priced production.
+ * Skips while `defenceProcurementPaused`. `_year` is reserved
+ * for era-priced production.
  */
 export async function applyNuclearProduction(
   db: Db,
   countryId: CountryId,
   _year: number,
   _turn: number,
-  preloadedGameState?: { coldWarEnabled?: boolean; defenceProcurementPaused?: boolean }
+  preloadedGameState?: { defenceProcurementPaused?: boolean }
 ): Promise<NuclearProductionResult> {
   const gs =
     preloadedGameState ??
-    (await db
-      .collection<{ _id: string; coldWarEnabled?: boolean; defenceProcurementPaused?: boolean }>(
-        "gameState"
-      )
-      .findOne(
-        { _id: "current" },
-        { projection: { coldWarEnabled: 1, defenceProcurementPaused: 1 } }
-      )) ??
+    (await gameStateCollection<{ _id: string; defenceProcurementPaused?: boolean }>(db).findOne(
+      { _id: "current" },
+      { projection: { defenceProcurementPaused: 1 } }
+    )) ??
     {};
-  if (gs.coldWarEnabled !== true) return NOTHING;
   if (gs.defenceProcurementPaused === true) return NOTHING;
 
   const program = await getNuclearProgram(db, countryId);

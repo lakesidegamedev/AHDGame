@@ -9,7 +9,6 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { deliverAddress } from "@/lib/governorOffice/address/deliverAddress";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
-import { getDemographicCategoriesForCountry } from "@/lib/demographics/countryDemographics";
 import {
   ADDRESS_COOLDOWN_TURNS,
   ADDRESS_EMPHASIS_MIN,
@@ -18,7 +17,11 @@ import {
   ADDRESS_TITLE_MAX_LENGTH,
   ADDRESS_BODY_MAX_LENGTH,
 } from "@/lib/constants/governorOffice";
-import type { Character, GameState, GovernorAddress, GovernorOfficeState } from "@/lib/db/types";
+import type { GameState, GovernorAddress, GovernorOfficeState } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
 
 /**
  * National (head-of-government) addresses — country leader's equivalent of
@@ -59,15 +62,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
     const db = await getDb();
 
-    // The target must be a bucket THIS country's electorate actually has.
-    // Validated here rather than in the schema because the valid set depends on
-    // the game's preset. A stale or foreign bucket used to be accepted, charged,
-    // and then applied to no voters at all.
+    // The target must be a bucket THIS country's electorate has. Validated
+    // here, not in the schema, because the valid set depends on the preset.
     const targetId = parsed.data.targetDemographicGroupId;
     if (targetId) {
-      const gs = await db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1 } });
+      const gs = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { preset: 1 } }
+      );
       if (!isTargetValidForCountry(targetId, countryId, gs?.preset ?? null)) {
         return errorResponse(400, "Unknown demographic target");
       }
@@ -97,7 +99,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
 
 // GET /api/country/[code]/executive/address — page-load payload for the
 // Address tab. Returns most-recent address, cooldown, AP / NPI balances,
-// and the country's demographic groups for the modal dropdown.
+// balances. Targets come from the turnout-targets endpoint.
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const { code } = await params;
@@ -115,17 +117,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const viewerIsLeader = characterId ? await isSittingLeader(db, countryId, characterId) : false;
 
     const [office, recentArr, gameStateDoc, charDoc] = await Promise.all([
-      db.collection<GovernorOfficeState>("governorOfficeState").findOne({ countryId, stateId }),
-      db
-        .collection<GovernorAddress>("governorAddresses")
+      governorOfficeStateCollection(db).findOne({ countryId, stateId }),
+      governorAddressesCollection(db)
         .find({ countryId, stateId })
         .sort({ deliveredAtTurn: -1 })
         .limit(1)
         .toArray(),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      characterId
-        ? db.collection<Character>("characters").findOne({ _id: characterId })
-        : Promise.resolve(null),
+      gameStateCollection(db).findOne({ _id: "current" }),
+      characterId ? charactersCollection(db).findOne({ _id: characterId }) : Promise.resolve(null),
     ]);
 
     const currentTurn = gameStateDoc?.currentTurn ?? 0;
@@ -159,9 +158,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       viewerIsAdmin: isAdmin,
       mostRecentAddress,
       addressAvailableAtTurn,
-      demographicGroups: getDemographicCategoriesForCountry(countryId).flatMap((c) =>
-        c.groups.map((g) => ({ id: g.id, name: g.name }))
-      ),
     });
   } catch (error) {
     return handleRouteError(error);

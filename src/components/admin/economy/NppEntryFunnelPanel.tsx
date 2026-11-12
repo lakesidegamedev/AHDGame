@@ -10,10 +10,7 @@ function pct(share: number | null): string {
   return share == null ? "n/a" : `${(share * 100).toFixed(1)}%`;
 }
 
-// Read-only operator view over the persisted #991 evidence: the NPP entry
-// funnel (one primary reason per candidate) and the state-sector coverage
-// aggregates already embedded in the vital-signs snapshot. This view changes
-// no entry mechanics and manages no experiment flags.
+// Read-only operator view of the NPP entry funnel (one primary reason per candidate) and state-sector coverage from vital-signs. Changes no entry mechanics and no experiment flags.
 export function NppEntryFunnelPanel() {
   const [funnel, setFunnel] = useState<NppMarketEntryFunnel | null>(null);
   const [funnelMissing, setFunnelMissing] = useState(false);

@@ -1,5 +1,9 @@
 import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types";
+import { workerConfig } from "@/lib/config/worker";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import type { Document } from "mongodb";
 
 /**
  * Turns of seat history retained. 96 (two years at 48 turns/year) is the right
@@ -9,7 +13,7 @@ import type { ElectedOfficial } from "@/lib/db/types";
  * via SIM_SEAT_HISTORY_CAP; the live game is untouched by the default.
  */
 const HISTORY_CAP = (() => {
-  const raw = Number(process.env.SIM_SEAT_HISTORY_CAP);
+  const raw = Number(workerConfig.simSeatHistoryCap());
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 96;
 })();
 
@@ -25,29 +29,19 @@ interface ParliamentSeatsSnapshot {
 }
 
 /**
- * Snapshot seat counts by (country, officeType, party) once per turn — the
- * "seats over time" timeline for the sim experiments report. Mirrors
- * snapshotPartyHistory's exact storage pattern (src/lib/turn/
- * partyHistorySnapshot.ts): one doc per (countryId, officeType, party, turn)
- * with a composite _id, bulkWrite upsert, deleteMany pruning past
- * HISTORY_CAP turns.
+ * Snapshot seat counts by (country, officeType, party) once per turn using
+ * the same storage pattern as snapshotPartyHistory: one doc per composite key
+ * per turn, bulkWrite upsert, prune past HISTORY_CAP.
  *
- * Deliberately covers EVERY country, not just status:"active" ones (unlike
- * snapshotPartyHistory, which is scoped to the live game's player-facing
- * trend chart) — the sim harness needs full coverage of whatever the
- * backfill (src/lib/sim/backfillMissingSeats.ts) populated, including
- * "coming-soon" countries.
+ * Covers every country, not just active ones: the sim harness needs full
+ * coverage of whatever the backfill populated, including coming-soon countries.
  *
- * Seat count is summed via seatsHeld (falling back to 1 per doc) — NOT a
- * raw electedOfficials doc count. Getting this wrong was a real bug caught
- * earlier this session (src/lib/sim/metrics.ts's office-turnover metric,
- * and this file's own author's first read of the US House seat count):
- * multi-member office types (house/commons/etc.) can have one record
- * represent several seats.
+ * Seat count is summed via seatsHeld (falling back to 1 per doc), NOT a raw
+ * electedOfficials doc count. Multi-member offices can have one record standing
+ * for several seats.
  */
 export async function snapshotParliamentSeats(db: Db, turn: number): Promise<number> {
-  const rows = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const rows = await electedOfficialsCollection(db)
     .aggregate<{
       _id: { countryId: string; officeType: string; party: string };
       seats: number;
@@ -110,12 +104,12 @@ export async function snapshotParliamentSeats(db: Db, turn: number): Promise<num
     };
   });
 
-  await db
-    .collection<ParliamentSeatsSnapshot>("parliamentSeatsHistory")
-    .bulkWrite(ops, { ordered: false });
+  await parliamentSeatsHistoryCollection<ParliamentSeatsSnapshot>(db).bulkWrite(ops, {
+    ordered: false,
+  });
 
   const minTurn = Math.max(1, turn - HISTORY_CAP + 1);
-  await db.collection("parliamentSeatsHistory").deleteMany({ turn: { $lt: minTurn } });
+  await parliamentSeatsHistoryCollection<Document>(db).deleteMany({ turn: { $lt: minTurn } });
 
   return ops.length;
 }

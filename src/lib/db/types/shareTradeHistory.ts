@@ -2,25 +2,20 @@ import type { ObjectId } from "mongodb";
 import type { CurrencyCode } from "../../constants/currencies";
 
 /**
- * Immutable audit trail for every share movement on a corporation.
- * Written by recordShareTrade(); never mutated after insert.
+ * Immutable audit trail for share movements on a corporation. Written by
+ * recordShareTrade(); never mutated after insert.
  *
- * `kind` partitions the presentation surface:
- *   - issuance: CEO issued new shares. Two shapes:
- *       · public issuance — `to` is null, shares land in publicFloat
- *       · CEO self-issuance — `to` is the CEO party, shares land on their
- *         shareholder entry (publicFloat unchanged). Distinguished by `to`.
- *   - market_buy: buyer took shares from publicFloat at current sharePrice
- *   - market_sell: seller pushed shares into publicFloat at current sharePrice
- *   - limit_fill: a limit buy/sell filled (turn processor or immediate fillsNow)
+ * `kind`:
+ *   - issuance: CEO issued new shares. `to` null = public issuance (into
+ *       publicFloat); `to` set = CEO self-issuance (onto their shareholder
+ *       entry, publicFloat unchanged).
+ *   - market_buy / market_sell: traded with publicFloat at current sharePrice
+ *   - limit_fill: a limit order filled
  *   - peer_fill: another player filled an open shareOrder
  *   - listing_fill: a private listing offer was accepted
  *   - takeover_buyout: hostile takeover forced minority sale
  *   - correction: admin/migration data fix (note required)
- *   - stock_split: CEO-driven forward split (totalShares increased, price scaled down).
- *                  structureChange populated.
- *   - reverse_split: CEO-driven reverse split (totalShares decreased, price scaled up).
- *                    structureChange populated.
+ *   - stock_split / reverse_split: CEO-driven split; structureChange populated
  */
 export type ShareTradeKind =
   | "issuance"

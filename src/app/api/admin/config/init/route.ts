@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export async function POST() {
   try {
@@ -13,9 +14,7 @@ export async function POST() {
     const db = await getDb();
 
     // Check if config already exists
-    const existingConfig = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" });
+    const existingConfig = await gameConfigCollection(db).findOne({ _id: "default" });
 
     if (existingConfig) {
       return NextResponse.json({
@@ -67,7 +66,7 @@ export async function POST() {
       partyInfluenceMaxBonus: 6,
     };
 
-    await db.collection<GameConfig>("gameConfig").insertOne(defaultConfig);
+    await gameConfigCollection(db).insertOne(defaultConfig);
 
     return NextResponse.json({
       success: true,
@@ -85,7 +84,7 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
 
     if (!config) {
       return errorResponse(404, "Game config not found. Please initialize it first.");

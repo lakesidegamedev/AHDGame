@@ -8,6 +8,7 @@ import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { rankWikiSearchCandidates, type WikiSearchCandidate } from "@/lib/wiki/wikiSearch";
 import { getNonPageWikiSearchCandidates } from "@/lib/wiki/wikiSearchSources";
 import type { WikiPage } from "@/lib/db/types";
+import { wikiPagesCollection } from "@/lib/db/repositories/wikiPages";
 
 /**
  * Ranking needs more candidates than it returns: the best title match may not
@@ -38,7 +39,7 @@ async function handleGET(request: Request) {
     const isAdmin = user?.isAdmin === true;
 
     const db = await getDb();
-    const wikiPages = db.collection<WikiPage>("wikiPages");
+    const wikiPages = wikiPagesCollection(db);
 
     // Build filter — exclude private pages for non-admins
     const filter: Record<string, unknown> = { status: "published" };

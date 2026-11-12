@@ -3,7 +3,7 @@
  * freezeRussianDumaElectorate validates regional identities and voter precision;
  * planRussianDumaDistricts then divides those voters between individual seats.
  */
-import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
+import { scalePoolToRegistered } from "@/lib/elections/rules/registration";
 import { planRussianDumaDistricts } from "./assemblyDistricts";
 
 export function freezeRussianDumaElectorate(

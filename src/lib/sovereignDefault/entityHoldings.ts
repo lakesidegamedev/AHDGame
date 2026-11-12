@@ -23,6 +23,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export async function sumQualifyingEntitySovereignHoldings(
   db: Db,
@@ -31,8 +32,7 @@ export async function sumQualifyingEntitySovereignHoldings(
   const imfCorp = await getImfCorporation(db);
   const imfCorpIdStr = imfCorp?._id.toString();
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       countryId: countryCode as CountryId,

@@ -10,21 +10,15 @@ import { DD_GEOGRAPHY } from "@/lib/countries/dd/geography";
 import { BR_GEOGRAPHY } from "@/lib/countries/br/geography";
 
 /**
- * Election-anchored targets. center/spread on the derived −5..+5 scale; sign
- * anchors and orderings come from real results (nearest election to the era).
- * Tolerances start loose-ish and tighten as calibration converges.
+ * Election-anchored targets on the derived -5..+5 scale; sign anchors and
+ * orderings come from real results (nearest election to the era). Tolerances
+ * tighten as calibration converges.
  *
- * Region IDs:
- *   US: USPS state codes + DC.
- *   UK: LON SEE SWE EAE EMI WMI YHU NWE NEE SCO WAL NIR (NIR omitted from L/R
- *       anchors — its cleavage is unionist/nationalist, not left/right).
- *   DE: BW BY NW HE RP SL NI SH HH BRE BE BB MV SN ST TH.
- *   JP: HOK TOH KAN CHU KNS CGK SHI KYU.
- *   IE: DUB KIL MID WEX LIM COR GAL DON.
- *   BR: NORTE NORDESTE CENTRO_OESTE SUDESTE SUL.
+ * Region IDs per country: US state codes + DC; UK and DE region codes; JP and IE
+ * region codes; BR macro-regions. NIR is omitted from UK left/right anchors
+ * because its cleavage is unionist/nationalist, not left/right.
  *
- * Confidence is noted in `election`. Low-confidence cells use center+spread only
- * (few/no sign anchors) and are the priority for Egg's review.
+ * Low-confidence cells use center+spread only (few/no sign anchors).
  */
 export const TARGETS: Partial<Record<CountryId, Partial<Record<EraId, CalibrationTarget>>>> = {
   // ─── United States — presidential, by state ───────────────────────────────

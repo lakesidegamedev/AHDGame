@@ -1,17 +1,13 @@
 /**
- * Construction work as funded demand (funded-market cutover, demand side).
+ * Construction work as funded demand.
  *
- * A capacity build order is paid in full when it is placed, and today that cash
- * leaves the economy with no recipient. In the funded market it becomes the
- * destination it should have had: the construction work on each outstanding
- * order is bought from producers as the order progresses, spread over the
- * order's build window on its delivery schedule (`deliveredFraction`): linear
- * for smooth orders, all at landing for all-at-once orders.
- *
- * Using the delivery schedule keeps money closed: a cancellation refunds a
- * share of the undelivered cost only, a shortage speed-up preserves the
- * delivered fraction, so work bought plus any refund never exceeds what the
- * order paid. Unbought work stays in the existing sink.
+ * A build order is paid in full when placed; in the funded market that cash
+ * buys construction work from producers as the order progresses, spread over
+ * the build window via `deliveredFraction` (linear for smooth orders, all at
+ * landing for all-at-once). Using the delivery schedule keeps money closed: a
+ * cancellation refunds undelivered cost only, a shortage speed-up preserves
+ * the delivered fraction, so work bought plus any refund never exceeds what
+ * the order paid. Unbought work stays in the existing sink.
  *
  * Pure: build orders in, per-country purchase lines out.
  */

@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
 import { toNativeEffectValue } from "@/lib/crises/effectScale";
+import { vietnamEscalationCollection } from "@/lib/db/repositories/vietnamEscalation";
 
 /**
  * The Vietnam escalation ladder: the shared state behind the chained Vietnam
@@ -207,22 +208,18 @@ export const VIETNAM_RUNG_PRESSURE = 24;
 
 /**
  * Apply one leader's move to the ladder. Pure: takes a state, returns the next
- * state. This is the whole escalation mechanic in one function, which is what
- * makes it testable without a database.
+ * state, so the mechanic is testable without a database.
  *
  * Rules:
- *  - Support adds pressure to that side and can climb at most one rung per move.
+ *  - Support adds pressure to that side, climbing at most one rung per move.
  *  - The ladder never climbs past the last rung.
- *  - De-escalation drains that side's own pressure first; only once its pressure
- *    is spent does the rung itself come down. A superpower cannot undo the other
- *    superpower's commitment by announcing restraint.
- *  - Both sides supporting is how the ladder actually climbs fastest, because
- *    pressure is compared per side and the higher one governs.
- *  - A rung is also gated by its `earliestYear`: pressure can max out but the
- *    ladder holds until the calendar reaches the next rung's floor, so an
- *    aggressive US/RU tracks the historical arc's ceiling rather than outrunning
- *    it. Pass `currentYear` to enforce the floor; omit it (tests, callers with
- *    no clock) to fall back to pressure-only, the pre-floor behaviour.
+ *  - De-escalation drains that side's own pressure first; only then does the
+ *    rung come down. One superpower cannot undo the other's commitment.
+ *  - Both sides supporting climbs fastest: pressure is compared per side and
+ *    the higher governs.
+ *  - Each rung is gated by its earliestYear: pressure can max out but the
+ *    ladder holds until the calendar reaches the floor. Omit currentYear
+ *    (tests, clockless callers) for pressure-only behaviour.
  */
 export function applyVietnamMove(
   state: VietnamEscalationState,
@@ -340,7 +337,7 @@ function clamp01to100(n: number): number {
  * deliberately reads nothing and writes nothing. It is a pure multiplier on
  * whatever baseline procurement demand the contracting system computes, so that
  * system can adopt it with one call and no coupling in the other direction.
- * Surfaced to players on the conflicts hub via `getVietnamEscalationSummary`.
+ * Surfaced to players on the conflicts hub.
  */
 export function vietnamProcurementMultiplier(level: number): number {
   return rungForLevel(clampVietnamLevel(level))?.procurementMultiplier ?? 1;
@@ -398,9 +395,9 @@ type StoredState = VietnamEscalationState & { _id: string };
 
 /** Read the ladder. Returns the empty ladder when the world has never had one. */
 export async function getVietnamEscalation(db: Db): Promise<VietnamEscalationState> {
-  const doc = await db
-    .collection<StoredState>(VIETNAM_ESCALATION_COLLECTION)
-    .findOne({ _id: VIETNAM_ESCALATION_ID });
+  const doc = await vietnamEscalationCollection<StoredState>(db).findOne({
+    _id: VIETNAM_ESCALATION_ID,
+  });
   if (!doc) return emptyVietnamState();
   const empty = emptyVietnamState();
   return {
@@ -429,13 +426,11 @@ export async function openVietnamEscalation(db: Db): Promise<VietnamEscalationSt
 }
 
 async function putVietnamEscalation(db: Db, state: VietnamEscalationState): Promise<void> {
-  await db
-    .collection<StoredState>(VIETNAM_ESCALATION_COLLECTION)
-    .updateOne(
-      { _id: VIETNAM_ESCALATION_ID },
-      { $set: { ...state, updatedAt: new Date() } },
-      { upsert: true }
-    );
+  await vietnamEscalationCollection<StoredState>(db).updateOne(
+    { _id: VIETNAM_ESCALATION_ID },
+    { $set: { ...state, updatedAt: new Date() } },
+    { upsert: true }
+  );
 }
 
 /**
@@ -463,15 +458,6 @@ export async function recordVietnamMove(
   return { before, after };
 }
 
-/** Advance the war clock by one turn and persist. Called from the crisis turn. */
-export async function tickVietnamEscalation(db: Db): Promise<VietnamEscalationState> {
-  const before = await getVietnamEscalation(db);
-  if (before.level < VIETNAM_WAR_LEVEL) return before;
-  const after = tickVietnamWarClock(before);
-  await putVietnamEscalation(db, after);
-  return after;
-}
-
 /**
  * The small query helper other systems read the war off.
  *
@@ -492,25 +478,4 @@ export interface VietnamEscalationSummary {
   eastSupport: number;
   warTurns: number;
   dials: VietnamDials;
-}
-
-/** Everything the conflicts hub needs to render the ladder, in one read. */
-export async function getVietnamEscalationSummary(db: Db): Promise<VietnamEscalationSummary> {
-  const gameState = await db
-    .collection<{ _id: string; livingConflictsEnabled?: boolean }>("gameState")
-    .findOne({ _id: "current" }, { projection: { livingConflictsEnabled: 1 } });
-  const state = gameState?.livingConflictsEnabled
-    ? await (await import("@/lib/livingConflict/vietnamCompat")).livingVietnamAsLegacyState(db)
-    : await getVietnamEscalation(db);
-  const rung = rungForLevel(state.level);
-  return {
-    level: state.level,
-    rungKey: rung?.key ?? null,
-    rungLabel: rung?.label ?? null,
-    rungSummary: rung?.summary ?? null,
-    westSupport: state.westSupport,
-    eastSupport: state.eastSupport,
-    warTurns: state.warTurns,
-    dials: deriveVietnamDials(state),
-  };
 }

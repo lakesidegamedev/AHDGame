@@ -2,6 +2,7 @@
 import type { LawFamilyDefinition, LegislativePosition } from "../catalog";
 import type { ResetCountry } from "../fundingOwner";
 import { regionalLawLevel } from "../regionalCatalog";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type LawChoice = LegislativePosition | "leave_to_states";
 export type LawScope = "national" | "regional";
@@ -31,7 +32,7 @@ export function lawChoiceEligibility(
   }
   if (
     choice === "leave_to_states" &&
-    (country !== "US" || scope !== "national" || !law.leaveToStates)
+    (!countryHasFeature("usSeeds", country) || scope !== "national" || !law.leaveToStates)
   ) {
     return { allowed: false, reason: "leave_to_states_unavailable" };
   }

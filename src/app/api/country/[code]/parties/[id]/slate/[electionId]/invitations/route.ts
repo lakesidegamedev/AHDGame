@@ -12,12 +12,17 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { computeSlateAssignmentScore, isNppSlateCompliant } from "@/lib/slateAssignments";
 import { countSlateAssignmentUsage } from "@/lib/slateAssignmentCap";
-import type { Character, Election, ElectionCandidate, NPP, SlateCandidate } from "@/lib/db/types";
+import type { Election, ElectionCandidate, NPP, SlateCandidate } from "@/lib/db/types";
 import { getSlateAcceptanceStatBonus, resolveSlateAuthority } from "@/lib/slateAuthority";
 import { getPartyNppControlStatus } from "@/lib/parties/antiAbuseGuards";
 import { findBlockingActiveCandidacy } from "@/lib/elections/activeCandidacy";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { isPrimaryClosed } from "@/lib/elections/electionDeadlineFilters";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { slateCandidatesCollection } from "@/lib/db/repositories/slateCandidates";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; electionId: string }>;
@@ -68,9 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const partyId = String(party.sequentialId);
     const electionObjId = new ObjectId(electionId);
-    const election = await db
-      .collection<Election>("elections")
-      .findOne({ _id: electionObjId, countryId });
+    const election = await electionsCollection(db).findOne({ _id: electionObjId, countryId });
     if (!election) return errorResponse(404, "Election not found");
     const authority = await resolveSlateAuthority({
       db,
@@ -105,29 +108,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const candidateObjId = new ObjectId(parsed.data.candidateId);
 
-    // Race capacity. A party may hold at most SLATE_ASSIGNMENT_CAP slots on one
-    // race, players and NPPs drawing on the same pool.
+    // Race capacity: a party may hold at most SLATE_ASSIGNMENT_CAP slots on
+    // one race, players and NPPs sharing the pool. The candidate being
+    // assigned is excluded, so an already-slotted candidate falls through to
+    // the "already on the slate" check instead.
     //
-    // The candidate being assigned is excluded from the count, so someone
-    // already on the slate is never turned away by the slot they themselves
-    // hold: that case falls through to the specific "already on the slate"
-    // answer below. The question asked here is whether adding THIS candidate
-    // would exceed the cap.
-    //
-    // This gate is the courteous one, not the authoritative one. Rows carried
-    // forward from the previous cycle only exist once something has
-    // materialized them from the template — the slate GET does, and so does
-    // the turn's own pass — so an assignment POSTed against a race that has
-    // been neither viewed nor turn-processed can still undercount. The turn's
-    // filing pass counts the same way and refuses the overflow there, marking
-    // it `slate_full`, so the ballot itself never exceeds the cap.
+    // Courteous gate, not authoritative: rows carried forward from the
+    // previous cycle only exist once materialized, so this can undercount.
+    // The turn's filing pass enforces the same cap and refuses overflow,
+    // marking it `slate_full`, so the ballot never exceeds the cap.
     const [slateRowsForRace, activeCandidaciesForRace] = await Promise.all([
-      db
-        .collection<SlateCandidate>("slateCandidates")
+      slateCandidatesCollection(db)
         .find({ electionId: electionObjId, partyId }, { projection: { candidateId: 1, status: 1 } })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find(
           { electionId: electionObjId, party: partyId, status: "active" },
           { projection: { characterId: 1, status: 1, isNPP: 1, nppId: 1 } }
@@ -180,7 +174,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(409, "Slate has been archived for this race.");
     }
 
-    const existingRow = await db.collection<SlateCandidate>("slateCandidates").findOne({
+    const existingRow = await slateCandidatesCollection(db).findOne({
       slateId: slate._id,
       candidateId: candidateObjId,
     });
@@ -227,15 +221,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const sameStateSlateIds = (
-      await db
-        .collection<Election>("elections")
+      await electionsCollection(db)
         .find({ countryId, state: election.state, status: { $in: ["upcoming", "active"] } })
         .project<Pick<Election, "_id">>({ _id: 1 })
         .toArray()
     ).map((stateElection) => stateElection._id);
 
     if (existingRow) {
-      await db.collection<SlateCandidate>("slateCandidates").updateOne(
+      await slateCandidatesCollection(db).updateOne(
         { _id: existingRow._id },
         {
           $set: {
@@ -263,7 +256,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         // the NPP back onto it from the prior-cycle template and the move reverts.
         // A withdrawn tombstone keeps the slate non-empty (blocking re-hydration)
         // and is skipped by the template carry-forward and file/override passes.
-        await db.collection<SlateCandidate>("slateCandidates").updateMany(
+        await slateCandidatesCollection(db).updateMany(
           {
             candidateId: candidateObjId,
             countryId,
@@ -286,12 +279,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ success: true, id: existingRow._id.toString(), reassigned: true });
     }
 
-    await db.collection<SlateCandidate>("slateCandidates").insertOne(candidate.row);
+    await slateCandidatesCollection(db).insertOne(candidate.row);
     if (sameStateSlateIds.length > 0) {
-      // #906: tombstone (not delete) the NPP's other same-state slate rows so the
-      // old race's slate stays non-empty and syncPersistentSlateAssignments does
-      // not re-hydrate the NPP back onto it next turn. See matching branch above.
-      await db.collection<SlateCandidate>("slateCandidates").updateMany(
+      // Tombstone (not delete) the NPP's other same-state slate rows so the
+      // old race's slate stays non-empty and syncPersistentSlateAssignments
+      // does not re-hydrate the NPP back onto it.
+      await slateCandidatesCollection(db).updateMany(
         {
           candidateId: candidateObjId,
           countryId,
@@ -331,7 +324,7 @@ async function buildNppSlateCandidate(args: {
   assignedByRole: SlateCandidate["assignedByRole"];
   getsStateAcceptanceBuff: boolean;
 }): Promise<BuiltSlateCandidate> {
-  const npp = await args.db.collection<NPP>("npps").findOne({ _id: args.candidateObjId });
+  const npp = await nppsCollection(args.db).findOne({ _id: args.candidateObjId });
   if (!npp) return { error: "NPP not found", status: 404 };
 
   if ((npp.countryId ?? "US") !== args.countryId) {
@@ -397,9 +390,7 @@ async function buildCharacterSlateCandidate(args: {
   assignedByRole: SlateCandidate["assignedByRole"];
   electionId: string;
 }): Promise<BuiltSlateCandidate> {
-  const character = await args.db
-    .collection<Character>("characters")
-    .findOne({ _id: args.candidateObjId });
+  const character = await charactersCollection(args.db).findOne({ _id: args.candidateObjId });
   if (!character) return { error: "Character not found", status: 404 };
 
   if ((character.countryId ?? "US") !== args.countryId) {
@@ -412,9 +403,9 @@ async function buildCharacterSlateCandidate(args: {
     return { error: "Character does not live in the race's state.", status: 400 };
   }
 
-  // Only block if the candidate has an active candidacy in a still-open election
-  // (upcoming / active / completed). Cancelled or resolved races leave behind
-  // `status: "active"` rows that should not stop fresh slating — bug #0550.
+  // Only block if the candidate has an active candidacy in a still-open
+  // election. Cancelled or resolved races leave behind stale active rows that
+  // should not stop fresh slating.
   const blocking = await findBlockingActiveCandidacy(
     args.db,
     args.candidateObjId,

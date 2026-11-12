@@ -1,23 +1,19 @@
 /**
- * Sales fund the run. A company that spent its cash (on construction, say) can
- * still run a plant whose sales pay for it: the run's wages, site running costs
- * and inputs are financed against the revenue the run earns in the same
- * settlement, and settled from that revenue before the turn closes. Whatever
- * the sales do not cover stays owed as an ordinary producer payable, so money
- * is never created.
+ * Sales fund the run. A company that spent its cash (on construction, say) can still run a
+ * plant whose sales pay for it: the run's wages, site running costs and inputs are financed
+ * against the revenue the run earns in the same settlement, and settled from that revenue
+ * before the turn closes. Whatever sales do not cover stays owed as an ordinary producer
+ * payable, so money is never created.
  *
- * The advance is capped by what the run is expected to earn: last turn's
- * realized price times last turn's sell-through, on the units this run makes,
- * with a margin for the market moving against it. A run that does not pay for
- * itself gets no advance beyond its revenue, so it still runs only the share
+ * The advance is capped by expected run revenue: last turn's realized price times last turn's
+ * sell-through on this run's units, with a margin for the market moving against it. A run that
+ * does not pay for itself gets no advance beyond its revenue, so it still runs only the share
  * its own cash covers.
  *
- * Whether a run pays for itself is judged on what its inputs are expected to
- * cost (gameConfig.producerSalesAdvancePriceStage): last turn's clearing price,
- * never above the bid ceiling. Judged at the bid ceiling, a run that clears
- * its inputs at a quarter of the ceiling reads as losing money and is held to
- * its opening cash, so a company that spent its cash on construction cannot
- * get its sales back. The bid ceiling still caps what the run may bid.
+ * Whether a run pays for itself is judged on expected input cost
+ * (gameConfig.producerSalesAdvancePriceStage): last turn's clearing price, never above the bid
+ * ceiling. Judged at the ceiling, a run that clears at a quarter of it reads as losing money and
+ * is held to opening cash. The bid ceiling still caps what the run may bid.
  *
  * Pure: plain data in, plain data out. Anchor units throughout.
  */

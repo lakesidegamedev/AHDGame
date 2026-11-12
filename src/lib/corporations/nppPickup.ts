@@ -25,6 +25,10 @@ import {
   getExtractionContractsCollection,
 } from "@/lib/db/collections/extractionContracts";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 /**
  * Share of a leaving plant's built capacity an NPP operator takes over. The
@@ -84,7 +88,7 @@ export async function chooseNppPickupReceiver(
   nppCorpIds: ObjectId[],
   now: Date
 ): Promise<Omit<NonNullable<CorporateSector["nppPickup"]>, "key"> | null> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const candidates = nppCorpIds.filter((id) => !id.equals(owner._id));
 
   const inState = await sectors
@@ -131,8 +135,7 @@ export async function chooseNppPickupReceiver(
   if (!currencyCode) return null;
   const lane = laneOf(sector);
   const existingNames = (
-    await db
-      .collection<Corporation>("corporations")
+    await corporationsCollection(db)
       .find({ countryId: hostCountry as CountryId })
       .project<{ name: string }>({ name: 1 })
       .toArray()
@@ -165,7 +168,7 @@ export async function creditNppPickup(
   /** Share of the donor's workers and nameplate that moves with the capacity. */
   share: number = NPP_PICKUP_SHARE
 ): Promise<number> {
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const sectors = corporateSectorsCollection(db);
   const workers = Math.round((sector.workers ?? 0) * share);
   const capacityShare = builtStock(sector) > 0 ? carved.capitalStock / builtStock(sector) : 0;
 
@@ -258,14 +261,13 @@ export async function creditNppPickup(
  * Dispose of sectors leaving their owner (abandon, dissolution, restructure
  * liquidation).
  *
- * Before this, every leaving plant returned all of its capacity to the unowned
- * pool. Headroom is bookkeeping, not supply: the plant simply stopped and the
- * market lost that output until someone ordered a build and waited out its
- * window, so one large exit spiked prices across every market it served. Now
- * an NPP operator takes over {@link NPP_PICKUP_SHARE} of each plant's BUILT
- * capacity, system-funded (no cash moves, the leaving owner's refund and payout
- * are unchanged). The remaining share and every undelivered build order return
- * to the pool exactly as before.
+ * Headroom is bookkeeping, not supply: returning a leaving plant's capacity to
+ * the unowned pool means it simply stopped, and the market loses that output
+ * until someone builds and waits out the window, so one large exit can spike
+ * prices across every market it served. An NPP operator instead takes over
+ * {@link NPP_PICKUP_SHARE} of each plant's BUILT capacity, system-funded (no
+ * cash moves, the leaving owner's refund and payout are unchanged). The
+ * remaining share and every undelivered build order return to the pool.
  *
  * Resumable: the receiver is recorded on the leaving row before any capacity
  * moves, credits are guarded by a per-pickup receipt, and the pool restore is
@@ -290,7 +292,7 @@ export async function disposeLeavingSectors(
   );
 
   if (eligible.length > 0) {
-    const nppCorpIds = await db.collection<Corporation>("corporations").distinct("_id", {
+    const nppCorpIds = await corporationsCollection(db).distinct("_id", {
       ceoType: "npp",
       countryOwnerId: { $exists: false },
       ownershipState: { $ne: "stateOwned" },
@@ -298,8 +300,7 @@ export async function disposeLeavingSectors(
     });
     const hostByState = new Map(
       (
-        await db
-          .collection<{ _id: string; countryId: string }>("states")
+        await statesCollection<{ _id: string; countryId: string }>(db)
           .find({ _id: { $in: [...new Set(eligible.map((s) => s.stateId))] } })
           .project<{ _id: string; countryId: string }>({ countryId: 1 })
           .toArray()
@@ -335,7 +336,7 @@ export async function disposeLeavingSectors(
     // 2. Commit the receivers before any capacity moves, then read back what
     //    won (a concurrent retry may have marked a row first).
     if (proposals.size > 0) {
-      await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      await corporateSectorsCollection(db).bulkWrite(
         [...proposals].map(([id, proposed]) => ({
           updateOne: {
             filter: { _id: new ObjectId(id), nppPickup: { $exists: false } },
@@ -347,8 +348,7 @@ export async function disposeLeavingSectors(
     }
     const storedMarkers = new Map(
       (
-        await db
-          .collection<CorporateSector>("corporateSectors")
+        await corporateSectorsCollection(db)
           .find({ _id: { $in: eligible.map((s) => s._id) } })
           .project<Pick<CorporateSector, "_id" | "nppPickup">>({ nppPickup: 1 })
           .toArray()
@@ -401,8 +401,7 @@ async function repointContracts(
   if (handedOff.length === 0) return;
   const receiverCountry = new Map(
     (
-      await db
-        .collection<Corporation>("corporations")
+      await corporationsCollection(db)
         .find({ _id: { $in: handedOff.map((h) => h.pickup.receiverCorporationId) } })
         .project<Pick<Corporation, "_id" | "countryId">>({ countryId: 1 })
         .toArray()
@@ -421,7 +420,7 @@ async function repointContracts(
       },
     },
   }));
-  await db.collection<DefenceContract>("defenceContracts").bulkWrite(defenceOps, {
+  await defenceContractsCollection(db).bulkWrite(defenceOps, {
     ordered: false,
   });
 
@@ -433,7 +432,7 @@ async function repointContracts(
   }
   if (extractionReceiverByState.size === 0) return;
   const stillOperating = new Set(
-    await db.collection<CorporateSector>("corporateSectors").distinct("stateId", {
+    await corporateSectorsCollection(db).distinct("stateId", {
       corporationId: ownerId,
       stateId: { $in: [...extractionReceiverByState.keys()] },
       sectorType: "extraction",

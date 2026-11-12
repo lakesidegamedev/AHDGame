@@ -25,6 +25,11 @@ import {
   freeCashFlowPerTurn,
   politicalContributionPerTurn,
 } from "@/lib/unions/unionPoliticalContributions";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
+import type { Document } from "mongodb";
 
 export type UnionActionResult =
   { ok: true; status: 200; [key: string]: unknown } | { ok: false; status: number; error: string };
@@ -44,7 +49,7 @@ export async function resolveOwnedUnion(
   if (!ObjectId.isValid(unionId)) {
     return { ok: false, status: 400, error: "Invalid union ID" };
   }
-  const union = await db.collection<Union>("unions").findOne({ _id: new ObjectId(unionId) });
+  const union = await unionsCollection(db).findOne({ _id: new ObjectId(unionId) });
   if (!union) {
     return { ok: false, status: 404, error: "Union not found" };
   }
@@ -102,9 +107,10 @@ export async function setUnionWageDemand(
   const { union } = resolved;
 
   const clamped = demandedWageLevel === null ? null : clampWageLevel(demandedWageLevel);
-  await db
-    .collection<Union>("unions")
-    .updateOne({ _id: union._id }, { $set: { demandedWageLevel: clamped, updatedAt: new Date() } });
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { demandedWageLevel: clamped, updatedAt: new Date() } }
+  );
 
   return { ok: true, status: 200, demandedWageLevel: clamped };
 }
@@ -118,8 +124,7 @@ export async function setUnionWageDemand(
  * won, never the whole industry it merely shares a type with.
  */
 async function loadRepresentedSectors(db: Db, union: Union): Promise<UnionMemberSector[]> {
-  return db
-    .collection<CorporateSector>("corporateSectors")
+  return corporateSectorsCollection(db)
     .find(
       { representingUnionId: union._id },
       { projection: { workers: 1, unionization: 1, wagePerWorker: 1 } }
@@ -171,12 +176,10 @@ export async function setUnionDues(
   const clamped = Math.min(Math.max(0, duesPerWorkerAnnual), maxDues);
   const members = unionMembers(sectors);
 
-  await db
-    .collection<Union>("unions")
-    .updateOne(
-      { _id: union._id },
-      { $set: { duesPerWorkerAnnual: clamped, updatedAt: new Date() } }
-    );
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { duesPerWorkerAnnual: clamped, updatedAt: new Date() } }
+  );
 
   return {
     ok: true,
@@ -212,9 +215,10 @@ export async function setUnionServices(
   const annualWage = averageAnnualWage(sectors);
   const members = unionMembers(sectors);
 
-  await db
-    .collection<Union>("unions")
-    .updateOne({ _id: union._id }, { $set: { activeServices: normalized, updatedAt: new Date() } });
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { activeServices: normalized, updatedAt: new Date() } }
+  );
 
   return {
     ok: true,
@@ -264,12 +268,10 @@ export async function setUnionPoliticalContributions(
   const servicesCost = servicesCostPerTurn(members, annualWage, activeServices);
   const freeCashFlow = freeCashFlowPerTurn(duesIncome, servicesCost);
 
-  await db
-    .collection<Union>("unions")
-    .updateOne(
-      { _id: union._id },
-      { $set: { politicalContributionPct: clamped, updatedAt: new Date() } }
-    );
+  await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $set: { politicalContributionPct: clamped, updatedAt: new Date() } }
+  );
 
   return {
     ok: true,
@@ -300,7 +302,7 @@ export async function endorseBill(
   }
 
   const billObjectId = new ObjectId(billId);
-  const bill = await db.collection<Bill>("bills").findOne(
+  const bill = await billsCollection(db).findOne(
     {
       _id: billObjectId,
       ...buildNationalBillCountryScopeFilter(union.countryId),
@@ -316,13 +318,11 @@ export async function endorseBill(
     };
   }
 
-  await db
-    .collection("unionEndorsements")
-    .updateOne(
-      { unionId: union._id, billId: billObjectId },
-      { $set: { stance, createdAt: new Date() } },
-      { upsert: true }
-    );
+  await unionEndorsementsCollection<Document>(db).updateOne(
+    { unionId: union._id, billId: billObjectId },
+    { $set: { stance, createdAt: new Date() } },
+    { upsert: true }
+  );
 
   return { ok: true, status: 200, stance };
 }

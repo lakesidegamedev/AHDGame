@@ -1,19 +1,7 @@
 /**
  * Japan's small geographic scalars, in a module with NO value imports.
- *
- * ⚠ WHY THIS IS SEPARATE FROM `geography.ts`. That module imports all seven
- * eras of region, census, demographic and metric data as VALUES -- it is the
- * heaviest module in the folder. Two of these facts are read by registries that
- * client components import (`maps/countryAnchors`, `politicalStrength/
- * strengthConstants`), so sourcing them from `geography.ts` would pull Japan's
- * entire region dataset into the browser bundle to deliver three numbers.
- *
- * Nothing would fail. The page would just get much bigger, which is the same
- * silent failure `noClientBarrelImport.test.ts` exists to catch for the barrel.
- *
- * `geography.ts` re-exports these, so the conceptual home still reads right.
- * KEEP THIS MODULE FREE OF VALUE IMPORTS -- `clientSafeLeafModules.test.ts`
- * enforces that.
+ * ⚠ SEPARATE FROM `geography.ts`: that module imports all eras' region data as values, and these facts are read by client-imported registries (maps/countryAnchors, politicalStrength/strengthConstants). Importing from there would pull the whole region dataset into the browser bundle for three numbers.
+ * geography.ts re-exports these. KEEP FREE OF VALUE IMPORTS (clientSafeLeafModules.test.ts enforces).
  */
 
 /**
@@ -195,6 +183,12 @@ export const JP_CORE5_NORMALS = {
     },
   ],
 };
+
+/** Japan was admitted to the United Nations in 1956. */
+export const JP_UN_MEMBER_SINCE = 1956;
+
+/** Coverage region in the world entity tables. */
+export const JP_WORLD_REGION = "asia" as const;
 
 /** The continent Japan is filed under in the world tables. */
 export const JP_CONTINENT = "Asia";

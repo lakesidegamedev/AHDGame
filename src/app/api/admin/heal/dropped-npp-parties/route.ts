@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
 import type { NPP, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /**
  * Policy signature to party slug mapping.
@@ -107,8 +110,7 @@ export async function GET() {
 
     // Find ALL independent NPPs that are not retired
     // We don't require generatedAt since older NPPs may not have this field
-    const independentNpps = await db
-      .collection<NPP>("npps")
+    const independentNpps = await nppsCollection(db)
       .find({
         party: "independent",
         retiredAt: null,
@@ -176,8 +178,7 @@ export async function POST() {
     const now = new Date();
 
     // Find ALL independent NPPs (not just ones with generatedAt)
-    const independentNpps = await db
-      .collection<NPP>("npps")
+    const independentNpps = await nppsCollection(db)
       .find({
         party: "independent",
         retiredAt: null,
@@ -185,7 +186,7 @@ export async function POST() {
       .toArray();
 
     // Build party slug -> sequentialId map
-    const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
+    const parties = await politicalPartiesCollection(db).find({}).toArray();
     const partySlugToId = new Map<string, string>();
     for (const p of parties) {
       const slug = Object.entries(SLUG_TO_NAME).find(([, name]) => name === p.name)?.[0];
@@ -223,7 +224,7 @@ export async function POST() {
       }
 
       // Update NPP party
-      await db.collection<NPP>("npps").updateOne(
+      await nppsCollection(db).updateOne(
         { _id: npp._id },
         {
           $set: {
@@ -238,7 +239,7 @@ export async function POST() {
       results.partyCounts[partyName] = (results.partyCounts[partyName] ?? 0) + 1;
 
       // Update corresponding electedOfficials records
-      const officialResult = await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+      const officialResult = await electedOfficialsCollection(db).updateMany(
         { nppId: npp._id },
         {
           $set: {

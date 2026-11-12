@@ -22,7 +22,7 @@ vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
 vi.mock("@/lib/elections/electionParamResolution", () => ({
   resolveElectionRouteParam: vi.fn(),
 }));
-vi.mock("@/lib/turn/elections/supportEvents", () => ({
+vi.mock("@/lib/elections/campaigns/supportEvents", () => ({
   applyEndorsementSupportBump: vi.fn().mockResolvedValue(1),
 }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));

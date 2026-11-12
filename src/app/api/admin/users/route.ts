@@ -9,6 +9,9 @@ import {
   type IdentitySignalEligibility,
 } from "@/lib/auth/identitySignals";
 import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 export interface UserWithCharacter {
   id: string;
@@ -62,20 +65,13 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
 
     // Fetch users sorted by creation date (newest first), bounded by limit/offset.
     const [users, total] = await Promise.all([
-      db
-        .collection<User>("users")
-        .find({})
-        .sort({ createdAt: -1 })
-        .skip(offset)
-        .limit(limit)
-        .toArray(),
-      db.collection<User>("users").countDocuments(),
+      usersCollection(db).find({}).sort({ createdAt: -1 }).skip(offset).limit(limit).toArray(),
+      usersCollection(db).countDocuments(),
     ]);
 
     // Fetch only the characters for users in this page (avoids loading the
     // entire characters collection on busy servers).
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({ userId: { $in: users.map((u) => u._id) } })
       .toArray();
 
@@ -86,8 +82,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
     }
 
     // Build party name lookup: "countryId:sequentialId" → party name
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find({}, { projection: { sequentialId: 1, countryId: 1, name: 1 } })
       .toArray();
     const partyNameMap = new Map<string, string>(
@@ -148,10 +143,9 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
         modNote: user.modNote || null,
         latestModNote: user.modNotes?.at(-1)?.text ?? user.modNote ?? null,
         ipDetails: user.ipDetails ?? null,
-        // Annotation only — every value emitted above is unchanged. Nulling
-        // ineligible signals here would blank the Registration IP / Last Known
-        // IP columns in the users table for any account inactive 30+ days,
-        // which is a forensic regression in a view this change does not touch.
+        // Annotation only, emitted values are unchanged. Nulling ineligible
+        // signals here would blank the Registration IP / Last Known IP columns
+        // for accounts inactive 30+ days, a forensic regression.
         signalEligibility: eligibleIdentitySignals(user, now),
       };
     });

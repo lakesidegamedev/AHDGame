@@ -19,6 +19,8 @@ import {
   politicalDomainHealth,
 } from "@/lib/politicalLegislation/conditionsSignal";
 import { METRIC_TO_DOMAIN } from "./selectNppBill";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import type { Document } from "mongodb";
 
 /**
  * Reduce a national stateMetrics doc to `domain → health` (0–100, higher =
@@ -61,7 +63,7 @@ export async function loadDomainHealth(
   const [board, doc] = await Promise.all([
     loadNationalPoliticalBoard(db, countryId),
     (
-      db.collection("macroMetrics") as import("mongodb").Collection<Record<string, unknown>>
+      macroMetricsCollection<Document>(db) as import("mongodb").Collection<Record<string, unknown>>
     ).findOne(
       { _id: nationalDocId } as unknown as import("mongodb").Filter<Record<string, unknown>>,
       { projection: { economic: 1 } }

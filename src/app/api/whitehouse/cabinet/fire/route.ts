@@ -10,9 +10,12 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import { createNotification } from "@/lib/notifications";
-import type { CabinetMember, ElectedOfficial, Character } from "@/lib/db/types";
+import type { CabinetMember, ElectedOfficial } from "@/lib/db/types";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 const fireSchema = z.object({
   // positionId validated against the resolved country's positions in the handler.
@@ -46,21 +49,23 @@ export async function POST(request: Request) {
 
     const db = await getDb();
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
       return errorResponse(403, "Only the President can fire cabinet members");
     }
 
-    const member = await db.collection<CabinetMember>("cabinetMembers").findOne({
+    const member = await cabinetMembersCollection(db).findOne({
       countryId,
       positionId,
     });
@@ -68,14 +73,15 @@ export async function POST(request: Request) {
       return errorResponse(404, "No cabinet member in that position");
     }
 
-    await db.collection<CabinetMember>("cabinetMembers").deleteOne({ _id: member._id });
+    await cabinetMembersCollection(db).deleteOne({ _id: member._id });
 
     const posName = positionDef.name;
 
     const firedChar = member.characterId
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ _id: member.characterId }, { projection: { userId: 1 } })
+      ? await charactersCollection(db).findOne(
+          { _id: member.characterId },
+          { projection: { userId: 1 } }
+        )
       : null;
     if (firedChar?.userId) {
       await createNotification({

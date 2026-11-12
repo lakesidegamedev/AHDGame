@@ -1,0 +1,136 @@
+import type { DeLawText } from "./deLawTextTypes";
+
+export const DE_LAW_TEXT_DEFENSE: Record<string, DeLawText> = {
+  "defense.diplomacy.primary": [
+    "Foreign Service Act",
+    "The foreign office and the embassies it keeps.",
+    3,
+    [
+      ["Skeleton Service", "Few posts abroad."],
+      ["Professional Service", "A trained corps staffs key capitals."],
+      ["Global Diplomacy", "Embassies cover most states."],
+      ["Diplomatic Offensive", "Active mediation and summitry."],
+      ["Great-Power Diplomacy", "A leading voice in every forum."],
+    ],
+  ],
+  "defense.institutions.primary": [
+    "International Organizations Act",
+    "The EU, NATO, the UN seat and the dues of standing.",
+    4,
+    [
+      ["No Memberships", "Outside every body."],
+      ["Member in Standing", "A paying member."],
+      ["Active Membership", "Leadership roles in several bodies."],
+      ["System Architect", "A shaper of rules."],
+      ["Order Underwriter", "A principal funder and guarantor."],
+    ],
+  ],
+  "defense.softPower.primary": [
+    "Cultural Diplomacy Act",
+    "Language institutes, exchanges and the voice abroad.",
+    3,
+    [
+      ["No Voice Abroad", "No presence."],
+      ["External Services", "A broadcaster abroad."],
+      ["Institutes and Exchanges", "Language institutes operate."],
+      ["Cultural Offensive", "Large cultural programmes."],
+      ["Global Persuasion Drive", "A global campaign."],
+    ],
+  ],
+  "defense.security.primary": [
+    "Intelligence and Cyber Security Act",
+    "Services and defences against hostile states and attackers.",
+    3,
+    [
+      ["No Apparatus", "No services."],
+      ["Security Foundations", "Basic services."],
+      ["Security Establishment", "Modern foreign and cyber services."],
+      ["Deep Security State", "Wide surveillance."],
+      ["Total Vigilance", "Every channel is watched."],
+    ],
+  ],
+  "defense.defenseIndustry.primary": [
+    "Defence Industry and Procurement Act",
+    "The firms and labs that equip the armed forces.",
+    2,
+    [
+      ["No Industrial Policy", "Buy abroad."],
+      ["Procurement Base", "A small base builds basics."],
+      ["Production and Research", "Domestic production and research."],
+      ["Research and Production Drive", "Large programmes."],
+      ["Full Mobilization Base", "A national arms industry."],
+    ],
+  ],
+  "defense.armedForces.primary": [
+    "Armed Forces Act",
+    "The professional army, navy and air force.",
+    2,
+    [
+      ["Skeleton Forces", "Token forces."],
+      ["Regular Forces", "A small professional force."],
+      ["Strong Standing Forces", "A capable professional army."],
+      ["Large Establishment", "Larger forces with reserves."],
+      ["Mobilized Establishment", "Large forces and conscription."],
+    ],
+  ],
+  "defense.projection.primary": [
+    "Expeditionary and Strategic Forces Act",
+    "The reach of the armed forces beyond the borders.",
+    1,
+    [
+      ["No Strategic Forces", "No reach."],
+      ["Strategic Foundations", "Small deployable units."],
+      ["Deployment Programme", "Lift and logistics."],
+      ["Strategic Capability", "Sustained deployments."],
+      ["Great-Power Reach", "Global reach."],
+    ],
+  ],
+  "sec.developmentCooperation": [
+    "Development Cooperation Act",
+    "Aid and partnership with poorer countries.",
+    3,
+    [
+      ["No Aid Programmes", "No aid."],
+      ["Relief Assistance", "Disaster relief."],
+      ["Development Programmes", "Programmes and loans."],
+      ["Partnership Drive", "Large bilateral aid."],
+      ["Development Underwriting", "A leading donor."],
+    ],
+  ],
+  "sec.allianceCommitments": [
+    "Alliance Commitments Act",
+    "The alliances Germany stands inside.",
+    3,
+    [
+      ["No Alliances", "Neutral."],
+      ["Regional Pacts", "Regional agreements."],
+      ["Alliance System", "Treaty obligations."],
+      ["Integrated Commands", "Joint commands."],
+      ["Global Alliance Web", "A web of alliances."],
+    ],
+  ],
+  "sec.reserveForces": [
+    "Reserve Forces Act",
+    "The reserves behind the regulars.",
+    2,
+    [
+      ["No Reserve System", "No reserves."],
+      ["Territorial Units", "Volunteer territorial units."],
+      ["Ready Reserve System", "Trained reserves."],
+      ["Deep Reserve Structure", "Large reserves."],
+      ["Nation in Arms", "Mass reserves."],
+    ],
+  ],
+  "sec.intelligenceFunding": [
+    "Intelligence Budget",
+    "The line in the budget that funds the services.",
+    2,
+    [
+      ["Unfunded", "No funds."],
+      ["Nominal Provision", "A small line."],
+      ["Standing Service", "A steady budget."],
+      ["Expanded Service", "Growing budget."],
+      ["Unrestricted Budget", "Few limits."],
+    ],
+  ],
+};
