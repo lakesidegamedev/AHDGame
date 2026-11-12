@@ -1,19 +1,11 @@
 #!/usr/bin/env node
 /**
- * Lighthouse scorecard for the top-35 public pages in `pages.mjs`: per-page
- * JSON/HTML reports, a Markdown summary, and an optional floor-budget gate.
- *
- * node scripts/perf/lighthouse/run.mjs --base=<url> --strategy=mobile|desktop
- *   [--pages=/,/faq] [--runs=3 (median)] [--out=<dir>] [--budget=strict|off]
- *   [--chrome-path=<chrome>]
- *   [--cohort=public|signed-in|all] [--storage=<login-state.mjs output>]
- *   [--corp=<id>] [--party=<id>]
- *
- * The signed-in cohort needs --storage (the cookie jar written by
- * scripts/perf/page-load/login-state.mjs against the benchmark world).
- *
- * Needs the `lighthouse` and `chrome-launcher` devDependencies and a Chrome
- * (CHROME_PATH, --chrome-path, or a system install).
+ * Lighthouse scorecard: per-page JSON/HTML reports, a Markdown summary and an
+ * optional floor-budget gate. Options are documented in README.md.
+ *   node scripts/perf/lighthouse/run.mjs --base=<url> --strategy=mobile|desktop
+ *     [--cohort=public|signed-in|all] [--storage=<login-state.mjs output>]
+ * The signed-in cohort needs --storage (cookie jar from page-load/login-state.mjs).
+ * Needs the lighthouse and chrome-launcher devDependencies and a Chrome binary.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
