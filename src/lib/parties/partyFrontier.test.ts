@@ -265,7 +265,7 @@ describe("getPartyFrontier", () => {
 
   it("returns presence and its one-hop expansion", async () => {
     const db = makeDb();
-    seedRegions(["NY"]);
+    seedRegions(["NY", "PA", "CA"]);
     setMockCollection("characters", { distinct: vi.fn().mockResolvedValue(["NY"]) });
 
     const { presence, frontier } = await getPartyFrontier(db, "US", "1");
@@ -384,10 +384,21 @@ describe("annexed region (IE Northern Ireland)", () => {
   });
 
   it("changes nothing while Northern Ireland is still outside the country", () => {
-    // The country folder's map already names NIR as a neighbour; while NIR is
-    // outside the live region set it must not become reachable.
-    const live = Object.keys(STATE_ADJACENCY.IE).filter((region) => region !== "NIR");
-    expect(Object.keys(getTerritoryAdjacency("IE", live))).not.toContain("NIR");
-    expect(annexedNeighbours("IE", "DON", new Set(live))).toEqual([]);
+    // The static graph now includes the transferable region too. Country
+    // ownership comes from the live state set, not every key in that graph.
+    const seeded = Object.keys(STATE_ADJACENCY.IE).filter((region) => region !== "NIR");
+    expect(expandFrontier("IE", ["DON"], seeded).has("NIR")).toBe(false);
+    expect(expandFrontier("IE", ["KIL"], seeded).has("NIR")).toBe(false);
+    expect(getTerritoryAdjacency("IE", seeded)).toEqual(
+      Object.fromEntries(Object.entries(STATE_ADJACENCY.IE).filter(([region]) => region !== "NIR"))
+    );
+    // Callers without a live set retain the static geography lookup.
+    expect(expandFrontier("IE", ["DON"]).has("NIR")).toBe(true);
+  });
+
+  it("does not add a transferred UK neighbour or an absent isolated region to a live frontier", () => {
+    const remainingUk = Object.keys(STATE_ADJACENCY.UK).filter((region) => region !== "SCO");
+    expect(expandFrontier("UK", ["NWE"], remainingUk).has("SCO")).toBe(false);
+    expect(expandFrontier("RU", ["MOS"], ["MOS"]).has("MOL")).toBe(false);
   });
 });
