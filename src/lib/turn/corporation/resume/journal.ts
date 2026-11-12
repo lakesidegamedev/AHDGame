@@ -4,6 +4,7 @@
  * plan is stored in chunks before the first write and each chunk is marked applied,
  * so an interrupted turn applies the stored plan instead of recomputing it.
  */
+import { workerConfig } from "@/lib/config/worker";
 import { BSON, type Db, type Document } from "mongodb";
 
 const { EJSON } = BSON;
@@ -21,9 +22,25 @@ import {
   type CorporationTurnStep,
 } from "./rules";
 
-const MAX_OPS_PER_CHUNK = 2000;
+/** Rehearsal override for the chunk size, so a small world still spans several chunks. */
+const MAX_OPS_PER_CHUNK =
+  Number(workerConfig.corpTurnChunk()) > 0 ? Number(workerConfig.corpTurnChunk()) : 2000;
 const MAX_BYTES_PER_CHUNK = 8 * 1024 * 1024;
 const TURNS_KEPT = 3;
+
+/**
+ * Rehearsal fault: AHD_CORP_TURN_FAULT=<point>:<mode> where mode is `throw` or `kill`.
+ * Points: `<step>` (after the step ran, before its done mark) and `<step>@<chunk>`
+ * (after that plan chunk applied, before its mark). Only honoured at stage 2.
+ */
+function faultAt(ctx: JournalContext, point: string): void {
+  const spec = workerConfig.corpTurnFault();
+  if (!spec || ctx.stage < 2) return;
+  const [target, mode] = spec.split(":");
+  if (target !== point) return;
+  if (mode === "kill") process.kill(process.pid, "SIGKILL");
+  throw new Error(`rehearsal fault at ${point}`);
+}
 
 export interface JournalContext {
   db: Db;
@@ -114,6 +131,7 @@ export async function applyJournaledOps<Op extends object>(
       if (payload === undefined)
         throw new Error(`corporation turn plan chunk ${step}:${index} is missing`);
       await apply(EJSON.parse(payload, { relaxed: true }) as Op[]);
+      faultAt(ctx, `${step}@${index}`);
       await markChunkApplied(journal, key, step, index);
     }
     return "replayed";
@@ -158,6 +176,7 @@ export async function applyJournaledOps<Op extends object>(
 
   for (const [index, chunk] of chunks.entries()) {
     await apply(chunk.map((x) => x.op));
+    faultAt(ctx, `${step}@${index}`);
     await markChunkApplied(journal, key, step, index);
   }
   return "planned";
@@ -212,6 +231,7 @@ export async function runJournaledStep(
   if (action === "refuse") throw new CorporationTurnStepRefusedError(name);
   if (action === "run") await setPhase(ctx, name, "started");
   await fn();
+  faultAt(ctx, name);
   await setPhase(ctx, name, "done");
 }
 
@@ -240,6 +260,7 @@ export async function runJournaledStepWithOutput<T>(
   if (action === "refuse") throw new CorporationTurnStepRefusedError(name);
   if (action === "run") await setPhase(ctx, name, "started");
   const result = await fn();
+  faultAt(ctx, name);
   if (isStorableOutput(result)) {
     await journal.updateOne(
       { _id: outputId(key, name) },
