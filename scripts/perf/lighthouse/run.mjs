@@ -6,6 +6,11 @@
  * node scripts/perf/lighthouse/run.mjs --base=<url> --strategy=mobile|desktop
  *   [--pages=/,/faq] [--runs=3 (median)] [--out=<dir>] [--budget=strict|off]
  *   [--chrome-path=<chrome>]
+ *   [--cohort=public|signed-in|all] [--storage=<login-state.mjs output>]
+ *   [--corp=<id>] [--party=<id>]
+ *
+ * The signed-in cohort needs --storage (the cookie jar written by
+ * scripts/perf/page-load/login-state.mjs against the benchmark world).
  *
  * Needs the `lighthouse` and `chrome-launcher` devDependencies and a Chrome
  * (CHROME_PATH, --chrome-path, or a system install).
@@ -15,7 +20,8 @@ import path from "node:path";
 import process from "node:process";
 import lighthouse from "lighthouse";
 import * as chromeLauncher from "chrome-launcher";
-import { TOP_PAGES } from "./pages.mjs";
+import { readFile } from "node:fs/promises";
+import { SIGNED_IN_PAGES, TOP_PAGES } from "./pages.mjs";
 import {
   METRIC_BUDGETS,
   METRIC_IDS,
@@ -44,6 +50,45 @@ if (!["mobile", "desktop"].includes(strategy)) {
   process.exit(2);
 }
 
+const cohort = arg("cohort", "public");
+if (!["public", "signed-in", "all"].includes(cohort)) {
+  console.error(`Unknown --cohort=${cohort}; expected public, signed-in or all.`);
+  process.exit(2);
+}
+const storagePath = arg("storage", "");
+const idParams = { corp: arg("corp", ""), party: arg("party", "") };
+
+let cookieHeader = "";
+if (cohort !== "public") {
+  if (!storagePath) {
+    console.error("--cohort=signed-in|all needs --storage=<login-state.mjs output>.");
+    process.exit(2);
+  }
+  const state = JSON.parse(await readFile(storagePath, "utf8"));
+  cookieHeader = (state.cookies ?? []).map((c) => `${c.name}=${c.value}`).join("; ");
+  if (!cookieHeader) {
+    console.error(`No cookies in ${storagePath}.`);
+    process.exit(2);
+  }
+}
+
+const cohortPages =
+  cohort === "public"
+    ? TOP_PAGES
+    : cohort === "signed-in"
+      ? SIGNED_IN_PAGES
+      : [...TOP_PAGES, ...SIGNED_IN_PAGES];
+
+/** Fills `:corp` / `:party`; a page whose id is unknown is skipped, not guessed. */
+function resolvePage(page) {
+  let missing = false;
+  const resolved = page.path.replace(/:(\w+)/g, (_, key) => {
+    if (!idParams[key]) missing = true;
+    return idParams[key] ?? "";
+  });
+  return missing ? null : { ...page, path: resolved, budgetKey: page.path };
+}
+
 const pages = only
   ? only
       .split(",")
@@ -51,13 +96,13 @@ const pages = only
       .filter(Boolean)
       .map(
         (value) =>
-          TOP_PAGES.find((page) => page.path === value) ?? {
+          cohortPages.find((page) => page.path === value) ?? {
             path: value,
             name: slug(value),
             group: "custom",
           }
       )
-  : TOP_PAGES;
+  : cohortPages.map(resolvePage).filter(Boolean);
 
 function slug(value) {
   if (value === "/") return "home";
@@ -127,9 +172,10 @@ function ms(value) {
 
 function evaluateBudget(page, scores, metrics, seoExcluded) {
   const limits = SCORE_BUDGETS[strategy];
+  const budgetKey = page.budgetKey ?? page.path;
   const mobileOverride =
-    strategy === "mobile" ? (MOBILE_PAGE_BUDGET_OVERRIDES[page.path] ?? {}) : {};
-  const override = { ...(PAGE_BUDGET_OVERRIDES[page.path] ?? {}), ...mobileOverride };
+    strategy === "mobile" ? (MOBILE_PAGE_BUDGET_OVERRIDES[budgetKey] ?? {}) : {};
+  const override = { ...(PAGE_BUDGET_OVERRIDES[budgetKey] ?? {}), ...mobileOverride };
   const breaches = [];
   const metricWarnings = [];
 
@@ -188,10 +234,17 @@ try {
         throttlingMethod: "simulate",
         ...(strategy === "desktop" ? { throttling: desktopThrottling } : {}),
         maxWaitForLoad: 90_000,
+        ...(page.signedIn ? { extraHeaders: { Cookie: cookieHeader } } : {}),
       };
 
       try {
         const result = await lighthouse(url, flags);
+        if (
+          page.signedIn &&
+          /^\/(login|register)/.test(new URL(result.lhr.finalDisplayedUrl).pathname)
+        ) {
+          throw new Error(`redirected to ${result.lhr.finalDisplayedUrl}: session cookie rejected`);
+        }
         lastLhr = result.lhr;
         for (const category of CATEGORIES) {
           const score = lastLhr.categories[category]?.score;
