@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Input, Label, Modal, Button, SectionLabel } from "@/components/ui";
 import { normalizeReferralCode } from "@/lib/auth/normalizeReferralCode";
+import { isIosStoreAppUserAgent } from "@/lib/displayMode";
+
+const noopSubscribe = () => () => {};
 
 /** Why a social signup button is unusable on this deployment. */
 export interface SocialAvailability {
@@ -61,6 +64,13 @@ export function AccountSection({
   onChange,
 }: AccountSectionProps) {
   const t = useTranslations("auth.register.account");
+  // The Apple-first notice is for the iOS app only, where Sign in with Apple
+  // is the natural path. Read after hydration so the server render matches.
+  const isIosApp = useSyncExternalStore(
+    noopSubscribe,
+    () => isIosStoreAppUserAgent(navigator.userAgent),
+    () => false
+  );
   const passwordTooShort = formData.password.length > 0 && formData.password.length < 8;
   const passwordMismatch =
     formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword;
@@ -126,7 +136,7 @@ export function AccountSection({
         <p className="mt-1 text-body-sm text-muted">
           {bothBlocked ? t("subBothBlocked") : t("subDefault")}
         </p>
-        {discordLinkRequired && (
+        {discordLinkRequired && isIosApp && (
           <p className="mt-3 rounded-lg border border-card-border bg-card-muted p-3 text-body-sm text-foreground">
             {t("discordRuleNotice")}
           </p>
