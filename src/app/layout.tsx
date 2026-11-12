@@ -47,7 +47,6 @@ import { MaintenancePartialBanner } from "@/components/MaintenancePartialBanner"
 import { PollBannerNotice } from "@/components/PollBannerNotice";
 import { isSingleplayer } from "@/lib/singleplayer";
 import { AdSlot } from "@/components/AdSlot";
-import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { CookieConsentBanner } from "@/components/CookieConsent";
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -55,13 +54,6 @@ import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
 import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
-import {
-  buildGoogleTagBootstrapScript,
-  getAdSenseClientId,
-  getAdSensePageTagUrl,
-  shouldRenderConsentManagedGoogleTags,
-  shouldRenderGooglePrivacyMessaging,
-} from "@/lib/googlePrivacyMessaging";
 import {
   DEFAULT_SITE_DESCRIPTION,
   SITE_BRAND,
@@ -132,8 +124,6 @@ const jetbrainsMono = JetBrains_Mono({
 
 const siteUrl = getSiteUrl();
 const defaultDocumentTitle = `${SITE_BRAND} | ${SITE_SUBTITLE}`;
-const GA_MEASUREMENT_ID = "G-5GBG3BHWCZ";
-const GOOGLE_ADS_ID = "AW-18130975758";
 // Optional self-hosted umami tag. Both vars must be set; see the script block
 // at the end of the layout for why the host is not hardcoded.
 const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC?.trim();
@@ -326,25 +316,9 @@ export default async function RootLayout({
   // Root layout does not re-render on client navigation, so it ships only
   // what its own client tree renders; app/template.tsx adds the rest per route.
   const clientMessages = pickClientNamespaces(intlMessages, SHELL_CLIENT_NAMESPACES);
-  const adSenseClientId = getAdSenseClientId();
-  // Never load the AdSense page tag (auto ads + CMP) inside the native app
-  // WebView: AdSense is not permitted in app WebViews, and its third-party
-  // requests are routinely killed by mobile DNS filters / adblockers, which
-  // the Android shell used to misread as the server being unreachable.
-  // The page tag enables Google Auto ads. Loading it on a game, account, or
-  // community screen can result in Google-served ads on a non-editorial page,
-  // even when no manual AdSense component is mounted there.
-  const renderGoogleCmp = shouldRenderGooglePrivacyMessaging(pathname, host) && !isNativeApp;
   // Server component, so this is a plain call. Throws on a deployment
   // that sets SINGLEPLAYER, by design: see @/lib/singleplayer.
   const singleplayer = isSingleplayer();
-  const renderConsentManagedGoogleTags = shouldRenderConsentManagedGoogleTags(pathname, {
-    storeApp: isStoreApp,
-  });
-  const googleTagBootstrap = buildGoogleTagBootstrapScript(
-    GA_MEASUREMENT_ID,
-    renderGoogleCmp ? "cmp" : "fallback"
-  );
 
   return (
     <html
@@ -378,38 +352,6 @@ export default async function RootLayout({
             __html: `try{var c=localStorage.getItem(${JSON.stringify(COOKIE_CONSENT_KEY)});if(c==="accepted"||c==="rejected"){document.documentElement.dataset.cookieConsent=c;}}catch(e){}`,
           }}
         />
-        {renderGoogleCmp ? (
-          <>
-            <Script
-              id="google-privacy-messaging-bootstrap"
-              strategy="beforeInteractive"
-              dangerouslySetInnerHTML={{
-                __html:
-                  "window.googlefc = window.googlefc || {}; window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];",
-              }}
-            />
-            {/*
-              lazyOnload: the AdSense page tag is ~56KB and pulls in
-              show_ads_impl (~186KB more). Moving it from beforeInteractive to
-              afterInteractive cut Total Blocking Time from 2398ms to 1483ms
-              (landing, 4x CPU, 1.6Mbps; audit 2026-07-26). It still competed
-              with hydration on first load, so it now joins the rest of the
-              Google tags behind the load event: the 2026-11 Lighthouse audit
-              measured gtag+ads as the largest single blocking source on every
-              page (600-750ms of long tasks).
-
-              The googlefc consent bootstrap above stays beforeInteractive so
-              the CMP callback queue still exists before any consent callback
-              can fire; only the tag fetch is deferred, which matches Google's
-              own async-loading guidance.
-            */}
-            <Script
-              src={getAdSensePageTagUrl(adSenseClientId!)}
-              strategy="lazyOnload"
-              crossOrigin="anonymous"
-            />
-          </>
-        ) : null}
         <a
           href="#main-content"
           className="absolute -top-24 left-4 z-[200] rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white outline-none transition-[top] duration-150 focus:top-4 focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
@@ -478,7 +420,6 @@ export default async function RootLayout({
                             {children}
                           </main>
                           {!isWikiSubdomain && !isNativeApp && <AdSlot />}
-                          {!isWikiSubdomain && !isNativeApp && <AdSenseSlot />}
                           {!isWikiSubdomain && <SiteFooter displayMode={displayMode} />}
                           {!isWikiSubdomain && !nativeStatusDock && (
                             <StatusBar
@@ -492,9 +433,7 @@ export default async function RootLayout({
                           {!isWikiSubdomain && <LiveRefreshBanner />}
                           {/* Singleplayer loads no analytics (see below), so there is
                               nothing to consent to. */}
-                          {!isNativeApp && !singleplayer && (
-                            <CookieConsentBanner googleCmp={renderGoogleCmp} />
-                          )}
+                          {!isNativeApp && !singleplayer && <CookieConsentBanner />}
                           {/* A singleplayer build runs on the player's machine with no
                               account and nothing to measure, so none of the telemetry
                               or ad tags below have a job there.
@@ -511,34 +450,6 @@ export default async function RootLayout({
                               the self-hosted umami tag below. */}
                           {!singleplayer && (
                             <>
-                              {/* GA4 and the Ads conversion tag also wait for
-                                  the load event. The consent default is still
-                                  pushed into dataLayer before gtag.js runs
-                                  (the bootstrap reads localStorage itself), so
-                                  deferring the fetch delays when Google starts
-                                  counting, not whether it respects consent. */}
-                              {renderConsentManagedGoogleTags ? (
-                                <>
-                                  <Script
-                                    src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-                                    strategy="lazyOnload"
-                                  />
-                                  <Script
-                                    id="google-analytics"
-                                    strategy="lazyOnload"
-                                    dangerouslySetInnerHTML={{
-                                      __html: googleTagBootstrap,
-                                    }}
-                                  />
-                                  <Script
-                                    id="google-ads"
-                                    strategy="lazyOnload"
-                                    dangerouslySetInnerHTML={{
-                                      __html: `gtag('config', '${GOOGLE_ADS_ID}');`,
-                                    }}
-                                  />
-                                </>
-                              ) : null}
                               {/* Optional self-hosted umami tag. The host is
                                   configured rather than hardcoded: the old
                                   analytics.lakesidegames.net instance stopped

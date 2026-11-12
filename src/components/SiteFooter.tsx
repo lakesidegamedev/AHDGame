@@ -96,7 +96,6 @@ export function SiteFooter({ displayMode }: { displayMode?: "focused" | "classic
             {t("footer.terms")}
           </Link>
           <CookieSettingsLink
-            hideOnPrivacyPage
             className="text-xs text-muted transition-colors hover:text-foreground"
           />
           <a

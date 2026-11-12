@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { shouldRenderGooglePrivacyMessaging } from "@/lib/googlePrivacyMessaging";
 
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
 
@@ -13,31 +11,6 @@ export const CONSENT_EVENT = "ahd:cookie-consent-changed";
 export const CONSENT_RESET_EVENT = "ahd:cookie-consent-reset";
 
 export type CookieConsentValue = "accepted" | "rejected";
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-    googlefc?: {
-      callbackQueue?: Array<() => void>;
-      showRevocationMessage?: () => void;
-    };
-  }
-}
-
-function applyFallbackGoogleConsent(choice: CookieConsentValue | null) {
-  if (typeof window === "undefined") return;
-  if (shouldRenderGooglePrivacyMessaging(window.location.pathname, window.location.hostname))
-    return;
-  if (!window.gtag) return;
-
-  const state = choice === "accepted" ? "granted" : "denied";
-  window.gtag("consent", "update", {
-    ad_storage: state,
-    analytics_storage: state,
-    ad_user_data: state,
-    ad_personalization: state,
-  });
-}
 
 export function getStoredConsent(): CookieConsentValue | null {
   if (typeof window === "undefined") return null;
@@ -60,17 +33,7 @@ export function openCookiePreferences() {
   // Re-show the first-paint banner immediately: the gate attribute is what
   // hides it, and clearing it here avoids waiting for the effect below.
   delete document.documentElement.dataset.cookieConsent;
-  applyFallbackGoogleConsent(null);
   window.dispatchEvent(new Event(CONSENT_RESET_EVENT));
-
-  if (shouldRenderGooglePrivacyMessaging(window.location.pathname, window.location.hostname)) {
-    window.googlefc = window.googlefc || {};
-    window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-    window.googlefc.callbackQueue.push(() => {
-      window.googlefc?.showRevocationMessage?.();
-    });
-    return;
-  }
 }
 
 function subscribe(callback: () => void) {
@@ -106,24 +69,11 @@ function setConsent(choice: CookieConsentValue) {
   // Hide (or re-show) the banner before React re-renders: the first paint of a
   // returning player must never be gated on the post-hydration snapshot.
   document.documentElement.dataset.cookieConsent = choice;
-  applyFallbackGoogleConsent(choice);
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }));
 }
 
-export function CookieConsentBanner({ googleCmp = false }: { googleCmp?: boolean }) {
-  const pathname = usePathname();
+export function CookieConsentBanner() {
   const consent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Google's own CMP renders the consent UI on AdSense-eligible paths. The
-  // server decides that from the request path and host; the client only
-  // re-checks after mount so hydration always matches the server tree.
-  const clientCmp =
-    mounted && shouldRenderGooglePrivacyMessaging(pathname, window.location.hostname);
 
   useEffect(() => {
     if (consent === UNSET) return;
@@ -133,10 +83,7 @@ export function CookieConsentBanner({ googleCmp = false }: { googleCmp?: boolean
     } else {
       delete root.dataset.cookieConsent;
     }
-    applyFallbackGoogleConsent(consent);
   }, [consent]);
-
-  if (googleCmp || clientCmp) return null;
 
   // The banner is part of the first paint, not a post-hydration mount. It used
   // to appear only after the client store resolved localStorage, which made a

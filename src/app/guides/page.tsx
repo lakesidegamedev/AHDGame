@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { publicPageMetadata } from "@/lib/siteMetadata";
-import { AdSenseUnit } from "@/components/AdSenseUnit";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Guides | A House Divided",
@@ -199,11 +198,6 @@ export default function GuidesHubPage() {
           ))}
         </div>
 
-        <AdSenseUnit
-          slot="ahd-guides-incontent"
-          format="auto"
-          className="min-h-[280px] sm:min-h-[90px] mt-6"
-        />
       </div>
     </div>
   );

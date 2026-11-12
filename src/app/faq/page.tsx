@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { publicPageMetadata } from "@/lib/siteMetadata";
-import { AdSenseUnit } from "@/components/AdSenseUnit";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import {
   formatNationChoices,
@@ -119,12 +118,6 @@ export default async function FAQPage() {
           </p>
         </div>
 
-        <AdSenseUnit
-          slot="ahd-faq-top"
-          format="auto"
-          className="min-h-[280px] sm:min-h-[90px] mb-8"
-        />
-
         <div className="space-y-6">
           {FAQS.map((faq, i) => (
             <details
@@ -150,11 +143,6 @@ export default async function FAQPage() {
           ))}
         </div>
 
-        <AdSenseUnit
-          slot="ahd-faq-bottom"
-          format="auto"
-          className="min-h-[280px] sm:min-h-[90px] mt-8"
-        />
       </div>
 
       <script

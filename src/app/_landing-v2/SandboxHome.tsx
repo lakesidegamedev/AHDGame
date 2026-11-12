@@ -819,7 +819,6 @@ export function SandboxHome({
                     {col.headingKey === "landing.footer.legal" && (
                       <li>
                         <CookieSettingsLink
-                          hideOnPrivacyPage
                           className="text-body-sm text-muted transition-colors hover:text-foreground"
                         />
                       </li>

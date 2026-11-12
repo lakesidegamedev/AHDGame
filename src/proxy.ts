@@ -33,7 +33,6 @@ import {
 const WIKI_PASSTHROUGH_PATHS = new Set([
   "/robots.txt",
   "/sitemap.xml",
-  "/ads.txt",
   "/manifest.webmanifest",
 ]);
 
@@ -252,7 +251,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Canonical host is the apex domain. www duplicates every page (splits SEO
-  // signals and confuses the AdSense review), so 301 it. The raw Railway host
+  // signals), so 301 it. The raw Railway host
   // is NOT redirected — deploy healthchecks hit /api/health on it — it gets an
   // X-Robots-Tag: noindex header on its passthrough response instead.
   //
