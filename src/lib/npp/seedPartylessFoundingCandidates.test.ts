@@ -68,10 +68,10 @@ describe("seedPartylessFoundingCandidates", () => {
     expect(db.collection("statePartyOrg").insertMany).not.toHaveBeenCalled();
   });
 
-  it("does nothing outside the 1991 preset", async () => {
+  it("does nothing for a preset without empty starts", async () => {
     await expect(
       seedPartylessFoundingCandidates(db as unknown as Db, "2019-default")
-    ).rejects.toThrow("only for 1991-default");
+    ).rejects.toThrow("not supported for 2019-default");
     expect(db.collection("npps").insertMany).not.toHaveBeenCalled();
   });
 
@@ -89,7 +89,7 @@ describe("seedPartylessFoundingCandidates", () => {
 
     await expect(
       seedPartylessFoundingCandidates(db as unknown as Db, "1991-default")
-    ).rejects.toThrow("require an active 1991-default founding phase");
+    ).rejects.toThrow("require an active founding phase");
     expect(db.collection("npps").insertMany).not.toHaveBeenCalled();
     expect(db.collection("counters").findOneAndUpdate).not.toHaveBeenCalled();
   });

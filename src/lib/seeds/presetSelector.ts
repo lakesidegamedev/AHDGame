@@ -6,6 +6,7 @@
  * preset without its own bundle stops the seed with a `SeedContractError`.
  */
 
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { SEED_PRESET_IDS, type SeedPresetId } from "@/lib/constants/turnTime";
 import { missingPresetEntry, SeedContractError } from "@/lib/seeds/contract/seedContractError";
 
@@ -189,7 +190,7 @@ export function presetDefaultsToFoundingPhase(
   return (
     preset === "1953-default" ||
     preset === "1979-default" ||
-    (preset === "1991-default" && startingParties === "none")
+    (supportsNoStartingParties(preset) && startingParties === "none")
   );
 }
 
