@@ -28,6 +28,8 @@ import snapshot from "@/lib/countries/us/data/us2026ResultsSnapshot.json";
 import { canonicalTurnsForCycle } from "@/lib/elections/canonicalCycle";
 import { check } from "./checkFactory";
 import type { SeedDiagnosticCheck } from "./types";
+import type { ResetRegionalOpeningBoard } from "@/lib/resetFinance/rules/regionalOpeningBoard";
+import { regionalOpeningServiceClaims } from "@/lib/resetFinance/rules/regionalServiceClaims";
 
 export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDiagnosticCheck[]> {
   if (preset !== "2027-default") return [];
@@ -47,6 +49,7 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
     poverty,
     continuity,
     lawBoards,
+    serviceBoards,
   ] = await Promise.all([
     db
       .collection<State>("states")
@@ -137,6 +140,10 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       .collection<ResetLawOpeningBoard>("resetLawOpeningBoards")
       .find({ countryId: "US" })
       .toArray(),
+    db
+      .collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards")
+      .find({ countryId: "US" })
+      .toArray(),
   ]);
   const checks: SeedDiagnosticCheck[] = [];
   const assert = (
@@ -149,6 +156,23 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       check(`opening.US.2027.${metric}`, "US", metric, expected, actual, valid ? "ok" : "critical")
     );
   const regionalGdp = states.reduce((sum, s) => sum + (s.gdp ?? 0) * 1e6, 0);
+  if (world?.legislationSystemVersion === "v2") {
+    let invalidServices = 0;
+    for (const board of serviceBoards) {
+      try {
+        regionalOpeningServiceClaims(board);
+        if (board.worldId !== world.resetWorldId) invalidServices++;
+      } catch {
+        invalidServices++;
+      }
+    }
+    assert(
+      "regional-service-continuity",
+      serviceBoards.length === states.length && invalidServices === 0,
+      invalidServices,
+      0
+    );
+  }
   const grantPool = budget ? formulaGrantPool(budget.revenue?.total ?? 0, formulaGrants) : NaN;
   const receipts = regionalBudgets.reduce((sum, b) => sum + b.revenue.federalGrants, 0);
   const reserves =

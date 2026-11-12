@@ -31,7 +31,11 @@ export function buildModeledFiscalOpening(input: {
     operating: number;
     grants: number;
     sources: readonly ModeledLawSource[];
-    regions: readonly { id: string; spending: number }[];
+    regions: readonly {
+      id: string;
+      spending: number;
+      spendingByCategory?: Record<string, number>;
+    }[];
   }[];
 }) {
   const laws: ResetLawOpeningBoard[] = [];
@@ -165,6 +169,9 @@ export function buildModeledFiscalOpening(input: {
         annualSpending: region.spending,
         familyOwned: 0,
         otherExistingServices: region.spending,
+        ...(input.preset === "2027-default" && country.country === "US" && region.spendingByCategory
+          ? { existingServicesByCategory: { ...region.spendingByCategory } }
+          : {}),
         allocatedClaims: [],
         estimateKind: "proportional-source-pool",
       });

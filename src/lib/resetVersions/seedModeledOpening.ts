@@ -185,7 +185,11 @@ export async function loadModeledOpening(
               (b) => b.countryId === country && b.stateId === s._id
             );
             if (!regional) throw new Error(`Missing modeled regional budget ${country}:${s._id}`);
-            return { id: s._id, spending: regional.spending.total };
+            return {
+              id: s._id,
+              spending: regional.spending.total,
+              spendingByCategory: regional.spending.byCategory,
+            };
           }),
       };
     }),

@@ -45,3 +45,5 @@ areas: [engine]
 - Reconciles US 2027 federal and regional grants using the existing formula,
   loads the correct state poverty records, and preserves valid zero rates.
   Saved law boards now omit absent restrictions and accept older BSON nulls.
+- Preserves US 2027 regional opening services and their category mix through
+  fiscal rollover, funding them alongside newly enacted regional programs.

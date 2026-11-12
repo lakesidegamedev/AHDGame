@@ -287,6 +287,7 @@ function makeDb(options: {
   stateMetrics?: Record<string, unknown>[];
   stateBudgets?: Record<string, unknown>[];
   resetPrograms?: Record<string, unknown>[];
+  openingBoards?: Record<string, unknown>[];
   gameState?: Record<string, unknown> | null;
   countryGameStates?: Record<string, unknown>[];
   gameConfig?: Record<string, unknown> | null;
@@ -298,6 +299,7 @@ function makeDb(options: {
     stateMetrics = [],
     stateBudgets = [],
     resetPrograms = [],
+    openingBoards = [],
     gameState = null,
     countryGameStates = [],
     gameConfig = null,
@@ -374,6 +376,10 @@ function makeDb(options: {
         case "resetLawPrograms":
           return {
             find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(resetPrograms) }),
+          };
+        case "resetRegionalOpeningBoards":
+          return {
+            find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(openingBoards) }),
           };
         case "gameState":
           return {
@@ -1073,6 +1079,79 @@ describe("processFiscalYear", () => {
     expect(setOps.surplus).toBe(10_000_000_000);
     expect(setOps.balance).toBe(60_000_000_000); // 50B + 10B
   });
+
+  it.each([0, 20_000_000])(
+    "retains opening services with %i of additional regional programs",
+    async (additional) => {
+      const stateBudget = makeStateBudget("US-CA");
+      stateBudget.balance = 0;
+      vi.mocked(calculateStateRevenue).mockResolvedValue({
+        total: 100_000_000 + additional,
+      } as never);
+      vi.mocked(calculateStateSpendingDetail).mockResolvedValue({
+        spending: { total: 0, byCategory: {} },
+        lawCosts: [],
+      });
+      const receipt = (revision: number) => ({
+        worldId: "world",
+        revision,
+        sourceTurn: 1,
+        completedAt: "2026-11-12T00:00:00.000Z",
+        verificationHash: "verified",
+        countries: ["US"],
+      });
+      const db = makeDb({
+        states: [{ _id: "US-CA", countryId: "US" }],
+        stateBudgets: [stateBudget],
+        gameState: {
+          _id: "current",
+          preset: "2027-default",
+          resetWorldId: "world",
+          metricsSystemVersion: "v2",
+          legislationSystemVersion: "v2",
+          resetVersionSeeds: { metrics: receipt(3), legislation: receipt(6) },
+        },
+        openingBoards: [
+          {
+            _id: "US:US-CA",
+            worldId: "world",
+            countryId: "US",
+            regionId: "US-CA",
+            sourceTurn: 1,
+            annualSpending: 100_000_000,
+            familyOwned: 0,
+            otherExistingServices: 100_000_000,
+            allocatedClaims: [],
+            estimateKind: "proportional-source-pool",
+            existingServicesByCategory: { education: 60_000_000, healthcare: 40_000_000 },
+          },
+        ],
+        resetPrograms: additional
+          ? [
+              {
+                _id: "new-program",
+                regionId: "US-CA",
+                familyId: "L10",
+                choice: "center_left",
+                annualAgencyAllocation: additional,
+              },
+            ]
+          : [],
+      });
+      await processFiscalYear(db as unknown as Db, 2028, 40);
+      const set = db._stateBudgetUpdateOne.mock.calls.find(
+        (c: unknown[]) => (c[1] as { $set?: { fiscalYear?: number } }).$set?.fiscalYear === 2028
+      )![1].$set;
+      expect(set.spending.byCategory).toMatchObject({
+        education: 60_000_000,
+        healthcare: 40_000_000,
+        resetLegislation: additional,
+      });
+      expect(set.spending.total).toBe(100_000_000 + additional);
+      expect(set.authorizedSpending.total).toBe(100_000_000 + additional);
+      expect(set.balance).toBe(0);
+    }
+  );
 
   it("settles US v2 state-law allocations through the state budget", async () => {
     const stateBudget = makeStateBudget("US-CA");

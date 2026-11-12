@@ -87,6 +87,8 @@ import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import type { ResetRegionalOpeningBoard } from "@/lib/resetFinance/rules/regionalOpeningBoard";
+import { regionalOpeningServiceClaims } from "@/lib/resetFinance/rules/regionalServiceClaims";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -149,6 +151,7 @@ export async function processFiscalYear(
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
         resetVersionSeeds: 1,
+        preset: 1,
       },
     }
   );
@@ -200,6 +203,39 @@ export async function processFiscalYear(
           .toArray()
       : [];
   const usResetProgramsByRegion = new Map<string, ResetLawProgramDocument[]>();
+  // One world-scoped preload, never a lookup per region. Other presets retain their rules.
+  const openingServices =
+    usResetLegislationV2 && financeState?.preset === "2027-default"
+      ? await db
+          .collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards")
+          .find(
+            { countryId: "US", worldId: financeState.resetWorldId },
+            {
+              projection: {
+                _id: 1,
+                countryId: 1,
+                worldId: 1,
+                regionId: 1,
+                sourceTurn: 1,
+                annualSpending: 1,
+                familyOwned: 1,
+                otherExistingServices: 1,
+                allocatedClaims: 1,
+                estimateKind: 1,
+                existingServicesByCategory: 1,
+              },
+            }
+          )
+          .toArray()
+      : [];
+  const openingServicesByRegion = new Map(openingServices.map((board) => [board.regionId, board]));
+  for (const board of openingServices) regionalOpeningServiceClaims(board);
+  if (
+    usResetLegislationV2 &&
+    financeState?.preset === "2027-default" &&
+    states.some((s) => s.countryId === "US" && !openingServicesByRegion.has(String(s._id)))
+  )
+    throw new Error("US 2027 rollover requires current-world regional service baselines");
   for (const program of usResetRegionalPrograms) {
     if (!program.regionId) continue;
     const programs = usResetProgramsByRegion.get(program.regionId) ?? [];
@@ -690,7 +726,8 @@ export async function processFiscalYear(
         currentTurn,
         countryId === COUNTRY_CONFIGS.US.id,
         regionalLegislationTypeMap,
-        countryId === COUNTRY_CONFIGS.US.id ? (usResetProgramsByRegion.get(stateId) ?? []) : []
+        countryId === COUNTRY_CONFIGS.US.id ? (usResetProgramsByRegion.get(stateId) ?? []) : [],
+        countryId === COUNTRY_CONFIGS.US.id ? openingServicesByRegion.get(stateId) : undefined
       );
     }
 
@@ -783,7 +820,8 @@ async function processStateFiscalYear(
   currentTurn = 0,
   regionalFinanceEnabled = false,
   legislationTypeMap: ReadonlyMap<string, LegislationType> = new Map(),
-  resetPrograms: readonly ResetLawProgramDocument[] = []
+  resetPrograms: readonly ResetLawProgramDocument[] = [],
+  openingServices?: ResetRegionalOpeningBoard
 ): Promise<void> {
   const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
@@ -851,22 +889,34 @@ async function processStateFiscalYear(
     (sum, program) => sum + program.annualAgencyAllocation,
     0
   );
+  const serviceClaims = openingServices ? regionalOpeningServiceClaims(openingServices) : [];
+  const serviceCategories = Object.fromEntries(
+    serviceClaims.map((c) => [c.category, c.authorizedCost])
+  );
+  const authorizedCategories = { ...spendingDetail.spending.byCategory };
+  for (const [category, amount] of Object.entries(serviceCategories))
+    authorizedCategories[category] = (authorizedCategories[category] ?? 0) + amount;
   const authorizedSpending: StateBudget["spending"] = {
     ...spendingDetail.spending,
     byCategory: {
-      ...spendingDetail.spending.byCategory,
+      ...authorizedCategories,
       resetLegislation:
         (spendingDetail.spending.byCategory.resetLegislation ?? 0) + resetProgramAnnualCost,
     },
-    total: spendingDetail.spending.total + resetProgramAnnualCost,
+    total:
+      spendingDetail.spending.total +
+      resetProgramAnnualCost +
+      serviceClaims.reduce((sum, c) => sum + c.authorizedCost, 0),
   };
   let spending = authorizedSpending;
   let regionalProgramSettlements = stateBudget.regionalProgramSettlements;
 
-  const regionalSettlementEnabled = regionalFinanceEnabled || resetPrograms.length > 0;
+  const regionalSettlementEnabled =
+    regionalFinanceEnabled || resetPrograms.length > 0 || serviceClaims.length > 0;
   if (regionalSettlementEnabled) {
     const previousIds = new Set(Object.keys(stateBudget.regionalProgramSettlements ?? {}));
     const claims = [
+      ...serviceClaims,
       ...spendingDetail.lawCosts.flatMap(({ law, annualCost }) => {
         const type = legislationTypeMap.get(law.legislationTypeId);
         const option =
@@ -907,6 +957,9 @@ async function processStateFiscalYear(
       settlement.programs.map((program) => [program.legislationTypeId, program])
     );
     const actualByCategory: Record<string, number> = {};
+    for (const service of serviceClaims)
+      actualByCategory[service.category] =
+        settlement.programs.find((p) => p.programId === service.programId)?.fundedAmount ?? 0;
     for (const row of spendingDetail.lawCosts) {
       const funded =
         row.annualCost <= 0

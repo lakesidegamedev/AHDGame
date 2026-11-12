@@ -86,6 +86,16 @@ export function transferResetV2FiscalToIreland(
     annualSpending: source.annualSpending * scale,
     familyOwned: source.familyOwned * scale,
     otherExistingServices: source.otherExistingServices * scale,
+    ...(source.existingServicesByCategory
+      ? {
+          existingServicesByCategory: Object.fromEntries(
+            Object.entries(source.existingServicesByCategory).map(([category, amount]) => [
+              category,
+              amount * scale,
+            ])
+          ),
+        }
+      : {}),
     allocatedClaims: source.allocatedClaims.map((claim) => ({
       ...claim,
       annualBooked: claim.annualBooked * scale,
