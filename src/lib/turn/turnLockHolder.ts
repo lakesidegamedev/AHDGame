@@ -10,7 +10,17 @@ const HOST = workerConfig.replicaId() ?? hostname();
 
 /** Worker instance, pid and boot id: unique per process lifetime. */
 export const TURN_HOLDER_ID = `${HOST}:${process.pid}:${BOOT_ID}`;
-const SELF = { host: HOST, bootId: BOOT_ID };
+const SELF = { host: HOST };
+
+/** Signal 0 probes without sending anything; EPERM means the process exists. */
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
 
 let fencedHolderId: string | null = null;
 let lockLost = false;
@@ -75,7 +85,7 @@ export async function tryFastStaleLockTakeover(
     }
   );
   if (lock?.processingHolderId === TURN_HOLDER_ID) return false;
-  if (!shouldFastTakeOverStaleLock(lock, now, stage, SELF)) return false;
+  if (!shouldFastTakeOverStaleLock(lock, now, stage, SELF, pidAlive)) return false;
   const res = await col.updateOne(
     {
       _id: "current",
