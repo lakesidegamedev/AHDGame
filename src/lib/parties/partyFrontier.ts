@@ -91,13 +91,15 @@ export function expandFrontier(
   for (const stateId of presence) {
     if (!stateId) continue;
     out.add(stateId);
-    for (const neighbour of adjacentStates(countryId, stateId)) out.add(neighbour);
+    for (const neighbour of adjacentStates(countryId, stateId))
+      if (!live || live.has(neighbour)) out.add(neighbour);
     // Regions annexed after the map was seeded, when the live set is known.
     if (live)
       for (const neighbour of annexedNeighbours(countryId, stateId, live)) out.add(neighbour);
   }
   if (out.size > 0) {
-    for (const isolated of isolatedRegions(countryId)) out.add(isolated);
+    for (const isolated of isolatedRegions(countryId))
+      if (!live || live.has(isolated)) out.add(isolated);
   }
   return out;
 }
