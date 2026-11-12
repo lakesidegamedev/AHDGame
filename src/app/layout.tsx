@@ -41,6 +41,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { LiveRefreshBanner } from "@/components/LiveRefreshBanner";
+import { VpnGateBanner } from "@/components/VpnGateBanner";
 import { MassCrashAlertBanner } from "@/components/MassCrashAlertBanner";
 import { MaintenancePartialBanner } from "@/components/MaintenancePartialBanner";
 import { PollBannerNotice } from "@/components/PollBannerNotice";
@@ -444,6 +445,7 @@ export default async function RootLayout({
                           {!isWikiSubdomain && <BugReportFab displayMode={displayMode} />}
                           {/* Experimental opt-in (Settings). Singleplayer has no Ask service. */}
                           {!isWikiSubdomain && !singleplayer && <AskDrawer />}
+                          {!isWikiSubdomain && <VpnGateBanner />}
                           {!isWikiSubdomain && <MassCrashAlertBanner />}
                           {!isWikiSubdomain && <MaintenancePartialBanner />}
                           {/* Admin-controlled survey strip. Not auth-gated: it must reach

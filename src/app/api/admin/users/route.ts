@@ -22,6 +22,7 @@ export interface UserWithCharacter {
   isBanned: boolean;
   singleplayerEntitled: boolean;
   sandboxAccessGranted: boolean;
+  vpnWhitelisted: boolean;
   characterId: string | null;
   characterName: string | null;
   party: string | null;
@@ -121,6 +122,7 @@ export const GET = withAdminAuth(async (_auth, request: Request) => {
         isBanned: user.isBanned || false,
         singleplayerEntitled: Boolean(user.singleplayerEntitledAt),
         sandboxAccessGranted: Boolean(user.sandboxAccessGrantedAt),
+        vpnWhitelisted: user.vpnWhitelisted === true,
         characterId: character?._id?.toString() || null,
         characterName: character?.name || null,
         party: resolvePartyName(character),
