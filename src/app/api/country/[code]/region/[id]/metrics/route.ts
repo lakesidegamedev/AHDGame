@@ -118,7 +118,17 @@ export async function GET(
     const preset = gameStateDoc?.preset ?? null;
     // Live year for era-aware scoring; null while the flag is off (legacy path).
     const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
-    const nationalApproval = isNational ? await loadNationalApproval(resolvedCountryId) : null;
+    const nationalApproval = isNational
+      ? await loadNationalApproval(resolvedCountryId, {
+          allStates: await statesCollection(db)
+            .find({ countryId: resolvedCountryId }, { projection: { _id: 1, population: 1 } })
+            .toArray(),
+          allMetrics: countryMetricsRaw.filter((row) => !NATIONAL_SCOPE_IDS.has(String(row._id))),
+          nationalAverages: approvalAverages,
+          preset,
+          year,
+        })
+      : null;
     const addressModifiers = isNational
       ? []
       : await getActiveAddressApprovalModifiers(db, resolvedCountryId, stateId, currentTurn);

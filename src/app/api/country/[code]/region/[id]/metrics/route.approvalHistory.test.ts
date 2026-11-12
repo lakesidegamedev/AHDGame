@@ -68,6 +68,12 @@ describe("region metrics route — approvalHistory", () => {
     ["us", "federal"],
     ["ca", "ca_national"],
   ])("uses national approval without a synthetic region electorate: %s", async (code, id) => {
+    db.collection("gameState").findOne.mockResolvedValue({
+      preset: "2027-default",
+      currentTurn: 40,
+      currentYear: 2027,
+      startingYear: 2027,
+    });
     db.collectionMocks.macroMetrics!.findOne.mockResolvedValue({
       _id: id,
       countryId: code.toUpperCase(),
@@ -94,7 +100,13 @@ describe("region metrics route — approvalHistory", () => {
     expect(body.governmentApproval).toBe(63);
     expect(body.governmentApprovalBase).toBe(58);
     expect(body.approvalHistory).toEqual([{ turn: 40, approval: 63, net: 26 }]);
-    expect(loadNationalApproval).toHaveBeenCalledWith(code.toUpperCase());
+    expect(loadNationalApproval).toHaveBeenCalledWith(
+      code.toUpperCase(),
+      expect.objectContaining({
+        preset: "2027-default",
+        year: 2027,
+      })
+    );
     expect(db.collectionMocks.stateDemographics).toBeUndefined();
   });
 
