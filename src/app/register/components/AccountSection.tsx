@@ -126,6 +126,11 @@ export function AccountSection({
         <p className="mt-1 text-body-sm text-muted">
           {bothBlocked ? t("subBothBlocked") : t("subDefault")}
         </p>
+        {discordLinkRequired && (
+          <p className="mt-3 rounded-lg border border-card-border bg-card-muted p-3 text-body-sm text-foreground">
+            {t("discordRuleNotice")}
+          </p>
+        )}
       </div>
       <div className="p-5 sm:p-7">
         {/* Social quick-register — referral first so OAuth never skips it */}
