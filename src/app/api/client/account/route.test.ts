@@ -4,8 +4,6 @@ const requireBasicAuth = vi.fn();
 const getAuthUserFromToken = vi.fn();
 const findOne = vi.fn();
 const getCookie = vi.fn();
-const isPatreonActive = vi.fn(() => false);
-const isPlusOrBetter = vi.fn(() => false);
 
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth }));
 vi.mock("@/lib/auth", () => ({ getAuthUserFromToken }));
@@ -13,7 +11,6 @@ vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({ get: getCookie })
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(async () => ({ collection: () => ({ findOne }) })),
 }));
-vi.mock("@/lib/db/types", () => ({ isPatreonActive, isPlusOrBetter }));
 
 describe("GET /api/client/account", () => {
   it("rejects unauthenticated WebView requests", async () => {
@@ -27,8 +24,7 @@ describe("GET /api/client/account", () => {
     expect(findOne).not.toHaveBeenCalled();
   });
 
-  it("returns only the desktop account summary", async () => {
-    isPatreonActive.mockReturnValueOnce(true);
+  it("returns only the desktop account summary, including singleplayer for a supporter", async () => {
     requireBasicAuth.mockResolvedValueOnce({
       ok: true,
       user: { userId: "507f1f77bcf86cd799439011" },
@@ -54,20 +50,18 @@ describe("GET /api/client/account", () => {
       displayName: "Ada Lovelace",
       avatarUrl: "https://cdn.discordapp.com/avatars/123/avatar-hash.png?size=128",
       supporter: true,
-      singleplayer: { entitled: false, expiresAt: null },
+      singleplayer: { entitled: true },
     });
     expect(body).not.toHaveProperty("email");
   });
 
-  it.each(["supporter-plus", "supporter-plus-plus"])(
+  it.each(["supporter", "supporter-plus", "supporter-plus-plus"])(
     "grants singleplayer to an active %s account without a manual entitlement field",
     async (patreonTier) => {
       requireBasicAuth.mockResolvedValueOnce({
         ok: true,
         user: { userId: "507f1f77bcf86cd799439011" },
       });
-      isPatreonActive.mockReturnValueOnce(true);
-      isPlusOrBetter.mockReturnValueOnce(true);
       findOne.mockResolvedValueOnce({
         username: "Ada",
         patreonTier,
@@ -83,6 +77,45 @@ describe("GET /api/client/account", () => {
       expect(Date.parse(body.singleplayer.expiresAt)).toBeGreaterThan(Date.now());
     }
   );
+
+  it.each(["supporter", "supporter-plus", "supporter-plus-plus"])(
+    "denies singleplayer to a lapsed %s account with no purchase",
+    async (patreonTier) => {
+      requireBasicAuth.mockResolvedValueOnce({
+        ok: true,
+        user: { userId: "507f1f77bcf86cd799439011" },
+      });
+      findOne.mockResolvedValueOnce({
+        username: "Ada",
+        patreonTier,
+        patreonExpiresAt: new Date(Date.now() - 60_000),
+      });
+      const { GET } = await import("./route");
+
+      const body = await (await GET()).json();
+
+      expect(body.supporter).toBe(false);
+      expect(body.singleplayer).toEqual({ entitled: false, expiresAt: null });
+    }
+  );
+
+  it("keeps singleplayer for a purchase holder after the supporter tier lapses", async () => {
+    requireBasicAuth.mockResolvedValueOnce({
+      ok: true,
+      user: { userId: "507f1f77bcf86cd799439011" },
+    });
+    findOne.mockResolvedValueOnce({
+      username: "Ada",
+      patreonTier: "supporter",
+      patreonExpiresAt: new Date(Date.now() - 60_000),
+      singleplayerEntitledAt: new Date(),
+    });
+    const { GET } = await import("./route");
+
+    const body = await (await GET()).json();
+
+    expect(body.singleplayer.entitled).toBe(true);
+  });
 
   it("grants singleplayer to moderators without a supporter or manual entitlement", async () => {
     requireBasicAuth.mockResolvedValueOnce({

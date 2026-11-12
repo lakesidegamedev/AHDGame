@@ -5,7 +5,7 @@ import {
 } from "@/lib/seeds/reference/budgets";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
-const COUNTRY_IDS = ["HU", "PL", "RO", "BG"] as const;
+const COUNTRY_IDS = ["HU", "PL", "RO", "BG", "RU"] as const;
 
 /** Persist only authored 2027 fiscal rows for the included transition countries. */
 export async function seedModernTransitionBudgets2027(

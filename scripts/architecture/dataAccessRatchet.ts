@@ -417,6 +417,7 @@ export const FRONT_DOOR_COLLECTIONS = [
   "sourceFenceConsumptions",
   "sourceFenceReceipts",
   "authSourceOwnershipProofs",
+  "centralLoginShadowEvents",
   "bankTreasuryTrades",
   "bankingTelemetry",
   "reservePoolTransferCommands",

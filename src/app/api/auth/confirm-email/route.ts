@@ -13,6 +13,14 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumeEmailChange } from "@/lib/emailChange";
 import { sendEmail } from "@/lib/email";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  bridgeAccountFromUser,
+  centralRestoreAccount,
+  centralWriteFirst,
+  getCentralLoginMode,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 const NO_STORE = { headers: { "Cache-Control": "private, no-store" } };
@@ -53,6 +61,25 @@ export async function POST(request: Request) {
     const db = await getDb();
     const usersCollectionHandle = usersCollection(db);
 
+    // The account email changes here, so this is the credential write to mirror.
+    const centralMode = getCentralLoginMode();
+    const accountBefore =
+      centralMode === "off"
+        ? null
+        : await usersCollectionHandle.findOne({ _id: change.userId, email: change.previousEmail });
+    const emailWrite = accountBefore
+      ? ({
+          op: "account-upsert",
+          account: bridgeAccountFromUser(accountBefore, {
+            email: change.newEmail,
+            emailVerified: true,
+          }),
+        } as const)
+      : null;
+    if (emailWrite && !(await centralWriteFirst(emailWrite))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE, NO_STORE);
+    }
+
     let matched: number;
     try {
       // CAS on the address the request was made from: a second change that
@@ -68,6 +95,9 @@ export async function POST(request: Request) {
       );
       matched = updated.matchedCount;
     } catch (error) {
+      if (accountBefore) {
+        await centralRestoreAccount(accountBefore);
+      }
       if (isDuplicateKey(error)) {
         return errorResponse(409, "That email is already used by another account.", NO_STORE);
       }
@@ -75,6 +105,9 @@ export async function POST(request: Request) {
     }
 
     if (matched !== 1) {
+      if (accountBefore) {
+        await centralRestoreAccount(accountBefore);
+      }
       recordAudit({
         source: "api",
         category: "auth",
@@ -87,6 +120,7 @@ export async function POST(request: Request) {
     }
 
     invalidateCachedUser(change.userId.toHexString());
+    if (emailWrite) shadowMirrorWrite(emailWrite);
 
     recordAudit({
       source: "api",

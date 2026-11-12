@@ -31,4 +31,11 @@ export const authConfig = {
   unifiedGeneralCohort: () => process.env.AHD_UNIFIED_GENERAL_COHORT,
   migrationSourceIssuer: () => process.env.AHD_MIGRATION_SOURCE_ISSUER,
   migrationProofLoadSecret: () => process.env.AHD_MIGRATION_PROOF_LOAD_SECRET,
+
+  centralLoginMode: () => process.env.AHD_CENTRAL_LOGIN_MODE,
+  accountBridgeUrl: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_URL,
+  accountBridgeTokenUrl: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_TOKEN_URL,
+  accountBridgeClientId: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_CLIENT_ID,
+  accountBridgeClientSecret: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_CLIENT_SECRET,
+  accountBridgeTimeoutMs: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_TIMEOUT_MS,
 } as const;

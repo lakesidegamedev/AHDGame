@@ -33,6 +33,24 @@ function getPreset(args: readonly string[]): string {
   return arg?.split("=")[1] ?? DEFAULT_SEED_PRESET;
 }
 
+/** `--iteration=Iteration:5` stamps the new world's label; absent keeps the old one. */
+export function getIteration(
+  args: readonly string[]
+): ResetAndBootstrapOptions["iteration"] | undefined {
+  const arg = args.find((value) => value.startsWith("--iteration="));
+  if (!arg) return undefined;
+  const [type, rawNumber] = arg.slice("--iteration=".length).split(":");
+  const number = Number(rawNumber);
+  if (
+    (type !== "Alpha" && type !== "Beta" && type !== "Iteration") ||
+    !Number.isInteger(number) ||
+    number < 1
+  ) {
+    throw new Error("--iteration must look like Iteration:5, Beta:2 or Alpha:1");
+  }
+  return { type, number };
+}
+
 function hasFlag(args: readonly string[], flag: string): boolean {
   return args.includes(flag);
 }
@@ -58,6 +76,7 @@ export async function runResetAndBootstrapCli(
   if (startingParties === "none" && !supportsNoStartingParties(preset)) {
     throw new Error(`--no-starting-parties is not supported for --preset=${preset}`);
   }
+  const iteration = getIteration(args);
   const skipRegionalCouncil = hasFlag(args, "--skip-regional-council");
   const resetReference = !hasFlag(args, "--preserve-reference");
   if (!resetReference && preset === "1991-default") {
@@ -86,6 +105,11 @@ export async function runResetAndBootstrapCli(
       `Resetting and bootstrapping game world (mode=${mode}, preset=${preset}, startingParties=${startingParties ?? "preset defaults"}${
         foundingEffective ? ", pre-iteration founding" : ""
       })`
+    );
+    console.log(
+      iteration
+        ? `Iteration label: ${iteration.type} ${iteration.number}`
+        : "Iteration label: unchanged (pass --iteration=Iteration:<n> to set it)"
     );
     if (!resetReference) {
       console.log(
@@ -117,6 +141,7 @@ export async function runResetAndBootstrapCli(
       deleteProfiles: false,
       adminUsername: "CLI",
       preIteration,
+      ...(iteration ? { iteration } : {}),
       log: console.log,
     });
 

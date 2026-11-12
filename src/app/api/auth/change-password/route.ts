@@ -13,6 +13,14 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { changePasswordSchema } from "@/lib/api/schemas/settings";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import {
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralRestoreAccount,
+  centralWriteFirst,
+  newPasswordTooLongForCentral,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/change-password — Changes the authenticated user's password after verifying the current one.
@@ -32,6 +40,9 @@ export async function POST(request: Request) {
       return errorResponse(parsed.status, parsed.error);
     }
     const { currentPassword, newPassword } = parsed.data;
+    if (newPasswordTooLongForCentral(newPassword)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
 
     const db = await getDb();
     const usersCollectionHandle = usersCollection(db);
@@ -57,28 +68,43 @@ export async function POST(request: Request) {
       return errorResponse(401, "Current password is incorrect");
     }
 
+    // Central mode writes the central credential first; refuse if it is unreachable.
+    const passwordWrite = { op: "password-set", ahdUserId: userId, password: newPassword } as const;
+    if (!(await centralWriteFirst(passwordWrite))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE, {
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     const changedAt = new Date();
 
     // Update password in database — also invalidate all existing sessions
-    const updated = await usersCollectionHandle.updateOne(
-      {
-        _id: new ObjectId(userId),
-        password: user.password ?? null,
-        isBanned: { $ne: true },
-        ...authRevocationSnapshotFilter(user.authRevokedAt),
-        ...authMigrationFenceAbsentFilter(),
-      },
-      {
-        $set: {
-          password: hashedPassword,
+    let updated;
+    try {
+      updated = await usersCollectionHandle.updateOne(
+        {
+          _id: new ObjectId(userId),
+          password: user.password ?? null,
+          isBanned: { $ne: true },
+          ...authRevocationSnapshotFilter(user.authRevokedAt),
+          ...authMigrationFenceAbsentFilter(),
         },
-        $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
-      }
-    );
+        {
+          $set: {
+            password: hashedPassword,
+          },
+          $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
+        }
+      );
+    } catch (error) {
+      await centralRestoreAccount(user, { password: true });
+      throw error;
+    }
 
     if (updated.matchedCount !== 1) {
+      await centralRestoreAccount(user, { password: true });
       return errorResponse(
         409,
         "Your account changed during this request. Please sign in and try again.",
@@ -88,6 +114,7 @@ export async function POST(request: Request) {
 
     // Token revocation must bite immediately, not after the userDocCache TTL.
     invalidateCachedUser(userId);
+    shadowMirrorWrite(passwordWrite);
 
     return NextResponse.json({
       message: "Password changed successfully",
