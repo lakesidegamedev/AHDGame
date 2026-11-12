@@ -67,3 +67,4 @@ areas: [engine]
   legacy receipt compatibility and the existing paths elsewhere.
 - Recalibrates the optional 2027 campaign price factor to the corrected US GDP
   baseline while preserving the default flag-off behavior.
+- Lets post-turn contest writes finish before reset rehearsal connections close.
