@@ -94,6 +94,10 @@ const tierLabel = (t: TFunc): Record<EraNation["tier"], { label: string; title: 
     label: t("landing.tiers.soon"),
     title: t("landing.tiers.soonTitle"),
   },
+  background: {
+    label: t("landing.tiers.background"),
+    title: t("landing.tiers.backgroundTitle"),
+  },
 });
 
 /** Only one-party/command systems land in Eastern Bloc — never default unknowns there. */
@@ -639,7 +643,13 @@ export function SandboxHome({
                             key={c.id}
                             className="flex items-baseline justify-between gap-3 text-body"
                           >
-                            <span className={c.tier === "npp" ? "text-muted" : "text-foreground"}>
+                            <span
+                              className={
+                                c.tier === "npp" || c.tier === "background"
+                                  ? "text-muted"
+                                  : "text-foreground"
+                              }
+                            >
                               {c.name}
                             </span>
                             <span

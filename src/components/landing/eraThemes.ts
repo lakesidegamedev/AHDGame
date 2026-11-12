@@ -6,6 +6,7 @@
 import { tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import type { CountryId } from "@/lib/constants/countries";
 import { SHOWCASE_1991, TICKER_1991 } from "./broadcast1991";
+import { SHOWCASE_2027, TICKER_2027 } from "./broadcast2027";
 import type { HistoricalCrisisShowcaseEntry } from "./historicalCrisisShowcase";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
@@ -24,7 +25,7 @@ export type EraTileKey =
 export type EraNation = {
   id: string;
   name: string;
-  tier: "player" | "econ" | "npp";
+  tier: "player" | "econ" | "npp" | "background";
 };
 
 /** Where a headline was filed from. */
@@ -51,8 +52,9 @@ export type BroadcastLanderConfig = {
   /**
    * Map feature ids of a state that has just broken up. Their merged outline is
    * drawn as a fading dashed border, and the borders between them as new ones.
+   * Absent for an era in which no state has just broken up.
    */
-  dissolvedStateFeatureIds: readonly string[];
+  dissolvedStateFeatureIds?: readonly string[];
   /** Name riding beside the satellite on the inner orbit. */
   orbitLabel: string;
   /** The globe's idle tour for this era, in place of the Cold War tour. */
@@ -155,7 +157,9 @@ function accessFor(
     const tier = tierFor(preset, id as CountryId);
     if (tier === "player") out[id] = PLAYER;
     else if (tier === "econ") out[id] = ECON;
-    else if (tier === "npp" || tier === "background") out[id] = NPP;
+    else if (tier === "npp") out[id] = NPP;
+    // A background country has no access record: the globe tiers it from the
+    // manifest's background-macro roster, not as a named economy.
     // `latent` and `absent` are not shown on the landing page at all.
   }
   return out;
@@ -169,10 +173,9 @@ function nationsFor(
   const out: EraNation[] = [];
   for (const { id, name } of curated) {
     const tier = tierFor(preset, id as CountryId);
-    if (tier === "player" || tier === "econ" || tier === "npp") out.push({ id, name, tier });
-    // A background country is not joinable, so the landing roster lists it the
-    // way it lists an NPP-run one.
-    else if (tier === "background") out.push({ id, name, tier: "npp" });
+    if (tier === "player" || tier === "econ" || tier === "npp" || tier === "background") {
+      out.push({ id, name, tier });
+    }
   }
   return out;
 }
@@ -275,9 +278,37 @@ const NATIONS_2019 = [
   n("RU", "Russia"),
 ] as const;
 
-// 2023 and 2027 share the 2019 roster: name and order only, tier is derived from ERA_ROSTER.
 const NATIONS_2023 = NATIONS_2019;
-const NATIONS_2027 = NATIONS_2019;
+
+/**
+ * Curated display roster for 2027: name and order only; tier is derived. The
+ * two player countries come first, then the four computer-run full
+ * simulations, then the sixteen background countries.
+ */
+const NATIONS_2027 = [
+  n("US", "United States"),
+  n("CA", "Canada"),
+  n("UK", "United Kingdom"),
+  n("DE", "Germany"),
+  n("JP", "Japan"),
+  n("CN", "China"),
+  n("FR", "France"),
+  n("IT", "Italy"),
+  n("ES", "Spain"),
+  n("SE", "Sweden"),
+  n("TR", "Turkey"),
+  n("AT", "Austria"),
+  n("FI", "Finland"),
+  n("GR", "Greece"),
+  n("IE", "Ireland"),
+  n("PL", "Poland"),
+  n("HU", "Hungary"),
+  n("RO", "Romania"),
+  n("BG", "Bulgaria"),
+  n("RU", "Russia"),
+  n("BR", "Brazil"),
+  n("NG", "Nigeria"),
+] as const;
 
 const ERA_2023: EraConfig = {
   id: "2023",
@@ -512,15 +543,44 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
 
   "2023": ERA_2023,
   "2027": {
-    ...ERA_2023,
     id: "2027",
     year: 2027,
-    label: "Current Era · 2027",
+    label: "Automation Age · 2027",
     gameDate: "January 2027",
+    wireframeColor: null,
     loginTagline: "A political simulation set in 2027.",
     heroHeadline: "A political simulation set in 2027.",
+    heroDek:
+      "Automation is changing work, the population is ageing and the climate is under pressure. The United States and Canada are open to players, and the world runs on to 2050. Every real hour is a game week.",
+    primaryCta: "Start playing",
+    secondaryCta: "Explore the map",
+    eraChips: [
+      "Automation",
+      "Climate Pressure",
+      "Cyber Operations",
+      "Treaty Trade",
+      "Ageing Populations",
+      "Quebec Question",
+    ],
+    playSectionDek:
+      "Run for office in the United States or Canada, pass laws on AI, energy and pensions, and steer a country through the decades to 2050.",
+    worldSectionDek:
+      "{playableCount} of these nations are open to players. The United Kingdom, Germany, Japan and China run full simulations of their own, and sixteen more run in the background. Drag the globe to explore.",
+    closingHeadline: "Pick a country and a role.",
+    closingDek: "A turn resolves every hour, and the world keeps running while you are offline.",
+    closingCta: "Get started",
+    footerTagline: "A persistent political and economic simulation with no seasonal resets.",
     accessMap: accessFor("2027-default", NATIONS_2027),
     nations: nationsFor("2027-default", NATIONS_2027),
+    // Open over the Atlantic so both North American player countries and the
+    // European simulations share the first frame.
+    initialRotation: [30, -40, 0],
+    broadcast: {
+      ticker: TICKER_2027,
+      orbitLabel: "RELAY",
+      showcase: SHOWCASE_2027,
+      showcaseBadge: "Looking ahead",
+    },
   },
 };
 
