@@ -7,7 +7,7 @@ import { seedModernTransitionBudgets2027 } from "./seedModernTransitionBudgets20
 const noop = () => {};
 
 describe("2027 transition fiscal seeding", () => {
-  it("persists authored HU and BG budgets without inventing PL or RO budgets", async () => {
+  it("persists an authored 2027 budget for every transition country", async () => {
     const db = createInMemoryDb() as unknown as Db;
     const sources = new Map(
       getInitialNationalBudgetsForPreset("2027-default").map((budget) => [budget.countryId, budget])
@@ -18,9 +18,9 @@ describe("2027 transition fiscal seeding", () => {
     await seedModernTransitionBudgets2027(db, true, "2027-default", noop);
     const rows = await db
       .collection<{ countryId: string; gdp: number; currencyCode: string }>("federalBudget")
-      .find({ countryId: { $in: ["HU", "PL", "RO", "BG"] } })
+      .find({ countryId: { $in: ["HU", "PL", "RO", "BG", "RU"] } })
       .toArray();
-    expect(rows.map((row) => row.countryId).sort()).toEqual(["BG", "HU"]);
+    expect(rows.map((row) => row.countryId).sort()).toEqual(["BG", "HU", "PL", "RO", "RU"]);
     for (const row of rows) {
       expect(row.gdp).toBe(sources.get(row.countryId)?.gdp);
     }

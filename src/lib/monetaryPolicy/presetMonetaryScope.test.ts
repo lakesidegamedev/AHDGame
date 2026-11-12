@@ -66,14 +66,12 @@ describe("getPresetMonetaryScope", () => {
     expect([...scope.forexCountries].sort()).toEqual([...registered].sort());
     expect(scope.forexCountries).toEqual(expect.arrayContaining(["HU", "PL", "RO"]));
     expect(scope.forexCountries).not.toContain("DD");
-    // HU seeds a HUF budget and HUF bonds, so its forint gets a central bank.
-    expect(scope.centralBankCountries).toContain("HU");
-    for (const countryId of ["PL", "RO"] as const) {
-      expect(scope.centralBankCountries).not.toContain(countryId);
-      expect(scope.exclusions).toContainEqual(
-        expect.objectContaining({ countryId, reason: "fiscal-model-unauthored" })
-      );
-    }
+    // Every rostered country with its own currency has a 2027 fiscal book and a bank.
+    expect(scope.centralBankCountries).toEqual(expect.arrayContaining(["HU", "PL", "RO", "RU"]));
+    expect(scope.exclusions.map(({ reason }) => reason)).not.toContain("fiscal-model-unauthored");
+    expect(scope.exclusions).toContainEqual(
+      expect.objectContaining({ countryId: "BG", reason: "shared-currency-bank" })
+    );
   });
 
   it.each(["1953-default", "1979-default"])("models RU and DD fiscally in %s", (preset) => {
@@ -84,7 +82,7 @@ describe("getPresetMonetaryScope", () => {
     );
   });
 
-  it.each(["1999-default", "2007-default", "2023-default", "2027-default"])(
+  it.each(["1999-default", "2007-default", "2023-default"])(
     "records explicit RU/DD exclusions in %s",
     (preset) => {
       const scope = getPresetMonetaryScope(preset);

@@ -38,6 +38,15 @@ import type { ActionAuditNet } from "@/lib/db/types/actionAuditLog";
 import { authConfig } from "@/lib/config/auth";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
+  bridgeAccountFromUser,
+  centralRollbackCreate,
+  centralWriteFirst,
+  newPasswordTooLongForCentral,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Partially redact an IP for display in forensic surfaces — never store the
@@ -97,6 +106,9 @@ export async function POST(request: Request) {
       termsAccepted,
       turnstileToken,
     } = parsed.data;
+    if (newPasswordTooLongForCentral(password)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
 
     // Read (not minted) here so every rejection/acceptance path below shares
     // one masked/hashed `net` snapshot — mirrors the login route.
@@ -320,45 +332,62 @@ export async function POST(request: Request) {
 
     // Create player user
     const acquisition = parseAcquisition(cookieStore.get(ACQUISITION_COOKIE)?.value);
-    const result = await usersCollectionHandle.insertOne({
-      ...(acquisition ? { acquisition } : {}),
-      email: email.toLowerCase(),
-      username: username.toLowerCase(),
-      displayName: username,
-      password: hashedPassword,
-      role: "player",
-      isAdmin: isAdmin, // Flag to indicate admin privileges
-      hasCompletedSetup: false, // Character creation not done yet
-      // Store normalized form so the IP-collision check (which normalizes on
-      // read via registrationGate) can match consistently across header
-      // variants (IPv4-mapped IPv6 vs bare IPv4, casing, whitespace).
-      registrationIp: normalizeIp(clientIp) ?? clientIp,
-      lastKnownIp: clientIp,
-      lastKnownIpAt: observedAt,
-      registrationFingerprint: fingerprint || null,
-      lastFingerprint: fingerprint || null,
-      // Stamped only when a fingerprint was actually supplied — an absent one
-      // must not read as "observed at signup".
-      ...(fingerprint
-        ? { registrationFingerprintAt: observedAt, lastFingerprintAt: observedAt }
-        : {}),
-      fingerprintHistory: fingerprint ? [fingerprint] : [],
-      registrationFingerprintComponents: fingerprintComponents ?? null,
-      lastFingerprintComponents: fingerprintComponents ?? null,
-      ...(isEmptyCfFingerprint(cf) ? {} : { registrationCf: cf, lastCf: cf }),
-      trackingId,
-      trackingIdAt: observedAt,
-      deviceKey: deviceKey || null,
-      ...(deviceKey ? { deviceKeyAt: observedAt } : {}),
-      lastDevice: device,
-      ...(referredByObjectId ? { referredBy: referredByObjectId } : {}),
-      referralCount: 0,
-      activeCharacterId: null,
-      activeCharacterCount: 0,
-      ...lakesideAccountFields("ahd"),
-      createdAt: observedAt,
-      updatedAt: observedAt,
-    });
+    const newUserId = new ObjectId();
+    const newAccount = bridgeAccountFromUser(
+      { _id: newUserId, username: username.toLowerCase(), email: email.toLowerCase() },
+      { passwordHash: hashedPassword, emailVerified: false }
+    );
+    // Central mode creates the central account first; refuse if it is unreachable.
+    if (!(await centralWriteFirst({ op: "account-upsert", account: newAccount }))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE);
+    }
+    const result = await usersCollectionHandle
+      .insertOne({
+        _id: newUserId,
+        ...(acquisition ? { acquisition } : {}),
+        email: email.toLowerCase(),
+        username: username.toLowerCase(),
+        displayName: username,
+        password: hashedPassword,
+        role: "player",
+        isAdmin: isAdmin, // Flag to indicate admin privileges
+        hasCompletedSetup: false, // Character creation not done yet
+        // Store normalized form so the IP-collision check (which normalizes on
+        // read via registrationGate) can match consistently across header
+        // variants (IPv4-mapped IPv6 vs bare IPv4, casing, whitespace).
+        registrationIp: normalizeIp(clientIp) ?? clientIp,
+        lastKnownIp: clientIp,
+        lastKnownIpAt: observedAt,
+        registrationFingerprint: fingerprint || null,
+        lastFingerprint: fingerprint || null,
+        // Stamped only when a fingerprint was actually supplied — an absent one
+        // must not read as "observed at signup".
+        ...(fingerprint
+          ? { registrationFingerprintAt: observedAt, lastFingerprintAt: observedAt }
+          : {}),
+        fingerprintHistory: fingerprint ? [fingerprint] : [],
+        registrationFingerprintComponents: fingerprintComponents ?? null,
+        lastFingerprintComponents: fingerprintComponents ?? null,
+        ...(isEmptyCfFingerprint(cf) ? {} : { registrationCf: cf, lastCf: cf }),
+        trackingId,
+        trackingIdAt: observedAt,
+        deviceKey: deviceKey || null,
+        ...(deviceKey ? { deviceKeyAt: observedAt } : {}),
+        lastDevice: device,
+        ...(referredByObjectId ? { referredBy: referredByObjectId } : {}),
+        referralCount: 0,
+        activeCharacterId: null,
+        activeCharacterCount: 0,
+        ...lakesideAccountFields("ahd"),
+        createdAt: observedAt,
+        updatedAt: observedAt,
+      })
+      .catch(async (error: unknown) => {
+        await centralRollbackCreate(newUserId.toHexString());
+        throw error;
+      });
+
+    shadowMirrorWrite({ op: "account-upsert", account: newAccount });
 
     // Log account creation
     await createAdminLog({
