@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openingDistrictHolders } from "./openingHolders";
+import { openingDistrictHolders, openingDistrictHolderPlan } from "./openingHolders";
 
 const districts = [1, 2, 3].map((n) => ({ id: `CA${n}`, state: "CA", lean: n, occupied: false }));
 const officials = [
@@ -49,5 +49,39 @@ describe("opening House holders", () => {
   });
   it("fails instead of inventing seats when the roster is incomplete", () => {
     expect(() => openingDistrictHolders({ districts, officials: officials.slice(0, 1) })).toThrow();
+  });
+  it("leaves declared vacancies empty without dropping the rest of a delegation", () => {
+    const result = openingDistrictHolderPlan({
+      districts: districts.map((d, i) => ({ ...d, vacant: i === 1 })),
+      officials: [officials[0]],
+      sourceCapacity: { CA: 3 },
+    });
+    expect(result.assignments.map((a) => a.districtId)).toEqual(["CA1", "CA3"]);
+    expect(result.unsupportedStates).toEqual([]);
+  });
+  it("reports incompatible historical maps while continuing compatible states", () => {
+    const result = openingDistrictHolderPlan({
+      districts: [...districts, { id: "CO1", state: "CO", lean: 0, occupied: false }],
+      officials: [...officials, { ...officials[0], id: "co", state: "CO", seats: 2 }],
+      sourceCapacity: { CA: 3, CO: 2 },
+    });
+    expect(result.assignments).toHaveLength(3);
+    expect(result.unsupportedStates).toEqual([
+      {
+        state: "CO",
+        reason: expect.stringContaining(
+          "historical roster requires 2 districts, configured map has 1"
+        ),
+      },
+    ]);
+  });
+  it("does not treat a missing official as a declared vacancy on a compatible map", () => {
+    expect(() =>
+      openingDistrictHolderPlan({
+        districts,
+        officials: officials.slice(0, 1),
+        sourceCapacity: { CA: 3 },
+      })
+    ).toThrow("capacity");
   });
 });

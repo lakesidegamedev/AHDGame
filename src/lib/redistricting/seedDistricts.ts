@@ -36,7 +36,7 @@ export async function seedCongressionalDistricts(
     );
   }
   const seeded = docs.length;
-  if (countryId === COUNTRY_CONFIGS.US.id) await seedOpeningHouseHolders(db, opts.preset);
+  if (countryId === COUNTRY_CONFIGS.US.id) await seedOpeningHouseHolders(db, opts.preset, log);
 
   await congressionalDistrictsCollection<Document>(db)
     .createIndex({ countryId: 1, stateId: 1, index: 1 }, { unique: true })

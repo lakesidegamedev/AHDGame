@@ -1,10 +1,26 @@
 /** Link opening House delegations to districts without replacing live incumbents. */
 import type { Db } from "mongodb";
 import type { CongressionalDistrict, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
-import { openingDistrictHolders } from "./rules/openingHolders";
+import { openingDistrictHolderPlan } from "./rules/openingHolders";
+import { seatGroupsFor, US_HOUSE_2020 } from "@/lib/constants/historicalSeats";
 import snapshot from "@/lib/countries/us/data/us2026ResultsSnapshot.json";
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 
-export async function seedOpeningHouseHolders(db: Db, preset?: string): Promise<number> {
+// Declared in the February 2020 roster, not vacancies inferred from missing officials.
+const vacancies2020: Readonly<Record<string, readonly number[]>> = {
+  CA: [25],
+  MD: [7],
+  NY: [27],
+  TX: [4],
+  WI: [7],
+};
+
+export async function seedOpeningHouseHolders(
+  db: Db,
+  preset?: string,
+  log: (message: string) => void = console.warn
+): Promise<number> {
+  const activePreset = preset ?? (await getGameStatePresetOrDefault(db));
   const [districts, officials, parties] = await Promise.all([
     db
       .collection<CongressionalDistrict>("congressionalDistricts")
@@ -59,7 +75,7 @@ export async function seedOpeningHouseHolders(db: Db, preset?: string): Promise<
   );
   const officialById = new Map(officials.map((o) => [String(o._id), o]));
   const useSnapshot =
-    preset === "2027-default" &&
+    activePreset === "2027-default" &&
     parties.some((p) => p.abbreviation === "DEM") &&
     parties.some((p) => p.abbreviation === "REP");
   const openingParties = new Map(
@@ -68,12 +84,36 @@ export async function seedOpeningHouseHolders(db: Db, preset?: string): Promise<
       row.party === "D" ? "DEM" : row.party === "R" ? "REP" : "IND",
     ])
   );
-  const updates = openingDistrictHolders({
+  const sourceSeats = (seatGroupsFor(activePreset).US ?? []).filter(
+    (seat) => seat.officeType === "house"
+  );
+  // Follow the roster actually selected, including legacy preset fallbacks.
+  const vacancies = sourceSeats.some((seat) => US_HOUSE_2020.includes(seat)) ? vacancies2020 : {};
+  const sourceCapacity: Record<string, number> = {};
+  for (const seat of sourceSeats) {
+    if (seat.state)
+      sourceCapacity[seat.state] = (sourceCapacity[seat.state] ?? 0) + (seat.seatsHeld ?? 1);
+  }
+  for (const [state, indexes] of Object.entries(vacancies))
+    sourceCapacity[state] = (sourceCapacity[state] ?? 0) + indexes.length;
+  if (
+    useSnapshot &&
+    districts.some(
+      (d) =>
+        !openingParties.has(`${d.stateId}-${String(d.index).padStart(2, "0")}`) &&
+        !openingParties.has(`${d.stateId}-AL`)
+    )
+  )
+    throw new Error("Incomplete opening district results");
+  const plan = openingDistrictHolderPlan({
+    // Snapshot-backed openings must fail on disagreement, never silently degrade.
+    ...(!useSnapshot ? { sourceCapacity } : {}),
     districts: districts.map((d) => ({
       id: d._id,
       state: d.stateId,
       lean: d.netLean,
       occupied: !!(d.holderParty || d.holderCharacterId || d.holderNppId),
+      vacant: vacancies[d.stateId]?.includes(d.index) ?? false,
       ...(useSnapshot
         ? {
             openingParty:
@@ -96,6 +136,8 @@ export async function seedOpeningHouseHolders(db: Db, preset?: string): Promise<
       };
     }),
   });
+  for (const unsupported of plan.unsupportedStates) log(unsupported.reason);
+  const updates = plan.assignments;
   if (updates.length)
     await db.collection<CongressionalDistrict>("congressionalDistricts").bulkWrite(
       updates.map((u) => {

@@ -1022,7 +1022,12 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
       preExistingNpps: preExistingNppsCount,
     })
   ) {
-    const result = await seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners");
+    const result = await seedHistoricalOfficials(
+      db,
+      preset,
+      preIteration ? "priors" : "winners",
+      log
+    );
     log(
       `Seeded ${preIteration ? "priors (candidate pool, vacant chambers) for" : "historical world:"} ${
         result.officialsCreated

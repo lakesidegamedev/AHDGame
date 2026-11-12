@@ -846,7 +846,8 @@ export async function seedFromSeats(
 export async function seedHistoricalOfficials(
   db: Db,
   presetId: string = "2019-default",
-  seedMode: SeedMode = "winners"
+  seedMode: SeedMode = "winners",
+  log: (message: string) => void = console.warn
 ): Promise<SeedResult> {
   const seats = getPresetSeats(presetId);
   // Same idempotency contract as the econ-tier rosters: this seeds a country's
@@ -879,7 +880,7 @@ export async function seedHistoricalOfficials(
   await seedBRGovernmentFormation(db, () => {});
 
   const { seedOpeningHouseHolders } = await import("@/lib/redistricting/seedOpeningHolders");
-  await seedOpeningHouseHolders(db, presetId);
+  await seedOpeningHouseHolders(db, presetId, log);
 
   return result;
 }

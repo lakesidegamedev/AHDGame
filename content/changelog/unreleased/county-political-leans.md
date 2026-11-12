@@ -37,3 +37,6 @@ areas: [engine]
   retaining 2027 world data. Empty starts apply to player countries, preserving
   economic actors and background governments. Recreated China parties now
   restore regional organization under their actual party IDs.
+- Prevents legacy House rosters from aborting resets when district counts differ.
+  Compatible delegations keep their declared vacancies; incompatible states are
+  explicitly reported as unmapped without inventing incumbents.

@@ -397,7 +397,7 @@ export async function resetAndBootstrapGameWorld(
     if (seedOnly && preset !== "2019-no-parties") {
       phaseReached = "officials";
       const result = await run.step("officials", "seedHistoricalOfficials", () =>
-        seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners")
+        seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners", collect)
       );
       if (result) {
         postSeedOfficials = result;
