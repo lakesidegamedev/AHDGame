@@ -3,6 +3,7 @@
  * Background governments remain seeded. Cleanup removes player-country politicians, retaining
  * economic owners and the historical institutions: see clearStartingPolitics.
  */
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { ObjectId, type Db, type Filter, type Document } from "mongodb";
 import type { Bond, CentralBank, Corporation, GameState, NPP } from "@/lib/db/types";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
@@ -23,15 +24,15 @@ import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegi
 
 export type StartingPartiesMode = "default" | "none";
 
-/** No preset alias: the historical economy, institutions and clock stay in 1991. */
+/** No preset alias: the economy, institutions and clock stay those of the preset. */
 export function resolveStartingPartiesMode(
   preset: string,
   mode: StartingPartiesMode = "default"
 ): StartingPartiesMode {
   if (mode !== "default" && mode !== "none") throw new Error("Invalid starting parties mode");
   if (preset === "2019-no-parties") return "none";
-  if (mode === "none" && preset !== "1991-default") {
-    throw new Error("No starting parties is supported only for 1991-default");
+  if (mode === "none" && !supportsNoStartingParties(preset)) {
+    throw new Error(`No starting parties is not supported for ${preset}`);
   }
   return mode;
 }

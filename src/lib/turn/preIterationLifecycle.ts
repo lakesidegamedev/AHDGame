@@ -1,3 +1,4 @@
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import type { Db } from "mongodb";
 import { invalidateGameTimeCache } from "@/lib/time/gameTime";
 import { getGameStateCollection } from "@/lib/db/collections/gameState";
@@ -89,17 +90,17 @@ export async function detectPreIterationComplete(
   const talliesByElection = new Set(
     tallyCoverage.map((row) => String((row as { _id: unknown })._id))
   );
-  const partyless1991 =
-    gameState.preset === "1991-default" && gameState.startingPartiesMode === "none";
+  const partylessStart =
+    supportsNoStartingParties(gameState.preset) && gameState.startingPartiesMode === "none";
   const incomplete = resolvedElections.some((election) => {
     const id = String(election._id);
     const hasCandidates = candidatesByElection.has(id);
     const hasVotes = talliesByElection.has(id);
     if (hasCandidates && hasVotes) return false;
-    // A playerless 1991 founding can legitimately have no candidacy for a
+    // A playerless partyless founding can legitimately have no candidacy for a
     // race such as the US presidency, where NPP entry is barred. Only a
     // terminally resolved, truly empty ballot may complete without coverage.
-    return !(partyless1991 && election.status === "resolved" && !hasCandidates && !hasVotes);
+    return !(partylessStart && election.status === "resolved" && !hasCandidates && !hasVotes);
   });
   if (incomplete) {
     return { completed: false };
