@@ -1,6 +1,6 @@
 /** Public community URLs surfaced on the landing page and marketing surfaces. */
 
-import { HELP_PATREON_URL } from "@/components/HelpDropdown";
+import { HELP_PATREON_URL } from "@/components/navbar/helpLinks";
 
 /**
  * The server's permanent invite. The previous code (p2kseZKCW) expired, which

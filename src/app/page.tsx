@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthUser } from "@/lib/auth";
 import { publicPageMetadata } from "@/lib/siteMetadata";
 import { getCachedLandingData } from "@/lib/landing/cachedLandingData";
+import { ANNOUNCED_2027_LAUNCH, resolveLaunchSchedule } from "@/lib/landing/rules/launchSchedule";
 import { formatNationList, toEraId } from "@/lib/marketing/marketedWorld";
 import { backgroundMacroFeatureIdsForPreset } from "@/lib/world/worldEntityMap";
 import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
@@ -65,6 +66,15 @@ export default async function LandingPage() {
   const backgroundMacroFeatureIds = backgroundMacroFeatureIdsForPreset(
     `${toEraId(seedYear)}-default`
   );
+  // The announced dates only stand in for a 2027 world; any other world shows
+  // a clock only once staff set its times in config.
+  const launch = snapshot
+    ? resolveLaunchSchedule(
+        snapshot.launch,
+        new Date().getTime(),
+        toEraId(seedYear) === "2027" ? ANNOUNCED_2027_LAUNCH : null
+      )
+    : null;
 
   return (
     <SandboxHome
@@ -77,6 +87,7 @@ export default async function LandingPage() {
       world={world}
       backgroundMacroFeatureIds={backgroundMacroFeatureIds}
       currentYear={currentYear}
+      launch={launch}
     />
   );
 }
