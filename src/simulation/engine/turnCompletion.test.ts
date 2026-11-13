@@ -130,6 +130,15 @@ describe("completedTurnStatus", () => {
     expect(status.success).toBe(true);
   });
 
+  it("does not call a resumed turn degraded because finished steps were skipped", () => {
+    const status = completedTurnStatus([], {
+      fundGeneration: { status: "skipped", reason: "upstreamAbort", resumeCarried: "completed" },
+      bondTurn: { status: "completed" },
+    } as unknown as TurnPhaseTelemetryMap);
+    expect(status.outcome).toBe("clean");
+    expect(status.abortedPhases).toEqual([]);
+  });
+
   it("treats conditionally skipped phases as clean", () => {
     expect(
       completedTurnStatus(

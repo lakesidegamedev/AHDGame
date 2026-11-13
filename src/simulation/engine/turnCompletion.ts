@@ -68,7 +68,13 @@ export function completedTurnStatus(
     .map(([phase]) => phase)
     .sort();
   const abortedPhases = Object.entries(phaseStatuses)
-    .filter(([, status]) => status?.status === "skipped" && status.reason === "upstreamAbort")
+    .filter(
+      ([, status]) =>
+        status?.status === "skipped" &&
+        status.reason === "upstreamAbort" &&
+        // A step an earlier holder already finished is skipped by design on a resume.
+        status.resumeCarried !== "completed"
+    )
     .map(([phase]) => phase)
     .sort();
   const stepAccounting = accountForSteps(phaseStatuses);
