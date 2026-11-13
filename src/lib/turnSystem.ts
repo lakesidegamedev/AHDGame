@@ -552,7 +552,6 @@ async function processTurnImpl(
           `turn ${crashedTurnRecovery.targetTurn} is INCOMPLETE: interrupted steps not rerun: ` +
           crashedTurnRecovery.interruptedMoneyMoving.join(", ");
         warnings.push(`turnIncomplete: ${incomplete}`);
-        console.error(`[Turn System] ${incomplete}`);
         Sentry.captureMessage("Turn resumed with interrupted money-moving steps skipped", {
           level: "fatal",
           fingerprint: ["turn-resume-interrupted-money-steps"],
