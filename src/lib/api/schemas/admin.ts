@@ -254,6 +254,7 @@ export const adminTurnBatchSchema = z.object({
 export const adminTurnReleaseHoldSchema = z.object({
   mode: z.enum(["rerun", "mark-done"]),
   acknowledge: z.array(z.string().min(1)).min(1).max(200),
+  confirmRepaired: z.boolean().optional(),
 });
 
 // admin/turn/process POST (optional body; the turn worker queues `count` turns)

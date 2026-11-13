@@ -11,7 +11,7 @@ export type HoldReleasePlan =
 
 export function planHoldRelease(
   state: { processingHoldReason?: string | null; processingHeldPhases?: string[] | null },
-  input: { mode: HoldReleaseMode; acknowledge: string[] },
+  input: { mode: HoldReleaseMode; acknowledge: string[]; confirmRepaired?: boolean },
   now: Date
 ): HoldReleasePlan {
   const held = state.processingHeldPhases ?? [];
@@ -24,6 +24,13 @@ export function planHoldRelease(
     return {
       ok: false,
       error: `Acknowledge exactly the held steps: ${held.join(", ")}.`,
+    };
+  }
+  if (input.mode === "rerun" && input.confirmRepaired !== true) {
+    return {
+      ok: false,
+      error:
+        "Rerun can apply a step's writes twice. Confirm that each held step wrote nothing or its partial writes were repaired (confirmRepaired: true).",
     };
   }
   const set: Record<string, unknown> = {

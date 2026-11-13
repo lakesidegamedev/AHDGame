@@ -18,7 +18,7 @@ describe("planHoldRelease", () => {
   it("rerun clears the held steps and the hold", () => {
     const plan = planHoldRelease(
       held,
-      { mode: "rerun", acknowledge: ["treasuryTurn", "bondTurn"] },
+      { mode: "rerun", acknowledge: ["treasuryTurn", "bondTurn"], confirmRepaired: true },
       now
     );
     expect(plan.ok && Object.keys(plan.unset).sort()).toEqual([
@@ -28,6 +28,14 @@ describe("planHoldRelease", () => {
       "processingPhaseStatuses.treasuryTurn",
     ]);
     expect(plan.ok && plan.set.processingHoldReason).toBeNull();
+  });
+  it("refuses rerun without the repair confirmation", () => {
+    const plan = planHoldRelease(
+      held,
+      { mode: "rerun", acknowledge: ["bondTurn", "treasuryTurn"] },
+      now
+    );
+    expect(plan.ok).toBe(false);
   });
   it("mark-done records the steps as completed by the operator", () => {
     const plan = planHoldRelease(

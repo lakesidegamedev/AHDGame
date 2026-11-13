@@ -10,7 +10,8 @@ import { createAdminLog } from "@/lib/adminLog";
 import { planHoldRelease } from "@/lib/turn/rules/holdRelease";
 
 // POST /api/admin/turn/release-hold - Releases a turn held after a mid-turn process death.
-// Body: { mode: "rerun" | "mark-done", acknowledge: string[] } naming exactly the held steps.
+// Body: { mode: "rerun" | "mark-done", acknowledge: string[], confirmRepaired?: true } naming exactly
+// the held steps; rerun requires confirmRepaired because a half-applied step would apply twice.
 // "rerun" clears the held steps so the next attempt runs them again; "mark-done" records them
 // as finished by an operator. The next turn tick then resumes the turn.
 // Auth: requireAdmin

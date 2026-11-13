@@ -46,6 +46,19 @@ describe("lock lost", () => {
     await expect(runtime.runPhase("treasuryTurn", fn)).rejects.toBeInstanceOf(TurnLockLostError);
   });
 
+  it("writes every completion at once while the fence is on", async () => {
+    const { runtime, updateOne } = runtimeWith(1);
+    await runtime.runPhase("approvalSnapshot", async () => 1);
+    await runtime.runPhase("metricHistory", async () => 2);
+    const completedWrites = updateOne.mock.calls.filter(
+      (c) =>
+        (c[1] as { $set: Record<string, { status?: string }> }).$set[
+          "processingPhaseStatuses.metricHistory"
+        ]?.status === "completed"
+    );
+    expect(completedWrites).toHaveLength(1);
+  });
+
   it("stops the turn when a heartbeat finds the lock gone mid-phase", async () => {
     vi.useFakeTimers();
     const updateOne = vi
