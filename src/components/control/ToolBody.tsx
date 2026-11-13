@@ -159,7 +159,7 @@ const SHARED_IDS = new Set([
   "position-editor",
 ]);
 
-function SharedTool({ id }: { id: string }) {
+function SharedTool({ id, role }: { id: string; role: StaffRole }) {
   switch (id) {
     case "priority":
       return <ModeratorPriorityBody />;
@@ -174,7 +174,7 @@ function SharedTool({ id }: { id: string }) {
     case "player-reports":
       return <PlayerReportsTab />;
     case "site-controls":
-      return <ModeratorSiteTab />;
+      return <ModeratorSiteTab canChange={role === "admin"} />;
     case "tasks":
       return <TasksPageClient />;
     case "position-editor":
@@ -235,7 +235,7 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
 }
 
 export function ToolBody({ tool, role }: { tool: ToolDef; role: StaffRole }) {
-  if (SHARED_IDS.has(tool.id)) return <SharedTool id={tool.id} />;
+  if (SHARED_IDS.has(tool.id)) return <SharedTool id={tool.id} role={role} />;
   if (role === "moderator") return <ModeratorTool id={tool.id} />;
 
   const legacy = tool.legacy?.admin;

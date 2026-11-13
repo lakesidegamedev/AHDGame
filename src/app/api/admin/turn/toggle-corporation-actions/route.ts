@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { requireModerator } from "@/lib/api/requireModerator";
+import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { createAdminLog } from "@/lib/adminLog";
 
 // POST /api/admin/turn/toggle-corporation-actions — Toggles corporation action processing on/off.
-// Auth: requireModerator (admin or moderator)
+// Auth: requireAdmin
 // Errors: 403, 404
 export async function POST() {
   try {
-    const auth = await requireModerator();
+    const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
@@ -35,8 +35,8 @@ export async function POST() {
     await createAdminLog({
       category: "system",
       action: newValue ? "corporation_actions_paused" : "corporation_actions_resumed",
-      username: auth.user.username,
-      adminUsername: auth.user.username,
+      username: auth.admin.username,
+      adminUsername: auth.admin.username,
       details: message,
     });
 

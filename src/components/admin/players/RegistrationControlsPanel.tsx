@@ -16,7 +16,7 @@ interface CollisionStatus {
   enabledAt: string;
 }
 
-export function RegistrationControlsPanel() {
+export function RegistrationControlsPanel({ canChange = true }: { canChange?: boolean }) {
   const [registration, setRegistration] = useState<RegistrationStatus | null>(null);
   const [collision, setCollision] = useState<CollisionStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,19 +117,21 @@ export function RegistrationControlsPanel() {
             {registration?.enabled ? "Open" : "Closed"}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={toggleRegistration}
-          disabled={regToggling}
-          className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
-          style={{ background: registration?.enabled ? "var(--warning)" : "var(--success)" }}
-        >
-          {regToggling
-            ? "Updating..."
-            : registration?.enabled
-              ? "Close registration"
-              : "Open registration"}
-        </button>
+        {canChange && (
+          <button
+            type="button"
+            onClick={toggleRegistration}
+            disabled={regToggling}
+            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+            style={{ background: registration?.enabled ? "var(--warning)" : "var(--success)" }}
+          >
+            {regToggling
+              ? "Updating..."
+              : registration?.enabled
+                ? "Close registration"
+                : "Open registration"}
+          </button>
+        )}
         {!registration?.enabled && registration?.disabledBy && (
           <p className="mt-2 text-xs text-muted">
             Closed by <span className="font-medium text-foreground">{registration.disabledBy}</span>
@@ -172,19 +174,21 @@ export function RegistrationControlsPanel() {
             {collision?.enabled ? "Enabled" : "Disabled"}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={toggleCollision}
-          disabled={colToggling}
-          className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
-          style={{ background: collision?.enabled ? "var(--muted)" : "var(--warning)" }}
-        >
-          {colToggling
-            ? "Updating..."
-            : collision?.enabled
-              ? "Disable collision check"
-              : "Enable collision check"}
-        </button>
+        {canChange && (
+          <button
+            type="button"
+            onClick={toggleCollision}
+            disabled={colToggling}
+            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+            style={{ background: collision?.enabled ? "var(--muted)" : "var(--warning)" }}
+          >
+            {colToggling
+              ? "Updating..."
+              : collision?.enabled
+                ? "Disable collision check"
+                : "Enable collision check"}
+          </button>
+        )}
         {collision?.enabled && collision?.enabledBy && (
           <p className="mt-2 text-xs text-muted">
             Enabled by <span className="font-medium text-foreground">{collision.enabledBy}</span>
