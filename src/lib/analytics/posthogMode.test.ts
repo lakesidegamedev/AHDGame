@@ -49,8 +49,8 @@ describe("full config", () => {
   const config = fullPostHogConfig();
 
   it("keeps sampled, masked replay and local persistence", () => {
-    expect(config.session_recording.sampleRate).toBe(0.1);
-    expect(config.session_recording.maskAllInputs).toBe(true);
+    expect(config.session_recording?.sampleRate).toBe(0.1);
+    expect(config.session_recording?.maskAllInputs).toBe(true);
     expect(config.persistence).toBe("localStorage+cookie");
     expect("cookieless_mode" in config).toBe(false);
   });
