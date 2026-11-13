@@ -70,3 +70,29 @@ export function stepsNeedingRepairConfirmation(steps: StepPreview[]): string[] {
     .map((s) => s.phase)
     .sort();
 }
+
+/**
+ * Earliest moment the held step can have written for the held turn. Turn numbers restart
+ * after a world reset and old rows stay, so every probe only counts rows created at or
+ * after this time. The dead holder's own start time for the step is the tightest bound;
+ * the first step start of the turn, then the lock start, are the fallbacks. Null when
+ * none is known, in which case no probe can be scoped to this world.
+ */
+export function probeWindowStart(
+  statuses: Record<string, { startedAt?: Date | string | null } | undefined> | null | undefined,
+  phase: string,
+  processingStartedAt?: Date | string | null
+): Date | null {
+  const asDate = (v: Date | string | null | undefined) => {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+  const own = asDate(statuses?.[phase]?.startedAt);
+  if (own) return own;
+  const starts = Object.values(statuses ?? {})
+    .map((s) => asDate(s?.startedAt))
+    .filter((d): d is Date => d !== null);
+  if (starts.length > 0) return new Date(Math.min(...starts.map((d) => d.getTime())));
+  return asDate(processingStartedAt);
+}

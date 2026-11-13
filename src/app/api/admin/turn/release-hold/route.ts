@@ -8,7 +8,7 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { invalidateGameStateCache } from "@/lib/gameState";
 import { createAdminLog } from "@/lib/adminLog";
 import { planHoldRelease } from "@/lib/turn/rules/holdRelease";
-import { previewHeldTurn } from "@/lib/turn/holdPreview";
+import { loadHeldState, previewHeldTurn } from "@/lib/turn/holdPreview";
 
 // POST /api/admin/turn/release-hold - Releases a turn held after a mid-turn process death.
 // Body: { mode: "rerun" | "mark-done", acknowledge: string[], previewToken, confirmRepaired?: true } naming exactly
@@ -26,16 +26,7 @@ export async function POST(request: Request) {
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const state = await gameStateCollection(db).findOne(
-      { _id: "current" },
-      {
-        projection: {
-          processingHoldReason: 1,
-          processingHeldPhases: 1,
-          processingTargetTurn: 1,
-        },
-      }
-    );
+    const state = await loadHeldState(db);
     if (!state) return errorResponse(404, "Game state not initialized");
 
     const preview = await previewHeldTurn(db, state);
