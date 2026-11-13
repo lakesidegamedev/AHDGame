@@ -9,6 +9,7 @@ import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTr
 import { turnPhaseTraceId } from "@/lib/observability/context";
 import {
   buildStepPreview,
+  probeWindowStart,
   previewTokenInput,
   type StepPreview,
   type WriteProbeResult,
@@ -21,6 +22,8 @@ interface SpecificProbe {
   collection: ProbeCollection;
   filter: (turn: number) => Document;
   sums: string[];
+  /** Creation time of a row; rows older than the step belong to an earlier world. */
+  timeField: "createdAt" | "ts";
 }
 
 const FUND_GENERATION_ROWS: SpecificProbe = {
@@ -28,6 +31,7 @@ const FUND_GENERATION_ROWS: SpecificProbe = {
   collection: "treasuryTransactions",
   filter: (turn) => ({ turn, category: "fund_generation" }),
   sums: ["amount"],
+  timeField: "createdAt",
 };
 
 /**
@@ -57,6 +61,7 @@ const SPECIFIC_PROBES: Readonly<Record<string, SpecificProbe[]>> = {
         },
       }),
       sums: ["amount", "anchorAmount"],
+      timeField: "createdAt",
     },
   ],
   caucusTax: [
@@ -65,6 +70,7 @@ const SPECIFIC_PROBES: Readonly<Record<string, SpecificProbe[]>> = {
       collection: "treasuryTransactions",
       filter: (turn) => ({ turn, category: "caucus_tax" }),
       sums: ["amount"],
+      timeField: "createdAt",
     },
   ],
   fundGeneration: [FUND_GENERATION_ROWS],
@@ -75,6 +81,7 @@ const SPECIFIC_PROBES: Readonly<Record<string, SpecificProbe[]>> = {
       collection: "savingsLedger",
       filter: (turn) => ({ turn }),
       sums: ["amount"],
+      timeField: "createdAt",
     },
   ],
 };
@@ -118,6 +125,8 @@ export interface HeldStateFields {
   processingTargetTurn?: number | null;
   processingHeldPhases?: string[] | null;
   processingHeldAt?: Date | null;
+  processingStartedAt?: Date | null;
+  processingPhaseStatuses?: Record<string, { startedAt?: Date | null } | undefined> | null;
 }
 
 /** Read-only: what each held step already wrote for the held turn. */
@@ -136,24 +145,40 @@ export async function previewHeldTurn(
   const steps: StepPreview[] = [];
   for (const phase of [...phases].sort()) {
     const probes: WriteProbeResult[] = [];
-    probes.push(
-      auditOn
-        ? await countRows(
-            actionAuditLogCollection<Document>(db),
-            "audited writes (action audit trail)",
-            { traceId: turnPhaseTraceId(turn, phase) },
-            ["amount", "anchorAmount"]
-          )
-        : {
-            label: "audited writes (action audit trail)",
-            status: "unknown",
-            reason: "the action audit log is off",
-          }
-    );
     const specific = SPECIFIC_PROBES[phase] ?? [];
+    // Rows of an earlier world carry the same turn numbers, so only rows created since the
+    // step started count. Without a known start nothing can be scoped, so nothing is claimed.
+    const since = probeWindowStart(state.processingPhaseStatuses, phase, state.processingStartedAt);
+    const unscoped = (label: string): WriteProbeResult => ({
+      label,
+      status: "unknown",
+      reason: "the step's start time is unknown, so rows cannot be told from an earlier world's",
+    });
+    const auditLabel = "audited writes (action audit trail)";
+    if (!auditOn) {
+      probes.push({ label: auditLabel, status: "unknown", reason: "the action audit log is off" });
+    } else if (!since) {
+      probes.push(unscoped(auditLabel));
+    } else {
+      probes.push(
+        await countRows(
+          actionAuditLogCollection<Document>(db),
+          auditLabel,
+          { traceId: turnPhaseTraceId(turn, phase), ts: { $gte: since } },
+          ["amount", "anchorAmount"]
+        )
+      );
+    }
     for (const p of specific) {
       probes.push(
-        await countRows(collectionFor(db, p.collection), p.label, p.filter(turn), p.sums)
+        since
+          ? await countRows(
+              collectionFor(db, p.collection),
+              p.label,
+              { ...p.filter(turn), [p.timeField]: { $gte: since } },
+              p.sums
+            )
+          : unscoped(p.label)
       );
     }
     steps.push(buildStepPreview(phase, probes, specific.length > 0));
@@ -178,6 +203,8 @@ export async function loadHeldState(db: Db) {
         processingHeldPhases: 1,
         processingHeldAt: 1,
         processingTargetTurn: 1,
+        processingStartedAt: 1,
+        processingPhaseStatuses: 1,
       },
     }
   );
