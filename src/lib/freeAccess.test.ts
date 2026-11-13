@@ -30,7 +30,7 @@ describe("isFreeAccessOn", () => {
     const fetchMock = respond({ on: true, changedAt: "2026-11-12T00:00:00Z" });
     vi.stubGlobal("fetch", fetchMock);
     expect(await isFreeAccessOn()).toBe(true);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+    expect(String((fetchMock.mock.calls as unknown[][])[0]?.[0])).toBe(
       "https://lakesidegames.net/account/api/free-access"
     );
   });
