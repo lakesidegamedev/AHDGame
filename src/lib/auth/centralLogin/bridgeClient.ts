@@ -50,6 +50,11 @@ export function resetBridgeBreaker(): void {
   Object.assign(breaker, newBreakerState());
 }
 
+/** Read-only: true while the breaker is refusing bridge calls. Never admits a trial. */
+export function bridgeBreakerOpen(): boolean {
+  return breaker.openUntil !== 0 && Date.now() < breaker.openUntil;
+}
+
 /** Clears the cached token and the breaker, so each test starts from a clean client. */
 export function resetBridgeTokenCache(): void {
   cachedToken = null;

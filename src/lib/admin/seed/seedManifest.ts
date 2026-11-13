@@ -191,6 +191,12 @@ const REFERENCE: CollectionEntry[] = [
       "Carried books for the producer market shadow: cash, stock, unpaid bills and prices per run and turn, last two turns kept. Read only by the shadow phase.",
   },
   {
+    name: "corporationTurnJournal",
+    category: "runtime",
+    notes:
+      "Resume journal for the corporation turn: the computed write plan in chunks with per-chunk completion marks. Only written when turn resilience stage 2 is on; last few turns kept.",
+  },
+  {
     name: "producerPathClaims",
     category: "runtime",
     notes:

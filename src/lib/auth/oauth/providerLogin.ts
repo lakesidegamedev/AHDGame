@@ -39,7 +39,8 @@ import {
   shadowRecordProviderLogin,
   type BridgeWriteOp,
 } from "@/lib/auth/centralLogin";
-import { startLakesideHop } from "@/lib/auth/centralLogin/hop";
+import { recordHopSkipped, startLakesideHop } from "@/lib/auth/centralLogin/hop";
+import { isHopIssuerReady } from "@/lib/auth/centralLogin/issuerReadiness";
 import type { OAuthCookieStore, OAuthDb, OAuthLoginAdapter } from "./types";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -93,6 +94,10 @@ async function withLakesideHop(
   if (getCentralLoginMode() !== "central") return normal;
   const destination = normal.headers.get("location");
   if (!destination) return normal;
+  if (!(await isHopIssuerReady())) {
+    await recordHopSkipped(userId);
+    return normal;
+  }
   const hopUrl = await startLakesideHop({
     userId,
     destination,

@@ -85,6 +85,11 @@ function recordHop(userId: string, ok: boolean, reason?: ShadowEventReason): Pro
   });
 }
 
+/** Records a hop that was skipped because the issuer was not reachable. */
+export function recordHopSkipped(userId: string): Promise<void> {
+  return recordHop(userId, false, "hop_issuer_not_ready");
+}
+
 /**
  * Central mode only. Returns the issuer URL to send the browser to, or null
  * when the hop is skipped; the caller then proceeds exactly as without a hop.
@@ -142,7 +147,7 @@ export async function startLakesideHop(input: {
   }
 }
 
-async function sessionUserId(cookieStore: HopCookieJar): Promise<string | null> {
+export async function sessionUserId(cookieStore: HopCookieJar): Promise<string | null> {
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (!token) return null;
   try {

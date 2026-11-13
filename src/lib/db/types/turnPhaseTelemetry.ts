@@ -6,7 +6,11 @@ export type TurnPhaseExecutionStatus =
  * at least one phase failed, or was skipped because an upstream phase failed,
  * so its work for this turn did not happen.
  */
-export type TurnOutcome = "clean" | "degraded";
+/**
+ * `incomplete`: the turn committed, but a money-moving step was interrupted by
+ * a process death and not rerun, or a step never ran. Never a success.
+ */
+export type TurnOutcome = "clean" | "degraded" | "incomplete";
 
 export type TurnPhaseSkipReason =
   | "conditional"
