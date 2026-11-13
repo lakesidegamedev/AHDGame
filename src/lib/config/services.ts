@@ -20,6 +20,11 @@ export const servicesConfig = {
 
   resendApiKey: () => process.env.RESEND_API_KEY,
   emailFrom: () => process.env.EMAIL_FROM,
+  smtpHost: () => process.env.SMTP_HOST?.trim() || undefined,
+  smtpPort: () => {
+    const port = Number(process.env.SMTP_PORT);
+    return Number.isInteger(port) && port > 0 && port < 65536 ? port : 25;
+  },
 
   fcmProjectId: () => process.env.FCM_PROJECT_ID,
   fcmClientEmail: () => process.env.FCM_CLIENT_EMAIL,
