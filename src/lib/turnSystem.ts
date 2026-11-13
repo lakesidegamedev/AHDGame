@@ -1048,21 +1048,13 @@ async function processTurnImpl(
       // before setup (no statuses, no target yet) must not null out what the
       // previous holder left, or the next attempt would rerun applied phases.
       /*
-       * HOLD RUNBOOK. A turn is held (processingHoldReason set) when a process
-       * died mid-turn with a step in flight that is not on the safe-to-skip list
-       * (src/lib/turn/rules/interruptedPhases.ts). The lock stays held with all
-       * evidence. The fast watchdog, the stuck-lock sweep and the stale-lock
-       * acquisition all refuse a held lock, and POST /api/admin/turn/reset-lock
-       * refuses it too, so nothing skips the held steps on its own.
-       *
-       * A person resolves it: read processingHeldPhases and each step's status
-       * message in processingPhaseStatuses, check what the step wrote (heal
-       * tools, ledger and audit queries), repair any partial writes, then call
-       * POST /api/admin/turn/release-hold with the exact held step names and a
-       * mode: "rerun" clears the held steps so the next attempt runs them again
-       * (use when they wrote nothing or were repaired), "mark-done" records them
-       * as finished by the operator (use when they had fully applied). The next
-       * cron or watchdog tick then resumes the turn.
+       * HOLD RUNBOOK. processingHoldReason is set when a process died mid-turn with a step in
+       * flight that is not on the safe lists (src/lib/turn/rules/interruptedPhases.ts). The lock
+       * stays held with all evidence; the watchdog, the stuck-lock sweep, lock acquisition and
+       * admin reset-lock all refuse it. A person reads processingHeldPhases and each step's
+       * status message, checks what the step wrote (GET /api/admin/turn/release-hold/preview),
+       * repairs partial writes, then calls POST /api/admin/turn/release-hold with the preview
+       * token: "rerun" clears the held steps, "mark-done" records them as finished.
        */
       const heldError = error instanceof TurnHeldForRepairError ? error : null;
       const holdFields = heldError
