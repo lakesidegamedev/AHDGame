@@ -1,3 +1,4 @@
+import { runJournaledStepWithOutput, type JournalContext } from "./resume/journal";
 import { settleCorporateTaxPriority } from "./corporateTaxPriority";
 import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { dividendStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
@@ -49,6 +50,8 @@ export async function persistLabourIndices(args: {
   wagesEnabled: boolean;
   labourWageIndexByState: Map<string, number>;
   automationIndexByState: Map<string, number>;
+  /** Stage 2: the prior values are captured once per turn so a rerun computes the same deltas. */
+  journal?: JournalContext;
 }): Promise<void> {
   const { db, wagesEnabled, labourWageIndexByState, automationIndexByState } = args;
   if (wagesEnabled && labourWageIndexByState.size > 0) {
@@ -60,19 +63,23 @@ export async function persistLabourIndices(args: {
     // automationIndexByState shares its keyset with labourWageIndexByState by
     // construction (both accumulate inside the same per-sector conditional).
     const stateIds = Array.from(labourWageIndexByState.keys());
-    const priorDocs = await macroMetricsCollection(db)
-      .find({ _id: { $in: stateIds } })
-      .project<{
-        _id: string;
-        economic?: {
-          labourWageIndex?: { value?: number };
-          automationIndex?: { value?: number };
-        };
-      }>({
-        "economic.labourWageIndex.value": 1,
-        "economic.automationIndex.value": 1,
-      })
-      .toArray();
+    const readPriors = () =>
+      macroMetricsCollection(db)
+        .find({ _id: { $in: stateIds } })
+        .project<{
+          _id: string;
+          economic?: {
+            labourWageIndex?: { value?: number };
+            automationIndex?: { value?: number };
+          };
+        }>({
+          "economic.labourWageIndex.value": 1,
+          "economic.automationIndex.value": 1,
+        })
+        .toArray();
+    const priorDocs = args.journal
+      ? await runJournaledStepWithOutput(args.journal, "labourPriors", "rerun", readPriors)
+      : await readPriors();
     const priorWageIndexByState = new Map(
       priorDocs.map((d) => [d._id, d.economic?.labourWageIndex?.value])
     );

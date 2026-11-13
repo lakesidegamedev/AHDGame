@@ -10,6 +10,7 @@
  * Plain data only. `processTurn` owns the writes.
  */
 import type { GameState, TurnPhaseTelemetryMap } from "@/lib/db/types";
+import { classifyInterruptedPhases } from "@/lib/turn/rules/interruptedPhases";
 import { TURN_BOOTSTRAP_PHASE, turnHasCommittedWrites } from "@/lib/turn/processingLock";
 import {
   INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
@@ -30,8 +31,9 @@ type RecoveryFields = Pick<
 >;
 
 /** Lock fields only. Never the crash evidence the next step validates. */
-export function lockAcquisitionSet(at: Date) {
+export function lockAcquisitionSet(at: Date, holderId?: string) {
   return {
+    ...(holderId ? { processingHolderId: holderId } : {}),
     isProcessing: true,
     processingKind: "turn" as const,
     processingStartedAt: at,
@@ -46,6 +48,8 @@ export interface ValidatedTurnResume {
   lastPhase: string;
   /** Completed plus interrupted: neither may run again. */
   appliedPhases: Set<string>;
+  /** Interrupted steps not on the allow list: skipped, so the turn is incomplete. */
+  interruptedMoneyMoving: string[];
   phaseState: CrashedTurnPhaseState;
 }
 
@@ -56,7 +60,9 @@ export interface ValidatedTurnResume {
  */
 export function validateLockedResume(
   locked: RecoveryFields,
-  preLockTargetTurn: number | null
+  preLockTargetTurn: number | null,
+  /** Interrupted phases the caller proved safe to rerun; they are neither refused nor carried. */
+  rerunInterrupted: ReadonlySet<string> = new Set()
 ): ValidatedTurnResume | null {
   const target = locked.processingTargetTurn;
   if (typeof preLockTargetTurn !== "number" || target !== preLockTargetTurn) return null;
@@ -66,6 +72,7 @@ export function validateLockedResume(
     locked.processingPhaseStatuses,
     locked.processingPhaseResults
   );
+  for (const phase of rerunInterrupted) phaseState.interrupted.delete(phase);
   const blocking = [...phaseState.interrupted].filter(phaseBlocksResumeWhenInterrupted);
   if (blocking.length > 0) {
     throw new TurnResumeRefusedError(
@@ -78,6 +85,7 @@ export function validateLockedResume(
     targetTurn: target,
     lastPhase: locked.processingPhase!,
     appliedPhases: new Set([...phaseState.completed, ...phaseState.interrupted]),
+    interruptedMoneyMoving: classifyInterruptedPhases(phaseState.interrupted).moneyMoving,
     phaseState,
   };
 }

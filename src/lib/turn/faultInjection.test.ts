@@ -59,6 +59,17 @@ describe("maybeInjectTurnFault", () => {
   });
 });
 
+describe("armTurnFault", () => {
+  it("keeps a once fault fired when re-armed with the same spec", () => {
+    armTurnFault(parseTurnFaultSpec("bondTurn:once"));
+    expect(() => maybeInjectTurnFault("bondTurn", null)).toThrow();
+    armTurnFault(parseTurnFaultSpec("bondTurn:once"));
+    expect(() => maybeInjectTurnFault("bondTurn", null)).not.toThrow();
+    armTurnFault(parseTurnFaultSpec("fundGeneration:once"));
+    expect(() => maybeInjectTurnFault("fundGeneration", null)).toThrow();
+  });
+});
+
 describe("describeTurnError", () => {
   it("keeps the message and the first stack frames", () => {
     const text = describeTurnError(new Error("boom"), 2);

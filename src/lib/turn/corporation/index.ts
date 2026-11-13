@@ -16,6 +16,12 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getDb } from "@/lib/mongodb";
 import { buildCorporationLookups } from "./buildLookups";
 import { buildFreightBillingBySector } from "./freightBillingTurn";
+import {
+  runJournaledStep,
+  runJournaledStepWithOutput,
+  type JournalContext,
+} from "./resume/journal";
+import { resilienceStageOf } from "./resume/rules";
 import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
 import { shedInactiveCeoSectorsToUnowned } from "./inactiveCeoSectorShed";
 import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
@@ -117,15 +123,25 @@ export async function processCorporationTurn(
     ]
   );
   mark("preamble");
-  if (marketGovernorConfig?.privateBankingEnabled === true) {
-    await resumeFoundingUnderwritingPlans(db, now);
-  }
-  const equityPoolTurn = await processEquityMarketPoolTurn(
+  // Stage 2 journals each whole-call write step so an interrupted turn skips what
+  // finished and stops on what it cannot prove safe to repeat.
+  const journal: JournalContext = {
     db,
-    turn ?? gameState?.currentTurn ?? 0,
-    now
+    stage: resilienceStageOf(marketGovernorConfig),
+    turn: turn ?? gameState?.currentTurn ?? 0,
+    worldEpoch: gameState?.worldEpochId,
+  };
+  if (marketGovernorConfig?.privateBankingEnabled === true) {
+    await runJournaledStep(journal, "foundingUnderwriting", "refuse", () =>
+      resumeFoundingUnderwritingPlans(db, now)
+    );
+  }
+  const equityPoolTurn = await runJournaledStepWithOutput(journal, "equityPoolTurn", "refuse", () =>
+    processEquityMarketPoolTurn(db, turn ?? gameState?.currentTurn ?? 0, now)
   );
-  await placePendingShareIssuances(db, turn ?? gameState?.currentTurn ?? 0, now);
+  await runJournaledStep(journal, "pendingShareIssuances", "refuse", () =>
+    placePendingShareIssuances(db, turn ?? gameState?.currentTurn ?? 0, now)
+  );
   mark("equityMarketPool");
   // SINGLE SOURCE OF TRUTH for this turn's market mode, both the market-share
   // basis just below and `buildMarketContext` further down consume it. Do not
@@ -202,14 +218,22 @@ export async function processCorporationTurn(
     lookups.mediaProductProjectsByCorpId &&
     typeof gameState?.currentYear === "number"
   ) {
-    const startedNppProjects = await startNppMediaProductsV1({
-      db,
-      corporations: lookups.corporations,
-      sectorsByCorp: lookups.sectorsByCorp,
-      projectsByCorporationId: lookups.mediaProductProjectsByCorpId,
-      currentYear: gameState.currentYear,
-      currentTurn: turn ?? 1,
-    });
+    const mediaProjectsByCorporationId = lookups.mediaProductProjectsByCorpId;
+    const mediaCurrentYear = gameState.currentYear;
+    const startedNppProjects = await runJournaledStepWithOutput(
+      journal,
+      "nppMediaProducts",
+      "refuse",
+      () =>
+        startNppMediaProductsV1({
+          db,
+          corporations: lookups.corporations,
+          sectorsByCorp: lookups.sectorsByCorp,
+          projectsByCorporationId: mediaProjectsByCorporationId,
+          currentYear: mediaCurrentYear,
+          currentTurn: turn ?? 1,
+        })
+    );
     for (const project of startedNppProjects) {
       const development = lookups.mediaProductDevelopmentByCorpId ?? new Map();
       development.set(project.corporationId, project);
@@ -244,13 +268,16 @@ export async function processCorporationTurn(
     ? await loadAdvertisingEfficacyByCorp(db, (turn ?? gameState?.currentTurn ?? 0) - 1)
     : new Map<string, { turn: number; factor: number }>();
   if (lookups.productLinesV2Enabled && lookups.manufacturingProductByCorpId) {
-    await consumeManufacturingDevelopmentReceiptsV2({
-      db,
-      corporations: lookups.corporations,
-      projectsByCorporationId: lookups.manufacturingProductByCorpId,
-      completedTurn: (turn ?? gameState?.currentTurn ?? 0) - 1,
-      advertisingEfficacyByCorporationId: advertisingEfficacyByCorpId,
-    });
+    const manufacturingProjects = lookups.manufacturingProductByCorpId;
+    await runJournaledStep(journal, "manufacturingReceipts", "refuse", () =>
+      consumeManufacturingDevelopmentReceiptsV2({
+        db,
+        corporations: lookups.corporations,
+        projectsByCorporationId: manufacturingProjects,
+        completedTurn: (turn ?? gameState?.currentTurn ?? 0) - 1,
+        advertisingEfficacyByCorporationId: advertisingEfficacyByCorpId,
+      })
+    );
   }
   const currentYear = gameState?.currentYear;
   // Soft-budget gate for the turn path (see sectorTurn's affordability brake and
@@ -451,17 +478,22 @@ export async function processCorporationTurn(
   // plans, instead of two round trips per order. The map below stays keyed by
   // THIS turn's clearing output, exactly as before; the durable copy the saver
   // returns is what a replay settles from.
-  await savePoliticalMediaSettlementPlans(db, politicalMediaSettlementPlans);
+  await runJournaledStep(journal, "politicalMediaPlans", "refuse", () =>
+    savePoliticalMediaSettlementPlans(db, politicalMediaSettlementPlans)
+  );
   const plannedPoliticalMediaOrders = new Map(
     politicalMediaSettlementPlans.map(({ orderId, plan }) => [orderId, plan])
   );
   contractedByCorpCommodity = clearingContractedByCorpCommodity;
   if (mediaEditorialEnabled && !mediaOperatingModelsEnabled && market.editorialOutletsByState) {
-    await applyMediaEditorialEffects({
-      db,
-      turn: turn ?? gameState?.currentTurn ?? 0,
-      outletsByState: market.editorialOutletsByState,
-    });
+    const outletsByState = market.editorialOutletsByState;
+    await runJournaledStep(journal, "mediaEditorial", "refuse", () =>
+      applyMediaEditorialEffects({
+        db,
+        turn: turn ?? gameState?.currentTurn ?? 0,
+        outletsByState,
+      })
+    );
   }
   mark("marketContext");
 
@@ -532,14 +564,17 @@ export async function processCorporationTurn(
   }
 
   if (mediaProductSlatesEnabled && lookups.mediaProductProjectsByCorpId) {
-    await processMediaProductProjectsV1({
-      db,
-      corporations: lookups.corporations,
-      projectsByCorporationId: lookups.mediaProductProjectsByCorpId,
-      currentTurn: turn ?? 1,
-      sectorQualityBySectorId: lookups.productSectorQualityById ?? new Map(),
-      advertisingEfficacyByCorporationId: advertisingEfficacyByCorpId,
-    });
+    const mediaProjects = lookups.mediaProductProjectsByCorpId;
+    await runJournaledStep(journal, "mediaProductProjects", "refuse", () =>
+      processMediaProductProjectsV1({
+        db,
+        corporations: lookups.corporations,
+        projectsByCorporationId: mediaProjects,
+        currentTurn: turn ?? 1,
+        sectorQualityBySectorId: lookups.productSectorQualityById ?? new Map(),
+        advertisingEfficacyByCorporationId: advertisingEfficacyByCorpId,
+      })
+    );
     const projectsBySectorId = new Map<
       string,
       import("@/lib/products/mediaProduct").MediaProductProject[]
@@ -591,10 +626,12 @@ export async function processCorporationTurn(
   // they run via the clamped NPP brain instead of shedding to unowned. Mutates
   // the in-memory corp docs, so it must precede the vacant/inactive sheds below.
   // Inactivity never sets ceoVacant, so idle-but-seated CEOs are not covered.
-  const { installed: caretakersInstalled } = await installCaretakersForVacantCorps(db, lookups, {
-    turn: turn ?? 0,
-    now,
-  });
+  const { installed: caretakersInstalled } = await runJournaledStepWithOutput(
+    journal,
+    "autoCaretakers",
+    "refuse",
+    () => installCaretakersForVacantCorps(db, lookups, { turn: turn ?? 0, now })
+  );
   if (caretakersInstalled > 0) {
     console.log(
       `[corporationTurn] auto-installed ${caretakersInstalled} NPP caretaker(s) on vacant corp(s)`
@@ -609,7 +646,9 @@ export async function processCorporationTurn(
   // against sector peers into its CEO track record. Reads last turn's sector
   // results from the snapshot, before the sheds below mutate it. No decision
   // reads it below v6, so a failure only loses one sample.
-  await runNppCeoCareerPasses(db, lookups, turn ?? 0);
+  await runJournaledStep(journal, "nppCeoCareer", "refuse", () =>
+    runNppCeoCareerPasses(db, lookups, turn ?? 0)
+  );
   mark("nppCeoTrackRecord");
 
   // Forensics/alt-detection audit spine: aggregate, not-per-corp entries for
@@ -632,17 +671,17 @@ export async function processCorporationTurn(
   // Phase 1b: CEO-less player corps lose market footprint to unowned pools (same turn as step 2)
   // MUTATES lookups.sectorsByCorp, adjusts revenue/workers so processSectors sees reduced values.
   // Order matters: vacant shed runs first, then inactive-CEO shed (which excludes vacant corps).
-  const vacantShedResult = await shedVacantCeoSectorsToUnowned(
-    db,
-    lookups,
-    now,
-    market.plantsEnabled
+  const vacantShedResult = await runJournaledStepWithOutput(
+    journal,
+    "vacantCeoShed",
+    "refuse",
+    () => shedVacantCeoSectorsToUnowned(db, lookups, now, market.plantsEnabled)
   );
-  const inactiveShedResult = await shedInactiveCeoSectorsToUnowned(
-    db,
-    lookups,
-    now,
-    market.plantsEnabled
+  const inactiveShedResult = await runJournaledStepWithOutput(
+    journal,
+    "inactiveCeoShed",
+    "refuse",
+    () => shedInactiveCeoSectorsToUnowned(db, lookups, now, market.plantsEnabled)
   );
   if (vacantShedResult.corporateSectorsUpdated > 0) {
     corpAuditEntries.push({
@@ -869,6 +908,7 @@ export async function processCorporationTurn(
       capitalDividendPayments,
       passThroughTaxedDividendPayments,
       forexEnabled,
+      resilienceStage: journal.stage,
     });
 
   timer.finish(turn);

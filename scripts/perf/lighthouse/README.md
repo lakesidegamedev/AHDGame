@@ -88,8 +88,8 @@ noise on a loaded host is ±10 performance points.
 
 ### What the audit found
 
-- Google tags (gtag + Ads) were the largest single blocking source on every
-  page: 600–750ms of long tasks, competing with hydration.
+- Third-party advertising and analytics tags were the largest single blocking
+  source on every page: 600–750ms of long tasks, competing with hydration.
 - The cookie-consent banner mounted only after the client store read
   `localStorage`. On anonymous loads it painted ~4s after FCP and became the
   Largest Contentful Paint element (measured on `/world` in production).
@@ -110,6 +110,29 @@ noise on a loaded host is ±10 performance points.
   Best Practices audit at the cost of Railway egress.
 - `speed-index` on the landing page is still the weakest metric; the era globe
   and promotional media dominate first paint.
-- The cohort is measured unauthenticated. Logged-in surfaces (dashboard,
-  character pages) have their own cost profile and are covered by
-  `scripts/perf/page-load/run.mjs`.
+- The public cohort is measured unauthenticated. Logged-in surfaces have
+  their own cohort, below.
+
+## Signed-in cohort
+
+`SIGNED_IN_PAGES` in `pages.mjs` lists the pages a player opens while playing
+(dashboard, profile, actions, portfolio, notifications, country pages, party,
+elections, campaign, budget, corporation, market, news, map, world, banking).
+`:corp` and `:party` in a path are filled from `--corp=<id>` and `--party=<id>`;
+a page whose id is not supplied is skipped.
+
+```bash
+# 1. Save a session cookie jar for a labelled test account (never a real player):
+node scripts/perf/page-load/login-state.mjs --base=<origin> --user=<name> \
+  --password=<password> --out=<state.json>
+
+# 2. Run the cohort with that cookie. Phone preset is the default strategy:
+CHROME_PATH=/path/to/chrome node scripts/perf/lighthouse/run.mjs \
+  --base=<origin> --cohort=signed-in --storage=<state.json> \
+  --runs=3 --budget=off --corp=<corporation id> --party=<party id>
+```
+
+`--cohort=public|signed-in|all` (default `public`). A page that redirects to
+`/login` or `/register` is reported as a failure, so an expired session cannot
+masquerade as a fast page. Run against a deployed site or a local build of a
+seeded world; do not point it at an account that belongs to a real player.
