@@ -56,9 +56,10 @@ describe("previewHeldTurn", () => {
     const preview = await previewHeldTurn({} as never, {
       processingTargetTurn: 3,
       processingHeldPhases: ["bondTurn"],
+      processingStartedAt: new Date("2027-01-01T00:00:00Z"),
     });
     const first = aggregate.mock.calls[0][0][0].$match;
-    expect(first).toEqual({ traceId: "turn:3:bondTurn" });
+    expect(first).toMatchObject({ traceId: "turn:3:bondTurn", ts: { $gte: expect.any(Date) } });
     expect(preview?.steps[0].verdict).toBe("some");
     expect(preview?.steps[0].probes[0]).toMatchObject({
       count: 4,
@@ -78,6 +79,7 @@ describe("previewHeldTurn", () => {
         await previewHeldTurn({} as never, {
           processingTargetTurn: 3,
           processingHeldPhases: ["bondTurn"],
+          processingStartedAt: new Date("2027-01-01T00:00:00Z"),
         })
       )?.previewToken;
     };

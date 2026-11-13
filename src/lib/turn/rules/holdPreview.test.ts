@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  probeWindowStart,
   buildStepPreview,
   judgeStepWrites,
   previewTokenInput,
@@ -44,5 +45,23 @@ describe("stepsNeedingRepairConfirmation", () => {
       buildStepPreview("pensionTurn", [unknown("audit")], false),
     ];
     expect(stepsNeedingRepairConfirmation(steps)).toEqual(["bondTurn", "pensionTurn"]);
+  });
+});
+
+describe("probeWindowStart", () => {
+  const t = (iso: string) => new Date(iso);
+  it("prefers the step's own start, then the first step start, then the lock start", () => {
+    const statuses = {
+      a: { startedAt: t("2027-01-01T10:00:00Z") },
+      bondTurn: { startedAt: t("2027-01-01T10:05:00Z") },
+      c: { startedAt: null },
+    };
+    expect(probeWindowStart(statuses, "bondTurn")).toEqual(t("2027-01-01T10:05:00Z"));
+    expect(probeWindowStart(statuses, "c")).toEqual(t("2027-01-01T10:00:00Z"));
+    expect(probeWindowStart({}, "x", t("2027-01-01T09:00:00Z"))).toEqual(t("2027-01-01T09:00:00Z"));
+  });
+  it("is null when nothing is known", () => {
+    expect(probeWindowStart(null, "x")).toBeNull();
+    expect(probeWindowStart({ x: { startedAt: "not a date" } }, "x")).toBeNull();
   });
 });
