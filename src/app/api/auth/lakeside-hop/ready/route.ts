@@ -10,8 +10,10 @@ import { getCentralLoginMode } from "@/lib/auth/centralLogin";
 export async function GET() {
   const ready = await isHopIssuerReady();
   if (!ready && getCentralLoginMode() === "central") {
-    const userId = (await sessionUserId(await cookies())) ?? "";
-    await recordHopSkipped(userId);
+    // Only a signed-in caller (a player who just signed in) is recorded, so an
+    // anonymous caller cannot write events by polling this route.
+    const userId = await sessionUserId(await cookies());
+    if (userId) await recordHopSkipped(userId);
   }
   return NextResponse.json({ ready }, { headers: { "Cache-Control": "no-store" } });
 }
