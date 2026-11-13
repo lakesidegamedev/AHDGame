@@ -10,6 +10,7 @@ import {
   pickClientNamespaces,
   SHELL_CLIENT_NAMESPACES,
   shouldTrimClientCatalog,
+  signedOutTemplateNamespaces,
   templateNamespacesForPath,
 } from "./clientCatalog";
 
@@ -190,5 +191,35 @@ describe("nonShellClientMessages", () => {
       expect(rest[shellNamespace]).toBeUndefined();
     }
     expect(Object.keys(rest).length).toBe(NAMESPACES.length - SHELL_CLIENT_NAMESPACES.length);
+  });
+});
+
+describe("signedOutTemplateNamespaces", () => {
+  it("ships only the route's own copy on public content pages", () => {
+    expect(signedOutTemplateNamespaces("/about")).toEqual([]);
+    expect(signedOutTemplateNamespaces("/guides/bonds")).toEqual([]);
+    expect(signedOutTemplateNamespaces("/changelog/")).toEqual([]);
+  });
+
+  it("keeps the auth copy on the entry forms and the landing copy on /", () => {
+    expect(signedOutTemplateNamespaces("/login")).toEqual(["auth"]);
+    expect(signedOutTemplateNamespaces("/register")).toEqual(["auth"]);
+    expect(signedOutTemplateNamespaces("/")).toEqual(["auth", "worldConflicts"]);
+  });
+
+  it("leaves game routes on the full catalog", () => {
+    for (const path of ["/corporation/1", "/country/us/legislature", "/profile", "/actions"]) {
+      expect(signedOutTemplateNamespaces(path)).toBeNull();
+    }
+    expect(signedOutTemplateNamespaces(null)).toBeNull();
+  });
+
+  it("never asks for a namespace missing from the catalog", () => {
+    const catalog = englishCatalog();
+    for (const path of ["/", "/login", "/register", "/about", "/world"]) {
+      for (const namespace of signedOutTemplateNamespaces(path) ?? []) {
+        expect(catalog[namespace], `${path} -> ${namespace}`).toBeDefined();
+      }
+    }
   });
 });

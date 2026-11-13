@@ -206,6 +206,22 @@ describe("MoneyFlowGraph", () => {
     });
     expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
   });
+
+  it("shows a plain empty state, not an error, when the account has no character", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: "User has no character" }),
+      }))
+    );
+    render(<MoneyFlowGraph userId="cccccccccccccccccccccccc" />);
+    await waitFor(() => {
+      expect(screen.getByText("No character yet.")).toBeTruthy();
+    });
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+  });
 });
 
 describe("LinkedAccountsPanel", () => {
