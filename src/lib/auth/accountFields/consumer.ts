@@ -1,5 +1,6 @@
-import { ObjectId, type Db, type Document, type UpdateFilter } from "mongodb";
+import { ObjectId, type Db, type Document, type PushOperator, type UpdateFilter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { logger } from "@/lib/observability/logger";
 import { cronLocksCollection } from "@/lib/db/repositories/cronLocks";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
@@ -109,7 +110,9 @@ export async function applyAccountChange(
   try {
     const update: UpdateFilter<Document> = { $set: { email } };
     if (previous) {
-      update.$push = { emailHistory: { email: previous, changedAt, source: "central" } };
+      update.$push = {
+        emailHistory: { email: previous, changedAt, source: "central" },
+      } as PushOperator<Document>;
     }
     const result = await users.updateOne({ _id, email: user.email }, update);
     if (result.matchedCount !== 1) return { error: `seq ${change.seq}: account changed, retry` };
@@ -244,10 +247,11 @@ export function startAccountFieldsConsumer(): boolean {
       failures++;
       const wait = Math.min(MAX_BACKOFF_MS, FEED_POLL_MS * 2 ** Math.min(failures, 5));
       skipUntil = Date.now() + wait;
-      console.error(
-        `[account-fields] poll failed (${failures}), retrying in ${Math.round(wait / 1000)}s:`,
-        error instanceof Error ? error.message : "unknown error"
-      );
+      logger.warn("account-fields", "poll failed", {
+        failures,
+        retryInSeconds: Math.round(wait / 1000),
+        reason: error instanceof Error ? error.message : "unknown error",
+      });
     } finally {
       running = false;
     }
