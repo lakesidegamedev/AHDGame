@@ -31,8 +31,9 @@ type RecoveryFields = Pick<
 >;
 
 /** Lock fields only. Never the crash evidence the next step validates. */
-export function lockAcquisitionSet(at: Date) {
+export function lockAcquisitionSet(at: Date, holderId?: string) {
   return {
+    ...(holderId ? { processingHolderId: holderId } : {}),
     isProcessing: true,
     processingKind: "turn" as const,
     processingStartedAt: at,
