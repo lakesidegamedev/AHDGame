@@ -71,10 +71,17 @@ export async function runPensionSchemeInvestments(
     .find({ pendingInvestment: { $ne: null } })
     .toArray();
   const finishedThisTurn = new Set<string>();
+  const pendingFunds =
+    unfinished.length === 0
+      ? []
+      : await indexFundsCollection<IndexFund>(db)
+          .find({ _id: { $in: unfinished.map((s) => s.pendingInvestment!.fundId) } })
+          .toArray();
+  const pendingFundById = new Map(pendingFunds.map((f) => [f._id.toString(), f]));
   for (const scheme of unfinished) {
     try {
       const pending = scheme.pendingInvestment!;
-      const fund = await indexFundsCollection<IndexFund>(db).findOne({ _id: pending.fundId });
+      const fund = pendingFundById.get(pending.fundId.toString());
       if (!fund) {
         result.errors.push(`Scheme ${scheme._id.toString()}: pending investment fund is missing`);
         continue;
@@ -198,7 +205,7 @@ async function finishInvestment(
         lastSubscriptionTurn: plan.turn,
         createdAt: now,
         updatedAt: now,
-      } as unknown as IndexFundPosition);
+      });
     } catch (err) {
       if (!isDuplicateKeyError(err)) throw err;
       position = await positions.findOne(identity);
