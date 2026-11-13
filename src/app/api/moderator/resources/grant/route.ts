@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireModerator } from "@/lib/api/requireModerator";
+import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { moderatorResourcesGrantSchema } from "@/lib/api/schemas/admin";
@@ -16,13 +16,13 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 // POST /api/moderator/resources/grant — Grant resources to players.
-// Auth: requireModerator
+// Auth: requireAdmin. Granting money or actions is an admin power; moderators get 403.
 // Errors: 400, 403
 export async function POST(request: Request) {
   try {
-    const auth = await requireModerator();
+    const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
-    const { user: moderator } = auth;
+    const { admin: moderator } = auth;
 
     const parsed = await parseJsonBody(request, moderatorResourcesGrantSchema);
     if (!parsed.success) {
