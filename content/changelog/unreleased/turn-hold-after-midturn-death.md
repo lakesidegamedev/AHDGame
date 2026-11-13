@@ -14,6 +14,6 @@ areas: [engine, backend]
 
 - A turn that lost its process mid-step on anything other than a short list of harmless steps is held, not resumed.
 - The hold keeps all evidence, raises an alert naming the turn and steps, and no automatic takeover touches it.
-- A new admin release action reruns or marks done the held steps after a person has checked them.
+- A new admin release action reruns or marks done the held steps, but only after the admin has previewed what each held step already wrote.
 - The admin lock reset refuses a held turn and points to the release action.
 - Nothing changes until the turn resilience switch is turned on.

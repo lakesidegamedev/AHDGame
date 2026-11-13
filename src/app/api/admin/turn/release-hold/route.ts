@@ -8,10 +8,12 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { invalidateGameStateCache } from "@/lib/gameState";
 import { createAdminLog } from "@/lib/adminLog";
 import { planHoldRelease } from "@/lib/turn/rules/holdRelease";
+import { previewHeldTurn } from "@/lib/turn/holdPreview";
 
 // POST /api/admin/turn/release-hold - Releases a turn held after a mid-turn process death.
-// Body: { mode: "rerun" | "mark-done", acknowledge: string[], confirmRepaired?: true } naming exactly
-// the held steps; rerun requires confirmRepaired because a half-applied step would apply twice.
+// Body: { mode: "rerun" | "mark-done", acknowledge: string[], previewToken, confirmRepaired?: true } naming exactly
+// the held steps. previewToken comes from GET release-hold/preview and must still match; rerun of a step
+// that already wrote (or left no trace to check) also requires confirmRepaired.
 // "rerun" clears the held steps so the next attempt runs them again; "mark-done" records them
 // as finished by an operator. The next turn tick then resumes the turn.
 // Auth: requireAdmin
@@ -36,7 +38,8 @@ export async function POST(request: Request) {
     );
     if (!state) return errorResponse(404, "Game state not initialized");
 
-    const plan = planHoldRelease(state, parsed.data, new Date());
+    const preview = await previewHeldTurn(db, state);
+    const plan = planHoldRelease(state, parsed.data, new Date(), preview);
     if (!plan.ok) return errorResponse(409, plan.error);
 
     const result = await gameStateCollection(db).updateOne(
