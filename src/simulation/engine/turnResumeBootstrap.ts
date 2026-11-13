@@ -10,7 +10,10 @@
  * Plain data only. `processTurn` owns the writes.
  */
 import type { GameState, TurnPhaseTelemetryMap } from "@/lib/db/types";
-import { classifyInterruptedPhases } from "@/lib/turn/rules/interruptedPhases";
+import {
+  classifyInterruptedPhases,
+  isRerunSafeWhenInterrupted,
+} from "@/lib/turn/rules/interruptedPhases";
 import { TURN_BOOTSTRAP_PHASE, turnHasCommittedWrites } from "@/lib/turn/processingLock";
 import {
   INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
@@ -76,6 +79,12 @@ export function validateLockedResume(
     locked.processingPhaseResults
   );
   for (const phase of rerunInterrupted) phaseState.interrupted.delete(phase);
+  if (holdOnMoneyMoving) {
+    // Stage 1: a step proven rerun-safe is run again, not skipped and not held.
+    for (const phase of [...phaseState.interrupted]) {
+      if (isRerunSafeWhenInterrupted(phase)) phaseState.interrupted.delete(phase);
+    }
+  }
   if (holdOnMoneyMoving) {
     const held = classifyInterruptedPhases(phaseState.interrupted).moneyMoving;
     if (held.length > 0) {
