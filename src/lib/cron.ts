@@ -399,6 +399,8 @@ export async function initializeCronJobs() {
         // Clearing a stranded migration lock is the admin Reset Lock's job, not
         // this sweep's: taking it over could corrupt a half-applied migration.
         if (currentState.processingKind !== "turn") return;
+        // A held lock waits for a person (see the hold runbook in turnSystem.ts).
+        if (currentState.processingHoldReason) return;
 
         const lockState = getProcessingLockState(currentState);
         if (!lockState.isStale) return;

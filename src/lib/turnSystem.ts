@@ -71,6 +71,7 @@ import { armTurnFault, describeTurnError, parseTurnFaultSpec } from "@/lib/turn/
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
+  TurnHeldForRepairError,
   TurnResumeRefusedError,
   TurnResumeResultUnavailableError,
   phaseBlocksResumeWhenInterrupted,
@@ -509,6 +510,8 @@ async function processTurnImpl(
       {
         _id: "current",
         processingKind: { $nin: ["stockTaxMigration", "economyReset"] },
+        // A held turn waits for a person; no path takes the lock over.
+        processingHoldReason: null,
         $or: [
           { isProcessing: { $ne: true } },
           { processingHeartbeatAt: { $lt: staleLockCutoff } },
@@ -563,7 +566,8 @@ async function processTurnImpl(
     const crashedTurnRecovery = validateLockedResume(
       gameState,
       preLockRecoveryTarget,
-      await corporationTurnRerunSet(db, gameState)
+      await corporationTurnRerunSet(db, gameState),
+      resilienceStage >= 1
     );
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
@@ -1043,6 +1047,48 @@ async function processTurnImpl(
       // Only overwrite evidence with values this attempt actually has. A failure
       // before setup (no statuses, no target yet) must not null out what the
       // previous holder left, or the next attempt would rerun applied phases.
+      /*
+       * HOLD RUNBOOK. processingHoldReason is set when a process died mid-turn with a step in
+       * flight that is not on the safe lists (src/lib/turn/rules/interruptedPhases.ts). The lock
+       * stays held with all evidence; the watchdog, the stuck-lock sweep, lock acquisition and
+       * admin reset-lock all refuse it. A person reads processingHeldPhases and each step's
+       * status message, checks what the step wrote (GET /api/admin/turn/release-hold/preview),
+       * repairs partial writes, then calls POST /api/admin/turn/release-hold with the preview
+       * token: "rerun" clears the held steps, "mark-done" records them as finished.
+       */
+      const heldError = error instanceof TurnHeldForRepairError ? error : null;
+      const holdFields = heldError
+        ? {
+            processingHoldReason: heldError.message,
+            processingHeldPhases: heldError.phases,
+            processingHeldAt: failureTime,
+            lastTurnRetry: {
+              turn: heldError.turn,
+              attempt: 0,
+              afterPhase: heldError.phases[0] ?? null,
+              outcome: "stopped" as const,
+              at: failureTime,
+              note: `Held for a person: ${heldError.phases
+                .map((p) => `${p} (${heldError.details[p]})`)
+                .join("; ")}`,
+            },
+          }
+        : {};
+      if (heldError) {
+        try {
+          Sentry.captureMessage("Turn held for repair after a mid-turn process death", {
+            level: "fatal",
+            fingerprint: ["turn-held-for-repair"],
+            extra: {
+              turn: heldError.turn,
+              steps: heldError.phases,
+              details: heldError.details,
+            },
+          });
+        } catch {
+          // Alerting must not block the hold.
+        }
+      }
       const failureRecord = {
         turn: failedTarget,
         message: failureDetail,
@@ -1071,6 +1117,7 @@ async function processTurnImpl(
                 processingHeartbeatAt: failureTime,
                 processingAbandonedAt: failureTime,
                 ...evidence,
+                ...holdFields,
                 lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               }

@@ -99,6 +99,13 @@ export default function PrivacyPolicyPage() {
                   disabled in singleplayer.
                 </p>
                 <p className="mt-2">
+                  If you have not accepted optional analytics, PostHog counts anonymous page views
+                  only: the page address, the site that referred you, any campaign tags in the link,
+                  and coarse browser details such as browser and screen size. This sets no cookies,
+                  uses no browser storage, does not identify you and records no sessions. After you
+                  accept, tracking starts on your next page load.
+                </p>
+                <p className="mt-2">
                   Separately, and whether or not you accept optional analytics, our servers send
                   PostHog aggregate counts of sign-up steps, such as reaching the sign-up page,
                   creating an account or creating a character, broken down only by sign-in method,
