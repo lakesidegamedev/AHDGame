@@ -1083,7 +1083,6 @@ async function processTurnImpl(
           }
         : {};
       if (heldError) {
-        console.error(`[Turn System] ${heldError.message}`, heldError.details);
         try {
           Sentry.captureMessage("Turn held for repair after a mid-turn process death", {
             level: "fatal",
