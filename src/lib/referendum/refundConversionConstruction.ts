@@ -30,12 +30,15 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
 import { infraProjectsCollection } from "@/lib/db/repositories/infraProjects";
+import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
+import type { ConstructionCashWitnessContext } from "@/lib/banking/constructionCashWitness";
 
 async function cancelSecuredBuild(
   db: Db,
   sector: CorporateSector,
   turn: number,
-  wholePlants: boolean
+  wholePlants: boolean,
+  cashWitnessContext: ConstructionCashWitnessContext | null
 ) {
   let claim = sector.constructionFinancing!;
   if (claim.status === "awaiting_approval") {
@@ -70,6 +73,7 @@ async function cancelSecuredBuild(
       sectorId: sector._id,
       bank: bank.snapshot,
       borrower: borrower.snapshot,
+      cashWitnessContext,
     });
     if (!settled.ok) throw new Error(settled.error);
     const updated = await corporateSectorsCollection(db).findOne(
@@ -166,6 +170,11 @@ export async function refundConversionConstruction(
       throw new Error("A construction sale or foreclosure must settle before conversion");
   }
   // Finish financed receipts first, then reload all queues once so mixed queues are also refunded.
+  const cashWitnessContext = sectors.some(
+    (sector) => sector.constructionFinancing?.status === "funding"
+  )
+    ? await loadTreasuryCashContext(db, turn)
+    : null;
   const settleSecured = async (sector: CorporateSector) => {
     const claim = sector.constructionFinancing;
     if (!claim) {
@@ -181,7 +190,7 @@ export async function refundConversionConstruction(
       hasOrder ||
       (claim.cancellation && !claim.cancellation.cleanupCompleted)
     ) {
-      await cancelSecuredBuild(db, sector, turn, wholePlants);
+      await cancelSecuredBuild(db, sector, turn, wholePlants, cashWitnessContext);
     } else if (claim.status === "building" && !claim.fundingCleanupCompleted) {
       // A fully delivered plant is existing collateral, not a pending order to refund.
       if (!(await releaseCompletedConstructionFunding(db, claim)))

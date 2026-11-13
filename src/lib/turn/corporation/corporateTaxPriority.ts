@@ -38,6 +38,7 @@ export async function settleCorporateTaxPriority(
     for (const row of rows) {
       const cash = closing.get(row.corpId.toHexString());
       if (cash !== undefined) {
+        row.operatingCashLedgerOwnedBySettlement = true;
         row.liquidCapital = cash;
         row.liquidCapitalAnchorAfterIncome = cash / row.operatingCashLocalPerAnchor!;
       }
@@ -143,13 +144,30 @@ async function settleCorporateTaxPriorityBatch(
         const legs: Document[] = [
           {
             account: `corporation:${corp._id}:${currency}`,
-            amount: plan.cash - corp.liquidCapital - (corp.pendingOperatingCash ?? 0),
+            amount:
+              plan.cash -
+              corp.liquidCapital -
+              (corp.pendingOperatingCash ?? 0) +
+              (row.operatingCashAdjustmentLocal ?? 0),
             currencyCode: currency,
             anchorAmount:
-              (plan.cash - corp.liquidCapital - (corp.pendingOperatingCash ?? 0)) / rate,
+              (plan.cash -
+                corp.liquidCapital -
+                (corp.pendingOperatingCash ?? 0) +
+                (row.operatingCashAdjustmentLocal ?? 0)) /
+              rate,
             role: "primary",
           },
         ];
+        const adjustment = row.operatingCashAdjustmentLocal ?? 0;
+        if (adjustment !== 0)
+          legs.push({
+            account: `${adjustment > 0 ? "mint" : "sink"}:advertising_settlement_cash:${currency}`,
+            amount: -adjustment,
+            currencyCode: currency,
+            anchorAmount: -adjustment / rate,
+            role: "contra",
+          });
         for (const country of countries) {
           inc["federalTaxArrearsAnchorByCountry." + country] =
             (plan.currentUnpaid[country] ?? 0) - (plan.priorTaxPaid[country] ?? 0);
@@ -167,6 +185,30 @@ async function settleCorporateTaxPriorityBatch(
             observedRate: context.rates.get(target),
           }).anchorRate;
           treasury.set(country, (treasury.get(country) ?? 0) + paid * targetRate);
+          ledger.push({
+            _id: idFor(key + ":treasury-mirror:" + country),
+            turn,
+            createdAt: now,
+            txType: "gov_tax_revenue",
+            emitSite: "corporation/corporateTaxPriority:treasuryMirror",
+            balanced: true,
+            legs: [
+              {
+                account: `government:${country}:${target}`,
+                amount: paid * targetRate,
+                currencyCode: target,
+                anchorAmount: paid,
+                role: "primary",
+              },
+              {
+                account: `government_cash:${country}:${target}`,
+                amount: -paid * targetRate,
+                currencyCode: target,
+                anchorAmount: -paid,
+                role: "contra",
+              },
+            ],
+          });
           legs.push({
             account: `government_cash:${country}:${target}`,
             amount: paid * targetRate,

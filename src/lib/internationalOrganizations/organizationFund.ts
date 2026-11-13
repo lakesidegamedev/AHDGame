@@ -191,22 +191,6 @@ export async function chargeOrganizationDues(
         });
         if (result.status === "applied") {
           totalFund += fundAmount;
-          await witnessOrganizationCash(db, batch, {
-            kind: "government",
-            ref: m.countryId,
-            countryId: m.countryId,
-            amount: -dueLocal,
-            site: "dues_treasury",
-            now,
-          });
-          await witnessOrganizationCash(db, batch, {
-            kind: "org",
-            ref: organizationId,
-            countryId: currencyCountryId,
-            amount: fundAmount,
-            site: "dues_fund",
-            now,
-          });
         }
       } else {
         const debit = await budget.updateOne(

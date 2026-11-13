@@ -21,9 +21,12 @@ import {
   corpCapitalToAnchor,
   fxRateForCorpFromMap,
   resolveCorpLiquidCurrencyCode,
+  anchorToCorpCapital,
 } from "@/lib/currency/corporationCapital";
 import type { CorpSnapshot } from "./types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { developmentCashWitness } from "./developmentCashLedger";
 
 interface DevelopmentCashRow {
   _id: ObjectId;
@@ -34,6 +37,8 @@ interface DevelopmentCashRow {
     turn: number;
     amountAnchor: number;
   };
+  mediaProductDevelopmentPaidTurnV1?: number;
+  mediaProductDevelopmentReceiptV1?: { projectId: string; turn: number; amountAnchor: number };
 }
 
 export interface ManufacturingDevelopmentCashSettlementArgs {
@@ -115,6 +120,8 @@ export async function settleManufacturingDevelopmentCash(
           liquidCapital: 1,
           manufacturingProductDevelopmentPaidTurnV2: 1,
           manufacturingProductDevelopmentReceiptV2: 1,
+          mediaProductDevelopmentPaidTurnV1: 1,
+          mediaProductDevelopmentReceiptV1: 1,
         },
       }
     )
@@ -127,6 +134,7 @@ export async function settleManufacturingDevelopmentCash(
   let paidReceipts = 0;
   let paidAmountAnchor = 0;
   const creditOps: AnyBulkWriteOperation<Corporation>[] = [];
+  const witnesses: ReturnType<typeof developmentCashWitness>[] = [];
 
   for (const row of rows) {
     const corporationId = row._id.toString();
@@ -142,6 +150,29 @@ export async function settleManufacturingDevelopmentCash(
     snapshot.liquidCapitalAnchorAfterIncome = liquidCapitalAnchor;
 
     const receipt = row.manufacturingProductDevelopmentReceiptV2;
+    for (const [family, paidTurn, paid] of [
+      ["manufacturing", row.manufacturingProductDevelopmentPaidTurnV2, receipt],
+      ["media", row.mediaProductDevelopmentPaidTurnV1, row.mediaProductDevelopmentReceiptV1],
+    ] as const) {
+      if (
+        paidTurn !== args.turn ||
+        paid?.turn !== args.turn ||
+        !Number.isFinite(paid.amountAnchor) ||
+        !(paid.amountAnchor > 0)
+      )
+        continue;
+      witnesses.push(
+        developmentCashWitness({
+          corporation: corporationId,
+          family,
+          project: paid.projectId,
+          turn: paid.turn,
+          currency: currency ?? "USD",
+          amount: anchorToCorpCapital(paid.amountAnchor, currency, fxRate),
+          rate: currency ? fxRate : 1,
+        })
+      );
+    }
     if (
       row.manufacturingProductDevelopmentPaidTurnV2 === args.turn &&
       receipt?.turn === args.turn &&
@@ -194,6 +225,12 @@ export async function settleManufacturingDevelopmentCash(
     });
   }
 
+  if (witnesses.length > 0)
+    await ledgerEntriesCollection(args.db).bulkWrite(
+      witnesses.map((entry) => ({
+        updateOne: { filter: { _id: entry._id }, update: { $setOnInsert: entry }, upsert: true },
+      }))
+    );
   if (creditOps.length > 0) {
     await corporationsCollection(args.db).bulkWrite(creditOps, { ordered: false });
   }

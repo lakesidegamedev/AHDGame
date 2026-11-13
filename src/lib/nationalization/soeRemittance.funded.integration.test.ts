@@ -91,6 +91,20 @@ describe("funded SOE remittance against actual corporate cash", () => {
       treasuryCashLocal: 1100,
       treasuryBalance: 1100,
     });
+    const legs = db
+      .collection("ledgerEntries")
+      .docs.flatMap(
+        (row) =>
+          row.legs as { account: string; amount: number; anchorAmount: number; role: string }[]
+      );
+    const net = (account: string) =>
+      legs
+        .filter((leg) => leg.account === account && leg.role === "primary")
+        .reduce((sum, leg) => sum + leg.amount, 0);
+    expect(net(`corporation:${shortCorpId}:CNY`)).toBe(-100);
+    expect(net("government_cash:CN:CNY")).toBe(1100);
+    expect(net("government:CN:CNY")).toBe(1100);
+    expect(legs.reduce((sum, leg) => sum + leg.anchorAmount, 0)).toBeCloseTo(0, 9);
     const receipts = db.collection("bankMoneyMoves").docs;
     expect(receipts.map((doc) => [doc._id, doc.status])).toEqual([
       [shortKey, "applied"],

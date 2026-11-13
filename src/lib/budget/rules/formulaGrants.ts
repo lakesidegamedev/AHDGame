@@ -15,6 +15,17 @@ export function formulaGrantPool(revenue: number, programs: readonly FormulaGran
   return programs.reduce((sum, p) => sum + (revenue * p.poolPercentage) / 100, 0);
 }
 
+/** Regional receipts retain the fiscal year's appropriation until annual repricing. */
+export function annualFormulaGrantPool(
+  booked: number | undefined,
+  revenue: number,
+  programs: readonly FormulaGrant[]
+): number {
+  return booked !== undefined && Number.isFinite(booked) && booked >= 0
+    ? booked
+    : formulaGrantPool(revenue, programs);
+}
+
 /** Same grant formulas for bootstrap, annual rollover and headless hosts. */
 export function allocateFormulaGrants(
   revenue: number,

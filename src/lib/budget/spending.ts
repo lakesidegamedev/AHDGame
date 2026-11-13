@@ -49,8 +49,9 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
-import { formulaGrantPool } from "./rules/formulaGrants";
+import { annualFormulaGrantPool } from "./rules/formulaGrants";
 import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
+import { usesCaProvincialFinance } from "@/lib/countries/ca/rules/provincialServices";
 
 // Re-exported so existing importers of `./spending` keep working.
 export { keepLatestActiveLawPerType } from "./keepLatestActiveLawPerType";
@@ -323,10 +324,14 @@ export async function calculateFederalSpending(
     }
   }
 
-  // The 2027 US opening uses the same standing formula pool as annual rollover.
-  // Keep it booked through ordinary revenue/law refreshes, not only on January's turn.
+  // Formula receipts are appropriated annually, alongside the regional books.
   if (countryHasFeature("usLib", budgetCountryId) && preset === "2027-default")
-    stateGrants = formulaGrantPool(budget.revenue.total, formulaGrants);
+    stateGrants = annualFormulaGrantPool(
+      budget.spending?.stateGrants,
+      budget.revenue.total,
+      formulaGrants
+    );
+  if (usesCaProvincialFinance(budgetCountryId, preset)) stateGrants = budget.spending.stateGrants;
 
   // The 1991 Russian law catalog covers only a portion of the observed
   // general-government envelope. Keep the calibrated non-law portion alongside

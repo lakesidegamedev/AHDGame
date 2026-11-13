@@ -375,6 +375,7 @@ export async function approveConstructionFinance(
     sectorId: sector._id,
     bank: loaded.snapshot,
     borrower: borrowerSnapshot,
+    cashWitnessContext: preloadedFundingContext?.cashWitnessContext,
   });
   return result.ok
     ? { ok: true, pending: false, loanId: claim.loanId, claimId: claim.claimId }

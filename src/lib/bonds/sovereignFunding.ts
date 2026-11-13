@@ -153,11 +153,13 @@ export async function fundSovereignSeries(
       qeSupportRatio: placed + monetized > 0 ? monetized / (placed + monetized) : 0,
     };
   });
-  const projections: TransitionProjection[] = funded.map((doc) => ({
-    collection: "bonds",
-    insert: doc as unknown as Record<string, unknown>,
-    note: "Issued sovereign tranche",
-  }));
+  const projections: TransitionProjection[] = [
+    {
+      collection: "bonds",
+      inserts: funded as unknown as Record<string, unknown>[],
+      note: "Issued sovereign tranches",
+    },
+  ];
   projections.push({
     collection: "federalBudget",
     filter: { _id: args.budget._id },

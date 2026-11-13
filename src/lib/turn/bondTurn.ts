@@ -4,6 +4,11 @@
  */
 import { loadPoolCashPerFaceByCountry } from "@/lib/bonds/sovereignPrimarySettlement";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
+import { withSettlementReadSnapshot } from "@/lib/banking/settlementReadSnapshot";
+import {
+  withSovereignPricingSnapshot,
+  invalidateSovereignPricingSnapshot,
+} from "@/lib/bonds/sovereignPricingSnapshot";
 import { euroSettlementRates } from "@/lib/currency/euro/rules";
 import { loadConversionQuoteContext } from "@/lib/currency/euro/quotes";
 import { roundedAggregateCredit } from "@/lib/bonds/rules/roundedAggregateCredit";
@@ -122,6 +127,14 @@ export type { BondTurnResult } from "./bondTurnTypes";
  * 4. Settle matured bonds (return face value to holders)
  */
 export async function processBondTurn(
+  ...args: Parameters<typeof processBondTurnInScope>
+): Promise<BondTurnResult> {
+  return withSovereignPricingSnapshot(() =>
+    withSettlementReadSnapshot(() => processBondTurnInScope(...args))
+  );
+}
+
+async function processBondTurnInScope(
   turn: number,
   config?: Pick<
     GameConfig,
@@ -196,6 +209,7 @@ export async function processBondTurn(
   await processCrisisAutoActions(db, Date.now(), turn);
   steps.mark("crisisAutoActions");
   await processSovereignLegislativeTurn(db, Date.now(), turn);
+  invalidateSovereignPricingSnapshot();
   steps.mark("sovereignLegislative");
 
   const activeBonds = await bondsCollection(db).find({ matured: false }).toArray();

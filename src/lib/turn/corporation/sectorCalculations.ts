@@ -1622,9 +1622,9 @@ export function processSectors(
       const update = corpOps[i].updateOne.update;
       update.$inc.liquidCapital = (update.$inc.liquidCapital ?? 0) + delta;
 
-      // History, credit, and the tangible-book floor must see the same final
-      // treasury as the bulk write, for both payer debits and seller receipts.
+      // Snapshots must include the cash adjustment already queued in the bulk write.
       const snapshot = corpSnapshots[i];
+      snapshot.operatingCashAdjustmentLocal = (snapshot.operatingCashAdjustmentLocal ?? 0) + delta;
       const code = resolveCorpLiquidCurrencyCode(corp);
       const rate = fxRateForCorpFromMap(corp, lookups.exchangeRatesByCurrency);
       snapshot.liquidCapital += delta;

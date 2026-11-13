@@ -25,6 +25,7 @@ import {
 } from "./reinvestmentCashLedger";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
+import { foundingCreditCashLegs } from "./rules/foundingCreditLedger";
 
 export interface NppFoundingCashWitness {
   corporationId: ObjectId;
@@ -37,6 +38,7 @@ export function buildNppFoundingCashWitness(input: {
   corporationId: ObjectId;
   key: ObjectId;
   amountLocal: number;
+  creditLocal?: number;
   currencyCode: CurrencyCode;
   rate: number;
   turn: number;
@@ -54,6 +56,12 @@ export function buildNppFoundingCashWitness(input: {
       txType: "corp_sector_founding",
       emitSite: "nppCorporationBehavior/sector_founding",
       legs: [
+        ...foundingCreditCashLegs(
+          input.corporationId.toHexString(),
+          input.currencyCode,
+          input.creditLocal ?? 0,
+          rate
+        ),
         {
           account: accountId("corporation", input.corporationId.toString(), input.currencyCode),
           amount: -input.amountLocal,
@@ -123,6 +131,7 @@ export function buildNppDecisionCashWrites(args: {
           corporationId: args.corporation._id,
           key: founded[0]._id,
           amountLocal: args.decision.foundingCashLocal,
+          creditLocal: args.decision.foundingCreditLocal,
           currencyCode: args.currencyCode,
           rate: args.rate,
           turn: args.turn,

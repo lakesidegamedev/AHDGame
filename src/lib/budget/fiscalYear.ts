@@ -1,5 +1,8 @@
 import { financialAusteritySpending } from "@/lib/livingConflict/rules/financialFiscal";
-import { caProvincialServiceClaims } from "@/lib/countries/ca/rules/provincialServices";
+import {
+  caProvincialServiceClaims,
+  caProvincialGrantDistribution,
+} from "@/lib/countries/ca/rules/provincialServices";
 import type { RegionalProgramClaim } from "@/lib/governmentFinance/rules/regionalSettlement";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
@@ -451,7 +454,13 @@ export async function processFiscalYear(
     const isUS = countryId === COUNTRY_CONFIGS.US.id;
     const formulaGrantDistribution = isUS
       ? await processFormulaGrants(db, federalRevenue.total, countryId)
-      : {};
+      : caProvincialGrantDistribution(
+          countryId,
+          financeState?.preset,
+          states
+            .filter((state) => state.countryId === countryId)
+            .map((state) => ({ id: String(state._id), gdp: state.gdp ?? 0 }))
+        );
     const departmentGrant = isUS
       ? resolveAnnualRegionalGrantPool({
           accounts: federalBudget.departmentAccounts ?? {},
@@ -479,7 +488,7 @@ export async function processFiscalYear(
       ])
     );
 
-    if (isUS) {
+    if (Object.keys(grantDistribution).length > 0) {
       for (const [stateId, grantAmount] of Object.entries(grantDistribution)) {
         await updateStateGrantRevenue(db, stateId, countryId, grantAmount);
       }
@@ -569,12 +578,9 @@ export async function processFiscalYear(
       }
     }
 
-    if (isUS) {
-      // US still uses the formulaGrants pool for state grants and overrides
-      // the enacted-law-derived total. Non-US countries already populated
-      // stateGrants from isGrant=true enacted laws inside calculateFederalSpending.
-      // The department-delivered pool is already charged in byCategory through
-      // its enacted law. Only the legacy formula-grant line is added here.
+    if (Object.keys(formulaGrantDistribution).length > 0) {
+      // Book the annual US formula or Canadian modeled pool with its regional receipts.
+      // Department-delivered grants remain charged through their enacted category.
       const totalStateGrants = Object.values(formulaGrantDistribution).reduce((a, b) => a + b, 0);
       federalSpending.total += totalStateGrants - federalSpending.stateGrants;
       federalSpending.stateGrants = totalStateGrants;

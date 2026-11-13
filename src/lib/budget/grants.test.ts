@@ -5,12 +5,21 @@ import { processFormulaGrants } from "./grants";
 import {
   allocateFormulaGrants,
   formulaGrantPool,
+  annualFormulaGrantPool,
   grantPovertyRate,
   openingRegionalGrantBudget,
 } from "./rules/formulaGrants";
 import { formulaGrants } from "@/lib/seeds/reference/formulaGrants";
 
 describe("formula grant allocation", () => {
+  it("retains the annual appropriation through intra-year revenue changes, including a zero pool", () => {
+    for (const revenue of [0, 1000, 10000]) {
+      expect(annualFormulaGrantPool(270, revenue, formulaGrants)).toBe(270);
+      expect(annualFormulaGrantPool(0, revenue, formulaGrants)).toBe(0);
+    }
+    expect(annualFormulaGrantPool(undefined, 1000, formulaGrants)).toBe(270);
+    expect(formulaGrantPool(2000, formulaGrants)).toBe(540);
+  });
   it("loads _id-keyed poverty records with country isolation and valid zero rates", async () => {
     const db = createInMemoryDb() as unknown as Db;
     await db.collection("states").insertMany([

@@ -121,22 +121,6 @@ export async function payOrganizationAid(
       });
       if (result.status !== "applied" && result.status !== "replayed") return false;
       if (result.status === "applied") {
-        await witnessOrganizationCash(db, batch, {
-          kind: "org",
-          ref: organizationId,
-          countryId: fundCountry,
-          amount: -amountFund,
-          site: "aid_fund",
-          now: new Date(),
-        });
-        await witnessOrganizationCash(db, batch, {
-          kind: "government",
-          ref: recipient,
-          countryId: recipient,
-          amount: fundedRecipientLocal,
-          site: "aid_treasury",
-          now: new Date(),
-        });
         await applyOrganizationAidBoost(db, recipient, localToUsd(fundCountry, amountFund, preset));
       }
       return true;

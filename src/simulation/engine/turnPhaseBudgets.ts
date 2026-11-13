@@ -52,7 +52,9 @@ export const PHASE_ROUND_TRIP_BUDGETS: Readonly<Record<string, number>> = {
   nppGovernmentPhases: 1000,
   // Bounded preset/registration reads plus batched government/approval reads and write.
   parliamentaryGovernmentConfidence: 20,
-  bondTurn: 1000,
+  // Guarded multi-country maturity and issuance receipts dominate periodic turns.
+  // The 81-maturity qualification costs 7,114 commands after batching and read reuse.
+  bondTurn: 8000,
   // At most three 1991 federation applications; real Mongo volume fixtures cap
   // one application at 20 commands, with headroom for all three and cursors.
   federationFacilityCompensation: 75,

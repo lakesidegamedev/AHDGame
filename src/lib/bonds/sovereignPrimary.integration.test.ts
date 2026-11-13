@@ -573,7 +573,7 @@ describe("sovereign primary settlement", () => {
     { collection: "bondMarketPools", op: "updateOne" as const, onCall: 1, afterWrite: true },
     { collection: "federalBudget", op: "updateOne" as const, onCall: 1, afterWrite: true },
     { collection: "federalBudget", op: "updateOne" as const, onCall: 2, afterWrite: true },
-    { collection: "bonds", op: "insertOne" as const, onCall: 1, afterWrite: true },
+    { collection: "bonds", op: "insertMany" as const, onCall: 1, afterWrite: true },
   ])("recovers exactly once after $collection $op #$onCall", async (fault) => {
     const db = world();
     const before = cash(db);

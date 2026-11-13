@@ -79,3 +79,17 @@ areas: [engine]
   premier contests, without appointing winners or refilling No NPPs worlds.
 - Enforces the Laurentian Alliance's authored Quebec-only regional presence when
   seeding Canadian party organizations and NPP candidate eligibility.
+- Initializes working-age population before the first turn, preserving historical
+  voting ages and preventing an artificial opening employment collapse.
+- Keeps US annual grants synchronized with state receipts and preserves Canada's
+  modeled provincial transfers through ordinary turns and fiscal rollover.
+- Reconciles Canadian opening debt interest to the actual seeded bond coupons.
+- Records corporate advertising, construction funding, organization transfers,
+  and funded Treasury payments without duplicate operating-income or tax entries.
+- Records NPP stock trades and corporation-founding fees against their investment cash, using the
+  existing phase batch and preserving historical account denominations.
+- Dates corporation wind-downs using the turn that actually processes them,
+  closes departing cash accounts once, and keeps central-bank distributions out
+  of Treasury receipts.
+- Batches settlement bookkeeping and crisis board updates while retaining guarded
+  cash writes, receipt recovery, and the existing economic rules.

@@ -44,12 +44,35 @@ describe("media product advertising denomination recovery", () => {
     );
 
     const manufacturing = productAdvertisingTransition(buyerId, obligation!, "manufacturing");
+    const delayed = productAdvertisingTransition(buyerId, obligation!, "manufacturing", {
+      turn: 9,
+      rates: { USD: 2 },
+    });
+    expect(delayed.key).toBe(manufacturing.key);
+    expect(delayed.legs[0].valuation?.localPerAnchor).toBe(1);
+    expect(
+      delayed.projections.find((projection) => projection.collection === "ledgerEntries")?.insert
+    ).toMatchObject({
+      turn: 9,
+      legs: expect.arrayContaining([
+        expect.objectContaining({
+          account: `corporation:${buyerId}:USD`,
+          amount: -10,
+          anchorAmount: -5,
+          role: "primary",
+        }),
+      ]),
+    });
     expect(manufacturing).toMatchObject({
       key: `manufacturing-product-advertising:8:${buyerId.toHexString()}:shared-project`,
       kind: "manufacturing.product.advertising",
       event: { command: "turn.manufacturingProductAdvertising" },
     });
-    expect(manufacturing.projections[0]).toMatchObject({
+    expect(
+      manufacturing.projections.find(
+        (projection) => projection.collection === "productAdvertisingPayables"
+      )
+    ).toMatchObject({
       collection: "productAdvertisingPayables",
       insert: {
         _id: `manufacturing-product-advertising:8:${buyerId.toHexString()}:shared-project`,

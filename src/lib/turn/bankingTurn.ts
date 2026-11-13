@@ -1577,9 +1577,7 @@ async function serviceNpcBulkBook(
     if (state.cb) state.cb.externalBroadMoney = poolAvailable;
   }
 
-  // One interest row for the whole book rather than one per band: this fires
-  // for every bank every turn, and seven rows per bank per turn would bury the
-  // ledger for no extra information the tranches do not already carry.
+  // The book's interest belongs to ring-fenced reserves, not parent-company cash.
   if (interestCollected > 0) {
     await emitTx(db, {
       type: "bank_npc_loan_interest",
@@ -1594,6 +1592,7 @@ async function serviceNpcBulkBook(
       counterpartyName: "NPC households",
       meta: {
         borrowerType: "npcBulk",
+        bankVaultMovement: true,
         tranches: work.length,
         lendingProfile: state.lendingProfile ?? DEFAULT_LENDING_PROFILE,
       },

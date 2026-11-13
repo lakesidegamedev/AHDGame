@@ -10,7 +10,8 @@
 import type { Db } from "mongodb";
 import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 
-export type WriteOp = "insertOne" | "updateOne" | "updateMany" | "findOneAndUpdate" | "bulkWrite";
+export type WriteOp =
+  "insertOne" | "insertMany" | "updateOne" | "updateMany" | "findOneAndUpdate" | "bulkWrite";
 
 export interface FaultPlan {
   /** Only writes to this collection count. Omit to count every collection. */
@@ -36,6 +37,7 @@ export class InjectedCrash extends Error {
 
 const WRITE_OPS: WriteOp[] = [
   "insertOne",
+  "insertMany",
   "updateOne",
   "updateMany",
   "findOneAndUpdate",
@@ -44,6 +46,7 @@ const WRITE_OPS: WriteOp[] = [
 
 export interface FaultyDb {
   db: Db;
+  readonly crashed: boolean;
   /** Writes seen so far, in order, for assertions and for choosing `onCall`. */
   log: { collection: string; op: WriteOp }[];
   /** Disarm the fault so the retry runs clean. */
@@ -53,6 +56,7 @@ export interface FaultyDb {
 export function withInjectedCrash(memory: InMemoryDb, plan: FaultPlan): FaultyDb {
   let armed = true;
   let matches = 0;
+  let crashed = false;
   const log: { collection: string; op: WriteOp }[] = [];
 
   const proxyCollection = (name: string) => {
@@ -73,6 +77,7 @@ export function withInjectedCrash(memory: InMemoryDb, plan: FaultPlan): FaultyDb
             (plan.matches === undefined || plan.matches(args));
           if (counts) matches += 1;
           const fire = counts && matches === plan.onCall;
+          if (fire) crashed = true;
           if (fire && !plan.afterWrite) {
             armed = false;
             throw new InjectedCrash(`crash before ${name}.${op} #${matches}`);
@@ -94,6 +99,9 @@ export function withInjectedCrash(memory: InMemoryDb, plan: FaultPlan): FaultyDb
 
   return {
     db,
+    get crashed() {
+      return crashed;
+    },
     log,
     disarm() {
       armed = false;

@@ -52,13 +52,16 @@ vi.mock("@/lib/bonds/sovereign", () => ({
   isCorporateBond: vi.fn((b: { isCorporate?: boolean }) => !!b.isCorporate),
   issueScheduledSovereignBondSeries: vi.fn().mockResolvedValue(undefined),
   freezeFundedSovereignBondMaturityQuote: vi.fn().mockResolvedValue({ id: "frozen" }),
-  settleFundedSovereignBondMaturity: vi.fn(async () => ({
-    status: "applied",
-    key: "sovereign-maturity:test:10",
-    appliedLegs: [],
-    appliedProjections: [],
-    newlyAppliedProjections: [],
-  })),
+  settleFundedSovereignBondMaturity: vi.fn(
+    async (_db, input: { nonBankRepaymentLocal: number }) => ({
+      status: "applied",
+      cashPaidLocal: input.nonBankRepaymentLocal,
+      key: "sovereign-maturity:test:10",
+      appliedLegs: [],
+      appliedProjections: [],
+      newlyAppliedProjections: [],
+    })
+  ),
   settleSovereignBondMaturity: vi.fn(async (_db, _bond, repaymentLocal: number) => ({
     amountLocal: repaymentLocal,
     currencyCode: "USD",
@@ -563,13 +566,14 @@ describe("processBondTurn", () => {
     db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
       makeCursor([{ currencyCode: "USD", rate: 1 }])
     );
-    vi.mocked(settleFundedSovereignBondMaturity).mockResolvedValueOnce({
+    vi.mocked(settleFundedSovereignBondMaturity).mockImplementationOnce(async (_db, input) => ({
       status: "partial",
+      cashPaidLocal: input.nonBankRepaymentLocal,
       key: "sovereign-maturity:exact-receipt:payout",
       appliedLegs: [],
       appliedProjections: [],
       newlyAppliedProjections: [],
-    });
+    }));
     const bankClaimId = `bank-sovereign-maturity:${bond._id.toHexString()}:bank:4`;
     db.collectionMocks["federalBudget"]!.findOne.mockResolvedValueOnce({
       _id: "federal",

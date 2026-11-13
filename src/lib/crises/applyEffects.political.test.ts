@@ -95,7 +95,9 @@ describe("applyCrisisEffects — political half", () => {
     db.collection("politicalMetrics")
       .find()
       .toArray.mockImplementation(() =>
-        Promise.resolve([{ _id: "CA", countryId: "US", values: { "order.safety": 50 } }])
+        Promise.resolve(
+          ["CA", "TX"].map((_id) => ({ _id, countryId: "US", values: { "order.safety": 50 } }))
+        )
       );
     await applyCrisisEffects(
       db as unknown as Db,
@@ -103,10 +105,18 @@ describe("applyCrisisEffects — political half", () => {
       ["CA", "TX"],
       ["US"]
     );
-    const targeted = db.collectionMocks.politicalMetrics!.find.mock.calls.map(
-      (c) => (c[0] as { _id?: string })?._id
+    const reads = db.collectionMocks.politicalMetrics!.find.mock.calls.filter(
+      (call) => call[0] !== undefined
     );
-    expect(targeted).toEqual(expect.arrayContaining(["CA", "TX"]));
+    expect(reads).toHaveLength(1);
+    expect(reads[0][0]).toEqual({
+      _id: { $in: ["CA", "TX"] },
+    });
+    expect(db.collectionMocks.politicalMetrics!.bulkWrite).toHaveBeenCalledTimes(1);
+    expect(boardWrites().map((write) => write.updateOne.filter._id)).toEqual(["CA", "TX"]);
+    expect(
+      boardWrites().every((write) => write.updateOne.update.$set.values["order.safety"] < 50)
+    ).toBe(true);
   });
 
   it("drops a legacy path the adapter has no family for, rather than guessing", async () => {

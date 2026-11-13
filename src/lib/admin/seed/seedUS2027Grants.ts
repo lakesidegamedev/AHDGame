@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { FederalBudget, StateBudget } from "@/lib/db/types";
 import { processFormulaGrants } from "@/lib/budget/grants";
 import { openingRegionalGrantBudget } from "@/lib/budget/rules/formulaGrants";
+import { federalSurplus } from "@/lib/budget/federalSurplus";
 
 /** Reconcile fresh regional receipts before snapshots and v2 opening claims are built. */
 export async function seedUS2027Grants(db: Db): Promise<void> {
@@ -12,10 +13,17 @@ export async function seedUS2027Grants(db: Db): Promise<void> {
     stateBudgetsCollection<StateBudget>(db).find({ countryId: "US" }).toArray(),
   ]);
   const total = Object.values(distribution).reduce((sum, n) => sum + n, 0);
-  if (Math.abs(total - budget.spending.stateGrants) >= 1)
-    throw new Error("US opening grant receipts do not match federal spending");
   if (regions.length !== Object.keys(distribution).length)
     throw new Error("US opening grants need every regional budget");
+  const spending = {
+    ...budget.spending,
+    stateGrants: total,
+    total: budget.spending.total - budget.spending.stateGrants + total,
+  };
+  await federalBudgetCollection(db).updateOne(
+    { _id: budget._id, countryId: "US" },
+    { $set: { spending, surplus: federalSurplus({ revenue: budget.revenue, spending }) } }
+  );
   await stateBudgetsCollection<StateBudget>(db).bulkWrite(
     regions.map((region) => {
       const grant = distribution[region.stateId];

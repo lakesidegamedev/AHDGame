@@ -72,6 +72,28 @@ describe("funded sovereign coupon claims", () => {
     await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), args);
     const amount = perTurnCouponPayment(4.8, BOND_UNIT_FACE_VALUE) * 12;
     expect(savedBudget(db).treasuryCashLocal).toBe(1_000 - amount);
+    const cashLegs = db
+      .collection("ledgerEntries")
+      .docs.flatMap(
+        (row) =>
+          row.legs as Array<{ account: string; role: string; amount: number; anchorAmount: number }>
+      )
+      .filter((leg) => leg.account === "government_cash:US:USD" && leg.role === "primary");
+    expect(cashLegs.reduce((sum, leg) => sum + leg.amount, 0)).toBe(-amount);
+    const payeeLegs = db
+      .collection("ledgerEntries")
+      .docs.flatMap((row) => row.legs as { account: string; amount: number; role: string }[])
+      .filter((leg) => leg.role === "primary");
+    expect(
+      payeeLegs
+        .filter((leg) => leg.account === `character:${characterId}:USD`)
+        .reduce((sum, leg) => sum + leg.amount, 0)
+    ).toBe(amount / 6);
+    expect(
+      payeeLegs
+        .filter((leg) => leg.account === "bond_pool:USD:USD")
+        .reduce((sum, leg) => sum + leg.amount, 0)
+    ).toBe((amount * 10) / 12);
     expect((db.collection("characters").docs[0] as { cashOnHand: number }).cashOnHand).toBe(
       amount / 6
     );
@@ -86,6 +108,7 @@ describe("funded sovereign coupon claims", () => {
     });
     await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), args);
     expect(savedBudget(db).treasuryCashLocal).toBe(1_000 - amount);
+    expect(db.collection("ledgerEntries").docs).toHaveLength(2);
     expect(openClaims(db)).toEqual([]);
     await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), {
       ...args,
@@ -1359,7 +1382,10 @@ describe("coupon payee lock keys", () => {
     // Receipts and claim records are per budget by construction, so the lock
     // set only has to cover the money documents.
     const moneyWrites = writtenKeys(before, snapshot(db)).filter(
-      (key) => !key.startsWith("bankMoneyMoves:") && !key.startsWith("sovereignCouponClaims:")
+      (key) =>
+        !key.startsWith("bankMoneyMoves:") &&
+        !key.startsWith("sovereignCouponClaims:") &&
+        !key.startsWith("ledgerEntries:")
     );
     expect(moneyWrites.sort()).toEqual([
       "characters:650000000000000000000021",

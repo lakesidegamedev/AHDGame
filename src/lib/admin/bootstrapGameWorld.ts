@@ -835,6 +835,7 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   if (preset === "2027-default")
     await (await import("./seed/seedUS2027Grants")).seedUS2027Grants(db);
   await guarded("seedSovereignBondInstruments", () => seedSovereignBondInstruments(db, log, 0));
+  await (await import("./seed/seedCaOpeningFinance")).seedCaOpeningFinance(db, preset);
   await seedCountryGameStates(db, preset, getStartingYearForPreset(preset), log);
   await worldEntityStatesCollection<Document>(db).deleteMany({});
   await federationSettlementApplicationsCollection<Document>(db).deleteMany({});
