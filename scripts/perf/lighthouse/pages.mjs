@@ -51,3 +51,35 @@ export const TOP_PAGE_COUNT = TOP_PAGES.length;
 if (TOP_PAGE_COUNT !== 35) {
   throw new Error(`pages.mjs must list exactly 35 pages, found ${TOP_PAGE_COUNT}`);
 }
+
+/**
+ * Signed-in cohort: pages a player opens while playing, measured with a session
+ * cookie for the benchmark account. `:corp` and `:party` placeholders are
+ * filled from `--corp=<id>` and `--party=<id>` (the run script looks them up
+ * in the benchmark world when omitted). `seo` is always false: these pages are
+ * behind a login and not indexable.
+ */
+export const SIGNED_IN_PAGES = [
+  { path: "/dashboard", name: "si-dashboard", group: "signed-in" },
+  { path: "/profile", name: "si-profile", group: "signed-in" },
+  { path: "/actions", name: "si-actions", group: "signed-in" },
+  { path: "/portfolio", name: "si-portfolio", group: "signed-in" },
+  { path: "/notifications", name: "si-notifications", group: "signed-in" },
+  { path: "/country/us", name: "si-country", group: "signed-in" },
+  { path: "/country/us/economy", name: "si-country-economy", group: "signed-in" },
+  { path: "/country/us/legislature", name: "si-legislature", group: "signed-in" },
+  { path: "/country/us/budget", name: "si-country-budget", group: "signed-in" },
+  { path: "/country/us/parties", name: "si-country-parties", group: "signed-in" },
+  { path: "/parties/:party", name: "si-party", group: "signed-in" },
+  { path: "/elections", name: "si-elections", group: "signed-in" },
+  { path: "/campaign", name: "si-campaign", group: "signed-in" },
+  { path: "/budget", name: "si-budget", group: "signed-in" },
+  { path: "/corporation/:corp", name: "si-corporation", group: "signed-in" },
+  { path: "/corporations", name: "si-corporations", group: "signed-in" },
+  { path: "/market", name: "si-market", group: "signed-in" },
+  { path: "/stockmarket/us", name: "si-stockmarket", group: "signed-in" },
+  { path: "/news", name: "si-news", group: "signed-in" },
+  { path: "/map", name: "si-map", group: "signed-in" },
+  { path: "/world", name: "si-world", group: "signed-in" },
+  { path: "/banking", name: "si-banking", group: "signed-in" },
+].map((page) => ({ ...page, seo: false, signedIn: true }));

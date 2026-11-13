@@ -96,6 +96,26 @@ export const PAGE_BUDGET_OVERRIDES = {
   },
 };
 
+/**
+ * Phone-only overrides, applied on top of PAGE_BUDGET_OVERRIDES. `metrics` are
+ * per-page reported ceilings (a miss warns, never fails). Set from the 2026-11
+ * phone sweep of production; tighten them as the fixes land.
+ */
+export const MOBILE_PAGE_BUDGET_OVERRIDES = {
+  "/": {
+    reason: "Landing: era globe and promo media; phone TBT is the largest of any public page.",
+    metrics: { "largest-contentful-paint": 4000, "total-blocking-time": 6000 },
+  },
+  "/login": {
+    reason: "Login ships the shared shell plus provider sign-in code.",
+    metrics: { "largest-contentful-paint": 3500, "total-blocking-time": 5000 },
+  },
+  "/changelog": {
+    reason: "Banner image is the LCP element.",
+    metrics: { "largest-contentful-paint": 4000 },
+  },
+};
+
 export const METRIC_IDS = [
   "first-contentful-paint",
   "largest-contentful-paint",
