@@ -79,6 +79,7 @@ export async function tryFastStaleLockTakeover(
         isProcessing: 1,
         processingKind: 1,
         processingHolderId: 1,
+        processingHoldReason: 1,
         processingHeartbeatAt: 1,
         processingAbandonedAt: 1,
       },

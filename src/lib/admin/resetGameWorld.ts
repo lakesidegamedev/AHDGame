@@ -190,6 +190,11 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
       "Evidence for an interrupted partially committed turn; shutdown recovery owns it.",
     lastTurnRetry:
       "Diagnostic record of the last automatic turn retry, owned by the turn runner; kept across a reset so it stays readable.",
+    processingHoldReason:
+      "Turn hold awaiting a person after a mid-turn process death; owned by the turn runner.",
+    processingHeldPhases:
+      "The interrupted steps a turn hold is waiting on; owned by the turn runner.",
+    processingHeldAt: "When a turn hold was placed; owned by the turn runner.",
     processingHolderId:
       "Identity of the process holding the turn lock; owned by processTurn and its recovery.",
     lastTurnFailure:

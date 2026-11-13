@@ -35,6 +35,7 @@ export const POST = withAdminRoute(async (auth) => {
         processingTargetTurn: 1,
         processingPhaseStatuses: 1,
         processingAbandonedAt: 1,
+        processingHoldReason: 1,
         processingHeartbeatAt: 1,
         processingStartedAt: 1,
         updatedAt: 1,
@@ -54,6 +55,13 @@ export const POST = withAdminRoute(async (auth) => {
       processingPhase: gameState.processingPhase ?? null,
       processingTargetTurn: gameState.processingTargetTurn ?? null,
     });
+  }
+
+  if (gameState.processingHoldReason) {
+    return errorResponse(
+      409,
+      "The turn is held for a person after a mid-turn process death. Use release-hold with the held step names instead of resetting the lock."
+    );
   }
 
   const { isStale, lastTouch, retryAfterMs, staleAfterAt } = getProcessingLockState(gameState);
