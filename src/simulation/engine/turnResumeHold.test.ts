@@ -74,6 +74,35 @@ describe("hold on a mid-turn death (stage 1)", () => {
   });
 });
 
+describe("rerun-safe steps (stage 2)", () => {
+  it("reruns an interrupted treasuryTurn instead of holding or skipping it", () => {
+    const l = locked({ fundGeneration: st("completed"), treasuryTurn: st("running") });
+    const r = validateLockedResume(l, 3, new Set(), true, true);
+    expect(r?.interruptedMoneyMoving).toEqual([]);
+    expect([...(r?.appliedPhases ?? [])]).toEqual(["fundGeneration"]);
+  });
+  it("still holds when a rerun-safe step was in flight beside an unproven money step", () => {
+    const l = locked({ treasuryTurn: st("running"), bondTurn: st("running") });
+    expect(() => validateLockedResume(l, 3, new Set(), true, true)).toThrow(TurnHeldForRepairError);
+  });
+  it.each(["treasuryTurn", "savingsInterestTurn", "pensionTurn"])(
+    "at stage 1 an interrupted %s is held, at stage 2 it is rerun",
+    (step) => {
+      const l = locked({ [step]: st("running") });
+      expect(() => validateLockedResume(l, 3, new Set(), true, false)).toThrow(
+        TurnHeldForRepairError
+      );
+      expect(validateLockedResume(l, 3, new Set(), true, true)?.interruptedMoneyMoving).toEqual([]);
+    }
+  );
+  it("without the stage nothing is rerun and the step counts as skipped money", () => {
+    const l = locked({ treasuryTurn: st("running") });
+    const r = validateLockedResume(l, 3, new Set(), false);
+    expect(r?.interruptedMoneyMoving).toEqual(["treasuryTurn"]);
+    expect([...(r?.appliedPhases ?? [])]).toEqual(["treasuryTurn"]);
+  });
+});
+
 describe("watchdog refuses a held lock", () => {
   it("never fast-takes over a lock with a hold reason", () => {
     const now = new Date("2027-01-01T12:00:00Z");

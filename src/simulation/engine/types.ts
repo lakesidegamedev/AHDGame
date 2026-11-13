@@ -28,6 +28,8 @@ export interface TurnExecutionContext {
   gameNow: Date;
   realNow: Date;
   startTimeMs: number;
+  /** Resolved once per turn from the resilience stage: use the stamped, rerun-safe write paths. */
+  rerunSafe?: boolean;
   nextTurnTime: Date;
   characters: Character[];
   states: State[];

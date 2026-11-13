@@ -35,6 +35,7 @@ import {
 import { PENSION_SCHEMES, refreshSchemeInvestedValues } from "./schemeAssets";
 import { runPensionBenefitsTurn, type PensionBenefitsResult } from "./pensionBenefits";
 import { runPensionSchemeInvestments, type PensionInvestingResult } from "./schemeInvesting";
+import { runStampedPensionSchemeInvestments } from "./schemeInvestingStamped";
 import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
@@ -122,7 +123,15 @@ export function coveredWageBillPerTurn(sectors: Pick<CorporateSector, "laborCost
   return coveredWageBill(sectors) / TURNS_PER_DAY;
 }
 
-export async function runPensionTurn(db: Db, currentTurn: number): Promise<PensionTurnResult> {
+/**
+ * `rerunSafe` (turn resilience stage 2 and above) adds the per-turn stamps that make a
+ * rerun after a process death a no-op; without it the writes are exactly the unstamped ones.
+ */
+export async function runPensionTurn(
+  db: Db,
+  currentTurn: number,
+  rerunSafe = false
+): Promise<PensionTurnResult> {
   const result: PensionTurnResult = {
     schemesCharged: 0,
     contributionsAnchor: 0,
@@ -154,7 +163,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
     })
     .toArray();
   if (agreements.length === 0) {
-    await runPensionPostContributionPasses(db, currentTurn, result);
+    await runPensionPostContributionPasses(db, currentTurn, result, rerunSafe);
     return result;
   }
 
@@ -172,7 +181,14 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
   const employers = await corporationsCollection(db)
     .find(
       { _id: { $in: employerIds } },
-      { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1 } }
+      {
+        projection: {
+          name: 1,
+          countryId: 1,
+          liquidCurrencyCode: 1,
+          ...(rerunSafe ? { pensionDebitTurns: 1 } : {}),
+        },
+      }
     )
     .toArray();
   const employerById = new Map(employers.map((c) => [c._id.toString(), c]));
@@ -202,6 +218,12 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       if (wageBillLocal <= 0) continue;
 
       const scheme = await ensurePensionScheme(db, union, currentTurn);
+      // Charged already this turn (the scheme update below is the last write of a charge):
+      // a rerun after a process death must not charge this agreement again.
+      const agreementKey = agreement._id.toString();
+      if (rerunSafe && scheme.agreementChargeTurns?.[agreementKey] === currentTurn) continue;
+      const debitedTurns =
+        (employer as { pensionDebitTurns?: Record<string, number> }).pensionDebitTurns ?? {};
       const currency = (employer.liquidCurrencyCode ?? "USD") as CurrencyCode;
       const fxRate = fxRateForCorpFromMap(employer, fxByCurrency);
       const now = new Date();
@@ -213,9 +235,17 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       });
       let paidLocal = 0;
       if (contributionLocal > 0) {
-        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal, {
-          corporateObligation: true,
-        });
+        // The debit carries a per-agreement, per-turn stamp in the same update, so a rerun
+        // finds it already taken instead of debiting the employer twice.
+        const debit =
+          rerunSafe && debitedTurns[`${agreementKey}_c`] === currentTurn
+            ? { ok: true as const }
+            : await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal, {
+                corporateObligation: true,
+                ...(rerunSafe
+                  ? { stamp: { path: `pensionDebitTurns.${agreementKey}_c`, turn: currentTurn } }
+                  : {}),
+              });
         if (debit.ok) {
           paidLocal = contributionLocal;
         } else {
@@ -239,9 +269,15 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       let toppedUpAnchor = 0;
       let toppedUpLocal = 0;
       if (topUpLocal > 0) {
-        const debit = await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal, {
-          corporateObligation: true,
-        });
+        const debit =
+          rerunSafe && debitedTurns[`${agreementKey}_t`] === currentTurn
+            ? { ok: true as const }
+            : await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal, {
+                corporateObligation: true,
+                ...(rerunSafe
+                  ? { stamp: { path: `pensionDebitTurns.${agreementKey}_t`, turn: currentTurn } }
+                  : {}),
+              });
         if (debit.ok) {
           toppedUpAnchor = topUpAnchor;
           toppedUpLocal = topUpLocal;
@@ -256,7 +292,10 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
       );
 
       await pensionSchemesCollection<PensionScheme>(db).updateOne(
-        { _id: scheme._id },
+        {
+          _id: scheme._id,
+          ...(rerunSafe ? { [`agreementChargeTurns.${agreementKey}`]: { $ne: currentTurn } } : {}),
+        },
         {
           $inc: {
             assetsAnchor: paidAnchor + toppedUpAnchor,
@@ -264,7 +303,11 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
             totalContributionsAnchor: paidAnchor,
             totalTopUpsAnchor: toppedUpAnchor,
           },
-          $set: { lastChargedTurn: currentTurn, updatedAt: now },
+          $set: {
+            lastChargedTurn: currentTurn,
+            updatedAt: now,
+            ...(rerunSafe ? { [`agreementChargeTurns.${agreementKey}`]: currentTurn } : {}),
+          },
         }
       );
 
@@ -317,7 +360,7 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
     }
   }
 
-  await runPensionPostContributionPasses(db, currentTurn, result);
+  await runPensionPostContributionPasses(db, currentTurn, result, rerunSafe);
   return result;
 }
 
@@ -336,9 +379,12 @@ export async function runPensionTurn(db: Db, currentTurn: number): Promise<Pensi
 async function runPensionPostContributionPasses(
   db: Db,
   currentTurn: number,
-  result: PensionTurnResult
+  result: PensionTurnResult,
+  rerunSafe: boolean
 ): Promise<void> {
-  result.benefits = await runPensionBenefitsTurn(db, currentTurn);
-  result.investing = await runPensionSchemeInvestments(db, currentTurn);
+  result.benefits = await runPensionBenefitsTurn(db, currentTurn, rerunSafe);
+  result.investing = rerunSafe
+    ? await runStampedPensionSchemeInvestments(db, currentTurn)
+    : await runPensionSchemeInvestments(db, currentTurn);
   await refreshSchemeInvestedValues(db);
 }

@@ -60,6 +60,7 @@ import {
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import type { TurnFailureInfo } from "@/lib/turn/rules/retryPolicy";
 import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
+import { rerunSafeAt } from "@/lib/turn/rules/interruptedPhases";
 import {
   TURN_HOLDER_ID,
   TurnLockLostError,
@@ -567,7 +568,8 @@ async function processTurnImpl(
       gameState,
       preLockRecoveryTarget,
       await corporationTurnRerunSet(db, gameState),
-      resilienceStage >= 1
+      resilienceStage >= 1,
+      rerunSafeAt(resilienceStage)
     );
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
@@ -707,6 +709,7 @@ async function processTurnImpl(
         activeIteration,
         phaseStatuses,
         startTimeMs: startTime,
+        rerunSafe: rerunSafeAt(resilienceStage),
       })
     );
     // One eligibility predicate for the locked phases and the post-lock

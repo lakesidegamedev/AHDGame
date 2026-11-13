@@ -436,7 +436,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         }
 
         const savingsInterestResult = await runtime.runPhase("savingsInterestTurn", () =>
-          processSavingsInterestTurn(context.db, newTurn)
+          processSavingsInterestTurn(context.db, newTurn, context.rerunSafe)
         );
         if (savingsInterestResult) {
           phaseResults.savingsInterestTurn = {
@@ -498,7 +498,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // writes the `laborCost` this reads, so the charge is always against
         // THIS turn's wage bill rather than last turn's.
         const pensionResult = await runtime.runPhase("pensionTurn", () =>
-          runPensionTurn(context.db, newTurn)
+          runPensionTurn(context.db, newTurn, context.rerunSafe)
         );
         if (pensionResult) {
           phaseResults.pensionTurn = {

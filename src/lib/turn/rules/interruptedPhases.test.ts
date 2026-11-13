@@ -1,14 +1,30 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BASE_TURN_PHASE_NAMES } from "@/simulation/phases/turnPhaseNames";
 import {
+  RERUN_SAFE_WHEN_INTERRUPTED,
+  isRerunSafeWhenInterrupted,
   SAFE_WHEN_INTERRUPTED,
   classifyInterruptedPhases,
   isSafeWhenInterrupted,
 } from "./interruptedPhases";
 
+/** Every step name the turn registry runs, plus the declared base list. */
+function knownTurnSteps(): Set<string> {
+  const dir = join(process.cwd(), "src/simulation/phases");
+  const names = new Set<string>(BASE_TURN_PHASE_NAMES);
+  for (const file of readdirSync(dir)) {
+    if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
+    const text = readFileSync(join(dir, file), "utf8");
+    for (const m of text.matchAll(/runPhase\(\s*"(\w+)"/g)) names.add(m[1]);
+  }
+  return names;
+}
+
 describe("allow list", () => {
   it("names only steps that exist, each with a reason", () => {
-    const known = new Set<string>(BASE_TURN_PHASE_NAMES);
+    const known = knownTurnSteps();
     for (const [phase, reason] of Object.entries(SAFE_WHEN_INTERRUPTED)) {
       expect(known.has(phase), `${phase} is not a turn step`).toBe(true);
       expect(reason.length).toBeGreaterThan(5);
@@ -28,6 +44,25 @@ describe("allow list", () => {
       "lineOfCreditTurn",
     ])
       expect(isSafeWhenInterrupted(phase)).toBe(false);
+  });
+});
+
+describe("rerun-safe list", () => {
+  it("names only steps that exist, each with a reason, and not also on the skip list", () => {
+    const known = knownTurnSteps();
+    for (const [phase, reason] of Object.entries(RERUN_SAFE_WHEN_INTERRUPTED)) {
+      expect(known.has(phase), `${phase} is not a turn step`).toBe(true);
+      expect(reason.length).toBeGreaterThan(10);
+      expect(isSafeWhenInterrupted(phase)).toBe(false);
+    }
+  });
+  it("lists the steps proven so far", () => {
+    expect(Object.keys(RERUN_SAFE_WHEN_INTERRUPTED)).toEqual([
+      "treasuryTurn",
+      "savingsInterestTurn",
+      "pensionTurn",
+    ]);
+    expect(isRerunSafeWhenInterrupted("bondTurn")).toBe(false);
   });
 });
 

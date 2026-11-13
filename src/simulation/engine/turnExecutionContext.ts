@@ -25,9 +25,11 @@ export async function buildTurnExecutionContext(input: {
   activeIteration?: GameIteration;
   phaseStatuses: TurnPhaseTelemetryMap;
   startTimeMs: number;
+  rerunSafe?: boolean;
 }): Promise<TurnExecutionContext> {
   const { db, gameState, config, engine, warnings, activeIteration, phaseStatuses, startTimeMs } =
     input;
+  const { rerunSafe } = input;
   const newTurn = gameState.currentTurn + 1;
   // Preset-aware: read the calendar baseline from GameState so 1991 games
   // advance their year correctly. Legacy rows fall back to STARTING_YEAR.
@@ -97,6 +99,7 @@ export async function buildTurnExecutionContext(input: {
     gameNow,
     realNow,
     startTimeMs,
+    rerunSafe,
     nextTurnTime,
     characters,
     states,
