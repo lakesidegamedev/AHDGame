@@ -207,6 +207,28 @@ describe("session hop on password login", () => {
     }
   );
 
+  it("shadow: a listed test user gets the central decision and a hop, others do not", async () => {
+    configure("shadow");
+    vi.stubEnv("AHD_CENTRAL_LOGIN_TEST_USERS", userId.toHexString());
+    const listed = await loginAndHop();
+    expect(listed.hop).not.toBeNull();
+    expect(state.ticketCalls).toBe(1);
+
+    state.ticketCalls = 0;
+    state.user = { ...state.user, _id: otherId };
+    const unlisted = await loginAndHop();
+    expect(unlisted.json.lakesideHop).toBeUndefined();
+    expect(state.ticketCalls).toBe(0);
+  });
+
+  it("off: the test user list does nothing", async () => {
+    configure("off");
+    vi.stubEnv("AHD_CENTRAL_LOGIN_TEST_USERS", userId.toHexString());
+    const { json } = await loginAndHop();
+    expect(json.lakesideHop).toBeUndefined();
+    expect(state.ticketCalls).toBe(0);
+  });
+
   it("central: returns the issuer authorization url and stores the flow", async () => {
     configure("central");
     const { json, hop } = await loginAndHop({ returnTo: null });

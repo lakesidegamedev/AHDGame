@@ -144,7 +144,7 @@ export function resolveSourceLink(
     const issueNumber = m.issueNumber as number;
     const label =
       type === "feedback_status_changed" ? `View issue #${issueNumber}` : `View #${issueNumber}`;
-    return { label, href: `/control/support/feedback?issue=${issueNumber}` };
+    return { label, href: "/control/support/suggestions" };
   }
 
   // ── Player suggestion (admin view) ────────────────────────────────────────

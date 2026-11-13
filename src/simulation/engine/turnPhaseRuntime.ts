@@ -270,7 +270,18 @@ export function createTurnPhaseRuntime(input: {
     if (status === "running") currentPhaseRef.current = phase;
 
     // Result-carrying completions must land atomically with their saved output.
-    if (status !== "running" && !isAbnormal && !windowElapsed && !stagedCompletion) return;
+    // With the lock fence on (turn resilience stage 1) every completion lands at
+    // once: a coalesced completion that never flushes leaves a finished step
+    // looking interrupted after a process death, and recovery cannot tell it
+    // from one that was in flight.
+    if (
+      status !== "running" &&
+      !isAbnormal &&
+      !windowElapsed &&
+      !stagedCompletion &&
+      !turnLockFenceActive()
+    )
+      return;
     lastFlushAtMs = now.getTime();
 
     const setFields: Record<string, unknown> = {
@@ -624,9 +635,10 @@ export function createTurnPhaseRuntime(input: {
         }
         return result;
       }
-      void setPhaseStatus(name, "completed", completionTelemetry).catch((err) =>
+      const completedWrite = setPhaseStatus(name, "completed", completionTelemetry).catch((err) =>
         console.warn(`[Turn] Failed to mark phase "${name}" completed`, err)
       );
+      if (turnLockFenceActive()) await completedWrite;
       return result;
     }
 

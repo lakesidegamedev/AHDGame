@@ -96,6 +96,34 @@ export const PAGE_BUDGET_OVERRIDES = {
   },
 };
 
+/**
+ * Signed-in cohort budgets (mobile preset, populated sandbox world, three-run
+ * medians). `floor` is today's score minus a margin; `target` is where the
+ * fixes should land. Keyed by the resolved final path, since several nav paths
+ * redirect (for example /dashboard to /profile). Reported, never gated until a
+ * stable idle-host baseline exists.
+ */
+export const SIGNED_IN_BUDGETS = {
+  "/country/us/map": { floor: { performance: 0.3 }, target: { performance: 0.6 } },
+  "/country/us/elections": { floor: { performance: 0.35 }, target: { performance: 0.6 } },
+  "/profile": { floor: { performance: 0.4 }, target: { performance: 0.7 } },
+  "/market": { floor: { performance: 0.35 }, target: { performance: 0.7 } },
+  "/country/us/parties/1": { floor: { performance: 0.4 }, target: { performance: 0.7 } },
+  "/country/us/budget": { floor: { performance: 0.45 }, target: { performance: 0.7 } },
+  "/actions": { floor: { performance: 0.45 }, target: { performance: 0.7 } },
+  "/country/us/legislature": { floor: { performance: 0.3 }, target: { performance: 0.6 } },
+  "/portfolio": { floor: { performance: 0.5 }, target: { performance: 0.75 } },
+  "/corporation/:corp": { floor: { performance: 0.5 }, target: { performance: 0.75 } },
+  "/world": { floor: { performance: 0.4 }, target: { performance: 0.7 } },
+  "/country/us/economy": { floor: { performance: 0.55 }, target: { performance: 0.75 } },
+  "/notifications": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/banking": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/campaign": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/country/us/parties": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/country/us": { floor: { performance: 0.65 }, target: { performance: 0.8 } },
+  "/news": { floor: { performance: 0.55 }, target: { performance: 0.75 } },
+};
+
 export const METRIC_IDS = [
   "first-contentful-paint",
   "largest-contentful-paint",

@@ -21,7 +21,7 @@ interface SupporterRequestRow {
 }
 
 function tierLabel(tier: string | null): string {
-  if (tier === "supporter-plus-plus") return "Supporter++";
+  if (tier === "supporter-plus-plus") return "Champion";
   if (tier === "supporter-plus") return "Supporter+";
   if (tier === "supporter") return "Supporter";
   return "None";

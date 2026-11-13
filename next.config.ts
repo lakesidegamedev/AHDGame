@@ -253,15 +253,12 @@ const nextConfig: NextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           // Report-only CSP: collect violations and tune before switching to an
           // enforcing Content-Security-Policy. object-src/base-uri are already
-          // locked down; script/connect/frame are permissive for AdSense + YouTube.
-          // fundingchoicesmessages.google.com serves the GDPR/EU consent dialog
-          // (Google Funding Choices) and must be allowlisted or the message
-          // silently fails to render once this policy goes enforcing.
+          // locked down; script/connect/frame are permissive for analytics + YouTube.
           // worker-src blob: is kept for consent-gated replay/recording workers.
           {
             key: "Content-Security-Policy-Report-Only",
             value:
-              "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.posthog.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://www.googletagmanager.com https://fundingchoicesmessages.google.com https://analytics.lakesidegames.net; worker-src 'self' blob:; connect-src 'self' https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.googlesyndication.com https://googleads.g.doubleclick.net https://fundingchoicesmessages.google.com",
+              "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.posthog.com https://analytics.lakesidegames.net; worker-src 'self' blob:; connect-src 'self' https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
           },
         ],
       },

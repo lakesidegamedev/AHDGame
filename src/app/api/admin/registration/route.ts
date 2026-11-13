@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { requireModerator } from "@/lib/api/requireModerator";
+import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
@@ -43,11 +44,11 @@ export async function GET() {
 }
 
 // PATCH /api/admin/registration — toggle master player registration
-// Auth: requireModerator (admin or moderator)
+// Auth: requireAdmin
 // Errors: 400, 403
 export async function PATCH(request: Request) {
   try {
-    const auth = await requireModerator();
+    const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
     const parsed = await parseJsonBody(request, patchSchema);
@@ -56,7 +57,7 @@ export async function PATCH(request: Request) {
     const { enabled } = parsed.data;
     const db = await getDb();
     const now = new Date().toISOString();
-    const actor = auth.user.username;
+    const actor = auth.admin.username;
 
     if (enabled) {
       await gameConfigCollection(db).updateOne(

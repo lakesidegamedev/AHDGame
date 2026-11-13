@@ -1613,16 +1613,6 @@ html[data-high-contrast="true"] :focus-visible {
   }
 }
 
-/* AdSense: collapse unfilled units so blank reserved space disappears
-   (Google-documented pattern; data-ad-status is set by adsbygoogle.js).
-   Also hide the container's "Advertisement" label when the unit is unfilled. */
-ins.adsbygoogle[data-ad-status="unfilled"] {
-  display: none !important;
-}
-.adsense-container:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
-  display: none;
-}
-
 /* Corporation page "ledger" look (CorpLedgerProvider). Scoped to the page's
    root so other pages keep their styling. Figures use Geist with fixed-width
    digits instead of the mono face, and groups share one corner radius. */

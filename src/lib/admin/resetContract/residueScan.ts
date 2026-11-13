@@ -20,6 +20,12 @@ import {
   OLD_CATALOGUE_LAW_IDS,
   oldCatalogueIdsWithin,
 } from "@/lib/admin/resetContract/rules/oldCatalogueIds";
+import { loadResetPartySeedCatalog } from "@/lib/admin/resetPartySeedCatalog";
+import { findPartySeed, partySeedValues } from "@/lib/admin/resetContract/resetSurvivingParties";
+import { partyResidue } from "@/lib/admin/resetContract/rules/survivingParties";
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { electoratePriorityOverridesCollection } from "@/lib/db/repositories/electoratePriorityOverrides";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
@@ -279,6 +285,8 @@ export async function runResidueScan(
     }
   }
 
+  preservedFields.push(...(await loadSurvivingPartyEvidence(db)));
+
   return evaluateResidueScan({
     resetStartedAtMs: context.resetStartedAt.getTime(),
     expected: { currentTurn: context.expectedTurn, resetWorldId: context.resetWorldId },
@@ -289,4 +297,35 @@ export async function runResidueScan(
     preservedFields,
     oldCatalogue: await loadOldCatalogueEvidence(db, context.referenceReplaced),
   });
+}
+
+/**
+ * Surviving default parties that still differ from the seed outside the identity
+ * list (defunct, merged, old titles, tier, turn stamps), and any party charter.
+ */
+export async function loadSurvivingPartyEvidence(db: Db): Promise<PreservedFieldEvidence[]> {
+  const evidence: PreservedFieldEvidence[] = [];
+  const preset = await getGameStatePresetOrDefault(db);
+  const catalog = await loadResetPartySeedCatalog();
+  const parties = await politicalPartiesCollection<Document>(db)
+    .find({ isDefault: true })
+    .toArray();
+  for (const party of parties) {
+    const seed = findPartySeed(catalog, preset, String(party.countryId), String(party.name));
+    const fields = partyResidue(party, seed ? partySeedValues(seed, preset) : null);
+    if (party.isDefunct === true && !fields.includes("isDefunct")) fields.push("isDefunct");
+    if (fields.length > 0)
+      evidence.push({
+        collection: "politicalParties",
+        id: `${party.countryId}:${party.name}`,
+        fields,
+      });
+  }
+  const charters = await partyChartersCollection<Document>(db)
+    .find({}, { projection: { _id: 1 } })
+    .limit(20)
+    .toArray();
+  for (const charter of charters)
+    evidence.push({ collection: "partyCharters", id: String(charter._id), fields: ["charter"] });
+  return evidence;
 }

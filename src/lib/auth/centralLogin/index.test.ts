@@ -27,6 +27,7 @@ import {
   centralRollbackCreate,
   centralWriteFirst,
   getCentralLoginMode,
+  getCentralLoginModeFor,
   shadowMirrorWrite,
   shadowRecordProviderLogin,
 } from "./index";
@@ -83,6 +84,45 @@ describe("mode switch", () => {
     expect(getCentralLoginMode()).toBe("central");
     env("");
     expect(getCentralLoginMode()).toBe("off");
+  });
+});
+
+describe("per-account test users", () => {
+  const listed = "0123456789abcdef01234567";
+  const other = "aaaaaaaaaaaaaaaaaaaaaaaa";
+
+  it("shadow: a listed user gets central, everyone else stays shadow", () => {
+    env("shadow");
+    vi.stubEnv("AHD_CENTRAL_LOGIN_TEST_USERS", ` ${listed.toUpperCase()} ,${other.slice(1)}`);
+    expect(getCentralLoginModeFor(listed)).toBe("central");
+    expect(getCentralLoginModeFor(other)).toBe("shadow");
+    expect(getCentralLoginMode()).toBe("shadow");
+  });
+
+  it("off ignores the list", () => {
+    env("off");
+    vi.stubEnv("AHD_CENTRAL_LOGIN_TEST_USERS", listed);
+    expect(getCentralLoginModeFor(listed)).toBe("off");
+  });
+
+  it("central stays central for everyone", () => {
+    env("central");
+    vi.stubEnv("AHD_CENTRAL_LOGIN_TEST_USERS", listed);
+    expect(getCentralLoginModeFor(other)).toBe("central");
+  });
+
+  it("ignores malformed ids", () => {
+    env("shadow");
+    vi.stubEnv("AHD_CENTRAL_LOGIN_TEST_USERS", `nothex,${"g".repeat(24)},123,,${listed}00`);
+    expect(getCentralLoginModeFor("nothex")).toBe("shadow");
+    expect(getCentralLoginModeFor("g".repeat(24))).toBe("shadow");
+    expect(getCentralLoginModeFor(`${listed}00`)).toBe("shadow");
+  });
+
+  it("an unconfigured bridge keeps the list inert", () => {
+    vi.stubEnv("AHD_CENTRAL_LOGIN_MODE", "shadow");
+    vi.stubEnv("AHD_CENTRAL_LOGIN_TEST_USERS", listed);
+    expect(getCentralLoginModeFor(listed)).toBe("off");
   });
 });
 

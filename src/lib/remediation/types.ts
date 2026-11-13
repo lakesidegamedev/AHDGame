@@ -146,6 +146,8 @@ export interface HealContext {
   dryRun: boolean;
   /** Run id, present in apply(). Same id as the healRuns marker and healBackups rows. */
   runId?: string;
+  /** Staff account id the run is done for, from --requested-by. */
+  requestedBy?: string;
   now: Date;
 }
 
@@ -166,6 +168,12 @@ export interface Defect {
   seedFix: SeedFix;
   /** Environments this defect may be healed in. */
   envs: HealEnv[];
+  /**
+   * ISO date. Set when the pinned rows belong to one world: in a world whose
+   * epoch started on or after this date the defect reports 0 and refuses to
+   * plan or apply (see worldScope.ts).
+   */
+  worldsStartedBefore?: string;
   /**
    * Re-running apply() after success must be a safe no-op. The runner refuses
    * to register a non-idempotent defect: that is a migration.
