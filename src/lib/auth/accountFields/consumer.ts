@@ -1,4 +1,4 @@
-import { ObjectId, type Db, type Document } from "mongodb";
+import { ObjectId, type Db, type Document, type UpdateFilter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { cronLocksCollection } from "@/lib/db/repositories/cronLocks";
 import { usersCollection } from "@/lib/db/repositories/users";
@@ -107,15 +107,11 @@ export async function applyAccountChange(
   if (taken) return { error: `seq ${change.seq}: email already held by another account` };
 
   try {
-    const result = await users.updateOne(
-      { _id, email: user.email },
-      {
-        $set: { email },
-        ...(previous
-          ? { $push: { emailHistory: { email: previous, changedAt, source: "central" } } }
-          : {}),
-      }
-    );
+    const update: UpdateFilter<Document> = { $set: { email } };
+    if (previous) {
+      update.$push = { emailHistory: { email: previous, changedAt, source: "central" } };
+    }
+    const result = await users.updateOne({ _id, email: user.email }, update);
     if (result.matchedCount !== 1) return { error: `seq ${change.seq}: account changed, retry` };
   } catch (error) {
     if (isDuplicateKey(error)) {
