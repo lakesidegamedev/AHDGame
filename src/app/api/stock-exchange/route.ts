@@ -1,4 +1,5 @@
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { parsePreviewRows, topStocksForPreview } from "@/lib/market/overviewPreview";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { StockExchangeSnapshot } from "@/lib/db/types";
@@ -14,6 +15,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const exchange = searchParams.get("exchange")?.toLowerCase();
+    const previewRows = parsePreviewRows(searchParams.get("preview"));
 
     if (!exchange || !EXCHANGE_API_KEYS.has(exchange)) {
       return errorResponse(
@@ -43,7 +45,9 @@ export async function GET(request: Request) {
     return conditionalJson(request, {
       exchange: exchange.toUpperCase(),
       exchangeName: snapshot.exchangeName,
-      listings: snapshot.listings,
+      listings: previewRows
+        ? topStocksForPreview(snapshot.listings, previewRows)
+        : snapshot.listings,
       unlistedPrivateCount: snapshot.unlistedPrivateCount ?? 0,
       turn: snapshot.turn,
       asOf: snapshot.createdAt,

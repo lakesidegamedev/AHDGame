@@ -1,4 +1,4 @@
-/** Every paid supporter tier. Each one includes single-player while active. */
+/** Every paid supporter tier. Only the Supporter+ tiers include single-player and sandbox. */
 export const SUPPORTER_TIERS = ["supporter", "supporter-plus", "supporter-plus-plus"] as const;
 
 export type PatreonTier = (typeof SUPPORTER_TIERS)[number] | null;
@@ -94,7 +94,7 @@ export function isPatreonActive(tier: PatreonTier, expiresAt?: Date | null): boo
   return expiresAt.getTime() > Date.now();
 }
 
-/** Single-player is included with any active supporter tier. */
+/** Single-player is included with active Supporter+ and Champion, not plain Supporter. */
 export function tierIncludesSingleplayer(tier: PatreonTier, expiresAt?: Date | null): boolean {
-  return tier !== null && SUPPORTER_TIERS.includes(tier) && isPatreonActive(tier, expiresAt);
+  return isPlusOrBetter(tier) && isPatreonActive(tier, expiresAt);
 }

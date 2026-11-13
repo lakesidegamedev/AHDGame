@@ -9,7 +9,7 @@ import { usersCollection } from "@/lib/db/repositories/users";
 export const metadata: Metadata = publicPageMetadata({
   title: "Supporter wall | A House Divided",
   description:
-    "The players whose support keeps A House Divided running. Thank you to every Supporter, Supporter+, and Supporter++ member.",
+    "The players whose support keeps A House Divided running. Thank you to every Supporter, Supporter+, and Champion member.",
   pathname: "/supporters",
 });
 
@@ -23,7 +23,7 @@ interface WallEntry {
 const TIER_SECTIONS: { tier: Exclude<PatreonTier, null>; label: string; blurb: string }[] = [
   {
     tier: "supporter-plus-plus",
-    label: "Supporter++",
+    label: "Champion",
     blurb: "The top tier. These players carry the servers on their backs.",
   },
   {

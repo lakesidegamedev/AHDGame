@@ -1,6 +1,6 @@
 import { authConfig } from "@/lib/config/auth";
 import { bridgeBreakerOpen } from "./bridgeClient";
-import { getCentralLoginMode } from "./index";
+import { getCentralLoginMode, getCentralLoginModeFor } from "./index";
 import { READINESS_CACHE_MS, READINESS_TIMEOUT_MS } from "./hopRules";
 
 interface CachedReadiness {
@@ -21,8 +21,9 @@ export function resetIssuerReadinessCache(): void {
  * in-process for a few seconds, and an open bridge breaker counts as not ready.
  * Never throws.
  */
-export async function isHopIssuerReady(): Promise<boolean> {
-  if (getCentralLoginMode() !== "central") return false;
+export async function isHopIssuerReady(userId?: string): Promise<boolean> {
+  const mode = userId ? getCentralLoginModeFor(userId) : getCentralLoginMode();
+  if (mode !== "central") return false;
   const issuer = authConfig.unifiedOidcIssuer()?.replace(/\/+$/, "");
   if (!issuer) return false;
   if (bridgeBreakerOpen()) return false;
