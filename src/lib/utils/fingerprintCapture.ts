@@ -45,16 +45,15 @@ const FALLBACK_DELAY_MS = 10_000;
 export function scheduleFingerprintCapture(): void {
   if (scheduled || typeof window === "undefined") return;
   scheduled = true;
-  let timer: number | undefined;
   const run = () => {
     for (const name of INTERACTION_EVENTS) window.removeEventListener(name, run);
-    if (timer !== undefined) window.clearTimeout(timer);
+    window.clearTimeout(timer);
     void beginCapture();
   };
+  const timer = window.setTimeout(run, FALLBACK_DELAY_MS);
   for (const name of INTERACTION_EVENTS) {
     window.addEventListener(name, run, { once: true, passive: true });
   }
-  timer = window.setTimeout(run, FALLBACK_DELAY_MS);
 }
 
 /** Fingerprint for a sign-in submission, starting capture now if it never ran. */
