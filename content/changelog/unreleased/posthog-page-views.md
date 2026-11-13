@@ -4,9 +4,9 @@ title: "Anonymous page counts for site traffic"
 summary: >-
   We now count anonymous page views so we can see which pages and sources bring
   visitors. Nothing is stored on your device until you accept the cookie banner.
-tags: [engineering]
+tags: [engineering, privacy, analytics]
 badges: [patch]
-areas: [frontend, legal]
+areas: [frontend]
 ---
 
 ## What changed

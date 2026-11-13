@@ -1,3 +1,5 @@
+import type { PostHogConfig } from "posthog-js";
+
 export type PostHogMode = "anonymous" | "full";
 
 export type ConsentAnswer = "accepted" | "rejected" | null;
@@ -9,7 +11,7 @@ export function resolvePostHogMode(consent: ConsentAnswer): PostHogMode {
 
 const API_HOST = "https://us.i.posthog.com";
 
-const COMMON = {
+const COMMON: Partial<PostHogConfig> = {
   api_host: API_HOST,
   autocapture: false,
   capture_exceptions: false,
@@ -19,24 +21,24 @@ const COMMON = {
   capture_pageview: "history_change",
   disable_surveys: true,
   property_denylist: ["$ip", "ip", "email"],
-} as const;
+};
 
 /**
  * Anonymous page views only: no cookies, no browser storage, no identity, no
  * replay, no flags. Identity is a server-side hash.
  */
-export function anonymousPostHogConfig() {
+export function anonymousPostHogConfig(): Partial<PostHogConfig> {
   return {
     ...COMMON,
     cookieless_mode: "always",
     person_profiles: "never",
     disable_session_recording: true,
     advanced_disable_feature_flags: true,
-  } as const;
+  };
 }
 
 /** The consented setup: identified events and sampled, masked replay. */
-export function fullPostHogConfig() {
+export function fullPostHogConfig(): Partial<PostHogConfig> {
   return {
     ...COMMON,
     session_recording: {
@@ -48,9 +50,9 @@ export function fullPostHogConfig() {
     },
     advanced_disable_feature_flags: false,
     persistence: "localStorage+cookie",
-  } as const;
+  };
 }
 
-export function postHogConfigFor(mode: PostHogMode) {
+export function postHogConfigFor(mode: PostHogMode): Partial<PostHogConfig> {
   return mode === "full" ? fullPostHogConfig() : anonymousPostHogConfig();
 }
