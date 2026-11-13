@@ -17,6 +17,7 @@ import { OfficePlaques, type OfficePlaque } from "./components/OfficePlaques";
 import { getExecutiveIdentity } from "@/lib/constants/institutionIdentity";
 import type {
   Character,
+  NPP,
   ElectedOfficial,
   ParliamentaryGovernment,
   PoliticalParty,
@@ -55,6 +56,7 @@ import { ConfidenceGaugeReadout } from "@/components/uk/government/ConfidenceGau
 import { getNhsState } from "@/lib/countries/uk/nhs/nhsStore";
 import { NhsQualityTile } from "@/components/uk/nhs/NhsQualityTile";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
@@ -101,7 +103,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     getConfidenceGauge(db, countryId),
     getConfidenceGaugeHistory(db, countryId),
   ]);
-  // eslint-disable-next-line local/no-country-literals -- the NHS quality tile remains UK-specific.
+
   const isUK = countryHasFeature("ukUi", countryId);
   const nhsState = isUK ? await getNhsState(db) : null;
 
@@ -121,6 +123,12 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   // when the canonical document is missing entirely — never when it exists with a null
   // PM (that state is meaningful: e.g. immediately after a no-confidence vote passes).
   const pmCharId = govFormation ? govFormation.pmCharacterId : (parlGov?.pmCharacterId ?? null);
+  const pmNpp = govFormation?.pmNppId
+    ? await nppsCollection(db).findOne(
+        { _id: govFormation.pmNppId, countryId, retiredAt: null },
+        { projection: { name: 1, party: 1, avatarUrl: 1 } }
+      )
+    : null;
   let pmCharacter: Character | null = null;
   if (pmCharId) {
     pmCharacter = await charactersCollection(db).findOne({ _id: pmCharId });
@@ -260,7 +268,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   if (
     viewerIsMember &&
     govFormation?.status === "formed" &&
-    govFormation.pmCharacterId &&
+    (govFormation.pmCharacterId || govFormation.pmNppId) &&
     !govFormation.activeVoteId
   ) {
     const NO_CONFIDENCE_COOLDOWN_TURNS = 48;
@@ -344,13 +352,16 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
       }))
     );
   }
-  const pmPartyDoc = await resolveCharacterParty(pmCharacter);
+  const pmPartyDoc =
+    (await resolveCharacterParty(pmCharacter)) ??
+    (pmNpp?.party ? (partyDocs.find((p) => String(p.sequentialId) === pmNpp.party) ?? null) : null);
   const deputyPartyDoc = await resolveCharacterParty(deputyCharacter);
 
   // Find Opposition Leader: chair of the largest party or coalition NOT in
   // government. Shared with the shadow-cabinet route so appointment authority
   // matches this displayed signal exactly (see @/lib/parliament/oppositionLeader).
   let oppositionLeaderChar: Character | null = null;
+  let oppositionNpp: NPP | null = null;
   let oppositionPartyDoc: PoliticalParty | null = null;
   const oppositionResult = await resolveOppositionLeaderFromState(
     db,
@@ -361,9 +372,17 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
     parlGov
   );
   if (oppositionResult) {
-    oppositionLeaderChar = await charactersCollection(db).findOne({
-      _id: oppositionResult.chairId,
-    });
+    oppositionLeaderChar = oppositionResult.chairId
+      ? await charactersCollection(db).findOne({
+          _id: oppositionResult.chairId,
+        })
+      : null;
+    oppositionNpp = oppositionResult.nppId
+      ? await nppsCollection(db).findOne(
+          { _id: oppositionResult.nppId, countryId, retiredAt: null },
+          { projection: { name: 1, party: 1, avatarUrl: 1 } }
+        )
+      : null;
     oppositionPartyDoc = oppositionResult.partyDoc;
   }
 
@@ -453,7 +472,8 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   function plaqueFor(
     meta: { title: string; sealGlyph: string; vacancyNote: string },
     character: Character | null,
-    partyDoc: PoliticalParty | null
+    partyDoc: PoliticalParty | null,
+    npp: NPP | null = null
   ): OfficePlaque {
     return {
       title: meta.title,
@@ -467,13 +487,21 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
             partyName: partyDoc?.name,
             partyColor: partyDoc?.color,
           }
-        : null,
+        : npp
+          ? {
+              name: npp.name,
+              avatarUrl: npp.avatarUrl,
+              partyId: npp.party,
+              partyName: partyDoc?.name,
+              partyColor: partyDoc?.color,
+            }
+          : null,
       vacancyNote: meta.vacancyNote,
     };
   }
 
   const leftPlaques: OfficePlaque[] = [
-    plaqueFor(surface.headPlaque, pmCharacter, pmPartyDoc),
+    plaqueFor(surface.headPlaque, pmCharacter, pmPartyDoc, pmNpp),
     ...(surface.deputyPlaque
       ? [plaqueFor(surface.deputyPlaque, deputyCharacter, deputyPartyDoc)]
       : []),
@@ -517,7 +545,7 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
 
           <div className="rounded-2xl border border-card-border bg-card p-6 shadow-card">
             <SectionLabel as="h3">Government record</SectionLabel>
-            {pmCharacter ? (
+            {pmCharacter || pmNpp ? (
               <div className="space-y-3 text-body-sm text-muted">
                 {(govFormation?.formedTurn ?? parlGov?.formedTurn) && (
                   <p>
@@ -566,7 +594,12 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
             identity={getExecutiveIdentity(countryId)}
             gridClassName="grid"
             plaques={[
-              plaqueFor(surface.oppositionPlaque, oppositionLeaderChar, oppositionPartyDoc),
+              plaqueFor(
+                surface.oppositionPlaque,
+                oppositionLeaderChar,
+                oppositionPartyDoc,
+                oppositionNpp
+              ),
             ]}
           />
 
@@ -649,11 +682,11 @@ export async function ParliamentaryExecutiveHub({ countryId }: { countryId: Coun
   return (
     <UKGovernmentLayout
       pmSummary={{
-        name: pmCharacter?.name ?? null,
+        name: pmCharacter?.name ?? pmNpp?.name ?? null,
         profileHref: pmCharacter ? characterHref(pmCharacter) : null,
         partyName: pmPartyDoc?.name ?? null,
         partyColor: pmPartyDoc?.color ?? null,
-        partyId: pmCharacter?.party ?? null,
+        partyId: pmCharacter?.party ?? pmNpp?.party ?? null,
       }}
       pluralityParty={pluralityPartyChip}
       commonsLine={{

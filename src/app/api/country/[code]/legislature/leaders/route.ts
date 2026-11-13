@@ -14,6 +14,7 @@ import {
   resolveGoverningPartyIdsFromDocuments,
   resolveOppositionLeader,
 } from "@/lib/turn/parliamentaryGovernment";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
@@ -68,11 +69,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       });
     }
 
+    const hogNpp = govFormation?.pmNppId
+      ? await nppsCollection(db).findOne(
+          { _id: govFormation.pmNppId, countryId, retiredAt: null },
+          { projection: { name: 1, party: 1, sequentialId: 1, avatarUrl: 1, updatedAt: 1 } }
+        )
+      : null;
+    const hog = hogChar ?? hogNpp;
     let primeMinister = null;
-    if (hogChar) {
+    if (hog) {
       // Resolve party sequentialId to display name
-      const partySeqId = hogChar.party ? Number.parseInt(hogChar.party, 10) : Number.NaN;
-      let partyLabel: string | null = hogChar.party || null;
+      const partySeqId = hog.party ? Number.parseInt(hog.party, 10) : Number.NaN;
+      let partyLabel: string | null = hog.party || null;
       if (!Number.isNaN(partySeqId)) {
         const partyDoc = await politicalPartiesCollection(db).findOne({
           sequentialId: partySeqId,
@@ -82,12 +90,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       }
 
       primeMinister = {
-        characterId: hogChar._id.toString(),
-        sequentialId: hogChar.sequentialId ?? null,
-        characterName: hogChar.name,
+        characterId: hogChar?._id.toString() ?? null,
+        nppId: hogNpp?._id.toString() ?? null,
+        isNPP: !hogChar,
+        sequentialId: hog.sequentialId ?? null,
+        characterName: hog.name,
         party: partyLabel,
-        since: hogChar.updatedAt?.toISOString() || null,
-        avatarUrl: hogChar.avatarUrl ?? null,
+        since: hog.updatedAt?.toISOString() || null,
+        avatarUrl: hog.avatarUrl ?? null,
       };
     }
 
@@ -124,16 +134,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       );
 
       if (result) {
-        const oppositionChar = await charactersCollection(db).findOne({ _id: result.chairId });
+        const oppositionChar = result.chairId
+          ? await charactersCollection(db).findOne({ _id: result.chairId })
+          : null;
+        const oppositionNpp = result.nppId
+          ? await nppsCollection(db).findOne(
+              { _id: result.nppId, countryId, retiredAt: null },
+              { projection: { name: 1, party: 1, sequentialId: 1, avatarUrl: 1, updatedAt: 1 } }
+            )
+          : null;
+        const opposition = oppositionChar ?? oppositionNpp;
 
-        if (oppositionChar) {
+        if (opposition) {
           oppositionLeader = {
-            characterId: oppositionChar._id.toString(),
-            sequentialId: oppositionChar.sequentialId ?? null,
-            characterName: oppositionChar.name,
-            party: result.partyDoc?.name || oppositionChar.party || null,
-            since: oppositionChar.updatedAt?.toISOString() || null,
-            avatarUrl: oppositionChar.avatarUrl ?? null,
+            characterId: oppositionChar?._id.toString() ?? null,
+            nppId: oppositionNpp?._id.toString() ?? null,
+            isNPP: !oppositionChar,
+            sequentialId: opposition.sequentialId ?? null,
+            characterName: opposition.name,
+            party: result.partyDoc?.name || opposition.party || null,
+            since: opposition.updatedAt?.toISOString() || null,
+            avatarUrl: opposition.avatarUrl ?? null,
           };
         }
       }

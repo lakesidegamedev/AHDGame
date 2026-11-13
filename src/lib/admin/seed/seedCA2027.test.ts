@@ -68,7 +68,8 @@ describe("seedCA2027", () => {
     expect(calls.stateBaselines!.bulkWrite.mock.calls[0]![0]).toHaveLength(13);
     expect(calls.statePartyOrg!.bulkWrite.mock.calls[0]![0]).toHaveLength(13 * 5);
 
-    const formation = calls.governmentFormations!.updateOne.mock.calls[0]![1].$set;
+    const formation = calls.governmentFormations!.updateOne.mock.calls[0]![1].$setOnInsert;
+    expect(calls.governmentFormations!.updateOne.mock.calls[0]![1]).not.toHaveProperty("$set");
     expect(formation).toMatchObject({ countryId: "CA", totalSeats: 343, majorityThreshold: 172 });
     expect(log).toHaveBeenCalledWith(expect.stringContaining("343-seat Commons"));
   });

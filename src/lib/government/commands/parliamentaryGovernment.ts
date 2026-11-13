@@ -424,7 +424,7 @@ export async function proposeNoConfidence(
   if (!govFormation) {
     throw notFound("Government formation record not found");
   }
-  if (govFormation.status !== "formed" || !govFormation.pmCharacterId) {
+  if (govFormation.status !== "formed" || (!govFormation.pmCharacterId && !govFormation.pmNppId)) {
     throw badRequest(`There is no ${countryConfig.executiveTitle} currently in office`);
   }
   if (govFormation.activeVoteId !== null) {
@@ -476,7 +476,7 @@ export async function proposeNoConfidence(
   }
 
   let targetPmName = govFormation.pmName ?? "Unknown";
-  if (!govFormation.pmName) {
+  if (!govFormation.pmName && govFormation.pmCharacterId) {
     const pmChar = await charactersCollection<{ _id: ObjectId; name: string }>(db).findOne({
       _id: govFormation.pmCharacterId,
     });
@@ -491,6 +491,7 @@ export async function proposeNoConfidence(
     proposedByCharacterId: proposer._id,
     proposedByName: proposer.name,
     targetPmCharacterId: govFormation.pmCharacterId,
+    targetPmNppId: govFormation.pmNppId ?? null,
     targetPmName,
     votesFor: 0,
     votesAgainst: 0,
@@ -640,14 +641,16 @@ async function notifyNoConfidenceParticipants(
   countryId: CountryId,
   proposerUserId: string,
   proposerName: string,
-  pmCharacterId: ObjectId,
+  pmCharacterId: ObjectId | null,
   pmName: string,
   lowerChamberKey: string,
   lowerChamberShortName: string,
   executiveTitle: string
 ): Promise<void> {
   const [pmChar, allLowerMps] = await Promise.all([
-    charactersCollection(db).findOne({ _id: pmCharacterId }),
+    pmCharacterId
+      ? charactersCollection(db).findOne({ _id: pmCharacterId })
+      : Promise.resolve(null),
     electedOfficialsCollection(db)
       .find({ officeType: lowerChamberKey, countryId, isNPP: { $ne: true } })
       .toArray(),

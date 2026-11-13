@@ -128,7 +128,7 @@ export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
       formationByCountry.get(key) ?? null,
       parlGovByCountry.get(key) ?? null
     );
-    if (!opposition) continue;
+    if (!opposition?.chairId) continue;
     leaderIds.add(opposition.chairId.toString());
     for (const appointment of Object.values(opposition.partyDoc?.shadowCabinet ?? {})) {
       if (appointment?.characterId) shadowCabinetIds.add(appointment.characterId.toString());

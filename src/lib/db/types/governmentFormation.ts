@@ -273,7 +273,8 @@ export interface NoConfidenceVote {
    */
   proposedByCharacterId: ObjectId | null;
   proposedByName: string;
-  targetPmCharacterId: ObjectId;
+  targetPmCharacterId: ObjectId | null;
+  targetPmNppId?: ObjectId | null;
   targetPmName: string;
 
   // Votes — all Commons MPs eligible
