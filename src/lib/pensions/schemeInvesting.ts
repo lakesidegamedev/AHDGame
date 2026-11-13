@@ -14,7 +14,7 @@
  * benefit cut.
  */
 
-import type { Db, Document } from "mongodb";
+import { ObjectId, type Db, type Document } from "mongodb";
 import type { IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types/indexFund";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -75,7 +75,13 @@ export async function runPensionSchemeInvestments(
     unfinished.length === 0
       ? []
       : await indexFundsCollection<IndexFund>(db)
-          .find({ _id: { $in: unfinished.map((s) => s.pendingInvestment!.fundId) } })
+          .find({
+            _id: {
+              $in: unfinished.flatMap((s) =>
+                s.pendingInvestment ? [s.pendingInvestment.fundId] : []
+              ),
+            },
+          })
           .toArray();
   const pendingFundById = new Map(pendingFunds.map((f) => [f._id.toString(), f]));
   for (const scheme of unfinished) {
@@ -198,6 +204,7 @@ async function finishInvestment(
   if (!position) {
     try {
       await positions.insertOne({
+        _id: new ObjectId(),
         ...identity,
         units: plan.units,
         avgNavAnchor: plan.navAnchor,
