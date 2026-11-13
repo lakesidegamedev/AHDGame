@@ -282,7 +282,7 @@ export const defect: Defect = {
     note: "runtime unit-basis bug in the corporation turn, not authored seed data; a fresh world bills correctly once the fix is deployed",
   },
   envs: ["prod"],
-  // Pinned corporation turns 29 to 78 of the 1991 world; ids recur in the 2027 world.
+  // Pinned corporation ids and turns recur in later worlds.
   worldsStartedBefore: "2026-11-12T00:00:00.000Z",
   idempotent: true,
   // Deliberate: repays freight a unit bug overcharged, without clawing back the
