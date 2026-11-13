@@ -71,6 +71,7 @@ import { armTurnFault, describeTurnError, parseTurnFaultSpec } from "@/lib/turn/
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
+  TurnHeldForRepairError,
   TurnResumeRefusedError,
   TurnResumeResultUnavailableError,
   phaseBlocksResumeWhenInterrupted,
@@ -509,6 +510,8 @@ async function processTurnImpl(
       {
         _id: "current",
         processingKind: { $nin: ["stockTaxMigration", "economyReset"] },
+        // A held turn waits for a person; no path takes the lock over.
+        processingHoldReason: null,
         $or: [
           { isProcessing: { $ne: true } },
           { processingHeartbeatAt: { $lt: staleLockCutoff } },
@@ -563,7 +566,8 @@ async function processTurnImpl(
     const crashedTurnRecovery = validateLockedResume(
       gameState,
       preLockRecoveryTarget,
-      await corporationTurnRerunSet(db, gameState)
+      await corporationTurnRerunSet(db, gameState),
+      resilienceStage >= 1
     );
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
@@ -1044,6 +1048,57 @@ async function processTurnImpl(
       // Only overwrite evidence with values this attempt actually has. A failure
       // before setup (no statuses, no target yet) must not null out what the
       // previous holder left, or the next attempt would rerun applied phases.
+      /*
+       * HOLD RUNBOOK. A turn is held (processingHoldReason set) when a process
+       * died mid-turn with a step in flight that is not on the safe-to-skip list
+       * (src/lib/turn/rules/interruptedPhases.ts). The lock stays held with all
+       * evidence. The fast watchdog, the stuck-lock sweep and the stale-lock
+       * acquisition all refuse a held lock, and POST /api/admin/turn/reset-lock
+       * refuses it too, so nothing skips the held steps on its own.
+       *
+       * A person resolves it: read processingHeldPhases and each step's status
+       * message in processingPhaseStatuses, check what the step wrote (heal
+       * tools, ledger and audit queries), repair any partial writes, then call
+       * POST /api/admin/turn/release-hold with the exact held step names and a
+       * mode: "rerun" clears the held steps so the next attempt runs them again
+       * (use when they wrote nothing or were repaired), "mark-done" records them
+       * as finished by the operator (use when they had fully applied). The next
+       * cron or watchdog tick then resumes the turn.
+       */
+      const heldError = error instanceof TurnHeldForRepairError ? error : null;
+      const holdFields = heldError
+        ? {
+            processingHoldReason: heldError.message,
+            processingHeldPhases: heldError.phases,
+            processingHeldAt: failureTime,
+            lastTurnRetry: {
+              turn: heldError.turn,
+              attempt: 0,
+              afterPhase: heldError.phases[0] ?? null,
+              outcome: "stopped" as const,
+              at: failureTime,
+              note: `Held for a person: ${heldError.phases
+                .map((p) => `${p} (${heldError.details[p]})`)
+                .join("; ")}`,
+            },
+          }
+        : {};
+      if (heldError) {
+        console.error(`[Turn System] ${heldError.message}`, heldError.details);
+        try {
+          Sentry.captureMessage("Turn held for repair after a mid-turn process death", {
+            level: "fatal",
+            fingerprint: ["turn-held-for-repair"],
+            extra: {
+              turn: heldError.turn,
+              steps: heldError.phases,
+              details: heldError.details,
+            },
+          });
+        } catch {
+          // Alerting must not block the hold.
+        }
+      }
       const failureRecord = {
         turn: failedTarget,
         message: failureDetail,
@@ -1072,6 +1127,7 @@ async function processTurnImpl(
                 processingHeartbeatAt: failureTime,
                 processingAbandonedAt: failureTime,
                 ...evidence,
+                ...holdFields,
                 lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               }
