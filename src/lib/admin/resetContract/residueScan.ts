@@ -26,6 +26,10 @@ import { partyResidue } from "@/lib/admin/resetContract/rules/survivingParties";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameConfig } from "@/lib/seeds/reference/gameConfig";
+import { splitFreshWorldGameConfigFlags } from "@/lib/seeds/reference/featureFlagDefaults";
+import { gameConfigResidue } from "@/lib/admin/resetContract/rules/gameConfigSurvival";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { electoratePriorityOverridesCollection } from "@/lib/db/repositories/electoratePriorityOverrides";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
@@ -286,6 +290,7 @@ export async function runResidueScan(
   }
 
   preservedFields.push(...(await loadSurvivingPartyEvidence(db)));
+  preservedFields.push(...(await loadGameConfigEvidence(db)));
 
   return evaluateResidueScan({
     resetStartedAtMs: context.resetStartedAt.getTime(),
@@ -328,4 +333,15 @@ export async function loadSurvivingPartyEvidence(db: Db): Promise<PreservedField
   for (const charter of charters)
     evidence.push({ collection: "partyCharters", id: String(charter._id), fields: ["charter"] });
   return evidence;
+}
+
+/** Non-survivor `gameConfig` keys that differ from the seed after a reset. */
+export async function loadGameConfigEvidence(db: Db): Promise<PreservedFieldEvidence[]> {
+  const config = await gameConfigCollection<Record<string, unknown>>(db).findOne({
+    _id: "default",
+  } as never);
+  if (!config) return [];
+  const { settings, flags } = splitFreshWorldGameConfigFlags(gameConfig);
+  const fields = gameConfigResidue(config, { ...settings, ...flags });
+  return fields.length > 0 ? [{ collection: "gameConfig", id: "default", fields }] : [];
 }
