@@ -35,20 +35,14 @@ export async function sendEmail({
     return { sent: false, reason: "email-not-configured" };
   }
 
-  if (smtpHost) {
-    try {
+  try {
+    if (smtpHost) {
       await sendSmtp(
         { host: smtpHost, port: servicesConfig.smtpPort() },
         { from, to, subject, html, text }
       );
       return { sent: true };
-    } catch (error) {
-      console.error("sendEmail: mail relay refused or was unreachable", error);
-      return { sent: false, reason: "send-failed" };
     }
-  }
-
-  try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -64,7 +58,7 @@ export async function sendEmail({
     const data = (await res.json().catch(() => ({}))) as { id?: string };
     return { sent: true, id: data.id };
   } catch (error) {
-    console.error("sendEmail: request failed", error);
+    console.error("sendEmail: request or mail relay failed", error);
     return { sent: false, reason: "send-failed" };
   }
 }
