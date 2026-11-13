@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveViewAs } from "./viewAs";
 import { canViewTier } from "./rules";
+import { navFor, TOOLS } from "./panelRegistry";
 
 describe("resolveViewAs", () => {
   it("lets an admin preview each role", () => {
@@ -24,5 +25,14 @@ describe("resolveViewAs", () => {
   it("previews with the same permission table the server uses", () => {
     expect(canViewTier(resolveViewAs("admin", "moderator"), "admin")).toBe(false);
     expect(canViewTier(resolveViewAs("moderator", "admin"), "admin")).toBe(false);
+  });
+
+  it("filters the panel so each previewed role sees exactly its tools", () => {
+    const ids = (role: Parameters<typeof resolveViewAs>[1]) =>
+      navFor(resolveViewAs("admin", role)).flatMap((g) => g.tools.map((t) => t.id));
+    const moderatorTools = TOOLS.filter((t) => t.tier === "moderator").map((t) => t.id);
+    expect(ids("moderator").sort()).toEqual([...moderatorTools].sort());
+    expect(ids("junior_dev").sort()).toEqual(TOOLS.map((t) => t.id).sort());
+    expect(ids("admin").sort()).toEqual(TOOLS.map((t) => t.id).sort());
   });
 });
