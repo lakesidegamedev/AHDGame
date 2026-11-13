@@ -1,4 +1,4 @@
-import { ObjectId, type Db, type Document, type PushOperator, type UpdateFilter } from "mongodb";
+import { ObjectId, type Db, type Document } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { logger } from "@/lib/observability/logger";
 import { cronLocksCollection } from "@/lib/db/repositories/cronLocks";
@@ -108,11 +108,9 @@ export async function applyAccountChange(
   if (taken) return { error: `seq ${change.seq}: email already held by another account` };
 
   try {
-    const update: UpdateFilter<Document> = { $set: { email } };
+    const update: Document = { $set: { email } };
     if (previous) {
-      update.$push = {
-        emailHistory: { email: previous, changedAt, source: "central" },
-      } as PushOperator<Document>;
+      update.$push = { emailHistory: { email: previous, changedAt, source: "central" } };
     }
     const result = await users.updateOne({ _id, email: user.email }, update);
     if (result.matchedCount !== 1) return { error: `seq ${change.seq}: account changed, retry` };
