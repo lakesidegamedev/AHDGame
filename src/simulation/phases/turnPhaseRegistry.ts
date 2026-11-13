@@ -132,7 +132,6 @@ import { processNpcBankPolicyTurn } from "@/lib/banking/npcBanks";
 import { processBankingTurn } from "@/lib/turn/bankingTurn";
 import { processSavingsShadowTurn } from "@/lib/savings/shadow";
 import { runPensionTurn } from "@/lib/pensions/pensionTurn";
-import { rerunSafeAt } from "@/lib/turn/rules/interruptedPhases";
 import { processBankSolvencyTurn } from "@/lib/turn/bankSolvencyTurn";
 import { runParliamentaryGovernmentConfidencePhase } from "./parliamentaryGovernmentConfidencePhase";
 import { processBankSupervision } from "@/lib/banking/supervision";
@@ -437,7 +436,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         }
 
         const savingsInterestResult = await runtime.runPhase("savingsInterestTurn", () =>
-          processSavingsInterestTurn(context.db, newTurn, rerunSafeAt(context.resilienceStage))
+          processSavingsInterestTurn(context.db, newTurn, context.rerunSafe)
         );
         if (savingsInterestResult) {
           phaseResults.savingsInterestTurn = {
@@ -499,7 +498,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // writes the `laborCost` this reads, so the charge is always against
         // THIS turn's wage bill rather than last turn's.
         const pensionResult = await runtime.runPhase("pensionTurn", () =>
-          runPensionTurn(context.db, newTurn, rerunSafeAt(context.resilienceStage))
+          runPensionTurn(context.db, newTurn, context.rerunSafe)
         );
         if (pensionResult) {
           phaseResults.pensionTurn = {

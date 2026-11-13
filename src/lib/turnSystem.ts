@@ -709,7 +709,7 @@ async function processTurnImpl(
         activeIteration,
         phaseStatuses,
         startTimeMs: startTime,
-        resilienceStage,
+        rerunSafe: rerunSafeAt(resilienceStage),
       })
     );
     // One eligibility predicate for the locked phases and the post-lock
