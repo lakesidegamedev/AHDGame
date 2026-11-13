@@ -159,6 +159,56 @@ describe("reset over a world holding every known leftover", () => {
     expect(text).toContain("preserved-field partyCharters: charter still holds charter");
   });
 
+  it("fails the gate on a gameConfig key that is neither a survivor nor the seed value", async () => {
+    const existing = memory.collection("gameConfig").docs.find((d) => d._id === "default");
+    const stray = {
+      turnResilienceStage: 1,
+      firstJoinerBecomesPartyChair: false,
+      producerMarketLiveFromTurn: 400,
+    };
+    if (existing) Object.assign(existing, stray);
+    else memory.collection("gameConfig").docs.push({ _id: "default", ...stray });
+    const text = (
+      await runResidueScan(memory as unknown as Db, {
+        resetStartedAt: new Date(),
+        expectedTurn: 1,
+        resetWorldId: "new-world",
+        referenceReplaced: true,
+      })
+    )
+      .map(formatResidueViolation)
+      .join("\n");
+    expect(text).toMatch(
+      /preserved-field gameConfig: default still holds .*producerMarketLiveFromTurn/
+    );
+    expect(text).not.toMatch(/gameConfig: default still holds .*turnResilienceStage/);
+    expect(text).not.toMatch(/gameConfig: default still holds .*firstJoinerBecomesPartyChair/);
+  });
+
+  it("fails the gate only when a party counter is behind its country's largest party id", async () => {
+    memory
+      .collection("politicalParties")
+      .docs.push(
+        { _id: "a", countryId: "UK", sequentialId: 52, name: "A", isDefault: true },
+        { _id: "b", countryId: "JP", sequentialId: 6, name: "B", isDefault: true }
+      );
+    memory
+      .collection("counters")
+      .docs.push({ _id: "party_UK", seq: 52 }, { _id: "party_JP", seq: 3 });
+    const text = (
+      await runResidueScan(memory as unknown as Db, {
+        resetStartedAt: new Date(),
+        expectedTurn: 1,
+        resetWorldId: "new-world",
+        referenceReplaced: true,
+      })
+    )
+      .map(formatResidueViolation)
+      .join("\n");
+    expect(text).toMatch(/preserved-field counters: party_JP still holds seq 3 is behind/);
+    expect(text).not.toContain("party_UK still holds");
+  });
+
   it("ages fixed-id collections by createdAt and exempts kept reference collections", async () => {
     const resetStartedAt = new Date();
     const fixedOldId = new ObjectId("60b15e11a4be27f200000000");
