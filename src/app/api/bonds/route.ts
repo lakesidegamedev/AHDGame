@@ -22,6 +22,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpCapitalToAnchor, loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { calculateBondYieldToMaturityPercent } from "@/lib/constants/bonds";
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { parsePreviewRows, topBondsForPreview } from "@/lib/market/overviewPreview";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
@@ -199,8 +200,9 @@ export async function GET(request: Request) {
 
     // Per-user (enabled-country filtered) — ETag/304 saves egress on unchanged
     // polls; not shared-cached to avoid cross-country-access leakage.
+    const previewRows = parsePreviewRows(url.searchParams.get("preview"));
     return conditionalJson(request, {
-      bonds: bondListings,
+      bonds: previewRows ? topBondsForPreview(bondListings, previewRows) : bondListings,
       totalOutstanding: totalOutstandingAnchor,
     });
   } catch (error) {

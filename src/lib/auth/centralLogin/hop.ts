@@ -7,7 +7,7 @@ import { safeLakesideLoginReturn } from "@/lib/auth/lakesideLoginReturn";
 import { getDb } from "@/lib/mongodb";
 import { lakesideHopFlowsCollection } from "@/lib/db/repositories/lakesideHopFlows";
 import { bridgeLoginTicket } from "./bridgeClient";
-import { getCentralLoginMode } from "./index";
+import { getCentralLoginModeFor } from "./index";
 import {
   HOP_CALLBACK_PATH,
   HOP_COOKIE_NAME,
@@ -101,7 +101,7 @@ export async function startLakesideHop(input: {
   cookieStore: HopCookieJar;
   fallbackOrigin: string;
 }): Promise<string | null> {
-  if (getCentralLoginMode() !== "central") return null;
+  if (getCentralLoginModeFor(input.userId) !== "central") return null;
   try {
     const config = hopConfig();
     // Not configured means the hop is not in use: nothing to record.

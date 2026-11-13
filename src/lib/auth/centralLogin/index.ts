@@ -12,7 +12,9 @@ import {
   type BridgeResult,
 } from "./bridgeClient";
 import {
+  modeForUser,
   parseCentralLoginMode,
+  parseCentralLoginTestUsers,
   type CentralLoginMode,
   type LocalPasswordResult,
   type PasswordCheckOutcome,
@@ -32,6 +34,18 @@ export function getCentralLoginMode(): CentralLoginMode {
   const mode = parseCentralLoginMode(authConfig.centralLoginMode());
   // A switched-on mode without bridge config behaves as off, never half-on.
   return mode !== "off" && !isBridgeConfigured() ? "off" : mode;
+}
+
+/**
+ * The mode for one account. Listed test users in shadow mode take the central
+ * path; everyone else, and every other global mode, is unchanged.
+ */
+export function getCentralLoginModeFor(userId: string): CentralLoginMode {
+  return modeForUser(
+    getCentralLoginMode(),
+    userId,
+    parseCentralLoginTestUsers(authConfig.centralLoginTestUsers())
+  );
 }
 
 export const CENTRAL_WRITE_UNAVAILABLE_MESSAGE =
