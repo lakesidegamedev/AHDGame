@@ -43,6 +43,23 @@ describe("AHD-1448 freight overbilling restitution", () => {
     expect(planned!.creditLocal).toBeCloseTo(121_800, 6);
   });
 
+  it("skips a corporation the current world created, and credits one that predates it", () => {
+    const id = new ObjectId();
+    const row = { corporationId: id.toString(), overchargeAnchor: 500 };
+    const worldStart = new Date("2026-11-12T19:16:45Z");
+    const rates = new Map([["USD", 1]]);
+    const made = (createdAt: Date) => ({ _id: id, liquidCurrencyCode: "USD" as const, createdAt });
+    expect(
+      planCorporationCredit(row, made(new Date("2026-11-12T19:22:10Z")), rates, worldStart)
+    ).toBeNull();
+    expect(
+      planCorporationCredit(row, made(new Date("2026-10-04T12:00:00Z")), rates, worldStart)
+    ).not.toBeNull();
+    expect(
+      planCorporationCredit(row, made(new Date("2026-11-12T19:22:10Z")), rates)
+    ).not.toBeNull();
+  });
+
   it("skips a corporation that is gone, already credited, or has no usable rate", () => {
     const id = new ObjectId();
     const row = { corporationId: id.toString(), overchargeAnchor: 500 };

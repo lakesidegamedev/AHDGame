@@ -13,6 +13,7 @@ import type {
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { createdByCurrentWorld, currentWorldStart } from "../worldStart";
 
 /**
  * Restitution for a bank charter destroyed by a hostile-takeover merge. The
@@ -64,12 +65,14 @@ interface CorporationDoc {
   _id: ObjectId;
   name?: string;
   liquidCurrencyCode?: CurrencyCode | string | null;
+  createdAt?: Date;
   remediation?: Record<string, unknown>;
 }
 
 interface CentralBankDoc {
   _id: string;
   externalBroadMoney?: number;
+  createdAt?: Date;
   remediation?: Record<string, unknown>;
 }
 
@@ -138,6 +141,7 @@ async function loadDocs(db: Db): Promise<{
  */
 async function buildPlanned(db: Db): Promise<{ planned: PlannedRestitution[]; notes: string[] }> {
   const { hunt, usCb } = await loadDocs(db);
+  const worldStart = await currentWorldStart(db);
   const notes: string[] = [];
   const planned: PlannedRestitution[] = [];
   for (const row of pinnedRows()) {
@@ -147,6 +151,11 @@ async function buildPlanned(db: Db): Promise<{ planned: PlannedRestitution[]; no
       continue;
     }
     if (hasMarker(doc)) continue;
+    // The destroyed bank belongs to a past world; a recipient this world created is not owed it.
+    if (createdByCurrentWorld(doc, worldStart)) {
+      notes.push(`${row.subjectName} was created by the current world; nothing is owed to it`);
+      continue;
+    }
     planned.push(row);
   }
   return { planned, notes };

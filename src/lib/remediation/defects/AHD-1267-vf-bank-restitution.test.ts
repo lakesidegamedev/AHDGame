@@ -147,3 +147,28 @@ describe("AHD-1267 detect/plan/apply/verify", () => {
     expect(detected.sample[0]).toMatchObject({ kind: "npc-return" });
   });
 });
+
+describe("AHD-1267 in a fresh world", () => {
+  function world(centralBankCreatedAt: Date, huntPresent: boolean): Db {
+    const memory = createInMemoryDb();
+    memory.seed("gameState", [{ _id: "current", worldEpochId: "6af6109d59773223b82f5390" }]);
+    memory.seed("centralBanks", [{ _id: US_CB_ID, createdAt: centralBankCreatedAt }]);
+    memory.seed(
+      "corporations",
+      huntPresent
+        ? [{ _id: new ObjectId(HUNT_OIL_ID), name: "Hunt Oil Company", liquidCurrencyCode: "USD" }]
+        : []
+    );
+    return memory as unknown as Db;
+  }
+
+  it("owes nothing to a central bank this world created", async () => {
+    const detected = await defect.detect(world(new Date("2026-11-12T19:26:13Z"), false), ctx());
+    expect(detected.affected).toBe(0);
+  });
+
+  it("still owes the household leg to a central bank that predates the world", async () => {
+    const detected = await defect.detect(world(new Date("2026-08-01T00:00:00Z"), false), ctx());
+    expect(detected.affected).toBe(1);
+  });
+});

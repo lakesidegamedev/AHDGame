@@ -18,6 +18,7 @@ import {
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { createdByCurrentWorld, currentWorldStart } from "../worldStart";
 
 /**
  * Restitution for freight overbilling: the sourcing pass settles the commodity
@@ -45,6 +46,7 @@ interface CorporationDoc {
   name?: string;
   countryId?: string;
   liquidCurrencyCode?: CurrencyCode | null;
+  createdAt?: Date;
   remediation?: Record<string, unknown>;
 }
 
@@ -77,7 +79,7 @@ async function loadCorporations(db: Db): Promise<Map<string, CorporationDoc>> {
   const docs = await corporationsCollection<CorporationDoc>(db)
     .find(
       { _id: { $in: ids } },
-      { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1, remediation: 1 } }
+      { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1, createdAt: 1, remediation: 1 } }
     )
     .toArray();
   return new Map(docs.map((doc) => [doc._id.toString(), doc]));
@@ -92,9 +94,12 @@ async function loadRatesByCurrency(db: Db): Promise<Map<string, number>> {
 export function planCorporationCredit(
   row: { corporationId: string; overchargeAnchor: number },
   doc: CorporationDoc | undefined,
-  ratesByCurrency: Map<string, number>
+  ratesByCurrency: Map<string, number>,
+  worldStart: Date | null = null
 ): PlannedCredit | null {
   if (!doc || hasMarker(doc) || !(row.overchargeAnchor > 0)) return null;
+  // The overbilling happened in a past world; a corporation this world created is not owed it.
+  if (createdByCurrentWorld(doc, worldStart)) return null;
   // Pre-forex corps carry no `liquidCurrencyCode` and hold `liquidCapital` in
   // anchor, so rate 1 keeps the written amount and the receipt consistent.
   const liquidCurrency = doc.liquidCurrencyCode ?? null;
@@ -112,9 +117,13 @@ export function planCorporationCredit(
 }
 
 async function buildPlannedCredits(db: Db): Promise<PlannedCredit[]> {
-  const [corporations, rates] = await Promise.all([loadCorporations(db), loadRatesByCurrency(db)]);
+  const [corporations, rates, worldStart] = await Promise.all([
+    loadCorporations(db),
+    loadRatesByCurrency(db),
+    currentWorldStart(db),
+  ]);
   return FREIGHT_OVERBILLING_BY_CORPORATION.map((row) =>
-    planCorporationCredit(row, corporations.get(row.corporationId), rates)
+    planCorporationCredit(row, corporations.get(row.corporationId), rates, worldStart)
   ).filter((planned): planned is PlannedCredit => planned !== null);
 }
 
