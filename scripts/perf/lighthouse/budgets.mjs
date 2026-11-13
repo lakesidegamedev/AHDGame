@@ -104,24 +104,24 @@ export const PAGE_BUDGET_OVERRIDES = {
  * stable idle-host baseline exists.
  */
 export const SIGNED_IN_BUDGETS = {
-  "/country/us/map": { floor: { performance: 0.3 }, target: { performance: 0.6 } }, // measured 32
-  "/country/us/elections": { floor: { performance: 0.35 }, target: { performance: 0.6 } }, // measured 42
-  "/profile": { floor: { performance: 0.4 }, target: { performance: 0.7 } }, // measured 47
-  "/market": { floor: { performance: 0.35 }, target: { performance: 0.7 } }, // measured 44
-  "/country/us/parties/1": { floor: { performance: 0.4 }, target: { performance: 0.7 } }, // measured 48
-  "/country/us/budget": { floor: { performance: 0.45 }, target: { performance: 0.7 } }, // measured 54
-  "/actions": { floor: { performance: 0.45 }, target: { performance: 0.7 } }, // measured 52
-  "/country/us/legislature": { floor: { performance: 0.3 }, target: { performance: 0.6 } }, // measured 40
-  "/portfolio": { floor: { performance: 0.5 }, target: { performance: 0.75 } }, // measured 60
-  "/corporation/:corp": { floor: { performance: 0.5 }, target: { performance: 0.75 } }, // measured 58
-  "/world": { floor: { performance: 0.4 }, target: { performance: 0.7 } }, // measured 51
-  "/country/us/economy": { floor: { performance: 0.55 }, target: { performance: 0.75 } }, // measured 65
-  "/notifications": { floor: { performance: 0.6 }, target: { performance: 0.8 } }, // measured 71
-  "/banking": { floor: { performance: 0.6 }, target: { performance: 0.8 } }, // measured 70
-  "/campaign": { floor: { performance: 0.6 }, target: { performance: 0.8 } }, // measured 70
-  "/country/us/parties": { floor: { performance: 0.6 }, target: { performance: 0.8 } }, // measured 70
-  "/country/us": { floor: { performance: 0.65 }, target: { performance: 0.8 } }, // measured 75
-  "/news": { floor: { performance: 0.55 }, target: { performance: 0.75 } }, // measured 65
+  "/country/us/map": { floor: { performance: 0.3 }, target: { performance: 0.6 } },
+  "/country/us/elections": { floor: { performance: 0.35 }, target: { performance: 0.6 } },
+  "/profile": { floor: { performance: 0.4 }, target: { performance: 0.7 } },
+  "/market": { floor: { performance: 0.35 }, target: { performance: 0.7 } },
+  "/country/us/parties/1": { floor: { performance: 0.4 }, target: { performance: 0.7 } },
+  "/country/us/budget": { floor: { performance: 0.45 }, target: { performance: 0.7 } },
+  "/actions": { floor: { performance: 0.45 }, target: { performance: 0.7 } },
+  "/country/us/legislature": { floor: { performance: 0.3 }, target: { performance: 0.6 } },
+  "/portfolio": { floor: { performance: 0.5 }, target: { performance: 0.75 } },
+  "/corporation/:corp": { floor: { performance: 0.5 }, target: { performance: 0.75 } },
+  "/world": { floor: { performance: 0.4 }, target: { performance: 0.7 } },
+  "/country/us/economy": { floor: { performance: 0.55 }, target: { performance: 0.75 } },
+  "/notifications": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/banking": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/campaign": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/country/us/parties": { floor: { performance: 0.6 }, target: { performance: 0.8 } },
+  "/country/us": { floor: { performance: 0.65 }, target: { performance: 0.8 } },
+  "/news": { floor: { performance: 0.55 }, target: { performance: 0.75 } },
 };
 
 export const METRIC_IDS = [
