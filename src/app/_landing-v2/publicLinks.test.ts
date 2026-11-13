@@ -1,14 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  AHD_2027_OVERVIEW_URL,
-  API_DOCS_URL,
-  LAKESIDE_LAUNCHER_URL,
-  LANDING_FOOTER_SECTIONS,
-  LANDING_TRAY_LINKS,
-  LANDING_WORLD_LINKS,
-  STATE_OF_THE_GAME_NOVEMBER_2026_URL,
-} from "./publicLinks";
-import { COMMUNITY_DISCORD_URL } from "@/lib/communityLinks";
+import { API_DOCS_URL, LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "./publicLinks";
 import enCatalog from "../../../messages/en/auth.json";
 import deCatalog from "../../../messages/de/auth.json";
 
@@ -118,39 +109,5 @@ describe("landing public link inventory", () => {
       .map((l) => l.href)
       .filter((h) => !["/register", "/privacy", "/terms", "/contact"].includes(h));
     expect(trayHrefs).toEqual(expected);
-  });
-
-  it.each(LOCALES)("every 2027 world link and lander string resolves in %s", (_locale, catalog) => {
-    for (const link of LANDING_WORLD_LINKS) {
-      expect(resolveMessage(catalog, link.labelKey)).toBeTypeOf("string");
-    }
-    for (const key of [
-      "opensLabel",
-      "firstTurnLabel",
-      "easternTime",
-      "playable",
-      "span",
-      "sealedNote",
-      "openNote",
-    ]) {
-      expect(resolveMessage(catalog, `landing.world2027.${key}`)).toBeTypeOf("string");
-    }
-  });
-
-  it("links the 2027 overview, the State of the Game post, the launcher and Discord", () => {
-    expect(LANDING_WORLD_LINKS.map((l) => l.href)).toEqual([
-      AHD_2027_OVERVIEW_URL,
-      STATE_OF_THE_GAME_NOVEMBER_2026_URL,
-      LAKESIDE_LAUNCHER_URL,
-      COMMUNITY_DISCORD_URL,
-    ]);
-    for (const link of LANDING_WORLD_LINKS) {
-      expect(link.external).toBe(true);
-      expect(link.href.startsWith("https://")).toBe(true);
-    }
-    expect(AHD_2027_OVERVIEW_URL).toBe("https://lakesidegames.net/ahd-2027/");
-    expect(STATE_OF_THE_GAME_NOVEMBER_2026_URL).toBe(
-      "https://lakesidegames.net/news/state-of-the-game-november-2026/"
-    );
   });
 });

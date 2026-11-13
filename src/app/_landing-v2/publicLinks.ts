@@ -11,8 +11,6 @@
  * `publicLinks.test.ts` asserts every label key exists in every locale.
  */
 
-import { COMMUNITY_DISCORD_URL } from "@/lib/communityLinks";
-
 export type LandingLink = {
   href: string;
   /** Key under the `auth` next-intl namespace. */
@@ -27,31 +25,6 @@ export type LandingLink = {
 
 /** Canonical home of the public API reference since #771 retired /api-guide. */
 export const API_DOCS_URL = "https://docs.lakesidegames.net/api/public-v1.html";
-
-/** Lakeside Games' one-page overview of the 2027 world. */
-export const AHD_2027_OVERVIEW_URL = "https://lakesidegames.net/ahd-2027/";
-
-/** The State of the Game post that announced the 2027 world. */
-export const STATE_OF_THE_GAME_NOVEMBER_2026_URL =
-  "https://lakesidegames.net/news/state-of-the-game-november-2026/";
-
-/** Download page for the Lakeside launcher. */
-export const LAKESIDE_LAUNCHER_URL = "https://lakesidegames.net/download/";
-
-/**
- * The lander's secondary actions beside Create your character and Sign in.
- * Every one leaves the game's domain, so every one is external.
- */
-export const LANDING_WORLD_LINKS: readonly LandingLink[] = [
-  { href: AHD_2027_OVERVIEW_URL, labelKey: "landing.world2027.overview", external: true },
-  {
-    href: STATE_OF_THE_GAME_NOVEMBER_2026_URL,
-    labelKey: "landing.world2027.stateOfTheGame",
-    external: true,
-  },
-  { href: LAKESIDE_LAUNCHER_URL, labelKey: "landing.world2027.launcher", external: true },
-  { href: COMMUNITY_DISCORD_URL, labelKey: "landing.world2027.discord", external: true },
-];
 
 export type LandingFooterSection = {
   headingKey: string;
