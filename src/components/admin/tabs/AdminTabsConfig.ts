@@ -1,6 +1,5 @@
 export type MainTabId =
   | "dashboard"
-  | "traffic"
   | "politics"
   | "economy"
   | "world"

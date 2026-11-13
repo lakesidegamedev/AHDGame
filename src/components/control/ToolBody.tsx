@@ -23,9 +23,6 @@ const lazy = <P extends object>(load: () => Promise<React.ComponentType<P>>) =>
 const AdminDashboardTab = lazy(() =>
   import("@/components/admin/tabs/AdminDashboardTab").then((m) => m.AdminDashboardTab)
 );
-const AdminTrafficTab = lazy(() =>
-  import("@/components/admin/tabs/AdminTrafficTab").then((m) => m.AdminTrafficTab)
-);
 const AdminPoliticsTab = lazy(() =>
   import("@/components/admin/tabs/AdminPoliticsTab").then((m) => m.AdminPoliticsTab)
 );
@@ -206,8 +203,6 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
           onNavigate={(tab: MainTabId, nextSub?: string) => open(tab, nextSub)}
         />
       );
-    case "traffic":
-      return <AdminTrafficTab />;
     case "politics":
       return <AdminPoliticsTab activeSub={sub as never} />;
     case "world":
@@ -223,7 +218,6 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
         <AdminSupportTab
           activeSub={sub as never}
 
-          initialFeedbackIssue={sub === "feedback" ? deepLinkIssue : undefined}
           initialSuggestionIssue={sub === "suggestions" ? deepLinkIssue : undefined}
         />
       );
