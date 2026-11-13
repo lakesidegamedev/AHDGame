@@ -200,7 +200,7 @@ Miyagi also built one of the iteration's great fortunes. **Miyagi Healing**, a p
 
 ### Larry Fink: from bankruptcy notice to wartime premier
 
-**Larry Fink** arrived on the Wire as a financier. Their early posts went *BlackRock Investment Notice*, *BlackRock Subsidiary News*, *Formation of the Vanguard Group*, *BlackRock Financial Crisis* and, four days after the first, *BlackRock Corporation Bankruptcy Notice*. They took the setback well, and became prime minister at turn 433. Fink was confirmed again at turn 671.
+**Larry Fink** arrived on the Wire as a financier. Their early posts went *BlackRock Investment Notice*, *BlackRock Subsidiary News*, *Formation of the Vanguard Group*, *BlackRock Financial Crisis* and, one post later, *BlackRock Corporation Bankruptcy Notice*. They took the setback well, and became prime minister at turn 433. Fink was confirmed again at turn 671.
 
 At turn 598 Nariyoshi Miyagi moved a vote of no confidence against their own successor. More members voted for it than against, 94 to 36, but it fell short of the threshold and failed. Miyagi served as Fink's Chief Cabinet Secretary both before and after the vote.
 
