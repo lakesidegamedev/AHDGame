@@ -11,14 +11,24 @@
  * the hero is scrolled away or the tab is hidden. Each moving piece is its own
  * element so a frame repaints a trail, not the whole globe.
  */
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { MultiLineString } from "geojson";
 import type { mesh as topojsonMesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
-import type { BroadcastPlace, BroadcastTickerItem } from "./eraThemes";
+import type { BroadcastPlace, BroadcastTickerItem, NightsideConfig } from "./eraThemes";
+import { fetchJson } from "@/lib/observability/fetchJson";
+import { NIGHT_CITIES } from "./nightCities";
 import {
   beamAt,
+  capPath,
+  cityLightPaths,
   envelope,
+  greatCircle,
+  liftedRoutePath,
+  lonLatToVec,
+  subsolarPoint,
+  viewBasis,
+  type Vec3,
   orbitAxes,
   orbitPosition,
   orbitToGlobe,
@@ -32,6 +42,54 @@ import {
 export const BROADCAST_SPHERE_FILL = "url(#ahd-bc-ocean)";
 export const BROADCAST_SPHERE_STROKE = "rgba(150, 205, 255, 0.6)";
 export const BROADCAST_GRATICULE_STROKE = "rgba(190, 220, 255, 0.45)";
+
+/** The nightside globe's sphere: a darker sea, so city lights and routes carry the frame. */
+export const NIGHTSIDE_SPHERE_FILL = "url(#ahd-bc-ocean-night)";
+export const NIGHTSIDE_SPHERE_STROKE = "rgba(120, 220, 255, 0.55)";
+export const NIGHTSIDE_GRATICULE_STROKE = "rgba(140, 210, 255, 0.28)";
+
+/** Sphere, rim and graticule colours for either broadcast look. */
+export function broadcastSphereStyle(nightside: boolean): {
+  fill: string;
+  stroke: string;
+  graticule: string;
+} {
+  return nightside
+    ? {
+        fill: NIGHTSIDE_SPHERE_FILL,
+        stroke: NIGHTSIDE_SPHERE_STROKE,
+        graticule: NIGHTSIDE_GRATICULE_STROKE,
+      }
+    : {
+        fill: BROADCAST_SPHERE_FILL,
+        stroke: BROADCAST_SPHERE_STROKE,
+        graticule: BROADCAST_GRATICULE_STROKE,
+      };
+}
+
+/** Night colour, warm city light and the cyan the routes and region carry. */
+const NIGHT_FILL = "#01040d";
+const LIGHT_GLOW = "#ffb547";
+const LIGHT_CORE = "#fff3d1";
+const ROUTE_CYAN = "#5fe3ff";
+
+/**
+ * Bands of the night side, around the point opposite the sun, as angular
+ * radius in degrees and opacity. The widest reaches past the terminator for
+ * twilight; stacked, they darken toward deep night without a blur filter.
+ */
+const NIGHT_BANDS: readonly (readonly [number, number])[] = [
+  [97, 0.2],
+  [91, 0.3],
+  [84, 0.26],
+  [74, 0.22],
+];
+
+/** Lift of a route's midpoint above the surface, as a share of the radius per radian flown. */
+const ROUTE_LIFT_PER_RADIAN = 0.075;
+const ROUTE_SAMPLES = 32;
+/** Seconds for a packet to cross a route. Staggered so they never pulse in step. */
+const PACKET_PERIOD_S = 5.5;
 
 const SIGNAL_RED = "#ff4d5e";
 const MONO = "var(--font-geist-mono), ui-monospace, monospace";
@@ -55,6 +113,8 @@ type Satellite = {
   phase: number;
   /** Carries the era's orbit label. */
   labelled: boolean;
+  /** A constellation craft: a bare dot with no trail and no beam. */
+  small?: boolean;
 };
 
 /**
@@ -67,6 +127,36 @@ const SATELLITES: readonly Satellite[] = [
   { id: "comsat-2", orbit: ORBITS[1], phase: 0.25 + 1 / 3, labelled: false },
   { id: "comsat-3", orbit: ORBITS[1], phase: 0.25 + 2 / 3, labelled: false },
 ];
+
+/**
+ * The nightside sky adds a low, busy shell: a broadband constellation of
+ * small craft close over the surface, no trails, so the sky reads as 2027 and
+ * not 1991 without costing a trail path each.
+ */
+const CONSTELLATION_ORBIT: Orbit = {
+  id: "leo",
+  radius: 1.055,
+  tilt: 66,
+  roll: 24,
+  period: 26,
+  phase: 0,
+  dotted: true,
+};
+const CONSTELLATION_SIZE = 9;
+const NIGHT_ORBITS: readonly Orbit[] = [...ORBITS, CONSTELLATION_ORBIT];
+const NIGHT_SATELLITES: readonly Satellite[] = [
+  ...SATELLITES,
+  ...Array.from({ length: CONSTELLATION_SIZE }, (_, i) => ({
+    id: `leo-${i}`,
+    orbit: CONSTELLATION_ORBIT,
+    phase: i / CONSTELLATION_SIZE,
+    labelled: false,
+    small: true,
+  })),
+];
+
+const orbitsFor = (nightside: boolean) => (nightside ? NIGHT_ORBITS : ORBITS);
+const satellitesFor = (nightside: boolean) => (nightside ? NIGHT_SATELLITES : SATELLITES);
 
 /** Radians of orbit a satellite's trail covers. */
 const TRAIL_SWEEP = 0.42;
@@ -156,12 +246,14 @@ function OrbitSide({
   globeRadius,
   label,
   bind,
+  satellites,
 }: {
   orbit: Orbit;
   side: "far" | "near";
   globeRadius: number;
   label?: string;
   bind: BindRef;
+  satellites: readonly Satellite[];
 }) {
   const { a, b } = orbitAxes(orbit, globeRadius);
   const clipId = `ahd-bc-orbit-${orbit.id}-${side}`;
@@ -188,38 +280,56 @@ function OrbitSide({
           strokeDasharray={orbit.dotted ? "0.6 2.4" : undefined}
           strokeLinecap={orbit.dotted ? "round" : undefined}
         />
-        {SATELLITES.filter((sat) => sat.orbit === orbit).map((sat) => (
-          <g key={sat.id}>
-            <path
-              ref={bind(`trail:${sat.id}:${side}`)}
-              fill="none"
-              stroke={`url(#ahd-bc-trail-${sat.id})`}
-              strokeWidth={0.85}
-              strokeLinecap="round"
-              opacity={near ? 1 : 0.6}
+        {satellites
+          .filter((sat) => sat.orbit === orbit && sat.small)
+          .map((sat) => (
+            <circle
+              key={sat.id}
+              ref={bind(`sat:${sat.id}:${side}`)}
+              r={0.55}
+              fill="#e6fbff"
+              opacity={near ? 0.9 : 0.45}
             />
-            <g ref={bind(`sat:${sat.id}:${side}`)} opacity={near ? 1 : 0.65}>
-              {/* Swells while this satellite is the one transmitting. */}
-              <circle ref={bind(`halo:${sat.id}:${side}`)} r={2.6} fill="#ffffff" opacity={0.16} />
-              <rect x={-3.4} y={-0.35} width={6.8} height={0.7} fill="rgb(200, 225, 255)" />
-              <circle r={1.15} fill="#ffffff" />
-              {sat.labelled && label && (
-                <text
-                  x={4.2}
-                  y={-3.2}
-                  transform={`rotate(${-orbit.roll})`}
+          ))}
+        {satellites
+          .filter((sat) => sat.orbit === orbit && !sat.small)
+          .map((sat) => (
+            <g key={sat.id}>
+              <path
+                ref={bind(`trail:${sat.id}:${side}`)}
+                fill="none"
+                stroke={`url(#ahd-bc-trail-${sat.id})`}
+                strokeWidth={0.85}
+                strokeLinecap="round"
+                opacity={near ? 1 : 0.6}
+              />
+              <g ref={bind(`sat:${sat.id}:${side}`)} opacity={near ? 1 : 0.65}>
+                {/* Swells while this satellite is the one transmitting. */}
+                <circle
+                  ref={bind(`halo:${sat.id}:${side}`)}
+                  r={2.6}
                   fill="#ffffff"
-                  fillOpacity={0.85}
-                  fontSize={4.4}
-                  fontFamily={MONO}
-                  letterSpacing={0.6}
-                >
-                  {label}
-                </text>
-              )}
+                  opacity={0.16}
+                />
+                <rect x={-3.4} y={-0.35} width={6.8} height={0.7} fill="rgb(200, 225, 255)" />
+                <circle r={1.15} fill="#ffffff" />
+                {sat.labelled && label && (
+                  <text
+                    x={4.2}
+                    y={-3.2}
+                    transform={`rotate(${-orbit.roll})`}
+                    fill="#ffffff"
+                    fillOpacity={0.85}
+                    fontSize={4.4}
+                    fontFamily={MONO}
+                    letterSpacing={0.6}
+                  >
+                    {label}
+                  </text>
+                )}
+              </g>
             </g>
-          </g>
-        ))}
+          ))}
       </g>
     </g>
   );
@@ -231,15 +341,21 @@ export function BroadcastUnderlay({
   globeRadius,
   zoom,
   bind,
+  nightside = false,
 }: {
   translate: readonly [number, number];
   globeRadius: number;
   /** Zoom at render time; the frame loop keeps it current between renders. */
   zoom: number;
   bind: BindRef;
+  /** The present-day look: darker sea, cyan rim, the constellation shell. */
+  nightside?: boolean;
 }) {
-  const atmosphere = globeRadius * 1.16;
+  const atmosphere = globeRadius * (nightside ? 1.2 : 1.16);
   const limb = globeRadius / atmosphere;
+  const rim = nightside
+    ? (["#7fe9ff", "#8cefff", "#2fc4ff", "#1b8cff"] as const)
+    : (["#7cc0ff", "#8ac8ff", "#4f9dff", "#2f7bff"] as const);
 
   return (
     <g aria-hidden="true" style={{ pointerEvents: "none" }}>
@@ -250,12 +366,21 @@ export function BroadcastUnderlay({
           <stop offset="66%" stopColor="#0f3577" />
           <stop offset="100%" stopColor="#06173f" />
         </radialGradient>
+        {nightside && (
+          // Lit from the left of frame, where the day side opens.
+          <radialGradient id="ahd-bc-ocean-night" cx="30%" cy="40%" r="80%">
+            <stop offset="0%" stopColor="#1f5f9e" />
+            <stop offset="34%" stopColor="#123f74" />
+            <stop offset="70%" stopColor="#0a2448" />
+            <stop offset="100%" stopColor="#040d22" />
+          </radialGradient>
+        )}
         <radialGradient id="ahd-bc-atmosphere" cx="50%" cy="50%" r="50%">
-          <stop offset={limb - 0.02} stopColor="#7cc0ff" stopOpacity={0} />
-          <stop offset={limb} stopColor="#8ac8ff" stopOpacity={0.55} />
-          <stop offset={limb + 0.035} stopColor="#4f9dff" stopOpacity={0.2} />
-          <stop offset={limb + 0.08} stopColor="#2f7bff" stopOpacity={0.06} />
-          <stop offset="100%" stopColor="#2f7bff" stopOpacity={0} />
+          <stop offset={limb - 0.02} stopColor={rim[0]} stopOpacity={0} />
+          <stop offset={limb} stopColor={rim[1]} stopOpacity={nightside ? 0.5 : 0.55} />
+          <stop offset={limb + 0.035} stopColor={rim[2]} stopOpacity={0.2} />
+          <stop offset={limb + 0.08} stopColor={rim[3]} stopOpacity={0.06} />
+          <stop offset="100%" stopColor={rim[3]} stopOpacity={0} />
         </radialGradient>
         <radialGradient id="ahd-bc-shade" cx="34%" cy="28%" r="92%">
           <stop offset="0%" stopColor="#030714" stopOpacity={0} />
@@ -270,27 +395,30 @@ export function BroadcastUnderlay({
         </radialGradient>
         {/* Trail gradients run tail to head; `render` moves their ends. Both
             sides of an orbit share one, as they share a coordinate frame. */}
-        {SATELLITES.map((sat) => (
-          <linearGradient
-            key={sat.id}
-            id={`ahd-bc-trail-${sat.id}`}
-            ref={bind(`grad:${sat.id}`)}
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop offset="0%" stopColor="#ffffff" stopOpacity={0} />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity={0.75} />
-          </linearGradient>
-        ))}
+        {satellitesFor(nightside)
+          .filter((sat) => !sat.small)
+          .map((sat) => (
+            <linearGradient
+              key={sat.id}
+              id={`ahd-bc-trail-${sat.id}`}
+              ref={bind(`grad:${sat.id}`)}
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" stopColor="#ffffff" stopOpacity={0} />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity={0.75} />
+            </linearGradient>
+          ))}
       </defs>
       <g ref={bind("zoom:underlay")} transform={broadcastZoomTransform(translate, zoom)}>
         <circle r={atmosphere} fill="url(#ahd-bc-atmosphere)" />
-        {ORBITS.map((orbit) => (
+        {orbitsFor(nightside).map((orbit) => (
           <OrbitSide
             key={orbit.id}
             orbit={orbit}
             side="far"
             globeRadius={globeRadius}
             bind={bind}
+            satellites={satellitesFor(nightside)}
           />
         ))}
       </g>
@@ -343,21 +471,106 @@ export function BroadcastOverlay({
   zoom,
   bind,
   orbitLabel,
+  nightside,
 }: {
   translate: readonly [number, number];
   globeRadius: number;
   zoom: number;
   bind: BindRef;
   orbitLabel?: string;
+  /** The present-day layers: night, city lights, routes and the watched region. */
+  nightside?: NightsideConfig;
 }) {
   const transform = broadcastZoomTransform(translate, zoom);
+  const night = Boolean(nightside);
 
   return (
     <g aria-hidden="true" style={{ pointerEvents: "none" }}>
-      <g ref={bind("zoom:shade")} transform={transform}>
-        <circle r={globeRadius} fill="url(#ahd-bc-shade)" />
-        <circle r={globeRadius} fill="url(#ahd-bc-sheen)" />
-      </g>
+      {night ? (
+        <>
+          {/* `d` on every layer below is written by the frame loop. */}
+          {NIGHT_BANDS.map(([, opacity], i) => (
+            <path
+              key={i}
+              ref={bind(`night:${i}`)}
+              fill={NIGHT_FILL}
+              fillOpacity={opacity}
+              fillRule="evenodd"
+            />
+          ))}
+          <g ref={bind("zoom:shade")} transform={transform}>
+            <circle r={globeRadius} fill="url(#ahd-bc-sheen)" opacity={0.6} />
+          </g>
+          <path
+            ref={bind("lights:glow")}
+            fill="none"
+            stroke={LIGHT_GLOW}
+            strokeOpacity={0.42}
+            strokeWidth={2.6}
+            strokeLinecap="round"
+          />
+          <path
+            ref={bind("lights:core")}
+            fill="none"
+            stroke={LIGHT_CORE}
+            strokeOpacity={1}
+            strokeWidth={0.95}
+            strokeLinecap="round"
+          />
+          <path
+            ref={bind("region:outline")}
+            fill={ROUTE_CYAN}
+            fillOpacity={0.08}
+            stroke={ROUTE_CYAN}
+            strokeOpacity={0.9}
+            strokeWidth={0.6}
+            strokeDasharray="1.6 1.2"
+            strokeLinejoin="round"
+          />
+          {nightside?.watchedRegion && (
+            <text
+              ref={bind("region:label")}
+              fill="#ffffff"
+              fillOpacity={0.9}
+              fontSize={4}
+              fontFamily={MONO}
+              letterSpacing={0.6}
+              textAnchor="middle"
+              opacity={0}
+              className="max-sm:hidden"
+            >
+              {nightside.watchedRegion.label.toUpperCase()}
+            </text>
+          )}
+          {nightside?.routes.map((_, i) => (
+            <g key={i}>
+              <path
+                ref={bind(`route:${i}`)}
+                fill="none"
+                stroke={ROUTE_CYAN}
+                strokeOpacity={0.55}
+                strokeWidth={0.55}
+                strokeLinecap="round"
+              />
+              <path
+                ref={bind(`packet:${i}`)}
+                fill="none"
+                stroke="#e9fdff"
+                strokeOpacity={1}
+                strokeWidth={1}
+                strokeLinecap="round"
+                pathLength={100}
+                strokeDasharray="7 93"
+              />
+            </g>
+          ))}
+        </>
+      ) : (
+        <g ref={bind("zoom:shade")} transform={transform}>
+          <circle r={globeRadius} fill="url(#ahd-bc-shade)" />
+          <circle r={globeRadius} fill="url(#ahd-bc-sheen)" />
+        </g>
+      )}
       {/* `d` is written by the frame loop and never by React. */}
       <path
         ref={bind("seams")}
@@ -377,7 +590,7 @@ export function BroadcastOverlay({
       />
       <UplinkBeam bind={bind} />
       <g ref={bind("zoom:orbits")} transform={transform}>
-        {ORBITS.map((orbit) => (
+        {orbitsFor(night).map((orbit) => (
           <OrbitSide
             key={orbit.id}
             orbit={orbit}
@@ -385,6 +598,7 @@ export function BroadcastOverlay({
             globeRadius={globeRadius}
             label={orbitLabel}
             bind={bind}
+            satellites={satellitesFor(night)}
           />
         ))}
       </g>
@@ -419,15 +633,51 @@ const fixed = (n: number) => n.toFixed(2);
  * borders never lag the land they trace and satellites keep moving under a
  * hovering cursor.
  */
+type NightsidePlan = {
+  /** The sun's direction, and the pole of the night side opposite it. */
+  sun: Vec3;
+  antisolar: Vec3;
+  routes: { points: Vec3[]; lift: number }[];
+};
+
+function planNightside(config: NightsideConfig): NightsidePlan {
+  const sun = lonLatToVec(subsolarPoint(Date.parse(config.sunAt)));
+  return {
+    sun,
+    antisolar: [-sun[0], -sun[1], -sun[2]],
+    routes: config.routes.map(({ from, to }) => {
+      const points = greatCircle(from.lonLat, to.lonLat, ROUTE_SAMPLES);
+      const a = points[0];
+      const b = points[points.length - 1];
+      const flown = Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])));
+      return { points, lift: Math.min(0.2, Math.max(0.035, flown * ROUTE_LIFT_PER_RADIAN)) };
+    }),
+  };
+}
+
+/** A region's outer rings as unit vectors, from a GeoJSON Polygon or MultiPolygon. */
+function regionRings(geometry: { type: string; coordinates: unknown }): Vec3[][] {
+  const polygons =
+    geometry.type === "Polygon"
+      ? [geometry.coordinates as number[][][]]
+      : geometry.type === "MultiPolygon"
+        ? (geometry.coordinates as number[][][][])
+        : [];
+  return polygons.map((polygon) => polygon[0].map(([lon, lat]) => lonLatToVec([lon, lat])));
+}
+
 export function useBroadcastGlobeLayers({
   translate,
   globeRadius,
   ticker,
+  nightside,
 }: {
   translate: readonly [number, number];
   globeRadius: number;
   /** The crawl. Every item with a place is a dateline a satellite can beam to. */
   ticker?: readonly BroadcastTickerItem[];
+  /** The present-day layers. Pass a stable reference; the era config is one. */
+  nightside?: NightsideConfig;
 }) {
   const els = useRef(new Map<string, SVGElement>());
   const binders = useRef(new Map<string, (el: SVGElement | null) => void>());
@@ -437,6 +687,45 @@ export function useBroadcastGlobeLayers({
   const beamTarget = useRef<{ beam: number; satellite: string; dateline: number } | null>(null);
   const recentPlaces = useRef<string[]>([]);
   const lastBeamed = useRef(new Map<number, number>());
+
+  const night = nightside !== undefined;
+  const satellites = satellitesFor(night);
+  const plan = useMemo(() => (nightside ? planNightside(nightside) : null), [nightside]);
+  // The night layers only move when the globe does; this is the view they were drawn for.
+  const nightView = useRef("");
+  const region = useRef<Vec3[][] | null>(null);
+  const watched = nightside?.watchedRegion;
+
+  useEffect(() => {
+    if (!watched) return;
+    let cancelled = false;
+    type RegionShard = {
+      features?: {
+        id?: unknown;
+        properties?: Record<string, unknown>;
+        geometry?: { type: string; coordinates: unknown };
+      }[];
+    };
+    fetchJson<RegionShard>(watched.geoUrl, { feature: "landing-globe-region" })
+      .then((collection) => {
+        if (cancelled) return;
+        const feature = collection.features?.find(
+          (f) => f.properties?.regionCode === watched.featureId || f.id === watched.featureId
+        );
+        if (!feature?.geometry) return;
+        region.current = regionRings(feature.geometry);
+        nightView.current = "";
+      })
+      // fetchJson has already reported a real fault. The region is a flourish:
+      // without it the globe is complete, so there is no error state to show.
+      .catch((error: unknown) => {
+        if (!cancelled) region.current = null;
+        return error;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [watched]);
 
   const datelines = useMemo<readonly Dateline[]>(
     () =>
@@ -491,10 +780,76 @@ export function useBroadcastGlobeLayers({
         }
       }
 
+      if (plan) {
+        const project = viewBasis(view.rotate);
+        const viewKey = `${project([1, 0, 0]).map(fixed).join()}|${project([0, 0, 1]).map(fixed).join()}|${view.zoom}`;
+        if (viewKey !== nightView.current) {
+          nightView.current = viewKey;
+          NIGHT_BANDS.forEach(([degrees], i) => {
+            el(`night:${i}`)?.setAttribute(
+              "d",
+              capPath(project, plan.antisolar, (degrees * Math.PI) / 180, translate, radius)
+            );
+          });
+          const lights = cityLightPaths(project, plan.sun, NIGHT_CITIES, translate, radius);
+          el("lights:glow")?.setAttribute("d", lights.glow);
+          el("lights:core")?.setAttribute("d", lights.core);
+          plan.routes.forEach((route, i) => {
+            const d = liftedRoutePath(project, route.points, translate, radius, route.lift);
+            el(`route:${i}`)?.setAttribute("d", d);
+            el(`packet:${i}`)?.setAttribute("d", d);
+          });
+          const rings = region.current;
+          if (rings && watched) {
+            let d = "";
+            let whole = true;
+            for (const ring of rings) {
+              let drawing = false;
+              for (const v of ring) {
+                const [x, y, depth] = project(v);
+                if (depth < 0) {
+                  whole = false;
+                  drawing = false;
+                  continue;
+                }
+                d += `${drawing ? "L" : "M"}${fixed(translate[0] + radius * x)} ${fixed(translate[1] - radius * y)}`;
+                drawing = true;
+              }
+              if (whole) d += "Z";
+            }
+            setAttrs(el("region:outline"), { d, "fill-opacity": whole ? 0.08 : 0 });
+            const [lx, ly, ldepth] = project(lonLatToVec(watched.labelLonLat));
+            setAttrs(el("region:label"), {
+              x: fixed(translate[0] + radius * lx),
+              y: fixed(translate[1] - radius * ly),
+              opacity: ldepth > 0.3 ? 1 : 0,
+            });
+          }
+        }
+        // Packets run along their routes; under reduced motion the routes stand still and bare.
+        plan.routes.forEach((_, i) => {
+          const packet = el(`packet:${i}`);
+          if (!view.animate) {
+            packet?.setAttribute("opacity", "0");
+            return;
+          }
+          const travelled = (seconds / PACKET_PERIOD_S + i * 0.383) % 1;
+          setAttrs(packet, { opacity: 1, "stroke-dashoffset": fixed(100 - travelled * 105) });
+        });
+      }
+
       // Satellites. Under reduced motion they hold their opening positions.
-      const satellites = SATELLITES.map((sat) => {
+      const placed = satellites.map((sat) => {
         const orbit = { ...sat.orbit, phase: sat.phase };
         const position = orbitPosition(orbit, globeRadius, view.animate ? seconds : 0);
+        if (sat.small) {
+          for (const side of ["far", "near"]) {
+            setAttrs(el(`sat:${sat.id}:${side}`), {
+              transform: `translate(${fixed(position.x)} ${fixed(position.y)})`,
+            });
+          }
+          return { id: sat.id, orbit, position, small: true };
+        }
         const trail = orbitTrail(orbit, globeRadius, position.theta, TRAIL_SWEEP);
         const d = view.animate ? pointsPath(trail) : "";
         for (const side of ["far", "near"]) {
@@ -510,7 +865,7 @@ export function useBroadcastGlobeLayers({
           x2: fixed(position.x),
           y2: fixed(position.y),
         });
-        return { id: sat.id, orbit, position };
+        return { id: sat.id, orbit, position, small: false };
       });
 
       const beam = el("beam");
@@ -542,8 +897,8 @@ export function useBroadcastGlobeLayers({
         type Pick = { satellite: string; dateline: number; distance: number; used: number };
         const pick = (cooldown: boolean): Pick | null => {
           let best: Pick | null = null;
-          for (const { id, orbit, position } of satellites) {
-            if (!position.near) continue;
+          for (const { id, orbit, position, small } of placed) {
+            if (small || !position.near) continue;
             const [px, py] = orbitToGlobe([position.x, position.y], orbit, translate, view.zoom);
             const nadirX = translate[0] + (px - translate[0]) / orbit.radius;
             const nadirY = translate[1] + (py - translate[1]) / orbit.radius;
@@ -585,7 +940,7 @@ export function useBroadcastGlobeLayers({
       const target = beamTarget.current;
       const dateline = target.dateline >= 0 ? datelines[target.dateline] : undefined;
       const ground = dateline ? project(dateline.place.lonLat) : undefined;
-      const source = satellites.find(({ id }) => id === target.satellite);
+      const source = placed.find(({ id }) => id === target.satellite);
       if (!dateline || !ground?.visible || !source?.position.near) {
         quiet();
         return;
@@ -636,7 +991,7 @@ export function useBroadcastGlobeLayers({
         }
       }
     },
-    [translate, globeRadius, datelines]
+    [translate, globeRadius, datelines, plan, satellites, watched]
   );
 
   return { bind, geometry, render };

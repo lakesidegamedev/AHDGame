@@ -1,5 +1,3 @@
-import type { EraConfig } from "@/components/landing/eraThemes";
-
 const TONE_CLASSES = {
   // The broadcast hero sits on the always-dark satellite backdrop, like its dek.
   onDark: "text-white/80 decoration-white/30 hover:text-white hover:decoration-white/70",
@@ -7,28 +5,36 @@ const TONE_CLASSES = {
     "text-foreground/80 decoration-foreground/30 hover:text-foreground hover:decoration-foreground/70",
 } as const;
 
+export type ExplainerLink = { href: string; label: string };
+
 /**
- * A quiet text link under the hero copy to the era's explainer page on the
- * studio site. It leaves ahousedividedgame.com, so it opens in a new tab, the
- * same rule `publicLinks.ts` applies to the drawer and footer.
+ * Quiet text links under the hero copy: the era's explainer page on the
+ * studio site, and the news post that announced the world. They leave
+ * ahousedividedgame.com, so they open in a new tab, the same rule
+ * `publicLinks.ts` applies to the drawer and footer.
  */
 export function EraExplainerLink({
-  explainer,
+  links,
   tone = "theme",
 }: {
-  explainer: EraConfig["explainer"];
+  links: readonly ExplainerLink[];
   tone?: keyof typeof TONE_CLASSES;
 }) {
-  if (!explainer) return null;
+  if (links.length === 0) return null;
   return (
-    <a
-      href={explainer.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`pointer-events-auto mt-4 inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-4 transition-colors ${TONE_CLASSES[tone]}`}
-    >
-      {explainer.label}
-      <span aria-hidden="true">→</span>
-    </a>
+    <div className="pointer-events-auto mt-4 flex flex-wrap gap-x-5 gap-y-2">
+      {links.map((link) => (
+        <a
+          key={link.href}
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-4 transition-colors ${TONE_CLASSES[tone]}`}
+        >
+          {link.label}
+          <span aria-hidden="true">→</span>
+        </a>
+      ))}
+    </div>
   );
 }

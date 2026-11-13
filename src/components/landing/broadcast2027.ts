@@ -7,7 +7,9 @@
  * through: the shared moments every world gets, the laws and research tiers
  * that open in set years, and the crises a country can meet along the way.
  */
-import type { BroadcastTickerItem } from "./eraThemes";
+import type { BroadcastTickerItem, NightsideConfig } from "./eraThemes";
+import { ANNOUNCED_2027_LAUNCH } from "@/lib/landing/rules/launchSchedule";
+import { CANADA_GEO_URL } from "@/lib/countries/ca/data/canadaGeometry";
 import type { HistoricalCrisisShowcaseEntry } from "./historicalCrisisShowcase";
 
 const PLACES = {
@@ -26,6 +28,17 @@ const PLACES = {
   berlin: { name: "Berlin", lonLat: [13.4, 52.52] },
   seoul: { name: "Seoul", lonLat: [126.98, 37.57] },
   newYork: { name: "New York", lonLat: [-74, 40.71] },
+  toronto: { name: "Toronto", lonLat: [-79.38, 43.65] },
+  vancouver: { name: "Vancouver", lonLat: [-123.12, 49.28] },
+  losAngeles: { name: "Los Angeles", lonLat: [-118.24, 34.05] },
+  london: { name: "London", lonLat: [-0.13, 51.51] },
+  shanghai: { name: "Shanghai", lonLat: [121.47, 31.23] },
+  saoPaulo: { name: "Sao Paulo", lonLat: [-46.63, -23.55] },
+  lagos: { name: "Lagos", lonLat: [3.38, 6.52] },
+  istanbul: { name: "Istanbul", lonLat: [28.98, 41.01] },
+  moscow: { name: "Moscow", lonLat: [37.62, 55.75] },
+  coloradoBasin: { name: "Colorado River basin", lonLat: [-111.5, 36.2] },
+  mediterranean: { name: "Mediterranean", lonLat: [14.5, 37.5] },
 } as const;
 
 /** Oldest first. The last item has no dateline: it is filed from orbit. */
@@ -160,6 +173,22 @@ export const SHOWCASE_2027: readonly HistoricalCrisisShowcaseEntry[] = [
       "The tournament marks a century since the first final. Players choose whether to host a screening, watch at home or place a bet.",
   },
   {
+    id: "megadrought-2031",
+    year: 2031,
+    lonLat: at(PLACES.coloradoBasin),
+    title: "Megadrought",
+    description:
+      "From 2031 a drought can run into its fifth year, emptying reservoirs and aquifers. Farm and river output fall, food prices climb and the government takes the blame for the water.",
+  },
+  {
+    id: "climate-migration-2035",
+    year: 2035,
+    lonLat: at(PLACES.mediterranean),
+    title: "Climate migration",
+    description:
+      "From 2035 drought and flooding can push people across borders faster than towns can absorb them. Governments choose between an orderly border policy, reception funding and work permits.",
+  },
+  {
     id: "fusion-2035",
     year: 2035,
     lonLat: at(PLACES.tokyo),
@@ -200,3 +229,33 @@ export const SHOWCASE_2027: readonly HistoricalCrisisShowcaseEntry[] = [
       "The year 2050 opens with a worldwide look back at the century so far. Advanced AI oversight, a zero carbon economy and space resources arrive as new laws.",
   },
 ];
+
+/**
+ * The 2027 globe's look: sunlight as it falls at the first turn, the routes
+ * between the six economies that run the full simulation and the larger
+ * background ones, and Quebec drawn as the border a referendum could make.
+ */
+export const NIGHTSIDE_2027: NightsideConfig = {
+  sunAt: ANNOUNCED_2027_LAUNCH.firstTurnAt,
+  routes: [
+    { from: PLACES.newYork, to: PLACES.london },
+    { from: PLACES.toronto, to: PLACES.london },
+    { from: PLACES.newYork, to: PLACES.toronto },
+    { from: PLACES.london, to: PLACES.frankfurt },
+    { from: PLACES.frankfurt, to: PLACES.shanghai },
+    { from: PLACES.shanghai, to: PLACES.tokyo },
+    { from: PLACES.tokyo, to: PLACES.losAngeles },
+    { from: PLACES.vancouver, to: PLACES.tokyo },
+    { from: PLACES.losAngeles, to: PLACES.newYork },
+    { from: PLACES.newYork, to: PLACES.saoPaulo },
+    { from: PLACES.london, to: PLACES.lagos },
+    { from: PLACES.frankfurt, to: PLACES.istanbul },
+    { from: PLACES.frankfurt, to: PLACES.moscow },
+  ],
+  watchedRegion: {
+    geoUrl: CANADA_GEO_URL,
+    featureId: "CA_QC",
+    label: "Quebec",
+    labelLonLat: [-73.5, 52.5],
+  },
+};
