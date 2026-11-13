@@ -190,4 +190,35 @@ describe("money mirror policy", () => {
     const [docs] = db.collectionMocks.actionAuditLog.insertMany.mock.calls[0];
     expect(docs).toHaveLength(1);
   });
+
+  it("stamps every row with the current world from one game state read per flush", async () => {
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      currentTurn: 7,
+      worldEpochId: "65a000000000000000000001",
+    });
+
+    recordAuditBulk([baseEntry(), baseEntry(), baseEntry()]);
+    await flushRecordAuditBufferForTest();
+
+    const [docs] = db.collectionMocks.actionAuditLog.insertMany.mock.calls[0];
+    expect(docs.map((d: { worldEpochId?: string }) => d.worldEpochId)).toEqual([
+      "65a000000000000000000001",
+      "65a000000000000000000001",
+      "65a000000000000000000001",
+    ]);
+    expect(docs[0].turn).toBe(7);
+    const worldReads = db.collectionMocks.gameState.findOne.mock.calls.filter(
+      ([, options]: [unknown, { projection?: Record<string, number> }?]) =>
+        options?.projection?.worldEpochId === 1
+    );
+    expect(worldReads).toHaveLength(1);
+  });
+
+  it("writes rows unstamped when no world is known", async () => {
+    db.collectionMocks.gameState.findOne.mockResolvedValue(null);
+    recordAudit(baseEntry());
+    await flushRecordAuditBufferForTest();
+    const [docs] = db.collectionMocks.actionAuditLog.insertMany.mock.calls[0];
+    expect(docs[0]).not.toHaveProperty("worldEpochId");
+  });
 });

@@ -16,6 +16,7 @@
  */
 import * as Sentry from "@sentry/nextjs";
 import { ObjectId, type Collection, type Db, type Document } from "mongodb";
+import { loadCurrentWorldEpochId, withCurrentWorld } from "@/lib/audit/worldScope";
 import { getActionAuditLogCollection } from "@/lib/db/collections/actionAuditLog";
 import { getAuditAnomaliesCollection } from "@/lib/db/collections/auditAnomalies";
 import { isAuditLogEnabled } from "@/lib/audit/featureFlag";
@@ -463,12 +464,16 @@ export function anomalyCandidateClauses(
 export function anomalyCandidateFilter(
   minTurn: number,
   isPreElectionWindow: boolean,
-  relatedAgreementIds: ReadonlySet<string> = new Set()
+  relatedAgreementIds: ReadonlySet<string> = new Set(),
+  worldEpochId?: string | null
 ): Document {
-  return {
-    turn: { $gte: minTurn },
-    $or: anomalyCandidateClauses(isPreElectionWindow, relatedAgreementIds),
-  };
+  return withCurrentWorld(
+    {
+      turn: { $gte: minTurn },
+      $or: anomalyCandidateClauses(isPreElectionWindow, relatedAgreementIds),
+    },
+    worldEpochId
+  );
 }
 
 /**
@@ -483,15 +488,21 @@ async function detectWireFanInFanOutWithSkippedRows(
   config: AnomalyScanConfig,
   minTurn: number,
   isPreElectionWindow: boolean,
-  relatedAgreementIds: ReadonlySet<string>
+  relatedAgreementIds: ReadonlySet<string>,
+  worldEpochId?: string | null
 ): Promise<DetectorResult> {
   const result = detectWireFanInFanOut(rows, config);
   if (!result.finding) return result;
-  const skippedMoneyRows = await col.countDocuments({
-    turn: { $gte: minTurn },
-    category: "money",
-    $nor: anomalyCandidateClauses(isPreElectionWindow, relatedAgreementIds),
-  });
+  const skippedMoneyRows = await col.countDocuments(
+    withCurrentWorld(
+      {
+        turn: { $gte: minTurn },
+        category: "money",
+        $nor: anomalyCandidateClauses(isPreElectionWindow, relatedAgreementIds),
+      },
+      worldEpochId
+    )
+  );
   if (skippedMoneyRows === 0) return result;
   return detectWireFanInFanOut(rows, config, {
     additionalExcludedSettlementRows: skippedMoneyRows,
@@ -563,9 +574,10 @@ export async function runAuditAnomalyScan(
     // The filter keeps only rows some detector can act on, so the system
     // mirror of every financialTxLog row never leaves Mongo.
     const relatedAgreementIds = await loadRelatedSupplyAgreementIds(db);
+    const worldEpochId = await loadCurrentWorldEpochId(db);
     const rows: AnomalyAuditRow[] = [];
     const cursor = col.find(
-      anomalyCandidateFilter(minTurn, isPreElectionWindow, relatedAgreementIds),
+      anomalyCandidateFilter(minTurn, isPreElectionWindow, relatedAgreementIds, worldEpochId),
       {
         projection: ANOMALY_SCAN_PROJECTION,
         batchSize: ANOMALY_SCAN_BATCH_SIZE,
@@ -584,7 +596,8 @@ export async function runAuditAnomalyScan(
         config,
         minTurn,
         isPreElectionWindow,
-        relatedAgreementIds
+        relatedAgreementIds,
+        worldEpochId
       ),
       detectWashTrade(rows, config),
       detectPreElectionFundingSurge(rows, { isPreElectionWindow, ...config }),

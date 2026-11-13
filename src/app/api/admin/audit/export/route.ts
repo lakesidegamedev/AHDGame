@@ -13,7 +13,11 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { getActionAuditLogCollection } from "@/lib/db/collections/actionAuditLog";
-import { buildAuditLogFilter, MAX_AUDIT_EXPORT_ROWS } from "@/lib/audit/queryAuditLog";
+import {
+  buildAuditLogFilter,
+  MAX_AUDIT_EXPORT_ROWS,
+  scopeToCurrentWorldWhenTurnFiltered,
+} from "@/lib/audit/queryAuditLog";
 
 export const GET = withAdminRoute(async (_auth, request: Request) => {
   const { searchParams } = new URL(request.url);
@@ -28,18 +32,19 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
 
   const db = await getDb();
   const collection = await getActionAuditLogCollection(db);
+  const filter = await scopeToCurrentWorldWhenTurnFiltered(db, built.filter);
 
   // Response headers must be committed before the body starts streaming,
   // so the "was this capped" signal has to be known up front rather than
   // derived from the row count after the fact. `countDocuments` with a
   // `limit` stops scanning as soon as it hits the cap, so this stays a
   // bounded, cheap check even against a large matching set.
-  const matchCount = await collection.countDocuments(built.filter, {
+  const matchCount = await collection.countDocuments(filter, {
     limit: MAX_AUDIT_EXPORT_ROWS + 1,
   });
   const capped = matchCount > MAX_AUDIT_EXPORT_ROWS;
 
-  const cursor = collection.find(built.filter).sort({ _id: -1 }).limit(MAX_AUDIT_EXPORT_ROWS);
+  const cursor = collection.find(filter).sort({ _id: -1 }).limit(MAX_AUDIT_EXPORT_ROWS);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({

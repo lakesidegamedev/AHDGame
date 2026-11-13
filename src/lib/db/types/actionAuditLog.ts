@@ -100,6 +100,8 @@ export interface ActionAuditRecord {
   _id: ObjectId;
   ts: Date;
   turn: number;
+  /** World the row was written in; absent on rows from before stamping began. */
+  worldEpochId?: string;
   /** Correlation id — groups every envelope written for one request/turn-phase. */
   traceId: string;
   /** Order within the trace, when more than one envelope is written for it. */

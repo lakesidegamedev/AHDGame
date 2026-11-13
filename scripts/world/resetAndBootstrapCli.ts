@@ -3,6 +3,7 @@ import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import type { ResetAndBootstrapOptions } from "@/lib/admin/resetAndBootstrapGameWorld";
 import { assertResetDatabaseMatchesApplication } from "@/lib/admin/resetPreflight";
 import type { Db } from "mongodb";
+import { dirname, join } from "node:path";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { BootstrapMode } from "@/lib/admin/bootstrapGameWorld";
 import { presetDefaultsToFoundingPhase } from "@/lib/seeds/presetSelector";
@@ -148,6 +149,19 @@ export async function runResetAndBootstrapCli(
   try {
     assertResetDatabaseMatchesApplication(applicationEnv, db.databaseName, "connected database");
     console.log(`Reset target database: ${db.databaseName}`);
+    const auditArchiveDir =
+      getArgValue(args, "--audit-archive-dir") ??
+      (recordPath ? dirname(recordPath) : join(process.cwd(), "reset-evidence"));
+    try {
+      const { planAuditArchive } = await import("@/lib/admin/resetContract/auditArchive");
+      console.log(
+        `Audit archive (dry run): ${await planAuditArchive(db)} action audit row(s) would be exported to ${auditArchiveDir} and dropped`
+      );
+    } catch (err) {
+      console.log(
+        `Audit archive (dry run): could not count rows (${err instanceof Error ? err.message : String(err)})`
+      );
+    }
     if (hasFlag(args, "--check-target")) {
       console.log("Target check complete; no reset or bootstrap executed");
       return;
@@ -190,6 +204,7 @@ export async function runResetAndBootstrapCli(
       skipRegionalCouncil,
       resetReference,
       deleteProfiles: false,
+      auditArchiveDir,
       adminUsername: "CLI",
       preIteration,
       ...(iteration ? { iteration } : {}),

@@ -54,6 +54,20 @@ describe("evaluateResidueScan", () => {
     expect(evaluateResidueScan(cleanInput())).toEqual([]);
   });
 
+  it("fails when audit rows of another world remain", () => {
+    const input = { ...cleanInput(), auditWorld: { count: 3, sampleIds: ["a1", "a2"] } };
+    expect(evaluateResidueScan(input)).toEqual([
+      {
+        check: "audit-world",
+        collection: "actionAuditLog",
+        detail: "3 row(s) belong to another world, e.g. a1, a2",
+      },
+    ]);
+    expect(
+      evaluateResidueScan({ ...cleanInput(), auditWorld: { count: 0, sampleIds: [] } })
+    ).toEqual([]);
+  });
+
   it("lists every kind of old-world leftover", () => {
     const input = cleanInput();
     input.collectionAges = [

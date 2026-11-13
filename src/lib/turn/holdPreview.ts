@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Db, Document } from "mongodb";
+import { withCurrentWorld } from "@/lib/audit/worldScope";
 import { actionAuditLogCollection } from "@/lib/db/repositories/actionAuditLog";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -122,6 +123,7 @@ export interface HeldTurnPreview {
 }
 
 export interface HeldStateFields {
+  worldEpochId?: string | null;
   processingTargetTurn?: number | null;
   processingHeldPhases?: string[] | null;
   processingHeldAt?: Date | null;
@@ -164,7 +166,10 @@ export async function previewHeldTurn(
         await countRows(
           actionAuditLogCollection<Document>(db),
           auditLabel,
-          { traceId: turnPhaseTraceId(turn, phase), ts: { $gte: since } },
+          withCurrentWorld(
+            { traceId: turnPhaseTraceId(turn, phase), ts: { $gte: since } },
+            state.worldEpochId
+          ),
           ["amount", "anchorAmount"]
         )
       );
@@ -205,6 +210,7 @@ export async function loadHeldState(db: Db) {
         processingTargetTurn: 1,
         processingStartedAt: 1,
         processingPhaseStatuses: 1,
+        worldEpochId: 1,
       },
     }
   );

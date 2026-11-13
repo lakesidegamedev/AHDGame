@@ -5,7 +5,7 @@ import { getDb } from "@/lib/mongodb";
 import { getActionAuditLogCollection } from "@/lib/db/collections/actionAuditLog";
 import { isAuditLogEnabled } from "@/lib/audit/featureFlag";
 import { getAuditRequestContext } from "@/lib/observability/context";
-import { getGameState } from "@/lib/gameState";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
 import { shouldMirrorMoneyAudit } from "@/lib/audit/moneyMirrorPolicy";
@@ -152,7 +152,7 @@ function computeAuditExpiresAt(ts: Date, turnLengthMinutes: number): Date {
 /** Freeze a canonical audit envelope for a durable outbox before its command runs. */
 export function prepareAuditRecord(
   entry: ActionAuditInput,
-  defaults: { turn: number; ts: Date; turnLengthMinutes: number }
+  defaults: { turn: number; ts: Date; turnLengthMinutes: number; worldEpochId?: string }
 ): ActionAuditRecord {
   const normalized = withContextDefaults({ ...entry, delta: trimDelta(entry.delta) });
   const ts = entry.ts ?? defaults.ts;
@@ -161,6 +161,9 @@ export function prepareAuditRecord(
     _id: new ObjectId(),
     ts,
     turn: entry.turn ?? defaults.turn,
+    ...(defaults.worldEpochId && !entry.worldEpochId
+      ? { worldEpochId: defaults.worldEpochId }
+      : {}),
     expiresAt: computeAuditExpiresAt(ts, defaults.turnLengthMinutes),
   };
 }
@@ -180,14 +183,18 @@ async function flush(): Promise<void> {
 
     const db = await getDb();
 
-    let fallbackTurn: number | undefined;
-    if (batch.some((entry) => entry.turn === undefined)) {
-      try {
-        const gs = await getGameState(db);
-        fallbackTurn = gs?.currentTurn ?? 0;
-      } catch {
-        fallbackTurn = 0;
-      }
+    // One projected read per flush, shared by every row in the batch.
+    let fallbackTurn = 0;
+    let worldEpochId: string | undefined;
+    try {
+      const gs = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1, worldEpochId: 1 } }
+      );
+      fallbackTurn = gs?.currentTurn ?? 0;
+      worldEpochId = gs?.worldEpochId ?? undefined;
+    } catch {
+      // Rows are written unstamped rather than lost.
     }
 
     let turnLengthMinutes = DEFAULT_TURN_LENGTH_MINUTES;
@@ -204,7 +211,8 @@ async function flush(): Promise<void> {
         ...entry,
         _id: new ObjectId(),
         ts,
-        turn: entry.turn ?? fallbackTurn ?? 0,
+        turn: entry.turn ?? fallbackTurn,
+        ...(worldEpochId && !entry.worldEpochId ? { worldEpochId } : {}),
         expiresAt: computeAuditExpiresAt(ts, turnLengthMinutes),
       };
     });

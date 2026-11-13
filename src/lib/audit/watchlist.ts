@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { loadCurrentWorldEpochId, withCurrentWorld } from "@/lib/audit/worldScope";
 import { getActionAuditLogCollection } from "@/lib/db/collections/actionAuditLog";
 import { getAltLinksCollection } from "@/lib/db/collections/altDetection";
 import { getUsersCollection } from "@/lib/db/collections/users";
@@ -106,9 +107,10 @@ export async function buildWatchlistEntryView(
   const categoryGuard = categoryGuardFor(isAdmin);
   const projection = auditProjectionFor(isAdmin);
 
-  const [actionsCol, linksCol] = await Promise.all([
+  const [actionsCol, linksCol, worldEpochId] = await Promise.all([
     getActionAuditLogCollection(db),
     getAltLinksCollection(db),
+    loadCurrentWorldEpochId(db),
   ]);
 
   const [recentActions, totalActions, newActivityCount, newLinkDocs] = await Promise.all([
@@ -118,11 +120,12 @@ export async function buildWatchlistEntryView(
       .limit(WATCHLIST_RECENT_ACTIONS_LIMIT)
       .toArray(),
     actionsCol.countDocuments({ "actor.userId": entry.userId, ...categoryGuard }),
-    actionsCol.countDocuments({
-      "actor.userId": entry.userId,
-      turn: { $gt: baseline },
-      ...categoryGuard,
-    }),
+    actionsCol.countDocuments(
+      withCurrentWorld(
+        { "actor.userId": entry.userId, turn: { $gt: baseline }, ...categoryGuard },
+        worldEpochId
+      )
+    ),
     linksCol
       .find({
         $or: [{ userA: entry.userId }, { userB: entry.userId }],

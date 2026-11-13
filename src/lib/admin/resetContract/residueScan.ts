@@ -14,7 +14,10 @@ import {
   type PreservedFieldEvidence,
   type ResidueViolation,
   type TurnStampEvidence,
+  type AuditWorldEvidence,
 } from "@/lib/admin/resetContract/rules/residueScan";
+import { currentWorldFilter } from "@/lib/audit/worldScope";
+import { getActionAuditLogCollection } from "@/lib/db/collections/actionAuditLog";
 import type { GameState } from "@/lib/db/types/gameState";
 import {
   OLD_CATALOGUE_LAW_IDS,
@@ -174,6 +177,26 @@ export async function loadOldCatalogueEvidence(
   return evidence;
 }
 
+/**
+ * Audit rows that are not stamped with the new world's epoch and were not written since
+ * it began. Null when no epoch is known, since then nothing can be told apart.
+ */
+export async function loadAuditWorldEvidence(
+  db: Db,
+  worldEpochId: string | null
+): Promise<AuditWorldEvidence | null> {
+  if (!worldEpochId) return null;
+  const col = await getActionAuditLogCollection(db);
+  const other = { $nor: [currentWorldFilter(worldEpochId)] };
+  const count = await col.countDocuments(other);
+  if (count === 0) return { count, sampleIds: [] };
+  const samples = await col
+    .find(other, { projection: { _id: 1 } })
+    .limit(5)
+    .toArray();
+  return { count, sampleIds: samples.map((row) => String(row._id)) };
+}
+
 /** Load the evidence for {@link evaluateResidueScan} and return its violations. */
 export async function runResidueScan(
   db: Db,
@@ -200,9 +223,14 @@ export async function runResidueScan(
     { _id: "current" },
     {
       projection: Object.fromEntries(
-        ["currentTurn", "currentYear", "resetWorldId", ...YEAR_GUARDS, ...TURN_GUARDS].map(
-          (field) => [field, 1]
-        )
+        [
+          "currentTurn",
+          "currentYear",
+          "resetWorldId",
+          "worldEpochId",
+          ...YEAR_GUARDS,
+          ...TURN_GUARDS,
+        ].map((field) => [field, 1])
       ),
     }
   );
@@ -296,6 +324,10 @@ export async function runResidueScan(
     appropriations,
     preservedFields,
     oldCatalogue: await loadOldCatalogueEvidence(db, context.referenceReplaced),
+    auditWorld: await loadAuditWorldEvidence(
+      db,
+      typeof state?.worldEpochId === "string" ? state.worldEpochId : null
+    ),
   });
 }
 

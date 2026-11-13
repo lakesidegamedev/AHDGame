@@ -54,7 +54,8 @@ describe("buildWatchlistViews", () => {
       ]),
     });
     db.collectionMocks.actionAuditLog!.countDocuments.mockImplementation(
-      (filter: Record<string, unknown>) => Promise.resolve(filter.turn ? 2 : 9)
+      (filter: Record<string, unknown>) =>
+        Promise.resolve(JSON.stringify(filter).includes('"turn"') ? 2 : 9)
     );
     db.collectionMocks.altLinks!.find.mockReturnValue({
       sort: vi.fn().mockReturnThis(),

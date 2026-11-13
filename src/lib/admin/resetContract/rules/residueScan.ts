@@ -45,6 +45,12 @@ export interface OldCatalogueEvidence {
   lawIds: ReadonlyArray<string>;
 }
 
+/** Action audit rows that do not belong to the world the reset just created. */
+export interface AuditWorldEvidence {
+  count: number;
+  sampleIds: ReadonlyArray<string>;
+}
+
 export interface GameStateEvidence {
   currentTurn: number | null;
   currentYear: number | null;
@@ -67,6 +73,7 @@ export interface ResidueScanInput {
   appropriations: ReadonlyArray<AppropriationEvidence>;
   preservedFields: ReadonlyArray<PreservedFieldEvidence>;
   oldCatalogue?: ReadonlyArray<OldCatalogueEvidence>;
+  auditWorld?: AuditWorldEvidence | null;
 }
 
 export type ResidueCheck =
@@ -75,7 +82,8 @@ export type ResidueCheck =
   | "game-state"
   | "appropriation"
   | "preserved-field"
-  | "old-catalogue";
+  | "old-catalogue"
+  | "audit-world";
 
 export interface ResidueViolation {
   check: ResidueCheck;
@@ -158,6 +166,16 @@ export function evaluateResidueScan(input: ResidueScanInput): ResidueViolation[]
       check: "old-catalogue",
       collection: doc.collection,
       detail: `${doc.id} names retired law type(s) ${doc.lawIds.slice(0, SAMPLE_IDS).join(", ")}`,
+    });
+  }
+
+  if (input.auditWorld && input.auditWorld.count > 0) {
+    violations.push({
+      check: "audit-world",
+      collection: "actionAuditLog",
+      detail: `${input.auditWorld.count} row(s) belong to another world, e.g. ${input.auditWorld.sampleIds
+        .slice(0, SAMPLE_IDS)
+        .join(", ")}`,
     });
   }
 

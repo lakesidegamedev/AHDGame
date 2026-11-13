@@ -57,6 +57,9 @@ import { resetPoliticalMetricsRuntimeState } from "@/lib/admin/seed/resetPolitic
 import { resetMacroMetricsRuntimeState } from "@/lib/admin/seed/resetMacroMetricsRuntimeState";
 import { resetStateRuntimeFields } from "@/lib/admin/seed/resetStateRuntimeFields";
 import { clearReferenceForRebuild } from "@/lib/admin/seed/referenceRebuildClear";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { archiveAndDropAuditLog } from "@/lib/admin/resetContract/auditArchive";
 import { runResidueScan } from "@/lib/admin/resetContract/residueScan";
 import { formatResidueViolation } from "@/lib/admin/resetContract/rules/residueScan";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -64,6 +67,8 @@ import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics
 import type { Document } from "mongodb";
 
 export interface ResetAndBootstrapOptions {
+  /** Directory for the audit archive written before teardown. Defaults to a temp directory. */
+  auditArchiveDir?: string;
   /** 1991 only: leave political offices vacant for player-created parties. */
   startingParties?: StartingPartiesMode;
   db: Db;
@@ -287,8 +292,17 @@ export async function resetAndBootstrapGameWorld(
   let finalized: Awaited<ReturnType<typeof finalizeResetGameWorld>> | null = null;
   const recordRunLog = options.recordRunLog !== false;
   if (recordRunLog) await openResetRunLog(db, run, { preset, mode, adminUsername });
+  const auditArchiveDir = options.auditArchiveDir ?? join(tmpdir(), "ahd-reset-evidence");
 
   try {
+    // 0c) Audit rows belong to one world. Export the outgoing world's rows to an
+    //     archive file and drop them before teardown, so the new world starts clean.
+    phaseReached = "audit archive";
+    const archived = await archiveAndDropAuditLog(db, { dir: auditArchiveDir, at: resetStartedAt });
+    collect(
+      `Audit archive: ${archived.rows} row(s) exported to ${archived.path}, ${archived.dropped} dropped`
+    );
+
     // 1) TEARDOWN. Wipes runtime state, retires or deletes characters, stamps the
     //    new clock. Does NOT seed; step 2 seeds.
     //
@@ -607,6 +621,16 @@ export async function resetAndBootstrapGameWorld(
     // start until a clean reset replaces gameConfig.lastReset.
     phaseReached = "residue scan";
     try {
+      // Rows written during the reset still carry the outgoing world's identity.
+      const late = await archiveAndDropAuditLog(db, {
+        dir: auditArchiveDir,
+        at: resetStartedAt,
+        suffix: "-late",
+      });
+      if (late.rows > 0)
+        collect(
+          `Audit archive: ${late.rows} row(s) written during the reset exported to ${late.path}`
+        );
       const violations = await runResidueScan(db, {
         resetStartedAt,
         expectedTurn: reset.world?.currentTurn ?? 1,

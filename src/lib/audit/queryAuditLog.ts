@@ -1,4 +1,5 @@
 import { ObjectId, type Db, type Filter } from "mongodb";
+import { loadCurrentWorldEpochId, withCurrentWorld } from "@/lib/audit/worldScope";
 import { getActionAuditLogCollection } from "@/lib/db/collections/actionAuditLog";
 import type {
   ActionAuditCategory,
@@ -200,6 +201,18 @@ export function categoryGuardFor(isAdmin: boolean): AuditFilter {
   return isAdmin ? {} : { category: { $ne: "admin" } };
 }
 
+/**
+ * Turn numbers repeat across worlds, so a turn-filtered read only means anything inside the
+ * current world. Queries without a turn filter are left as the caller built them.
+ */
+export async function scopeToCurrentWorldWhenTurnFiltered(
+  db: Db,
+  filter: AuditFilter
+): Promise<AuditFilter> {
+  if (filter.turn === undefined) return filter;
+  return withCurrentWorld(filter, await loadCurrentWorldEpochId(db)) as AuditFilter;
+}
+
 export interface AuditLogPage {
   rows: ActionAuditRecord[];
   nextCursor: string | null;
@@ -219,8 +232,9 @@ export async function queryAuditLog(
   isAdmin: boolean
 ): Promise<AuditLogPage> {
   const collection = await getActionAuditLogCollection(db);
+  const scoped = await scopeToCurrentWorldWhenTurnFiltered(db, filter);
   const rows = await collection
-    .find(filter, { projection: auditProjectionFor(isAdmin) })
+    .find(scoped, { projection: auditProjectionFor(isAdmin) })
     .sort({ _id: -1 })
     .limit(limit + 1)
     .toArray();
@@ -241,8 +255,12 @@ export async function queryAuditTrace(
   isAdmin: boolean
 ): Promise<ActionAuditRecord[]> {
   const collection = await getActionAuditLogCollection(db);
+  const scoped = withCurrentWorld(
+    { traceId, ...categoryGuardFor(isAdmin) },
+    await loadCurrentWorldEpochId(db)
+  );
   return collection
-    .find({ traceId, ...categoryGuardFor(isAdmin) }, { projection: auditProjectionFor(isAdmin) })
+    .find(scoped, { projection: auditProjectionFor(isAdmin) })
     .sort({ seq: 1, _id: 1 })
     .limit(MAX_TRACE_ROWS)
     .toArray();

@@ -240,6 +240,40 @@ describe("queryAuditLog", () => {
   });
 });
 
+describe("queryAuditLog world scope", () => {
+  const epoch = ObjectId.createFromTime(1_800_000_000).toHexString();
+
+  function dbWithEpoch(worldEpochId: string | null) {
+    const db = createMockDb();
+    const collection = db.collection("actionAuditLog");
+    db.collection("gameState").findOne.mockResolvedValue(worldEpochId ? { worldEpochId } : null);
+    collection.find.mockReturnValue({
+      sort: () => ({ limit: () => ({ toArray: async () => [] }) }),
+    });
+    return { db, collection };
+  }
+
+  it("limits a turn-filtered query to the current world", async () => {
+    const { db, collection } = dbWithEpoch(epoch);
+    await queryAuditLog(db as unknown as Db, { turn: { $gte: 5 } }, 10, true);
+    const [filter] = collection.find.mock.calls[0];
+    expect(filter.$and[0]).toEqual({ turn: { $gte: 5 } });
+    expect(filter.$and[1].$or[0]).toEqual({ worldEpochId: epoch });
+  });
+
+  it("leaves a query without a turn filter alone", async () => {
+    const { db, collection } = dbWithEpoch(epoch);
+    await queryAuditLog(db as unknown as Db, { action: "wire.send" }, 10, true);
+    expect(collection.find.mock.calls[0][0]).toEqual({ action: "wire.send" });
+  });
+
+  it("applies no scope when no world is active", async () => {
+    const { db, collection } = dbWithEpoch(null);
+    await queryAuditLog(db as unknown as Db, { turn: { $gte: 5 } }, 10, true);
+    expect(collection.find.mock.calls[0][0]).toEqual({ turn: { $gte: 5 } });
+  });
+});
+
 describe("queryAuditTrace", () => {
   it("sorts by seq ascending, applies the category guard, and caps at MAX_TRACE_ROWS", async () => {
     const db = createMockDb();
