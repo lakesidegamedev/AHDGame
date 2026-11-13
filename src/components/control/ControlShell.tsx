@@ -7,6 +7,8 @@ import { navFor, toolForLegacy, toolPath } from "@/lib/staff/panelRegistry";
 import { AdminAlertsStrip } from "@/components/admin/nav/AdminAlertsStrip";
 import { ClockDriftBanner } from "@/components/admin/system/ClockDriftBanner";
 import { canWrite as roleCanWrite, type StaffRole } from "@/lib/staff/rules";
+import { STAFF_ROLES } from "@/lib/staff/rules";
+import { VIEW_AS_COOKIE, VIEW_AS_LABEL } from "@/lib/staff/viewAs";
 import { ControlNav } from "./ControlNav";
 import { ControlPalette } from "./ControlPalette";
 import { ReadOnlyGuard } from "./ReadOnlyGuard";
@@ -17,12 +19,20 @@ const ROLE_LABEL: Record<StaffRole, string> = {
   junior_dev: "Junior dev (read-only)",
 };
 
+function setViewAs(role: StaffRole | null) {
+  const base = `${VIEW_AS_COOKIE}=${role ?? ""}; path=/control; SameSite=Lax`;
+  document.cookie = role ? base : `${base}; max-age=0`;
+}
+
 export function ControlShell({
   role,
+  realRole = role,
   username,
   children,
 }: {
+  /** The role being rendered. Differs from `realRole` only while an admin previews. */
   role: StaffRole;
+  realRole?: StaffRole;
   username: string;
   children: ReactNode;
 }) {
@@ -30,6 +40,12 @@ export function ControlShell({
   const groups = useMemo(() => navFor(role), [role]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const previewing = role !== realRole;
+  const switchView = (next: StaffRole | null) => {
+    setViewAs(next);
+    router.push("/control");
+    router.refresh();
+  };
   // Full admin write access is checked per tier on the server; the shell only
   // needs to know whether the role can write at all.
   const canWrite = roleCanWrite(role, "moderator") || roleCanWrite(role, "admin");
@@ -68,7 +84,25 @@ export function ControlShell({
             {ROLE_LABEL[role]}
           </span>
           <span className="hidden text-body-sm text-muted sm:inline">{username}</span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {realRole === "admin" && (
+              <label className="flex items-center gap-1.5 text-body-sm text-muted">
+                View as
+                <select
+                  value={role}
+                  onChange={(e) =>
+                    switchView(e.target.value === "admin" ? null : (e.target.value as StaffRole))
+                  }
+                  className="rounded-md border border-card-border bg-card px-2 py-1 text-body-sm text-foreground"
+                >
+                  {STAFF_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {VIEW_AS_LABEL[r]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
@@ -78,6 +112,24 @@ export function ControlShell({
             </button>
           </div>
         </header>
+        {previewing && (
+          <div
+            role="status"
+            className="flex items-center gap-3 border-b border-warning/40 bg-warning/10 px-3 py-2 text-body-sm text-foreground sm:px-4"
+          >
+            <span>
+              Viewing as {VIEW_AS_LABEL[role]}. Your own {VIEW_AS_LABEL[realRole].toLowerCase()}{" "}
+              access is unchanged.
+            </span>
+            <button
+              type="button"
+              onClick={() => switchView(null)}
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm hover:bg-white/5"
+            >
+              Back to {VIEW_AS_LABEL[realRole].toLowerCase()}
+            </button>
+          </div>
+        )}
         {role === "moderator" ? (
           <ClockDriftBanner />
         ) : (
