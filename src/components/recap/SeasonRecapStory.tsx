@@ -32,7 +32,12 @@ export function SeasonRecapStory({ recap, onClose }: SeasonRecapStoryProps) {
   const story = useMemo(() => buildStory(recap), [recap]);
   const accent = useMemo(() => recapAccent(recap.partyColor), [recap.partyColor]);
   const motion = !usePrefersReducedMotion();
-  const player = useStoryPlayer(story.map((s) => s.ms));
+  // Reduced motion: no auto-advance. Every slide waits for a tap, so nothing
+  // is skipped and the reveal after the question stays up until the player moves on.
+  const player = useStoryPlayer(
+    story.map((s) => s.ms),
+    motion
+  );
   const { index, next, prev, togglePause, paused } = player;
   const slide = story[index];
   const isFinale = slide?.kind === "finale";
@@ -122,15 +127,12 @@ export function SeasonRecapStory({ recap, onClose }: SeasonRecapStoryProps) {
               className="h-[2px] flex-1 overflow-hidden rounded-full bg-white/20"
             >
               {i === index && s.ms > 0 ? (
-                // The active segment's animation is the slide timer.
+                // Visual follower of the player's JS timer; it never advances the story.
                 <div
                   key={index}
+                  ref={player.barRef}
                   className="h-full bg-white"
-                  style={{
-                    animation: `ahdw-progress ${s.ms}ms linear forwards`,
-                    animationPlayState: player.running ? "running" : "paused",
-                  }}
-                  onAnimationEnd={next}
+                  style={{ width: motion ? "0%" : "100%" }}
                 />
               ) : (
                 <div className="h-full bg-white" style={{ width: i <= index ? "100%" : "0%" }} />
@@ -138,6 +140,12 @@ export function SeasonRecapStory({ recap, onClose }: SeasonRecapStoryProps) {
             </div>
           ))}
         </div>
+
+        {!motion && !isFinale && (
+          <p className="pointer-events-none absolute inset-x-0 bottom-4 z-30 text-center text-[12px] text-white/60">
+            Tap to continue
+          </p>
+        )}
 
         {/* Header */}
         <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 pt-7">
@@ -186,6 +194,7 @@ export function SeasonRecapStory({ recap, onClose }: SeasonRecapStoryProps) {
 
         <div
           key={index}
+          data-slide={slide.kind}
           className={`relative z-20 flex-1 ${isFinale ? "" : "pointer-events-none"}`}
         >
           {isFinale ? (
