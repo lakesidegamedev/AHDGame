@@ -20,11 +20,16 @@ vi.mock("@/lib/financialTxLog/emit", async () => {
   };
 });
 
+vi.mock("@/lib/db/repositories/users", () => ({
+  usersCollection: () => ({ findOne: async () => ({ role: "admin" }) }),
+}));
+
 const { compensationId, compileCompensationDefect, validateCompensationSpec } =
   await import("./compensation");
 const { runApply, runPlan } = await import("./runner");
 const { validateAdhocSpec } = await import("./adhoc");
 
+const STAFF = new ObjectId("6ac763824f4573325e5f8070");
 const A = new ObjectId("6ac763824f4573325e5f8069");
 const B = new ObjectId("6ac3dbf9c6e9f850d977790d");
 
@@ -66,6 +71,7 @@ function seed() {
       },
     ],
     financialTxLog: [],
+    actionAuditLog: [],
   });
 }
 
@@ -132,9 +138,16 @@ describe("compensation through the runner", () => {
       env: "sandbox",
       tokenId: planned.token!.id,
       operator: "tester",
+      requestedBy: STAFF.toString(),
     });
     expect(applied.refusal ?? null).toBeNull();
     expect(applied.ok).toBe(true);
+    expect(store.cols.actionAuditLog).toHaveLength(1);
+    expect(store.cols.actionAuditLog[0]).toMatchObject({
+      action: "grant.credit",
+      actor: { userId: STAFF, role: "admin" },
+      meta: { grant: { via: { tool: "heal", requestedBy: STAFF.toString() } } },
+    });
     const corps = new Map(store.cols.corporations.map((c) => [String(c._id), c]));
     expect(corps.get(A.toString())!.liquidCapital).toBe(100 + 7_465_290);
     expect(corps.get(B.toString())!.liquidCapital).toBe(1_000 + 1_132_397_399);
@@ -153,6 +166,21 @@ describe("compensation through the runner", () => {
     // A repeat plan finds nobody owed: the marker makes the credit idempotent.
     const again = await runPlan(store.db, defect, { env: "sandbox", operator: "tester" });
     expect(again.plan.affected).toBe(0);
+  });
+
+  it("refuses a credit that names no staff account, and changes nothing", async () => {
+    const store = seed();
+    const defect = compileCompensationDefect(spec());
+    const planned = await runPlan(store.db, defect, { env: "sandbox", operator: "tester" });
+    const applied = await runApply(store.db, defect, {
+      env: "sandbox",
+      tokenId: planned.token!.id,
+      operator: "ops-agent",
+    });
+    expect(applied.ok).toBe(false);
+    const corps = new Map(store.cols.corporations.map((c) => [String(c._id), c]));
+    expect(corps.get(A.toString())!.liquidCapital).toBe(100);
+    expect(store.cols.actionAuditLog).toHaveLength(0);
   });
 
   it("receipt-only records money that already moved, in the turn it moved, without moving it again", async () => {

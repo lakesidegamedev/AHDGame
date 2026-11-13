@@ -106,6 +106,7 @@ export const adminResourcesGrantSchema = z
     cashOnHand: z.number().min(-100000000).max(100000000).optional(),
     currency: z.enum(["USD", "GBP", "JPY", "CAD", "EUR"]).optional(),
     positionUpdateVoucher: z.boolean().optional(),
+    reason: z.string().trim().max(300).optional(),
   })
   .refine(
     (d) =>
@@ -134,6 +135,7 @@ export const moderatorResourcesGrantSchema = z
     funds: z.number().min(-100000000).max(100000000).optional(),
     cashOnHand: z.number().min(-100000000).max(100000000).optional(),
     currency: z.enum(["USD", "GBP", "JPY", "CAD", "EUR"]).optional(),
+    reason: z.string().trim().max(300).optional(),
   })
   .refine(
     (d) =>
