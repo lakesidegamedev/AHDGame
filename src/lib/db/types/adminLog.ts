@@ -105,6 +105,7 @@ export type AdminLogAction =
   | "turn_system_started"
   | "turn_system_stopped"
   | "turn_lock_reset"
+  | "turn_hold_released"
   | "corporation_actions_paused"
   | "corporation_actions_resumed"
   | "ip_ban_added"
