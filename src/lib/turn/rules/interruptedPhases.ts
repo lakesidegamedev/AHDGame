@@ -47,6 +47,11 @@ export const SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
 /** Turn resilience stage from which the stamped, rerun-safe write paths run and steps are rerun. */
 export const RERUN_SAFE_STAGE = 2;
 
+/** Whether a turn running at this resilience stage uses the stamped, rerun-safe write paths. */
+export function rerunSafeAt(stage: number | undefined): boolean {
+  return (stage ?? 0) >= RERUN_SAFE_STAGE;
+}
+
 export const RERUN_SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
   treasuryTurn:
     "accrual is one guarded claim per budget and turn, coupon payouts replay by receipt; killed at every write and rerun it matches an uninterrupted turn",
