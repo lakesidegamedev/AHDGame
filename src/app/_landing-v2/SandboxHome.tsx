@@ -17,7 +17,7 @@ import dynamic from "next/dynamic";
 import { LandingIntakeBeacon } from "@/components/intake/LandingIntakeBeacon";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CDN_WORLD_GEO_URL } from "@/lib/images/cdnUrls";
 import {
@@ -327,6 +327,7 @@ export function SandboxHome({
   const posterBase = globePosterBase(eraConfig.id);
   const globeReady = useGlobeActivation(globeBoxRef, posterBase !== null);
   const [globeDrawn, setGlobeDrawn] = useState(false);
+  const markGlobeDrawn = useCallback(() => setGlobeDrawn(true), []);
   const l = links(isSignedIn);
 
   // Signal-field star scatter: a full-viewport layer independent of the
@@ -474,7 +475,7 @@ export function SandboxHome({
               }`}
             >
               <LandingGlobe
-                onReady={() => setGlobeDrawn(true)}
+                onReady={markGlobeDrawn}
                 bare
                 enhanced
                 hideLiveIndicator

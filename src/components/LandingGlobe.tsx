@@ -287,13 +287,9 @@ export function LandingGlobe({
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const onReadyRef = useRef(onReady);
   useEffect(() => {
-    onReadyRef.current = onReady;
-  }, [onReady]);
-  useEffect(() => {
-    if (isLoaded) onReadyRef.current?.();
-  }, [isLoaded]);
+    if (isLoaded) onReady?.();
+  }, [isLoaded, onReady]);
   const [isDragging, setIsDragging] = useState(false);
   const [paths, setPaths] = useState<Map<string, string | null>>(new Map());
   const [showcaseEntry, setShowcaseEntry] = useState<HistoricalCrisisShowcaseEntry | null>(null);
