@@ -4,6 +4,8 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { moderatorResourcesGrantSchema } from "@/lib/api/schemas/admin";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
+import { resourceGrantInputs } from "@/lib/audit/grants/rules";
 import { createModAuditLog } from "@/lib/modAuditLog";
 import type { ExchangeRate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
@@ -79,21 +81,6 @@ export async function POST(request: Request) {
       }
     }
 
-    let affectedCount = 0;
-
-    if (allPlayers) {
-      const result = await charactersCollection(db).updateMany({}, [{ $set: setStage }]);
-      affectedCount = result.modifiedCount;
-    } else {
-      const ids = characterIds ?? [];
-      const objectIds = ids.map((id: string) => new ObjectId(id));
-
-      const result = await charactersCollection(db).updateMany({ _id: { $in: objectIds } }, [
-        { $set: setStage },
-      ]);
-      affectedCount = result.modifiedCount;
-    }
-
     const resourceParts: string[] = [];
     if (actions !== undefined && actions !== 0) {
       resourceParts.push(`${actions > 0 ? "+" : ""}${actions} actions`);
@@ -112,6 +99,26 @@ export async function POST(request: Request) {
       );
     }
     const resourceDesc = resourceParts.join(", ");
+
+    let affectedCount = 0;
+    await withAuditedGrant(
+      db,
+      resourceGrantInputs(parsed.data, moderator.userId, `Control panel grant: ${resourceDesc}`),
+      async () => {
+        if (allPlayers) {
+          const result = await charactersCollection(db).updateMany({}, [{ $set: setStage }]);
+          affectedCount = result.modifiedCount;
+        } else {
+          const ids = characterIds ?? [];
+          const objectIds = ids.map((id: string) => new ObjectId(id));
+
+          const result = await charactersCollection(db).updateMany({ _id: { $in: objectIds } }, [
+            { $set: setStage },
+          ]);
+          affectedCount = result.modifiedCount;
+        }
+      }
+    );
 
     await createModAuditLog({
       moderatorId: moderator.userId,

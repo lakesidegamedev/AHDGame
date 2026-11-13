@@ -7,6 +7,11 @@ vi.mock("@/lib/auth", () => ({ getAuthAdmin: vi.fn(), getAuthJuniorDev: vi.fn() 
 vi.mock("@/lib/staff/requestMethod", () => ({ currentRequestMethod: vi.fn() }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn() }));
 vi.mock("@/lib/modAuditLog", () => ({ createModAuditLog: vi.fn() }));
+vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn(async () => ({ currentTurn: 7 })) }));
+vi.mock("@/lib/db/collections/gameState", () => ({
+  getGameStatePresetOrDefault: vi.fn(async () => "2027"),
+}));
+vi.mock("@/lib/financialTxLog/expiresAt", () => ({ loadTurnLengthMinutes: vi.fn(async () => 60) }));
 
 const admin = { userId: new ObjectId().toString(), username: "Sample Admin" };
 
@@ -25,6 +30,9 @@ describe("POST /api/moderator/resources/grant is admin-only", () => {
     vi.clearAllMocks();
     db = createMockDb();
     db.collection("characters");
+    db.collection("users");
+    db.collection("actionAuditLog");
+    db.collectionMocks.users!.findOne.mockResolvedValue({ role: "admin" });
     db.collectionMocks.characters!.updateMany.mockResolvedValue({ modifiedCount: 1 });
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
