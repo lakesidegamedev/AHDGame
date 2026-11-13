@@ -35,6 +35,7 @@ export const authConfig = {
   centralLoginMode: () => process.env.AHD_CENTRAL_LOGIN_MODE,
   centralLoginTestUsers: () => process.env.AHD_CENTRAL_LOGIN_TEST_USERS,
   accountsUrl: () => process.env.LAKESIDE_ACCOUNTS_URL,
+  accountsInternalToken: () => process.env.LAKESIDE_ACCOUNTS_INTERNAL_TOKEN,
   accountBridgeUrl: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_URL,
   accountBridgeTokenUrl: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_TOKEN_URL,
   accountBridgeClientId: () => process.env.LAKESIDE_ACCOUNT_BRIDGE_CLIENT_ID,

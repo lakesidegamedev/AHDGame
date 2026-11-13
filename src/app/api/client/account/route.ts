@@ -10,6 +10,7 @@ import { getAuthUserFromToken } from "@/lib/auth";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { entitlementExpiryMs, isFreeAccessOn } from "@/lib/freeAccess";
+import { hasLakesideEntitlement } from "@/lib/lakesideEntitlements";
 
 const OFFLINE_ENTITLEMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -71,9 +72,15 @@ export async function GET() {
     Boolean(user.singleplayerEntitledAt) ||
     tierActive ||
     tempActive;
-  const freeAccess = await isFreeAccessOn();
-  const singleplayerEntitled = realEntitled || freeAccess;
-  const freeAccessOnly = freeAccess && !realEntitled;
+  const [freeAccess, lakesideGrant] = await Promise.all([
+    isFreeAccessOn(),
+    realEntitled
+      ? Promise.resolve(false)
+      : hasLakesideEntitlement(auth.user.userId, "ahd-singleplayer"),
+  ]);
+  const singleplayerEntitled = realEntitled || lakesideGrant || freeAccess;
+  // Grants and free access are revocable remotely, so they get the short cap too.
+  const freeAccessOnly = (freeAccess || lakesideGrant) && !realEntitled;
 
   const graceEnd = entitlementExpiryMs({
     nowMs,
