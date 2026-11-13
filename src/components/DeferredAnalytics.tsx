@@ -2,39 +2,45 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { getStoredConsent } from "@/components/CookieConsent";
+import { startAnonymousPageviews } from "@/lib/analytics/posthogClient";
 
 /**
- * Mounts the product analytics glue after the page is interactive.
+ * Starts analytics after the page is idle, never during hydration.
  *
- * `PostHogTracker` is a render-null component: it only runs effects that
- * identify the account, set event context and forward consented product events.
- * Its static import still put ~40 KB gzipped of analytics glue in the first load
- * of every page, where it competed with hydration for the main thread.
+ * A visitor who has accepted analytics gets the full tracker. Everyone else gets
+ * anonymous page counts only, with nothing stored on the device. The mode is
+ * fixed for the page load: a visitor who accepts mid-visit is upgraded on the
+ * next full page load.
  *
- * PostHog itself is already loaded on demand behind consent; this only moves
- * the wrapper. Nothing is lost by waiting: the tracker reads the
- * current route and account on mount, and events raised before it mounts are
- * buffered by the capture helpers (or dropped by design when consent is absent).
+ * `PostHogTracker` is a render-null component that only runs effects, so it is
+ * split out of the first load of every page.
  */
 const PostHogTracker = dynamic(
   () => import("@/components/PostHogTracker").then((module) => module.PostHogTracker),
   { ssr: false }
 );
 
+const IDLE_TIMEOUT_MS = 3_000;
+
 export function DeferredAnalytics() {
-  const [ready, setReady] = useState(false);
+  const [full, setFull] = useState(false);
 
   useEffect(() => {
+    const start = () => {
+      if (getStoredConsent() === "accepted") setFull(true);
+      else startAnonymousPageviews();
+    };
     // `typeof` guard first: this repo also renders in a server pass, and the
     // idle callback is not in every target's DOM lib.
     const supportsIdle = typeof window !== "undefined" && "requestIdleCallback" in window;
     if (supportsIdle) {
-      const id = window.requestIdleCallback(() => setReady(true), { timeout: 4_000 });
+      const id = window.requestIdleCallback(start, { timeout: IDLE_TIMEOUT_MS });
       return () => window.cancelIdleCallback(id);
     }
-    const timer = setTimeout(() => setReady(true), 1_500);
+    const timer = setTimeout(start, 1_500);
     return () => clearTimeout(timer);
   }, []);
 
-  return ready ? <PostHogTracker /> : null;
+  return full ? <PostHogTracker /> : null;
 }
