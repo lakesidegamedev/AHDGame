@@ -1,4 +1,4 @@
-import type { ObjectId } from "mongodb";
+import type { Document, ObjectId } from "mongodb";
 import { authConfig } from "@/lib/config/auth";
 import { getDb } from "@/lib/mongodb";
 import { usersCollection } from "@/lib/db/repositories/users";
@@ -120,8 +120,9 @@ export async function centralWriteFirst(write: BridgeWriteOp): Promise<boolean> 
 async function currentLocalAccount<T extends AccountSource>(previous: T): Promise<T> {
   try {
     const db = await getDb();
-    const current = await usersCollection(db).findOne({ _id: previous._id });
-    return (current as unknown as T | null) ?? previous;
+    const current = await usersCollection<Document>(db).findOne({ _id: previous._id });
+    // Fields read now override the snapshot; the snapshot keeps the caller's type.
+    return current ? { ...previous, ...current } : previous;
   } catch {
     return previous;
   }
