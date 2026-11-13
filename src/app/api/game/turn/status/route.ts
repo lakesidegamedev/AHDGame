@@ -46,6 +46,9 @@ export async function GET(request: Request) {
     const processingProgress = gameState.isProcessing
       ? computeTurnProcessingProgress(processingPhase, processingPhaseStatuses)
       : null;
+    // Per-phase telemetry is tens of KB and every open client polls this route
+    // every couple of seconds during a turn; no client reads it, so it stays
+    // out of the public payload. Progress above is derived from it.
 
     const singleplayer = isSingleplayer();
     const payload = {
@@ -71,7 +74,7 @@ export async function GET(request: Request) {
       pauseKind: gameState.pauseKind ?? null,
       processingPhase,
       processingPhaseLabel: processingPhase ? formatTurnPhaseLabel(processingPhase) : null,
-      processingPhaseStatuses,
+      processingPhaseStatuses: null,
       processingProgress,
       processingTargetTurn: gameState.processingTargetTurn ?? null,
       processingHeartbeatAt: gameState.processingHeartbeatAt ?? null,
