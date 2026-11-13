@@ -348,6 +348,13 @@ export const TOOLS: readonly ToolDef[] = [
     legacy: { admin: a("economy", id) },
   })),
   {
+    id: "grants",
+    area: "economy",
+    label: "Grants and adjustments",
+    tier: "admin",
+    keywords: "grant money funds audit accountable",
+  },
+  {
     id: "financial-ledger",
     area: "economy",
     label: "Financial ledger",

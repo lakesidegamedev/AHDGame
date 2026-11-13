@@ -47,6 +47,9 @@ const AdminSupportTab = lazy(() =>
 const AdminSystemTab = lazy(() =>
   import("@/components/admin/tabs/AdminSystemTab").then((m) => m.AdminSystemTab)
 );
+const GrantsLedgerPanel = lazy(() =>
+  import("@/components/admin/grants/GrantsLedgerPanel").then((m) => m.GrantsLedgerPanel)
+);
 const TasksPageClient = lazy(() =>
   import("@/components/admin/tasks/TasksPageClient").then((m) => m.TasksPageClient)
 );
@@ -156,6 +159,7 @@ const SHARED_IDS = new Set([
   "player-reports",
   "site-controls",
   "tasks",
+  "grants",
   "position-editor",
 ]);
 
@@ -175,6 +179,8 @@ function SharedTool({ id, role }: { id: string; role: StaffRole }) {
       return <PlayerReportsTab />;
     case "site-controls":
       return <ModeratorSiteTab canChange={role === "admin"} />;
+    case "grants":
+      return <GrantsLedgerPanel />;
     case "tasks":
       return <TasksPageClient />;
     case "position-editor":

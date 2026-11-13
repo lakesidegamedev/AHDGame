@@ -10,12 +10,18 @@ vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(async () => ({ collection: () => ({ findOne, updateOne }) })),
 }));
 vi.mock("@/lib/adminLog", () => ({ createAdminLog }));
+vi.mock("@/lib/audit/grants/recordGrant", () => ({
+  withAuditedGrant: vi.fn(async (_db: unknown, _input: unknown, apply: () => unknown) => apply()),
+}));
 
 beforeEach(() => vi.clearAllMocks());
 
 describe("PATCH /api/admin/users/singleplayer-entitlement", () => {
   it("grants access and records the administrator", async () => {
-    requireAdmin.mockResolvedValueOnce({ ok: true, admin: { username: "operator" } });
+    requireAdmin.mockResolvedValueOnce({
+      ok: true,
+      admin: { userId: "a".repeat(24), username: "operator" },
+    });
     findOne.mockResolvedValueOnce({ username: "Ada" });
     const { PATCH } = await import("./route");
     const response = await PATCH(
