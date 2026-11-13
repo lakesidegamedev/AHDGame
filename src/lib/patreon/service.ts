@@ -115,7 +115,7 @@ export async function applyPatreonStatus(
   // Notify user of benefit update
   const tierName =
     input.tier === "supporter-plus-plus"
-      ? "Supporter Plus Plus"
+      ? "Champion"
       : input.tier === "supporter-plus"
         ? "Supporter Plus"
         : input.tier === "supporter"

@@ -31,6 +31,8 @@ vi.mock("@/lib/db/collections", () => ({
   getGameStateCollection: vi.fn(),
 }));
 
+vi.mock("@/lib/freeAccess", () => ({ isFreeAccessOn: vi.fn(async () => false) }));
+
 vi.mock("@/lib/currency/featureFlag", () => ({
   isForexEnabled: vi.fn(async () => true),
 }));
