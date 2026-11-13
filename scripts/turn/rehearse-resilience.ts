@@ -199,32 +199,6 @@ async function main() {
     );
     await c.close();
     process.exit(0);
-  } else if (mode === "release") {
-    const { planHoldRelease } = await import("@/lib/turn/rules/holdRelease");
-    const c = new MongoClient(process.env.MONGODB_URI!);
-    await c.connect();
-    const col = c.db(db).collection("gameState");
-    const gs = (await col.findOne({ _id: "current" as never })) as Record<string, any> | null;
-    const plan = planHoldRelease(
-      gs ?? {},
-      {
-        mode: (arg("--mode") ?? "rerun") as "rerun" | "mark-done",
-        acknowledge: gs?.processingHeldPhases ?? [],
-        confirmRepaired: true,
-      },
-      new Date()
-    );
-    if (!plan.ok) throw new Error(plan.error);
-    const r = await col.updateOne(
-      { _id: "current" as never },
-      Object.keys(plan.unset).length ? { $set: plan.set, $unset: plan.unset } : { $set: plan.set }
-    );
-    console.log(
-      "[release]",
-      JSON.stringify({ matched: r.matchedCount, released: gs?.processingHeldPhases })
-    );
-    await c.close();
-    process.exit(0);
   } else if (mode === "kill" || mode === "pause") {
     const r = await killRun(
       arg("--phase") ?? "bondTurn",
