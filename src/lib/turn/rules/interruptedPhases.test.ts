@@ -56,8 +56,11 @@ describe("rerun-safe list", () => {
       expect(isSafeWhenInterrupted(phase)).toBe(false);
     }
   });
-  it("starts with treasuryTurn only", () => {
-    expect(Object.keys(RERUN_SAFE_WHEN_INTERRUPTED)).toEqual(["treasuryTurn"]);
+  it("lists the steps proven so far", () => {
+    expect(Object.keys(RERUN_SAFE_WHEN_INTERRUPTED)).toEqual([
+      "treasuryTurn",
+      "savingsInterestTurn",
+    ]);
     expect(isRerunSafeWhenInterrupted("bondTurn")).toBe(false);
   });
 });

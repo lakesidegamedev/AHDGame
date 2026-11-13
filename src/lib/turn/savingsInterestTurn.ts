@@ -43,7 +43,8 @@ const DEFAULT_PRIME = 2.5;
  */
 async function bookCentralBankInterestCreation(
   db: Db,
-  interestByCountry: Map<CountryId, number>
+  interestByCountry: Map<CountryId, number>,
+  turn: number
 ): Promise<void> {
   const rows = [...interestByCountry.entries()].filter(([, amount]) => amount > 0);
   if (rows.length === 0) return;
@@ -59,12 +60,14 @@ async function bookCentralBankInterestCreation(
   await centralBanksCollection(db).bulkWrite(
     [...byBankId.entries()].map(([bankId, amount]) => ({
       updateOne: {
-        filter: { _id: bankId },
+        // Booked once per bank and turn: the stamp rides the same update.
+        filter: { _id: bankId, savingsInterestBookedTurn: { $ne: turn } },
         update: {
           $inc: {
             netMoneyCreatedLifetime: Math.round(amount * 100) / 100,
             savingsInterestPaidLifetime: Math.round(amount * 100) / 100,
           },
+          $set: { savingsInterestBookedTurn: turn },
         },
       },
     }))
@@ -195,10 +198,15 @@ export async function processSavingsInterestTurn(
         if (accountsAuthoritative) {
           accountAccrualOps.push({
             updateOne: {
-              filter: { ownerType: "character", ownerId: char._id, currency },
+              filter: {
+                ownerType: "character",
+                ownerId: char._id,
+                currency,
+                accrualTurn: { $ne: turn },
+              },
               update: {
                 $inc: { accruedInterest: interest, version: 1 },
-                $set: { updatedAt: new Date() },
+                $set: { updatedAt: new Date(), accrualTurn: turn },
               },
             },
           });
@@ -210,8 +218,14 @@ export async function processSavingsInterestTurn(
         perCharFilter[`currencyBalances.savingsHolder.${currency}`] = holder ?? null;
       }
       if (Object.keys(perCharInc).length > 0) {
+        // The stamp lands in the same update as the accrual, so running this
+        // turn's accrual again after a process death skips what already applied.
+        perCharFilter.savingsAccrualTurn = { $ne: turn };
         accrualOps.push({
-          updateOne: { filter: perCharFilter, update: { $inc: perCharInc } },
+          updateOne: {
+            filter: perCharFilter,
+            update: { $inc: perCharInc, $set: { savingsAccrualTurn: turn } },
+          },
         });
       }
     }
@@ -354,7 +368,7 @@ export async function processSavingsInterestTurn(
         // Booked AFTER the credit lands: crediting first and failing here
         // understates money created, which is recoverable from the ledger;
         // booking first and failing there overstates it, which is not.
-        await bookCentralBankInterestCreation(db, interestPaidByCountry);
+        await bookCentralBankInterestCreation(db, interestPaidByCountry, turn);
       }
       if (ledgerBatch.length > 0) {
         await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
@@ -481,7 +495,7 @@ export async function processSavingsInterestTurn(
   );
   for (const [index, credit] of legacySettled.entries())
     ledgerBatch[index].balanceAfter -= credit.gross - credit.net;
-  await bookCentralBankInterestCreation(db, legacyInterestByCountry);
+  await bookCentralBankInterestCreation(db, legacyInterestByCountry, turn);
   if (ledgerBatch.length > 0) {
     await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
 
