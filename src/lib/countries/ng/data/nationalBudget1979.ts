@@ -34,14 +34,14 @@ export const NG_NATIONAL_BUDGET_1979: NationalBudgetSeedConfig = {
   },
   creditRating: "BB",
   baselineSpendingByCategory: {
-    infrastructure: 7_000_000_000, // oil-boom splurge; ports, roads, FESTAC legacy
-    education: 2_500_000_000, // UPE (Universal Primary Education) legacy
-    defense: 1_800_000_000,
-    healthcare: 800_000_000,
-    socialSecurity: 400_000_000,
-    other: 2_500_000_000,
+    infrastructure: 3_500_000_000, // oil-boom capital works; ports, roads, FESTAC legacy
+    education: 1_500_000_000, // UPE (Universal Primary Education) legacy
+    defense: 1_200_000_000,
+    healthcare: 500_000_000,
+    socialSecurity: 200_000_000,
+    other: 1_500_000_000,
   },
-  baselineStateGrants: 5_000_000_000, // large oil-derived federal transfers to states
+  baselineStateGrants: 3_000_000_000, // large oil-derived federal transfers to states
   policyDefaults: COUNTRY_POLICY_CONFIGS.ng.defaults,
   policyOptionOverrides: COUNTRY_POLICY_CONFIGS.ng.optionIndexes,
   taxPolicyIds: {
