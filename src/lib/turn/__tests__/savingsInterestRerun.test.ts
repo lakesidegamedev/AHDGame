@@ -124,19 +124,19 @@ function diagnostics(db: InMemoryDb) {
   };
 }
 
-describe("savingsInterestTurn rerun safety", () => {
+describe("savingsInterestTurn rerun safety (stage 2)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("applying the phase twice for the same turn equals applying it once", async () => {
     const once = world();
     activeWorld = once;
     vi.mocked(getDb).mockResolvedValue(once as unknown as Db);
-    await processSavingsInterestTurn(once as unknown as Db, QUARTER_TURN);
+    await processSavingsInterestTurn(once as unknown as Db, QUARTER_TURN, true);
     const twice = world();
     activeWorld = twice;
     vi.mocked(getDb).mockResolvedValue(twice as unknown as Db);
-    await processSavingsInterestTurn(twice as unknown as Db, QUARTER_TURN);
-    await processSavingsInterestTurn(twice as unknown as Db, QUARTER_TURN);
+    await processSavingsInterestTurn(twice as unknown as Db, QUARTER_TURN, true);
+    await processSavingsInterestTurn(twice as unknown as Db, QUARTER_TURN, true);
     expect(endState(twice)).toEqual(endState(once));
     expect(diagnostics(twice)).toEqual(diagnostics(once));
     expect(diagnostics(once).savingsLedgerRows).toBeGreaterThan(0);
@@ -146,7 +146,7 @@ describe("savingsInterestTurn rerun safety", () => {
     const clean = world();
     activeWorld = clean;
     vi.mocked(getDb).mockResolvedValue(clean as unknown as Db);
-    await processSavingsInterestTurn(clean as unknown as Db, QUARTER_TURN);
+    await processSavingsInterestTurn(clean as unknown as Db, QUARTER_TURN, true);
     const expected = endState(clean);
     const expectedDiagnostics = diagnostics(clean);
 
@@ -159,14 +159,14 @@ describe("savingsInterestTurn rerun safety", () => {
         vi.mocked(getDb).mockResolvedValue(crash.db);
         let died = false;
         try {
-          await processSavingsInterestTurn(crash.db, QUARTER_TURN);
+          await processSavingsInterestTurn(crash.db, QUARTER_TURN, true);
         } catch {
           died = true;
         }
         vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
         if (!died) break;
         boundaries += 1;
-        await processSavingsInterestTurn(db as unknown as Db, QUARTER_TURN);
+        await processSavingsInterestTurn(db as unknown as Db, QUARTER_TURN, true);
         expect(endState(db), `death at write ${onCall} afterWrite=${afterWrite}`).toEqual(expected);
         for (const [key, value] of Object.entries(diagnostics(db))) {
           expect(value, `${key} after death at write ${onCall}`).toBeLessThanOrEqual(
@@ -176,5 +176,45 @@ describe("savingsInterestTurn rerun safety", () => {
       }
     }
     expect(boundaries).toBeGreaterThan(4);
+  });
+});
+
+const STAMP_KEYS = ["savingsAccrualTurn", "accrualTurn", "savingsInterestBookedTurn"];
+
+describe("savingsInterestTurn below stage 2", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  async function oneTurn(rerunSafe: boolean) {
+    const db = world();
+    activeWorld = db;
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+    await processSavingsInterestTurn(db as unknown as Db, QUARTER_TURN, rerunSafe);
+    return db;
+  }
+
+  it("writes no stamp fields and the same money as the stamped path", async () => {
+    const plain = await oneTurn(false);
+    const stamped = await oneTurn(true);
+    const text = JSON.stringify([
+      plain.collection("characters").docs,
+      plain.collection("npps").docs,
+      plain.collection("centralBanks").docs,
+    ]);
+    for (const key of STAMP_KEYS) expect(text.includes(key), `${key} written`).toBe(false);
+    expect(JSON.stringify(endState(stamped)).includes("savingsAccrualTurn")).toBe(true);
+    const unstamped = (db: InMemoryDb) =>
+      JSON.parse(JSON.stringify(endState(db), (k, v) => (STAMP_KEYS.includes(k) ? undefined : v)));
+    expect(unstamped(plain)).toEqual(unstamped(stamped));
+    expect(diagnostics(plain)).toEqual(diagnostics(stamped));
+  });
+
+  it("defaults to the unstamped path", async () => {
+    const db = world();
+    activeWorld = db;
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+    await processSavingsInterestTurn(db as unknown as Db, QUARTER_TURN);
+    expect(JSON.stringify(db.collection("characters").docs).includes("savingsAccrualTurn")).toBe(
+      false
+    );
   });
 });

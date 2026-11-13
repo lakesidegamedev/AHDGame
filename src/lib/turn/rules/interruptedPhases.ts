@@ -37,13 +37,16 @@ export const SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
 };
 
 /**
- * Steps proven safe to RERUN after a process death, under turn resilience stage 1:
+ * Steps proven safe to RERUN after a process death, under turn resilience stage 2:
  * each applies its money moves behind a per-turn guard written in the same update
  * as the move, so running it again for the same turn changes nothing already
  * applied. An interrupted step on this list is rerun on resume instead of held.
  * A step belongs here only with a test that kills it at every write boundary and
  * reruns it to the uninterrupted end state; new steps are never on it by default.
  */
+/** Turn resilience stage from which the stamped, rerun-safe write paths run and steps are rerun. */
+export const RERUN_SAFE_STAGE = 2;
+
 export const RERUN_SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
   treasuryTurn:
     "accrual is one guarded claim per budget and turn, coupon payouts replay by receipt; killed at every write and rerun it matches an uninterrupted turn",

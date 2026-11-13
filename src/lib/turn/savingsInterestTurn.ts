@@ -44,7 +44,8 @@ const DEFAULT_PRIME = 2.5;
 async function bookCentralBankInterestCreation(
   db: Db,
   interestByCountry: Map<CountryId, number>,
-  turn: number
+  turn: number,
+  rerunSafe: boolean
 ): Promise<void> {
   const rows = [...interestByCountry.entries()].filter(([, amount]) => amount > 0);
   if (rows.length === 0) return;
@@ -61,13 +62,16 @@ async function bookCentralBankInterestCreation(
     [...byBankId.entries()].map(([bankId, amount]) => ({
       updateOne: {
         // Booked once per bank and turn: the stamp rides the same update.
-        filter: { _id: bankId, savingsInterestBookedTurn: { $ne: turn } },
+        filter: {
+          _id: bankId,
+          ...(rerunSafe ? { savingsInterestBookedTurn: { $ne: turn } } : {}),
+        },
         update: {
           $inc: {
             netMoneyCreatedLifetime: Math.round(amount * 100) / 100,
             savingsInterestPaidLifetime: Math.round(amount * 100) / 100,
           },
-          $set: { savingsInterestBookedTurn: turn },
+          ...(rerunSafe ? { $set: { savingsInterestBookedTurn: turn } } : {}),
         },
       },
     }))
@@ -88,7 +92,9 @@ async function bookCentralBankInterestCreation(
  */
 export async function processSavingsInterestTurn(
   db: Db,
-  turn: number
+  turn: number,
+  /** Turn resilience stage 2 and above: accrual is stamped per turn so a rerun cannot double it. */
+  rerunSafe = false
 ): Promise<{ charactersProcessed: number; totalInterest: number }> {
   const centralBankPricing = await ensureCentralBankPricingPhaseIn(db, turn);
   const forexEnabled = await isForexEnabled();
@@ -202,11 +208,11 @@ export async function processSavingsInterestTurn(
                 ownerType: "character",
                 ownerId: char._id,
                 currency,
-                accrualTurn: { $ne: turn },
+                ...(rerunSafe ? { accrualTurn: { $ne: turn } } : {}),
               },
               update: {
                 $inc: { accruedInterest: interest, version: 1 },
-                $set: { updatedAt: new Date(), accrualTurn: turn },
+                $set: { updatedAt: new Date(), ...(rerunSafe ? { accrualTurn: turn } : {}) },
               },
             },
           });
@@ -220,11 +226,13 @@ export async function processSavingsInterestTurn(
       if (Object.keys(perCharInc).length > 0) {
         // The stamp lands in the same update as the accrual, so running this
         // turn's accrual again after a process death skips what already applied.
-        perCharFilter.savingsAccrualTurn = { $ne: turn };
+        if (rerunSafe) perCharFilter.savingsAccrualTurn = { $ne: turn };
         accrualOps.push({
           updateOne: {
             filter: perCharFilter,
-            update: { $inc: perCharInc, $set: { savingsAccrualTurn: turn } },
+            update: rerunSafe
+              ? { $inc: perCharInc, $set: { savingsAccrualTurn: turn } }
+              : { $inc: perCharInc },
           },
         });
       }
@@ -368,7 +376,7 @@ export async function processSavingsInterestTurn(
         // Booked AFTER the credit lands: crediting first and failing here
         // understates money created, which is recoverable from the ledger;
         // booking first and failing there overstates it, which is not.
-        await bookCentralBankInterestCreation(db, interestPaidByCountry, turn);
+        await bookCentralBankInterestCreation(db, interestPaidByCountry, turn, rerunSafe);
       }
       if (ledgerBatch.length > 0) {
         await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
@@ -412,7 +420,8 @@ export async function processSavingsInterestTurn(
         resolvePrime,
         resolveInflation,
         resolvePoolTotal,
-        centralBankPricing.depositBonusPercentPoints
+        centralBankPricing.depositBonusPercentPoints,
+        rerunSafe
       );
     }
 
@@ -495,7 +504,7 @@ export async function processSavingsInterestTurn(
   );
   for (const [index, credit] of legacySettled.entries())
     ledgerBatch[index].balanceAfter -= credit.gross - credit.net;
-  await bookCentralBankInterestCreation(db, legacyInterestByCountry, turn);
+  await bookCentralBankInterestCreation(db, legacyInterestByCountry, turn, rerunSafe);
   if (ledgerBatch.length > 0) {
     await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
 

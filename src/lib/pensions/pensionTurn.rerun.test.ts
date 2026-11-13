@@ -137,13 +137,13 @@ function mortal(crash: ReturnType<typeof withInjectedCrash>) {
   return { db, state };
 }
 
-describe("runPensionTurn rerun safety", () => {
+describe("runPensionTurn rerun safety (stage 2)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("moves money in this world (contributions, benefits and an investment)", async () => {
     const db = world();
     vi.mocked((await import("@/lib/mongodb")).getDb).mockResolvedValue(db as unknown as Db);
-    const result = await runPensionTurn(db as unknown as Db, TURN);
+    const result = await runPensionTurn(db as unknown as Db, TURN, true);
     expect(result.contributionsAnchor).toBeGreaterThan(0);
     expect(result.benefits.benefitsPaidAnchor).toBeGreaterThan(0);
     expect(result.investing.investedAnchor).toBeGreaterThan(0);
@@ -152,17 +152,17 @@ describe("runPensionTurn rerun safety", () => {
 
   it("applying the phase twice for the same turn equals applying it once", async () => {
     const once = world();
-    await runPensionTurn(once as unknown as Db, TURN);
+    await runPensionTurn(once as unknown as Db, TURN, true);
     const twice = world();
-    await runPensionTurn(twice as unknown as Db, TURN);
-    await runPensionTurn(twice as unknown as Db, TURN);
+    await runPensionTurn(twice as unknown as Db, TURN, true);
+    await runPensionTurn(twice as unknown as Db, TURN, true);
     expect(endState(twice)).toEqual(endState(once));
     expect(ledgerRows(twice)).toBe(ledgerRows(once));
   });
 
   it("a death at any write boundary then a rerun equals an uninterrupted turn", async () => {
     const clean = world();
-    await runPensionTurn(clean as unknown as Db, TURN);
+    await runPensionTurn(clean as unknown as Db, TURN, true);
     const expected = endState(clean);
     const expectedRows = ledgerRows(clean);
 
@@ -172,13 +172,13 @@ describe("runPensionTurn rerun safety", () => {
         const db = world();
         const mortalDb = mortal(withInjectedCrash(db, { onCall, afterWrite }));
         try {
-          await runPensionTurn(mortalDb.db, TURN);
+          await runPensionTurn(mortalDb.db, TURN, true);
         } catch {
           // the process died mid-phase
         }
         if (!mortalDb.state.dead) break;
         boundaries += 1;
-        await runPensionTurn(db as unknown as Db, TURN);
+        await runPensionTurn(db as unknown as Db, TURN, true);
         expect(endState(db), `death at write ${onCall} afterWrite=${afterWrite}`).toEqual(expected);
         expect(ledgerRows(db), `ledger rows after death at write ${onCall}`).toBeLessThanOrEqual(
           expectedRows
@@ -186,5 +186,39 @@ describe("runPensionTurn rerun safety", () => {
       }
     }
     expect(boundaries).toBeGreaterThan(8);
+  });
+});
+
+const PENSION_STAMPS = [
+  "agreementChargeTurns",
+  "pensionDebitTurns",
+  "pendingInvestment",
+  "lastInvestedTurn",
+  "lastSubscriptionTurn",
+  "pensionSubscriptionTurns",
+];
+
+describe("runPensionTurn below stage 2", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("writes no stamp fields and the same money as the stamped path", async () => {
+    const plain = world();
+    vi.mocked((await import("@/lib/mongodb")).getDb).mockResolvedValue(plain as unknown as Db);
+    const plainResult = await runPensionTurn(plain as unknown as Db, TURN);
+    const stamped = world();
+    const stampedResult = await runPensionTurn(stamped as unknown as Db, TURN, true);
+
+    const text = JSON.stringify(endState(plain));
+    for (const key of PENSION_STAMPS) expect(text.includes(key), `${key} written`).toBe(false);
+    expect(JSON.stringify(endState(stamped)).includes("agreementChargeTurns")).toBe(true);
+
+    const unstamped = (db: InMemoryDb) =>
+      JSON.parse(
+        JSON.stringify(endState(db), (k, v) => (PENSION_STAMPS.includes(k) ? undefined : v))
+      );
+    expect(unstamped(plain)).toEqual(unstamped(stamped));
+    expect(plainResult).toEqual(stampedResult);
+    expect(plainResult.investing.investedAnchor).toBeGreaterThan(0);
+    expect(ledgerRows(plain)).toBe(ledgerRows(stamped));
   });
 });

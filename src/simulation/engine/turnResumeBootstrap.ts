@@ -68,7 +68,9 @@ export function validateLockedResume(
   /** Interrupted phases the caller proved safe to rerun; they are neither refused nor carried. */
   rerunInterrupted: ReadonlySet<string> = new Set(),
   /** Stage 1: hold instead of resuming when an interrupted step may have moved money. */
-  holdOnMoneyMoving = false
+  holdOnMoneyMoving = false,
+  /** Stage 2: steps on the rerun-safe list are run again instead of held. */
+  rerunSafeSteps = false
 ): ValidatedTurnResume | null {
   const target = locked.processingTargetTurn;
   if (typeof preLockTargetTurn !== "number" || target !== preLockTargetTurn) return null;
@@ -80,9 +82,12 @@ export function validateLockedResume(
   );
   for (const phase of rerunInterrupted) phaseState.interrupted.delete(phase);
   if (holdOnMoneyMoving) {
-    // Stage 1: a step proven rerun-safe is run again, not skipped and not held.
-    for (const phase of [...phaseState.interrupted]) {
-      if (isRerunSafeWhenInterrupted(phase)) phaseState.interrupted.delete(phase);
+    // A step proven rerun-safe is run again, not skipped and not held; below the rerun
+    // stage it stays held like any other money step.
+    if (rerunSafeSteps) {
+      for (const phase of [...phaseState.interrupted]) {
+        if (isRerunSafeWhenInterrupted(phase)) phaseState.interrupted.delete(phase);
+      }
     }
     const held = classifyInterruptedPhases(phaseState.interrupted).moneyMoving;
     if (held.length > 0) {

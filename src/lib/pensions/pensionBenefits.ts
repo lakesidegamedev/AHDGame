@@ -46,7 +46,9 @@ export interface PensionBenefitsResult {
  */
 export async function runPensionBenefitsTurn(
   db: Db,
-  currentTurn: number
+  currentTurn: number,
+  /** Turn resilience stage 2 and above: a scheme is paid at most once per turn. */
+  rerunSafe = false
 ): Promise<PensionBenefitsResult> {
   const result: PensionBenefitsResult = {
     schemesPaying: 0,
@@ -58,7 +60,10 @@ export async function runPensionBenefitsTurn(
   };
 
   const schemes = await pensionSchemesCollection<PensionScheme>(db)
-    .find({ liabilitiesAnchor: { $gt: 0 }, lastBenefitTurn: { $ne: currentTurn } })
+    .find({
+      liabilitiesAnchor: { $gt: 0 },
+      ...(rerunSafe ? { lastBenefitTurn: { $ne: currentTurn } } : {}),
+    })
     .toArray();
   if (schemes.length === 0) return result;
 
@@ -89,7 +94,7 @@ export async function runPensionBenefitsTurn(
           _id: scheme._id,
           assetsAnchor: { $gte: payment.paidAnchor },
           // Paid at most once per turn: the stamp below lands in this same update.
-          lastBenefitTurn: { $ne: currentTurn },
+          ...(rerunSafe ? { lastBenefitTurn: { $ne: currentTurn } } : {}),
         },
         {
           $inc: {

@@ -28,6 +28,8 @@ export interface TurnExecutionContext {
   gameNow: Date;
   realNow: Date;
   startTimeMs: number;
+  /** Turn resilience stage resolved once for this turn; rerun-safety writes need stage 2. */
+  resilienceStage?: number;
   nextTurnTime: Date;
   characters: Character[];
   states: State[];
