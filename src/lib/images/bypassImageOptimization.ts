@@ -35,6 +35,8 @@ export function bypassNextImageOptimization(src: string): boolean {
     if (path.startsWith("/api/logos/")) return true;
     if (path.startsWith("/api/flags/")) return true;
     if (path.startsWith("/api/uploads/")) return true;
+    // Pre-sized files in public/heroes are served as-is.
+    if (path.startsWith("/heroes/")) return true;
 
     const hostname = url.hostname;
     if (hostname.endsWith(".public.blob.vercel-storage.com")) return true;
