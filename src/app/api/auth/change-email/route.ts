@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
@@ -39,6 +40,9 @@ function confirmEmailContent(url: string, baseUrl: string): { html: string; text
 // Errors: 400, 401, 404, 409, 429, 503
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("email");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
     const userId = auth.user.userId;

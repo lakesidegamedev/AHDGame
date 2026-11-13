@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { MessageBanner, SpinnerIcon } from "./shared";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { AccountFieldsNotice } from "@/components/auth/AccountFieldsNotice";
+import { useAccountFieldsMode } from "@/hooks/useAccountFieldsMode";
 
 function EyeIcon({ open }: { open: boolean }) {
   if (open) {
@@ -42,6 +44,7 @@ interface Props {
 
 export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
   const t = useTranslations("settings");
+  const accountFieldsMode = useAccountFieldsMode();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -138,6 +141,10 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
 
   const inputCls =
     "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed pr-10";
+
+  if (accountFieldsMode !== "off") {
+    return <AccountFieldsNotice kind="password" mode={accountFieldsMode} />;
+  }
 
   return (
     <>
