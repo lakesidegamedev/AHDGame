@@ -12,11 +12,12 @@
 // then delete the defunct party rows. The pool value is SET from the invariant,
 // not incremented, so a retry after any partial application is idempotent.
 
-import type { Db } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg, StateRegistrationPool } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
@@ -60,6 +61,30 @@ function roundShare(value: number): number {
   return Math.round(Math.max(0, Math.min(100, value)) * 1e12) / 1e12;
 }
 
+/**
+ * When the current world began: the creation time of its epoch id. Regional rows
+ * written at or after it belong to this world's own seed, not to a past merger.
+ */
+async function currentWorldStart(db: Db): Promise<Date | null> {
+  const state = await gameStateCollection<{ worldEpochId?: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { worldEpochId: 1 } }
+  );
+  const epoch = state?.worldEpochId;
+  return epoch && ObjectId.isValid(epoch) ? new ObjectId(epoch).getTimestamp() : null;
+}
+
+/** Rows a past merger left behind; rows this world's seed wrote are not stale. */
+export function rowsFromBeforeThisWorld<T extends { createdAt?: unknown }>(
+  rows: T[],
+  worldStart: Date | null
+): T[] {
+  if (!worldStart) return rows;
+  return rows.filter(
+    (row) => !(row.createdAt instanceof Date) || row.createdAt.getTime() < worldStart.getTime()
+  );
+}
+
 async function survey(db: Db): Promise<Survey> {
   const defunctParties = await politicalPartiesCollection(db)
     .find(
@@ -87,25 +112,30 @@ async function survey(db: Db): Promise<Survey> {
     };
   }
 
-  const staleRows = await statePartyOrgCollection(db)
-    .find(
-      {
-        $or: parties.map((party) => ({
-          countryId: party.countryId,
-          partyId: String(party.sequentialId),
-        })),
-      },
-      {
-        projection: {
-          countryId: 1,
-          stateId: 1,
-          partyId: 1,
-          organization: 1,
-          registration: 1,
+  const worldStart = await currentWorldStart(db);
+  const staleRows = rowsFromBeforeThisWorld(
+    await statePartyOrgCollection(db)
+      .find(
+        {
+          $or: parties.map((party) => ({
+            countryId: party.countryId,
+            partyId: String(party.sequentialId),
+          })),
         },
-      }
-    )
-    .toArray();
+        {
+          projection: {
+            countryId: 1,
+            stateId: 1,
+            partyId: 1,
+            organization: 1,
+            registration: 1,
+            createdAt: 1,
+          },
+        }
+      )
+      .toArray(),
+    worldStart
+  );
   if (staleRows.length === 0) {
     return {
       staleRows: [],
