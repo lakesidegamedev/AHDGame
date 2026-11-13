@@ -1233,10 +1233,6 @@
       "longBlocks": 1,
       "narrativeLines": 0
     },
-    "src/app/api/admin/settlement/route.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
     "src/app/api/admin/telemetry/research/route.ts": {
       "longBlocks": 0,
       "narrativeLines": 1

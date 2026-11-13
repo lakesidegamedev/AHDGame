@@ -718,7 +718,6 @@ export async function runUniversalSearch({
       subtabs?: Array<{ name: string; label: string }>;
     }> = [
       { name: "dashboard", label: "Dashboard" },
-      { name: "traffic", label: "Traffic" },
       {
         name: "politics",
         label: "Politics",
@@ -785,7 +784,6 @@ export async function runUniversalSearch({
         label: "Support",
         subtabs: [
           { name: "suggestions", label: "Suggestions" },
-          { name: "feedback", label: "Feedback" },
           { name: "logs", label: "Logs" },
           { name: "debug", label: "Debug" },
           { name: "migrations", label: "Migrations" },
@@ -801,7 +799,6 @@ export async function runUniversalSearch({
           { name: "reset", label: "Reset" },
           { name: "heal", label: "Heal" },
           { name: "game-health", label: "Game Health" },
-          { name: "code-quality", label: "Code Quality" },
           { name: "integrations", label: "Integrations" },
         ],
       },

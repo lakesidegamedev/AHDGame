@@ -11,6 +11,9 @@ vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(async () => ({ collection: () => ({ findOne, updateOne }) })),
 }));
 vi.mock("@/lib/adminLog", () => ({ createAdminLog }));
+vi.mock("@/lib/audit/grants/recordGrant", () => ({
+  withAuditedGrant: vi.fn(async (_db: unknown, _input: unknown, apply: () => unknown) => apply()),
+}));
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -27,7 +30,10 @@ const call = async (granted: boolean) => {
 
 describe("PATCH /api/admin/users/sandbox-access", () => {
   it("grants access and never writes a supporter field", async () => {
-    requireAdmin.mockResolvedValueOnce({ ok: true, admin: { username: "operator" } });
+    requireAdmin.mockResolvedValueOnce({
+      ok: true,
+      admin: { userId: "a".repeat(24), username: "operator" },
+    });
     findOne.mockResolvedValueOnce({ username: "Ada" });
     expect((await call(true)).status).toBe(200);
 
@@ -49,7 +55,10 @@ describe("PATCH /api/admin/users/sandbox-access", () => {
   });
 
   it("revokes by unsetting only the grant fields", async () => {
-    requireAdmin.mockResolvedValueOnce({ ok: true, admin: { username: "operator" } });
+    requireAdmin.mockResolvedValueOnce({
+      ok: true,
+      admin: { userId: "a".repeat(24), username: "operator" },
+    });
     findOne.mockResolvedValueOnce({ username: "Ada" });
     expect((await call(false)).status).toBe(200);
     expect(Object.keys(updateOne.mock.calls[0][1].$unset).sort()).toEqual([

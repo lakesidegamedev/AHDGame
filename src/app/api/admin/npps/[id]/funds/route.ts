@@ -13,9 +13,13 @@ import { z } from "zod";
 import type { NPP } from "@/lib/db/types";
 import { loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 
-const schema = z.object({ amount: z.number().positive() });
+const schema = z.object({
+  amount: z.number().positive(),
+  reason: z.string().trim().max(300).optional(),
+});
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -44,9 +48,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { rate } = await loadCharacterFxRate(db, homeCurrency);
     const amountLocal = parsed.data.amount * rate;
 
-    const result = await nppsCollection(db).updateOne(
-      { _id: new ObjectId(id) },
-      { $inc: { funds: amountLocal } }
+    const result = await withAuditedGrant(
+      db,
+      {
+        actorUserId: auth.admin.userId,
+        recipients: [{ type: "npp", id }],
+        kind: "funds",
+        amount: parsed.data.amount,
+        currencyCode: homeCurrency,
+        reason: parsed.data.reason ?? "Control panel: NPP funds grant",
+      },
+      () =>
+        nppsCollection(db).updateOne({ _id: new ObjectId(id) }, { $inc: { funds: amountLocal } })
     );
 
     if (result.matchedCount === 0) throw notFound("NPP not found");

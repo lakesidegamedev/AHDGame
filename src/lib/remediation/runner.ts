@@ -190,6 +190,8 @@ export async function runApply(
     env: HealEnv;
     tokenId: string;
     operator: string;
+    /** Staff account id the work is done for. Money credits refuse to run without it. */
+    requestedBy?: string;
     codeGate?: CodeGateResult;
     /** Required for env "prod". Sandbox and dev do not need it. */
     confirmProd?: boolean;
@@ -204,7 +206,7 @@ export async function runApply(
   }
 
   // Re-derive from live state. Never trust the plan the caller is holding.
-  const ctx = { env: args.env, dryRun: false, now };
+  const ctx = { env: args.env, dryRun: false, now, requestedBy: args.requestedBy };
   const freshPlan = await defect.plan(db, ctx);
   const turnNumber = await readTurnNumber(db);
 
