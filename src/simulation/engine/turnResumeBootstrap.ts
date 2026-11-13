@@ -10,6 +10,7 @@
  * Plain data only. `processTurn` owns the writes.
  */
 import type { GameState, TurnPhaseTelemetryMap } from "@/lib/db/types";
+import { classifyInterruptedPhases } from "@/lib/turn/rules/interruptedPhases";
 import { TURN_BOOTSTRAP_PHASE, turnHasCommittedWrites } from "@/lib/turn/processingLock";
 import {
   INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
@@ -46,6 +47,8 @@ export interface ValidatedTurnResume {
   lastPhase: string;
   /** Completed plus interrupted: neither may run again. */
   appliedPhases: Set<string>;
+  /** Interrupted steps not on the allow list: skipped, so the turn is incomplete. */
+  interruptedMoneyMoving: string[];
   phaseState: CrashedTurnPhaseState;
 }
 
@@ -81,6 +84,7 @@ export function validateLockedResume(
     targetTurn: target,
     lastPhase: locked.processingPhase!,
     appliedPhases: new Set([...phaseState.completed, ...phaseState.interrupted]),
+    interruptedMoneyMoving: classifyInterruptedPhases(phaseState.interrupted).moneyMoving,
     phaseState,
   };
 }
