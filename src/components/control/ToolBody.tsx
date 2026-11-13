@@ -23,9 +23,6 @@ const lazy = <P extends object>(load: () => Promise<React.ComponentType<P>>) =>
 const AdminDashboardTab = lazy(() =>
   import("@/components/admin/tabs/AdminDashboardTab").then((m) => m.AdminDashboardTab)
 );
-const AdminTrafficTab = lazy(() =>
-  import("@/components/admin/tabs/AdminTrafficTab").then((m) => m.AdminTrafficTab)
-);
 const AdminPoliticsTab = lazy(() =>
   import("@/components/admin/tabs/AdminPoliticsTab").then((m) => m.AdminPoliticsTab)
 );
@@ -46,6 +43,9 @@ const AdminSupportTab = lazy(() =>
 );
 const AdminSystemTab = lazy(() =>
   import("@/components/admin/tabs/AdminSystemTab").then((m) => m.AdminSystemTab)
+);
+const GrantsLedgerPanel = lazy(() =>
+  import("@/components/admin/grants/GrantsLedgerPanel").then((m) => m.GrantsLedgerPanel)
 );
 const TasksPageClient = lazy(() =>
   import("@/components/admin/tasks/TasksPageClient").then((m) => m.TasksPageClient)
@@ -156,10 +156,11 @@ const SHARED_IDS = new Set([
   "player-reports",
   "site-controls",
   "tasks",
+  "grants",
   "position-editor",
 ]);
 
-function SharedTool({ id }: { id: string }) {
+function SharedTool({ id, role }: { id: string; role: StaffRole }) {
   switch (id) {
     case "priority":
       return <ModeratorPriorityBody />;
@@ -174,7 +175,9 @@ function SharedTool({ id }: { id: string }) {
     case "player-reports":
       return <PlayerReportsTab />;
     case "site-controls":
-      return <ModeratorSiteTab />;
+      return <ModeratorSiteTab canChange={role === "admin"} />;
+    case "grants":
+      return <GrantsLedgerPanel />;
     case "tasks":
       return <TasksPageClient />;
     case "position-editor":
@@ -206,8 +209,6 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
           onNavigate={(tab: MainTabId, nextSub?: string) => open(tab, nextSub)}
         />
       );
-    case "traffic":
-      return <AdminTrafficTab />;
     case "politics":
       return <AdminPoliticsTab activeSub={sub as never} />;
     case "world":
@@ -223,7 +224,6 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
         <AdminSupportTab
           activeSub={sub as never}
 
-          initialFeedbackIssue={sub === "feedback" ? deepLinkIssue : undefined}
           initialSuggestionIssue={sub === "suggestions" ? deepLinkIssue : undefined}
         />
       );
@@ -235,7 +235,7 @@ function AdminAreaBody({ tool, legacy }: { tool: ToolDef; legacy: LegacyRef }) {
 }
 
 export function ToolBody({ tool, role }: { tool: ToolDef; role: StaffRole }) {
-  if (SHARED_IDS.has(tool.id)) return <SharedTool id={tool.id} />;
+  if (SHARED_IDS.has(tool.id)) return <SharedTool id={tool.id} role={role} />;
   if (role === "moderator") return <ModeratorTool id={tool.id} />;
 
   const legacy = tool.legacy?.admin;

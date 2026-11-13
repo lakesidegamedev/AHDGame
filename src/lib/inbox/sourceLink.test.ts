@@ -163,17 +163,17 @@ describe("resolveSourceLink", () => {
   });
 
   // ── Feedback ─────────────────────────────────────────────────────────────
-  it("feedback_status_changed links to admin feedback tab", () => {
+  it("feedback_status_changed links to the admin suggestions tool", () => {
     const s = resolveSourceLink("feedback_status_changed", {
       issueNumber: 42,
     });
-    expect(s?.href).toBe("/control/support/feedback?issue=42");
+    expect(s?.href).toBe("/control/support/suggestions");
     expect(s?.label).toBe("View issue #42");
   });
 
-  it("new_feedback links to admin feedback tab", () => {
+  it("new_feedback links to the admin suggestions tool", () => {
     const s = resolveSourceLink("new_feedback", { issueNumber: 5 });
-    expect(s?.href).toBe("/control/support/feedback?issue=5");
+    expect(s?.href).toBe("/control/support/suggestions");
     expect(s?.label).toBe("View #5");
   });
 

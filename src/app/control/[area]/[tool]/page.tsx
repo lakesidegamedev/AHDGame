@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getAuthStaff } from "@/lib/auth";
 import { ToolBody } from "@/components/control/ToolBody";
-import { canSeeTool, findTool } from "@/lib/staff/panelRegistry";
+import { canSeeTool, findTool, REMOVED_TOOL_REDIRECTS } from "@/lib/staff/panelRegistry";
 
 interface Props {
   params: Promise<{ area: string; tool: string }>;
@@ -13,6 +13,8 @@ export default async function ControlToolPage({ params }: Props) {
   if (!staff) redirect("/dashboard");
 
   const tool = findTool(toolId);
+  const removedTarget = REMOVED_TOOL_REDIRECTS[toolId];
+  if (!tool && removedTarget) redirect(removedTarget);
   if (!tool || tool.area !== area) notFound();
   // A tool the role may not see answers like a missing one.
   if (!canSeeTool(staff.staffRole, tool)) notFound();
