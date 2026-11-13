@@ -159,7 +159,7 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
                 <option value="">None</option>
                 <option value="supporter">Supporter</option>
                 <option value="supporter-plus">Supporter+</option>
-                <option value="supporter-plus-plus">Supporter++</option>
+                <option value="supporter-plus-plus">Champion</option>
               </select>
             </label>
             <label className="space-y-1">

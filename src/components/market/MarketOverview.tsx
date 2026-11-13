@@ -3,9 +3,9 @@
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CommodityData, ExchangeData } from "@/app/country/[code]/stockmarket/types";
 import {
-  BONDS_URL,
+  BONDS_PREVIEW_URL,
   FUNDS_URL,
-  STOCKS_URL,
+  STOCKS_PREVIEW_URL,
   type BondsResponse,
   type FundsResponse,
   type SectorsForSaleResponse,
@@ -34,8 +34,8 @@ export function MarketOverview({
   loading: boolean;
 }) {
   const { formatAmount, formatListingPrice } = useCurrency();
-  const stocks = useMarketJson<ExchangeData>(STOCKS_URL);
-  const bonds = useMarketJson<BondsResponse>(BONDS_URL);
+  const stocks = useMarketJson<ExchangeData>(STOCKS_PREVIEW_URL);
+  const bonds = useMarketJson<BondsResponse>(BONDS_PREVIEW_URL);
   const funds = useMarketJson<FundsResponse>(FUNDS_URL);
 
   const topStocks = (stocks.data?.listings ?? [])

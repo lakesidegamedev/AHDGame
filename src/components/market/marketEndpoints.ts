@@ -16,6 +16,10 @@ export const STOCKS_URL = "/api/stock-exchange?exchange=global";
 export const stocksUrl = (exchange: string) =>
   `/api/stock-exchange?exchange=${encodeURIComponent(exchange)}`;
 export const BONDS_URL = "/api/bonds";
+
+/** Overview cards show five rows, so they ask for only those. */
+export const STOCKS_PREVIEW_URL = `${STOCKS_URL}&preview=5`;
+export const BONDS_PREVIEW_URL = `${BONDS_URL}?preview=5`;
 export const FUNDS_URL = "/api/investment-funds?exchange=global";
 
 export const sectorsUrl = (page: number) =>

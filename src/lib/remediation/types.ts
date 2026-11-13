@@ -146,6 +146,8 @@ export interface HealContext {
   dryRun: boolean;
   /** Run id, present in apply(). Same id as the healRuns marker and healBackups rows. */
   runId?: string;
+  /** Staff account id the run is done for, from --requested-by. */
+  requestedBy?: string;
   now: Date;
 }
 

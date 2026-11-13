@@ -84,8 +84,6 @@ export function validateLockedResume(
     for (const phase of [...phaseState.interrupted]) {
       if (isRerunSafeWhenInterrupted(phase)) phaseState.interrupted.delete(phase);
     }
-  }
-  if (holdOnMoneyMoving) {
     const held = classifyInterruptedPhases(phaseState.interrupted).moneyMoving;
     if (held.length > 0) {
       const details: Record<string, string> = {};

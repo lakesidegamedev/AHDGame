@@ -13,8 +13,7 @@ import { HeroStatsStrip } from "@/components/ui";
 import { useGameClock } from "@/contexts/useGameClock";
 import type { ElectionsSummary } from "../electionsSelectors";
 
-const HERO_SRC =
-  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Women_practice_voting_in_Dayton_Oct._27%2C_1920.jpg/960px-Women_practice_voting_in_Dayton_Oct._27%2C_1920.jpg";
+const HERO_SRC = "/heroes/elections-voting-1920.webp";
 
 export function ElectionsHero({
   countryName,

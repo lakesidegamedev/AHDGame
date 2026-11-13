@@ -1,4 +1,4 @@
-import { generateFingerprintData, type StoredFingerprintComponents } from "@/lib/utils/fingerprint";
+import type { StoredFingerprintComponents } from "@/lib/utils/fingerprint";
 
 /**
  * Deferred fingerprint capture for the auth entry pages.
@@ -9,8 +9,8 @@ import { generateFingerprintData, type StoredFingerprintComponents } from "@/lib
  * React was still hydrating the form — page-load telemetry ranks both routes
  * among the slowest in the game even though they have almost no data.
  *
- * Capture therefore starts at idle after first paint, and any submit or OAuth
- * redirect that arrives earlier awaits the same promise, so the value sent is
+ * Capture therefore starts on first interaction (or a long idle fallback), and any
+ * submit or OAuth redirect that arrives earlier awaits the same promise, so the value sent is
  * identical to what the mount effect produced. Failures degrade to an empty
  * hash, exactly as before: the fingerprint is advisory.
  */
@@ -24,28 +24,36 @@ let scheduled = false;
 
 function beginCapture(): Promise<CapturedFingerprint> {
   if (!capture) {
-    capture = generateFingerprintData()
+    // Imported on demand so the fingerprint library stays out of the page's first load.
+    capture = import("@/lib/utils/fingerprint")
+      .then(({ generateFingerprintData }) => generateFingerprintData())
       .then(({ hash, components }) => ({ hash, components }))
       .catch(() => ({ hash: "", components: null }));
   }
   return capture;
 }
 
-/** Start capture once the browser is idle, so it cannot compete with hydration. */
+const INTERACTION_EVENTS = ["focusin", "pointerdown", "keydown", "touchstart"] as const;
+const FALLBACK_DELAY_MS = 10_000;
+
+/**
+ * Start capture when the visitor first touches the page, or after a long idle
+ * fallback. Probing canvas, WebGL and audio is a multi-second task on a phone, so
+ * it must not land while the page is still loading. A sign-in needs the visitor to
+ * interact first, and a submit that arrives early awaits the same promise.
+ */
 export function scheduleFingerprintCapture(): void {
   if (scheduled || typeof window === "undefined") return;
   scheduled = true;
   const run = () => {
+    for (const name of INTERACTION_EVENTS) window.removeEventListener(name, run);
+    window.clearTimeout(timer);
     void beginCapture();
   };
-  const idleWindow = window as Window & {
-    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-  };
-  if (typeof idleWindow.requestIdleCallback === "function") {
-    idleWindow.requestIdleCallback(run, { timeout: 2500 });
-    return;
+  const timer = window.setTimeout(run, FALLBACK_DELAY_MS);
+  for (const name of INTERACTION_EVENTS) {
+    window.addEventListener(name, run, { once: true, passive: true });
   }
-  window.setTimeout(run, 1200);
 }
 
 /** Fingerprint for a sign-in submission, starting capture now if it never ran. */

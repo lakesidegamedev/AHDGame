@@ -88,8 +88,8 @@ noise on a loaded host is ±10 performance points.
 
 ### What the audit found
 
-- Third-party advertising and analytics tags were the largest single blocking
-  source on every page: 600–750ms of long tasks, competing with hydration.
+- Google tags (gtag + Ads) were the largest single blocking source on every
+  page: 600–750ms of long tasks, competing with hydration.
 - The cookie-consent banner mounted only after the client store read
   `localStorage`. On anonymous loads it painted ~4s after FCP and became the
   Largest Contentful Paint element (measured on `/world` in production).
@@ -110,6 +110,69 @@ noise on a loaded host is ±10 performance points.
   Best Practices audit at the cost of Railway egress.
 - `speed-index` on the landing page is still the weakest metric; the era globe
   and promotional media dominate first paint.
-- The cohort is measured unauthenticated. Logged-in surfaces (dashboard,
-  character pages) have their own cost profile and are covered by
-  `scripts/perf/page-load/run.mjs`.
+- The public cohort is measured unauthenticated. Logged-in surfaces have
+  their own cohort, below.
+
+## Signed-in cohort
+
+`SIGNED_IN_PAGES` in `pages.mjs` lists the pages a player opens while playing
+(dashboard, profile, actions, portfolio, notifications, country pages, party,
+elections, campaign, budget, corporation, market, news, map, world, banking).
+`:corp` and `:party` in a path are filled from `--corp=<id>` and `--party=<id>`;
+a page whose id is not supplied is skipped.
+
+```bash
+# 1. Save a session cookie jar for a labelled test account (never a real player):
+node scripts/perf/page-load/login-state.mjs --base=<origin> --user=<name> \
+  --password=<password> --out=<state.json>
+
+# 2. Run the cohort with that cookie. Phone preset is the default strategy:
+CHROME_PATH=/path/to/chrome node scripts/perf/lighthouse/run.mjs \
+  --base=<origin> --cohort=signed-in --storage=<state.json> \
+  --runs=3 --budget=off --corp=<corporation id> --party=<party id>
+```
+
+`--cohort=public|signed-in|all` (default `public`). A page that redirects to
+`/login` or `/register` is reported as a failure, so an expired session cannot
+masquerade as a fast page. Run against a deployed site or a local build of a
+seeded world; do not point it at an account that belongs to a real player.
+
+### Signed-in baseline (phone)
+
+Measured on a populated sandbox deployment, mobile preset (Lighthouse default
+throttling), three-run median, a throwaway account with one character. Ranked by
+LCP, then TBT. "final" is where the request ended up: several nav paths
+redirect, and those rows duplicate the target page. That sandbox world's turn
+was stuck processing, which makes every page poll turn status every 1.5 s and
+inflates TBT, and the first page of each batch ran cold, so treat TBT as a
+ceiling and the ordering as a guide, not a gate.
+
+| #   | page                    | final                 | perf | LCP ms | TBT ms | CLS   | server ms |
+| --- | ----------------------- | --------------------- | ---- | ------ | ------ | ----- | --------- |
+| 1   | /corporations           | /market               | 25   | 10053  | 13193  | 0.143 | 19        |
+| 2   | /map                    | /country/us/map       | 32   | 6916   | 4186   | 0.203 | 15        |
+| 3   | /elections              | /country/us/elections | 42   | 6612   | 8295   | 0.016 | 15        |
+| 4   | /dashboard              | /profile              | 39   | 6164   | 12111  | 0.013 | 695       |
+| 5   | /stockmarket/us         | /market               | 37   | 6067   | 5427   | 0.009 | 14        |
+| 6   | /parties/1              | /country/us/parties/1 | 48   | 4951   | 3958   | 0.009 | 9         |
+| 7   | /budget                 | /country/us/budget    | 43   | 4935   | 4549   | 0.01  | 29        |
+| 8   | /profile                | same                  | 47   | 4610   | 4686   | 0.009 | 24        |
+| 9   | /actions                | same                  | 52   | 4447   | 2312   | 0.009 | 9         |
+| 10  | /country/us/legislature | same                  | 40   | 4290   | 1676   | 0.307 | 8         |
+| 11  | /country/us/budget      | same                  | 54   | 3749   | 3487   | 0.009 | 23        |
+| 12  | /portfolio              | same                  | 60   | 3488   | 1756   | 0.057 | 10        |
+| 13  | /corporation/:corp      | same                  | 58   | 3419   | 2781   | 0.009 | 25        |
+| 14  | /world                  | same                  | 51   | 3324   | 5162   | 0.14  | 15        |
+| 15  | /market                 | same                  | 44   | 3204   | 3428   | 0.216 | 15        |
+| 16  | /country/us/economy     | same                  | 65   | 2892   | 1696   | 0.009 | 18        |
+| 17  | /notifications          | same                  | 71   | 2632   | 1122   | 0.017 | 10        |
+| 18  | /banking                | same                  | 70   | 2385   | 1300   | 0.009 | 12        |
+| 19  | /campaign               | same                  | 70   | 2355   | 1337   | 0.009 | 13        |
+| 20  | /country/us/parties     | same                  | 70   | 2337   | 1354   | 0.037 | 15        |
+| 21  | /country/us             | same                  | 75   | 2273   | 734    | 0.04  | 14        |
+| 22  | /news                   | same                  | 65   | 2211   | 1786   | 0.01  | 27        |
+
+Biggest signals: `/country/us/legislature` shifts layout 0.31 when its chamber
+data arrives (the footer jumps), `/map` and `/market` shift 0.20 and
+0.22, and `/country/us/map`, `/country/us/elections`, `/profile` and
+`/market` have LCP above 4 s on a phone.

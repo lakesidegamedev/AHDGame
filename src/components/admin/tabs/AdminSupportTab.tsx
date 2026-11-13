@@ -2,10 +2,6 @@
 
 import dynamic from "next/dynamic";
 
-const FeedbackTab = dynamic(
-  () => import("@/components/admin/feedback/FeedbackTab").then((m) => ({ default: m.FeedbackTab })),
-  { ssr: false }
-);
 const LogsTab = dynamic(
   () => import("@/components/admin/system/LogsTab").then((m) => ({ default: m.LogsTab })),
   { ssr: false }
@@ -51,7 +47,6 @@ const PollBannerTab = dynamic(
 
 export type SupportSubTab =
   | "suggestions"
-  | "feedback"
   | "logs"
   | "debug"
   | "migrations"
@@ -61,22 +56,16 @@ export type SupportSubTab =
 
 interface AdminSupportTabProps {
   activeSub: SupportSubTab;
-  initialFeedbackIssue?: number;
   initialSuggestionIssue?: number;
 }
 
-export function AdminSupportTab({
-  activeSub,
-  initialFeedbackIssue,
-  initialSuggestionIssue,
-}: AdminSupportTabProps) {
+export function AdminSupportTab({ activeSub, initialSuggestionIssue }: AdminSupportTabProps) {
   return (
     <>
       <div className="space-y-6">
         {activeSub === "suggestions" && (
           <SuggestionsTab initialIssueNumber={initialSuggestionIssue} />
         )}
-        {activeSub === "feedback" && <FeedbackTab initialIssueNumber={initialFeedbackIssue} />}
         {activeSub === "logs" && <LogsTab />}
         {activeSub === "debug" && <DebugTab />}
         {activeSub === "migrations" && <MigrationsTab />}
