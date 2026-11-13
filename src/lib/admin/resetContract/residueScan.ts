@@ -24,6 +24,8 @@ import { loadResetPartySeedCatalog } from "@/lib/admin/resetPartySeedCatalog";
 import { findPartySeed, partySeedValues } from "@/lib/admin/resetContract/resetSurvivingParties";
 import { partyResidue } from "@/lib/admin/resetContract/rules/survivingParties";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { electoratePriorityOverridesCollection } from "@/lib/db/repositories/electoratePriorityOverrides";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
@@ -305,7 +307,9 @@ export async function loadSurvivingPartyEvidence(db: Db): Promise<PreservedField
   const evidence: PreservedFieldEvidence[] = [];
   const preset = await getGameStatePresetOrDefault(db);
   const catalog = await loadResetPartySeedCatalog();
-  const parties = await db.collection("politicalParties").find({ isDefault: true }).toArray();
+  const parties = await politicalPartiesCollection<Document>(db)
+    .find({ isDefault: true })
+    .toArray();
   for (const party of parties) {
     const seed = findPartySeed(catalog, preset, String(party.countryId), String(party.name));
     const fields = partyResidue(party, seed ? partySeedValues(seed, preset) : null);
@@ -317,8 +321,7 @@ export async function loadSurvivingPartyEvidence(db: Db): Promise<PreservedField
         fields,
       });
   }
-  const charters = await db
-    .collection("partyCharters")
+  const charters = await partyChartersCollection<Document>(db)
     .find({}, { projection: { _id: 1 } })
     .limit(20)
     .toArray();

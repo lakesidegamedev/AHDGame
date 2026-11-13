@@ -66,11 +66,11 @@ function roundShare(value: number): number {
  * written at or after it belong to this world's own seed, not to a past merger.
  */
 async function currentWorldStart(db: Db): Promise<Date | null> {
-  const state = await gameStateCollection<{ worldEpochId?: string }>(db).findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     { projection: { worldEpochId: 1 } }
   );
-  const epoch = state?.worldEpochId;
+  const epoch = state?.worldEpochId ? String(state.worldEpochId) : null;
   return epoch && ObjectId.isValid(epoch) ? new ObjectId(epoch).getTimestamp() : null;
 }
 
