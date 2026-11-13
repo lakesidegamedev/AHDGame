@@ -60,6 +60,7 @@ describe("rerun-safe list", () => {
     expect(Object.keys(RERUN_SAFE_WHEN_INTERRUPTED)).toEqual([
       "treasuryTurn",
       "savingsInterestTurn",
+      "pensionTurn",
     ]);
     expect(isRerunSafeWhenInterrupted("bondTurn")).toBe(false);
   });

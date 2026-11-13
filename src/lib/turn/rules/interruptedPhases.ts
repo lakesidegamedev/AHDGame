@@ -49,6 +49,8 @@ export const RERUN_SAFE_WHEN_INTERRUPTED: Readonly<Record<string, string>> = {
     "accrual is one guarded claim per budget and turn, coupon payouts replay by receipt; killed at every write and rerun it matches an uninterrupted turn",
   savingsInterestTurn:
     "per-account accrual stamped with the turn in the same update, the quarterly credit is one receipted transaction; killed at every write and rerun the balances match an uninterrupted turn (forex path; diagnostic ledger rows and counters can come up short, never doubled)",
+  pensionTurn:
+    "employer debits carry a per-agreement per-turn stamp, each charge, benefit payment and fund investment is stamped on the scheme, fund-side writes finish forward behind per-turn witnesses; killed at every write and rerun it matches an uninterrupted turn (ledger rows can come up short, never doubled)",
 };
 
 export function isRerunSafeWhenInterrupted(phase: string): boolean {
