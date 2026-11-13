@@ -17,6 +17,7 @@ import { states2007 } from "./data/usStates2007";
 import { states2023 } from "./data/usStates2023";
 import { states2027 } from "./data/usStates2027";
 import { usMetricPresets1953 } from "./data/usMetricPresets1953";
+import { usMetricPresets1979 } from "./data/usMetricPresets1979";
 import { usMetricPresets1991, usMetricPresets2019 } from "./data/usMetricPresets";
 import { usMetricPresets2027 } from "./data/usMetricPresets2027";
 import { usPopulationAnchors1991, usPopulationAnchors2019 } from "./data/usPopulationAnchors";
@@ -65,6 +66,7 @@ const metricPresetBundles = {
   "2019-default": usMetricPresets2019,
   "1991-default": usMetricPresets1991,
   "1953-default": usMetricPresets1953,
+  "1979-default": usMetricPresets1979,
 };
 
 const populationAnchors = {

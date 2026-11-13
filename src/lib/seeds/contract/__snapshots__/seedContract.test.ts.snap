@@ -13,20 +13,7 @@ exports[`seed contract per preset > 1953-default matches the recorded gap list 1
 
 exports[`seed contract per preset > 1979-default matches the recorded gap list 1`] = `
 [
-  "budget:NG budgetSpending",
   "commodityPrices commodityPriceLevel",
-  "fxRates:BAL no starting rate for 1979-default",
-  "fxRates:BG no starting rate for 1979-default",
-  "fxRates:BLR no starting rate for 1979-default",
-  "fxRates:CS no starting rate for 1979-default",
-  "fxRates:HU no starting rate for 1979-default",
-  "fxRates:PL no starting rate for 1979-default",
-  "fxRates:RO no starting rate for 1979-default",
-  "fxRates:UKR no starting rate for 1979-default",
-  "fxRates:YU no starting rate for 1979-default",
-  "metricPresets:IE missing",
-  "metricPresets:NG missing",
-  "metricPresets:US missing",
 ]
 `;
 

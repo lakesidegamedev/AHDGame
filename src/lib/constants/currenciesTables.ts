@@ -499,6 +499,22 @@ export const INITIAL_RATES_1979: Partial<Record<CountryId, number>> = {
   GR: 37.0, // GRD/USD 1979 (~37 drachmae)
   AT: 13.4, // ATS/USD 1979 (hard-schilling DM shadow)
   FI: 3.9, // FIM/USD 1979 (post-devaluation markka)
+  // Eastern bloc: official or commercial rates, local currency per USD, from
+  // IMF International Financial Statistics 1979 averages and national statistical
+  // yearbooks (non-convertible currencies, so these are administered rates).
+  PL: 32.3, // PLZ: zloty official rate
+  HU: 32.5, // HUF: forint commercial rate (~32 to 33 Ft/USD)
+  RO: 18.0, // ROL: leu official rate (~18 lei/USD)
+  YU: 18.3, // YUD: dinar, managed float (~18 din/USD)
+  BG: 9.6, // BGL: the official rate was ~0.85 leva/USD, but the authored leva 400B
+  // seed is ~16x a real-leva GDP (same game-unit inflation as YU 1953), so the
+  // era rate carries that factor: 9.6 lev/USD reads ~$4,700/head, ~0.4x the US,
+  // matching Maddison's 1979 Bulgarian-to-US income ratio.
+  CS: 5.6, // CSK: koruna commercial rate (~5.6 Kcs/USD)
+  // Soviet republics share the Soviet administered rouble basis used for RU.
+  BLR: 2.22, // SUR: same administered basis as RU
+  UKR: 2.22, // SUR: same administered basis as RU
+  BAL: 2.22, // SUR: same administered basis as RU
 };
 
 /**
