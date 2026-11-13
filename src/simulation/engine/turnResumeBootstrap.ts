@@ -14,6 +14,7 @@ import { classifyInterruptedPhases } from "@/lib/turn/rules/interruptedPhases";
 import { TURN_BOOTSTRAP_PHASE, turnHasCommittedWrites } from "@/lib/turn/processingLock";
 import {
   INTERRUPTED_PHASE_NOT_RERUN_MESSAGE,
+  TurnHeldForRepairError,
   TurnResumeRefusedError,
   encodeResumeResult,
   phaseBlocksResumeWhenInterrupted,
@@ -62,7 +63,9 @@ export function validateLockedResume(
   locked: RecoveryFields,
   preLockTargetTurn: number | null,
   /** Interrupted phases the caller proved safe to rerun; they are neither refused nor carried. */
-  rerunInterrupted: ReadonlySet<string> = new Set()
+  rerunInterrupted: ReadonlySet<string> = new Set(),
+  /** Stage 1: hold instead of resuming when an interrupted step may have moved money. */
+  holdOnMoneyMoving = false
 ): ValidatedTurnResume | null {
   const target = locked.processingTargetTurn;
   if (typeof preLockTargetTurn !== "number" || target !== preLockTargetTurn) return null;
@@ -73,6 +76,16 @@ export function validateLockedResume(
     locked.processingPhaseResults
   );
   for (const phase of rerunInterrupted) phaseState.interrupted.delete(phase);
+  if (holdOnMoneyMoving) {
+    const held = classifyInterruptedPhases(phaseState.interrupted).moneyMoving;
+    if (held.length > 0) {
+      const details: Record<string, string> = {};
+      for (const phase of held) {
+        details[phase] = locked.processingPhaseStatuses?.[phase]?.message ?? "process died";
+      }
+      throw new TurnHeldForRepairError(target as number, held, details);
+    }
+  }
   const blocking = [...phaseState.interrupted].filter(phaseBlocksResumeWhenInterrupted);
   if (blocking.length > 0) {
     throw new TurnResumeRefusedError(
