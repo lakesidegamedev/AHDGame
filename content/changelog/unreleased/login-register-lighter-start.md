@@ -4,9 +4,9 @@ title: "Login and sign-up pages load sooner"
 summary: >-
   The device check on the login and sign-up pages now starts when you first
   touch the page instead of while it is loading.
-tags: [performance]
+tags: [performance, auth]
 badges: [patch]
-areas: [frontend, auth]
+areas: [frontend]
 ---
 
 ## What changed
