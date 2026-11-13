@@ -2,12 +2,6 @@ import { z } from "zod";
 import { schemas } from "../validate";
 import { countryIdSchema } from "@/lib/api/schemas/country";
 
-// admin/feedback/[id] PATCH
-export const adminFeedbackPatchSchema = z.object({
-  status: z.enum(["open", "in_progress", "resolved", "wont_fix"]).optional(),
-  adminNotes: z.string().max(5000).optional(),
-});
-
 // admin/suggestions/[id] PATCH — player suggestion forum (`suggestions` collection)
 export const adminSuggestionPatchSchema = z.object({
   status: z

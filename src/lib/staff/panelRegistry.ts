@@ -74,13 +74,6 @@ export const TOOLS: readonly ToolDef[] = [
     tier: "admin",
     legacy: { admin: a("dashboard") },
   },
-  {
-    id: "traffic",
-    area: "overview",
-    label: "Traffic",
-    tier: "admin",
-    legacy: { admin: a("traffic") },
-  },
   { id: "tasks", area: "overview", label: "Tasks", tier: "admin", keywords: "bugs todo" },
 
   // Players
@@ -262,13 +255,6 @@ export const TOOLS: readonly ToolDef[] = [
     legacy: { admin: a("support", "suggestions") },
   },
   {
-    id: "feedback",
-    area: "support",
-    label: "Feedback (legacy)",
-    tier: "admin",
-    legacy: { admin: a("support", "feedback") },
-  },
-  {
     id: "mail-reports",
     area: "support",
     label: "Mail reports",
@@ -306,7 +292,6 @@ export const TOOLS: readonly ToolDef[] = [
       ["npps", "NPPs"],
       ["politicians", "Politician profiles"],
       ["crises", "Crises"],
-      ["german-question", "German question"],
       ["events", "Random events"],
       ["countries", "Countries"],
       ["conflicts", "Conflicts"],
@@ -412,13 +397,6 @@ export const TOOLS: readonly ToolDef[] = [
     legacy: { admin: a("system", "game-health") },
   },
   {
-    id: "code-quality",
-    area: "diagnostics",
-    label: "Code quality",
-    tier: "admin",
-    legacy: { admin: a("system", "code-quality") },
-  },
-  {
     id: "observability",
     area: "diagnostics",
     label: "Observability",
@@ -426,6 +404,23 @@ export const TOOLS: readonly ToolDef[] = [
     legacy: { admin: a("system", "observability") },
   },
 ];
+
+/** Retired tools: old tool id to the nearest surviving tool's path. */
+export const REMOVED_TOOL_REDIRECTS: Readonly<Record<string, string>> = {
+  traffic: "/control/overview/dashboard",
+  feedback: "/control/support/suggestions",
+  "german-question": "/control/world/countries",
+  "code-quality": "/control/diagnostics/game-health",
+};
+
+/** Retired tools by their old admin tab and sub. */
+const REMOVED_LEGACY_ADMIN: Readonly<Record<string, string>> = {
+  traffic: REMOVED_TOOL_REDIRECTS.traffic!,
+  feedback: REMOVED_TOOL_REDIRECTS.feedback!,
+  "support/feedback": REMOVED_TOOL_REDIRECTS.feedback!,
+  "world/german-question": REMOVED_TOOL_REDIRECTS["german-question"]!,
+  "system/code-quality": REMOVED_TOOL_REDIRECTS["code-quality"]!,
+};
 
 const TOOL_BY_ID = new Map(TOOLS.map((t) => [t.id, t]));
 
@@ -511,7 +506,6 @@ const LEGACY_ADMIN_TAB_ALIASES: Record<string, LegacyRef> = {
   wiki: { tab: "content", sub: "wiki" },
   roadmap: { tab: "content", sub: "roadmap" },
   suggestions: { tab: "support", sub: "suggestions" },
-  feedback: { tab: "support", sub: "feedback" },
   logs: { tab: "support", sub: "logs" },
   reset: { tab: "system", sub: "reset" },
   seed: { tab: "system", sub: "seed" },
@@ -567,6 +561,10 @@ export function legacyRedirect(
   if (panel === "admin" && rawTab && LEGACY_ADMIN_TAB_ALIASES[rawTab]) {
     tab = LEGACY_ADMIN_TAB_ALIASES[rawTab]!.tab;
     sub = LEGACY_ADMIN_TAB_ALIASES[rawTab]!.sub ?? rawSub;
+  }
+  if (panel === "admin" && tab) {
+    const removed = REMOVED_LEGACY_ADMIN[sub ? `${tab}/${sub}` : tab];
+    if (removed) return withQuery(removed);
   }
   const tool = toolForLegacy(panel, tab, sub);
   if (!tool) return withQuery("/control");
