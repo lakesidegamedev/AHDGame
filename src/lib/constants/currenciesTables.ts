@@ -471,6 +471,12 @@ export const INITIAL_RATES_1953: Partial<Record<CountryId, number>> = {
   // (~$355/capita). Fixing the ₮100B magnitude instead would rescale every YU
   // local-currency budget line by 18 while its absolute per-capita law costs
   // stayed put — tracked separately, not carried in this change.
+  // The three Soviet union republics keep their accounts in rubles, so they
+  // take the same 9 SUR/USD basis as RU. At that rate each reads roughly
+  // $700 to $1,100 per head, below the Russian republic's own figure.
+  BLR: 9.0,
+  UKR: 9.0,
+  BAL: 9.0,
 };
 
 /**
