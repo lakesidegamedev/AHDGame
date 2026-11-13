@@ -410,7 +410,6 @@ export function createTurnPhaseRuntime(input: {
     const onHeartbeatResult = (res: { matchedCount: number }) => {
       if (turnLockFenceActive() && res.matchedCount === 0) {
         markTurnLockLost();
-        console.error(`[Turn] Heartbeat found the turn lock gone during phase "${name}"`);
         rejectLockLost(new TurnLockLostError(`heartbeat during phase "${name}"`));
       }
     };
