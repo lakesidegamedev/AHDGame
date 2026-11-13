@@ -66,7 +66,6 @@ export function scheduleSentryLoad(
   load: () => void
 ): () => void {
   let done = false;
-  let timer: number | undefined;
   const finish = () => {
     if (done) return;
     done = true;
@@ -77,14 +76,14 @@ export function scheduleSentryLoad(
     if (doc.visibilityState === "visible") finish();
   };
   function cancel() {
-    if (timer !== undefined) env.clearTimeout(timer);
+    env.clearTimeout(timer);
     for (const name of SENTRY_LOAD_INTERACTIONS) env.removeEventListener(name, finish);
     doc.removeEventListener("visibilitychange", onVisible);
   }
   for (const name of SENTRY_LOAD_INTERACTIONS) {
     env.addEventListener(name, finish, { once: true, passive: true });
   }
-  timer = env.setTimeout(() => {
+  const timer = env.setTimeout(() => {
     if (doc.visibilityState === "visible") finish();
     else doc.addEventListener("visibilitychange", onVisible);
   }, SENTRY_LOAD_FALLBACK_MS);
