@@ -1,14 +1,11 @@
 /**
  * Sandbox rehearsal of turn resilience stage 1. Sandbox databases only.
- *
  *   run    one turn through processTurn and the automatic retry controller.
- *   pause  SIGSTOP the holder for --pause-sec (default 240) while emulating the
- *          watchdog, then SIGCONT it and report whether the turn completed.
- *   kill   SIGKILL the child when the lock shows --phase, then emulate the
- *          watchdog tick until it takes the lock over and run the resumed turn.
- *
- *   npx tsx scripts/turn/rehearse-resilience.ts kill --phase bondTurn
- *
+ *   pause  SIGSTOP the holder for --pause-sec (default 240), emulate the watchdog,
+ *          then SIGCONT and report whether the turn completed.
+ *   kill   SIGKILL the child when the lock shows --phase, emulate the watchdog
+ *          until it takes over, then run the resumed turn.
+ * Example: npx tsx scripts/turn/rehearse-resilience.ts kill --phase bondTurn
  * Prints one JSON line with wall times. Connection: MONGODB_URI, MONGODB_DB.
  */
 import { spawn } from "node:child_process";
