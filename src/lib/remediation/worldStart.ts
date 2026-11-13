@@ -6,11 +6,11 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
  * pinned to a past world's event must not credit a document this world created.
  */
 export async function currentWorldStart(db: Db): Promise<Date | null> {
-  const state = await gameStateCollection<{ worldEpochId?: string }>(db).findOne(
+  const state = await gameStateCollection(db).findOne(
     { _id: "current" },
     { projection: { worldEpochId: 1 } }
   );
-  const epoch = state?.worldEpochId;
+  const epoch = state?.worldEpochId ? String(state.worldEpochId) : null;
   return epoch && ObjectId.isValid(epoch) ? new ObjectId(epoch).getTimestamp() : null;
 }
 
