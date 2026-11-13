@@ -13,6 +13,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumeEmailChange } from "@/lib/emailChange";
 import { sendEmail } from "@/lib/email";
+import { EMAIL_DEFAULT_BASE_URL, renderBrandedEmail } from "@/lib/emailTemplate";
 import {
   CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
   bridgeAccountFromUser,
@@ -135,12 +136,15 @@ export async function POST(request: Request) {
       await sendEmail({
         to: change.previousEmail,
         subject: "Your A House Divided email was changed",
-        text:
-          "The email on your A House Divided account was just changed to a new address.\n\n" +
-          "If this was not you, contact support on Discord right away.",
-        html:
-          "<p>The email on your A House Divided account was just changed to a new address.</p>" +
-          "<p>If this was not you, contact support on Discord right away.</p>",
+        ...renderBrandedEmail({
+          preheader: "The email on your A House Divided account was changed.",
+          heading: "Your email was changed",
+          paragraphs: [
+            "The email on your A House Divided account was just changed to a new address.",
+            "If this was not you, contact support on Discord right away.",
+          ],
+          baseUrl: process.env.NEXT_PUBLIC_BASE_URL || EMAIL_DEFAULT_BASE_URL,
+        }),
       });
     }
 
