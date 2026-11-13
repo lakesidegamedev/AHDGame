@@ -9,6 +9,7 @@ import { cookies } from "next/headers";
 import { getAuthUserFromToken } from "@/lib/auth";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { entitlementExpiryMs, isFreeAccessOn } from "@/lib/freeAccess";
 
 const OFFLINE_ENTITLEMENT_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -65,13 +66,20 @@ export async function GET() {
     ? new Date(user.clientAccessExpiresAt).getTime()
     : 0;
   const tempActive = tempExpiresMs > nowMs;
-  const singleplayerEntitled =
+  const realEntitled =
     auth.user.isModerator === true ||
     Boolean(user.singleplayerEntitledAt) ||
     tierActive ||
     tempActive;
+  const freeAccess = await isFreeAccessOn();
+  const singleplayerEntitled = realEntitled || freeAccess;
+  const freeAccessOnly = freeAccess && !realEntitled;
 
-  const graceEnd = nowMs + OFFLINE_ENTITLEMENT_GRACE_MS;
+  const graceEnd = entitlementExpiryMs({
+    nowMs,
+    graceMs: OFFLINE_ENTITLEMENT_GRACE_MS,
+    freeAccessOnly,
+  });
   const tempOnly =
     tempActive && auth.user.isModerator !== true && !user.singleplayerEntitledAt && !tierActive;
 
@@ -80,6 +88,7 @@ export async function GET() {
       linked: true,
       displayName: user.displayName || user.username,
       supporter,
+      freeAccess,
       avatarUrl,
       singleplayer: {
         entitled: singleplayerEntitled,

@@ -7,7 +7,7 @@ const m = vi.hoisted(() => ({
   user: "u1" as string | null,
 }));
 vi.mock("next/headers", () => ({ cookies: async () => ({}) }));
-vi.mock("@/lib/auth/centralLogin", () => ({ getCentralLoginMode: () => m.mode }));
+vi.mock("@/lib/auth/centralLogin", () => ({ getCentralLoginModeFor: () => m.mode }));
 vi.mock("@/lib/auth/centralLogin/issuerReadiness", () => ({
   isHopIssuerReady: async () => m.ready,
 }));

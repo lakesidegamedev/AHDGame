@@ -33,7 +33,7 @@ import {
   centralCheckPassword,
   centralHealUnknownAccount,
   decideCentralLogin,
-  getCentralLoginMode,
+  getCentralLoginModeFor,
   isLongPasswordForCentral,
   recordLoginFallback,
   recordLongPasswordLogin,
@@ -174,8 +174,8 @@ export async function POST(request: Request) {
     }
 
     // Verify password — reject OAuth-only accounts that have no password set
-    const centralMode = getCentralLoginMode();
     const userKey = user._id.toString();
+    const centralMode = getCentralLoginModeFor(userKey);
     let isValidPassword: boolean;
     if (centralMode === "central" && user.password && !isLongPasswordForCentral(password)) {
       const central = await centralCheckPassword(userKey, password);

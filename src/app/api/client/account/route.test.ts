@@ -5,6 +5,12 @@ const getAuthUserFromToken = vi.fn();
 const findOne = vi.fn();
 const getCookie = vi.fn();
 
+const isFreeAccessOn = vi.fn(async () => false);
+
+vi.mock("@/lib/freeAccess", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/freeAccess")>()),
+  isFreeAccessOn,
+}));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth }));
 vi.mock("@/lib/auth", () => ({ getAuthUserFromToken }));
 vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({ get: getCookie })) }));
@@ -200,5 +206,42 @@ describe("GET /api/client/account", () => {
     const { GET } = await import("./route");
     const body = await (await GET()).json();
     expect(body.singleplayer).toEqual({ entitled: false, expiresAt: null });
+  });
+
+  describe("free access", () => {
+    const ownerAuth = { ok: true, user: { userId: "507f1f77bcf86cd799439011" } };
+
+    it("is off by default and reports freeAccess false", async () => {
+      requireBasicAuth.mockResolvedValueOnce(ownerAuth);
+      findOne.mockResolvedValueOnce({ username: "Ada" });
+      const { GET } = await import("./route");
+      const body = await (await GET()).json();
+      expect(body.freeAccess).toBe(false);
+      expect(body.singleplayer).toEqual({ entitled: false, expiresAt: null });
+    });
+
+    it("entitles a linked account with no ownership, capped at one hour", async () => {
+      isFreeAccessOn.mockResolvedValueOnce(true);
+      requireBasicAuth.mockResolvedValueOnce(ownerAuth);
+      findOne.mockResolvedValueOnce({ username: "Ada" });
+      const { GET } = await import("./route");
+      const body = await (await GET()).json();
+      expect(body.freeAccess).toBe(true);
+      expect(body.singleplayer.entitled).toBe(true);
+      const ttl = Date.parse(body.singleplayer.expiresAt) - Date.now();
+      expect(ttl).toBeGreaterThan(0);
+      expect(ttl).toBeLessThanOrEqual(60 * 60 * 1000);
+    });
+
+    it("keeps the long expiry for a real owner while free access is on", async () => {
+      isFreeAccessOn.mockResolvedValueOnce(true);
+      requireBasicAuth.mockResolvedValueOnce(ownerAuth);
+      findOne.mockResolvedValueOnce({ username: "Ada", singleplayerEntitledAt: new Date() });
+      const { GET } = await import("./route");
+      const body = await (await GET()).json();
+      expect(body.freeAccess).toBe(true);
+      const ttl = Date.parse(body.singleplayer.expiresAt) - Date.now();
+      expect(ttl).toBeGreaterThan(24 * 60 * 60 * 1000);
+    });
   });
 });

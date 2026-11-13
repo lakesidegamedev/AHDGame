@@ -17,6 +17,26 @@ export function parseCentralLoginMode(raw: string | undefined): CentralLoginMode
   return "off";
 }
 
+/** The listed ids that are well formed, lowercased. Anything else is ignored. */
+export function parseCentralLoginTestUsers(raw: string | undefined): Set<string> {
+  const ids = new Set<string>();
+  for (const part of (raw ?? "").split(",")) {
+    const id = part.trim().toLowerCase();
+    if (/^[0-9a-f]{24}$/.test(id)) ids.add(id);
+  }
+  return ids;
+}
+
+/** Only a shadow run can be raised to central, and only for a listed user. */
+export function modeForUser(
+  globalMode: CentralLoginMode,
+  userId: string,
+  testUsers: ReadonlySet<string>
+): CentralLoginMode {
+  if (globalMode === "shadow" && testUsers.has(userId.trim().toLowerCase())) return "central";
+  return globalMode;
+}
+
 /**
  * Central mode: an infrastructure failure falls back to the local check. An
  * account the central system does not know (an import gap or a failed mirror)

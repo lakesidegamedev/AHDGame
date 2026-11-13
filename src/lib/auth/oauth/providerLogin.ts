@@ -33,7 +33,7 @@ import { authMigrationFenceAbsentFilter, isAuthMigrationFenced } from "@/lib/aut
 import {
   bridgeAccountFromUser,
   centralRollbackCreate,
-  getCentralLoginMode,
+  getCentralLoginModeFor,
   centralWriteFirst,
   shadowMirrorWrite,
   shadowRecordProviderLogin,
@@ -91,10 +91,10 @@ async function withLakesideHop(
   cookieStore: OAuthCookieStore,
   baseUrl: string
 ): Promise<NextResponse> {
-  if (getCentralLoginMode() !== "central") return normal;
+  if (getCentralLoginModeFor(userId) !== "central") return normal;
   const destination = normal.headers.get("location");
   if (!destination) return normal;
-  if (!(await isHopIssuerReady())) {
+  if (!(await isHopIssuerReady(userId))) {
     await recordHopSkipped(userId);
     return normal;
   }
