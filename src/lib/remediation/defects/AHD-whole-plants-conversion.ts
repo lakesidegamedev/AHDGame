@@ -753,6 +753,9 @@ export const defect: Defect = {
       "to credit on the first turn, so a reset world needs no conversion and no refund.",
   },
   envs: ["dev", "sandbox", "prod"],
+  // Worlds seeded with stage on carry the part-plant as plantUnitRemainder
+  // construction credit already; converting would pay it out a second time.
+  worldsStartedBefore: "2026-11-12T00:00:00.000Z",
   idempotent: true,
   mintsMoney: true,
   guards: ["turn-lock-free", "max-affected:20000"],
