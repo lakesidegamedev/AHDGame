@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 /**
- * Lighthouse scorecard: per-page JSON/HTML reports, a Markdown summary and an
- * optional floor-budget gate. Options are documented in README.md.
- *   node scripts/perf/lighthouse/run.mjs --base=<url> --strategy=mobile|desktop
- *     [--cohort=public|signed-in|all] [--storage=<login-state.mjs output>]
- * The signed-in cohort needs --storage (cookie jar from page-load/login-state.mjs).
- * Needs the lighthouse and chrome-launcher devDependencies and a Chrome binary.
+ * Lighthouse scorecard for the top-35 public pages in `pages.mjs`: per-page
+ * JSON/HTML reports, a Markdown summary, and an optional floor-budget gate.
+ *
+ * node scripts/perf/lighthouse/run.mjs --base=<url> --strategy=mobile|desktop
+ *   [--pages=/,/faq] [--runs=3 (median)] [--out=<dir>] [--budget=strict|off]
+ *   [--chrome-path=<chrome>]
+ *   [--cohort=public|signed-in|all] [--storage=<login-state.mjs output>]
+ *   [--corp=<id>] [--party=<id>]
+ *
+ * The signed-in cohort needs --storage (the cookie jar written by
+ * scripts/perf/page-load/login-state.mjs against the benchmark world).
+ *
+ * Needs the `lighthouse` and `chrome-launcher` devDependencies and a Chrome
+ * (CHROME_PATH, --chrome-path, or a system install).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -17,9 +25,9 @@ import { SIGNED_IN_PAGES, TOP_PAGES } from "./pages.mjs";
 import {
   METRIC_BUDGETS,
   METRIC_IDS,
-  MOBILE_PAGE_BUDGET_OVERRIDES,
   PAGE_BUDGET_OVERRIDES,
   SCORE_BUDGETS,
+  SIGNED_IN_BUDGETS,
 } from "./budgets.mjs";
 
 const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"];
@@ -165,15 +173,14 @@ function ms(value) {
 
 function evaluateBudget(page, scores, metrics, seoExcluded) {
   const limits = SCORE_BUDGETS[strategy];
-  const budgetKey = page.budgetKey ?? page.path;
-  const mobileOverride =
-    strategy === "mobile" ? (MOBILE_PAGE_BUDGET_OVERRIDES[budgetKey] ?? {}) : {};
-  const override = { ...(PAGE_BUDGET_OVERRIDES[budgetKey] ?? {}), ...mobileOverride };
+  const override = page.signedIn
+    ? (SIGNED_IN_BUDGETS[page.budgetKey ?? page.path] ?? {})
+    : (PAGE_BUDGET_OVERRIDES[page.budgetKey ?? page.path] ?? {});
   const breaches = [];
   const metricWarnings = [];
 
   for (const id of METRIC_IDS) {
-    const ceiling = override.metrics?.[id] ?? METRIC_BUDGETS[strategy][id];
+    const ceiling = METRIC_BUDGETS[strategy][id];
     const value = metrics[id];
     if (ceiling === undefined || value === null) continue;
     if (value > ceiling) {
@@ -202,6 +209,44 @@ const chrome = await chromeLauncher.launch({
   chromeFlags: ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
 });
 
+/**
+ * Installs the saved session cookies in the browser itself over the DevTools
+ * protocol. A Cookie request header alone is lost to Lighthouse's storage
+ * reset and its own navigations, which silently turns every signed-in page
+ * into the login page.
+ */
+async function installCookies(port, storagePath) {
+  const state = JSON.parse(await readFile(storagePath, "utf8"));
+  const version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+  const socket = new WebSocket(version.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => {
+    socket.onopen = resolve;
+    socket.onerror = () => reject(new Error("DevTools connection failed"));
+  });
+  const cookies = (state.cookies ?? []).map((c) => ({
+    name: c.name,
+    value: c.value,
+    domain: c.domain,
+    path: c.path ?? "/",
+    httpOnly: c.httpOnly,
+    secure: c.secure,
+    sameSite: c.sameSite,
+    ...(c.expires > 0 ? { expires: c.expires } : {}),
+  }));
+  await new Promise((resolve, reject) => {
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.id !== 1) return;
+      if (message.error) reject(new Error(message.error.message));
+      else resolve();
+    };
+    socket.send(JSON.stringify({ id: 1, method: "Storage.setCookies", params: { cookies } }));
+  });
+  socket.close();
+}
+
+if (cohort !== "public") await installCookies(chrome.port, storagePath);
+
 const rows = [];
 let breachCount = 0;
 
@@ -227,7 +272,7 @@ try {
         throttlingMethod: "simulate",
         ...(strategy === "desktop" ? { throttling: desktopThrottling } : {}),
         maxWaitForLoad: 90_000,
-        ...(page.signedIn ? { extraHeaders: { Cookie: cookieHeader } } : {}),
+        ...(page.signedIn ? { disableStorageReset: true } : {}),
       };
 
       try {
@@ -249,6 +294,13 @@ try {
         }
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
+        if (lastError.includes("session cookie rejected")) {
+          console.error(
+            `FAIL ${page.path}: ${lastError}; stopping, every signed-in page would fail.`
+          );
+          await chrome.kill();
+          process.exit(3);
+        }
       }
     }
 
@@ -279,7 +331,13 @@ try {
           ? "page is noindex/disallowed"
           : null;
 
-    const { breaches, metricWarnings } = evaluateBudget(page, scores, metrics, seoExcluded);
+    const budgetPage = page.signedIn
+      ? {
+          ...page,
+          budgetKey: new URL(lastLhr.finalDisplayedUrl).pathname.replace(/[0-9a-f]{24}/, ":corp"),
+        }
+      : page;
+    const { breaches, metricWarnings } = evaluateBudget(budgetPage, scores, metrics, seoExcluded);
     breachCount += breaches.length;
 
     const name = page.name ?? slug(page.path);
