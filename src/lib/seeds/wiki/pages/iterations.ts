@@ -49,14 +49,14 @@ export const iterationsPages: readonly WikiSeedPage[] = [
     slug: "iteration-2",
     title: "Iteration 2",
     description:
-      "The concluded 1991-start world: The Mafia's four presidential wins, a nationalist government that broke up the United Kingdom, and a United States-Japan war left unfinished.",
+      "The story of the 1991-start world and the characters who ran it: The Mafia's four presidential wins, a comeback from resignation, a nationalist government that broke up the United Kingdom, and a United States-Japan war left unfinished.",
     content: iteration2Content,
     category: "iterations",
     extraTags: ["history", "iteration", "post-cold-war"],
     featured: false,
     difficulty: "beginner",
     contentType: "reference",
-    estimatedReadTime: 20,
-    lastUpdated: "2026-11-12",
+    estimatedReadTime: 32,
+    lastUpdated: "2026-11-13",
   },
 ];
