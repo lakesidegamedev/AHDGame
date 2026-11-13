@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import * as topojson from "topojson-client";
 import topo from "../../../public/geo/countries-110m.json";
@@ -182,8 +184,52 @@ describe("2027 broadcast lander content", () => {
     expect(config.heroHeadline).toContain("2027");
   });
 
-  it("links no explainer, because no 2027 explainer page exists", () => {
-    expect(config.explainer).toBeUndefined();
+  it("links the 2027 world overview and the November State of the Game post", () => {
+    expect(config.explainer?.href).toBe("https://lakesidegames.net/ahd-2027/");
+    expect(config.explainer?.labelKey).toBe("landing.world2027.overview");
+    expect(config.newsPost?.href).toBe(
+      "https://lakesidegames.net/news/state-of-the-game-november-2026/"
+    );
+    expect(config.newsPost?.labelKey).toBe("landing.world2027.stateOfTheGame");
+  });
+
+  it("draws the present-day globe: sunlight at the first turn, routes and Quebec", () => {
+    const nightside = lander.nightside!;
+    expect(nightside).toBeDefined();
+    expect(Date.parse(nightside.sunAt)).toBe(Date.parse("2026-11-16T17:00:00-05:00"));
+    expect(nightside.routes.length).toBeGreaterThanOrEqual(8);
+    for (const { from, to } of nightside.routes) {
+      expect(from.name).not.toBe(to.name);
+      for (const [lon, lat] of [from.lonLat, to.lonLat]) {
+        expect(Math.abs(lon)).toBeLessThanOrEqual(180);
+        expect(Math.abs(lat)).toBeLessThanOrEqual(90);
+      }
+    }
+    // Both player countries and all four computer-run economies are on the network.
+    const ends = new Set(nightside.routes.flatMap(({ from, to }) => [from.name, to.name]));
+    for (const city of ["New York", "Toronto", "London", "Frankfurt", "Tokyo", "Shanghai"]) {
+      expect(ends.has(city), city).toBe(true);
+    }
+    expect(nightside.watchedRegion?.featureId).toBe("CA_QC");
+    expect(nightside.watchedRegion?.geoUrl).toBe("/ca-regions.json");
+  });
+
+  it("finds Quebec in the province shard the globe fetches", () => {
+    const shard = JSON.parse(
+      readFileSync(path.join(process.cwd(), "public/ca-regions.json"), "utf8")
+    ) as { features: { properties: { regionCode: string }; geometry: { type: string } }[] };
+    const quebec = shard.features.find((f) => f.properties.regionCode === "CA_QC");
+    expect(quebec?.geometry.type).toMatch(/Polygon/);
+  });
+
+  it("keys the hero to the three tiers 2027 has, with their counts", () => {
+    expect(lander.tierCounts).toEqual({ player: 2, economic: 4, background: 16 });
+  });
+
+  it("is the only era with the present-day globe", () => {
+    for (const other of Object.values(ERA_CONFIGS)) {
+      if (other.id !== "2027") expect(other.broadcast?.nightside, other.id).toBeUndefined();
+    }
   });
 
   it("keeps dashes and real politicians out of the copy players read", () => {
@@ -196,6 +242,10 @@ describe("2027 broadcast lander content", () => {
       ...config.eraChips,
       ...lander.ticker.flatMap((item) => [item.date, item.text, item.place?.name ?? ""]),
       ...lander.showcase.flatMap((entry) => [entry.title, entry.description]),
+      ...Object.values(config.tileBodies ?? {}),
+      config.explainer?.label ?? "",
+      config.newsPost?.label ?? "",
+      lander.nightside?.watchedRegion?.label ?? "",
     ];
     for (const text of copy) expect(text, text).not.toMatch(DASHES);
   });
