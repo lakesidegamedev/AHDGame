@@ -220,11 +220,13 @@ async function getCharacterData() {
 
   // First-days panel for a new character (null once past the first days or
   // every goal is done). Never let it break the profile.
-  const firstDays: FirstDaysData | null = await loadFirstDays(db, character).catch(() => null);
+  const firstDaysPromise: Promise<FirstDaysData | null> = loadFirstDays(db, character).catch(
+    () => null
+  );
 
   // New-player onboarding checklist: derive step completion only while the
   // card is actually shown (not dismissed, reward not yet claimed).
-  let onboardingChecklist: {
+  type OnboardingChecklistView = {
     steps: Array<{
       id: string;
       title: string;
@@ -237,15 +239,18 @@ async function getCharacterData() {
     total: number;
     rewardAmount: number;
     rewardSymbol: string;
-  } | null = null;
-  if (!isOnboardingDismissed(character) && character.onboarding?.rewardGrantedAt === undefined) {
+  };
+  const onboardingChecklistPromise = (async (): Promise<OnboardingChecklistView | null> => {
+    if (isOnboardingDismissed(character) || character.onboarding?.rewardGrantedAt !== undefined) {
+      return null;
+    }
     const checklist = await loadOnboardingChecklist(db, character);
     const homeCurrency = getHomeCurrency(character, gameState?.preset);
     const anchorCountry = getCountryIdForCurrency(homeCurrency);
     const rateDoc = forexEnabled
       ? await exchangeRatesCollection(db).findOne({ _id: anchorCountry })
       : null;
-    onboardingChecklist = {
+    return {
       steps: checklist.steps,
       completedCount: checklist.completedCount,
       total: checklist.total,
@@ -261,27 +266,31 @@ async function getCharacterData() {
       ),
       rewardSymbol: forexEnabled ? CURRENCY_SYMBOLS[homeCurrency] : "₳",
     };
-  }
+  })();
 
   const statePopulation = homeState?.population ?? 0;
   const stateTaxRate = statePartyOrg?.stateTaxRate ?? 0;
   const nationalTaxRate = party?.nationalTaxRate ?? 0;
   // GDP-baseline era for income math: the world's reset preset, so
   // historical worlds project in their own denomination (issue #798).
-  const fundDistribution = calculateFullFundDistribution(
-    statePopulation,
-    character.donorBaseLevel,
-    character.currentOffice,
-    stateTaxRate,
-    nationalTaxRate,
-    homeState?.gdp,
-    character.countryId,
-    character.politicalInfluence ?? 0,
-    gameState?.preset,
-    resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gameState?.preset),
+  const nationalGdpPerCapitaPromise: Promise<number | undefined> =
     homeState?.gdp === undefined
-      ? undefined
-      : await loadNationalGdpPerCapita(db, character.countryId ?? "US")
+      ? Promise.resolve(undefined)
+      : loadNationalGdpPerCapita(db, character.countryId ?? "US");
+  const fundDistributionPromise = nationalGdpPerCapitaPromise.then((nationalGdpPerCapita) =>
+    calculateFullFundDistribution(
+      statePopulation,
+      character.donorBaseLevel,
+      character.currentOffice,
+      stateTaxRate,
+      nationalTaxRate,
+      homeState?.gdp,
+      character.countryId,
+      character.politicalInfluence ?? 0,
+      gameState?.preset,
+      resolveCampaignPriceLevel(gameConfig?.campaignEraPriceLevelEnabled, gameState?.preset),
+      nationalGdpPerCapita
+    )
   );
 
   // Determine character's country for country-specific NPI rankings
@@ -289,7 +298,7 @@ async function getCharacterData() {
 
   const npiCountryMatch: Filter<Character> = { countryId: charCountryId ?? "US" };
 
-  const [topNPI, topDonor] = await Promise.all([
+  const topPromise = Promise.all([
     charactersCollection(db)
       .find({ isBanned: { $ne: true }, ...npiCountryMatch })
       .sort({ nationalInfluence: -1 })
@@ -303,57 +312,16 @@ async function getCharacterData() {
       .project({ donorBaseLevel: 1 })
       .toArray(),
   ]);
-  const maxNPI = Math.max(1, topNPI[0]?.nationalInfluence ?? 1);
-  const maxDonorLevel = Math.max(1, topDonor[0]?.donorBaseLevel ?? 1);
 
   // Resolve party names for career history display using compound "countryId:seqId" keys
   // so the same sequentialId in different countries maps to the right name.
   const careerPartyIds = [
     ...new Set((character.careerHistory ?? []).map((e) => e.party).filter((p): p is string => !!p)),
   ];
-  const partyNames: Record<string, string> = {};
-  if (careerPartyIds.length > 0) {
-    const numericIds = careerPartyIds.map(Number).filter((n) => !isNaN(n));
-    if (numericIds.length > 0) {
-      const parties = await politicalPartiesCollection(db)
-        .find({ sequentialId: { $in: numericIds } })
-        .project({ sequentialId: 1, name: 1, countryId: 1 })
-        .toArray();
-      for (const p of parties) {
-        partyNames[`${p.countryId}:${p.sequentialId}`] = p.name;
-      }
-    }
-  }
-
-  // Extend partyNames with any old/new party ids referenced by membership
-  // events but not seen in careerHistory.
-  for (const ev of partyHistoryEvents) {
-    if (ev.oldPartyId && ev.oldPartyCountryId && ev.oldPartyName) {
-      partyNames[`${ev.oldPartyCountryId}:${ev.oldPartyId}`] = ev.oldPartyName;
-    }
-    if (ev.newPartyId && ev.newPartyCountryId && ev.newPartyName) {
-      partyNames[`${ev.newPartyCountryId}:${ev.newPartyId}`] = ev.newPartyName;
-    }
-  }
-  const partyNameChanges = await fetchPartyNameChanges(db, partyHistoryEvents);
-  const partyHistory: PartyTenure[] = buildPartyTenures(
-    partyHistoryEvents,
-    {
-      partyId: character.party ?? "independent",
-      partyCountryId: character.countryId,
-      partyName: party?.name ?? null,
-      joinedAt: character.partyJoinedAt ?? null,
-      fallbackDate: new Date(),
-    },
-    partyNameChanges
-  );
-
-  const nationalNpiOrdinalRank = await getNationalNpiOrdinalRank(db, character);
-
   // Conflict-path reads are independent of one another — one round, with the
   // posting load gated on the commission (an uncommissioned character has no
   // order of battle).
-  const conflictExtras = await (async () => {
+  const conflictExtrasPromise = (async () => {
     const [doctrine, commission, generalEra, commands] = await Promise.all([
       getNationalDoctrine(db, charCountryId ?? "US"),
       getCharacterCommission(db, character._id.toString()),
@@ -376,6 +344,66 @@ async function getCharacterData() {
       isCommandingGeneral: commands.some((c) => c.commandingGeneralId === character._id.toString()),
     };
   })();
+
+  const partyNames: Record<string, string> = {};
+  const careerPartiesPromise = (async () => {
+    const numericIds = careerPartyIds.map(Number).filter((n) => !isNaN(n));
+    if (numericIds.length === 0) return [];
+    return politicalPartiesCollection(db)
+      .find({ sequentialId: { $in: numericIds } })
+      .project({ sequentialId: 1, name: 1, countryId: 1 })
+      .toArray();
+  })();
+  const partyNameChangesPromise = fetchPartyNameChanges(db, partyHistoryEvents);
+  const nationalNpiOrdinalRankPromise = getNationalNpiOrdinalRank(db, character);
+
+  const [careerParties, partyNameChanges] = await Promise.all([
+    careerPartiesPromise,
+    partyNameChangesPromise,
+  ]);
+  for (const p of careerParties) {
+    partyNames[`${p.countryId}:${p.sequentialId}`] = p.name;
+  }
+
+  // Extend partyNames with any old/new party ids referenced by membership
+  // events but not seen in careerHistory.
+  for (const ev of partyHistoryEvents) {
+    if (ev.oldPartyId && ev.oldPartyCountryId && ev.oldPartyName) {
+      partyNames[`${ev.oldPartyCountryId}:${ev.oldPartyId}`] = ev.oldPartyName;
+    }
+    if (ev.newPartyId && ev.newPartyCountryId && ev.newPartyName) {
+      partyNames[`${ev.newPartyCountryId}:${ev.newPartyId}`] = ev.newPartyName;
+    }
+  }
+  const partyHistory: PartyTenure[] = buildPartyTenures(
+    partyHistoryEvents,
+    {
+      partyId: character.party ?? "independent",
+      partyCountryId: character.countryId,
+      partyName: party?.name ?? null,
+      joinedAt: character.partyJoinedAt ?? null,
+      fallbackDate: new Date(),
+    },
+    partyNameChanges
+  );
+
+  const [
+    firstDays,
+    onboardingChecklist,
+    fundDistribution,
+    [topNPI, topDonor],
+    nationalNpiOrdinalRank,
+    conflictExtras,
+  ] = await Promise.all([
+    firstDaysPromise,
+    onboardingChecklistPromise,
+    fundDistributionPromise,
+    topPromise,
+    nationalNpiOrdinalRankPromise,
+    conflictExtrasPromise,
+  ]);
+  const maxNPI = Math.max(1, topNPI[0]?.nationalInfluence ?? 1);
+  const maxDonorLevel = Math.max(1, topDonor[0]?.donorBaseLevel ?? 1);
 
   return {
     character,
@@ -440,12 +468,12 @@ export default async function ProfilePage() {
   }
 
   const db = await getDb();
-  const [financialData, unionContribution] = await Promise.all([
+  const [financialData, unionContribution, campaignRates, campaignPriceLevel] = await Promise.all([
     getFinancialData(data.character._id),
     unionContributionIncomePerTurn(db, data.character._id),
+    loadCampaignCurrencyRates(db),
+    loadCampaignPriceLevel(db),
   ]);
-  const campaignRates = await loadCampaignCurrencyRates(await getDb());
-  const campaignPriceLevel = await loadCampaignPriceLevel(await getDb());
   const { corporation, bondIncomePerTurn, dividendIncomePerTurn, fxRatesRecord } = financialData;
 
   const {

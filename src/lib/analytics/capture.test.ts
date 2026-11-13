@@ -13,13 +13,6 @@ const state = vi.hoisted(() => ({
     setConfig: vi.fn(),
     on: vi.fn(),
   },
-  amplitude: {
-    setUserId: vi.fn(),
-    init: vi.fn(),
-    track: vi.fn(),
-    setOptOut: vi.fn(),
-    reset: vi.fn(),
-  },
 }));
 
 const accountProperties = {
@@ -53,14 +46,6 @@ vi.mock("posthog-js", () => ({
   },
 }));
 
-vi.mock("@amplitude/analytics-browser", () => ({
-  init: state.amplitude.init,
-  setUserId: state.amplitude.setUserId,
-  track: state.amplitude.track,
-  setOptOut: state.amplitude.setOptOut,
-  reset: state.amplitude.reset,
-}));
-
 function stubWindow() {
   const storage = new Map<string, string>();
   vi.stubGlobal("window", {
@@ -80,33 +65,24 @@ async function identifyPlayer() {
   identifyPostHogUser(client!, "stable-account-id");
 }
 
-describe("analytics fan-out", () => {
+describe("analytics capture", () => {
   beforeEach(async () => {
     vi.resetModules();
     vi.clearAllMocks();
     stubWindow();
     state.consent = null;
-    state.amplitude.init.mockReturnValue({ promise: Promise.resolve() });
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "phc_test");
-    vi.stubEnv("NEXT_PUBLIC_AMPLITUDE_API_KEY", "amp_test");
     const { setProductEventContext } = await import("./capture");
     setProductEventContext({ iteration_id: "alpha-1", turn_number: 8, nation_id: "US" });
   });
 
-  it("sends one product event to both destinations", async () => {
+  it("sends one product event to PostHog", async () => {
     const { captureProductEvent } = await import("./capture");
     state.consent = "accepted";
     await identifyPlayer();
     await captureProductEvent("character_created", { area: "profile" });
 
     expect(state.posthog.capture).toHaveBeenCalledWith("character_created", {
-      ...accountProperties,
-      area: "profile",
-      iteration_id: "alpha-1",
-      turn_number: 8,
-      nation_id: "US",
-    });
-    expect(state.amplitude.track).toHaveBeenCalledWith("character_created", {
       ...accountProperties,
       area: "profile",
       iteration_id: "alpha-1",
@@ -141,7 +117,6 @@ describe("analytics fan-out", () => {
     await captureProductEvent("character_created");
 
     expect(state.posthog.capture).not.toHaveBeenCalled();
-    expect(state.amplitude.track).not.toHaveBeenCalled();
   });
 
   it("adds nation_id only when the event has a known nation context", async () => {
@@ -178,7 +153,7 @@ describe("analytics fan-out", () => {
     });
   });
 
-  it("mirrors a widget dismissal to both destinations without survey answers", async () => {
+  it("sends a widget dismissal without survey answers", async () => {
     state.consent = "accepted";
     const { getPostHogClient } = await import("./posthogClient");
     await getPostHogClient();
@@ -190,14 +165,11 @@ describe("analytics fan-out", () => {
       event: "survey dismissed",
       properties: { $survey_questions: [{ response: "private" }, { response: null }] },
     });
-    await vi.waitFor(() => expect(state.amplitude.track).toHaveBeenCalled());
-    expect(state.posthog.capture).toHaveBeenCalledWith(
-      "survey_dismissed",
-      expect.objectContaining({ ...envelope, question_index: 1 })
-    );
-    expect(state.amplitude.track).toHaveBeenCalledWith(
-      "survey_dismissed",
-      expect.objectContaining({ ...envelope, question_index: 1 })
+    await vi.waitFor(() =>
+      expect(state.posthog.capture).toHaveBeenCalledWith(
+        "survey_dismissed",
+        expect.objectContaining({ ...envelope, question_index: 1 })
+      )
     );
   });
 
@@ -213,28 +185,9 @@ describe("analytics fan-out", () => {
     setAnalyticsAccount({ id: "another-account" });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(state.posthog.capture).not.toHaveBeenCalled();
-    expect(state.amplitude.track).not.toHaveBeenCalled();
   });
 
-  it("still reaches PostHog when Amplitude has no key configured", async () => {
-    // Amplitude is provisioned separately; a missing key must not suppress the
-    // other destination, which is the whole point of the fan-out.
-    vi.stubEnv("NEXT_PUBLIC_AMPLITUDE_API_KEY", "");
-    vi.resetModules();
-    const fresh = await import("./capture");
-    fresh.setProductEventContext({ iteration_id: "alpha-1", turn_number: 8, nation_id: "US" });
-    state.consent = "accepted";
-    await identifyPlayer();
-    await fresh.captureProductEvent("message_sent");
-
-    expect(state.posthog.capture).toHaveBeenCalledWith(
-      "message_sent",
-      expect.objectContaining(envelope)
-    );
-    expect(state.amplitude.track).not.toHaveBeenCalled();
-  });
-
-  it("withdraws consent from both destinations at once", async () => {
+  it("withdraws consent and stops capture", async () => {
     const { captureProductEvent, stopAnalyticsCapture } = await import("./capture");
     state.consent = "accepted";
     await identifyPlayer();
@@ -246,7 +199,6 @@ describe("analytics fan-out", () => {
       advanced_enable_surveys: false,
     });
     expect(state.posthog.optOut).toHaveBeenCalled();
-    expect(state.amplitude.setOptOut).toHaveBeenCalledWith(true);
   });
 
   it("ignores a stale war caller from a previous account", async () => {
@@ -267,7 +219,6 @@ describe("analytics fan-out", () => {
     await capturePendingWarDeclaration("previous-account", true);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(state.posthog.capture).not.toHaveBeenCalled();
-    expect(state.amplitude.track).not.toHaveBeenCalled();
   });
 
   it("records a filed war only after its declaration bill creates a conflict", async () => {
@@ -481,10 +432,6 @@ describe("analytics fan-out", () => {
     });
     await captureProductEvent("player_action_succeeded");
     expect(state.posthog.identify).toHaveBeenCalledWith("hydrating-account", { is_player: true });
-    expect(state.amplitude.setUserId).toHaveBeenCalledWith("hydrating-account");
-    expect(state.amplitude.setUserId.mock.invocationCallOrder[0]).toBeLessThan(
-      state.amplitude.track.mock.invocationCallOrder[0]
-    );
     expect(state.posthog.capture).toHaveBeenCalledWith(
       "player_action_succeeded",
       expect.objectContaining({ account_created_date: "2026-01-01", account_role: "player" })
@@ -512,26 +459,19 @@ describe("analytics fan-out", () => {
     release({ ok: true, json: async () => ({ iterationId: "alpha-1", currentTurn: 8 }) });
     await pending;
     expect(state.posthog.capture).not.toHaveBeenCalled();
-    expect(state.amplitude.track).not.toHaveBeenCalled();
     await captureProductEvent("new_action");
-    expect(state.amplitude.setUserId).toHaveBeenCalledWith("second");
-    expect(state.amplitude.track).toHaveBeenCalledTimes(1);
   });
 
   it("drops in-flight transport work on a switch and resets SDK histories before the new identity", async () => {
     state.consent = "accepted";
     await identifyPlayer();
     const { setAnalyticsAccount } = await import("./accountContext");
-    const { captureAmplitudeEvent } = await import("./amplitudeClient");
     const { capturePostHogEvent } = await import("./posthogClient");
-    const pending = [captureAmplitudeEvent("old_action"), capturePostHogEvent("old_action")];
+    const pending = [capturePostHogEvent("old_action")];
     setAnalyticsAccount({ id: "second" });
     await Promise.all(pending);
-    expect(state.amplitude.track).not.toHaveBeenCalled();
     expect(state.posthog.capture).not.toHaveBeenCalled();
-    await Promise.all([captureAmplitudeEvent("new_action"), capturePostHogEvent("new_action")]);
-    expect(state.amplitude.reset).toHaveBeenCalled();
-    expect(state.amplitude.setUserId).toHaveBeenCalledWith("second");
+    await capturePostHogEvent("new_action");
     expect(state.posthog.identify).toHaveBeenLastCalledWith("second", { is_player: true });
   });
 
@@ -548,10 +488,8 @@ describe("analytics fan-out", () => {
     });
     await capturePendingAccountCreated();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(state.amplitude.track).not.toHaveBeenCalled();
     await identifyPlayer();
     await capturePendingAccountCreated();
-    expect(state.amplitude.track).toHaveBeenCalledWith("account_created", expect.any(Object));
   });
 
   it.each(["another-account", "1"])(
@@ -562,7 +500,6 @@ describe("analytics fan-out", () => {
       const { rememberAccountCreated, capturePendingAccountCreated } = await import("./capture");
       rememberAccountCreated(marker);
       await capturePendingAccountCreated();
-      expect(state.amplitude.track).not.toHaveBeenCalled();
       expect(state.posthog.capture).not.toHaveBeenCalled();
     }
   );
@@ -585,10 +522,6 @@ describe("analytics fan-out", () => {
     });
     const { capturePendingAccountCreated } = await import("./capture");
     await capturePendingAccountCreated();
-    expect(state.amplitude.track).toHaveBeenCalledWith(
-      "account_created",
-      expect.objectContaining({ auth_provider: "google" })
-    );
     expect(cookies.value).toBe("theme=dark");
   });
 
@@ -607,23 +540,7 @@ describe("analytics fan-out", () => {
     setAnalyticsAccount({ id: "stable-account-id", signupDate: "2026-01-01" });
     const { capturePendingAccountCreated } = await import("./capture");
     await capturePendingAccountCreated();
-    expect(state.amplitude.track).not.toHaveBeenCalled();
     expect(cookies.value).toBe("");
-  });
-
-  it("resets Amplitude on logout and captures nothing until a fresh account is known", async () => {
-    state.consent = "accepted";
-    await identifyPlayer();
-    const { captureProductEvent } = await import("./capture");
-    const { setAnalyticsAccount } = await import("./accountContext");
-    const { resetAmplitudeUser } = await import("./amplitudeClient");
-    await captureProductEvent("before_logout");
-    state.amplitude.reset.mockClear();
-    setAnalyticsAccount(null);
-    await resetAmplitudeUser();
-    await captureProductEvent("after_logout");
-    expect(state.amplitude.reset).toHaveBeenCalledOnce();
-    expect(state.amplitude.track).toHaveBeenCalledOnce();
   });
 });
 

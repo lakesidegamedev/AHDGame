@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ChangelogEntry } from "../changelogTypes";
 import { PublicEntry } from "../components/PublicEntry";
 import { HeroImage } from "@/components/HeroImage";
+import { CHANGELOG_HERO_SRC } from "@/app/changelog/heroImage";
 import { HeroStatsStrip } from "@/components/ui";
 
 export function LegacyChangelogClient({ entries }: { entries: ChangelogEntry[] }) {
@@ -15,7 +16,7 @@ export function LegacyChangelogClient({ entries }: { entries: ChangelogEntry[] }
       <header className="relative mb-8 overflow-hidden rounded-2xl border border-card-border bg-card shadow-lg">
         <div className="relative h-[140px] w-full sm:h-[180px]">
           <HeroImage
-            src="/api/images/hero/changelog"
+            src={CHANGELOG_HERO_SRC}
             alt="DEC VT100 terminal"
             fill
             className="object-cover object-[center_55%]"

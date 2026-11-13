@@ -582,6 +582,24 @@ async function processTurnImpl(
         },
       });
       warnings.push(message);
+      if (crashedTurnRecovery.interruptedMoneyMoving.length > 0) {
+        // Money-moving steps were mid-flight when the holder died and are not
+        // rerun, so this turn commits without them: it is not a success.
+        const incomplete =
+          `turn ${crashedTurnRecovery.targetTurn} is INCOMPLETE: interrupted steps not rerun: ` +
+          crashedTurnRecovery.interruptedMoneyMoving.join(", ");
+        warnings.push(`turnIncomplete: ${incomplete}`);
+        console.error(`[Turn System] ${incomplete}`);
+        Sentry.captureMessage("Turn resumed with interrupted money-moving steps skipped", {
+          level: "fatal",
+          fingerprint: ["turn-resume-interrupted-money-steps"],
+          extra: {
+            turn: crashedTurnRecovery.targetTurn,
+            steps: crashedTurnRecovery.interruptedMoneyMoving,
+            diedAt: crashedTurnRecovery.lastPhase,
+          },
+        });
+      }
     } else {
       // Evidence that does not describe a resumable turn is cleared before setup
       // writes anything. Absent on a turn after a clean release: no round trip.
@@ -771,7 +789,11 @@ async function processTurnImpl(
       await reconcileFederalBudgetInvariants(db, context.newTurn);
     }
 
-    const completion = completedTurnStatus(warnings, phaseStatuses);
+    const completion = completedTurnStatus(
+      warnings,
+      phaseStatuses,
+      resumedFromCrash?.interruptedMoneyMoving ?? []
+    );
     const marketUpdateAt = completedMarketUpdateAt(phaseStatuses);
     const compactPhaseTimings = Object.entries(phaseStatuses)
       .flatMap(([phase, status]) => {
@@ -840,6 +862,10 @@ async function processTurnImpl(
       durationMs: Date.now() - startTime,
       success: completion.success,
       outcome: completion.outcome,
+      stepAccounting: completion.stepAccounting,
+      ...(completion.incompleteSteps.length > 0
+        ? { incompleteSteps: completion.incompleteSteps }
+        : {}),
       failedPhases: completion.failedPhases,
       abortedPhases: completion.abortedPhases,
       memory: readMemoryPeak(),
@@ -970,8 +996,9 @@ async function processTurnImpl(
     return {
       success: completion.success,
       turn: context.newTurn,
-      message:
-        warnings.length === 0
+      message: !completion.success
+        ? `Turn ${context.newTurn} committed INCOMPLETE: ${completion.incompleteSteps.join(", ")} did not run to completion.`
+        : warnings.length === 0
           ? `Turn ${context.newTurn} processed successfully. ${context.characters.length} characters received action points.`
           : `Turn ${context.newTurn} processed with ${warnings.length} warning(s). ${context.characters.length} characters received action points.`,
       warnings,
