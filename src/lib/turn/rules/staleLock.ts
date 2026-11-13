@@ -31,6 +31,8 @@ export type FastTakeoverLockView = {
   processingHolderId?: string | null;
   processingHeartbeatAt?: Date | null;
   processingAbandonedAt?: Date | null;
+  /** A held lock waits for a person; nothing takes it over. */
+  processingHoldReason?: string | null;
 };
 
 export type ParsedHolderId = { host: string; pid: string; bootId: string };
@@ -67,6 +69,7 @@ export function shouldFastTakeOverStaleLock(
   if (stage < 1 || !lock) return false;
   if (lock.isProcessing !== true || lock.processingKind !== "turn") return false;
   if (lock.processingAbandonedAt != null) return false;
+  if (lock.processingHoldReason) return false;
   if (!lock.processingHeartbeatAt) return false;
   const holder = parseHolderId(lock.processingHolderId);
   if (!holder || holder.host !== self.host) return false;

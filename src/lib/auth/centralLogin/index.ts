@@ -1,5 +1,7 @@
-import type { ObjectId } from "mongodb";
+import type { Document, ObjectId } from "mongodb";
 import { authConfig } from "@/lib/config/auth";
+import { getDb } from "@/lib/mongodb";
+import { usersCollection } from "@/lib/db/repositories/users";
 import {
   bridgeAccountDelete,
   bridgeAccountUpsert,
@@ -112,16 +114,33 @@ export async function centralWriteFirst(write: BridgeWriteOp): Promise<boolean> 
 }
 
 /**
+ * The local account as it is now. A lost race means another request already
+ * wrote it, so this, not the caller's earlier snapshot, is what central must match.
+ */
+async function currentLocalAccount<T extends AccountSource>(previous: T): Promise<T> {
+  try {
+    const db = await getDb();
+    const current = await usersCollection<Document>(db).findOne({ _id: previous._id });
+    // Fields read now override the snapshot; the snapshot keeps the caller's type.
+    return current ? { ...previous, ...current } : previous;
+  } catch {
+    return previous;
+  }
+}
+
+/**
  * Central mode: the local write failed after the central write landed, so put
- * the central account back to the previous local state. `password` also
- * restores the previous hash; an account that had none cannot be restored.
+ * the central account back to the current local state, re-read now: when two
+ * writes race, the winner's local state wins centrally too. `password` also
+ * restores the hash; an account that has none cannot be restored.
  * Best effort, recorded, never throws.
  */
 export async function centralRestoreAccount(
-  previous: AccountSource & { password?: unknown },
+  snapshot: AccountSource & { password?: unknown },
   options: { password?: boolean; overrides?: Partial<BridgeAccount> } = {}
 ): Promise<void> {
   if (getCentralLoginMode() !== "central") return;
+  const previous = await currentLocalAccount(snapshot);
   const hash =
     options.password && typeof previous.password === "string" && previous.password
       ? previous.password

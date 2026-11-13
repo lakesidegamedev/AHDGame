@@ -336,6 +336,27 @@ export class TurnResumeRefusedError extends Error {
   }
 }
 
+/**
+ * A process died mid-turn with money-moving steps in flight. Nothing is skipped
+ * and nothing is rerun: the turn is held for a person. See `holdRunbook` in
+ * `turnSystem.ts`.
+ */
+export class TurnHeldForRepairError extends TurnResumeRefusedError {
+  constructor(
+    readonly turn: number,
+    /** Interrupted steps that are not on the safe-to-skip list. */
+    readonly phases: string[],
+    /** Real error text per step, or "process died" when the holder left none. */
+    readonly details: Record<string, string>
+  ) {
+    super(
+      `Turn ${turn} held for repair: ${phases.join(", ")} ${phases.length === 1 ? "was" : "were"} ` +
+        `interrupted mid-step and may have moved money. Nothing was skipped or rerun.`
+    );
+    this.name = "TurnHeldForRepairError";
+  }
+}
+
 /** Errors after which the turn keeps its lock and evidence instead of releasing. */
 export function isResumeFailClosedError(err: unknown): boolean {
   return (

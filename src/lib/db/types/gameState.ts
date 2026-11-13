@@ -393,6 +393,11 @@ export interface GameState {
   processingAbandonedAt?: Date | null;
   /** Worker instance, pid and boot id of the process that holds the turn lock. */
   processingHolderId?: string | null;
+  /** Why a person must release this lock. Set only by the mid-turn death hold. */
+  processingHoldReason?: string | null;
+  /** The interrupted steps the hold is waiting on. */
+  processingHeldPhases?: string[] | null;
+  processingHeldAt?: Date | null;
   /** Latest automatic retry of a stopped turn: attempt, step it stopped at, outcome. */
   lastTurnRetry?: {
     turn: number | null;
