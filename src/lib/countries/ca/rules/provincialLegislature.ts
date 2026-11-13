@@ -1,8 +1,12 @@
 import { TURNS_PER_YEAR } from "@/lib/constants/calendar";
 import { CA_PROVINCIAL_LEGISLATURES } from "../data/caProvincialLegislatures";
+import {
+  CA_PROVINCIAL_TERM_YEARS,
+  provincialElectionYearForWorld,
+} from "./provincialElectionCalendar";
 
 /** Fixed-date terms: four years between provincial general elections. */
-export const CA_PROVINCIAL_PERIOD_HOURS = 4 * TURNS_PER_YEAR;
+export const CA_PROVINCIAL_PERIOD_HOURS = CA_PROVINCIAL_TERM_YEARS * TURNS_PER_YEAR;
 
 /**
  * The turn a legislature's first election in this world ends: the last turn of
@@ -29,12 +33,13 @@ export function caProvincialElectionYearForWorld(
   country: string,
   preset: string | undefined
 ): number | undefined {
-  if (country !== "CA" || electionType !== "provincialLegislature" || preset !== "2027-default")
-    return undefined;
-  const legislature = CA_PROVINCIAL_LEGISLATURES[region];
-  return legislature
-    ? legislature.nextElectionYear + ((cycle - 1) * CA_PROVINCIAL_PERIOD_HOURS) / TURNS_PER_YEAR
-    : undefined;
+  return provincialElectionYearForWorld(
+    CA_PROVINCIAL_LEGISLATURES[region]?.nextElectionYear,
+    electionType,
+    cycle,
+    country,
+    preset
+  );
 }
 
 /** The first turn host opens races on turn two, leaving 22 primary turns. */
