@@ -282,6 +282,8 @@ export const defect: Defect = {
     note: "runtime unit-basis bug in the corporation turn, not authored seed data; a fresh world bills correctly once the fix is deployed",
   },
   envs: ["prod"],
+  // Pinned corporation ids and turns recur in later worlds.
+  worldsStartedBefore: "2026-11-12T00:00:00.000Z",
   idempotent: true,
   // Deliberate: repays freight a unit bug overcharged, without clawing back the
   // haulers' matching surplus (owner decision), so the conservation guard is omitted.
