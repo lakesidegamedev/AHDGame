@@ -5,6 +5,7 @@
 import type { StatePartyOrg } from "@/lib/db/types";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { organizationFromVoteShare } from "@/lib/parties/rules/voteShareOrganization";
+import { CA_PARTY_REGIONAL_RESTRICTIONS } from "../data/caParties";
 
 export type CaStatePartyOrgRow = Omit<StatePartyOrg, "createdAt" | "updatedAt">;
 export type CaFormationDoc = Omit<GovernmentFormation, "createdAt" | "updatedAt">;
@@ -41,7 +42,7 @@ export function caStatePartyOrgRows(
         treasury: 0,
         stateTaxRate: REGIONAL_ASSOCIATION_TAX_RATE,
         politicalStrength: 0,
-        hasPresence: true,
+        hasPresence: CA_PARTY_REGIONAL_RESTRICTIONS[slug]?.includes(stateId) ?? true,
         consecutiveLosses: 0,
       });
     }

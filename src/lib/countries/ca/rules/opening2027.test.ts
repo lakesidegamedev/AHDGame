@@ -34,6 +34,14 @@ describe("Canada opening party organization", () => {
     expect(quebec.organization).toBeGreaterThan(30);
     expect(alberta.organization).toBe(5);
     expect(alberta.registration).toBe(0);
+    expect(quebec.hasPresence).toBe(true);
+    expect(
+      rows.filter((row) => row.partyId === laurentian && row.hasPresence).map((row) => row.stateId)
+    ).toEqual(["CA_QC"]);
+    expect(
+      rows.find((row) => row.stateId === "CA_NL" && row.partyId === slugToId.ca_green_horizon)
+        ?.hasPresence
+    ).toBe(true);
   });
 
   it("puts the right-of-centre party ahead in Alberta and the governing party ahead in Ontario", () => {

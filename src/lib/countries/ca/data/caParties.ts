@@ -19,6 +19,10 @@ export const CA_PARTY_SLUGS = {
   greenHorizon: "ca_green_horizon",
 } as const;
 
+export const CA_PARTY_REGIONAL_RESTRICTIONS: Readonly<Record<string, readonly string[]>> = {
+  [CA_PARTY_SLUGS.laurentian]: ["CA_QC"],
+};
+
 /** Default party abbreviation to stable slug, for rules keyed by slug. */
 export const CA_PARTY_SLUG_BY_ABBREVIATION: Readonly<Record<string, string>> = {
   FUP: CA_PARTY_SLUGS.federalUnity,

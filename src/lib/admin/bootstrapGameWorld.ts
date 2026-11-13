@@ -1432,6 +1432,10 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     await seedModernPartyBench(db, preset, log);
     const { seedModernOpeningCandidates } = await import("@/lib/npp/seedModernOpeningCandidates");
     await seedModernOpeningCandidates(db, preset, now, log);
+    if (startingParties === "default") {
+      const { seedCaElectionBench } = await import("@/lib/countries/ca/seedElectionBench");
+      await seedCaElectionBench(db, preset, log);
+    }
   }
 
   const [
