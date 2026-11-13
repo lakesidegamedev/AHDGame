@@ -26,6 +26,11 @@ import { partyResidue } from "@/lib/admin/resetContract/rules/survivingParties";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { gameConfig } from "@/lib/seeds/reference/gameConfig";
+import { splitFreshWorldGameConfigFlags } from "@/lib/seeds/reference/featureFlagDefaults";
+import { gameConfigResidue } from "@/lib/admin/resetContract/rules/gameConfigSurvival";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { countersCollection } from "@/lib/db/repositories/counters";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { electoratePriorityOverridesCollection } from "@/lib/db/repositories/electoratePriorityOverrides";
 import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
@@ -285,7 +290,7 @@ export async function runResidueScan(
     }
   }
 
-  preservedFields.push(...(await loadSurvivingPartyEvidence(db)));
+  preservedFields.push(...(await loadSurvivorEvidence(db)));
 
   return evaluateResidueScan({
     resetStartedAtMs: context.resetStartedAt.getTime(),
@@ -328,4 +333,55 @@ export async function loadSurvivingPartyEvidence(db: Db): Promise<PreservedField
   for (const charter of charters)
     evidence.push({ collection: "partyCharters", id: String(charter._id), fields: ["charter"] });
   return evidence;
+}
+
+/** Non-survivor `gameConfig` keys that differ from the seed after a reset. */
+export async function loadGameConfigEvidence(db: Db): Promise<PreservedFieldEvidence[]> {
+  const config = await gameConfigCollection<Record<string, unknown>>(db).findOne({
+    _id: "default",
+  } as never);
+  if (!config) return [];
+  const { settings, flags } = splitFreshWorldGameConfigFlags(gameConfig);
+  const fields = gameConfigResidue(config, { ...settings, ...flags });
+  return fields.length > 0 ? [{ collection: "gameConfig", id: "default", fields }] : [];
+}
+
+/** A party counter behind the largest sequential id in its country would hand out a taken id. */
+export async function loadPartyCounterEvidence(db: Db): Promise<PreservedFieldEvidence[]> {
+  const parties = await politicalPartiesCollection<Document>(db)
+    .find({}, { projection: { countryId: 1, sequentialId: 1 } })
+    .toArray();
+  const maxByCountry = new Map<string, number>();
+  for (const party of parties) {
+    const id = Number(party.sequentialId);
+    if (Number.isFinite(id))
+      maxByCountry.set(
+        String(party.countryId),
+        Math.max(maxByCountry.get(String(party.countryId)) ?? 0, id)
+      );
+  }
+  const counters = await countersCollection<{ _id: string; seq?: number }>(db)
+    .find({ _id: { $in: [...maxByCountry.keys()].map((c) => `party_${c}`) } } as never)
+    .toArray();
+  const seqById = new Map(counters.map((c) => [String(c._id), Number(c.seq ?? 0)]));
+  const evidence: PreservedFieldEvidence[] = [];
+  for (const [country, max] of maxByCountry) {
+    const seq = seqById.get(`party_${country}`) ?? 0;
+    if (seq < max)
+      evidence.push({
+        collection: "counters",
+        id: `party_${country}`,
+        fields: [`seq ${seq} is behind the largest party id ${max}`],
+      });
+  }
+  return evidence;
+}
+
+/** Everything a reset keeps on purpose, checked against the seed: parties, charters, game settings, counters. */
+export async function loadSurvivorEvidence(db: Db): Promise<PreservedFieldEvidence[]> {
+  return [
+    ...(await loadSurvivingPartyEvidence(db)),
+    ...(await loadGameConfigEvidence(db)),
+    ...(await loadPartyCounterEvidence(db)),
+  ];
 }
