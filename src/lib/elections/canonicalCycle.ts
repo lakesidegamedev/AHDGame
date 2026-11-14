@@ -1,4 +1,8 @@
-import { caOpeningProvincialPrimaryFloor } from "@/lib/countries/ca/rules/provincialLegislature";
+import { isCanada } from "@/lib/countries/ca/localGeographyFacts";
+import {
+  provincialCycle1EndTurn,
+  caOpeningProvincialPrimaryFloor,
+} from "@/lib/countries/ca/rules/provincialLegislature";
 /**
  * Canonical LARP-cycle math for perpetual elections, shared between
  * cron spawn paths, the admin recalibrate flow, and one-shot
@@ -558,7 +562,12 @@ export function canonicalTurnsForCycle(params: CanonicalCycleParams): CanonicalC
       // staggered per province via customCycle1EndTurn. The Commons anchor
       // only gates the chamber to eras where Canada exists.
       if (anchors.caCommons == null) return null;
-      const cycle1End = customCycle1EndTurn ?? anchors.caCommons;
+      const cycle1End =
+        customCycle1EndTurn ??
+        (isCanada(countryId ?? "") && params.state
+          ? provincialCycle1EndTurn(params.state, ctx)
+          : undefined) ??
+        anchors.caCommons;
       const endTurn = cycle1End + (cycle - 1) * 192;
       return {
         endTurn,

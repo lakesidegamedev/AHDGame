@@ -383,3 +383,54 @@ describe("CampaignMap pan and zoom", () => {
     expect(onSelectRegion).toHaveBeenCalledWith("LON");
   });
 });
+
+it("shows the historical unsupported reason instead of only a generic geography notice", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            viewBox: "0 0 1 1",
+            resultStatus: "unsupported",
+            geometryAvailable: false,
+            notice: "No riding placement was recorded.",
+            subdivisions: [],
+          })
+        )
+    )
+  );
+  const done = buildRaceIndex(
+    [
+      election({
+        id: "unsupported-history",
+        electionType: "commons",
+        state: "LON",
+        countryId: "UK",
+        status: "resolved",
+        isEnded: true,
+        inGeneral: false,
+        cands: [{ id: "a", name: "A", party: "1", share: 100 }],
+      }),
+    ],
+    { ...ctx, includeFinal: true }
+  );
+  renderWithElectionsMessages(
+    <CampaignMap
+      countryId="UK"
+      countryName="United Kingdom"
+      regionNoun="Region"
+      races={done}
+      filter={{
+        type: "commons",
+        stage: "final",
+        regionId: "LON",
+        query: "",
+        regionNames: { LON: "London" },
+      }}
+      selectedRace={done[0]}
+      onSelectRegion={() => {}}
+    />
+  );
+  expect(await screen.findByText("No riding placement was recorded.")).toBeTruthy();
+});

@@ -188,7 +188,13 @@ export async function GET(
     return NextResponse.json({
       viewBox: file.viewBox,
       notice: file.notice,
-      mode: "projected",
+      mode:
+        isCanada(election.countryId) &&
+        isCanadianCommons(election.electionType) &&
+        mode === "general" &&
+        !layer
+          ? "seatConsistent"
+          : "projected",
       unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
       unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",
       subdivisions: projected.map((r) => {

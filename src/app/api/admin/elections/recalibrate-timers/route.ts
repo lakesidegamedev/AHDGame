@@ -1,3 +1,5 @@
+import { canadianShiftedTimerTurns } from "@/lib/countries/ca/rules/electionTimerRepair";
+import { loadRecalibrationHistory } from "@/lib/elections/recalibrationHistory";
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/elections/recalibrate-timers
@@ -93,6 +95,8 @@ export function canonicalTurns(
     const frozen = frozenNativeCampaignTurns1991(election);
     if (frozen !== undefined) return frozen;
   }
+  const shifted = canadianShiftedTimerTurns(election);
+  if (shifted) return shifted;
   const { electionType, senateClass, cycle, state } = election;
   if (cycle == null || !electionType) return null;
   const chamberClass = (election as { chamberClass?: number }).chamberClass;
@@ -324,7 +328,7 @@ export const POST = withAdminRoute(async (_auth) => {
       // For lower-chamber types where a snap has resolved, the cycle math
       // is anchored to the snap's endTurn, not the bootstrap — don't use
       // step 0b renumbering for those (canonicalTurns handles it).
-      if (["commons", "regionalCouncil", "shugiin"].includes(election.electionType)) {
+      if (["commons", "regionalCouncil", "shugiin", "caCommons"].includes(election.electionType)) {
         return election.cycle;
       }
       for (let n = 1; n <= (election.cycle ?? 1) + 1; n++) {
@@ -429,38 +433,12 @@ export const POST = withAdminRoute(async (_auth) => {
   // Key: `${countryId}:${electionType}:${state}` where electionType is the
   // REGULAR type (e.g. "commons"). Value: the most-recent prior end turn
   // (measured in turns from the start of the game).
-  const priorEndTurnByRace = new Map<string, number>();
-  const lowerChamberTypeMap: Record<string, string[]> = {
-    commons: ["commons", "snap_commons"],
-    shugiin: ["shugiin", "snap_shugiin"],
-  };
-  for (const [regularType, candidateTypes] of Object.entries(lowerChamberTypeMap)) {
-    const prior = await electionsCollection(db)
-      .find({
-        electionType: { $in: candidateTypes },
-        status: { $in: ["completed", "resolved"] },
-      })
-      .sort({ endTime: -1 })
-      .toArray();
-    const seen = new Set<string>();
-    for (const e of prior) {
-      if (!e.endTime || !e.state || !e.countryId) continue;
-      const key = `${e.countryId}:${regularType}:${e.state}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      // Convert endTime to a turn number using ref as anchor:
-      //   turn = currentTurn - (ref.ms - endTime.ms) / MS_PER_TURN
-      const priorMs = new Date(e.endTime).getTime();
-      const turnsAgo = Math.round((ref.getTime() - priorMs) / MS_PER_TURN);
-      priorEndTurnByRace.set(key, currentTurn - turnsAgo);
-    }
-  }
-
+  const priorEndTurnByRace = await loadRecalibrationHistory(db, ref, currentTurn);
   function priorEndTurnFor(election: Election): number | null {
-    const type = election.electionType;
-    if (!["commons", "shugiin", "bundestag"].includes(type)) return null;
-    if (!election.state || !election.countryId) return null;
-    return priorEndTurnByRace.get(`${election.countryId}:${type}:${election.state}`) ?? null;
+    return (
+      priorEndTurnByRace.get(`${election.countryId}:${election.electionType}:${election.state}`) ??
+      null
+    );
   }
 
   // Determine the "current" cycle for each election type.
@@ -599,7 +577,8 @@ export const POST = withAdminRoute(async (_auth) => {
     // snaps advance the cycle counter, so formula-based expectedMaxCycle
     // can under-count valid cycles. The history-aware canonicalTurns above
     // already computes correct timestamps for post-snap cycles.
-    const hasPriorSnapShift = priorEndTurnFor(election) != null;
+    const hasPriorSnapShift =
+      priorEndTurnFor(election) != null || canadianShiftedTimerTurns(election) != null;
     if (!hasPriorSnapShift) {
       const classForCycle =
         election.electionType === "sangiin"
