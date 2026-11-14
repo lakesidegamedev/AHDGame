@@ -65,6 +65,12 @@ describe("isMaintenanceBypassPath", () => {
     expect(isMaintenanceBypassPath("/sitemap.xml")).toBe(true);
   });
 
+  it("keeps the client account link page reachable so single-player can start", () => {
+    expect(isMaintenanceBypassPath("/client/link")).toBe(true);
+    expect(isMaintenanceBypassPath("/client")).toBe(false);
+    expect(isMaintenanceBypassPath("/client/linker")).toBe(false);
+  });
+
   it("keeps account recovery and email confirmation reachable", () => {
     expect(isMaintenanceBypassPath("/forgot-password")).toBe(true);
     expect(isMaintenanceBypassPath("/reset-password")).toBe(true);
