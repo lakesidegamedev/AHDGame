@@ -99,6 +99,13 @@ export default function PrivacyPolicyPage() {
                   disabled in singleplayer.
                 </p>
                 <p className="mt-2">
+                  If you have not accepted optional analytics, PostHog counts anonymous page views
+                  only: the page address, the site that referred you, any campaign tags in the link,
+                  and coarse browser details such as browser and screen size. This sets no cookies,
+                  uses no browser storage, does not identify you and records no sessions. After you
+                  accept, tracking starts on your next page load.
+                </p>
+                <p className="mt-2">
                   Separately, and whether or not you accept optional analytics, our servers send
                   PostHog aggregate counts of sign-up steps, such as reaching the sign-up page,
                   creating an account or creating a character, broken down only by sign-in method,
@@ -177,27 +184,13 @@ export default function PrivacyPolicyPage() {
                 </p>
               </div>
               <div>
-                <p className="font-semibold text-foreground mb-1">
-                  Consent and advertising preferences
-                </p>
+                <p className="font-semibold text-foreground mb-1">Consent preferences</p>
                 <p>
-                  When required for visitors in regulated regions, we use Google&apos;s Privacy
-                  &amp; Messaging consent platform to present advertising and analytics choices. On
-                  pages where that message is active, you can reopen it from the footer&apos;s{" "}
+                  You can review or change your analytics choice at any time from the footer&apos;s{" "}
                   <span className="font-semibold text-foreground">
                     Privacy &amp; cookie settings
                   </span>{" "}
-                  link to review or revoke your choices.
-                </p>
-              </div>
-              <div>
-                <p className="font-semibold text-foreground mb-1">
-                  Third-party advertising cookies
-                </p>
-                <p>
-                  Google and other third-party vendors use cookies to serve ads based on a
-                  user&apos;s prior visits to this and other websites. See section 6 below for how
-                  to opt out.
+                  link.
                 </p>
               </div>
               <div>
@@ -222,9 +215,7 @@ export default function PrivacyPolicyPage() {
                 To detect and prevent multi-account abuse using browser fingerprinting, IP addresses
                 and VPN checks
               </li>
-              <li>
-                To display advertisements, including player-run banners and ads served by Google
-              </li>
+              <li>To display player-run banner advertisements</li>
               <li>To monitor site performance and diagnose errors</li>
             </ul>
           </section>
@@ -258,28 +249,10 @@ export default function PrivacyPolicyPage() {
                       label: "discord.com/privacy",
                     },
                     {
-                      name: "Google AdSense",
-                      purpose: "Advertising; uses cookies based on your prior visits",
-                      url: "https://policies.google.com/technologies/ads",
-                      label: "policies.google.com/technologies/ads",
-                    },
-                    {
-                      name: "Google Privacy & Messaging",
-                      purpose: "Consent collection and revocation where required",
-                      url: "https://support.google.com/adsense/answer/10924669",
-                      label: "support.google.com/adsense/privacy-messaging",
-                    },
-                    {
                       name: "PostHog",
                       purpose: "Optional product analytics",
                       url: "https://posthog.com/privacy",
                       label: "posthog.com/privacy",
-                    },
-                    {
-                      name: "Google Analytics",
-                      purpose: "Traffic and product analytics",
-                      url: "https://policies.google.com/privacy",
-                      label: "policies.google.com/privacy",
                     },
                     {
                       name: "Google reCAPTCHA",
@@ -315,65 +288,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">6. Advertising and Personalization</h2>
-            <div className="space-y-3 text-sm text-muted leading-relaxed">
-              <p>
-                We participate in Google AdSense. Third-party vendors, including Google, use cookies
-                to serve ads based on a user&apos;s prior visits to this and other websites.
-                Google&apos;s use of advertising cookies — including the DoubleClick (DART) cookie —
-                enables it and its partners to serve ads to our users based on their visit to this
-                site and/or other sites on the Internet.
-              </p>
-              <p>
-                You can opt out of personalized advertising by visiting{" "}
-                <a
-                  href="https://www.google.com/settings/ads"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  Google ads settings
-                </a>
-                . You can also opt out of a third-party vendor&apos;s use of cookies for
-                personalized advertising by visiting{" "}
-                <a
-                  href="https://www.aboutads.info/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  aboutads.info
-                </a>
-                . For more information about how Google uses data when you use our partners&apos;
-                sites or apps, see{" "}
-                <a
-                  href="https://policies.google.com/technologies/partner-sites"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  policies.google.com/technologies/partner-sites
-                </a>
-                .
-              </p>
-              <p>
-                In addition to Google, we work with other advertising partners who may also use
-                cookies to serve ads based on your prior activity. Our{" "}
-                <a
-                  href="/ads.txt"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  ads.txt
-                </a>{" "}
-                file lists the authorized sellers of advertising on this site.
-              </p>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-bold mb-3">7. Data Retention</h2>
+            <h2 className="text-lg font-bold mb-3">6. Data Retention</h2>
             <p className="text-sm text-muted leading-relaxed">
               Account and gameplay data is retained for as long as your account is active. You may
               delete your account at any time from the{" "}
@@ -385,7 +300,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">8. Children&apos;s Privacy</h2>
+            <h2 className="text-lg font-bold mb-3">7. Children&apos;s Privacy</h2>
             <p className="text-sm text-muted leading-relaxed">
               A House Divided is not directed at children under the age of 13. We do not knowingly
               collect personal information from anyone under 13. If you believe a person under 13
@@ -395,17 +310,17 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">9. Your Rights</h2>
+            <h2 className="text-lg font-bold mb-3">8. Your Rights</h2>
             <div className="space-y-3 text-sm text-muted leading-relaxed">
               <p>
                 You may delete your account and associated data at any time via the{" "}
                 <Link href="/settings" className="text-primary hover:underline">
                   Settings page
                 </Link>
-                . For consent choices tied to our Google consent message, use the{" "}
+                . To change your analytics consent, use the{" "}
                 <span className="font-semibold text-foreground">Privacy &amp; cookie settings</span>{" "}
-                link in the site footer on pages where that message is shown. For other data access
-                or deletion requests, contact us on our{" "}
+                link in the site footer. For other data access or deletion requests, contact us on
+                our{" "}
                 <a
                   href="https://discord.gg/DmF8zJJuqN"
                   target="_blank"
@@ -423,9 +338,9 @@ export default function PrivacyPolicyPage() {
                 If you are located in these regions, you have the right to access, correct, export,
                 restrict the processing of, and delete your personal data, and to withdraw consent
                 at any time (via the Privacy &amp; cookie settings link). Where we rely on consent —
-                for example, for personalized advertising — we ask for it before the relevant
-                cookies are set, using Google&apos;s certified consent management platform. You also
-                have the right to lodge a complaint with your local supervisory authority.
+                for example, for optional analytics — we ask for it before the relevant cookies are
+                set. You also have the right to lodge a complaint with your local supervisory
+                authority.
               </p>
               <p>
                 <span className="font-semibold text-foreground">
@@ -434,16 +349,15 @@ export default function PrivacyPolicyPage() {
                 You have the right to know what personal information we collect (described in
                 section 2), to request its deletion, and to opt out of the &ldquo;sale&rdquo; or
                 &ldquo;sharing&rdquo; of personal information as those terms are defined by
-                California law. We do not sell personal information for money; third-party
-                advertising cookies may constitute &ldquo;sharing,&rdquo; which you can opt out of
-                via the Privacy &amp; cookie settings link or the opt-out resources in section 6. We
-                do not discriminate against users who exercise these rights.
+                California law. We do not sell personal information for money, and you can withdraw
+                analytics consent at any time via the Privacy &amp; cookie settings link. We do not
+                discriminate against users who exercise these rights.
               </p>
             </div>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">10. Contact</h2>
+            <h2 className="text-lg font-bold mb-3">9. Contact</h2>
             <p className="text-sm text-muted leading-relaxed">
               For privacy-related questions, email us at{" "}
               <a href="mailto:admin@ahousedividedgame.com" className="text-primary hover:underline">
@@ -463,7 +377,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">11. Changes to This Policy</h2>
+            <h2 className="text-lg font-bold mb-3">10. Changes to This Policy</h2>
             <p className="text-sm text-muted leading-relaxed">
               We may update this Privacy Policy from time to time. The effective date at the top of
               this page will be updated to reflect any changes. Continued use of the service after

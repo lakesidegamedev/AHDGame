@@ -17,6 +17,7 @@
  * Flags:
  *   --env dev|sandbox|prod   target environment (default sandbox)
  *   --operator <name>        recorded on the run, default $USER
+ *   --requested-by <userId>  staff account id the work is done for; required by money credits
  *   --deployed-sha <sha>     commit currently deployed to --env; drives the code gate
  *   --confirm-prod           required for --env prod
  *   --override-code-gate "reason"   bypass a failing gate; recorded on the run forever
@@ -80,6 +81,7 @@ function has(name: string): boolean {
 const JSON_OUT = has("json");
 const ENV = (flag("env") || "sandbox") as HealEnv;
 const OPERATOR = flag("operator") || process.env.USER || "unknown";
+const REQUESTED_BY = flag("requested-by") || undefined;
 
 function out(payload: unknown, human: () => void): void {
   if (JSON_OUT) console.log(JSON.stringify(payload, null, 2));
@@ -370,6 +372,7 @@ async function main(): Promise<void> {
         env: ENV,
         tokenId,
         operator: OPERATOR,
+        requestedBy: REQUESTED_BY,
         confirmProd: has("confirm-prod"),
       })
     );
@@ -429,6 +432,7 @@ async function main(): Promise<void> {
         env: ENV,
         tokenId,
         operator: OPERATOR,
+        requestedBy: REQUESTED_BY,
         confirmProd: has("confirm-prod"),
       })
     );
@@ -583,6 +587,7 @@ async function main(): Promise<void> {
         env: ENV,
         tokenId,
         operator: OPERATOR,
+        requestedBy: REQUESTED_BY,
         codeGate,
         confirmProd: has("confirm-prod"),
       });

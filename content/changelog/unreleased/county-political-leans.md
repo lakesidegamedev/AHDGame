@@ -97,3 +97,5 @@ areas: [engine]
   central bank, so corporate payments and cash valuation use the same rate.
 - Batches annual market creation and income-tax reads, and reuses guarded
   banking and organization settlement metadata without changing payments or phase budgets.
+- Restores every authored default-party roster during reset, including Canada,
+  and preserves development cash records when an interrupted turn resumes.

@@ -14,6 +14,7 @@ import type { Db } from "mongodb";
 import { defectWarnings } from "./runner";
 import type { Defect, DefectStatus, EnvStatus, HealEnv, HealRun } from "./types";
 import { healRunsCollection } from "@/lib/db/repositories/healRuns";
+import { worldOutOfScope } from "./worldScope";
 
 /**
  * How the caller reaches each environment. The MCP and the CLI each know a
@@ -63,6 +64,16 @@ async function statusForEnv(
   if (!db) return { env, configured: false, affected: null, state: "unconfigured" };
 
   try {
+    const outOfScope = await worldOutOfScope(db, defect);
+    if (outOfScope) {
+      return {
+        env,
+        configured: true,
+        affected: 0,
+        state: "clean",
+        lastRun: await lastRunFor(db, defect.id, env),
+      };
+    }
     const detect = await defect.detect(db, { env, dryRun: true, now });
     return {
       env,

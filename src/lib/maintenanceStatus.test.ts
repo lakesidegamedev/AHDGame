@@ -54,6 +54,12 @@ describe("isMaintenanceBypassPath", () => {
     expect(isMaintenanceBypassPath("/retired/507f1f77bcf86cd799439011")).toBe(true);
   });
 
+  it("keeps the wiki readable between iterations", () => {
+    expect(isMaintenanceBypassPath("/wiki")).toBe(true);
+    expect(isMaintenanceBypassPath("/wiki/iteration-2")).toBe(true);
+    expect(isMaintenanceBypassPath("/wikipedia")).toBe(false);
+  });
+
   it("keeps robots.txt and the sitemap readable by crawlers", () => {
     expect(isMaintenanceBypassPath("/robots.txt")).toBe(true);
     expect(isMaintenanceBypassPath("/sitemap.xml")).toBe(true);

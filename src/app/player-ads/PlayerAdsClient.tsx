@@ -130,7 +130,7 @@ export function PlayerAdsClient() {
                 <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 mb-3">
                   <p className="text-sm font-medium text-primary">
                     {info.tier === "supporter-plus-plus"
-                      ? "Supporter++ benefits active"
+                      ? "Champion benefits active"
                       : info.tier === "supporter-plus"
                         ? "Supporter+ benefits active"
                         : "Supporter benefits active"}

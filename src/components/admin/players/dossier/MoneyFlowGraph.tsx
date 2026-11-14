@@ -65,6 +65,7 @@ export function MoneyFlowGraph({ userId, centerIds }: MoneyFlowGraphProps) {
   const [data, setData] = useState<MoneyGraphResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noCharacter, setNoCharacter] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
 
@@ -72,9 +73,15 @@ export function MoneyFlowGraph({ userId, centerIds }: MoneyFlowGraphProps) {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setNoCharacter(false);
     (async () => {
       try {
         const res = await fetch(`/api/admin/players/money-graph?userId=${userId}&depth=${depth}`);
+        if (res.status === 404) {
+          // The route answers 404 only when the account has no character yet.
+          if (!cancelled) setNoCharacter(true);
+          return;
+        }
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(apiErrorText(body, `Request failed (${res.status})`));
@@ -230,6 +237,10 @@ export function MoneyFlowGraph({ userId, centerIds }: MoneyFlowGraphProps) {
           className="h-72 animate-pulse rounded-lg border border-card-border/70 bg-card-muted/60 motion-reduce:animate-none"
           aria-hidden
         />
+      ) : noCharacter ? (
+        <div className="rounded-lg border border-card-border/70 bg-card-muted/40 px-4 py-10 text-center text-sm text-muted">
+          No character yet.
+        </div>
       ) : error ? (
         <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-8 text-center text-sm text-red-400">
           {error}

@@ -1,3 +1,5 @@
+import { corporationTurnRerunSet, startFreshJournal } from "@/simulation/engine/corporationResume";
+import { resilienceStageOf } from "@/lib/turn/corporation/resume/rules";
 import { drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import {
   executeTurnAdapters,
@@ -55,10 +57,24 @@ import {
   totalRoundTrips,
   withPhaseProfiling,
 } from "@/lib/observability/mongoRoundTrips";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import type { TurnFailureInfo } from "@/lib/turn/rules/retryPolicy";
+import { resolveTurnResilienceStage } from "@/lib/turn/rules/staleLock";
+import {
+  TURN_HOLDER_ID,
+  TurnLockLostError,
+  setTurnLockFence,
+  turnLockFenceActive,
+  turnLockFenceFilter,
+} from "@/lib/turn/turnLockHolder";
+import { armTurnFault, describeTurnError, parseTurnFaultSpec } from "@/lib/turn/faultInjection";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   isResumeFailClosedError,
+  TurnHeldForRepairError,
   TurnResumeRefusedError,
+  TurnResumeResultUnavailableError,
+  phaseBlocksResumeWhenInterrupted,
 } from "@/simulation/engine/turnPhaseResumeResults";
 import {
   bootstrapPhaseRecord,
@@ -100,6 +116,7 @@ import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import { resetResidueTurnRefusal } from "@/lib/admin/resetContract/rules/residueScan";
 import { serverEnv } from "@/lib/config/read";
+import { workerConfig } from "@/lib/config/worker";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
@@ -262,6 +279,10 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
   }
 }
 
+function phasesStarted(phase: string | null): boolean {
+  return phase != null && phase !== TURN_BOOTSTRAP_PHASE;
+}
+
 /** What a crashed previous holder left behind, for a resumed turn. */
 type CrashedTurnRecovery = ValidatedTurnResume;
 
@@ -289,19 +310,31 @@ export function processTurn(
   });
 }
 
-async function processTurnImpl(
-  options: {
-    /** Sandbox tooling hook. Production callers omit it. */
-    onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
-  } = {}
-): Promise<{
+export type TurnProcessResult = {
   success: boolean;
   turn: number;
   message: string;
   warnings: string[];
   health: GameHealthSummary | null;
-}> {
+  /** Present when the turn stopped on an error; drives automatic retry. */
+  failure?: TurnFailureInfo;
+};
+
+async function processTurnImpl(
+  options: {
+    /** Sandbox tooling hook. Production callers omit it. */
+    onPhaseCompleted?: (phase: CompletedTurnPhaseObservation) => Promise<void>;
+    /** Set by the automatic retry loop so the turn log tells the story. */
+    retryAttempt?: { attempt: number; of: number; afterPhase: string | null };
+  } = {}
+): Promise<TurnProcessResult> {
   const warnings: string[] = [];
+  if (options.retryAttempt) {
+    const r = options.retryAttempt;
+    warnings.push(
+      `turnRetry: automatic attempt ${r.attempt} of ${r.of} after ${r.afterPhase ?? "setup"} stopped the turn`
+    );
+  }
   const startTime = Date.now();
   let activeTurn = 0;
   let activeGameNow: Date | null = null;
@@ -323,6 +356,7 @@ async function processTurnImpl(
   // do NOT re-run that turn: committed income phases would double-apply.
   // Captured from the pre-lock snapshot, acted on once we hold the lock.
   let preLockRecoveryTarget: number | null = null;
+  let resilienceStage = 0;
   /** Set when this turn is a resume; drives the phase skip set below. */
   let resumedFromCrash: CrashedTurnRecovery | null = null;
   const stopMemorySampler = startTurnMemorySampler(() => currentPhaseRef.current);
@@ -350,6 +384,14 @@ async function processTurnImpl(
         ? null
         : await gameConfigCollection(db).findOne({ _id: "default" });
       const simSandbox = localSingleplayer || turnConfig?.simSandbox === true;
+      resilienceStage = resolveTurnResilienceStage({
+        configStage: turnConfig?.turnResilienceStage,
+        simSandbox: turnConfig?.simSandbox === true,
+        envStage: workerConfig.turnResilienceStage(),
+      });
+      armTurnFault(
+        turnConfig?.simSandbox === true ? parseTurnFaultSpec(workerConfig.turnFaultInject()) : null
+      );
       const residueRefusal = resetResidueTurnRefusal(turnConfig?.lastReset);
       if (residueRefusal) {
         console.error(`[Turn System] Refused turn: ${residueRefusal}`);
@@ -468,6 +510,8 @@ async function processTurnImpl(
       {
         _id: "current",
         processingKind: { $nin: ["stockTaxMigration", "economyReset"] },
+        // A held turn waits for a person; no path takes the lock over.
+        processingHoldReason: null,
         $or: [
           { isProcessing: { $ne: true } },
           { processingHeartbeatAt: { $lt: staleLockCutoff } },
@@ -485,7 +529,7 @@ async function processTurnImpl(
         // Lock fields only. The crash evidence (target, phase, statuses, results)
         // stays as the dead holder left it until the locked document validates the
         // resume, so a crash during takeover or setup cannot erase it.
-        $set: lockAcquisitionSet(lockAcquiredAt),
+        $set: lockAcquisitionSet(lockAcquiredAt, TURN_HOLDER_ID),
       },
       { returnDocument: "after" }
     );
@@ -502,6 +546,9 @@ async function processTurnImpl(
 
     // This process now owns the lock — allow graceful shutdown to release it.
     localTurnLockHeld = true;
+    // With the fast takeover on, a holder that lost its lock must not write over
+    // the new holder's state: every lock-owner write below is conditional on it.
+    setTurnLockFence(resilienceStage >= 1 ? TURN_HOLDER_ID : null);
 
     const gameState = lockResult;
     activeIteration = gameState.iteration ? { ...gameState.iteration } : undefined;
@@ -516,7 +563,12 @@ async function processTurnImpl(
     // dependent explicitly rather than rerunning or assuming zero. The race
     // guard (target === currentTurn+1 against the freshly locked state) prevents
     // a spurious resume when a concurrent completion races the lock.
-    const crashedTurnRecovery = validateLockedResume(gameState, preLockRecoveryTarget);
+    const crashedTurnRecovery = validateLockedResume(
+      gameState,
+      preLockRecoveryTarget,
+      await corporationTurnRerunSet(db, gameState),
+      resilienceStage >= 1
+    );
     if (crashedTurnRecovery) {
       resumedFromCrash = crashedTurnRecovery;
       const message =
@@ -534,6 +586,23 @@ async function processTurnImpl(
         },
       });
       warnings.push(message);
+      if (crashedTurnRecovery.interruptedMoneyMoving.length > 0) {
+        // Money-moving steps were mid-flight when the holder died and are not
+        // rerun, so this turn commits without them: it is not a success.
+        const incomplete =
+          `turn ${crashedTurnRecovery.targetTurn} is INCOMPLETE: interrupted steps not rerun: ` +
+          crashedTurnRecovery.interruptedMoneyMoving.join(", ");
+        warnings.push(`turnIncomplete: ${incomplete}`);
+        Sentry.captureMessage("Turn resumed with interrupted money-moving steps skipped", {
+          level: "fatal",
+          fingerprint: ["turn-resume-interrupted-money-steps"],
+          extra: {
+            turn: crashedTurnRecovery.targetTurn,
+            steps: crashedTurnRecovery.interruptedMoneyMoving,
+            diedAt: crashedTurnRecovery.lastPhase,
+          },
+        });
+      }
     } else {
       // Evidence that does not describe a resumable turn is cleared before setup
       // writes anything. Absent on a turn after a clean release: no round trip.
@@ -558,6 +627,13 @@ async function processTurnImpl(
     // One read of the selector per turn, before any phase runs. A resume pins the
     // engine recorded by the holder that died, so config can only choose the engine
     // for the NEXT turn — never for a turn that is already in progress.
+    if (!resumedFromCrash)
+      await startFreshJournal(
+        db,
+        resilienceStageOf(config),
+        gameState.currentTurn + 1,
+        gameState.worldEpochId
+      );
     const engineResolution = selectEngineForAttempt({
       configured: config?.turnEngineVersion,
       inFlightEngine: gameState.processingEngine,
@@ -716,7 +792,11 @@ async function processTurnImpl(
       await reconcileFederalBudgetInvariants(db, context.newTurn);
     }
 
-    const completion = completedTurnStatus(warnings, phaseStatuses);
+    const completion = completedTurnStatus(
+      warnings,
+      phaseStatuses,
+      resumedFromCrash?.interruptedMoneyMoving ?? []
+    );
     const marketUpdateAt = completedMarketUpdateAt(phaseStatuses);
     const compactPhaseTimings = Object.entries(phaseStatuses)
       .flatMap(([phase, status]) => {
@@ -725,10 +805,10 @@ async function processTurnImpl(
       })
       .sort((a, b) => b.durationMs - a.durationMs)
       .slice(0, 5);
-    await (
+    const completionWrite = await (
       await getGameStateCollection(db)
     ).updateOne(
-      { _id: "current" },
+      { _id: "current", ...turnLockFenceFilter() },
       {
         $set: {
           currentTurn: context.newTurn,
@@ -767,6 +847,9 @@ async function processTurnImpl(
         },
       }
     );
+    if (turnLockFenceActive() && completionWrite.matchedCount === 0) {
+      throw new TurnLockLostError("completion write found the lock gone");
+    }
     localTurnLockHeld = false;
     markServerTurnAnalyticsCommitted({ emit: !localSingleplayer && config?.simSandbox !== true });
 
@@ -782,6 +865,10 @@ async function processTurnImpl(
       durationMs: Date.now() - startTime,
       success: completion.success,
       outcome: completion.outcome,
+      stepAccounting: completion.stepAccounting,
+      ...(completion.incompleteSteps.length > 0
+        ? { incompleteSteps: completion.incompleteSteps }
+        : {}),
       failedPhases: completion.failedPhases,
       abortedPhases: completion.abortedPhases,
       memory: readMemoryPeak(),
@@ -912,8 +999,9 @@ async function processTurnImpl(
     return {
       success: completion.success,
       turn: context.newTurn,
-      message:
-        warnings.length === 0
+      message: !completion.success
+        ? `Turn ${context.newTurn} committed INCOMPLETE: ${completion.incompleteSteps.join(", ")} did not run to completion.`
+        : warnings.length === 0
           ? `Turn ${context.newTurn} processed successfully. ${context.characters.length} characters received action points.`
           : `Turn ${context.newTurn} processed with ${warnings.length} warning(s). ${context.characters.length} characters received action points.`,
       warnings,
@@ -921,10 +1009,13 @@ async function processTurnImpl(
     };
   } catch (error) {
     console.error("[Turn System] Critical error processing turn:", error);
-    Sentry.captureException(error, { tags: { component: "turnSystem" } });
+    Sentry.captureException(error, { level: "fatal", tags: { component: "turnSystem" } });
     const failureTime = new Date();
+    // Another process owns the turn now: write nothing about it, retry nothing.
+    const lockLost = error instanceof TurnLockLostError;
     const failureMessage =
       error instanceof Error ? error.message : "Unknown error during turn processing";
+    const failureDetail = describeTurnError(error);
 
     if (!warnings.some((warning) => warning === `turnSystem: ${failureMessage}`)) {
       warnings.push(`turnSystem: ${failureMessage}`);
@@ -956,6 +1047,53 @@ async function processTurnImpl(
       // Only overwrite evidence with values this attempt actually has. A failure
       // before setup (no statuses, no target yet) must not null out what the
       // previous holder left, or the next attempt would rerun applied phases.
+      /*
+       * HOLD RUNBOOK. processingHoldReason is set when a process died mid-turn with a step in
+       * flight that is not on the safe lists (src/lib/turn/rules/interruptedPhases.ts). The lock
+       * stays held with all evidence; the watchdog, the stuck-lock sweep, lock acquisition and
+       * admin reset-lock all refuse it. A person reads processingHeldPhases and each step's
+       * status message, checks what the step wrote (GET /api/admin/turn/release-hold/preview),
+       * repairs partial writes, then calls POST /api/admin/turn/release-hold with the preview
+       * token: "rerun" clears the held steps, "mark-done" records them as finished.
+       */
+      const heldError = error instanceof TurnHeldForRepairError ? error : null;
+      const holdFields = heldError
+        ? {
+            processingHoldReason: heldError.message,
+            processingHeldPhases: heldError.phases,
+            processingHeldAt: failureTime,
+            lastTurnRetry: {
+              turn: heldError.turn,
+              attempt: 0,
+              afterPhase: heldError.phases[0] ?? null,
+              outcome: "stopped" as const,
+              at: failureTime,
+              note: `Held for a person: ${heldError.phases
+                .map((p) => `${p} (${heldError.details[p]})`)
+                .join("; ")}`,
+            },
+          }
+        : {};
+      if (heldError) {
+        try {
+          Sentry.captureMessage("Turn held for repair after a mid-turn process death", {
+            level: "fatal",
+            fingerprint: ["turn-held-for-repair"],
+            extra: {
+              turn: heldError.turn,
+              steps: heldError.phases,
+              details: heldError.details,
+            },
+          });
+        } catch {
+          // Alerting must not block the hold.
+        }
+      }
+      const failureRecord = {
+        turn: failedTarget,
+        message: failureDetail,
+        at: failureTime,
+      };
       const evidence = {
         ...(holdForRepair
           ? committedPhase
@@ -970,7 +1108,7 @@ async function processTurnImpl(
       await (
         await getGameStateCollection(db)
       ).updateOne(
-        { _id: "current" },
+        { _id: "current", ...turnLockFenceFilter() },
         {
           $set: holdForRepair
             ? {
@@ -979,6 +1117,8 @@ async function processTurnImpl(
                 processingHeartbeatAt: failureTime,
                 processingAbandonedAt: failureTime,
                 ...evidence,
+                ...holdFields,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               }
             : {
@@ -986,6 +1126,7 @@ async function processTurnImpl(
                 processingKind: null,
                 processingHeartbeatAt: failureTime,
                 ...evidence,
+                lastTurnFailure: failureRecord,
                 updatedAt: failureTime,
               },
         }
@@ -994,6 +1135,7 @@ async function processTurnImpl(
 
       if (
         !isSingleplayer() &&
+        !lockLost &&
         finalizedPhaseStatuses &&
         phaseResultsForFailure &&
         activeTurn > 0 &&
@@ -1021,6 +1163,7 @@ async function processTurnImpl(
 
       if (
         !isSingleplayer() &&
+        !lockLost &&
         finalizedPhaseStatuses &&
         phaseResultsForFailure &&
         activeTurn > 0 &&
@@ -1034,6 +1177,7 @@ async function processTurnImpl(
           realTime: failureTime,
           durationMs: Date.now() - startTime,
           success: false,
+          error: failureDetail,
           memory: readMemoryPeak(),
           warnings: [...warnings],
           health: lastHealth,
@@ -1065,7 +1209,7 @@ async function processTurnImpl(
       });
     }
 
-    if (!isSingleplayer()) {
+    if (!isSingleplayer() && !lockLost) {
       void publishPlatformEvent({
         type: "turn:failed",
         source: "ahd",
@@ -1085,8 +1229,31 @@ async function processTurnImpl(
       message: `Failed to process turn: ${error instanceof Error ? error.message : "Unknown error"}`,
       warnings,
       health: lastHealth,
+      failure: {
+        phase:
+          error instanceof TurnMustStopError
+            ? error.phase
+            : currentPhaseRef.current && currentPhaseRef.current !== TURN_BOOTSTRAP_PHASE
+              ? currentPhaseRef.current
+              : null,
+        target: resumedFromCrash?.targetTurn ?? (activeTurn > 0 ? activeTurn : null),
+        retryable:
+          resilienceStage >= 1 &&
+          !lockLost &&
+          !(
+            currentPhaseRef.current != null &&
+            phaseBlocksResumeWhenInterrupted(currentPhaseRef.current) &&
+            !(error instanceof TurnMustStopError)
+          ) &&
+          (phasesStarted(currentPhaseRef.current) ||
+            !(
+              error instanceof TurnResumeRefusedError ||
+              error instanceof TurnResumeResultUnavailableError
+            )),
+      },
     };
   } finally {
+    setTurnLockFence(null);
     readMemoryPeak();
   }
 }

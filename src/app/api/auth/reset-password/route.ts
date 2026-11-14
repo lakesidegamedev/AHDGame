@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { authRevocationSnapshotFilter } from "@/lib/auth/sessionIssue";
@@ -28,6 +29,9 @@ import { usersCollection } from "@/lib/db/repositories/users";
 // Errors: 400, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("reset");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const clientIp = await getClientIp();
     const limit = await durableRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);

@@ -22,6 +22,8 @@ import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { POSITION_UPDATE_VOUCHER_GRANT_AMOUNT } from "@/lib/positionUpdateVouchers/rules";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
+import { resourceGrantInputs } from "@/lib/audit/grants/rules";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 import type { Document } from "mongodb";
 
@@ -101,21 +103,6 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     };
   }
 
-  let affectedCount = 0;
-
-  if (allPlayers) {
-    const result = await charactersCollection(db).updateMany({}, [{ $set: setStage }]);
-    affectedCount = result.modifiedCount;
-  } else {
-    const ids = characterIds ?? [];
-    const objectIds = ids.map((id: string) => new ObjectId(id));
-
-    const result = await charactersCollection(db).updateMany({ _id: { $in: objectIds } }, [
-      { $set: setStage },
-    ]);
-    affectedCount = result.modifiedCount;
-  }
-
   // Build description for log
   const resourceParts: string[] = [];
   if (actions !== undefined && actions !== 0) {
@@ -138,6 +125,26 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     resourceParts.push("+1 Positions Update Voucher");
   }
   const resourceDesc = resourceParts.join(", ");
+
+  let affectedCount = 0;
+  await withAuditedGrant(
+    db,
+    resourceGrantInputs(parsed.data, admin.userId, `Control panel grant: ${resourceDesc}`),
+    async () => {
+      if (allPlayers) {
+        const result = await charactersCollection(db).updateMany({}, [{ $set: setStage }]);
+        affectedCount = result.modifiedCount;
+      } else {
+        const ids = characterIds ?? [];
+        const objectIds = ids.map((id: string) => new ObjectId(id));
+
+        const result = await charactersCollection(db).updateMany({ _id: { $in: objectIds } }, [
+          { $set: setStage },
+        ]);
+        affectedCount = result.modifiedCount;
+      }
+    }
+  );
 
   // Log the action
   const logNow = new Date();

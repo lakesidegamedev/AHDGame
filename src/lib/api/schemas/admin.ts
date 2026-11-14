@@ -2,12 +2,6 @@ import { z } from "zod";
 import { schemas } from "../validate";
 import { countryIdSchema } from "@/lib/api/schemas/country";
 
-// admin/feedback/[id] PATCH
-export const adminFeedbackPatchSchema = z.object({
-  status: z.enum(["open", "in_progress", "resolved", "wont_fix"]).optional(),
-  adminNotes: z.string().max(5000).optional(),
-});
-
 // admin/suggestions/[id] PATCH — player suggestion forum (`suggestions` collection)
 export const adminSuggestionPatchSchema = z.object({
   status: z
@@ -112,6 +106,7 @@ export const adminResourcesGrantSchema = z
     cashOnHand: z.number().min(-100000000).max(100000000).optional(),
     currency: z.enum(["USD", "GBP", "JPY", "CAD", "EUR"]).optional(),
     positionUpdateVoucher: z.boolean().optional(),
+    reason: z.string().trim().max(300).optional(),
   })
   .refine(
     (d) =>
@@ -140,6 +135,7 @@ export const moderatorResourcesGrantSchema = z
     funds: z.number().min(-100000000).max(100000000).optional(),
     cashOnHand: z.number().min(-100000000).max(100000000).optional(),
     currency: z.enum(["USD", "GBP", "JPY", "CAD", "EUR"]).optional(),
+    reason: z.string().trim().max(300).optional(),
   })
   .refine(
     (d) =>
@@ -248,6 +244,14 @@ export const adminDemographicsPostSchema = z.object({
 // admin/turn/batch POST
 export const adminTurnBatchSchema = z.object({
   count: z.number().int().min(1).max(20),
+});
+
+// admin/turn/release-hold POST
+export const adminTurnReleaseHoldSchema = z.object({
+  mode: z.enum(["rerun", "mark-done"]),
+  acknowledge: z.array(z.string().min(1)).min(1).max(200),
+  confirmRepaired: z.boolean().optional(),
+  previewToken: z.string().min(8).max(128).optional(),
 });
 
 // admin/turn/process POST (optional body; the turn worker queues `count` turns)

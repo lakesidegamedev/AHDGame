@@ -165,7 +165,7 @@ export async function POST(request: Request) {
 
     // npp-rename
     if (tier !== "supporter-plus-plus") {
-      return errorResponse(403, "Politician renames require the Supporter++ tier.");
+      return errorResponse(403, "Politician renames require the Champion tier.");
     }
     if (user.nppRenameUsedAt) {
       return errorResponse(409, "Your one-time politician rename has already been used.");

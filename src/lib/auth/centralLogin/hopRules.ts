@@ -101,3 +101,19 @@ export function safeHopDestination(
   }
   return isAllowedExternal(destination) ? destination : "/";
 }
+
+export const HOP_READY_PATH = "/api/auth/lakeside-hop/ready";
+/** Server-side budget for the issuer discovery probe. */
+export const READINESS_TIMEOUT_MS = 800;
+export const READINESS_CACHE_MS = 10_000;
+/** Client-side budget for the readiness call, covering the server probe and the network. */
+export const READINESS_CLIENT_TIMEOUT_MS = 1500;
+
+/** Where the login page goes after a successful password sign-in that offered a hop. */
+export function chooseHopNavigation(
+  hopUrl: string,
+  readiness: { ready?: unknown } | null,
+  destination: string
+): string {
+  return readiness !== null && readiness.ready === true ? hopUrl : destination;
+}

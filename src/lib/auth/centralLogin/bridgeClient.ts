@@ -50,6 +50,11 @@ export function resetBridgeBreaker(): void {
   Object.assign(breaker, newBreakerState());
 }
 
+/** Read-only: true while the breaker is refusing bridge calls. Never admits a trial. */
+export function bridgeBreakerOpen(): boolean {
+  return breaker.openUntil !== 0 && Date.now() < breaker.openUntil;
+}
+
 /** Clears the cached token and the breaker, so each test starts from a clean client. */
 export function resetBridgeTokenCache(): void {
   cachedToken = null;
@@ -257,4 +262,32 @@ export async function bridgeLoginTicket(ahdUserId: string): Promise<BridgeResult
   return typeof ticket === "string" && ticket.length > 0
     ? { ok: true, data: ticket }
     : { ok: false, kind: "error" };
+}
+
+/** The account-changes feed: one GET with the cached client-credentials token. */
+export async function bridgeAccountChanges(
+  after: number,
+  limit: number
+): Promise<BridgeResult<unknown>> {
+  const base = authConfig.accountBridgeUrl();
+  if (!base) return { ok: false, kind: "error" };
+  const deadline = Date.now() + Math.max(bridgeTimeoutMs(), 5000);
+
+  const token = await fetchToken(deadline);
+  if (!token.ok) return token;
+
+  try {
+    const query = new URLSearchParams({ after: String(after), limit: String(limit) });
+    const response = await fetch(`${base.replace(/\/+$/, "")}/account-changes?${query}`, {
+      method: "GET",
+      headers: { Accept: "application/json", Authorization: `Bearer ${token.data}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
+    });
+    if (response.status === 401 || response.status === 403) cachedToken = null;
+    if (!response.ok) return { ok: false, kind: "error" };
+    return { ok: true, data: await response.json() };
+  } catch (error) {
+    return { ok: false, kind: classify(error) };
+  }
 }

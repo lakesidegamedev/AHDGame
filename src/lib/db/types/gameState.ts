@@ -391,6 +391,24 @@ export interface GameState {
    * the 20-minute staleness wait first. Cleared whenever a lock is acquired.
    */
   processingAbandonedAt?: Date | null;
+  /** Worker instance, pid and boot id of the process that holds the turn lock. */
+  processingHolderId?: string | null;
+  /** Why a person must release this lock. Set only by the mid-turn death hold. */
+  processingHoldReason?: string | null;
+  /** The interrupted steps the hold is waiting on. */
+  processingHeldPhases?: string[] | null;
+  processingHeldAt?: Date | null;
+  /** Latest automatic retry of a stopped turn: attempt, step it stopped at, outcome. */
+  lastTurnRetry?: {
+    turn: number | null;
+    attempt: number;
+    afterPhase: string | null;
+    outcome: "scheduled" | "succeeded" | "failed" | "stopped" | "exhausted";
+    at: Date;
+    note?: string;
+  } | null;
+  /** Most recent top-level turn failure: target turn, message with stack head, time. */
+  lastTurnFailure?: { turn: number | null; message: string; at: Date } | null;
   /** Last phase name to refresh the processing heartbeat; helps debug stuck turns */
   processingPhase?: string | null;
   /** Per-phase lifecycle state for the active turn; used to debug skips, failures, and stalls */

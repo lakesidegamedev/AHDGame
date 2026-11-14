@@ -82,7 +82,15 @@ export async function creditIncomeAfterTax(
   source: string,
   turn: number,
   now: Date,
-  credits: IncomeCredit[]
+  credits: IncomeCredit[],
+  options: {
+    /**
+     * A receipt for this turn and source is proof the payout landed. A resumed turn
+     * recomputes its credits from changed state, so the fingerprint can differ;
+     * with this set the stored receipt wins instead of throwing.
+     */
+    acceptAppliedReceipt?: boolean;
+  } = {}
 ): Promise<PayoutReceipt["credits"]> {
   if (!credits.length) return [];
   const fingerprint = hash(JSON.stringify(credits));
@@ -100,7 +108,8 @@ export async function creditIncomeAfterTax(
       if (previous && previous.turn > turn)
         throw new Error("Stale income payout cannot be replayed");
       if (previous?.turn === turn) {
-        if (previous.fingerprint !== fingerprint) throw new Error("Accepted income payout changed");
+        if (previous.fingerprint !== fingerprint && !options.acceptAppliedReceipt)
+          throw new Error("Accepted income payout changed");
         return previous.credits;
       }
       const sellers = [

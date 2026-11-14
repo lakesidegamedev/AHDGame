@@ -457,6 +457,7 @@ export const FRONT_DOOR_COLLECTIONS = [
   "conflictCivilianLossHistory",
   "refugeeReceptionHistory",
   "producerPathClaims",
+  "corporationTurnJournal",
   "producerOpenings",
   "truces",
   "nationalizationLedger",

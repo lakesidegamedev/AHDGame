@@ -3,10 +3,47 @@ import type { Collection, Document } from "mongodb";
 import { deleteRowsOfRemovedParties, loadResetPartySeedCatalog } from "./finalizeResetGameWorld";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { presetMismatchedPartyNames } from "@/lib/seeds/ensureDefaultParties";
-import { partySeedsForPreset } from "@/lib/seeds/partySeedRegistry";
+import { PARTY_SEED_MODULES, partySeedsForPreset } from "@/lib/seeds/partySeedRegistry";
+import { resetSurvivingPartiesToSeed } from "./resetContract/resetSurvivingParties";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
 describe("reset era cleanup party catalog", () => {
+  it("includes every authored country roster for seed restoration", async () => {
+    const catalog = await loadResetPartySeedCatalog();
+    for (const seed of Object.values(PARTY_SEED_MODULES).flatMap((seeds) => seeds ?? []))
+      expect(catalog).toContainEqual(seed);
+  });
+
+  it("restores Canadian party positions from the seed while preserving identity", async () => {
+    const catalog = await loadResetPartySeedCatalog();
+    const seed = catalog.find((party) => party.countryId === "CA");
+    expect(seed).toBeDefined();
+    const memory = createInMemoryDb();
+    memory.seed("politicalParties", [
+      {
+        _id: "ca-party",
+        countryId: "CA",
+        sequentialId: 1,
+        isDefault: true,
+        name: seed!.name,
+        economicPosition: 5,
+        socialPosition: 5,
+      },
+    ]);
+    const result = await resetSurvivingPartiesToSeed(
+      memory as unknown as import("mongodb").Db,
+      "2027-default",
+      catalog
+    );
+    expect(result.unseeded).toEqual([]);
+    expect(memory.collection("politicalParties").docs[0]).toMatchObject({
+      _id: "ca-party",
+      sequentialId: 1,
+      countryId: "CA",
+      economicPosition: seed!.economicPosition,
+      socialPosition: seed!.socialPosition,
+    });
+  });
   it("keeps Bulgaria's 1991 Movement for Rights and Freedoms on a 1991 reset", async () => {
     // Seeded for 1991 by the successor roster; the same name is a 2027-only
     // seed, so a catalog without the successor roster deleted it every reset.
@@ -21,7 +58,7 @@ describe("reset era cleanup party catalog", () => {
     });
   });
 
-  it.each(["1991-default", "2019-default", "1953-default"])(
+  it.each(["1991-default", "2019-default", "1953-default", "2027-default"])(
     "never removes a party the %s bootstrap seeds",
     async (preset) => {
       const countries = Object.keys(COUNTRY_CONFIGS) as CountryId[];

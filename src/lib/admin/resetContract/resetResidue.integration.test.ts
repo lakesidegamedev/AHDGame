@@ -127,6 +127,38 @@ describe("reset over a world holding every known leftover", () => {
     expect(text).toMatch(/preserved-field imperialCharacters: .* cashOnHand/);
   });
 
+  it("fails the gate on a defunct, merged default party and on any party charter", async () => {
+    memory.collection("politicalParties").docs.push({
+      _id: "lab",
+      sequentialId: 44,
+      countryId: "UK",
+      name: "Labour Party",
+      isDefault: true,
+      isDefunct: true,
+      defunctAtTurn: 52,
+      mergedIntoPartyId: "con",
+      leadershipTitles: { chair: "Leader" },
+    });
+    memory
+      .collection("partyCharters")
+      .docs.push({ _id: "charter", countryId: "UK", partyId: "44" });
+    const text = (
+      await runResidueScan(memory as unknown as Db, {
+        resetStartedAt: new Date(),
+        expectedTurn: 1,
+        resetWorldId: "new-world",
+        referenceReplaced: true,
+      })
+    )
+      .map(formatResidueViolation)
+      .join("\n");
+    expect(text).toMatch(
+      /preserved-field politicalParties: UK:Labour Party still holds .*isDefunct/
+    );
+    expect(text).toMatch(/politicalParties: UK:Labour Party still holds .*mergedIntoPartyId/);
+    expect(text).toContain("preserved-field partyCharters: charter still holds charter");
+  });
+
   it("ages fixed-id collections by createdAt and exempts kept reference collections", async () => {
     const resetStartedAt = new Date();
     const fixedOldId = new ObjectId("60b15e11a4be27f200000000");

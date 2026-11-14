@@ -637,7 +637,7 @@
       "longBlocks": 1,
       "narrativeLines": 1
     },
-    "scripts/seed/publish-iteration-1-wiki.ts": {
+    "scripts/seed/publish-iteration-wiki.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },
@@ -1230,10 +1230,6 @@
       "narrativeLines": 0
     },
     "src/app/api/admin/seed/route.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 0
-    },
-    "src/app/api/admin/settlement/route.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
     },

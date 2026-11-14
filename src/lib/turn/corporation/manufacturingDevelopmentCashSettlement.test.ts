@@ -11,42 +11,60 @@ import type { CorpSnapshot } from "./types";
 import { applyOperatingCashThenDevelopmentCash } from "./manufacturingDevelopmentCashSettlement";
 
 describe("manufacturing development cash settlement", () => {
-  it("witnesses only a funded guarded receipt and does not duplicate it on replay", async () => {
-    const memory = createInMemoryDb();
-    const paid = corporation(new ObjectId()),
-      refused = corporation(new ObjectId());
-    memory.seed("corporations", [
-      { ...paid, liquidCapital: 1_000 },
-      { ...refused, liquidCapital: 100 },
-    ]);
-    const args = {
-      db: memory as unknown as Db,
-      operations: [
-        developmentDebit(paid._id, 250, "paid"),
-        developmentDebit(refused._id, 250, "refused"),
-      ],
-      turn: 5,
-      corporations: [paid, refused],
-      snapshots: [snapshot(paid._id, 1_000), snapshot(refused._id, 100)],
-      exchangeRatesByCurrency: new Map<import("@/lib/constants/currencies").CurrencyCode, number>([
-        ["USD", 1],
-      ]),
-      bondsByCorpId: new Map(),
-      sectorsByCorp: new Map(),
-      applyOperatingCashWrites: async () => undefined,
-    };
-    await applyOperatingCashThenDevelopmentCash(args);
-    await applyOperatingCashThenDevelopmentCash(args);
-    expect(memory.collection("corporations").docs.map((row) => row.liquidCapital)).toEqual([
-      750, 100,
-    ]);
-    const entries = memory.collection("ledgerEntries").docs;
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({
-      turn: 5,
-      legs: [{ account: `corporation:${paid._id}:USD`, amount: -250 }, { amount: 250 }],
-    });
-  });
+  it.each([0, 2])(
+    "witnesses only a funded guarded receipt without duplicate cash at journal stage %s",
+    async (stage) => {
+      const memory = createInMemoryDb();
+      const paid = corporation(new ObjectId()),
+        refused = corporation(new ObjectId());
+      memory.seed("corporations", [
+        { ...paid, liquidCapital: 1_000 },
+        { ...refused, liquidCapital: 100 },
+      ]);
+      const args = {
+        db: memory as unknown as Db,
+        operations: [
+          developmentDebit(paid._id, 250, "paid"),
+          developmentDebit(refused._id, 250, "refused"),
+        ],
+        turn: 5,
+        corporations: [paid, refused],
+        snapshots: [snapshot(paid._id, 1_000), snapshot(refused._id, 100)],
+        exchangeRatesByCurrency: new Map<import("@/lib/constants/currencies").CurrencyCode, number>(
+          [["USD", 1]]
+        ),
+        bondsByCorpId: new Map(),
+        sectorsByCorp: new Map(),
+        journal: { db: memory as unknown as Db, stage, turn: 5, worldEpoch: "cash-test" },
+        applyOperatingCashWrites: async () => undefined,
+      };
+      if (stage === 2) {
+        vi.stubEnv("AHD_CORP_TURN_FAULT", "developmentCash@0:throw");
+        try {
+          await expect(applyOperatingCashThenDevelopmentCash(args)).rejects.toThrow(
+            "rehearsal fault at developmentCash@0"
+          );
+          expect(memory.collection("corporations").docs.map((row) => row.liquidCapital)).toEqual([
+            750, 100,
+          ]);
+          expect(memory.collection("ledgerEntries").docs).toHaveLength(0);
+        } finally {
+          vi.unstubAllEnvs();
+        }
+      }
+      await applyOperatingCashThenDevelopmentCash(args);
+      await applyOperatingCashThenDevelopmentCash(args);
+      expect(memory.collection("corporations").docs.map((row) => row.liquidCapital)).toEqual([
+        750, 100,
+      ]);
+      const entries = memory.collection("ledgerEntries").docs;
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        turn: 5,
+        legs: [{ account: `corporation:${paid._id}:USD`, amount: -250 }, { amount: 250 }],
+      });
+    }
+  );
   it("runs after operating cash and snapshots only the actual live balance and receipt", async () => {
     const paidId = new ObjectId();
     const refusedId = new ObjectId();
