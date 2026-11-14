@@ -4,12 +4,14 @@
  * hairline borders. Pure canvas and maths, no React, no animation loop: callers
  * render when the view or the sun changes and never per idle frame.
  */
-import { geoOrthographic, geoPath, geoRotation, type GeoPermissibleObjects } from "d3-geo";
+import { geoOrthographic, geoPath, geoRotation } from "d3-geo";
 import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import type { CountryTier } from "../countryTiers";
 import { NIGHT_CITIES } from "../nightCities";
 import { daylight, smoothstep, type LonLat } from "./sun";
+
+type GeoPermissibleObjects = object;
 
 export type LandKind = CountryTier | "macro";
 

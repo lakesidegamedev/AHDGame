@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { geoContains, geoOrthographic } from "d3-geo";
 import type { Topology } from "topojson-specification";
 import { fetchJson } from "@/lib/observability/fetchJson";
+import { captureClientException } from "@/lib/observability/sentryClientLazy";
 import { WORLD_GEO_URL } from "@/app/world/worldConstants";
 import { ISO_TO_COUNTRY_ID } from "@/app/world/worldMetricHighlight";
 import { resolveCountryAvailability } from "@/lib/countryAvailability";
@@ -182,7 +183,7 @@ export function LandingGlobe({
         requestDraw();
       })
       .catch((error: unknown) => {
-        console.error("Landing globe map failed to load", error);
+        captureClientException(error, { tags: { feature: "landing-globe" } });
       });
     return () => {
       cancelled = true;
@@ -259,7 +260,7 @@ export function LandingGlobe({
       .clipAngle(90);
     const at = projection.invert?.([event.clientX - rect.left, event.clientY - rect.top]);
     if (!at) return;
-    const hit = scene.land.find((land) => geoContains(land.geometry as never, at));
+    const hit = scene.land.find((land) => geoContains(land.geometry, at));
     if (!hit || !isTierInteractive(tiers.get(hit.id) ?? "background")) return;
     const countryId = ISO_TO_COUNTRY_ID[hit.id];
     const access = countryId ? countryAccess?.[countryId] : undefined;
