@@ -1,7 +1,7 @@
 "use client";
 
 import { CanadianRidingCampaigns } from "@/components/maps/CanadianRidingCampaigns";
-import { isCanadianCommons, isCanada } from "@/lib/countries/ca/rules/localGeography";
+import { isCanadianCommons, isCanada } from "@/lib/countries/ca/localGeographyFacts";
 
 import { JP_REGIONS } from "@/lib/countries/jp/data/jpRegionDirectory";
 import { useState, useEffect, use } from "react";

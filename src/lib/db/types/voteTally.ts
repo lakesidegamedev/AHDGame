@@ -3,6 +3,7 @@ import type { RankedBallot, PrStvResult } from "@/lib/elections/rules/prStv";
 import type { DemocraticHealthElectionSnapshot } from "@/lib/elections/engine/democraticHealth";
 import type { FactorLedgerSnapshot } from "@/lib/elections/engine/factorLedger";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
+import type { CanadianRidingResult } from "@/lib/countries/ca/rules/ridingResults";
 
 export interface VoteTurnSnapshot {
   turn: number;
@@ -51,7 +52,7 @@ export interface ResolvedSeatHolder {
 
 export interface ElectionVoteTally {
   /** Immutable Canadian federal riding placement; provincial seat totals remain authoritative. */
-  canadianRidingResult?: import("@/lib/countries/ca/rules/ridingResults").CanadianRidingResult;
+  canadianRidingResult?: CanadianRidingResult;
   /** Frozen US House district winners/geometry; removed with this tally on reset. */
   houseDistrictResult?: import("@/lib/redistricting/rules/houseResult").HouseDistrictResult;
   brazilPresidentialResult?: import("@/lib/countries/br/rules/presidential").BrazilPresidentialDecision;
