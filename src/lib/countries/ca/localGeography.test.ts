@@ -90,7 +90,22 @@ describe("qualified Canadian local geography", () => {
       );
     }
     expect([cds, ridings, cdPopulation, ridingPopulation]).toEqual([293, 343, 36991981, 36991981]);
-    expect(manifest.sources).toHaveLength(5);
+    expect(manifest.sources.map((source) => source.file).sort()).toEqual(
+      [
+        "cd-planar.json",
+        "fed-boundaries.zip",
+        "population-zip.zip",
+        "provinces-cartographic-planar.json",
+        "votes-table11.csv",
+        "votes-table12.csv",
+      ].sort()
+    );
+    for (const source of manifest.sources) {
+      expect(source.url).toMatch(
+        /^https:\/\/(geo\.statcan\.gc\.ca|www150\.statcan\.gc\.ca|www\.elections\.ca)\//
+      );
+      expect(source.sha256).toMatch(/^[a-f0-9]{64}$/);
+    }
   });
 
   it("keeps Canada, California, provincial maps and historical presets separate", async () => {
