@@ -3,7 +3,8 @@
  * weight]`. Weight 3 is a megacity, 2 a major city, 1 a regional one. Only
  * the lit dots are drawn, so the list is the whole cost: keep it near 200.
  */
-import type { CityLight } from "./broadcastMotion";
+/** `[lon, lat, weight]` for one metro area. */
+export type CityLight = readonly [number, number, number];
 
 export const NIGHT_CITIES: readonly CityLight[] = [
   // United States

@@ -4,9 +4,7 @@
  * Green-phosphor CRT countdown that sits above the hero headline.
  *
  * It is a fixed-deadline promo, not a recurring feature: once the deadline
- * passes the component renders nothing and `useCrtCountdown` reports inactive,
- * which also hands the globe's idle crisis showcase back to its normal
- * behaviour (see `showcasePaused` on LandingGlobe).
+ * passes the component renders nothing and `useCrtCountdown` reports inactive.
  *
  * Rendering is deliberately mount-gated. The server has no way to know the
  * viewer's clock, so a server-rendered timer either mismatches on hydration or

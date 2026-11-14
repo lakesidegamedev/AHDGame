@@ -3,28 +3,18 @@
  * so swapping the live globe in never moves anything. Server-rendered.
  */
 export function GlobePoster({ base, hidden }: { base: string; hidden: boolean }) {
-  const sizes = "130vmax";
   return (
     <picture
       className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
         hidden ? "opacity-0" : "opacity-100"
       }`}
     >
-      <source
-        type="image/avif"
-        srcSet={`${base}-640.avif 640w, ${base}-1200.avif 1200w`}
-        sizes={sizes}
-      />
-      <source
-        type="image/webp"
-        srcSet={`${base}-640.webp 640w, ${base}-1200.webp 1200w`}
-        sizes={sizes}
-      />
+      <source type="image/avif" srcSet={`${base}-960.avif`} />
       <img
-        src={`${base}-1200.webp`}
+        src={`${base}-960.webp`}
         alt=""
-        width={1200}
-        height={1200}
+        width={960}
+        height={960}
         decoding="async"
         className="h-full w-full object-cover"
       />
