@@ -241,3 +241,12 @@ describe("campaign page links", () => {
     );
   });
 });
+
+it("uses short Canadian region codes and preserves their country in public links", () => {
+  expect(campaignManagerHref({ region: "CA_NT", type: "caCommons" })).toBe(
+    "/campaign-manager?country=CA&type=caCommons&region=NT"
+  );
+  expect(parseCampaignManagerParams({ country: "CA", region: "CA_NT" }).filter.regionId).toBe(
+    "CA_NT"
+  );
+});

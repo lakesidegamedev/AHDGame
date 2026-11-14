@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -523,7 +524,7 @@ export function CampaignMap(props: CampaignMapProps) {
                 textShadow: "0 1px 3px #000, 0 0 2px #000",
               }}
             >
-              {sel ? regionLabel(id) : id}
+              {sel ? regionLabel(id) : displayCanadianRegionCode(id)}
             </span>
           );
         })}

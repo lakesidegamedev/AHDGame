@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect, useRef } from "react";
 import { getMessageStyle } from "@/lib/utils/formatters";
@@ -482,7 +483,9 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                       <span className={`text-xs ${getPartyTextColor(char.party)}`}>
                         {char.party.charAt(0).toUpperCase() + char.party.slice(1)}
                       </span>
-                      <span className="text-xs text-muted">({char.homeState})</span>
+                      <span className="text-xs text-muted">
+                        ({displayCanadianRegionCode(char.homeState)})
+                      </span>
                     </div>
                     <div className="text-xs text-muted">
                       {char.actions} actions | ₳{char.funds.toLocaleString("en-US")} campaign

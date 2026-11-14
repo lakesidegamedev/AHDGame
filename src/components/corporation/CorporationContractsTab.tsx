@@ -1,4 +1,7 @@
 "use client";
+import { regionUrl } from "@/lib/urls";
+
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { ContractBoardLink } from "@/components/governmentContracts/ContractBoardLink";
 import Link from "next/link";
@@ -110,10 +113,10 @@ export default function CorporationContractsTab({
   const stateCell = (c: ExtractionContractRow) => (
     <Td className="text-muted">
       <Link
-        href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
+        href={`${regionUrl(c.countryId.toLowerCase(), c.stateId)}?tab=resources`}
         className="text-primary"
       >
-        {c.stateId}
+        {displayCanadianRegionCode(c.stateId)}
       </Link>
     </Td>
   );

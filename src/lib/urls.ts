@@ -118,7 +118,7 @@ export function electionRegionUrl(
   countryId: CountryId | string,
   regionCode: string
 ): string {
-  return `/elections/${electionId}/country/${lowerCountry(countryId)}/region/${upperRegion(regionCode)}`;
+  return `/elections/${electionId}/country/${lowerCountry(countryId)}/region/${upperRegion(compactRegionCode(countryId, regionCode ?? ""))}`;
 }
 
 // ── API URL helpers ──
@@ -231,7 +231,7 @@ export function referendumDetailUrl(
   regionId: string,
   cycle?: number
 ): string {
-  const base = `/country/${lowerCountry(countryId)}/referendums/${regionId.toLowerCase()}`;
+  const base = `/country/${lowerCountry(countryId)}/referendums/${compactRegionCode(countryId, regionId).toLowerCase()}`;
   return cycle != null ? `${base}?cycle=${cycle}` : base;
 }
 

@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
 import type { State } from "@/lib/db/types";
@@ -12,5 +13,5 @@ export default async function LegislatureRedirect({ params }: { params: Promise<
     { projection: { countryId: 1 } }
   );
   const countryId = state?.countryId ?? "US";
-  redirect(`/country/${countryId.toLowerCase()}/region/${stateId}/legislature`);
+  redirect(`${regionUrl(countryId.toLowerCase(), stateId)}/legislature`);
 }

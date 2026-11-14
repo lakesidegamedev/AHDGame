@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
@@ -250,7 +251,7 @@ export function CampaignDeskView({
             })}
             style={{ color: BLEND.muted }}
           >
-            &lsaquo; {campaign.electionInfo.state}{" "}
+            &lsaquo; {displayCanadianRegionCode(campaign.electionInfo.state)}{" "}
             {campaign.electionInfo.electionType === "president"
               ? "Presidential"
               : campaign.electionInfo.electionType}{" "}

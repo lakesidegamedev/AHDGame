@@ -143,3 +143,11 @@ describe("electionsHref", () => {
     ).toBe("/country/us/elections?type=governor&state=NE");
   });
 });
+
+it("round-trips Canadian public region filters without changing stored filter IDs", () => {
+  const f = { ...DEFAULT_FILTERS, state: "CA_NT" };
+  expect(toElectionsParams(f).get("state")).toBe("NT");
+  expect(parseElectionsParams(toElectionsParams(f), "CA").state).toBe("CA_NT");
+  expect(parseElectionsParams(new URLSearchParams("state=CA_NT"), "CA").state).toBe("CA_NT");
+  expect(parseElectionsParams(new URLSearchParams("state=CA"), "US").state).toBe("CA");
+});

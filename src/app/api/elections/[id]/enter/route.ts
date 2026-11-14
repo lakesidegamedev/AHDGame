@@ -1,3 +1,4 @@
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 import { z } from "zod";
 import { isBgFoundingCampaign } from "@/lib/countries/bg/rules/foundingCampaign1990";
 import {
@@ -412,7 +413,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       logRequest("POST", path, 403, Date.now() - start);
       return errorResponse(
         403,
-        `You can only run for office in your home state (${character.homeState}). This election is in ${election.state}.`
+        `You can only run for office in your home state (${displayCanadianRegionCode(character.homeState)}). This election is in ${displayCanadianRegionCode(election.state)}.`
       );
     }
 

@@ -1,3 +1,4 @@
+import { regionUrl } from "@/lib/urls";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
 import type { State } from "@/lib/db/types";
@@ -16,5 +17,5 @@ export default async function MetricsRedirect({
     { projection: { countryId: 1 } }
   );
   const countryId = state?.countryId ?? "US";
-  redirect(`/country/${countryId.toLowerCase()}/region/${stateId}/metrics/${category}/${metricId}`);
+  redirect(`${regionUrl(countryId.toLowerCase(), stateId)}/metrics/${category}/${metricId}`);
 }

@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useBlendGround } from "@/components/blend/useBlendGround";
 import { useEffect, useMemo, useState } from "react";
@@ -177,7 +178,7 @@ function TileBoard({ vm, columns }: { vm: ResultsBlendVM; columns: number }) {
           }}
         >
           <span style={{ fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 700 }}>
-            {t.stateId}
+            {displayCanadianRegionCode(t.stateId)}
           </span>
           <span style={{ fontFamily: FONT.mono, fontSize: 9, opacity: 0.75 }}>{t.ev}</span>
         </div>
@@ -380,7 +381,7 @@ export function ResultsBlendView({
         }}
       >
         <button type="button" onClick={() => sort("state")} style={headStyle(sortBy === "state")}>
-          {vm.sortLabels.state}
+          {displayCanadianRegionCode(vm.sortLabels.state)}
         </button>
         <button type="button" onClick={() => sort("ev")} style={headStyle(sortBy === "ev", true)}>
           {vm.sortLabels.ev}

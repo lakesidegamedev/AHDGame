@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { canonicalRegionId, COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
 import { statesCollection } from "@/lib/db/repositories/states";
 
@@ -19,7 +19,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country code");
     }
-    const stateId = id;
+    const stateId = canonicalRegionId(countryId, id);
 
     const db = await getDb();
     const state = await statesCollection(db).findOne({ _id: stateId, countryId });

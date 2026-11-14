@@ -1,8 +1,10 @@
 "use client";
+import { regionUrl } from "@/lib/urls";
 
 import { CanadianRidingCampaigns } from "@/components/maps/CanadianRidingCampaigns";
 import { isCanadianCommons, isCanada } from "@/lib/countries/ca/localGeographyFacts";
 
+import { canonicalRegionId } from "@/lib/constants/countriesCore";
 import { JP_REGIONS } from "@/lib/countries/jp/data/jpRegionDirectory";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
@@ -226,7 +228,7 @@ export default function StateElectionResultsPage({
   params: Promise<{ id: string; code: string; stateId: string }>;
 }) {
   const { id, code, stateId } = use(params);
-  const dbStateId = stateId.toUpperCase();
+  const dbStateId = canonicalRegionId(code.toUpperCase(), stateId.toUpperCase());
   const stateUpper = dbStateId;
   const { navData } = useAuthMe();
   const router = useRouter();
@@ -641,7 +643,7 @@ export default function StateElectionResultsPage({
                 <h3 className="mb-2 font-semibold">Current district holders</h3>
                 <DistrictCardGrid
                   districts={districtSquares}
-                  redistrictHref={`/country/${code.toLowerCase()}/region/${stateUpper.toLowerCase()}/redistrict`}
+                  redistrictHref={`${regionUrl(code.toLowerCase(), stateUpper.toLowerCase())}/redistrict`}
                   campaign={
                     viewerPartySeqId
                       ? { countryId: code, stateId: stateUpper, partySeqId: viewerPartySeqId }

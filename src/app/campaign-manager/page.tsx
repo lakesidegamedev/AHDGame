@@ -1,3 +1,4 @@
+import { canonicalRegionId } from "@/lib/constants/countriesCore";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getAuthUserWithCharacter } from "@/lib/auth";
@@ -50,6 +51,8 @@ export default async function CampaignManagerPage({
   // Any country's races can be viewed: a linked race opens in its own country.
   const wanted = campaignManagerCountry(homeCountryId, linked, countryParam) as CountryId;
   const countryId = getCountryConfig(wanted) ? wanted : homeCountryId;
+  if (filter.regionId && filter.regionId !== "ALL")
+    filter.regionId = canonicalRegionId(countryId, filter.regionId);
   const [regions, preset, countryState, nameOverrides] = await Promise.all([
     statesCollection(db)
       .find({ countryId }, { projection: { _id: 1, name: 1 } })

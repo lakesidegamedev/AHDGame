@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 /**
  * Presidential-primary-only by design: other calendars don't use the staggered
@@ -121,7 +122,7 @@ export function PrimaryCalendar({
                           style={{ backgroundColor: winnerColor }}
                         />
                       ) : null}
-                      {stateId}
+                      {displayCanadianRegionCode(stateId)}
                     </button>
                   );
                 })}
