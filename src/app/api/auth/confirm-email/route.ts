@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { isPlaceholderEmail } from "@/lib/auth/placeholderEmail";
 import { authMigrationFenceAbsentFilter } from "@/lib/auth/sourceFence";
@@ -37,6 +38,9 @@ function isDuplicateKey(error: unknown): boolean {
 // Errors: 400, 409, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("email");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const clientIp = await getClientIp();
     const limit = await durableRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);

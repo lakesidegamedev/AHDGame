@@ -17,7 +17,7 @@ import dynamic from "next/dynamic";
 import { LandingIntakeBeacon } from "@/components/intake/LandingIntakeBeacon";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CDN_WORLD_GEO_URL } from "@/lib/images/cdnUrls";
 import {
@@ -25,6 +25,7 @@ import {
   LandingSectionHeading,
 } from "@/components/landing/LandingSectionHeading";
 import { getEraConfig } from "@/components/landing/eraThemes";
+import { globePosterBase } from "@/components/landing/globePosters";
 import { buildStarfield } from "@/components/landing/globeEnhancements";
 import { getEraFlavorCards } from "@/components/landing/flavorCards";
 import {
@@ -37,6 +38,8 @@ import { CookieSettingsLink } from "@/components/CookieSettingsLink";
 import { CrtCountdown, useCrtCountdown } from "./CrtCountdown";
 import { BroadcastBackdrop, BroadcastHeadline, BroadcastTierKey } from "./BroadcastHero";
 import { EraExplainerLink } from "./EraExplainerLink";
+import { GlobePoster } from "./GlobePoster";
+import { useGlobeActivation } from "./useGlobeActivation";
 import { LaunchCountdown } from "./LaunchCountdown";
 import type { LaunchSchedule } from "@/lib/landing/rules/launchSchedule";
 import { LANDING_FOOTER_SECTIONS, LANDING_TRAY_LINKS } from "./publicLinks";
@@ -69,34 +72,6 @@ const FlavorCardCarousel = dynamic(() =>
 const CommunitySupportSection = dynamic(() =>
   import("@/components/landing/CommunitySupportSection").then((m) => m.CommunitySupportSection)
 );
-
-/** True once the page has loaded and the main thread has gone idle, so the globe
- * bundle and its first frames never compete with hydration and first paint. */
-function useAfterLoadIdle(): boolean {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    let idle: number | undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const go = () => {
-      if (cancelled) return;
-      if ("requestIdleCallback" in window) {
-        idle = window.requestIdleCallback(() => setReady(true), { timeout: 2_500 });
-      } else {
-        timer = setTimeout(() => setReady(true), 300);
-      }
-    };
-    if (document.readyState === "complete") go();
-    else window.addEventListener("load", go, { once: true });
-    return () => {
-      cancelled = true;
-      window.removeEventListener("load", go);
-      if (idle !== undefined) window.cancelIdleCallback(idle);
-      if (timer) clearTimeout(timer);
-    };
-  }, []);
-  return ready;
-}
 
 /* -------------------------------------------------------------------------- */
 /* Shared styles + links                                                       */
@@ -348,7 +323,11 @@ export function SandboxHome({
   // until the deadline, after which both revert to normal behaviour with no
   // deploy needed.
   const countdown = useCrtCountdown();
-  const globeReady = useAfterLoadIdle();
+  const globeBoxRef = useRef<HTMLDivElement>(null);
+  const posterBase = globePosterBase(eraConfig.id);
+  const globeReady = useGlobeActivation(globeBoxRef, posterBase !== null);
+  const [globeDrawn, setGlobeDrawn] = useState(false);
+  const markGlobeDrawn = useCallback(() => setGlobeDrawn(true), []);
   const l = links(isSignedIn);
 
   // Signal-field star scatter: a full-viewport layer independent of the
@@ -482,33 +461,42 @@ export function SandboxHome({
         )}
         {broadcast && <BroadcastBackdrop nightside={Boolean(broadcast.nightside)} />}
         <div
+          ref={globeBoxRef}
           className="absolute left-[60%] top-[48%] h-[130vmax] w-[130vmax] -translate-x-1/2 -translate-y-1/2"
           style={
             wireframeColor ? { filter: `drop-shadow(0 0 18px ${wireframeColor}55)` } : undefined
           }
         >
+          {posterBase ? <GlobePoster base={posterBase} hidden={globeDrawn} /> : null}
           {globeReady ? (
-            <LandingGlobe
-              bare
-              enhanced
-              hideLiveIndicator
-              gameDate={eraConfig.gameDate}
-              countryAccess={eraConfig.accessMap}
-              geoUrl={CDN_WORLD_GEO_URL}
-              initialRotation={eraConfig.initialRotation ?? DEFAULT_GLOBE_ROTATION}
-              initialZoom={1.05}
-              wireframeColor={wireframeColor}
-              playerCounts={playerCounts}
-              battlegroundFeatureIds={battlegroundFeatureIds}
-              economicPowerFeatureIds={economicPowerFeatureIds}
-              onShowcaseActiveChange={setShowcaseActive}
-              showcasePaused={countdown !== null}
-              broadcast={broadcast}
-              hideTierLegend={Boolean(broadcast)}
-              markersFromSm={Boolean(broadcast)}
-              backgroundMacroFeatureIds={backgroundMacroFeatureIds}
-              successorProxies={successorProxies}
-            />
+            <div
+              className={`absolute inset-0 transition-opacity duration-500 ${
+                posterBase && !globeDrawn ? "opacity-0" : "opacity-100"
+              }`}
+            >
+              <LandingGlobe
+                onReady={markGlobeDrawn}
+                bare
+                enhanced
+                hideLiveIndicator
+                gameDate={eraConfig.gameDate}
+                countryAccess={eraConfig.accessMap}
+                geoUrl={CDN_WORLD_GEO_URL}
+                initialRotation={eraConfig.initialRotation ?? DEFAULT_GLOBE_ROTATION}
+                initialZoom={1.05}
+                wireframeColor={wireframeColor}
+                playerCounts={playerCounts}
+                battlegroundFeatureIds={battlegroundFeatureIds}
+                economicPowerFeatureIds={economicPowerFeatureIds}
+                onShowcaseActiveChange={setShowcaseActive}
+                showcasePaused={countdown !== null}
+                broadcast={broadcast}
+                hideTierLegend={Boolean(broadcast)}
+                markersFromSm={Boolean(broadcast)}
+                backgroundMacroFeatureIds={backgroundMacroFeatureIds}
+                successorProxies={successorProxies}
+              />
+            </div>
           ) : null}
         </div>
 
