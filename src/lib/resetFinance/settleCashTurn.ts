@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 /**
  * V2 sovereign cash and Cabinet delivery. Actual bond payouts are reconciled
  * before a department receives authority; durable receipts make retries safe.
@@ -157,7 +158,7 @@ export async function settleResetTreasuryCashTurn(input: {
           });
     const { next, externallyFundedBondCash } = plan;
     if (externallyFundedBondCash > 0) {
-      console.warn("[treasury-cash] funded bond reconciliation gap", {
+      logger.warn("treasury-cash", "funded bond reconciliation gap", {
         worldId,
         countryId: country,
         turn,
