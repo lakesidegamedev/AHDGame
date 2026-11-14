@@ -14,6 +14,11 @@
   ],
   "sources": [
     {
+      "file": "provinces-cartographic-planar.json",
+      "url": "https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer/0/query?where=1%3D1&outFields=PRUID%2CPRNAME%2CPRENAME&outSR=3347&f=geojson&maxAllowableOffset=500&geometryPrecision=1&returnGeometry=true",
+      "sha256": "f959f0eeacae2b434cf513e09a74258158952bfbbc150ada705a358fa9ef0cde"
+    },
+    {
       "file": "cd-planar.json",
       "url": "https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Digital_boundary_files/MapServer/4/query?where=1%3D1&outFields=CDUID%2CDGUID%2CCDNAME%2CCDTYPE%2CPRUID&outSR=3347&f=geojson&maxAllowableOffset=500&geometryPrecision=1&returnGeometry=true",
       "sha256": "35bb1fc797a8b45c87facd0afe43c49c9f3c56aa6222979e962eb0becb6fcbd5"

@@ -19,6 +19,7 @@ PARTIES = {"LIB": "Liberal/Libéral", "CON": "Conservative/Conservateur",
            "NDP": "Party/NPD-Nouveau Parti démocratique", "BQ": "Bloc Québécois/Bloc Québécois",
            "GRN": "Green Party/Parti Vert"}
 SOURCES = {
+    "provinces-cartographic-planar.json": "https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer/0/query?where=1%3D1&outFields=PRUID%2CPRNAME%2CPRENAME&outSR=3347&f=geojson&maxAllowableOffset=500&geometryPrecision=1&returnGeometry=true",
     "cd-planar.json": "https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Digital_boundary_files/MapServer/4/query?where=1%3D1&outFields=CDUID%2CDGUID%2CCDNAME%2CCDTYPE%2CPRUID&outSR=3347&f=geojson&maxAllowableOffset=500&geometryPrecision=1&returnGeometry=true",
     "population-zip.zip": "https://www150.statcan.gc.ca/n1/tbl/csv/98100002-eng.zip",
     "fed-boundaries.zip": "https://www.elections.ca/res/cir/mapsCorner/vector/FederalElectoralDistricts_2025_SHP.zip",
@@ -103,7 +104,71 @@ def write_region(destination, units, notice):
     destination.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8", newline="\n")
 
 
-def build(source, output):
+def write_campaign_map(destination, source, divisions, ridings):
+    provinces = json.loads((source / "provinces-cartographic-planar.json").read_text(encoding="utf-8"))["features"]
+    if {f["properties"]["PRUID"] for f in provinces} != set(PROVINCES) or len(provinces) != 13:
+        raise ValueError("Incomplete official province geometry")
+
+    def rings(feature):
+        geometry = feature["geometry"]
+        if geometry["type"] == "Polygon":
+            return geometry["coordinates"]
+        if geometry["type"] == "MultiPolygon":
+            return [r for polygon in geometry["coordinates"] for r in polygon]
+        raise ValueError("Expected provincial polygon geometry")
+
+    points = [p for province in provinces for ring in rings(province) for p in ring]
+    x0, x1 = min(p[0] for p in points), max(p[0] for p in points)
+    y0, y1 = min(p[1] for p in points), max(p[1] for p in points)
+    scale = 980 / max(x1 - x0, y1 - y0)
+
+    def project(point):
+        return 10 + (point[0] - x0) * scale, 10 + (y1 - point[1]) * scale
+
+    def path(rings):
+        commands = []
+        for ring in rings:
+            simple = simplify(ring)
+            if len(simple) < 4:
+                simple = ring
+            commands.append("M" + "L".join(f"{x:.2f},{y:.2f}" for x, y in map(project, simple)) + "Z")
+        return "".join(commands)
+
+    regions = {}
+    for province in provinces:
+        properties = province["properties"]
+        region_id = "CA_" + PROVINCES[properties["PRUID"]]
+        points = [project(p) for ring in rings(province) for p in ring]
+        regions[region_id] = {"n": properties["PRENAME"], "d": path(rings(province)),
+            "bb": [round(min(p[0] for p in points), 2), round(min(p[1] for p in points), 2),
+                   round(max(p[0] for p in points), 2), round(max(p[1] for p in points), 2)], "nb": []}
+    for region_id, region in regions.items():
+        a = region["bb"]
+        region["nb"] = sorted(other for other, r in regions.items() if other != region_id and
+            a[0] - 3 <= r["bb"][2] and r["bb"][0] - 3 <= a[2] and
+            a[1] - 3 <= r["bb"][3] and r["bb"][1] - 3 <= a[3])
+
+    def units(rows):
+        return [{"id": r["id"], "n": r["name"], "d": path(r["rings"])} for r in sorted(rows, key=lambda r: r["id"])]
+
+    result = {"w": round((x1 - x0) * scale + 20, 2), "h": round((y1 - y0) * scale + 20, 2),
+        "regions": dict(sorted(regions.items())), "units": None, "supportedPresets": ["2027-default"],
+        "clipUnitsToRegions": True, "labelMin": [34, 22],
+        "notice": "Federal riding projections use 2023 boundaries and 2025 votes. Provincial maps use 2021 census divisions with modeled population weights. The 2021 provincial coastlines clip administrative water areas for display.",
+        "unitLayerByType": {"caCommons": "federal-ridings", "snap_caCommons": "federal-ridings",
+            "provincialLegislature": "census-divisions", "governor": "census-divisions",
+            "regionalCouncil": "census-divisions"},
+        "unitLayers": {
+            "federal-ridings": {"unitLabelPlural": "Federal ridings", "units": {
+                "CA_" + p: units([r for key, r in ridings.items() if key.startswith(code)])
+                for code, p in PROVINCES.items()}},
+            "census-divisions": {"unitLabelPlural": "Census divisions", "units": {
+                "CA_" + p: units(divisions[code]) for code, p in PROVINCES.items()}}}}
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8", newline="\n")
+
+
+def build(source, output, campaign_output):
     census_zip = zipfile.ZipFile(source / "population-zip.zip")
     census_file = next(n for n in census_zip.namelist() if n.endswith(".csv") and "MetaData" not in n)
     census = list(csv.DictReader(io.TextIOWrapper(census_zip.open(census_file), encoding="utf-8-sig")))
@@ -148,6 +213,7 @@ def build(source, output):
         unit["rings"].extend(rings)
     if len(ridings) != 343 or sum(populations.values()) != sum(int(r["Population"]) for r in summaries.values()):
         raise ValueError("Incomplete riding roster or census population mismatch")
+    write_campaign_map(campaign_output, source, groups, ridings)
     for code, province in PROVINCES.items():
         state = f"CA_{province}"
         write_region(output / "census-divisions" / f"{state}.json", groups[code],
@@ -169,5 +235,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-dir", required=True, type=Path)
     parser.add_argument("--output-dir", type=Path, default=Path("src/data/subdivisions/ca"))
+    parser.add_argument("--campaign-output", type=Path, default=Path("public/geo/campaign-manager/ca.json"))
     args = parser.parse_args()
-    build(args.source_dir, args.output_dir)
+    build(args.source_dir, args.output_dir, args.campaign_output)

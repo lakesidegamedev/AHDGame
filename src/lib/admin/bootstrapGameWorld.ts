@@ -10,6 +10,11 @@ import type { ResetRunRecord } from "@/lib/admin/resetRunRecord";
 import { runSeed } from "@/lib/admin/seed";
 import { seedCohortVectors } from "@/lib/admin/seed/seedCohortVectors";
 import { initializeGameState, ensurePerpetualElections, ensureUKElections } from "@/lib/turnSystem";
+import {
+  ensureCAElections,
+  ensureCAProvincialElections,
+  ensureCAPremierElections,
+} from "@/lib/countries/ca/elections/perpetual";
 import { generateStockExchangeSnapshots } from "@/lib/turn/stockExchangeSnapshot";
 import {
   ensureUKRegionalCouncilElections,
@@ -1193,6 +1198,11 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
           async () => {
             await ensurePerpetualElections(now, gameState.currentTurn);
           },
+          forCountry("CA", async () => {
+            await ensureCAElections(now, gameState.currentTurn);
+            await ensureCAProvincialElections(now, gameState.currentTurn);
+            await ensureCAPremierElections(now, gameState.currentTurn);
+          }),
           forCountry("UK", async () => {
             await ensureUKElections(now);
           }),

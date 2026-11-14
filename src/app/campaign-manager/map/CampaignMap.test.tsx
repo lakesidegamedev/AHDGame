@@ -130,6 +130,75 @@ function renderMap(filter: Partial<RaceFilter> = {}, selectedKey: string | null 
 }
 
 describe("CampaignMap", () => {
+  it("explains why Canadian map coverage is unavailable for a historical preset", async () => {
+    geoResult = null;
+    renderWithElectionsMessages(
+      <CampaignMap
+        countryId="CA"
+        preset="1991-default"
+        countryName="Canada"
+        regionNoun="Region"
+        races={[]}
+        selectedRace={null}
+        onSelectRegion={vi.fn()}
+        filter={{ type: "caCommons", stage: "all", regionId: "ALL", query: "", regionNames: {} }}
+      />
+    );
+    expect(
+      await screen.findByText("Local boundary coverage is unavailable for this starting period.")
+    ).toBeTruthy();
+  });
+
+  it("switches Canadian riding and census-division layers without borrowing federal districts", async () => {
+    geoResult = {
+      ...geo,
+      clipUnitsToRegions: true,
+      regions: {
+        CA_NT: { n: "Northwest Territories", d: "M0,0H10V10Z", bb: [0, 0, 10, 10], nb: [] },
+      },
+      units: null,
+      unitLayerByType: { caCommons: "federal-ridings", provincialLegislature: "census-divisions" },
+      unitLayers: {
+        "federal-ridings": {
+          units: { CA_NT: [{ id: "CA-FED-2023-61001", n: "Federal riding", d: "M0,0H10V10Z" }] },
+          unitLabelPlural: "Federal ridings",
+        },
+        "census-divisions": {
+          units: { CA_NT: [{ id: "CA-CD-2021-6101", n: "Census division", d: "M0,0H5V5Z" }] },
+          unitLabelPlural: "Census divisions",
+        },
+      },
+    };
+    const shared = {
+      countryId: "CA",
+      preset: "2027-default",
+      countryName: "Canada",
+      regionNoun: "Province or territory",
+      races: [],
+      selectedRace: null,
+      onSelectRegion: vi.fn(),
+    };
+    const filter = {
+      type: "caCommons",
+      stage: "all" as const,
+      regionId: "CA_NT",
+      query: "",
+      regionNames: { CA_NT: "Northwest Territories" },
+    };
+    const { rerender } = renderWithElectionsMessages(<CampaignMap {...shared} filter={filter} />);
+    expect(await screen.findByRole("button", { name: "Federal riding" })).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Federal riding" })
+        .parentElement?.getAttribute("clip-path")
+    ).toMatch(/^url\(#campaign-region-/);
+    expect(screen.getByText("1 Federal ridings")).toBeTruthy();
+    rerender(<CampaignMap {...shared} filter={{ ...filter, type: "provincialLegislature" }} />);
+    expect(await screen.findByRole("button", { name: "Census division" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Federal riding" })).toBeNull();
+    expect(screen.getByText("1 Census divisions")).toBeTruthy();
+  });
+
   it("shades each region by its race and zooms on click", async () => {
     const { onSelectRegion } = renderMap();
     const london = await screen.findByRole("button", { name: /London/ });

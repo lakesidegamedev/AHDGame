@@ -6,6 +6,7 @@ Canada uses two separate, overlapping layers:
 | --- | --- | --- | --- |
 | Census divisions | Statistics Canada 2021 | 293 | Local population stocks and modeled local maps |
 | Federal ridings | 2023 Representation Order, 2025 election boundaries | 343 | Commons riding maps and Campaign Here |
+| Provincial and territorial outlines | Statistics Canada 2021 cartographic | 13 | Campaign Manager coastlines and regional frames |
 
 Census divisions are the consistent statistical layer across all provinces and
 territories. They are not all local governments or counties. The source's
@@ -51,17 +52,24 @@ retires the departed parent's subdivision stocks inside the existing transaction
 
 ## Rebuilding
 
-Cache the five official sources using the filenames and exact URLs in
+Campaign Manager also uses official cartographic provincial outlines in the same
+projected frame as both local layers. Administrative water extents are clipped to
+those coastal outlines for display. Commons races draw federal ridings. Provincial and
+Premier races draw census divisions with explicit statistical-area labels.
+The asset is qualified for the 2027 preset and records source dates in its notice.
+
+Cache the six official sources using the filenames and exact URLs in
 [manifest.json](./manifest.json), then run:
 
 ```sh
 python scripts/maps/build-canada-geography.py --source-dir <external-source-cache>
 ```
 
-The builder requires only Python's standard library. Both boundary sources use
+The builder requires only Python's standard library. All boundary sources use
 NAD83 / Statistics Canada Lambert (EPSG:3347). SVG paths are generalized at 500
 metres for display; no population or vote crosswalk is inferred from polygon area.
 The manifest records source SHA-256 checksums, coverage, projection and vintages.
+The same command rebuilds `public/geo/campaign-manager/ca.json`.
 
 Sources: [Statistics Canada population table 98-10-0002-01](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=9810000201),
 [2021 census boundaries](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm),
