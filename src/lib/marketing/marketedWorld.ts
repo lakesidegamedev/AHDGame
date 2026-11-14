@@ -17,8 +17,10 @@ import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS, getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 import { ERA_CONFIGS, type EraId } from "@/components/landing/eraThemes";
 import { GAME_VERSION } from "./gameVersion";
+import { countWord, resolveEraCopy } from "./eraCopy";
 
 export { GAME_VERSION };
+export { countWord, resolveEraCopy };
 
 /**
  * Countries with an authored world behind them, playable or not. This is the
@@ -121,39 +123,4 @@ export function formatNationChoices(nations: readonly MarketedNation[]): string 
 /** SEO keyword fragment: "US politics, UK politics, Soviet Union politics". */
 export function nationKeywords(nations: readonly MarketedNation[]): string[] {
   return nations.map((n) => `${n.name} politics`);
-}
-
-const NUMBER_WORDS = [
-  "zero",
-  "one",
-  "two",
-  "three",
-  "four",
-  "five",
-  "six",
-  "seven",
-  "eight",
-  "nine",
-  "ten",
-  "eleven",
-  "twelve",
-];
-
-/** Prose copy counts nations in words, not digits. "Four are open to players." */
-export function countWord(n: number): string {
-  return NUMBER_WORDS[n] ?? String(n);
-}
-
-/** Sentence-leading form, which is where every `{playableCount}` slot sits. */
-function capitalize(word: string): string {
-  return word.charAt(0).toUpperCase() + word.slice(1);
-}
-
-/**
- * Fill the `{playableCount}` slot in authored era prose (`eraThemes`).
- *
- * The count always opens a sentence in that copy, so it is capitalised.
- */
-export function resolveEraCopy(text: string, world: MarketedWorld): string {
-  return text.replaceAll("{playableCount}", capitalize(countWord(world.playable.length)));
 }
