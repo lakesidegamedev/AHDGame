@@ -359,15 +359,19 @@ export async function updateParliamentaryGovernmentSeats(
           },
         }
       );
-      // Restore former cabinet holders before the broad cleanup. The restore
-      // pass reads cabinetMembers to find their character ids; running the
-      // safety-net delete concurrently can erase those rows first and strand a
-      // player with a null currentOffice despite a live electedOfficials seat.
-      await clearCabinetOnTransition(db, countryId);
-      await Promise.all([
-        ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
-        cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
-      ]);
+      // Japan keeps its outgoing cabinet in post as a caretaker until a new PM is
+      // confirmed (seatNewPrimeMinister clears the outgoing cabinet then).
+      if (countryId !== (COUNTRY_CONFIGS.JP?.id ?? "JP")) {
+        // Restore former cabinet holders before the broad cleanup. The restore
+        // pass reads cabinetMembers to find their character ids; running the
+        // safety-net delete concurrently can erase those rows first and strand a
+        // player with a null currentOffice despite a live electedOfficials seat.
+        await clearCabinetOnTransition(db, countryId);
+        await Promise.all([
+          ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
+          cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
+        ]);
+      }
       return;
     }
   }
@@ -1767,6 +1771,8 @@ export async function unformGovernmentAndVacatePM(
   const collapsedAt =
     opts?.collapsedAt !== undefined ? opts.collapsedAt : reason === "post-election" ? null : now;
 
+  const isJapan = countryId === (COUNTRY_CONFIGS.JP?.id ?? "JP");
+  const keepCaretakerCabinet = reason === "snap" || isJapan;
   await govCol.updateOne(
     { _id: countryId },
     {
@@ -1789,11 +1795,11 @@ export async function unformGovernmentAndVacatePM(
         // the auto-snap loop (expired clock never re-armed → watcher fires
         // every turn). Matches existing NC-pass and reset-else-branch behavior.
         pmVacancyDeadlineTurn: currentTurn + PM_VACANCY_DEADLINE_TURNS,
-        ...(reason === "snap"
+        ...(keepCaretakerCabinet
           ? { caretaker: openCaretaker(currentTurn, existing.pmName ?? null) }
           : {}),
       },
-      ...(reason === "snap" ? {} : { $unset: { caretaker: "" } }),
+      ...(keepCaretakerCabinet ? {} : { $unset: { caretaker: "" } }),
     }
   );
 
@@ -1804,16 +1810,20 @@ export async function unformGovernmentAndVacatePM(
   // appointment votes filed during the vacancy.
   await cancelActiveNoConfidenceVotes(db, countryId, now);
 
-  // Restore former cabinet holders before the broad cleanup. The restore pass
-  // reads cabinetMembers to find their character ids; running the safety-net
-  // delete concurrently can erase those rows first and strand a player with a
-  // null currentOffice despite a live electedOfficials seat.
-  await clearCabinetOnTransition(db, countryId);
-  await Promise.all([
-    ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
-    // Extra sweep catches any position not in the country's position map.
-    cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
-  ]);
+  // Japan's outgoing cabinet stays in post as a caretaker until a new PM is
+  // confirmed (seatNewPrimeMinister calls clearCabinetOnTransition then).
+  if (!isJapan) {
+    // Restore former cabinet holders before the broad cleanup. The restore pass
+    // reads cabinetMembers to find their character ids; running the safety-net
+    // delete concurrently can erase those rows first and strand a player with a
+    // null currentOffice despite a live electedOfficials seat.
+    await clearCabinetOnTransition(db, countryId);
+    await Promise.all([
+      ukCabinetCooldownsCollection<Document>(db).deleteMany({ countryId }),
+      // Extra sweep catches any position not in the country's position map.
+      cabinetMembersCollection<Document>(db).deleteMany({ countryId }),
+    ]);
+  }
 
   const clearPM = { $set: { currentOffice: null, updatedAt: now } };
   const departingPlayers = await (

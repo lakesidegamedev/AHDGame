@@ -9,7 +9,10 @@ import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { CabinetNomination, ElectedOfficial } from "@/lib/db/types";
 import { getCabinetPositionById } from "@/lib/constants";
-import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
+import {
+  computeCabinetNominationBreakdown,
+  computeCabinetNominationTally,
+} from "@/lib/congress/governmentVoteBreakdown";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
@@ -69,14 +72,24 @@ export const GET = withNoStore(async function GET(
     // the page can never show more votes than seats (de-seated / cross-country
     // NPP keys carry no weight). Once closed, trust the stored final tally —
     // the resolver reconciled it at close time.
-    const tally =
+    const hasVotes = !!nomination.votes && Object.keys(nomination.votes).length > 0;
+    const [tally, breakdown] = await Promise.all([
       nomination.status === "active"
-        ? await computeCabinetNominationTally(db, countryId, nomination.votes)
-        : {
+        ? computeCabinetNominationTally(db, countryId, nomination.votes)
+        : Promise.resolve({
             votesFor: nomination.votesFor ?? 0,
             votesAgainst: nomination.votesAgainst ?? 0,
             votesAbstain: nomination.votesAbstain ?? 0,
-          };
+          }),
+      hasVotes && typeof computeCabinetNominationBreakdown === "function"
+        ? computeCabinetNominationBreakdown(
+            db,
+            countryId,
+            nomination.votes,
+            nomination.status === "active"
+          )
+        : Promise.resolve({ voteByParty: [], voters: [] }),
+    ]);
 
     return NextResponse.json({
       id: nomination._id.toString(),
@@ -94,6 +107,8 @@ export const GET = withNoStore(async function GET(
       votesFor: tally.votesFor,
       votesAgainst: tally.votesAgainst,
       votesAbstain: tally.votesAbstain,
+      voteByParty: breakdown.voteByParty,
+      voters: breakdown.voters,
       votingEndsAt: nomination.votingEndsAt?.toISOString() ?? null,
       votingEndsOnTurn: nomination.votingEndsOnTurn ?? null,
       proposedAt: nomination.proposedAt?.toISOString() ?? new Date().toISOString(),

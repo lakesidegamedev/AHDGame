@@ -127,15 +127,21 @@ describe("CeoOperationsTable: bulk bar", () => {
     expect(await screen.findByText("Output target +12% on 1 sectors")).toBeTruthy();
   });
 
-  it("bulk pricing sends the posture, and Auto sends null", async () => {
+  it("bulk pricing previews affected sectors with old and new posture, then sends posture or null on Confirm", async () => {
     const { onBulkOperations } = renderTable();
     fireEvent.change(screen.getByLabelText("Bulk pricing"), { target: { value: "-0.1" } });
     fireEvent.click(screen.getByText("Set pricing"));
+    expect(screen.getByText(/Pricing -10% on 1 sector:/)).toBeTruthy();
+    expect(screen.getByText(/Auto → -10%/)).toBeTruthy();
+    expect(onBulkOperations).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() =>
       expect(onBulkOperations).toHaveBeenCalledWith("US", null, { pricingPosture: -0.1 })
     );
+
     fireEvent.change(screen.getByLabelText("Bulk pricing"), { target: { value: "auto" } });
     fireEvent.click(screen.getByText("Set pricing"));
+    fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() =>
       expect(onBulkOperations).toHaveBeenLastCalledWith("US", null, { pricingPosture: null })
     );
