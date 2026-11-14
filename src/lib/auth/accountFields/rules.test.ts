@@ -8,6 +8,10 @@ import {
   normalizeFeedEmail,
   parseAccountChangesPage,
   parseAccountFieldsMode,
+  parseUsernameMode,
+  normalizeFeedUsername,
+  formerUsername,
+  loginIdentifierFilter,
 } from "./rules";
 
 describe("parseAccountFieldsMode", () => {
@@ -89,5 +93,85 @@ describe("decideSupersededLogin", () => {
     expect(decideSupersededLogin("error")).toBe("unavailable");
     expect(decideSupersededLogin("timeout")).toBe("unavailable");
     expect(decideSupersededLogin("unknown")).toBe("unavailable");
+  });
+});
+
+describe("parseUsernameMode", () => {
+  it("is off unless exactly central", () => {
+    expect(parseUsernameMode(undefined)).toBe("off");
+    expect(parseUsernameMode("")).toBe("off");
+    expect(parseUsernameMode("on")).toBe("off");
+    expect(parseUsernameMode(" Central ")).toBe("central");
+  });
+});
+
+describe("normalizeFeedUsername", () => {
+  it("keeps display case and builds a lowercase key", () => {
+    expect(normalizeFeedUsername(" MixedCase ")).toEqual({
+      display: "MixedCase",
+      key: "mixedcase",
+    });
+  });
+  it("accepts 2 and 22 character names", () => {
+    expect(normalizeFeedUsername("Jo")?.key).toBe("jo");
+    expect(normalizeFeedUsername("a".repeat(22))?.display).toHaveLength(22);
+  });
+  it("refuses empty, spaced and non-string values", () => {
+    expect(normalizeFeedUsername("")).toBeNull();
+    expect(normalizeFeedUsername("a b")).toBeNull();
+    expect(normalizeFeedUsername(5)).toBeNull();
+  });
+});
+
+describe("formerUsername", () => {
+  const now = new Date("2030-02-01T00:00:00Z");
+  const entry = (username: string, at: string) => ({
+    username,
+    changedAt: new Date(at),
+    source: "central" as const,
+  });
+  it("shows the newest name inside 30 days", () => {
+    const history = [
+      entry("Older", "2030-01-10T00:00:00Z"),
+      entry("Recent", "2030-01-25T00:00:00Z"),
+    ];
+    expect(formerUsername(history, now)).toBe("Recent");
+  });
+  it("shows nothing after 30 days or with no history", () => {
+    expect(formerUsername([entry("Old", "2029-12-25T00:00:00Z")], now)).toBeNull();
+    expect(formerUsername(undefined, now)).toBeNull();
+    expect(formerUsername([], now)).toBeNull();
+  });
+});
+
+describe("loginIdentifierFilter", () => {
+  type Row = { email: string; username: string };
+  const find = (rows: Row[], identifier: string) => {
+    const [byEmail, byName] = loginIdentifierFilter(identifier).$or;
+    return rows.find((r) => r.email === byEmail.email || r.username === byName.username);
+  };
+
+  it("matches case-insensitively and ignores surrounding spaces", () => {
+    const rows = [{ email: "a@example.invalid", username: "newname" }];
+    expect(find(rows, " NewName ")?.username).toBe("newname");
+    expect(find(rows, "A@Example.invalid")?.username).toBe("newname");
+  });
+
+  it("matches the new name after a rename and not the old one", () => {
+    const row = { email: "a@example.invalid", username: "oldname" };
+    expect(find([row], "OldName")).toBe(row);
+    row.username = "newname";
+    expect(find([row], "NewName")).toBe(row);
+    expect(find([row], "OldName")).toBeUndefined();
+  });
+
+  it("matches 2 and 22 character names", () => {
+    const long = "a".repeat(22);
+    const rows = [
+      { email: "b@example.invalid", username: "jo" },
+      { email: "c@example.invalid", username: long },
+    ];
+    expect(find(rows, "JO")?.username).toBe("jo");
+    expect(find(rows, long.toUpperCase())?.username).toBe(long);
   });
 });

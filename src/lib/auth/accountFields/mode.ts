@@ -5,6 +5,9 @@ import {
   ACCOUNT_URL,
   accountFieldsMessage,
   parseAccountFieldsMode,
+  parseUsernameMode,
+  USERNAME_CENTRAL_MESSAGE,
+  type UsernameMode,
   type AccountFieldKind,
   type AccountFieldsMode,
 } from "./rules";
@@ -32,5 +35,19 @@ export function accountFieldsRefusal(kind: AccountFieldKind): NextResponse | nul
   return errorResponse(409, accountFieldsMessage(mode, kind), {
     headers,
     extra: { accountFieldsMode: mode, accountUrl: ACCOUNT_URL },
+  });
+}
+
+/** The one place the username switch is read. */
+export function getUsernameMode(): UsernameMode {
+  return parseUsernameMode(authConfig.usernameMode());
+}
+
+/** The refusal a username write returns when names follow the central account, else null. */
+export function usernameRefusal(): NextResponse | null {
+  if (getUsernameMode() !== "central") return null;
+  return errorResponse(409, USERNAME_CENTRAL_MESSAGE, {
+    headers: { "Cache-Control": "private, no-store" },
+    extra: { usernameMode: "central", accountUrl: ACCOUNT_URL },
   });
 }

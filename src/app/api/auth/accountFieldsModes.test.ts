@@ -79,8 +79,8 @@ describe("email and password writes by account fields mode", () => {
 
   it("publishes the mode for the settings screens", async () => {
     vi.stubEnv("AHD_ACCOUNT_FIELDS_MODE", "central");
-    expect(await (await publicMode()).json()).toEqual({ mode: "central" });
+    expect(await (await publicMode()).json()).toEqual({ mode: "central", usernameMode: "off" });
     vi.stubEnv("AHD_ACCOUNT_FIELDS_MODE", "nonsense");
-    expect(await (await publicMode()).json()).toEqual({ mode: "off" });
+    expect(await (await publicMode()).json()).toEqual({ mode: "off", usernameMode: "off" });
   });
 });

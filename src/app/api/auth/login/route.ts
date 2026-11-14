@@ -1,3 +1,4 @@
+import { loginIdentifierFilter } from "@/lib/auth/accountFields/rules";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes, randomUUID } from "crypto";
@@ -103,9 +104,7 @@ export async function POST(request: Request) {
     const usersCollectionHandle = usersCollection<Document>(db);
 
     // Find user by email or username
-    const user = await usersCollectionHandle.findOne({
-      $or: [{ email: email.toLowerCase() }, { username: email.toLowerCase() }],
-    });
+    const user = await usersCollectionHandle.findOne(loginIdentifierFilter(email));
 
     if (!user) {
       // Perform dummy bcrypt compare to prevent timing-based username enumeration

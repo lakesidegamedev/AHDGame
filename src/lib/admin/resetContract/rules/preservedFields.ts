@@ -62,6 +62,7 @@ export const USER_FIELD_CONTRACT: PreservedFieldContract = Object.freeze({
   emailVerifiedAt: keep(ACCOUNT),
   emailHistory: keep(ACCOUNT),
   username: keep(ACCOUNT),
+  usernameHistory: keep(ACCOUNT),
   displayName: keep(ACCOUNT),
   password: keep(AUTH),
   role: keep("Staff role."),

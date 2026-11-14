@@ -5,9 +5,11 @@ import { cronLocksCollection } from "@/lib/db/repositories/cronLocks";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
 import { bridgeAccountChanges, isBridgeConfigured } from "@/lib/auth/centralLogin/bridgeClient";
-import { getAccountFieldsMode } from "./mode";
+import { getAccountFieldsMode, getUsernameMode } from "./mode";
 import {
   normalizeFeedEmail,
+  FORMER_USERNAME_DAYS,
+  normalizeFeedUsername,
   parseAccountChangesPage,
   type AccountChange,
   type AccountChangesPage,
@@ -74,6 +76,55 @@ async function recordFeedError(db: Db, owner: string, message: string, now: Date
   );
 }
 
+type Users = ReturnType<typeof usersCollection<Document>>;
+
+/**
+ * Follows a central rename. `username` stays the lowercase sign-in key and
+ * `displayName` carries the case. Other collections hold either what was
+ * written at the time (logs, tickets) or read the name from this row, so this
+ * row is the only write.
+ */
+async function applyUsernameChange(
+  users: Users,
+  change: AccountChange,
+  _id: ObjectId,
+  changedAt: Date
+): Promise<ApplyOutcome> {
+  const name = normalizeFeedUsername(change.username);
+  if (!name) return { error: `seq ${change.seq}: invalid username in feed` };
+  const user = await users.findOne({ _id }, { projection: { username: 1, displayName: 1 } });
+  if (!user) return "ignored";
+  const currentKey = typeof user.username === "string" ? user.username.toLowerCase() : "";
+  const currentDisplay = typeof user.displayName === "string" ? user.displayName : "";
+  if (currentKey === name.key && currentDisplay === name.display) return "unchanged";
+
+  if (currentKey !== name.key) {
+    const taken = await users.findOne(
+      { username: name.key, _id: { $ne: _id } },
+      { projection: { _id: 1 } }
+    );
+    if (taken) return { error: `seq ${change.seq}: username already held by another account` };
+  }
+
+  const update: Document = { $set: { username: name.key, displayName: name.display } };
+  if (currentKey !== name.key && currentKey) {
+    update.$push = {
+      usernameHistory: { username: currentDisplay || currentKey, changedAt, source: "central" },
+    };
+  }
+  try {
+    const result = await users.updateOne({ _id, username: user.username }, update);
+    if (result.matchedCount !== 1) return { error: `seq ${change.seq}: account changed, retry` };
+  } catch (error) {
+    if (isDuplicateKey(error)) {
+      return { error: `seq ${change.seq}: username already held by another account` };
+    }
+    throw error;
+  }
+  invalidateCachedUser(change.ahdUserId);
+  return "applied";
+}
+
 export type ApplyOutcome = "applied" | "unchanged" | "ignored" | { error: string };
 
 /** Applies one change. Safe to replay: a repeat leaves the account as it is. */
@@ -82,10 +133,16 @@ export async function applyAccountChange(
   change: AccountChange,
   now: Date
 ): Promise<ApplyOutcome> {
-  if (change.kind !== "email" && change.kind !== "password") return "ignored";
   const users = usersCollection<Document>(db);
   const _id = new ObjectId(change.ahdUserId);
   const changedAt = change.at > 0 ? new Date(change.at) : now;
+
+  if (change.kind === "username") {
+    if (getUsernameMode() !== "central") return "ignored";
+    return applyUsernameChange(users, change, _id, changedAt);
+  }
+  if (change.kind !== "email" && change.kind !== "password") return "ignored";
+  if (getAccountFieldsMode() !== "central") return "ignored";
 
   if (change.kind === "password") {
     const result = await users.updateOne(
@@ -200,10 +257,24 @@ export async function pollAccountChanges(deps: PollDeps): Promise<PollResult> {
 
 export interface AccountFieldsStatus {
   mode: string;
+  usernameMode: string;
+  usernameChangesLast30Days: number;
   cursor: number;
   lastPollAt: string | null;
   lastError: string | null;
   accountsWithoutLocalPassword: number;
+}
+
+async function countRecentUsernameChanges(db: Db, since: Date): Promise<number> {
+  const rows = await usersCollection<Document>(db)
+    .aggregate<{ n: number }>([
+      { $match: { "usernameHistory.changedAt": { $gte: since } } },
+      { $unwind: "$usernameHistory" },
+      { $match: { "usernameHistory.changedAt": { $gte: since } } },
+      { $count: "n" },
+    ])
+    .toArray();
+  return rows[0]?.n ?? 0;
 }
 
 export async function getAccountFieldsStatus(db: Db): Promise<AccountFieldsStatus> {
@@ -211,8 +282,12 @@ export async function getAccountFieldsStatus(db: Db): Promise<AccountFieldsStatu
   const accountsWithoutLocalPassword = await usersCollection<Document>(db).countDocuments({
     passwordSupersededAt: { $exists: true },
   });
+  const since = new Date(Date.now() - FORMER_USERNAME_DAYS * 86_400_000);
+  const usernameChangesLast30Days = await countRecentUsernameChanges(db, since);
   return {
     mode: getAccountFieldsMode(),
+    usernameMode: getUsernameMode(),
+    usernameChangesLast30Days,
     cursor: typeof state?.cursor === "number" ? state.cursor : 0,
     lastPollAt: state?.lastPollAt ? state.lastPollAt.toISOString() : null,
     lastError: state?.lastError ?? null,
@@ -224,9 +299,10 @@ declare global {
   var __ahdAccountFieldsConsumer: ReturnType<typeof setInterval> | undefined;
 }
 
-/** Starts the poller in the web process. Inert unless the mode is central and the bridge is set up. */
+/** Starts the poller in the web process. Inert unless a mode is central and the bridge is set up. */
 export function startAccountFieldsConsumer(): boolean {
-  if (getAccountFieldsMode() !== "central" || !isBridgeConfigured()) return false;
+  const following = getAccountFieldsMode() === "central" || getUsernameMode() === "central";
+  if (!following || !isBridgeConfigured()) return false;
   if (globalThis.__ahdAccountFieldsConsumer) return false;
 
   const owner = `web-${process.pid}-${Math.random().toString(36).slice(2, 10)}`;
