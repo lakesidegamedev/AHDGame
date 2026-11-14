@@ -2,12 +2,7 @@ import type { Db } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { retireDissolvedCorporationCash } from "./dissolutionCash";
 import { ObjectId } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  CorporateSector,
-  CorporationExitReason,
-} from "@/lib/db/types";
+import type { Character, Corporation, CorporationExitReason } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";

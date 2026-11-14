@@ -38,11 +38,7 @@ import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
 
-import {
-  couponCashWitness,
-  payoutTransition,
-  SOVEREIGN_COUPON_CLAIMS_COLLECTION,
-} from "./sovereignCouponPayout";
+import { couponCashWitness, payoutTransition } from "./sovereignCouponPayout";
 export { SOVEREIGN_COUPON_CLAIMS_COLLECTION } from "./sovereignCouponPayout";
 import {
   fundedCouponPayeeWitness,

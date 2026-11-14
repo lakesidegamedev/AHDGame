@@ -11,7 +11,7 @@ import {
   applyBoardValueDeltasByRegion,
   type BoardDelta,
 } from "@/lib/politicalLegislation/boardWrite";
-import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
+import type { Crisis, CrisisEffect } from "@/lib/db/types/crisis";
 import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
 import type { MetricCategoryId } from "@/lib/db/types";
 import {

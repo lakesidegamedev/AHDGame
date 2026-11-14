@@ -27,8 +27,6 @@ import type {
   CreditRating,
   Corporation,
   FederalBudget,
-  GameConfig,
-  GameState,
 } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import {

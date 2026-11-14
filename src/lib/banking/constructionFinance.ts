@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector, SectorBuildOrder } from "@/lib/db/types/corporation";
-import type { BankLoan } from "@/lib/db/types/bank";
 import { loadBankingSnapshot } from "./snapshot";
 import { loadBorrowerSnapshot } from "./lending";
 import { quoteConstructionFinance } from "./rules/constructionFinance";

@@ -50,7 +50,6 @@ import {
   participatesInFloat,
   resolveMonetaryRegime,
 } from "@/lib/monetary/brettonWoods";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { isCommandEconomy, MARKETIZATION_SCHEDULE } from "@/lib/constants/commandEconomy";
 import { rankReserveCurrencies } from "@/lib/centralBank/reserveCurrencyRanking";
 import { computeCurrencyVolumes } from "@/lib/currency/volumeTracker";
