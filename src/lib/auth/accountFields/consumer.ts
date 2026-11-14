@@ -314,11 +314,19 @@ export async function countFailClosedRefusals(
 ): Promise<{ lastHour: number; byHour: { hour: string; count: number }[] }> {
   const col = await getActionAuditLogCollection(db);
   const match = { action: "auth.login", reason: "central_unavailable" };
-  const lastHour = await col.countDocuments({ ...match, ts: { $gte: new Date(now.getTime() - 3_600_000) } });
+  const lastHour = await col.countDocuments({
+    ...match,
+    ts: { $gte: new Date(now.getTime() - 3_600_000) },
+  });
   const rows = await col
     .aggregate<{ _id: string; count: number }>([
       { $match: { ...match, ts: { $gte: new Date(now.getTime() - 24 * 3_600_000) } } },
-      { $group: { _id: { $dateToString: { format: "%Y-%m-%dT%H:00Z", date: "$ts" } }, count: { $sum: 1 } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%dT%H:00Z", date: "$ts" } },
+          count: { $sum: 1 },
+        },
+      },
       { $sort: { _id: -1 } },
     ])
     .toArray();

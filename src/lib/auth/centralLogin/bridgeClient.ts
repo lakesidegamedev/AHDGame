@@ -118,14 +118,26 @@ export function failureReason(error: unknown): string {
   const cause = (error as { cause?: { code?: unknown } } | null)?.cause;
   const code = typeof cause?.code === "string" ? cause.code : "";
   if (code === "ECONNREFUSED") return "connection_refused";
-  if (code === "ECONNRESET" || code === "UND_ERR_SOCKET" || code === "EPIPE") return "connection_reset";
+  if (code === "ECONNRESET" || code === "UND_ERR_SOCKET" || code === "EPIPE")
+    return "connection_reset";
   if (code === "ENOTFOUND" || code === "EAI_AGAIN") return "dns";
-  if (code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT" || code === "UND_ERR_HEADERS_TIMEOUT") return "timeout";
+  if (
+    code === "ETIMEDOUT" ||
+    code === "UND_ERR_CONNECT_TIMEOUT" ||
+    code === "UND_ERR_HEADERS_TIMEOUT"
+  )
+    return "timeout";
   return "network";
 }
 
 /** Failures worth one immediate retry: the request may never have reached a login server. */
-export const RETRYABLE_REASONS = new Set(["timeout", "connection_refused", "connection_reset", "dns", "network"]);
+export const RETRYABLE_REASONS = new Set([
+  "timeout",
+  "connection_refused",
+  "connection_reset",
+  "dns",
+  "network",
+]);
 
 function nodeOf(response: Response): string | undefined {
   const node = response.headers.get("x-lakeside-node");
@@ -162,7 +174,11 @@ async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
       };
     const body = (await response.json()) as { access_token?: unknown; expires_in?: unknown };
     if (typeof body.access_token !== "string" || body.access_token.length === 0) {
-      return { ok: false, kind: "error", detail: { reason: "bad_response", phase: "token", node: nodeOf(response) } };
+      return {
+        ok: false,
+        kind: "error",
+        detail: { reason: "bad_response", phase: "token", node: nodeOf(response) },
+      };
     }
     const lifetimeS =
       typeof body.expires_in === "number" && body.expires_in > 0
@@ -174,7 +190,11 @@ async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
     };
     return { ok: true, data: body.access_token };
   } catch (error) {
-    return { ok: false, kind: classify(error), detail: { reason: failureReason(error), phase: "token" } };
+    return {
+      ok: false,
+      kind: classify(error),
+      detail: { reason: failureReason(error), phase: "token" },
+    };
   }
 }
 
@@ -224,7 +244,8 @@ async function rawPost(
   requestId?: string
 ): Promise<BridgeResult<unknown>> {
   const base = authConfig.accountBridgeUrl();
-  if (!base) return { ok: false, kind: "error", detail: { reason: "not_configured", phase: "call" } };
+  if (!base)
+    return { ok: false, kind: "error", detail: { reason: "not_configured", phase: "call" } };
   const deadline = Date.now() + bridgeTimeoutMs();
 
   const token = await fetchToken(deadline);
@@ -252,7 +273,11 @@ async function rawPost(
       };
     return { ok: true, data: await response.json() };
   } catch (error) {
-    return { ok: false, kind: classify(error), detail: { reason: failureReason(error), phase: "call" } };
+    return {
+      ok: false,
+      kind: classify(error),
+      detail: { reason: failureReason(error), phase: "call" },
+    };
   }
 }
 
@@ -282,7 +307,11 @@ export async function bridgePasswordCheck(
   options: { enforceEnabled: boolean }
 ): Promise<PasswordCheckOutcome> {
   const requestId = globalThis.crypto.randomUUID();
-  const payload = { ahdUserId, password, ...(options.enforceEnabled ? { enforceEnabled: true } : {}) };
+  const payload = {
+    ahdUserId,
+    password,
+    ...(options.enforceEnabled ? { enforceEnabled: true } : {}),
+  };
   let result = await post("password-check", payload, requestId);
   // One immediate retry when the request may never have reached a login server (timeout or a
   // connection-level failure). Never on an answer: a wrong password, an HTTP error or a breaker skip.

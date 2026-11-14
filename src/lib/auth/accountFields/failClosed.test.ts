@@ -12,7 +12,12 @@ describe("fail-closed refusal counts for the opening-day watch", () => {
       },
       aggregate: (pipeline: unknown) => {
         seen.pipelines.push(pipeline);
-        return { toArray: async () => [{ _id: "2030-01-01T09:00Z", count: 2 }, { _id: "2030-01-01T08:00Z", count: 1 }] };
+        return {
+          toArray: async () => [
+            { _id: "2030-01-01T09:00Z", count: 2 },
+            { _id: "2030-01-01T08:00Z", count: 1 },
+          ],
+        };
       },
       createIndex: async () => "ok",
       createIndexes: async () => [],

@@ -116,7 +116,11 @@ describe("bridge client", () => {
     route(() => json({ error: "secret detail" }, 500));
     const failed = await bridgePasswordSet("u1", "pw");
     // The failure carries a reason, status and node for logs, never the response body.
-    expect(failed).toEqual({ ok: false, kind: "error", detail: { reason: "http", phase: "call", status: 500 } });
+    expect(failed).toEqual({
+      ok: false,
+      kind: "error",
+      detail: { reason: "http", phase: "call", status: 500 },
+    });
     expect(JSON.stringify(failed)).not.toContain("secret detail");
     route(() => json({ result: "ok" }));
     expect(await bridgeAccountDelete("u1")).toEqual({ ok: true, data: null });
@@ -161,7 +165,9 @@ describe("password check failure reasons and the single retry", () => {
       if (calls === 1) throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
       return json({ result: "ok" });
     });
-    await expect(bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })).resolves.toBe("ok");
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("ok");
     expect(calls).toBe(2);
   });
 
@@ -171,7 +177,9 @@ describe("password check failure reasons and the single retry", () => {
       calls += 1;
       throw netError("ECONNREFUSED");
     });
-    await expect(bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })).resolves.toBe("error");
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("error");
     expect(calls).toBe(2);
   });
 
@@ -181,7 +189,9 @@ describe("password check failure reasons and the single retry", () => {
       calls += 1;
       return json({ result: "wrong" });
     });
-    await expect(bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })).resolves.toBe("wrong");
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("wrong");
     expect(calls).toBe(1);
   });
 
@@ -191,7 +201,9 @@ describe("password check failure reasons and the single retry", () => {
       calls += 1;
       return json({ error: "x" }, 500);
     });
-    await expect(bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })).resolves.toBe("error");
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("error");
     expect(calls).toBe(1);
   });
 
@@ -203,9 +215,14 @@ describe("password check failure reasons and the single retry", () => {
       calls += 1;
       ids.push(String((init.headers as Record<string, string>)["X-Request-Id"]));
       if (calls === 1) throw netError("ECONNRESET");
-      return new Response("busy", { status: 503, headers: { "X-Lakeside-Node": "127.0.0.1:8082" } });
+      return new Response("busy", {
+        status: 503,
+        headers: { "X-Lakeside-Node": "127.0.0.1:8082" },
+      });
     });
-    await expect(bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })).resolves.toBe("error");
+    await expect(
+      bridgePasswordCheck("6af6a3f1c51fffa232cd7088", "pw", { enforceEnabled: true })
+    ).resolves.toBe("error");
     expect(ids).toHaveLength(2);
     expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
     expect(ids[1]).toBe(ids[0]);
