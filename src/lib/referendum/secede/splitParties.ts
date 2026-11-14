@@ -343,9 +343,27 @@ export async function splitParties(
         { projection: { _id: 1, countryId: 1, party: 1, partyId: 1 } }
       )
       .toArray();
-    if (rows.length)
+    // A slate belongs to a real party. An independentized party has no party
+    // doc in the new country, and the unique (country, party, election) index
+    // allows only one "independent" slate per election, so several dissolved
+    // parties' slates for the same race would collide. Drop them with their
+    // candidate rows instead of relabelling.
+    let kept = rows;
+    if (collection === "recruitmentSlates") {
+      const becomesIndependent = (row: (typeof rows)[number]) =>
+        row.partyId != null &&
+        !(row.countryId === toCountryId && plan.idMap[Number(row.partyId)] != null);
+      const dropped = rows.filter(becomesIndependent);
+      kept = rows.filter((row) => !becomesIndependent(row));
+      if (dropped.length) {
+        const droppedIds = dropped.map((row) => row._id);
+        await db.collection("slateCandidates").deleteMany({ slateId: { $in: droppedIds } });
+        await db.collection("recruitmentSlates").deleteMany({ _id: { $in: droppedIds } });
+      }
+    }
+    if (kept.length)
       await db.collection(collection).bulkWrite(
-        rows.map((row) => ({
+        kept.map((row) => ({
           updateOne: {
             filter: { _id: row._id },
             update: {
