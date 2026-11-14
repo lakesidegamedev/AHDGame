@@ -16,6 +16,7 @@
     "commitlint.config.mjs",
     "scripts/**/*.{ts,mjs,js}",
     "src/proxy.ts",
+    "src/landing-islands/*.ts",
     "src/**/*.test.{ts,tsx}",
     "src/**/__tests__/**/*.{ts,tsx}",
     "e2e/**/*.{ts,tsx}"
@@ -39,6 +40,7 @@
     "husky",
     "lint-staged",
     "prettier",
+    "esbuild",
     "eslint-plugin-*",
     "eslint-config-*"
   ]

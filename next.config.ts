@@ -182,6 +182,23 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The static landing page's poster frames, fonts and island scripts.
+        // Scripts and fonts are content-hashed or never edited in place, so they
+        // cache for a year; posters are regenerated rarely and revalidate daily.
+        source: "/landing/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/landing/js/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        source: "/landing/fonts/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
         // Corp-detail and elections APIs return large JSON fetched client-side
         // after the page shell renders. They set no Cache-Control of their own,
         // so without a directive Cloudflare re-compresses them with zstd —
