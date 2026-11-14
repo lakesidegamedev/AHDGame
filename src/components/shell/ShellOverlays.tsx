@@ -1,24 +1,9 @@
-import { AdSlot } from "@/components/AdSlot";
-import { AskDrawer } from "@/components/askDrawer/AskDrawer";
+import type { ComponentType } from "react";
 import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
-import { BugReportFab } from "@/components/BugReportFab";
-import {
-  DeferredNominationChoicePrompt,
-  DeferredSeasonRecapGate,
-  DeferredSingleplayerGuide,
-  DeferredStatAllocationGate,
-  DeferredTurnProgressToast,
-  DeferredTutorialCoachMount,
-  DeferredWealthTierRepickGate,
-} from "@/components/DeferredShellOverlays";
-import { LiveRefreshBanner } from "@/components/LiveRefreshBanner";
 import { MaintenancePartialBanner } from "@/components/MaintenancePartialBanner";
 import { MassCrashAlertBanner } from "@/components/MassCrashAlertBanner";
 import { NavbarWrapper } from "@/components/NavbarWrapper";
 import { PollBannerNotice } from "@/components/PollBannerNotice";
-import { SiteFooter } from "@/components/SiteFooter";
-import { StatusBar } from "@/components/StatusBar";
-import { VpnGateBanner } from "@/components/VpnGateBanner";
 import { isChromeHiddenPath } from "@/lib/constants/layoutPaths";
 import type { CountryId } from "@/lib/constants/countries";
 
@@ -37,15 +22,29 @@ export interface ShellFlags {
   typedWordmark: boolean;
 }
 
+/**
+ * The overlays only a full shell renders, loaded by the layout with a dynamic
+ * import so a light-shell page never downloads their code. See
+ * `ShellOverlaysFull`.
+ */
+export interface ShellFullParts {
+  TopLead: ComponentType<ShellFlags>;
+  TopGates: ComponentType<ShellFlags>;
+  Bottom: ComponentType<ShellFlags>;
+}
+
 /** Always-mounted chrome that sits before `<main>`. */
-export function ShellOverlaysTop(flags: ShellFlags) {
-  const { light, isWikiSubdomain, singleplayer } = flags;
+export function ShellOverlaysTop({
+  full,
+  ...flags
+}: ShellFlags & { full?: ShellFullParts | null }) {
+  const { light, isWikiSubdomain } = flags;
   const showNavbar = !isWikiSubdomain && !(light && isChromeHiddenPath(flags.pathname));
   return (
     <>
       {showNavbar && (
         <NavbarWrapper
-          singleplayer={singleplayer}
+          singleplayer={flags.singleplayer}
           clientShell={flags.isClientShell}
           phoneApp={flags.isStoreApp}
           displayMode={flags.displayMode}
@@ -53,43 +52,22 @@ export function ShellOverlaysTop(flags: ShellFlags) {
           typedWordmark={flags.typedWordmark}
         />
       )}
-      {!isWikiSubdomain && !light && <BugReportFab displayMode={flags.displayMode} />}
-      {/* Experimental opt-in (Settings). Singleplayer has no Ask service. */}
-      {!isWikiSubdomain && !light && !singleplayer && <AskDrawer />}
-      {!isWikiSubdomain && !light && <VpnGateBanner />}
+      {full && <full.TopLead {...flags} />}
       {!isWikiSubdomain && <MassCrashAlertBanner />}
       {!isWikiSubdomain && <MaintenancePartialBanner />}
       {/* Admin-controlled survey strip. Not auth-gated: it must reach signed-out
           visitors too. */}
       {!isWikiSubdomain && <PollBannerNotice />}
       <AuthConnectivityGate />
-      {!light && (
-        <>
-          <DeferredStatAllocationGate />
-          <DeferredWealthTierRepickGate />
-          <DeferredSeasonRecapGate />
-          <DeferredNominationChoicePrompt />
-        </>
-      )}
+      {full && <full.TopGates {...flags} />}
     </>
   );
 }
 
 /** Always-mounted chrome that sits after `<main>`. */
-export function ShellOverlaysBottom(flags: ShellFlags) {
-  const { light, isWikiSubdomain, singleplayer, isNativeApp } = flags;
-  if (light) return null;
-  return (
-    <>
-      {!isWikiSubdomain && !isNativeApp && <AdSlot />}
-      {!isWikiSubdomain && <SiteFooter displayMode={flags.displayMode} />}
-      {!isWikiSubdomain && !flags.nativeStatusDock && (
-        <StatusBar showOnlineStatus={!flags.isClientShell} turnStatusLink={!singleplayer} />
-      )}
-      {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
-      {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
-      {!isWikiSubdomain && <DeferredTutorialCoachMount />}
-      {!isWikiSubdomain && <LiveRefreshBanner />}
-    </>
-  );
+export function ShellOverlaysBottom({
+  full,
+  ...flags
+}: ShellFlags & { full?: ShellFullParts | null }) {
+  return full ? <full.Bottom {...flags} /> : null;
 }
