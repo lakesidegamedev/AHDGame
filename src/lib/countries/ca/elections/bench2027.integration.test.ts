@@ -6,6 +6,7 @@ import { loadNPPContext } from "@/lib/turn/npp/context";
 import { processElectionEntry } from "@/lib/turn/npp/electionEntry";
 import { seedCaElectionBench } from "../seedElectionBench";
 import { CA_ELECTIONS } from "../elections";
+import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { caRegions2027 } from "../data/caRegions2027";
 import {
   recordPrimarySnapshots,
@@ -175,11 +176,12 @@ it.each(["none", "no-npps"])("does not refill %s worlds", async (startingParties
   expect(await db.collection("npps").countDocuments()).toBe(0);
 });
 
-it("uses the authored regional party eligibility for the complete Default Parties bench", async () => {
+it("gives every default party a complete national election bench", async () => {
   await db.collection("politicalParties").deleteMany({ countryId: "CA" });
   await db.collection("statePartyOrg").deleteMany({ countryId: "CA" });
   const parties = caParties.map((party, index) => ({
     ...party,
+    tier: resolveSeedPartyTier(party, "2027-default"),
     _id: new ObjectId(),
     sequentialId: index + 1,
   }));
@@ -189,13 +191,37 @@ it("uses the authored regional party eligibility for the complete Default Partie
     .insertMany(
       caStatePartyOrgRows(CA_REGION_POLLING_2025, caSlugToPartyId(CA_PARTY_SLUG_TO_NAME, parties))
     );
-  expect(await seedCaElectionBench(db, "2027-default")).toBe(159);
-  const regionalParty = parties.find((party) => party.abbreviation === "AL")!;
+  expect(await seedCaElectionBench(db, "2027-default")).toBe(195);
+  const regionalParty = parties.find((party) => party.abbreviation === "BQ")!;
   const actors = await db
     .collection("npps")
     .find({ party: String(regionalParty.sequentialId) })
     .toArray();
-  expect(actors).toHaveLength(3);
-  expect(actors.every((actor) => actor.homeState === "CA_QC")).toBe(true);
+  expect(actors).toHaveLength(39);
+  expect(new Set(actors.map((actor) => actor.homeState)).size).toBe(13);
   expect(await seedCaElectionBench(db, "2027-default")).toBe(0);
+  memory.seed(
+    "stateDemographics",
+    buildModelRegionDemographics(getCaModel("2027")!).map(({ groups: _groups, ...data }) => {
+      void _groups;
+      return data;
+    })
+  );
+  const now = new Date("2026-01-01T00:00:00Z");
+  await CA_ELECTIONS.spawn!(now, 2);
+  await processElectionEntry(await loadNPPContext(now, { db, currentTurn: 2 }));
+  const races = await db.collection("elections").find({ countryId: "CA" }).toArray();
+  const entries = await db
+    .collection("electionCandidates")
+    .find({ countryId: "CA", status: "active" })
+    .toArray();
+  expect(races).toHaveLength(39);
+  for (const race of races) {
+    expect(
+      entries
+        .filter((entry) => String(entry.electionId) === String(race._id))
+        .some((entry) => entry.party === String(regionalParty.sequentialId)),
+      `${race.electionType}:${race.state}`
+    ).toBe(true);
+  }
 });

@@ -77,7 +77,7 @@ areas: [engine]
 - Seeds an unseated Canadian regional candidate bench in 2027 Default Parties
   worlds so provincial elections receive NPP competitors alongside Commons and
   premier contests, without appointing winners or refilling No NPPs worlds.
-- Enforces the Laurentian Alliance's authored Quebec-only regional presence when
+- Uses the Canadian default parties' nationwide regional presence when
   seeding Canadian party organizations and NPP candidate eligibility.
 - Initializes working-age population before the first turn, preserving historical
   voting ages and preventing an artificial opening employment collapse.

@@ -3,6 +3,9 @@ import type { Db } from "mongodb";
 import { seedCA2027, seedsCanada, writeCA2027 } from "./seedCA2027";
 import { tierFor } from "@/lib/world/eraRoster";
 import { caParties } from "@/lib/countries/ca/data/caParties";
+import { ObjectId } from "mongodb";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { CA_LEGACY_PARTY_NAMES } from "@/lib/countries/ca/data/caLegacyPartyNames";
 
 interface Recorded {
   bulkWrite: ReturnType<typeof vi.fn>;
@@ -45,6 +48,39 @@ function recordingDb() {
 }
 
 describe("seedCA2027", () => {
+  it("upgrades legacy defaults through repeated 2027 resets without duplicating identities", async () => {
+    const memory = createInMemoryDb();
+    const ids = caParties.map(() => new ObjectId());
+    memory.seed(
+      "politicalParties",
+      caParties.map((seed, i) => ({
+        _id: ids[i]!,
+        countryId: "CA",
+        sequentialId: i + 1,
+        isDefault: true,
+        name: CA_LEGACY_PARTY_NAMES[seed.name]!,
+        abbreviation: "OLD",
+      }))
+    );
+    const db = memory as unknown as Db;
+    for (let reset = 0; reset < 2; reset++) {
+      await writeCA2027(db, true, () => {});
+      const rows = await memory.collection("politicalParties").find({ countryId: "CA" }).toArray();
+      expect(rows).toHaveLength(5);
+      expect(rows.map((row) => row._id)).toEqual(ids);
+      expect(rows.map((row) => row.name)).toEqual(caParties.map((seed) => seed.name));
+      expect(rows.map((row) => row.abbreviation)).toEqual(["LIB", "CON", "NDP", "BQ", "GRN"]);
+      expect(rows.every((row) => row.isDefault)).toBe(true);
+      const orgs = await memory.collection("statePartyOrg").find({ countryId: "CA" }).toArray();
+      expect(orgs).toHaveLength(65);
+      expect(
+        orgs.filter((org) => String(org.partyId) === "4").every((org) => org.hasPresence)
+      ).toBe(true);
+      expect(orgs.every((org) => ["1", "2", "3", "4", "5"].includes(String(org.partyId)))).toBe(
+        true
+      );
+    }
+  });
   it("ships dark until the 2027 roster includes Canada", async () => {
     expect(seedsCanada("2027-default")).toBe(tierFor("2027-default", "CA") !== "absent");
     expect(seedsCanada("1991-default")).toBe(false);

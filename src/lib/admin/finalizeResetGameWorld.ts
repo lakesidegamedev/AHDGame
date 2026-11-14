@@ -1,4 +1,5 @@
 import { ensureUSMinorPartyOrgs } from "@/lib/countries/us/seedMinorPartyOrgs";
+import { reconcileCaDefaultPartyIdentities } from "@/lib/countries/ca/reconcileDefaultPartyIdentities";
 /**
  * Post-bootstrap finalize pass for a world reset.
  *
@@ -101,6 +102,7 @@ export async function finalizeResetGameWorld(
   // the new party gets `max(sequentialId) + 1`, never a colliding seqId.
   if (preset !== "2019-no-parties") {
     await realignPartyCountersToExisting(db);
+    await reconcileCaDefaultPartyIdentities(db, preset);
     await ensureDefaultParties(db, preset);
     await ensureUSMinorPartyOrgs(db, preset, true);
     // Mirror for statePartyOrg: insert rows for newly-added defaults so they

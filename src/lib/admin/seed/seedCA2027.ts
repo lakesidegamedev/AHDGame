@@ -13,6 +13,7 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { reserveSequentialIds } from "@/lib/db/sequentialId";
 import { writeSplitMetricsBulk } from "@/lib/macroMetrics/split";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
+import { reconcileCaDefaultPartyIdentities } from "@/lib/countries/ca/reconcileDefaultPartyIdentities";
 import {
   prunePresetMismatchedDefaultParties,
   selectPartyRosterForPreset,
@@ -101,6 +102,7 @@ async function seedRegions(db: Db): Promise<void> {
 }
 
 async function seedParties(db: Db): Promise<PoliticalParty[]> {
+  await reconcileCaDefaultPartyIdentities(db, PRESET);
   await prunePresetMismatchedDefaultParties(db, caParties, PRESET);
   const seeds = selectPartyRosterForPreset(caParties, PRESET);
   const parties = politicalPartiesCollection(db);
