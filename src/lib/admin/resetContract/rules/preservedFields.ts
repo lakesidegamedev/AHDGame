@@ -60,6 +60,7 @@ export const USER_FIELD_CONTRACT: PreservedFieldContract = Object.freeze({
   _id: keep(ACCOUNT),
   email: keep(ACCOUNT),
   emailVerifiedAt: keep(ACCOUNT),
+  emailHistory: keep(ACCOUNT),
   username: keep(ACCOUNT),
   displayName: keep(ACCOUNT),
   password: keep(AUTH),
@@ -72,6 +73,7 @@ export const USER_FIELD_CONTRACT: PreservedFieldContract = Object.freeze({
   authMigrationFence: keep(AUTH),
   accountDeletion: keep("Account deletion command; its lifecycle is not tied to a world."),
   passwordChangedAt: keep(AUTH),
+  passwordSupersededAt: keep(AUTH),
   bannedShareReleaseProcessedAt: keep(MODERATION),
   bannedShareReleaseCorporationIds: clear(
     "Corporations captured at ban time belong to the old world and are deleted by the reset."
