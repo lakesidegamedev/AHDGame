@@ -530,9 +530,9 @@ export async function processForexTurn(
     countriesUpdated++;
   }
 
+  const linkedWrites: AnyBulkWriteOperation<ExchangeRate>[] = [];
   if (euroUnion) {
     const linked = linkedEuroRates(euroUnion, ratesByCurrency);
-    const writes: AnyBulkWriteOperation<ExchangeRate>[] = [];
     for (const member of Object.values(euroUnion.members)) {
       if (!member || member.countryId === euroUnion.anchorCountryId) continue;
       const existing = rateMap.get(member.countryId);
@@ -540,7 +540,7 @@ export async function processForexTurn(
       if (!existing || rate === undefined)
         throw new Error("A euro member quotation is unavailable");
       const volume = volumes[member.ledgerCurrency] ?? { buyVolume24: 0, sellVolume24: 0 };
-      writes.push({
+      linkedWrites.push({
         updateOne: {
           filter: { _id: member.countryId },
           update: {
@@ -559,12 +559,45 @@ export async function processForexTurn(
         },
       });
     }
-    if (writes.length) {
-      const result = await exchangeRatesCollection(db).bulkWrite(writes);
-      if (result.matchedCount !== writes.length)
-        throw new Error("A euro member quotation could not be persisted");
-      countriesUpdated += writes.length;
+  }
+
+  // A shared-currency quotation does not require a separate national bank.
+  const sharedEuroRate = euroAnchorRate ?? deDocRate;
+  if (sharedEuroRate !== null) {
+    for (const countryId of activeCountries) {
+      const existing = rateMap.get(countryId);
+      if (
+        !existing ||
+        existing.currencyCode !== "EUR" ||
+        countryId === euroAnchorCountry ||
+        bankMap.has(countryId) ||
+        euroUnion?.members[countryId] ||
+        (!euroUnion && getSeedCurrencyCode(countryId, presetForSeed) !== "EUR")
+      )
+        continue;
+      linkedWrites.push({
+        updateOne: {
+          filter: { _id: existing._id, currencyCode: "EUR" },
+          update: {
+            $set: {
+              rate: sharedEuroRate,
+              macroTarget: euroAnchorMacroTarget ?? sharedEuroRate,
+              rateHistory: [
+                ...existing.rateHistory,
+                { turn: currentTurn, rate: sharedEuroRate },
+              ].slice(-FOREX_AND_MACRO_CHART_HISTORY_TURNS),
+              updatedAt: now,
+            },
+          },
+        },
+      });
     }
+  }
+  if (linkedWrites.length) {
+    const result = await exchangeRatesCollection(db).bulkWrite(linkedWrites);
+    if (result.matchedCount !== linkedWrites.length)
+      throw new Error("A shared euro quotation could not be persisted");
+    countriesUpdated += linkedWrites.length;
   }
 
   // Process triggered limit orders

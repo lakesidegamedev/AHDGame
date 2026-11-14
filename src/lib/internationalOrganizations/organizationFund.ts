@@ -137,6 +137,7 @@ export async function chargeOrganizationDues(
     const budget = federalBudgetCollection(db);
     let totalFund = 0;
     const fundedCash = batch?.treasuryCashLedgerEnabled === true;
+    let fundReady = false;
     for (const m of memberGdpUsd) {
       const dueUsd = memberDueUsd(m.gdpUsd, duesRateAnnual);
       if (dueUsd <= 0) continue;
@@ -152,20 +153,23 @@ export async function chargeOrganizationDues(
         const treasuryRate = organizationTreasuryLocalPerAnchor(batch, m.countryId);
         const fundRate = organizationLocalPerAnchor(batch, currencyCountryId);
         const fundAmount = (dueLocal / treasuryRate) * fundRate;
-        const fundCollection = await getOrganizationFundsCollection(db);
-        await fundCollection.updateOne(
-          { organizationId },
-          {
-            $setOnInsert: {
-              _id: new ObjectId(),
-              organizationId,
-              balanceLocal: 0,
-              duesRateAnnual,
-              currencyCountryId,
+        if (!fundReady) {
+          const fundCollection = await getOrganizationFundsCollection(db);
+          await fundCollection.updateOne(
+            { organizationId },
+            {
+              $setOnInsert: {
+                _id: new ObjectId(),
+                organizationId,
+                balanceLocal: 0,
+                duesRateAnnual,
+                currencyCountryId,
+              },
             },
-          },
-          { upsert: true }
-        );
+            { upsert: true }
+          );
+          fundReady = true;
+        }
         const result = await settleOrganizationFundedCashMove(db, batch, {
           key: `organization-dues:${batch.turn}:${organizationId}:${m.countryId}`,
           kind: "organization_dues",

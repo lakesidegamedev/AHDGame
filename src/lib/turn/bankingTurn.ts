@@ -9,6 +9,7 @@ import { resumeTreasuryReserveTransfers } from "@/lib/budget/treasuryReserveTran
  * Discount-window interest remains due when proprietary trading is disabled.
  */
 import { ObjectId, type Db } from "mongodb";
+import { withSettlementReadSnapshot } from "@/lib/banking/settlementReadSnapshot";
 import { resumeReservePoolTransfers } from "@/lib/centralBank/reservePoolTransferCommands";
 import { resumeMonetaryOperations } from "@/lib/moneySupply/monetaryOperationJournal";
 import { resumeLiquidityAdvances } from "@/lib/moneySupply/liquidityAdvance";
@@ -131,7 +132,9 @@ export async function processBankingTurn(
   // Every settlement in the pass bumps the turn's banking telemetry document.
   // Unbatched, that was about 150 concurrent increments on one document per
   // turn; batched, one write when the pass ends. Counts are unchanged.
-  return withBankingTelemetryBatch(db, turn, () => runBankingTurn(db, turn, options));
+  return withSettlementReadSnapshot(() =>
+    withBankingTelemetryBatch(db, turn, () => runBankingTurn(db, turn, options))
+  );
 }
 
 async function runBankingTurn(

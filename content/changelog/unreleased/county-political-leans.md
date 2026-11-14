@@ -93,3 +93,7 @@ areas: [engine]
   of Treasury receipts.
 - Batches settlement bookkeeping and crisis board updates while retaining guarded
   cash writes, receipt recovery, and the existing economic rules.
+- Keeps shared euro quotations synchronized for countries without a separate
+  central bank, so corporate payments and cash valuation use the same rate.
+- Batches annual market creation and income-tax reads, and reuses guarded
+  banking and organization settlement metadata without changing payments or phase budgets.

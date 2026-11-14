@@ -217,9 +217,11 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "handling is plants-aware regardless.",
   },
   "src/lib/turn/autoSectorSeed.ts": {
-    writeSites: 2,
+    writeSites: 1,
     status: "plants-gated",
-    reason: "World seeding of sectors; seeds capacity under plants.",
+    reason:
+      "The national-corporation update grows capacity alongside revenue under plants. " +
+      "Unowned-market inserts use a separate prebuilt batch, not corporateSectors.",
   },
   "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
     writeSites: 1,
