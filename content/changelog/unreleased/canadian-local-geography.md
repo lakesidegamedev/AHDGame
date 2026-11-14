@@ -16,3 +16,5 @@ areas: [fullstack]
 - Adds Campaign Here for party officers using the existing US costs, cap and decay.
   Riding placement respects the game's provincial seat allocation.
 - Preserves completed riding results and identifies older unsupported elections.
+- Existing active singleplayer saves initialize Canadian population maps during
+  startup before the player can advance a turn.

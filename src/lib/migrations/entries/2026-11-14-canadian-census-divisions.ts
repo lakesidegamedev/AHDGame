@@ -1,4 +1,5 @@
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { isSingleplayer } from "@/lib/singleplayer";
 /** Initialize resident population stocks before enabling Canadian demographic writers. */
 import type { Migration } from "../types";
 import { seedCountyPopulations } from "@/lib/counties/seed";
@@ -15,7 +16,8 @@ export const migration: Migration = {
       { _id: "current" },
       { projection: { isActive: 1, isProcessing: 1 } }
     );
-    if (!ctx.dryRun && (state?.isActive || state?.isProcessing))
+    // Singleplayer startup controls turn admission while upgrading an active save.
+    if (!ctx.dryRun && (state?.isProcessing || (state?.isActive && !isSingleplayer())))
       throw new Error("Pause turns before initializing Canadian subdivisions");
     const pending = await demographicFlowReceiptsCollection<Document>(db).countDocuments({
       status: "ready",
