@@ -25,20 +25,25 @@ const MAX_MERGE_DEPTH = 16;
  */
 export async function loadSurvivingPartyResolver(
   db: Db,
-  countryId: string
+  countryId: string,
+  preloaded?: readonly Pick<PoliticalParty, "_id" | "sequentialId" | "mergedIntoPartyId">[]
 ): Promise<SurvivingPartyResolver> {
-  const merged = await politicalPartiesCollection(db)
-    .find({ countryId, mergedIntoPartyId: { $exists: true, $ne: null } } as never, {
-      projection: { _id: 1, sequentialId: 1, mergedIntoPartyId: 1 },
-    })
-    .toArray();
+  const merged = preloaded
+    ? preloaded.filter((p) => p.mergedIntoPartyId != null)
+    : await politicalPartiesCollection(db)
+        .find({ countryId, mergedIntoPartyId: { $exists: true, $ne: null } } as never, {
+          projection: { _id: 1, sequentialId: 1, mergedIntoPartyId: 1 },
+        })
+        .toArray();
   if (merged.length === 0) return identity;
 
-  const targets = await politicalPartiesCollection(db)
-    .find({ _id: { $in: merged.map((p) => p.mergedIntoPartyId as ObjectId) } } as never, {
-      projection: { _id: 1, sequentialId: 1 },
-    })
-    .toArray();
+  const targets =
+    preloaded ??
+    (await politicalPartiesCollection(db)
+      .find({ _id: { $in: merged.map((p) => p.mergedIntoPartyId as ObjectId) } } as never, {
+        projection: { _id: 1, sequentialId: 1 },
+      })
+      .toArray());
   const seqById = new Map<string, string>();
   for (const p of [...merged, ...targets]) seqById.set(String(p._id), String(p.sequentialId));
 

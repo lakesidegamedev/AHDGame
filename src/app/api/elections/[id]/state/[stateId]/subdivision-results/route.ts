@@ -1,3 +1,9 @@
+import { isCanadianCommons, isCanada } from "@/lib/countries/ca/rules/localGeography";
+import { projectCanadianRidings } from "@/lib/countries/ca/rules/ridingResults";
+import {
+  SUBDIVISION_REGION_PATTERN,
+  subdivisionRegionMatchesCountry,
+} from "@/lib/maps/rules/region";
 import { hasPopulationSubdivisionReference } from "@/lib/counties/subdivisionReference";
 import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { NextRequest, NextResponse } from "next/server";
@@ -13,7 +19,7 @@ import {
   type CandidateDistributionInfo,
 } from "@/lib/utils/subdivisionResults";
 import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
-import type { ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
+import type { ElectionVoteTally } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
@@ -35,9 +41,11 @@ export async function GET(
     const { id, stateId } = await params;
     const regionId = stateId.toUpperCase();
     // regionId feeds a filesystem path — reject anything but region-code shapes.
-    if (!/^[A-Z]{2,3}$/.test(regionId)) {
+    if (!SUBDIVISION_REGION_PATTERN.test(regionId)) {
       return errorResponse(400, "Invalid region ID");
     }
+    const layer = req.nextUrl.searchParams.get("layer");
+    if (layer && layer !== "census-divisions") return errorResponse(400, "Invalid map layer");
     const turnParam = req.nextUrl.searchParams.get("turn");
     const atTurn = turnParam == null ? null : Number(turnParam);
     if (atTurn != null && (!Number.isInteger(atTurn) || atTurn < 0)) {
@@ -53,6 +61,60 @@ export async function GET(
       return errorResponse(404, "Election not found");
     }
     const election = resolved.election;
+    if (!subdivisionRegionMatchesCountry(election.countryId, regionId))
+      return errorResponse(400, "Region country mismatch");
+
+    if (isCanada(election.countryId) && (await getGameStatePresetOrDefault(db)) !== "2027-default")
+      return errorResponse(404, "Canadian local maps are qualified only for the 2027 preset");
+
+    if (
+      isCanada(election.countryId) &&
+      isCanadianCommons(election.electionType) &&
+      ["resolved", "completed"].includes(election.status)
+    ) {
+      if (election.state !== regionId) return errorResponse(400, "Election state mismatch");
+      if (atTurn != null) return errorResponse(400, "Riding turn replay is unavailable");
+      if (layer)
+        return errorResponse(
+          404,
+          "Historical census-division projections were not recorded for this election"
+        );
+      const tally = await electionVoteTalliesCollection(db).findOne(
+        { electionId: election._id },
+        { projection: { canadianRidingResult: 1 } }
+      );
+      const result = tally?.canadianRidingResult;
+      if (
+        !result ||
+        result.version !== 1 ||
+        result.electionId !== String(election._id) ||
+        !isCanada(result.countryId) ||
+        result.stateId !== regionId
+      ) {
+        return NextResponse.json({
+          viewBox: "0 0 1 1",
+          mode: "seatConsistent",
+          resultStatus: "unsupported",
+          unitLabel: "Federal riding",
+          unitLabelPlural: "Federal ridings",
+          geometryAvailable: false,
+          notice:
+            "Riding results unavailable: no placement was recorded. Resolution may still be pending, or this election predates recorded Canadian riding results.",
+          subdivisions: [],
+          candidateNames: {},
+          candidateParties: {},
+          partyColors: {},
+        });
+      }
+      return NextResponse.json({
+        ...result,
+        mode: "seatConsistent",
+        resultStatus: "frozen",
+        geometryAvailable: true,
+        unitLabel: "Federal riding",
+        unitLabelPlural: "Federal ridings",
+      });
+    }
 
     // Completed House races use only their frozen receipt, never today's holders or geometry.
     if (
@@ -93,7 +155,7 @@ export async function GET(
       });
     }
 
-    const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType));
+    const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType), layer);
     if (!modeEntry) {
       return errorResponse(404, "Subdivision map data is not available for this election");
     }
@@ -107,7 +169,9 @@ export async function GET(
     // County leans follow the world's era (a 1991 world starts from 1984/1988).
     const data = await loadSubdivisionFile(modeEntry.config.dataDir, regionId, {
       preset: await getGameStatePresetOrDefault(db),
-      ...(modeEntry.config.populationCountryId && election.status === "active"
+      ...(modeEntry.config.populationCountryId &&
+      (election.status === "active" ||
+        (isCanada(election.countryId) && election.status === "upcoming"))
         ? {
             countyPopulations: await loadCountyPopulationMap(
               db,
@@ -260,12 +324,24 @@ export async function GET(
           undefined
         ).seatsEstimate;
       }
-      results = assignSeatConsistentWinners(distributed, seatsByCandidate);
+      results = isCanada(election.countryId)
+        ? projectCanadianRidings({
+            subdivisions: data.subdivisions,
+            votes: regionVotes,
+            candidateParties: tally.candidateParties,
+            seats: seatsByCandidate,
+            partyAbbreviations: Object.fromEntries(
+              partyDocs.map((p) => [String(p.sequentialId), p.abbreviation])
+            ),
+            boosts: election.districtCampaignBoosts,
+          })
+        : assignSeatConsistentWinners(distributed, seatsByCandidate);
     }
 
     const subById = new Map(data.subdivisions.map((s) => [s.id, s]));
     return NextResponse.json({
       viewBox: data.viewBox,
+      notice: data.notice,
       mode: modeEntry.mode,
       unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
       unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",

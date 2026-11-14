@@ -9,6 +9,9 @@ import { loadCountyLeans } from "./countyLeans";
 import { usCongressionalGeometryDirectory } from "@/lib/countries/us/congressionalGeometry";
 
 export interface SubdivisionFile {
+  countryId?: string;
+  supportedPresets?: string[];
+  notice?: string;
   viewBox: string;
   subdivisions: (SubdivisionInput & { path: string })[];
 }
@@ -49,6 +52,12 @@ export async function loadSubdivisionFile(
     );
     const raw = await readFile(filePath, "utf-8");
     const parsed = JSON.parse(raw) as SubdivisionFile | LegacyCountyFile | LegacyCdFile;
+    if (
+      "supportedPresets" in parsed &&
+      parsed.supportedPresets &&
+      !parsed.supportedPresets.includes(options?.preset ?? "")
+    )
+      return null;
     if ("counties" in parsed) {
       if (
         options?.countyPopulations &&

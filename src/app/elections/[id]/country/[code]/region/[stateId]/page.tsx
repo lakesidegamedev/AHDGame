@@ -1,5 +1,8 @@
 "use client";
 
+import { CanadianRidingCampaigns } from "@/components/maps/CanadianRidingCampaigns";
+import { isCanadianCommons, isCanada } from "@/lib/countries/ca/rules/localGeography";
+
 import { JP_REGIONS } from "@/lib/countries/jp/data/jpRegionDirectory";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
@@ -18,6 +21,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface Election {
   _id: string;
+  id?: string;
   /** US union values plus UK types ("commons", "snap_commons", "regionalCouncil", …). */
   electionType: string;
   state?: string;
@@ -233,6 +237,7 @@ export default function StateElectionResultsPage({
   const [subdivisionResults, setSubdivisionResults] = useState<SubdivisionResultsData | null>(null);
   const [cdResults, setCDResults] = useState<CDResultsData | null>(null);
   const [districtSquares, setDistrictSquares] = useState<DistrictSquareView[] | null>(null);
+  const [canadianLayer, setCanadianLayer] = useState<"ridings" | "census-divisions">("ridings");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -250,7 +255,10 @@ export default function StateElectionResultsPage({
   };
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchData() {
+      setError("");
+      setSubdivisionResults(null);
       setCDResults(null);
       setDistrictSquares(null);
       try {
@@ -271,6 +279,7 @@ export default function StateElectionResultsPage({
           router.replace(`/elections/${encodeURIComponent(id)}?state=${stateUpper}`);
           return;
         }
+        if (cancelled) return;
         setElection(electionData);
 
         const isUS = countryHasFeature("usUi", code.toUpperCase());
@@ -278,13 +287,22 @@ export default function StateElectionResultsPage({
           // Non-US: the subdivision registry decides which election types are
           // supported — an unsupported type just 404s into the error state.
           const subRes = await fetch(
-            `/api/elections/${id}/state/${stateUpper}/subdivision-results`
+            `/api/elections/${id}/state/${stateUpper}/subdivision-results${canadianLayer === "census-divisions" && isCanada(code.toUpperCase()) ? "?layer=census-divisions" : ""}`
           );
-          if (subRes.ok) {
-            setSubdivisionResults(await subRes.json());
-          } else {
-            setError("Subdivision data not available");
+          let result = subRes.ok ? await subRes.json() : null;
+          if (
+            isCanada(code.toUpperCase()) &&
+            ["active", "upcoming"].includes(electionData.status) &&
+            (!result || result.subdivisions.length === 0)
+          ) {
+            const projection = await fetch(
+              `/api/elections/${id}/state/${stateUpper}/projected-subdivisions${canadianLayer === "census-divisions" ? "?layer=census-divisions" : ""}`
+            );
+            result = projection.ok ? await projection.json() : null;
           }
+          if (cancelled) return;
+          if (result) setSubdivisionResults(result);
+          else setError("Subdivision data not available for this region and preset");
           setLoading(false);
           return;
         }
@@ -372,7 +390,10 @@ export default function StateElectionResultsPage({
       }
     }
     fetchData();
-  }, [id, stateUpper, code, router, refreshKey]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, stateUpper, code, router, refreshKey, canadianLayer]);
 
   if (loading) {
     return (
@@ -518,6 +539,26 @@ export default function StateElectionResultsPage({
                   ? `${unitLabel} Results`
                   : "Congressional district results"}
             </h2>
+            {isCanada(code.toUpperCase()) &&
+              isCanadianCommons(election.electionType) &&
+              ["active", "upcoming"].includes(election.status) && (
+                <div className="mb-3 flex gap-2" aria-label="Canadian map layer">
+                  {(["ridings", "census-divisions"] as const).map((layer) => (
+                    <button
+                      key={layer}
+                      type="button"
+                      aria-pressed={canadianLayer === layer}
+                      onClick={() => setCanadianLayer(layer)}
+                      className="rounded border border-card-border px-2 py-1 text-sm"
+                    >
+                      {layer === "ridings" ? "Federal ridings" : "Census divisions"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            {subdivisionResults?.notice && (
+              <p className="mb-3 text-sm text-muted">{subdivisionResults.notice}</p>
+            )}
             <div
               className={
                 cdResults?.geometryAvailable === false
@@ -580,6 +621,21 @@ export default function StateElectionResultsPage({
                 />
               )}
             </div>
+            {isCanada(code.toUpperCase()) &&
+              isCanadianCommons(election.electionType) &&
+              ["active", "upcoming"].includes(election.status) &&
+              viewerPartySeqId &&
+              subdivisionResults &&
+              canadianLayer === "ridings" &&
+              subdivisionResults.subdivisions.length > 0 && (
+                <CanadianRidingCampaigns
+                  electionId={election.id ?? election._id}
+                  stateId={stateUpper}
+                  partyId={viewerPartySeqId}
+                  ridings={subdivisionResults.subdivisions}
+                  onCampaign={() => setRefreshKey((key) => key + 1)}
+                />
+              )}
             {districtSquares && !["resolved", "completed"].includes(election.status) && (
               <div className="mt-4">
                 <h3 className="mb-2 font-semibold">Current district holders</h3>

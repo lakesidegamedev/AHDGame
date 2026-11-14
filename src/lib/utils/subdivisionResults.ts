@@ -124,7 +124,8 @@ export function distributeSubdivisionVotes(
  */
 export function assignSeatConsistentWinners(
   distributed: SubdivisionVoteResult[],
-  seatsByCandidate: Record<string, number>
+  seatsByCandidate: Record<string, number>,
+  placementScores?: Readonly<Record<string, Readonly<Record<string, number>>>>
 ): SubdivisionVoteResult[] {
   const remaining: Record<string, number> = { ...seatsByCandidate };
   const pairs: { id: string; cid: string; share: number }[] = [];
@@ -132,7 +133,7 @@ export function assignSeatConsistentWinners(
     const total = Object.values(d.votes).reduce((s, v) => s + v, 0);
     if (total <= 0) continue;
     for (const [cid, v] of Object.entries(d.votes)) {
-      pairs.push({ id: d.id, cid, share: v / total });
+      pairs.push({ id: d.id, cid, share: placementScores?.[d.id]?.[cid] ?? v / total });
     }
   }
   pairs.sort((a, b) => b.share - a.share || a.id.localeCompare(b.id) || a.cid.localeCompare(b.cid));

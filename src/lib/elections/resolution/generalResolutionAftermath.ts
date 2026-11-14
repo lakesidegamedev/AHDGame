@@ -1,8 +1,8 @@
+import type { CanadianRidingResult } from "@/lib/countries/ca/rules/ridingResults";
 /** Follow-on effects once a general election's winners are seated. */
 import { type Db, ObjectId } from "mongodb";
 import type {
   Election,
-  CountryGameState,
   ElectionCandidate,
   ElectionVoteTally,
   ElectionStatus,
@@ -128,6 +128,7 @@ export async function reconcileGermanElection(
 
 /** Applies the effects that follow seating the winners. */
 export async function applyGeneralElectionAftermath({
+  canadianRidingResult,
   db,
   election,
   seatsEstimate,
@@ -147,6 +148,7 @@ export async function applyGeneralElectionAftermath({
   winnerAnalytics,
   officeAnalytics,
 }: {
+  canadianRidingResult?: CanadianRidingResult;
   db: Db;
   election: Election;
   seatsEstimate: Record<string, number>;
@@ -195,6 +197,7 @@ export async function applyGeneralElectionAftermath({
     {
       $set: {
         seatsEstimate,
+        ...(canadianRidingResult ? { canadianRidingResult } : {}),
         ...(districted?.houseDistrictResult
           ? { houseDistrictResult: districted.houseDistrictResult }
           : {}),
