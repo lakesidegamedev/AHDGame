@@ -9,6 +9,7 @@ import {
   parseBreakerConfig,
 } from "./breaker";
 import { recordShadowEvent } from "./shadowEvents";
+import { logger } from "@/lib/observability/logger";
 
 /**
  * Client for the central account bridge. Calls authenticate with a cached
@@ -17,9 +18,21 @@ import { recordShadowEvent } from "./shadowEvents";
  */
 
 export type BridgeFailure = "error" | "timeout";
+/**
+ * Why a bridge call failed, for logs and the single retry. `reason` is one of:
+ * timeout, connection_refused, connection_reset, dns, network, http, bad_response, not_configured.
+ * `node` is the login server that answered (the proxy's X-Lakeside-Node header), when there was an answer.
+ */
+export interface BridgeFailureDetail {
+  reason: string;
+  phase: "token" | "call";
+  status?: number;
+  node?: string;
+}
 /** `skipped` marks a call the circuit breaker refused without contacting the bridge. */
 export type BridgeResult<T> =
-  { ok: true; data: T } | { ok: false; kind: BridgeFailure; skipped?: true };
+  | { ok: true; data: T }
+  | { ok: false; kind: BridgeFailure; skipped?: true; detail?: BridgeFailureDetail };
 
 export interface BridgeAccount {
   ahdUserId: string;
@@ -99,6 +112,38 @@ function classify(error: unknown): BridgeFailure {
   return name === "TimeoutError" || name === "AbortError" ? "timeout" : "error";
 }
 
+/** The network-level reason behind a thrown fetch error (undici puts the code on `cause`). */
+export function failureReason(error: unknown): string {
+  if (classify(error) === "timeout") return "timeout";
+  const cause = (error as { cause?: { code?: unknown } } | null)?.cause;
+  const code = typeof cause?.code === "string" ? cause.code : "";
+  if (code === "ECONNREFUSED") return "connection_refused";
+  if (code === "ECONNRESET" || code === "UND_ERR_SOCKET" || code === "EPIPE")
+    return "connection_reset";
+  if (code === "ENOTFOUND" || code === "EAI_AGAIN") return "dns";
+  if (
+    code === "ETIMEDOUT" ||
+    code === "UND_ERR_CONNECT_TIMEOUT" ||
+    code === "UND_ERR_HEADERS_TIMEOUT"
+  )
+    return "timeout";
+  return "network";
+}
+
+/** Failures worth one immediate retry: the request may never have reached a login server. */
+export const RETRYABLE_REASONS = new Set([
+  "timeout",
+  "connection_refused",
+  "connection_reset",
+  "dns",
+  "network",
+]);
+
+function nodeOf(response: Response): string | undefined {
+  const node = response.headers.get("x-lakeside-node");
+  return node ? node.slice(0, 64) : undefined;
+}
+
 async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt > now) return { ok: true, data: cachedToken.value };
@@ -106,7 +151,8 @@ async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
   const tokenUrl = authConfig.accountBridgeTokenUrl();
   const clientId = authConfig.accountBridgeClientId();
   const clientSecret = authConfig.accountBridgeClientSecret();
-  if (!tokenUrl || !clientId || !clientSecret) return { ok: false, kind: "error" };
+  if (!tokenUrl || !clientId || !clientSecret)
+    return { ok: false, kind: "error", detail: { reason: "not_configured", phase: "token" } };
 
   try {
     const response = await fetch(tokenUrl, {
@@ -120,10 +166,19 @@ async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
       cache: "no-store",
       signal: AbortSignal.timeout(Math.max(1, deadline - now)),
     });
-    if (!response.ok) return { ok: false, kind: "error" };
+    if (!response.ok)
+      return {
+        ok: false,
+        kind: "error",
+        detail: { reason: "http", phase: "token", status: response.status, node: nodeOf(response) },
+      };
     const body = (await response.json()) as { access_token?: unknown; expires_in?: unknown };
     if (typeof body.access_token !== "string" || body.access_token.length === 0) {
-      return { ok: false, kind: "error" };
+      return {
+        ok: false,
+        kind: "error",
+        detail: { reason: "bad_response", phase: "token", node: nodeOf(response) },
+      };
     }
     const lifetimeS =
       typeof body.expires_in === "number" && body.expires_in > 0
@@ -135,7 +190,11 @@ async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
     };
     return { ok: true, data: body.access_token };
   } catch (error) {
-    return { ok: false, kind: classify(error) };
+    return {
+      ok: false,
+      kind: classify(error),
+      detail: { reason: failureReason(error), phase: "token" },
+    };
   }
 }
 
@@ -146,7 +205,8 @@ async function fetchToken(deadline: number): Promise<BridgeResult<string>> {
  */
 async function post(
   path: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  requestId?: string
 ): Promise<BridgeResult<unknown>> {
   const decision = breakerAdmit(breaker, Date.now());
   if (decision === "skip") {
@@ -162,7 +222,7 @@ async function post(
     return { ok: false, kind: "error", skipped: true };
   }
   breakerOnAdmit(breaker, decision);
-  const result = await rawPost(path, payload);
+  const result = await rawPost(path, payload, requestId);
   if (result.ok) breakerOnSuccess(breaker);
   else {
     breakerOnFailure(
@@ -180,10 +240,12 @@ async function post(
 /** One bridge POST. The timeout covers the token fetch and the call together. */
 async function rawPost(
   path: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  requestId?: string
 ): Promise<BridgeResult<unknown>> {
   const base = authConfig.accountBridgeUrl();
-  if (!base) return { ok: false, kind: "error" };
+  if (!base)
+    return { ok: false, kind: "error", detail: { reason: "not_configured", phase: "call" } };
   const deadline = Date.now() + bridgeTimeoutMs();
 
   const token = await fetchToken(deadline);
@@ -196,31 +258,70 @@ async function rawPost(
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: `Bearer ${token.data}`,
+        ...(requestId ? { "X-Request-Id": requestId } : {}),
       },
       body: JSON.stringify(payload),
       cache: "no-store",
       signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
     });
     if (response.status === 401 || response.status === 403) cachedToken = null;
-    if (!response.ok) return { ok: false, kind: "error" };
+    if (!response.ok)
+      return {
+        ok: false,
+        kind: "error",
+        detail: { reason: "http", phase: "call", status: response.status, node: nodeOf(response) },
+      };
     return { ok: true, data: await response.json() };
   } catch (error) {
-    return { ok: false, kind: classify(error) };
+    return {
+      ok: false,
+      kind: classify(error),
+      detail: { reason: failureReason(error), phase: "call" },
+    };
   }
 }
 
 const CHECK_RESULTS = new Set(["ok", "wrong", "disabled", "unknown"]);
+
+function logCheckFailure(
+  requestId: string,
+  ahdUserId: string,
+  attempt: number,
+  result: { kind: BridgeFailure; skipped?: true; detail?: BridgeFailureDetail }
+): void {
+  logger.warn("central-login", "password check failed", {
+    requestId,
+    ahdUserId,
+    attempt,
+    kind: result.kind,
+    reason: result.skipped ? "breaker_open" : (result.detail?.reason ?? "unknown"),
+    phase: result.detail?.phase ?? null,
+    status: result.detail?.status ?? null,
+    node: result.detail?.node ?? null,
+  });
+}
 
 export async function bridgePasswordCheck(
   ahdUserId: string,
   password: string,
   options: { enforceEnabled: boolean }
 ): Promise<PasswordCheckOutcome> {
-  const result = await post("password-check", {
+  const requestId = globalThis.crypto.randomUUID();
+  const payload = {
     ahdUserId,
     password,
     ...(options.enforceEnabled ? { enforceEnabled: true } : {}),
-  });
+  };
+  let result = await post("password-check", payload, requestId);
+  // One immediate retry when the request may never have reached a login server (timeout or a
+  // connection-level failure). Never on an answer: a wrong password, an HTTP error or a breaker skip.
+  if (!result.ok) {
+    logCheckFailure(requestId, ahdUserId, 1, result);
+    if (!result.skipped && result.detail && RETRYABLE_REASONS.has(result.detail.reason)) {
+      result = await post("password-check", payload, requestId);
+      if (!result.ok) logCheckFailure(requestId, ahdUserId, 2, result);
+    }
+  }
   if (!result.ok) return result.kind;
   const value = (result.data as { result?: unknown } | null)?.result;
   return typeof value === "string" && CHECK_RESULTS.has(value)

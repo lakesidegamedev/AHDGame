@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import { logger } from "@/lib/observability/logger";
 import { cronLocksCollection } from "@/lib/db/repositories/cronLocks";
 import { usersCollection } from "@/lib/db/repositories/users";
+import { getActionAuditLogCollection } from "@/lib/db/collections/actionAuditLog";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
 import { bridgeAccountChanges, isBridgeConfigured } from "@/lib/auth/centralLogin/bridgeClient";
 import { getAccountFieldsMode, getUsernameMode } from "./mode";
@@ -263,6 +264,10 @@ export interface AccountFieldsStatus {
   lastPollAt: string | null;
   lastError: string | null;
   accountsWithoutLocalPassword: number;
+  /** Sign-ins refused fail-closed (central check unavailable, no local password) in the last hour. */
+  failClosedLastHour: number;
+  /** The same per UTC hour for the last 24 hours, newest first, hours with refusals only. */
+  failClosedByHour: { hour: string; count: number }[];
 }
 
 async function countRecentUsernameChanges(db: Db, since: Date): Promise<number> {
@@ -284,6 +289,7 @@ export async function getAccountFieldsStatus(db: Db): Promise<AccountFieldsStatu
   });
   const since = new Date(Date.now() - FORMER_USERNAME_DAYS * 86_400_000);
   const usernameChangesLast30Days = await countRecentUsernameChanges(db, since);
+  const failClosed = await countFailClosedRefusals(db, new Date());
   return {
     mode: getAccountFieldsMode(),
     usernameMode: getUsernameMode(),
@@ -292,7 +298,39 @@ export async function getAccountFieldsStatus(db: Db): Promise<AccountFieldsStatu
     lastPollAt: state?.lastPollAt ? state.lastPollAt.toISOString() : null,
     lastError: state?.lastError ?? null,
     accountsWithoutLocalPassword,
+    failClosedLastHour: failClosed.lastHour,
+    failClosedByHour: failClosed.byHour,
   };
+}
+
+/**
+ * Sign-ins refused because the central check was unavailable and the account has no local password
+ * (login audit reason central_unavailable): the last hour, and per hour for the last 24 hours (UTC hour
+ * starts, newest first, only hours with refusals). For the opening-day watch.
+ */
+export async function countFailClosedRefusals(
+  db: Db,
+  now: Date
+): Promise<{ lastHour: number; byHour: { hour: string; count: number }[] }> {
+  const col = await getActionAuditLogCollection(db);
+  const match = { action: "auth.login", reason: "central_unavailable" };
+  const lastHour = await col.countDocuments({
+    ...match,
+    ts: { $gte: new Date(now.getTime() - 3_600_000) },
+  });
+  const rows = await col
+    .aggregate<{ _id: string; count: number }>([
+      { $match: { ...match, ts: { $gte: new Date(now.getTime() - 24 * 3_600_000) } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%dT%H:00Z", date: "$ts" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: -1 } },
+    ])
+    .toArray();
+  return { lastHour, byHour: rows.map((r) => ({ hour: r._id, count: r.count })) };
 }
 
 declare global {
