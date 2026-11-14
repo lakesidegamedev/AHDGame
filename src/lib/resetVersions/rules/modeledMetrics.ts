@@ -3,10 +3,8 @@ import {
   buildOpeningMetricObservation,
   type OpeningMetricObservation,
 } from "@/lib/resetMetrics/rules/openingObservation";
-import {
-  provisionalRegionalOpening,
-  type OpeningCountry,
-} from "@/lib/resetMetrics/rules/provisionalOpening";
+import { provisionalRegionalOpening } from "@/lib/resetMetrics/rules/provisionalOpening";
+import type { ModeledOpeningCountry as OpeningCountry } from "../rules";
 import {
   buildResetMetricSnapshot,
   type ResetMetricSnapshot,

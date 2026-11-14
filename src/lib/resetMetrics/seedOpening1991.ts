@@ -81,7 +81,7 @@ export async function persistMetricOpening(
   db: Db,
   worldId: string,
   sourceTurn: number,
-  countries: readonly OpeningCountry[],
+  countries: readonly (OpeningCountry | "CA")[],
   expected: readonly ResetMetricSnapshot[]
 ): Promise<ResetSystemSeedReceipt> {
   const seededRegions = await statesCollection(db)

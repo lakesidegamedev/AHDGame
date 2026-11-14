@@ -93,6 +93,7 @@ const JP_SAVED_WORLD_TAX_TYPE: Readonly<Record<string, string>> = {
 
 const treasurySeat: Record<ResetCountry, string> = {
   US: "secretary_of_treasury",
+  CA: "minister_of_finance",
   UK: "chancellor",
   JP: "finance_minister",
   IE: "minister_for_finance",
@@ -148,6 +149,18 @@ const nationalTaxes: ResetTaxDefinition[] = federal.flatMap(([id, title, taxType
     overseeingSeatId: treasurySeat.IE,
   },
 ]);
+nationalTaxes.push(
+  ...federal.map(([id, title, taxType]) => ({
+    id,
+    title,
+    taxType,
+    country: "CA" as const,
+    scope: "national" as const,
+    existingLegislationTypeId: `ca.tax.${taxType}`,
+    overseeingSeatId: treasurySeat.CA,
+  }))
+);
+
 const DEVOLVED_LAW_PREFIX = { SCO: "sco.", WAL: "wls." } as const;
 
 nationalTaxes.push(

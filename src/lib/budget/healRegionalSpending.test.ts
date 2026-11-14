@@ -8,6 +8,72 @@ import type { Db } from "mongodb";
 
 vi.mock("./spending", () => ({ calculateStateSpendingDetail: vi.fn() }));
 
+it("keeps Canadian v2 service categories and claims separate from the legacy baseline", async () => {
+  const memory = createInMemoryDb();
+  memory.seed("gameState", [
+    {
+      _id: "current",
+      preset: "2027-default",
+      resetWorldId: "modern",
+      metricsSystemVersion: "v2",
+      legislationSystemVersion: "v2",
+      resetVersionSeeds: {
+        metrics: {
+          worldId: "modern",
+          revision: 3,
+          sourceTurn: 1,
+          completedAt: "2026-11-14",
+          verificationHash: "ok",
+          countries: ["CA"],
+        },
+        legislation: {
+          worldId: "modern",
+          revision: 6,
+          sourceTurn: 1,
+          completedAt: "2026-11-14",
+          verificationHash: "ok",
+          countries: ["CA"],
+        },
+      },
+    },
+  ]);
+  memory.seed("resetRegionalOpeningBoards", [
+    {
+      _id: "CA:CA_ON",
+      countryId: "CA",
+      regionId: "CA_ON",
+      worldId: "modern",
+      sourceTurn: 1,
+      annualSpending: 1000,
+      familyOwned: 0,
+      otherExistingServices: 1000,
+      existingServicesByCategory: { healthcare: 700, education: 300 },
+      allocatedClaims: [],
+      estimateKind: "proportional-source-pool",
+    },
+  ]);
+  const context = await loadRegionalHealContext(memory as unknown as Db);
+  expect(context.enabledCountries).toEqual(["CA"]);
+  vi.mocked(calculateStateSpendingDetail).mockResolvedValue({
+    spending: { total: 0, byCategory: {} },
+    lawCosts: [],
+  } as never);
+  const spending = await regionalSpendingForHeal(
+    memory as unknown as Db,
+    {
+      stateId: "CA_ON",
+      countryId: "CA",
+      spending: { total: 0, byCategory: {} },
+      revenue: { total: 1000 },
+      balance: 0,
+    } as never,
+    context
+  );
+  expect(spending.total).toBe(1000);
+  expect(spending.byCategory.healthcare).toBe(700);
+  expect(spending.byCategory.education).toBe(300);
+});
+
 it("rebuilds Canadian services from the fixed source instead of erased or repeatedly healed totals", async () => {
   const db = createInMemoryDb();
   db.seed("gameState", [

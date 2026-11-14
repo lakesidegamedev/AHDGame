@@ -1159,6 +1159,7 @@ describe("processFiscalYear", () => {
           ? [
               {
                 _id: "new-program",
+                country: "US",
                 regionId: "US-CA",
                 familyId: "L10",
                 choice: "center_left",
@@ -1199,6 +1200,7 @@ describe("processFiscalYear", () => {
       resetPrograms: [
         {
           _id: "world:US:US-CA:L10",
+          country: "US",
           regionId: "US-CA",
           familyId: "L10",
           choice: "center_left",

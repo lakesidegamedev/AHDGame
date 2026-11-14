@@ -157,8 +157,10 @@ export async function processFiscalYear(
       },
     }
   );
-  const usResetLegislationV2 =
-    resetSystemVersionsForCountry(financeState, RESET_V2_READY, "US").legislation === "v2";
+  const regionalV2Countries = (["US", "CA"] as const).filter(
+    (country) =>
+      resetSystemVersionsForCountry(financeState, RESET_V2_READY, country).legislation === "v2"
+  );
   const regionalLegislationTypes = await legislationTypesCollection(db)
     .find(
       {
@@ -188,13 +190,18 @@ export async function processFiscalYear(
     macroMetricsCollection(db).find({}).toArray(),
   ]);
   const usResetRegionalPrograms =
-    usResetLegislationV2 && financeState?.resetWorldId
+    regionalV2Countries.length > 0 && financeState?.resetWorldId
       ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
-            { country: "US", scope: "regional", worldId: financeState.resetWorldId },
+            {
+              country: { $in: regionalV2Countries },
+              scope: "regional",
+              worldId: financeState.resetWorldId,
+            },
             {
               projection: {
                 _id: 1,
+                country: 1,
                 regionId: 1,
                 familyId: 1,
                 choice: 1,
@@ -207,10 +214,10 @@ export async function processFiscalYear(
   const usResetProgramsByRegion = new Map<string, ResetLawProgramDocument[]>();
   // One world-scoped preload, never a lookup per region. Other presets retain their rules.
   const openingServices =
-    usResetLegislationV2 && financeState?.preset === "2027-default"
+    regionalV2Countries.length > 0 && financeState?.preset === "2027-default"
       ? await resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db)
           .find(
-            { countryId: "US", worldId: financeState.resetWorldId },
+            { countryId: { $in: regionalV2Countries }, worldId: financeState.resetWorldId },
             {
               projection: {
                 _id: 1,
@@ -229,21 +236,25 @@ export async function processFiscalYear(
           )
           .toArray()
       : [];
-  const openingServicesByRegion = new Map(openingServices.map((board) => [board.regionId, board]));
+  const openingServicesByRegion = new Map(
+    openingServices.map((board) => [`${board.countryId}:${board.regionId}`, board])
+  );
   for (const board of openingServices) regionalOpeningServiceClaims(board);
   if (
-    usResetLegislationV2 &&
+    regionalV2Countries.length > 0 &&
     financeState?.preset === "2027-default" &&
     states.some(
-      (s) => countryHasFeature("usLib", s.countryId) && !openingServicesByRegion.has(String(s._id))
+      (s) =>
+        (regionalV2Countries as readonly string[]).includes(s.countryId) &&
+        !openingServicesByRegion.has(`${s.countryId}:${s._id}`)
     )
   )
-    throw new Error("US 2027 rollover requires current-world regional service baselines");
+    throw new Error("2027 v2 rollover requires current-world regional service baselines");
   for (const program of usResetRegionalPrograms) {
     if (!program.regionId) continue;
-    const programs = usResetProgramsByRegion.get(program.regionId) ?? [];
+    const programs = usResetProgramsByRegion.get(`${program.country}:${program.regionId}`) ?? [];
     programs.push(program);
-    usResetProgramsByRegion.set(program.regionId, programs);
+    usResetProgramsByRegion.set(`${program.country}:${program.regionId}`, programs);
   }
   const stateGdpGrowthMap = new Map(
     allStateMetrics
@@ -732,9 +743,11 @@ export async function processFiscalYear(
         currentTurn,
         countryId === COUNTRY_CONFIGS.US.id,
         regionalLegislationTypeMap,
-        countryId === COUNTRY_CONFIGS.US.id ? (usResetProgramsByRegion.get(stateId) ?? []) : [],
-        countryId === COUNTRY_CONFIGS.US.id ? openingServicesByRegion.get(stateId) : undefined,
-        caProvincialServiceClaims(countryId, financeState?.preset, stateId)
+        usResetProgramsByRegion.get(`${countryId}:${stateId}`) ?? [],
+        openingServicesByRegion.get(`${countryId}:${stateId}`),
+        (regionalV2Countries as readonly string[]).includes(countryId)
+          ? []
+          : caProvincialServiceClaims(countryId, financeState?.preset, stateId)
       );
     }
 

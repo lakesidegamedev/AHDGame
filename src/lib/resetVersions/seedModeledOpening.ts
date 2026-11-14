@@ -9,7 +9,10 @@ import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { resolveResetStartDate, type ResetStartDate } from "@/lib/admin/resetStartDate";
 import { calculateEnactedLawAnnualCost } from "@/lib/budget/costs";
 import { fiscalOwnerReadings } from "@/lib/resetMetrics/rules/fiscalOwner";
-import { buildOpeningMetricObservation } from "@/lib/resetMetrics/rules/openingObservation";
+import {
+  buildOpeningMetricObservation,
+  type OpeningMetricObservation,
+} from "@/lib/resetMetrics/rules/openingObservation";
 import { nationalForceReadiness } from "@/lib/resetMetrics/rules/forceReadiness";
 import { auditOpeningNationalMetricSources1991 } from "@/lib/resetMetrics/openingSeed1991";
 import { openingLawReferences } from "@/lib/resetLegislation/openingLaw";
@@ -18,13 +21,20 @@ import { buildOpeningDepartmentFundingPartition } from "@/lib/resetFinance/rules
 import { persistMetricOpening } from "@/lib/resetMetrics/seedOpening1991";
 import { persistLawOpening } from "@/lib/resetLegislation/seedOpening1991";
 import { persistCabinetOpening } from "@/lib/resetFinance/seedOpeningDepartments1991";
-import { RESET_V2_OPENING_COUNTRIES, type ResetSystem } from "./rules";
+import {
+  resetV2OpeningCountriesForPreset,
+  type ResetSystem,
+  type ModeledOpeningCountry,
+} from "./rules";
 import { buildModeledMetricOpening } from "./rules/modeledMetrics";
 import { buildModeledFiscalOpening } from "./rules/modeledFinance";
 import { modeledSeedMetrics, metricNumbers, modeledCensusGaps } from "./modeledSeedInputs";
 import { getNationalBudgetSeedProvenance } from "@/lib/seeds/reference/budgets";
 import { getLaw } from "@/lib/politicalLegislation/catalog";
 import { modeledLawFamily } from "./rules/modeledLawFamily";
+import { canadianModeledReferences } from "./rules/canadianReferences";
+import { CA_ENERGY_2025 } from "@/lib/countries/ca/data/caEnergy2025";
+import { canadianEnergySecurity } from "@/lib/countries/ca/rules/energySecurity";
 
 export async function loadModeledOpening(
   db: Db,
@@ -33,7 +43,8 @@ export async function loadModeledOpening(
   turn: number,
   date?: ResetStartDate
 ) {
-  const unsupportedCountries = RESET_V2_OPENING_COUNTRIES.flatMap((country) => {
+  const openingCountries = resetV2OpeningCountriesForPreset(preset);
+  const unsupportedCountries = openingCountries.flatMap((country) => {
     const regions = modeledCensusGaps(preset, country);
     return regions.length
       ? [
@@ -45,7 +56,7 @@ export async function loadModeledOpening(
         ]
       : [];
   });
-  const countries = RESET_V2_OPENING_COUNTRIES.filter(
+  const countries = openingCountries.filter(
     (country) => !unsupportedCountries.some((row) => row.country === country)
   );
   const filter = { countryId: { $in: [...countries] } };
@@ -104,6 +115,18 @@ export async function loadModeledOpening(
       });
   });
   const legacyEnergy = auditOpeningNationalMetricSources1991();
+  const modeledEnergy = (observation: OpeningMetricObservation): OpeningMetricObservation => ({
+    ...observation,
+    source: `Modeled ${preset} opening using the existing game fuel-risk assumption`,
+    note: "Inherited provisional fuel-risk parameters. The seed supplies no preset-specific physical fuel ledger.",
+  });
+  const energyByCountry: Record<ModeledOpeningCountry, OpeningMetricObservation> = {
+    US: modeledEnergy(legacyEnergy.US["58"]!),
+    UK: modeledEnergy(legacyEnergy.UK["58"]!),
+    JP: modeledEnergy(legacyEnergy.JP["58"]!),
+    IE: modeledEnergy(legacyEnergy.IE["58"]!),
+    CA: canadianEnergySecurity(CA_ENERGY_2025),
+  };
   const national = Object.fromEntries(
     countries.map((country) => {
       const budget = budgets.find((b) => b.countryId === country);
@@ -131,11 +154,7 @@ export async function loadModeledOpening(
               true
             ),
           }),
-          "58": {
-            ...legacyEnergy[country]["58"]!,
-            source: `Modeled ${preset} opening using the existing game fuel-risk assumption`,
-            note: "Inherited provisional fuel-risk parameters. The seed supplies no preset-specific physical fuel ledger.",
-          },
+          "58": energyByCountry[country],
         },
       ];
     })
@@ -157,7 +176,7 @@ export async function loadModeledOpening(
     turn,
     preset,
     year,
-    references: openingLawReferences,
+    references: [...openingLawReferences, ...canadianModeledReferences()],
     countries: countries.map((country) => {
       const budget = budgets.find((b) => b.countryId === country)!;
       const population = regions

@@ -398,6 +398,7 @@ export async function resetGameWorld(
           { _id: "current" },
           {
             projection: {
+              preset: 1,
               metricsSystemVersion: 1,
               legislationSystemVersion: 1,
               cabinetSystemVersion: 1,

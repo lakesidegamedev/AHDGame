@@ -9,10 +9,15 @@ import {
   resetVersionSelectionEligibility,
   resolveResetSystemVersion,
   RESET_V2_SEED_REVISION,
+  resetV2OpeningCountriesForPreset,
   type ResetSystemSeedReceipt,
 } from "./rules";
 
 describe("reset-era system versions", () => {
+  it("offers Canadian openings only in the authored modern preset", () => {
+    expect(resetV2OpeningCountriesForPreset("2027-default")).toContain("CA");
+    expect(resetV2OpeningCountriesForPreset("1991-default")).not.toContain("CA");
+  });
   const ready = { metrics: true, legislation: true, cabinet: true, demographics: true };
   const staged = { metrics: false, legislation: false, cabinet: false, demographics: false };
   const seeded = {
@@ -121,6 +126,47 @@ describe("reset-era system versions", () => {
     });
     expect(resetVersionSelectionEligibility(null, "demographics", "v2", ready)).toEqual({
       allowed: true,
+    });
+  });
+
+  it("requires country and world coverage for every Canadian v2 system", () => {
+    const state = {
+      ...seeded,
+      preset: "2027-default",
+      metricsSystemVersion: "v2",
+      legislationSystemVersion: "v2",
+      cabinetSystemVersion: "v2",
+      demographicsSystemVersion: "v2",
+      resetVersionSeeds: Object.fromEntries(
+        Object.entries(seeded.resetVersionSeeds).map(([key, receipt]) => [
+          key,
+          { ...(receipt as ResetSystemSeedReceipt), countries: ["US", "CA"] },
+        ])
+      ),
+    };
+    expect(resetSystemVersionsForCountry(state, ready, "CA")).toEqual({
+      metrics: "v2",
+      legislation: "v2",
+      cabinet: "v2",
+      demographics: "v2",
+    });
+    for (const invalid of [
+      { ...state, preset: "1991-default" },
+      { ...state, resetWorldId: "different-world" },
+      { ...state, resetVersionSeeds: seeded.resetVersionSeeds },
+    ]) {
+      expect(resetSystemVersionsForCountry(invalid, ready, "CA")).toEqual({
+        metrics: "v1",
+        legislation: "v1",
+        cabinet: "v1",
+        demographics: "v1",
+      });
+    }
+    expect(resetSystemVersionsForCountry(state, ready, "DE")).toEqual({
+      metrics: "v1",
+      legislation: "v1",
+      cabinet: "v1",
+      demographics: "v1",
     });
   });
 

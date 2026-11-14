@@ -39,6 +39,10 @@ export const opening1991Anchors: Record<
   IE: { lifeYears: 74.8, growthPercent: 0.250480411451676 },
 };
 
+const openingAnchorsByCountry: Partial<
+  Record<OpeningCountry | "CA", (typeof opening1991Anchors)[OpeningCountry]>
+> = opening1991Anchors;
+
 function valid(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -85,11 +89,12 @@ function proxy(
 
 /** Never provides national energy security or any other unreviewed metric. */
 export function provisionalRegionalOpening(
-  country: OpeningCountry,
+  country: OpeningCountry | "CA",
   rows: readonly ProvisionalRegionInput[],
-  anchors = opening1991Anchors[country],
+  anchors = openingAnchorsByCountry[country],
   sourceLabel = "1991"
 ): ReadonlyMap<string, Record<string, OpeningMetricObservation>> {
+  if (!anchors) throw new Error("Canadian modeled metrics require explicit preset anchors");
   if (new Set(rows.map((row) => row.regionId)).size !== rows.length) {
     throw new Error("duplicate region in provisional opening inputs");
   }

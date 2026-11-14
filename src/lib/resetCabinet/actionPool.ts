@@ -21,6 +21,7 @@ import { resetCabinetActionStatesCollection } from "@/lib/db/repositories/resetC
 
 type V2GameState = Pick<
   GameState,
+  | "preset"
   | "currentTurn"
   | "resetWorldId"
   | "metricsSystemVersion"

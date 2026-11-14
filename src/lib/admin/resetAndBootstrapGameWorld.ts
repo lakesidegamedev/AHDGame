@@ -44,6 +44,7 @@ import type { GameIteration, GameState } from "@/lib/db/types/gameState";
 import { isPresetAnchorDate, type ResetStartDate } from "@/lib/admin/resetStartDate";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import {
+  demographicsV2OpeningCountries,
   resetSeedComplete,
   resetSelectionPreflight,
   resetSystemSelectionsFrom,
@@ -220,6 +221,7 @@ export async function resetAndBootstrapGameWorld(
     { _id: "current" },
     {
       projection: {
+        preset: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
         cabinetSystemVersion: 1,
@@ -420,7 +422,14 @@ export async function resetAndBootstrapGameWorld(
       }
       const freshState = await gameStateCollection(db).findOne(
         { _id: "current" },
-        { projection: { resetWorldId: 1, currentTurn: 1, metricsSystemVersion: 1 } }
+        {
+          projection: {
+            preset: 1,
+            resetWorldId: 1,
+            currentTurn: 1,
+            metricsSystemVersion: 1,
+          },
+        }
       );
       if (
         freshState?.metricsSystemVersion !== "v2" ||
@@ -467,6 +476,7 @@ export async function resetAndBootstrapGameWorld(
         { _id: "current" },
         {
           projection: {
+            preset: 1,
             resetWorldId: 1,
             resetVersionSeeds: 1,
             currentTurn: 1,
@@ -522,6 +532,7 @@ export async function resetAndBootstrapGameWorld(
         { _id: "current" },
         {
           projection: {
+            preset: 1,
             resetWorldId: 1,
             resetVersionSeeds: 1,
             currentTurn: 1,
@@ -582,6 +593,7 @@ export async function resetAndBootstrapGameWorld(
         { _id: "current" },
         {
           projection: {
+            preset: 1,
             resetWorldId: 1,
             currentTurn: 1,
             demographicsSystemVersion: 1,
@@ -600,7 +612,8 @@ export async function resetAndBootstrapGameWorld(
       const receipt = await verifyDemographicsV2Opening(
         db,
         freshState.resetWorldId,
-        freshState.currentTurn
+        freshState.currentTurn,
+        demographicsV2OpeningCountries(preset)
       );
       const stamped = await gameStateCollection(db).updateOne(
         {
@@ -614,7 +627,7 @@ export async function resetAndBootstrapGameWorld(
       if (stamped.matchedCount !== 1) {
         throw new Error("Demographics v2 world changed before its receipt could be stamped");
       }
-      collect(`Verified ${preset} v2 demographics opening for US, UK, and JP`);
+      collect(`Verified ${preset} v2 demographics opening for ${receipt.countries?.join(", ")}`);
     }
 
     if (preIteration && startingParties === "none") {

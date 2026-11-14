@@ -5,6 +5,7 @@ import { US_GEOGRAPHY } from "@/lib/countries/us/geography";
 import { UK_GEOGRAPHY } from "@/lib/countries/uk/geography";
 import { JP_GEOGRAPHY } from "@/lib/countries/jp/geography";
 import { IE_GEOGRAPHY } from "@/lib/countries/ie/geography";
+import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 import { selectPresetBundle, selectPresetBundleOptional } from "@/lib/seeds/presetSelector";
 import { applyMetricPresetToMetrics, getRegionMetricPresets } from "@/lib/seeds/metricPresets";
 import { applyEra1953Adjustments } from "@/lib/seeds/reference/stateMetricsEra1953";
@@ -15,16 +16,20 @@ import { stateMetrics1999 } from "@/lib/seeds/reference/stateMetrics1999";
 import { stateMetrics2007 } from "@/lib/seeds/reference/stateMetrics2007";
 import { stateMetrics2023 } from "@/lib/seeds/reference/stateMetrics2023";
 import { stateMetrics2027 } from "@/lib/seeds/reference/stateMetrics2027";
-import type { OpeningCountry } from "@/lib/resetMetrics/rules/provisionalOpening";
+import type { ModeledOpeningCountry } from "./rules";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { cohortAgeShares1991 } from "@/lib/seeds/rules/cohortAgeShares1991";
 
 /** Match the cohort seeder's authored input requirement, without era substitution. */
-export function modeledCensusGaps(preset: string, country: OpeningCountry): string[] {
-  const geography = { US: US_GEOGRAPHY, UK: UK_GEOGRAPHY, JP: JP_GEOGRAPHY, IE: IE_GEOGRAPHY }[
-    country
-  ];
+export function modeledCensusGaps(preset: string, country: ModeledOpeningCountry): string[] {
+  const geography = {
+    US: US_GEOGRAPHY,
+    UK: UK_GEOGRAPHY,
+    JP: JP_GEOGRAPHY,
+    IE: IE_GEOGRAPHY,
+    CA: CA_GEOGRAPHY,
+  }[country];
   const regions = selectPresetBundleOptional(preset, geography.regionBundles);
   if (!regions) return ["no-authored-region-roster"];
   return regions
@@ -36,10 +41,14 @@ export function modeledCensusGaps(preset: string, country: OpeningCountry): stri
     .map((region) => String(region._id));
 }
 
-export function modeledSeedMetrics(preset: string, country: OpeningCountry): StateMetrics[] {
-  const geography = { US: US_GEOGRAPHY, UK: UK_GEOGRAPHY, JP: JP_GEOGRAPHY, IE: IE_GEOGRAPHY }[
-    country
-  ];
+export function modeledSeedMetrics(preset: string, country: ModeledOpeningCountry): StateMetrics[] {
+  const geography = {
+    US: US_GEOGRAPHY,
+    UK: UK_GEOGRAPHY,
+    JP: JP_GEOGRAPHY,
+    IE: IE_GEOGRAPHY,
+    CA: CA_GEOGRAPHY,
+  }[country];
   const rows =
     country === COUNTRY_CONFIGS.US.id
       ? selectPresetBundle(
@@ -69,10 +78,14 @@ export function modeledSeedMetrics(preset: string, country: OpeningCountry): Sta
   });
 }
 
-export function modeledSeedRegions(preset: string, country: OpeningCountry) {
-  const geography = { US: US_GEOGRAPHY, UK: UK_GEOGRAPHY, JP: JP_GEOGRAPHY, IE: IE_GEOGRAPHY }[
-    country
-  ];
+export function modeledSeedRegions(preset: string, country: ModeledOpeningCountry) {
+  const geography = {
+    US: US_GEOGRAPHY,
+    UK: UK_GEOGRAPHY,
+    JP: JP_GEOGRAPHY,
+    IE: IE_GEOGRAPHY,
+    CA: CA_GEOGRAPHY,
+  }[country];
   return selectPresetBundle(preset, geography.regionBundles, "modeled v2 region roster");
 }
 

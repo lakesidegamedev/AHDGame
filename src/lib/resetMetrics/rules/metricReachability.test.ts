@@ -102,7 +102,9 @@ describe("all-metric gameplay reachability", () => {
   );
   it("does not silently activate the new catalog in legacy countries", () => {
     const coverage = metricCountryCoverage(Object.keys(COUNTRY_CONFIGS));
-    expect(coverage.filter((c) => c.currentPath === "reviewed-v2-catalog")).toHaveLength(6);
+    expect(
+      coverage.filter((c) => c.currentPath === "reviewed-v2-catalog").map((c) => c.countryId)
+    ).toEqual(["CA", "IE", "JP", "SCO", "UK", "US", "WAL"]);
     expect(coverage.filter((c) => c.currentPath === "legacy").length).toBeGreaterThan(0);
   });
   it("checks old-definition fallback routes as well as complete owners", () => {

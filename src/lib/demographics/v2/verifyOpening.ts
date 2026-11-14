@@ -49,9 +49,9 @@ export async function verifyDemographicsV2Opening(
       throw new Error(`Demographics v2 opening has no populated regions for ${countryId}`);
     }
   }
-  const vectorIds = new Set(docs.map((doc) => doc._id));
+  const vectorIds = new Set(docs.map((doc) => `${doc.countryId}:${doc._id}`));
   const missingRegions = populatedRegions
-    .filter((region) => !vectorIds.has(region._id))
+    .filter((region) => !vectorIds.has(`${region.countryId}:${region._id}`))
     .map((region) => region._id);
   if (missingRegions.length > 0) {
     throw new Error(

@@ -1,3 +1,6 @@
+import { primaryMetricById } from "@/lib/resetMetrics/catalog";
+import { driftProxyValue } from "@/lib/resetMetrics/rules/policyDrift";
+import { modeledReachabilityIds } from "@/lib/resetMetrics/testing/metricReachability";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -8,7 +11,7 @@ import {
 } from "@/lib/seeds/reference/budgets";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
-import { RESET_V2_OPENING_COUNTRIES } from "./rules";
+import { resetV2OpeningCountriesForPreset } from "./rules";
 import { loadModeledOpening } from "./seedModeledOpening";
 import {
   modeledSeedMetrics,
@@ -20,7 +23,7 @@ import { buildResetAuthorityClaims } from "@/lib/resetFinance/rules/authorityCla
 
 function fixture(preset: string) {
   const db = createMockDb();
-  const countries = RESET_V2_OPENING_COUNTRIES.filter(
+  const countries = resetV2OpeningCountriesForPreset(preset).filter(
     (c) => modeledCensusGaps(preset, c).length === 0
   );
   const states = countries.flatMap((c) => modeledSeedRegions(preset, c));
@@ -75,6 +78,56 @@ function fixture(preset: string) {
 }
 
 describe("modeled preset v2 openings", () => {
+  it("moves modeled outcomes across all thirteen Canadian regions using their own opening values", async () => {
+    const { db } = fixture("2027-default");
+    const opening = await loadModeledOpening(db, "2027-default", "canadian-response", 1);
+    const boards = opening.metrics.filter((b) => b.countryId === "CA" && b.scope === "regional");
+    expect(boards).toHaveLength(13);
+    let cases = 0;
+    for (const board of boards) {
+      expect(board.regionId).toMatch(/^CA_/);
+      for (const id of modeledReachabilityIds) {
+        const value = board.observations[id]?.value;
+        if (value == null) continue;
+        const metric = primaryMetricById(id)!;
+        const input = {
+          metric,
+          currentValue: value,
+          openingValue: value,
+          countryId: "CA" as const,
+          year: 2027,
+        };
+        const favorable = driftProxyValue({ ...input, pressure: 0.5 });
+        const adverse = driftProxyValue({ ...input, pressure: -0.5 });
+        expect(Number.isFinite(favorable) && Number.isFinite(adverse), `${board._id}:${id}`).toBe(
+          true
+        );
+        expect(
+          favorable !== value || adverse !== value,
+          `${board._id}:${id} blocked in both directions`
+        ).toBe(true);
+        cases++;
+      }
+    }
+    expect(cases).toBeGreaterThan(300);
+  });
+
+  it("builds all Canadian boards and Cabinet accounts from the 2027 game seed", async () => {
+    const { db } = fixture("2027-default");
+    const opening = await loadModeledOpening(db, "2027-default", "canadian-world", 1);
+    expect(opening.countries).toContain("CA");
+    expect(opening.metrics.filter((b) => b.countryId === "CA")).toHaveLength(14);
+    expect(opening.fiscal.laws.filter((b) => b.countryId === "CA")).toHaveLength(14);
+    expect(opening.partition.accounts.filter((a) => a.countryId === "CA")).toHaveLength(19);
+    const board = opening.fiscal.laws.find((b) => b.countryId === "CA" && b.scope === "national")!;
+    expect(Object.keys(board.references)).toHaveLength(61);
+    expect(Object.values(board.references).every((r) => r.country === "CA")).toBe(true);
+    expect(
+      opening.fiscal.regional
+        .filter((b) => b.countryId === "CA")
+        .every((b) => b.existingServicesByCategory !== undefined)
+    ).toBe(true);
+  });
   it("binds an off-anchor opening and its cohort inputs to the requested date", async () => {
     const { db, budgets } = fixture("2027-default");
     const opening = await loadModeledOpening(db, "2027-default", "off-anchor", 12, {
@@ -109,7 +162,15 @@ describe("modeled preset v2 openings", () => {
     expect(opening.fiscal.laws).toHaveLength(states.length + opening.countries.length);
     for (const board of opening.metrics) {
       expect(board.modeledOpening?.preset).toBe(preset);
-      expect(Object.values(board.observations).every((o) => Number.isFinite(o.value))).toBe(true);
+      for (const observation of Object.values(board.observations)) {
+        if (board.countryId === "CA" && observation.metricId === "58") {
+          expect(observation.status).toBe("proxy");
+          expect(Number.isFinite(observation.value)).toBe(true);
+          expect(observation.source).toContain("Statistics Canada 2025");
+          expect(observation.source).not.toContain("US game");
+          expect(observation.note).toContain("Commercial stocks are not public emergency reserves");
+        } else expect(Number.isFinite(observation.value)).toBe(true);
+      }
     }
     for (const budget of budgets) {
       const board = opening.fiscal.departments.find((b) => b.countryId === budget.countryId)!;

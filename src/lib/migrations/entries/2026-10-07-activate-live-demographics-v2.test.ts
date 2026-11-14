@@ -30,6 +30,37 @@ function state(overrides: Record<string, unknown> = {}) {
 }
 
 describe(migration.id, () => {
+  it("repairs a modern receipt missing Canada before declaring activation complete", async () => {
+    const db = createMockDb();
+    const prior = state({
+      preset: "2027-default",
+      demographicsSystemVersion: "v2",
+      resetVersionSeeds: { demographics: receipt },
+      resetSystemSelections: { demographics: "v2" },
+    });
+    db.collection("gameState").findOne.mockResolvedValue(prior);
+    vi.mocked(verifyDemographicsV2Opening).mockResolvedValue({
+      ...receipt,
+      countries: ["US", "UK", "JP", "CA", "IE"],
+    });
+    await migration.execute(db as unknown as Db, { dryRun: true });
+    expect(verifyDemographicsV2Opening).toHaveBeenCalledWith(db, "world-live", 77, [
+      "US",
+      "UK",
+      "JP",
+      "CA",
+      "IE",
+    ]);
+    expect(db.collectionMocks.gameState.updateOne).not.toHaveBeenCalled();
+  });
+  it("refuses an activation while a turn can publish conflicting population or ballots", async () => {
+    const db = createMockDb();
+    db.collection("gameState").findOne.mockResolvedValue(state({ isProcessing: true }));
+    await expect(migration.execute(db as unknown as Db, { dryRun: false })).rejects.toThrow(
+      "idle turn runner"
+    );
+    expect(verifyDemographicsV2Opening).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.mocked(verifyDemographicsV2Opening).mockReset().mockResolvedValue(receipt);
   });
@@ -71,6 +102,7 @@ describe(migration.id, () => {
     expect(filter).toEqual({
       _id: "current",
       isActive: true,
+      isProcessing: { $ne: true },
       currentTurn: 77,
       resetWorldId: "world-live",
     });

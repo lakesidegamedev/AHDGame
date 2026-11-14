@@ -1,4 +1,3 @@
-import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { OpeningLawReference } from "@/lib/resetLegislation/openingLaw";
 import {
   buildResetLawOpeningBoard,
@@ -6,7 +5,7 @@ import {
 } from "@/lib/resetLegislation/rules/openingBoard";
 import { resetLawFamilies } from "@/lib/resetLegislation/catalog";
 import { fundingSeatForLaw, fundingNameForLaw1991 } from "@/lib/resetLegislation/fundingOwner";
-import type { ResetOpeningCountry } from "@/lib/resetFinance/opening1991";
+import type { ModeledOpeningCountry as ResetOpeningCountry } from "../rules";
 import { groupOpeningDepartmentClaims } from "@/lib/resetFinance/rules/departmentOpening";
 import type { ResetDepartmentOpeningBoard } from "@/lib/resetFinance/rules/departmentBoard";
 import type { ResetRegionalOpeningBoard } from "@/lib/resetFinance/rules/regionalOpeningBoard";
@@ -170,9 +169,7 @@ export function buildModeledFiscalOpening(input: {
         annualSpending: region.spending,
         familyOwned: 0,
         otherExistingServices: region.spending,
-        ...(input.preset === "2027-default" &&
-        countryHasFeature("usLib", country.country) &&
-        region.spendingByCategory
+        ...(input.preset === "2027-default" && region.spendingByCategory
           ? { existingServicesByCategory: { ...region.spendingByCategory } }
           : {}),
         allocatedClaims: [],

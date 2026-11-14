@@ -96,6 +96,7 @@ export async function checkUS2027Opening(db: Db, preset: string): Promise<SeedDi
       { _id: "current" as never },
       {
         projection: {
+          preset: 1,
           cabinetSystemVersion: 1,
           legislationSystemVersion: 1,
           resetWorldId: 1,

@@ -6,10 +6,12 @@ import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import type { State } from "@/lib/db/types/state";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { demographicsRegionKey } from "@/lib/demographics/v2/rules/regionKey";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
 
 export interface DemographicsV2Preload {
+  /** Qualified keys prevent a national CA aggregate from replacing US California. */
   regionDemographicsByState: Map<string, RegionDemographics>;
   demographicsV2Countries: Set<string>;
   votingAgeByCountry: Map<string, number>;
@@ -133,17 +135,20 @@ export async function loadDemographicsV2Preload(input: {
           )
           .toArray()
       : [];
-  const regionDemographicsByState = new Map(regionRows.map((row) => [row._id as string, row]));
+  const regionDemographicsByState = new Map(
+    regionRows.map((row) => [demographicsRegionKey(row.countryId, row._id), row])
+  );
 
   for (const countryId of input.nationwideCountries) {
     if (!demographicsV2Countries.has(countryId)) continue;
     const stateIds = new Set(
       input.states.filter((state) => state.countryId === countryId).map((state) => state._id)
     );
-    const rows = regionRows.filter((row) => stateIds.has(row._id));
+    const rows = regionRows.filter((row) => row.countryId === countryId && stateIds.has(row._id));
     if (rows.length === 0) continue;
     const aggregate = aggregateRegionDemographics(countryId, rows);
-    if (aggregate) regionDemographicsByState.set(countryId, aggregate);
+    if (aggregate)
+      regionDemographicsByState.set(demographicsRegionKey(countryId, countryId), aggregate);
   }
 
   return {

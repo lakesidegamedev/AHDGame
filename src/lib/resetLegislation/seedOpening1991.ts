@@ -38,7 +38,7 @@ export async function persistLawOpening(
   db: Db,
   worldId: string,
   sourceTurn: number,
-  countries: readonly ResetOpeningCountry[],
+  countries: readonly (ResetOpeningCountry | "CA")[],
   expected: readonly ResetLawOpeningBoard[],
   expectedRegional: readonly ResetRegionalOpeningBoard[],
   verifyHistoricalUk = false
