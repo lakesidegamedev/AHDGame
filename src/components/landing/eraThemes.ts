@@ -5,10 +5,7 @@
 
 import { tierFor, type ShippingPreset } from "@/lib/world/eraRoster";
 import type { CountryId } from "@/lib/constants/countries";
-import { SHOWCASE_1991, TICKER_1991 } from "./broadcast1991";
-import { NIGHTSIDE_2027, SHOWCASE_2027, TICKER_2027 } from "./broadcast2027";
 import type { CountryTier } from "./countryTiers";
-import type { HistoricalCrisisShowcaseEntry } from "./historicalCrisisShowcase";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
 export type { EraId };
@@ -29,62 +26,11 @@ export type EraNation = {
   tier: "player" | "econ" | "npp" | "background";
 };
 
-/** Where a headline was filed from. */
-export type BroadcastPlace = { name: string; lonLat: readonly [number, number] };
-
-/** One of the year's headlines. The globe's uplinks name its place and date. */
-export type BroadcastTickerItem = {
-  /** Short dateline, e.g. "25 Dec". Rendered uppercase. */
-  date: string;
-  /** Sentence-case headline. Rendered uppercase, read as written. */
-  text: string;
-  /** Where it was filed from. The globe's satellites beam down to it. */
-  place?: BroadcastPlace;
-};
-
-/** A route the nightside globe flies between two places. */
-export type BroadcastRoute = { from: BroadcastPlace; to: BroadcastPlace };
-
 /**
- * The present-day globe: real sunlight and night at one instant, city lights
- * on the night side, lifted routes between the simulated economies, a busier
- * sky and one region outlined as a border that could exist.
- */
-export type NightsideConfig = {
-  /** The instant whose sunlight the globe shows, ISO 8601. */
-  sunAt: string;
-  routes: readonly BroadcastRoute[];
-  /** A sub-national region drawn as a possible new border, from a GeoJSON shard. */
-  watchedRegion?: {
-    geoUrl: string;
-    featureId: string;
-    label: string;
-    labelLonLat: readonly [number, number];
-  };
-};
-
-/**
- * The broadcast lander: the hero framed as a satellite news feed of the era's
- * defining week, instead of the CRT console `wireframeColor` draws. An era
- * either has this or it doesn't; the two looks never stack.
+ * The broadcast lander: the hero framed as a news broadcast instead of the CRT
+ * console `wireframeColor` draws. An era either has this or it doesn't.
  */
 export type BroadcastLanderConfig = {
-  /** The year's headlines, oldest first. Their places are the satellites' datelines. */
-  ticker: readonly BroadcastTickerItem[];
-  /**
-   * Map feature ids of a state that has just broken up. Their merged outline is
-   * drawn as a fading dashed border, and the borders between them as new ones.
-   * Absent for an era in which no state has just broken up.
-   */
-  dissolvedStateFeatureIds?: readonly string[];
-  /** Name riding beside the satellite on the inner orbit. */
-  orbitLabel: string;
-  /** The globe's idle tour for this era, in place of the Cold War tour. */
-  showcase: readonly HistoricalCrisisShowcaseEntry[];
-  /** Badge on the tour's cards. */
-  showcaseBadge: string;
-  /** The present-day globe in place of the 1991 satellite look. */
-  nightside?: NightsideConfig;
   /**
    * Country count per tier for the hero's tier key. When set, the key lists
    * only these tiers, with their counts.
@@ -149,28 +95,6 @@ export type EraConfig = {
   /** Globe rotation at first paint, `[-lon, -lat, 0]`. Defaults to the Mediterranean. */
   initialRotation?: [number, number, number];
 };
-
-/**
- * The fifteen Soviet republics as Natural Earth feature ids. Their union is the
- * USSR's last outline, and the arcs they share are the borders it left behind.
- */
-export const SOVIET_REPUBLIC_FEATURE_IDS: readonly string[] = [
-  "643", // Russia
-  "804", // Ukraine
-  "112", // Belarus
-  "498", // Moldova
-  "233", // Estonia
-  "428", // Latvia
-  "440", // Lithuania
-  "268", // Georgia
-  "051", // Armenia
-  "031", // Azerbaijan
-  "398", // Kazakhstan
-  "860", // Uzbekistan
-  "795", // Turkmenistan
-  "417", // Kyrgyzstan
-  "762", // Tajikistan
-];
 
 /**
  * A curated roster entry: the display NAME and the order it appears in.
@@ -504,13 +428,7 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     // Open over the Balkans so the old Soviet outline fills the right of the
     // first frame and the UK's chip clears the hero copy.
     initialRotation: [-24, -42, 0],
-    broadcast: {
-      ticker: TICKER_1991,
-      dissolvedStateFeatureIds: SOVIET_REPUBLIC_FEATURE_IDS,
-      orbitLabel: "MIR",
-      showcase: SHOWCASE_1991,
-      showcaseBadge: "Special report",
-    },
+    broadcast: {},
     explainer: {
       href: "https://lakesidegames.net/ahd-1991/",
       label: "What's new in the 1991 world",
@@ -642,13 +560,8 @@ export const ERA_CONFIGS: Record<EraId, EraConfig> = {
     nations: nationsFor("2027-default", NATIONS_2027),
     // Open over the western Atlantic: the two player countries clear of the
     // hero copy on the day side, Europe's lit cities past the terminator.
-    initialRotation: [46, -38, 0],
+    initialRotation: [48, -30, 0],
     broadcast: {
-      ticker: TICKER_2027,
-      orbitLabel: "RELAY",
-      showcase: SHOWCASE_2027,
-      showcaseBadge: "Looking ahead",
-      nightside: NIGHTSIDE_2027,
       tierCounts: tierCountsFor("2027-default", NATIONS_2027),
     },
     explainer: {
