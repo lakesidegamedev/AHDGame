@@ -28,7 +28,7 @@ import { UniversalSearch } from "./UniversalSearch";
 import { Avatar } from "./Avatar";
 import { CountryFlag } from "@/components/CountryFlag";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { countryDisplayCode } from "@/lib/constants/countryDisplayCodes";
+import { COUNTRY_DISPLAY_CODES } from "@/lib/constants/countryDisplayCodes";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import {
   countryUrl,
@@ -1237,7 +1237,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                     className="flex h-9 items-center gap-2 rounded-lg border border-card-border bg-card px-2.5 text-xs font-medium text-fg-2 transition-colors hover:border-muted/50 hover:text-foreground"
                   >
                     <CountryFlag country={pageCountry} size="sm" />
-                    <span>{countryDisplayCode(pageCountry as CountryId)}</span>
+                    <span>{COUNTRY_DISPLAY_CODES[pageCountry] ?? pageCountry}</span>
                     <Chevron open={open === "country"} />
                   </button>
                   {open === "country" && (

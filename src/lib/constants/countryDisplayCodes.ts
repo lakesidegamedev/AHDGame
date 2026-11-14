@@ -37,7 +37,3 @@ export const COUNTRY_DISPLAY_CODES: Readonly<Record<string, string>> = {
   WAL: "WAL",
   YU: "YU",
 };
-
-export function countryDisplayCode(id: string): string {
-  return COUNTRY_DISPLAY_CODES[id] ?? id;
-}

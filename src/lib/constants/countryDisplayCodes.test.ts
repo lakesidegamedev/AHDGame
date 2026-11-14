@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COUNTRY_CLIENT_CONFIGS } from "./countryClientConfig";
-import { COUNTRY_DISPLAY_CODES, countryDisplayCode } from "./countryDisplayCodes";
+import { COUNTRY_DISPLAY_CODES } from "./countryDisplayCodes";
 
 describe("country display codes", () => {
   it("match every country client config", () => {
@@ -10,9 +10,5 @@ describe("country display codes", () => {
     expect(Object.keys(COUNTRY_DISPLAY_CODES).sort()).toEqual(
       Object.keys(COUNTRY_CLIENT_CONFIGS).sort()
     );
-  });
-
-  it("falls back to the id", () => {
-    expect(countryDisplayCode("ZZ")).toBe("ZZ");
   });
 });
