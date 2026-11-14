@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getClientIp } from "@/lib/utils/network";
@@ -42,6 +43,9 @@ function resetEmailContent(url: string, baseUrl: string): { html: string; text: 
 // Errors: 400, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("reset");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const clientIp = await getClientIp();
     const ipLimit = await durableRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
     if (!ipLimit.ok) return rateLimitResponse(ipLimit.retryAfter);

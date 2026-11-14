@@ -179,6 +179,7 @@ export function LandingGlobe({
   markersFromSm = false,
   backgroundMacroFeatureIds,
   successorProxies,
+  onReady,
 }: {
   gameDate?: string;
   theme?: "default" | "broadsheet";
@@ -276,6 +277,8 @@ export function LandingGlobe({
    * reference.
    */
   successorProxies?: SuccessorProxies;
+  /** Fires once, when the first frame of land is in the DOM. */
+  onReady?: () => void;
 }) {
   const resolveCountryName = useCountryDisplayName();
   const isBroadsheet = theme === "broadsheet";
@@ -284,6 +287,9 @@ export function LandingGlobe({
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  useEffect(() => {
+    if (isLoaded) onReady?.();
+  }, [isLoaded, onReady]);
   const [isDragging, setIsDragging] = useState(false);
   const [paths, setPaths] = useState<Map<string, string | null>>(new Map());
   const [showcaseEntry, setShowcaseEntry] = useState<HistoricalCrisisShowcaseEntry | null>(null);

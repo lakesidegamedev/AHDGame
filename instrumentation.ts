@@ -166,6 +166,19 @@ export async function register() {
         );
       }
 
+    // Follows the central account's email and password changes. Inert unless
+    // AHD_ACCOUNT_FIELDS_MODE=central; runs here because only web reaches the bridge.
+    if (hostedBackgroundEnabled)
+      try {
+        const { startAccountFieldsConsumer } = await import("@/lib/auth/accountFields/consumer");
+        startAccountFieldsConsumer();
+      } catch (err) {
+        console.error(
+          "[account-fields] failed to start consumer:",
+          err instanceof Error ? err.message : err
+        );
+      }
+
     // Release the turn lock on SIGTERM/SIGINT (Railway redeploys) so a redeploy
     // mid-turn recovers instantly instead of stranding the lock until the
     // 20-min stale takeover. Installed after cron so shutdown can stop it.

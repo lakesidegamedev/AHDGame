@@ -36,6 +36,7 @@ import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParti
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import type { Document } from "mongodb";
+import { formerUsername } from "@/lib/auth/accountFields/rules";
 import { notificationsCollection } from "@/lib/db/repositories/notifications";
 import { playerMailCollection } from "@/lib/db/repositories/playerMail";
 
@@ -69,7 +70,6 @@ export const GET = withNoStore(async () => {
       return errorResponse(401, "Authentication required");
     }
     const userId = payload.userId;
-    const username = payload.username;
 
     const db = await getDb();
     let user = await usersCollection(db).findOne({ _id: new ObjectId(userId) });
@@ -310,7 +310,9 @@ export const GET = withNoStore(async () => {
       {
         user: {
           id: userId,
-          username,
+          // The row, not the token: a rename must show without a new sign-in.
+          username: user?.username ?? payload.username,
+          formerUsername: formerUsername(user?.usernameHistory, new Date()),
           singleplayer: isSingleplayer(),
           email: user?.email ?? undefined,
           patreonTier: user?.patreonTier ?? null,
