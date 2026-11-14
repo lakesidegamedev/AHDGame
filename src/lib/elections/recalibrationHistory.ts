@@ -1,7 +1,7 @@
 /** Timer recalibration reads completed lower-chamber terms without moving Canadian snap clocks. */
 import type { Db } from "mongodb";
 import { electionsCollection } from "@/lib/db/repositories/elections";
-import { shiftedAnchorTurn } from "./snapShift";
+import { canadianRecalibrationAnchor } from "@/lib/countries/ca/rules/electionTimerRepair";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 
 export async function loadRecalibrationHistory(db: Db, ref: Date, currentTurn: number) {
@@ -44,10 +44,8 @@ export async function loadRecalibrationHistory(db: Db, ref: Date, currentTurn: n
     seen.add(key);
     const turnFromTime = (time: Date) =>
       currentTurn - Math.round((ref.getTime() - new Date(time).getTime()) / MS_PER_TURN);
-    const prior =
-      e.countryId === "CA" && type === "caCommons"
-        ? shiftedAnchorTurn(e, type, "snap_caCommons", () => e.endTurn ?? turnFromTime(e.endTime!))
-        : turnFromTime(e.endTime);
+    const owned = canadianRecalibrationAnchor(e, turnFromTime);
+    const prior = owned === undefined ? turnFromTime(e.endTime) : owned;
     if (prior != null) out.set(key, prior);
   }
   return out;
