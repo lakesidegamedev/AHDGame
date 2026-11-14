@@ -130,7 +130,7 @@ describe("renderLandingHtml", () => {
 
   it("passes the globe island its config as JSON that cannot close the script", () => {
     const json = html.match(
-      /<script type="application\/json" id="landing-config">(.*?)<\/script>/s
+      /<script type="application\/json" id="landing-config">([\s\S]*?)<\/script>/
     );
     expect(JSON.parse(json![1])).toMatchObject({ posthogKey: "phc_test", gameVersion: "1.20.0" });
     const hostile = renderLandingHtml(input({ globe: { note: "</script><b>" } }));
