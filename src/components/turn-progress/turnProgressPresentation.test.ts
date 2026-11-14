@@ -54,7 +54,7 @@ describe("turn progress placement", () => {
 
   it("mounts the popup only on server-gated singleplayer", () => {
     const layout = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), "../../app/layout.tsx"),
+      join(dirname(fileURLToPath(import.meta.url)), "../shell/ShellOverlaysFull.tsx"),
       "utf8"
     );
     expect(layout).toMatch(

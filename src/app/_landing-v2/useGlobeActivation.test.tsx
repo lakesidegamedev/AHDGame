@@ -101,10 +101,10 @@ describe("GlobePoster", () => {
   it("renders on the server with fixed dimensions and both formats", () => {
     const html = renderToString(<GlobePoster base="/landing/globe-2027" hidden={false} />);
     expect(html).toContain('type="image/avif"');
-    expect(html).toContain("/landing/globe-2027-640.avif 640w");
-    expect(html).toContain('src="/landing/globe-2027-1200.webp"');
-    expect(html).toContain('width="1200"');
-    expect(html).toContain('height="1200"');
+    expect(html).toContain("/landing/globe-2027-960.avif");
+    expect(html).toContain('src="/landing/globe-2027-960.webp"');
+    expect(html).toContain('width="960"');
+    expect(html).toContain('height="960"');
     expect(html).toContain("opacity-100");
   });
 

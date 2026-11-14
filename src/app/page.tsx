@@ -88,6 +88,7 @@ export default async function LandingPage() {
       backgroundMacroFeatureIds={backgroundMacroFeatureIds}
       currentYear={currentYear}
       launch={launch}
+      renderedAt={new Date().toISOString()}
     />
   );
 }

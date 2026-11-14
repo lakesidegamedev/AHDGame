@@ -26,14 +26,13 @@ import {
 } from "@/components/landing/LandingSectionHeading";
 import { getEraConfig } from "@/components/landing/eraThemes";
 import { globePosterBase } from "@/components/landing/globePosters";
-import { buildStarfield } from "@/components/landing/globeEnhancements";
 import { getEraFlavorCards } from "@/components/landing/flavorCards";
 import {
   battlegroundFeatureIdsForEra,
   economicPowerFeatureIdsForEra,
 } from "@/components/landing/countryTierRosters";
-import { successorProxiesForYear } from "@/components/landing/countryTiers";
-import { resolveEraCopy, type MarketedWorld } from "@/lib/marketing/marketedWorld";
+import { resolveEraCopy } from "@/lib/marketing/eraCopy";
+import type { MarketedWorld } from "@/lib/marketing/marketedWorld";
 import { CookieSettingsLink } from "@/components/CookieSettingsLink";
 import { CrtCountdown, useCrtCountdown } from "./CrtCountdown";
 import { BroadcastBackdrop, BroadcastHeadline, BroadcastTierKey } from "./BroadcastHero";
@@ -132,7 +131,7 @@ const GHOST_BUTTON_CLASSES =
 const ANDROID_BETA_APK_URL = "https://ops.lakesidegames.net/downloads/a-house-divided-0.3.1.apk";
 
 /** Opening view for an era that does not choose its own: the Mediterranean. */
-const DEFAULT_GLOBE_ROTATION: [number, number, number] = [-12, -38, 0];
+const GLOBE_ROTATION: [number, number, number] = [48, -30, 0];
 
 function links(isSignedIn: boolean) {
   return {
@@ -286,6 +285,7 @@ export function SandboxHome({
   backgroundMacroFeatureIds,
   currentYear,
   launch,
+  renderedAt,
 }: {
   isSignedIn: boolean;
   era?: string | number;
@@ -311,33 +311,20 @@ export function SandboxHome({
   currentYear?: number;
   /** Doors open and first turn, resolved on the server. Absent once the world is running. */
   launch?: LaunchSchedule | null;
+  /** When the server rendered this page (ISO). Picks the globe poster closest to the real sun. */
+  renderedAt: string;
 }) {
   const t = useTranslations("auth");
   const eraConfig = getEraConfig(era);
   const [hoveredBloc, setHoveredBloc] = useState<string | null>(null);
-  // True while the globe is idling through its historical-crisis showcase —
-  // fades the hero copy out of the way so the story reads without clutter.
-  const [showcaseActive, setShowcaseActive] = useState(false);
-  // Non-null only while the promo countdown is still running. It doubles as the
-  // pause switch for the globe's idle crisis tour: the countdown owns the hero
-  // until the deadline, after which both revert to normal behaviour with no
-  // deploy needed.
+  // Non-null only while the promo countdown is still running.
   const countdown = useCrtCountdown();
   const globeBoxRef = useRef<HTMLDivElement>(null);
-  const posterBase = globePosterBase(eraConfig.id);
+  const posterBase = globePosterBase(eraConfig.id, new Date(renderedAt));
   const globeReady = useGlobeActivation(globeBoxRef, posterBase !== null);
   const [globeDrawn, setGlobeDrawn] = useState(false);
   const markGlobeDrawn = useCallback(() => setGlobeDrawn(true), []);
   const l = links(isSignedIn);
-
-  // Signal-field star scatter: a full-viewport layer independent of the
-  // globe's own tiny SVG canvas, so density/twinkle never depend on how much
-  // of that canvas the oversized background crop happens to show on-screen.
-  // Distinct seed from the globe's own starfield so the two patterns don't echo.
-  const signalFieldStars = useMemo(
-    () => buildStarfield({ width: 100, height: 100, count: 64, seed: 8420 }),
-    []
-  );
 
   const countriesByBloc = useMemo(() => {
     const western: EraNation[] = [];
@@ -393,7 +380,6 @@ export function SandboxHome({
   const battlegroundFeatureIds = battlegroundFeatureIdsForEra(eraConfig.id);
   const economicPowerFeatureIds = economicPowerFeatureIdsForEra(eraConfig.id);
   // Czechoslovakia and Yugoslavia drawn over their successors where the era names them.
-  const successorProxies = useMemo(() => successorProxiesForYear(eraConfig.year), [eraConfig.year]);
 
   return (
     <div className="relative bg-background text-foreground">
@@ -419,47 +405,9 @@ export function SandboxHome({
                 background: `radial-gradient(circle at 60% 48%, ${wireframeColor}14, transparent 46%)`,
               }}
             />
-            <div
-              className="pointer-events-none absolute inset-0 overflow-hidden"
-              style={{
-                WebkitMaskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-                maskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-              }}
-            >
-              {signalFieldStars.map((s, i) => {
-                const size = 1.2 + s.r * 2;
-                const alphaHex = Math.round(s.opacity * 255)
-                  .toString(16)
-                  .padStart(2, "0");
-                return (
-                  <div
-                    key={s.id}
-                    className="ahd-star-twinkle absolute rounded-full"
-                    style={{
-                      left: `${s.cx}%`,
-                      top: `${s.cy}%`,
-                      width: `${size}px`,
-                      height: `${size}px`,
-                      background: `${wireframeColor}${alphaHex}`,
-                      animationDelay: `${s.twinkleDelay}s`,
-                      animationDuration: `${3.6 + (i % 4) * 0.6}s`,
-                    }}
-                  />
-                );
-              })}
-            </div>
-            <div
-              className="ahd-scan-drift pointer-events-none absolute inset-x-0 top-[-18vmax]"
-              style={{
-                height: "18vmax",
-                background: `linear-gradient(to bottom, transparent, ${wireframeColor}2e, transparent)`,
-                WebkitMaskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-                maskImage: "radial-gradient(85% 85% at 60% 48%, #000 20%, transparent 92%)",
-              }}
-            />
           </>
         )}
-        {broadcast && <BroadcastBackdrop nightside={Boolean(broadcast.nightside)} />}
+        {broadcast && <BroadcastBackdrop nightside={eraConfig.id === "2027"} />}
         <div
           ref={globeBoxRef}
           className="absolute left-[60%] top-[48%] h-[130vmax] w-[130vmax] -translate-x-1/2 -translate-y-1/2"
@@ -476,25 +424,16 @@ export function SandboxHome({
             >
               <LandingGlobe
                 onReady={markGlobeDrawn}
-                bare
-                enhanced
-                hideLiveIndicator
-                gameDate={eraConfig.gameDate}
                 countryAccess={eraConfig.accessMap}
                 geoUrl={CDN_WORLD_GEO_URL}
-                initialRotation={eraConfig.initialRotation ?? DEFAULT_GLOBE_ROTATION}
+                initialRotation={eraConfig.initialRotation ?? GLOBE_ROTATION}
                 initialZoom={1.05}
                 wireframeColor={wireframeColor}
                 playerCounts={playerCounts}
                 battlegroundFeatureIds={battlegroundFeatureIds}
                 economicPowerFeatureIds={economicPowerFeatureIds}
-                onShowcaseActiveChange={setShowcaseActive}
-                showcasePaused={countdown !== null}
-                broadcast={broadcast}
-                hideTierLegend={Boolean(broadcast)}
-                markersFromSm={Boolean(broadcast)}
                 backgroundMacroFeatureIds={backgroundMacroFeatureIds}
-                successorProxies={successorProxies}
+                markersFromSm={Boolean(broadcast)}
               />
             </div>
           ) : null}
@@ -517,13 +456,7 @@ export function SandboxHome({
           broadcast ? "pb-[calc(12vh+1.5rem)]" : ""
         }`}
       >
-        {/* Hero copy — fades out of the way during the idle crisis showcase,
-            back in the instant the user drags/scrolls/clicks. */}
-        <div
-          className={`mx-auto w-full max-w-7xl px-5 transition-opacity duration-700 ease-out sm:px-8 ${
-            showcaseActive ? "pointer-events-none opacity-0" : "pointer-events-auto opacity-100"
-          }`}
-        >
+        <div className="pointer-events-auto mx-auto w-full max-w-7xl px-5 sm:px-8">
           <div className="max-w-xl">
             <CrtCountdown remaining={countdown} />
             <LaunchCountdown schedule={launch} />
@@ -577,11 +510,7 @@ export function SandboxHome({
         </div>
 
         {/* Scroll cue */}
-        <div
-          className={`absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5 transition-opacity duration-700 ease-out ${
-            showcaseActive ? "opacity-0" : "opacity-100"
-          }`}
-        >
+        <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5">
           <span className="text-body-sm font-medium text-muted">{t("landing.scrollCue")}</span>
           <span className="block h-5 w-[1px] bg-muted/60" aria-hidden />
         </div>
@@ -592,7 +521,7 @@ export function SandboxHome({
           <div className="absolute inset-x-0 bottom-[calc(12vh+1rem)]">
             <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
               <BroadcastTierKey
-                hidden={showcaseActive}
+                hidden={false}
                 backgroundIsSimulated={Boolean(backgroundMacroFeatureIds?.length)}
                 counts={broadcast.tierCounts}
               />

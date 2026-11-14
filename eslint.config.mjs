@@ -24,6 +24,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated, minified landing islands (see scripts/landing/build-landing-islands.mjs)
+    "public/landing/js/**",
     // Stale git worktrees — not part of the project build
     ".worktrees/**",
     "worktrees/**",
