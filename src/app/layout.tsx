@@ -320,8 +320,10 @@ export default async function RootLayout({
   // that sets SINGLEPLAYER, by design: see @/lib/singleplayer.
   const singleplayer = isSingleplayer();
 
+  // The pre-paint consent script adds a browser-only attribute to this element.
   return (
     <html
+      suppressHydrationWarning
       lang={locale}
       data-store-app={isStoreApp ? "true" : undefined}
       data-store-os={isStoreApp ? (isIosStoreApp ? "ios" : "android") : undefined}
