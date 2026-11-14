@@ -183,6 +183,7 @@ function fixture() {
 describe("v2 treasury and paid Cabinet turn integration", () => {
   beforeEach(() => vi.clearAllMocks());
   it("does not duplicate a funded bond service liability or create spendable cash", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { treasuries, accounts, run } = fixture();
     await run({
       bondFlows: {
@@ -203,6 +204,19 @@ describe("v2 treasury and paid Cabinet turn integration", () => {
       },
     });
     expect(treasuries).toEqual(settled);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      "[treasury-cash] funded bond reconciliation gap",
+      expect.objectContaining({
+        countryId: "US",
+        worldId: "world",
+        turn: 2,
+        amountLocal: 3,
+        couponCashPaid: 13,
+        openingCash: 0,
+      })
+    );
+    warn.mockRestore();
   });
   it("keeps principal aligned through cash refunding and in-kind rollover", async () => {
     const { treasuries, budgets, run } = fixture();

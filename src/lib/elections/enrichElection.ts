@@ -1,3 +1,4 @@
+import { finishedPrimaryResults } from "./finishedPrimaryResults";
 /**
  * Election details show registered candidates, primary results and counted votes.
  * _enrichElection retains Russian national list nominees together and uses the
@@ -44,18 +45,14 @@ import { censusMedianVoter } from "./censusMedianVoter";
 import { ObjectId } from "mongodb";
 import type {
   Election,
-  ElectionCandidate,
   Character,
   NPP,
-  PoliticalParty,
   GameState,
   NPPEndorsement,
   PlayerEndorsement,
   PrimarySnapshot,
   Campaign,
   StatePartyOrg,
-  StateRegistrationPool,
-  ElectionVoteTally,
   State,
   StateDemographics,
 } from "@/lib/db/types";
@@ -1362,22 +1359,6 @@ export async function _enrichElection(
       ? { primaryResults: finishedPrimaryResults(tally.primaryResults) }
       : {}),
   };
-}
-
-/** The tally's stored primary results, trimmed to what a finished view shows. */
-function finishedPrimaryResults(
-  results: NonNullable<ElectionVoteTally["primaryResults"]>
-): NonNullable<ElectionResponse["primaryResults"]> {
-  const out: NonNullable<ElectionResponse["primaryResults"]> = {};
-  for (const [partyId, rows] of Object.entries(results.byParty ?? {})) {
-    out[partyId] = rows.map((r) => ({
-      candidateId: r.candidateId,
-      characterName: r.characterName,
-      sharePct: r.sharePct,
-      won: r.won,
-    }));
-  }
-  return out;
 }
 
 // ---------------------------------------------------------------------------

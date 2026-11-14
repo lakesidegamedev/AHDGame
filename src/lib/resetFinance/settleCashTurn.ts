@@ -12,7 +12,7 @@ import {
   resetSystemVersionsForCountry,
   type ResetV2Readiness,
 } from "@/lib/resetVersions/rules";
-import { settleResetCashTurn } from "./rules/cashTurn";
+import { planResetCashTurn } from "./rules/cashTurn";
 import { reconcileSovereignDebtFaceFlows } from "./rules/sovereignProceeds";
 import { buildResetAuthorityClaims } from "./rules/authorityClaims";
 import type { ResetNationalTreasurySnapshot } from "./rules/treasurySnapshot";
@@ -136,10 +136,10 @@ export async function settleResetTreasuryCashTurn(input: {
       closingDebt: budget.debt.principal,
       issuedFace: flow(bondFlows.sovereignDebtFaceIssuedByCountry),
     });
-    const next =
+    const plan =
       opening.settledThroughTurn === turn
-        ? opening
-        : settleResetCashTurn({
+        ? { next: opening, externallyFundedBondCash: 0 }
+        : planResetCashTurn({
             treasury: { ...opening, debtCeiling: budget.debt.ceiling },
             turn,
             claims,
@@ -155,6 +155,19 @@ export async function settleResetTreasuryCashTurn(input: {
               bondServiceAlreadyFunded: bondFlows.sovereignServiceAlreadyFunded === true,
             },
           });
+    const { next, externallyFundedBondCash } = plan;
+    if (externallyFundedBondCash > 0) {
+      console.warn("[treasury-cash] funded bond reconciliation gap", {
+        worldId,
+        countryId: country,
+        turn,
+        amountLocal: externallyFundedBondCash,
+        openingCash: opening.cash,
+        bondProceeds: flow(bondFlows.sovereignCashProceedsByCountry),
+        maturityCashPaid: flow(bondFlows.sovereignMaturityCashPaidByCountry),
+        couponCashPaid: flow(bondFlows.sovereignCouponPaidByCountry),
+      });
+    }
     if (!next.lastPaidByClaim) throw new Error("V2 cash replay is missing its payment receipt");
     const deliveries = roster
       .filter((account) => !account.externallySettled)

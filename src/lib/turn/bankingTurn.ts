@@ -1,3 +1,4 @@
+import { bankPassLockKeys } from "./bankingPassLocks";
 import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
@@ -461,67 +462,6 @@ type BankPassResult = {
 
 /** Concurrent bank passes; a shared document still orders them. */
 const BANKING_LANES = 8;
-
-/**
- * Lock keys for each deposit taker's pass, as `<collection>:<id>`: the bank,
- * its currency's central bank and insurance fund, every player depositor and
- * every borrower of a loan this pass services.
- */
-async function bankPassLockKeys(
-  db: Db,
-  turn: number,
-  depositTakers: readonly DepositTaker[]
-): Promise<Map<string, string[]>> {
-  const keys = new Map<string, string[]>();
-  const bankIdsByCurrency = new Map<string, string[]>();
-  for (const { corp, charter } of depositTakers) {
-    const currency = charter.currency as CurrencyCode;
-    keys.set(corp._id.toString(), [
-      `corporations:${corp._id.toString()}`,
-      `centralBanks:${getBankId(getCountryIdForCurrency(currency))}`,
-      `depositInsuranceFunds:${currency}`,
-    ]);
-    bankIdsByCurrency.set(currency, [
-      ...(bankIdsByCurrency.get(currency) ?? []),
-      corp._id.toString(),
-    ]);
-  }
-  if (!depositTakers.length) return keys;
-  const [depositors, loans] = await Promise.all([
-    charactersCollection(db)
-      .find(
-        {
-          $or: [...bankIdsByCurrency].map(([currency, ids]) => ({
-            [`currencyBalances.savingsHolder.${currency}`]: { $in: ids },
-          })),
-        },
-        { projection: { _id: 1, "currencyBalances.savingsHolder": 1 } }
-      )
-      .toArray(),
-    bankLoansCollection(db)
-      .find(
-        {
-          bankCorporationId: { $in: depositTakers.map((row) => row.corp._id) },
-          borrowerType: { $in: ["character", "corporation"] },
-          status: { $in: ["current", "arrears"] },
-          lastProcessedTurn: { $ne: turn },
-        },
-        { projection: { bankCorporationId: 1, borrowerType: 1, borrowerId: 1 } }
-      )
-      .toArray(),
-  ]);
-  for (const depositor of depositors) {
-    const holders = (depositor.currencyBalances?.savingsHolder ?? {}) as Record<string, unknown>;
-    for (const bankId of Object.values(holders))
-      keys.get(String(bankId))?.push(`characters:${depositor._id.toString()}`);
-  }
-  for (const loan of loans) {
-    if (!loan.borrowerId) continue;
-    const collection = loan.borrowerType === "character" ? "characters" : "corporations";
-    keys.get(String(loan.bankCorporationId))?.push(`${collection}:${String(loan.borrowerId)}`);
-  }
-  return keys;
-}
 
 async function processOneBank(
   db: Db,

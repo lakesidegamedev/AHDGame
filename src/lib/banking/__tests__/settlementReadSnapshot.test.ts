@@ -57,6 +57,39 @@ describe("settlement phase read snapshots", () => {
     expect(f.memory.collection("accounts").docs[0].balance).toBe(20);
   });
 
+  it("does not repeat a projection delivered by recovery after its cached target was read", async () => {
+    const f = fixture();
+    const transition = (key: string): BankingTransition => ({
+      key,
+      kind: "snapshot-projection",
+      turn: 1,
+      currency: "USD",
+      legs: [],
+      projections: [
+        {
+          collection: "accounts",
+          filter: { _id: "wallet" },
+          update: { $inc: { balance: 10 } },
+          note: "Update target",
+        },
+      ],
+      event: { kind: "bank.resolved", command: "snapshot-test" },
+    });
+    await withSettlementReadSnapshot(async () => {
+      await settleTransition(f.db, transition("one"));
+      const journal = f.memory.collection("bankMoneyMoves");
+      const insert = journal.insertOne.bind(journal);
+      vi.spyOn(journal, "insertOne").mockImplementation(async (doc) => {
+        const result = await insert(doc);
+        if (doc._id === "two")
+          await withSettlementReadSnapshot(() => settleTransition(f.db, transition("two")));
+        return result;
+      });
+      expect((await settleTransition(f.db, transition("two"))).status).toBe("applied");
+    });
+    expect(f.memory.collection("accounts").docs[0].balance).toBe(20);
+  });
+
   it("keeps projection generations authoritative across competing phase snapshots", async () => {
     const f = fixture();
     const transition = (key: string): BankingTransition => ({

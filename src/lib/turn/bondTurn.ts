@@ -1,3 +1,4 @@
+import { readFundedBankMaturityCash } from "./bondTurnBankMaturityCash";
 /**
  * Bond turns settle coupons and principal while preserving holder denominations.
  * processBondTurn shares one monetary quote snapshot across payout conversions.
@@ -66,9 +67,8 @@ import { loadBondPoolLedgerContext, withBondPoolLedgerBatch } from "@/lib/bonds/
 import { creditBondPool } from "@/lib/bonds/marketPool";
 import { processBondMarketPoolTurn } from "@/lib/bonds/marketPoolTurn";
 import { placeUnsoldBondUnits, settlePlacementProceeds } from "@/lib/bonds/primaryMarket";
-import { sovereignIssuanceFlowsByCountry } from "@/lib/resetFinance/rules/sovereignProceeds";
+import { readCapturedSovereignIssuance } from "./bondTurnIssuance";
 import { payNppBondReturns, type NppBondReturns } from "./nppBondCash";
-import type { Db } from "mongodb";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import type { BondTurnResult, SovereignMaturityPlan } from "./bondTurnTypes";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
@@ -86,36 +86,6 @@ import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
-
-async function readCapturedSovereignIssuance(
-  db: Db,
-  turn: number,
-  funded: boolean,
-  legacy: Parameters<typeof sovereignIssuanceFlowsByCountry>[0]
-) {
-  if (!funded) return sovereignIssuanceFlowsByCountry(legacy);
-  // Refunding issues can be created during maturity settlement, after the
-  // turn-open issue snapshot. Durable cash receipts include those sales and
-  // survive a same-turn retry; an in-kind rollover has no invented proceeds.
-  const receipts = await financialTxLogCollection<{
-    countryId: string;
-    amount: number;
-    meta: { face: number };
-  }>(db)
-    .find(
-      { turn, type: "gov_bond_issuance", "meta.ledgerOwnedBySettlement": true },
-      { projection: { countryId: 1, amount: 1, "meta.face": 1 } }
-    )
-    .toArray();
-  return sovereignIssuanceFlowsByCountry({
-    atParIssues: [],
-    placements: receipts.map((row) => ({
-      countryId: row.countryId,
-      face: row.meta.face,
-      cashPaid: row.amount,
-    })),
-  });
-}
 
 export type { BondTurnResult } from "./bondTurnTypes";
 
@@ -252,7 +222,10 @@ async function processBondTurnInScope(
             ),
             sovereignCouponPaidByCountry: {},
             sovereignServiceAlreadyFunded: config?.treasuryCashLedgerEnabled === true,
-            sovereignMaturityCashPaidByCountry: {},
+            sovereignMaturityCashPaidByCountry:
+              config?.treasuryCashLedgerEnabled === true
+                ? await readFundedBankMaturityCash(db, turn)
+                : {},
             sovereignDebtFaceRetiredByCountry: {},
           }
         : {}),
@@ -1035,6 +1008,16 @@ async function processBondTurnInScope(
       })
     : null;
 
+  if (captureSovereignCashProceeds && config?.treasuryCashLedgerEnabled === true) {
+    const bankCash = await readFundedBankMaturityCash(db, turn);
+    for (const [country, amount] of Object.entries(bankCash)) {
+      sovereignMaturityCashPaidByCountry.set(
+        country,
+        (sovereignMaturityCashPaidByCountry.get(country) ?? 0) + amount
+      );
+    }
+  }
+
   steps.mark("snapshotsLedgerNotify");
   return {
     bondsProcessed: activeBonds.length,
@@ -1065,5 +1048,3 @@ async function processBondTurnInScope(
       : {}),
   };
 }
-
-import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";

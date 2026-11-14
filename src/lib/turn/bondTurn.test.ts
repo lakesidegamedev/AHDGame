@@ -263,6 +263,47 @@ describe("processBondTurn", () => {
     );
   });
 
+  it.each([{}, { meta: {} }, { meta: { face: NaN } }])(
+    "rejects a funded issuance receipt without valid face: %j",
+    async (extra) => {
+      db.collection("financialTxLog").find.mockReturnValue(
+        makeCursor([{ countryId: "US", amount: 90, ...extra }])
+      );
+      await expect(
+        processBondTurn(10, { treasuryCashLedgerEnabled: true, captureSovereignCashProceeds: true })
+      ).rejects.toThrow(/face|cash event/);
+    }
+  );
+
+  it("captures bank maturity escrow funding with no remaining active bonds and on replay", async () => {
+    const funding = {
+      projections: [
+        {
+          applied: true,
+          projection: {
+            collection: "ledgerEntries",
+            insert: {
+              txType: "gov_bond_maturity_payment",
+              emitSite: "banking/bankSovereignClaims:funding",
+              legs: [{ account: "government_cash:CA:CAD", amount: -2000, role: "primary" }],
+            },
+          },
+        },
+      ],
+    };
+    db.collection("bankMoneyMoves").find.mockReturnValue(makeCursor([funding]));
+    const config = { treasuryCashLedgerEnabled: true, captureSovereignCashProceeds: true };
+    const first = await processBondTurn(10, config);
+    const replay = await processBondTurn(10, config);
+    expect(first.sovereignMaturityCashPaidByCountry).toEqual({ CA: 2000 });
+    expect(replay.sovereignMaturityCashPaidByCountry).toEqual(
+      first.sovereignMaturityCashPaidByCountry
+    );
+    expect(first.sovereignDebtFaceRetiredByCountry).toEqual({});
+    db.collection("bankMoneyMoves").find.mockReturnValue(makeCursor([]));
+    expect((await processBondTurn(11, config)).sovereignMaturityCashPaidByCountry).toEqual({});
+  });
+
   it("defers maturity while a funded bank treasury reservation is pending", async () => {
     const bond = {
       _id: new ObjectId(),
