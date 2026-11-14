@@ -31,7 +31,8 @@ import {
   battlegroundFeatureIdsForEra,
   economicPowerFeatureIdsForEra,
 } from "@/components/landing/countryTierRosters";
-import { resolveEraCopy, type MarketedWorld } from "@/lib/marketing/marketedWorld";
+import { resolveEraCopy } from "@/lib/marketing/eraCopy";
+import type { MarketedWorld } from "@/lib/marketing/marketedWorld";
 import { CookieSettingsLink } from "@/components/CookieSettingsLink";
 import { CrtCountdown, useCrtCountdown } from "./CrtCountdown";
 import { BroadcastBackdrop, BroadcastHeadline, BroadcastTierKey } from "./BroadcastHero";

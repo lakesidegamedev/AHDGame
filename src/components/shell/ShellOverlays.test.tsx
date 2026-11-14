@@ -38,6 +38,7 @@ vi.mock("@/components/VpnGateBanner", () => ({
 }));
 
 import { ShellOverlaysBottom, ShellOverlaysTop, type ShellFlags } from "./ShellOverlays";
+import * as Full from "./ShellOverlaysFull";
 
 const base: ShellFlags = {
   light: false,
@@ -55,8 +56,8 @@ const base: ShellFlags = {
 function rendered(flags: ShellFlags): string[] {
   const html = renderToStaticMarkup(
     <>
-      <ShellOverlaysTop {...flags} />
-      <ShellOverlaysBottom {...flags} />
+      <ShellOverlaysTop {...flags} full={flags.light ? null : Full} />
+      <ShellOverlaysBottom {...flags} full={flags.light ? null : Full} />
     </>
   );
   return [...html.matchAll(/data-c="([^"]+)"/g)].map((match) => match[1]);
