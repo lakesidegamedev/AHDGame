@@ -46,7 +46,7 @@ const SEED_TARGETS: SeedTarget[] = [
   {
     id: "parties",
     label: "Political parties",
-    description: "Default US parties (Democrat, Republican) with positions and colors",
+    description: "US default parties available in the selected preset, with positions and colors",
     destructiveWarning: "Drops and recreates all political parties (custom parties lost)",
   },
   {

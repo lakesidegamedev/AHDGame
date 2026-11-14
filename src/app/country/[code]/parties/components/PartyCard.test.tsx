@@ -99,4 +99,29 @@ describe("PartyCard", () => {
       .filter((a) => a.getAttribute("href") === "/country/us/parties/1");
     expect(hqLinks.length).toBeGreaterThanOrEqual(2);
   });
+  it("labels defaults independently of major/minor tier", () => {
+    render(
+      <PartyCard
+        party={{ ...PARTY, tier: "minor" }}
+        effectiveCountry="us"
+        rank={1}
+        totalMembers={200}
+        momentum={null}
+      />
+    );
+    expect(screen.getByText("Default party")).toBeTruthy();
+    expect(screen.getByText(/Minor party/)).toBeTruthy();
+  });
+  it("does not label custom parties as defaults", () => {
+    render(
+      <PartyCard
+        party={{ ...PARTY, isDefault: false }}
+        effectiveCountry="us"
+        rank={1}
+        totalMembers={200}
+        momentum={null}
+      />
+    );
+    expect(screen.queryByText("Default party")).toBeNull();
+  });
 });

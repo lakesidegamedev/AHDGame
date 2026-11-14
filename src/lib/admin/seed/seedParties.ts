@@ -1,3 +1,6 @@
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { isPartyValidForPreset } from "@/lib/seeds/ensureDefaultParties";
+import { ensureUSMinorPartyOrgs } from "@/lib/countries/us/seedMinorPartyOrgs";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
@@ -7,14 +10,15 @@ import { fillAbsentSeedFields } from "./fillAbsentSeedFields";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
-export async function seedParties(db: Db, log: (msg: string) => void) {
+export async function seedParties(db: Db, log: (msg: string) => void, preset?: string) {
+  const activePreset = preset ?? (await getGameStatePresetOrDefault(db));
   // NOTE: Never drop politicalParties collection - it would delete player-created third parties
-  // Only upsert the default parties (Democrat, Republican)
+  // Only upsert default parties available in this preset.
   const now = new Date();
   let created = 0;
   let filled = 0;
   let preserved = 0;
-  for (const party of politicalParties) {
+  for (const party of politicalParties.filter((row) => isPartyValidForPreset(row, activePreset))) {
     const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     // Check if party already exists by name + country
     const existing = await politicalPartiesCollection(db).findOne({
@@ -60,8 +64,9 @@ export async function seedParties(db: Db, log: (msg: string) => void) {
 
 export async function seedStatePartyOrg(db: Db, log: (msg: string) => void, preset: string) {
   // Never drop statePartyOrg: it holds third party state organizations.
-  // Only upsert the default Democrat and Republican orgs per state.
+  // Fill missing default chapters without overwriting played organizations.
   const now = new Date();
+  await ensureUSMinorPartyOrgs(db, preset);
   const statePartyOrg = generateStatePartyOrg(preset);
   if (statePartyOrg.length === 0) {
     log("Seeded 0 default state party org entries");

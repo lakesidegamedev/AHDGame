@@ -140,10 +140,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seed/runCoreSeed.ts",
     owner: "runSeed",
     argument: "entry.name",
-    scopeHash: "98bd29dbb249fd0d555985717c1dcfc2d07da2588071fa3fe759e208e2446ccb",
+    scopeHash: "01208b9ac2326e37ea678b1367a05616f3ef81c102be6cd553d5c4db871c2eda",
     count: 1,
     reason:
-      "Reviewed county reseed compatibility: only the literal states update now preserves live population, and the US census lean seeding no longer stores group rows. The reset filter no longer special-cases the retired voter-group category collection. Reviewed rebase: preset forwarding changed; the existing reset entry.name selector, registry, filters and dynamic call count are unchanged; no new dynamic collection scope is permitted.",
+      "Reviewed county reseed compatibility: only the literal states update now preserves live population, and the US census lean seeding no longer stores group rows. The reset filter no longer special-cases the retired voter-group category collection. Reviewed rebase and minor-party additions: preset forwarding and preset-filtered party seeding changed; the existing reset entry.name selector, registry, filters and dynamic call count are unchanged. Minor chapters use the existing statePartyOrg getter and lifecycle; no new dynamic collection scope is permitted.",
   },
   {
     file: "src/lib/admin/seed/seedRegionMetrics.ts",

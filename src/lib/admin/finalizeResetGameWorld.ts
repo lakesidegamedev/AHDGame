@@ -1,3 +1,4 @@
+import { ensureUSMinorPartyOrgs } from "@/lib/countries/us/seedMinorPartyOrgs";
 /**
  * Post-bootstrap finalize pass for a world reset.
  *
@@ -101,6 +102,7 @@ export async function finalizeResetGameWorld(
   if (preset !== "2019-no-parties") {
     await realignPartyCountersToExisting(db);
     await ensureDefaultParties(db, preset);
+    await ensureUSMinorPartyOrgs(db, preset, true);
     // Mirror for statePartyOrg: insert rows for newly-added defaults so they
     // show up on the region Party Organizations page. Non-destructive — never
     // overwrites existing rows.

@@ -1,3 +1,5 @@
+import { isPartyValidForPreset } from "@/lib/seeds/ensureDefaultParties";
+import { ensureUSMinorPartyOrgs } from "@/lib/countries/us/seedMinorPartyOrgs";
 import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import { ObjectId, type Db } from "mongodb";
 import {
@@ -558,11 +560,11 @@ export async function runSeed(
 
   // Political parties — sort by seedOrder to guarantee deterministic sequentialId assignment
   const now = new Date();
-  const sortedParties = [...politicalParties].sort(
-    (a, b) => (a.seedOrder ?? 999) - (b.seedOrder ?? 999)
-  );
+  const sortedParties = politicalParties
+    .filter((party) => isPartyValidForPreset(party, preset))
+    .sort((a, b) => (a.seedOrder ?? 999) - (b.seedOrder ?? 999));
   for (const party of sortedParties) {
-    const { seedOrder: _seedOrder, ...partyData } = party;
+    const { seedOrder: _seedOrder, validForPresets: _validForPresets, ...partyData } = party;
     // Check if party already exists by name + country
     const existing = await politicalPartiesCollection(db).findOne({
       name: party.name,
@@ -589,7 +591,7 @@ export async function runSeed(
       await politicalPartiesCollection(db).insertOne(doc);
     }
   }
-  log(`Seeded ${politicalParties.length} political parties`);
+  log(`Seeded ${sortedParties.length} political parties`);
 
   // State party org
   for (const org of statePartyOrg) {
@@ -600,6 +602,7 @@ export async function runSeed(
     );
   }
   log(`Seeded ${statePartyOrg.length} state party org entries`);
+  await ensureUSMinorPartyOrgs(db, preset);
 
   // Congressional districts (US House redistricting model). Seeded after states
   // + parties + state-party-org so apportionment (state.houseDistricts) and
@@ -768,7 +771,7 @@ export async function runSeed(
 
   return {
     seeded: true,
-    message: `Seeded successfully: ${statesBundle.length} states, ${politicalParties.length} parties, ${statePartyOrg.length} state-party orgs, ${seededDemographicsCount} state demographics, state metrics (${preset}), and budget records.`,
+    message: `Seeded successfully: ${statesBundle.length} states, ${sortedParties.length} parties, ${statePartyOrg.length} state-party orgs, ${seededDemographicsCount} state demographics, state metrics (${preset}), and budget records.`,
   };
 }
 
