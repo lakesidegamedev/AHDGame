@@ -6,7 +6,7 @@ const prior = {
   electionType: "snap_caCommons",
   endTime: new Date("2026-01-01"),
   endTurn: 60,
-};
+} satisfies Parameters<typeof canadianRecalibrationAnchor>[0];
 
 it("uses the snap's turn bound instead of a paused wall-clock estimate", () => {
   expect(canadianRecalibrationAnchor(prior, () => 999)).toBe(60);

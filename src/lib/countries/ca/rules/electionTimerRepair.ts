@@ -39,6 +39,6 @@ export function canadianRecalibrationAnchor(
     election,
     "caCommons",
     "snap_caCommons",
-    () => election.endTurn ?? endTimeToTurn(election.endTime)
+    (endTime) => election.endTurn ?? endTimeToTurn(endTime)
   );
 }
