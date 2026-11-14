@@ -4,9 +4,14 @@
  * USSR at Moscow (Russia's centroid is deep in Siberia) and East Germany near
  * Berlin (the modern basemap has no DDR feature — it shares unified Germany).
  */
-export type LandingMarkerGeo = { label: string; lonLat: [number, number] };
+export type LandingMarkerGeo = {
+  label: string;
+  lonLat: [number, number];
+  /** Chip sits under its pin instead of above, to clear the hero copy. */
+  below?: boolean;
+};
 export const LANDING_MARKERS: Record<string, LandingMarkerGeo> = {
-  US: { label: "United States", lonLat: [-98, 39] },
+  US: { label: "United States", lonLat: [-98, 39], below: true },
   // Southern Ontario and Quebec, where most Canadians live, not the Arctic centroid.
   CA: { label: "Canada", lonLat: [-84, 50] },
   UK: { label: "United Kingdom", lonLat: [-1.8, 52.6] },

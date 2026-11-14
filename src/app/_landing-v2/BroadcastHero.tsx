@@ -3,13 +3,11 @@
 /**
  * Hero chrome for the broadcast lander (the 1991 world): the headline with its
  * year odometer, the tier key along the foot of the first viewport, and the
- * blue ground glow the globe sits in. The globe's own art is
- * in `components/landing/broadcastGlobe`.
+ * blue ground glow the globe sits in.
  *
  * Signal red is deliberately off the brand palette, the same way the 1953 CRT
  * green is: it belongs to the broadcast, not to the site. Nothing here uses a
- * backdrop blur: it all sits over a globe that repaints every frame, and a
- * blur there is recomputed on each of them.
+ * backdrop blur over the globe.
  */
 import { useEffect, useState } from "react";
 import {
