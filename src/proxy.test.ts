@@ -34,10 +34,11 @@ afterEach(() => vi.unstubAllEnvs());
 
 function makeRequest(
   urlStr: string,
-  opts: { host?: string; cookies?: Record<string, string> } = {}
+  opts: { host?: string; cookies?: Record<string, string>; userAgent?: string } = {}
 ): NextRequest {
   const headers = new Headers();
   if (opts.host) headers.set("host", opts.host);
+  if (opts.userAgent) headers.set("user-agent", opts.userAgent);
   const req = new NextRequest(new URL(urlStr), { headers });
   for (const [k, v] of Object.entries(opts.cookies ?? {})) req.cookies.set(k, v);
   return req;
@@ -157,6 +158,49 @@ describe("proxy() — behaviors preserved from the deleted root middleware.ts", 
     });
     const res = await proxy(req);
     expect(res.headers.get("x-middleware-request-x-ahd-request-method")).toBe("POST");
+  });
+});
+
+describe("proxy() — static landing rewrite", () => {
+  const home = "https://ahousedividedgame.com/";
+  const opts = { host: "ahousedividedgame.com" };
+
+  it("rewrites the anonymous home page to the internal route and stamps the path", async () => {
+    const res = await proxy(makeRequest(home, opts));
+    expect(res.headers.get("x-middleware-rewrite")).toContain("/landing-static");
+    expect(res.headers.get("x-middleware-request-x-pathname")).toBe("/");
+  });
+
+  it("keeps the query string for the page", async () => {
+    const res = await proxy(makeRequest(`${home}?utm_source=x`, opts));
+    expect(res.headers.get("x-middleware-rewrite")).toContain("/landing-static?utm_source=x");
+  });
+
+  it("does not rewrite a visitor with a session cookie", async () => {
+    const res = await proxy(makeRequest(home, { ...opts, cookies: { [AUTH_COOKIE_NAME]: "t" } }));
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("does not rewrite an app webview or other paths", async () => {
+    const app = await proxy(
+      makeRequest(home, { ...opts, userAgent: "Mozilla/5.0 AHDClient-Desktop/1.0" })
+    );
+    const other = await proxy(makeRequest("https://ahousedividedgame.com/login", opts));
+    expect(other.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(app.headers.get("x-middleware-rewrite") ?? "").not.toContain("/landing-static");
+  });
+
+  it("does not rewrite the wiki subdomain home page to the landing page", async () => {
+    const res = await proxy(
+      makeRequest("https://wiki.ahousedividedgame.com/", { host: "wiki.ahousedividedgame.com" })
+    );
+    expect(res.headers.get("x-middleware-rewrite")).not.toContain("/landing-static");
+  });
+
+  it("is still behind the maintenance gate", async () => {
+    mockMaintenanceStatus.mockResolvedValueOnce({ mode: "full", enabled: true });
+    const res = await proxy(makeRequest(home, opts));
+    expect(res.headers.get("location")).toContain("/maintenance");
   });
 });
 
