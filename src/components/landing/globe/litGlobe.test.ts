@@ -74,8 +74,8 @@ describe("buildScene", () => {
       ["1", "player"],
       ["2", "background"],
     ]);
-    expect(scene.borders.type).toBe("MultiLineString");
-    expect(scene.coast.type).toBe("MultiLineString");
+    expect((scene.borders as { type: string }).type).toBe("MultiLineString");
+    expect((scene.coast as { type: string }).type).toBe("MultiLineString");
   });
 
   it("re-tints without rebuilding", () => {
