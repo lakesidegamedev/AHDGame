@@ -36,13 +36,13 @@ describe("anonymous page view beacon payload", () => {
     expect(config.cookieless_mode).toBe("always");
     expect(config.person_profiles).toBe("never");
     expect(config.capture_pageview).toBe("history_change");
-    for (const denied of config.property_denylist) {
+    for (const denied of config.property_denylist ?? []) {
       expect(Object.keys(payload.properties)).not.toContain(denied);
     }
   });
 
   it("carries the page, referrer and campaign tags only", () => {
-    const { properties } = payload;
+    const properties: Record<string, unknown> = payload.properties;
     expect(properties.$pathname).toBe("/");
     expect(properties.$host).toBe("ahousedividedgame.com");
     expect(properties.$referrer).toBe("https://www.reddit.com/r/games/");

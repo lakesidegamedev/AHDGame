@@ -61,9 +61,12 @@ function attachSurveyDismissalMirror(posthog: PostHogClient): void {
 /** URL of the page view already sent by beacon; the SDK's own initial one is dropped. */
 let beaconUrl: string | null = null;
 
-function dropBeaconedPageview(
-  event: { event?: string; properties?: Record<string, unknown> } | null
-) {
+type BeforeSend = Extract<
+  NonNullable<import("posthog-js").PostHogConfig["before_send"]>,
+  (...args: never[]) => unknown
+>;
+
+const dropBeaconedPageview: BeforeSend = (event) => {
   if (
     event &&
     beaconUrl !== null &&
@@ -74,7 +77,7 @@ function dropBeaconedPageview(
     return null;
   }
   return event;
-}
+};
 
 function loadPostHog(key: string, mode: PostHogMode): Promise<PostHogClient | null> {
   activeMode = mode;
