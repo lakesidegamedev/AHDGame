@@ -17,4 +17,3 @@ export function classifyLandingCta(href: string | null): LandingCta | null {
   if (path.startsWith("/wiki")) return "wiki";
   return null;
 }
-

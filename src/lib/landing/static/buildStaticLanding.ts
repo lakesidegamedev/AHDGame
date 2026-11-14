@@ -33,6 +33,7 @@ export async function buildStaticLandingHtml(now: Date = new Date()): Promise<st
     getLocale(),
   ]);
 
+  const translate: Translate = (key, values) => t(key as never, values as never);
   const seedYear = snapshot?.seedYear ?? 1979;
   const currentYear = snapshot?.currentYear ?? seedYear;
   const playerCounts = snapshot?.playerCounts ?? {};
@@ -64,7 +65,7 @@ export async function buildStaticLandingHtml(now: Date = new Date()): Promise<st
   ].join(", ");
 
   return renderLandingHtml({
-    t: t as unknown as Translate,
+    t: translate,
     labels: {
       contests: tNav("common.contests"),
       help: tNav("common.help"),

@@ -182,7 +182,9 @@ describe("proxy() — static landing rewrite", () => {
   });
 
   it("does not rewrite an app webview or other paths", async () => {
-    const app = await proxy(makeRequest(home, { ...opts, userAgent: "Mozilla/5.0 AHDClient-Desktop/1.0" }));
+    const app = await proxy(
+      makeRequest(home, { ...opts, userAgent: "Mozilla/5.0 AHDClient-Desktop/1.0" })
+    );
     const other = await proxy(makeRequest("https://ahousedividedgame.com/login", opts));
     expect(other.headers.get("x-middleware-rewrite")).toBeNull();
     expect(app.headers.get("x-middleware-rewrite") ?? "").not.toContain("/landing-static");
