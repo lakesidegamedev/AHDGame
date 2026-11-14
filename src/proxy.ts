@@ -19,6 +19,12 @@ import {
 } from "@/lib/analytics/acquisition";
 import { authConfig } from "@/lib/config/auth";
 import { clientIpFromRequest } from "@/lib/utils/network";
+import { shouldServeStaticLanding } from "@/lib/landing/rules/staticLandingEligibility";
+import {
+  isClientShellUserAgent,
+  isInAppWebViewUserAgent,
+  isStoreAppUserAgent,
+} from "@/lib/displayMode";
 import { classifyIp } from "@/lib/vpn/detection";
 import {
   VPN_BLOCKED_CODE,
@@ -399,6 +405,31 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // The signed-out home page is served as static HTML by an internal route
+  // handler. The rewrite is the exact anonymous browser visit the light shell
+  // already selects, evaluated after the maintenance gate above.
+  const userAgent = request.headers.get("user-agent") ?? "";
+  if (
+    shouldServeStaticLanding({
+      pathname,
+      method: request.method,
+      hasSessionCookie: hasAuth,
+      singleplayer,
+      isWikiSubdomain: host === "wiki.ahousedividedgame.com" || host.startsWith("wiki."),
+      isNativeApp: isInAppWebViewUserAgent(userAgent),
+      isClientShell: isClientShellUserAgent(userAgent),
+      isStoreApp: isStoreAppUserAgent(userAgent),
+    })
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/landing-static";
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    requestHeaders.set("x-search", request.nextUrl.search);
+    const rewritten = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return withAcquisitionCookie(request, withRailwayNoindex(rewritten, host), host);
+  }
+
   const response = withRailwayNoindex(passthrough(request), host);
   return singleplayer ? response : withAcquisitionCookie(request, response, host);
 }
@@ -457,7 +488,7 @@ export const config = {
     // it, and Germany silently renders undivided while the page around it looks
     // perfectly fine. Static geometry has no game state in it and nothing to
     // seal.
-    "/((?!api/|_next/static|_next/image|monitoring|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json)$).*)",
+    "/((?!api/|_next/static|_next/image|monitoring|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|json|js|css|woff2)$).*)",
     // Internal API routes — the read-gate above runs only when public viewing
     // mode is off, so this is a no-op pass-through during normal operation.
     "/api/:path*",
