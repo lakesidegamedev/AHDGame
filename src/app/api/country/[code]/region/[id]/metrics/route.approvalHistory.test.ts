@@ -8,6 +8,7 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+vi.mock("@/lib/country/nationalApproval", () => ({ loadNationalApproval: vi.fn() }));
 
 describe("region metrics route — approvalHistory", () => {
   let db: MockDb;
@@ -46,6 +47,67 @@ describe("region metrics route — approvalHistory", () => {
 
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+  });
+
+  it.each([
+    ["us", "ca_national"],
+    ["ca", "federal"],
+  ])("rejects another country's national scope: %s/%s", async (code, id) => {
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(`http://localhost/api/country/${code}/region/${id}/metrics`),
+      {
+        params: Promise.resolve({ code, id }),
+      }
+    );
+    expect(response.status).toBe(404);
+    expect(db.collectionMocks.macroMetrics!.findOne).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["us", "federal"],
+    ["ca", "ca_national"],
+  ])("uses national approval without a synthetic region electorate: %s", async (code, id) => {
+    db.collection("gameState").findOne.mockResolvedValue({
+      preset: "2027-default",
+      currentTurn: 40,
+      currentYear: 2027,
+      startingYear: 2027,
+    });
+    db.collectionMocks.macroMetrics!.findOne.mockResolvedValue({
+      _id: id,
+      countryId: code.toUpperCase(),
+      economic: { unemploymentRate: { value: 5 } },
+    });
+    const { loadNationalApproval } = await import("@/lib/country/nationalApproval");
+    vi.mocked(loadNationalApproval).mockResolvedValue({
+      governmentApproval: 63,
+      governmentApprovalBase: 58,
+      history: [{ turn: 40, approval: 63, net: 26 }],
+      modifiers: [],
+      stateAverage: 63,
+      nationalAdjustments: [],
+    });
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(`http://localhost/api/country/${code}/region/${id}/metrics`),
+      {
+        params: Promise.resolve({ code, id }),
+      }
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.governmentApproval).toBe(63);
+    expect(body.governmentApprovalBase).toBe(58);
+    expect(body.approvalHistory).toEqual([{ turn: 40, approval: 63, net: 26 }]);
+    expect(loadNationalApproval).toHaveBeenCalledWith(
+      code.toUpperCase(),
+      expect.objectContaining({
+        preset: "2027-default",
+        year: 2027,
+      })
+    );
+    expect(db.collectionMocks.stateDemographics).toBeUndefined();
   });
 
   it("returns the region's approval history", async () => {

@@ -767,3 +767,64 @@ describe("GET /api/country/[code]/legislature/leaders (UK)", () => {
     expect(data.speaker).toBeNull();
   });
 });
+
+describe("Canadian NPC leadership", () => {
+  it("returns explicit NPC identities without pretending they are player profiles", async () => {
+    const { createInMemoryDb } = await import("@/lib/test-utils/inMemoryDb");
+    const mem = createInMemoryDb();
+    const pm = new ObjectId(),
+      opp = new ObjectId();
+    mem.seed("governmentFormations", [
+      {
+        _id: "CA",
+        countryId: "CA",
+        status: "formed",
+        pmCharacterId: null,
+        pmNppId: pm,
+        governingPartyId: "1",
+        seatsByParty: { "1": 169, "2": 144 },
+      },
+    ]);
+    mem.seed("npps", [
+      { _id: pm, countryId: "CA", name: "Canadian PM", party: "1", retiredAt: null },
+      { _id: opp, countryId: "CA", name: "Canadian Opposition", party: "2", retiredAt: null },
+    ]);
+    mem.seed("politicalParties", [
+      { _id: new ObjectId(), countryId: "CA", sequentialId: 1, name: "Government" },
+      { _id: new ObjectId(), countryId: "CA", sequentialId: 2, name: "Opposition" },
+    ]);
+    mem.seed("electedOfficials", [
+      {
+        _id: new ObjectId(),
+        countryId: "CA",
+        officeType: "caCommons",
+        isNPP: true,
+        nppId: opp,
+        party: "2",
+        seatsHeld: 144,
+      },
+    ]);
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(mem as unknown as Db);
+    const { GET } = await import("@/app/api/country/[code]/legislature/leaders/route");
+    const response = await GET(new Request("http://localhost/api/country/ca/legislature/leaders"), {
+      params: Promise.resolve({ code: "ca" }),
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.primeMinister).toMatchObject({
+      characterId: null,
+      nppId: pm.toString(),
+      isNPP: true,
+      characterName: "Canadian PM",
+      party: "Government",
+    });
+    expect(body.oppositionLeader).toMatchObject({
+      characterId: null,
+      nppId: opp.toString(),
+      isNPP: true,
+      characterName: "Canadian Opposition",
+      party: "Opposition",
+    });
+  });
+});

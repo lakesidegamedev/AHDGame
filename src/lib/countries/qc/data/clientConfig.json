@@ -22,7 +22,7 @@
     "exchangeName": "Montreal Exchange",
     "financeMinisterCabinetId": "financeSecretary",
     "regionalBillAssentTitle": "Prefect",
-    "majorPartyIds": ["AL"],
+    "majorPartyIds": ["BQ"],
     "partyCreationNPPs": {
       "statesRequired": 2,
       "lockHomeState": false,

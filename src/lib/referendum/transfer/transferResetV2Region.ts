@@ -26,6 +26,7 @@ export async function transferResetV2RegionToIreland(
     { _id: "current" },
     {
       projection: {
+        preset: 1,
         resetWorldId: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,

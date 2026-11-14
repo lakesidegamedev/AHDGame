@@ -1,5 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { loadSubdivisionFile } from "./subdivisionData";
+import { formatSubdivisionLean } from "@/lib/utils/subdivisionResults";
+
+describe("unavailable congressional lean", () => {
+  it("retains unavailable status through the tooltip adapter instead of claiming Even", async () => {
+    const file = await loadSubdivisionFile("congressional-districts", "MT", {
+      preset: "2027-default",
+    });
+    expect(file?.subdivisions).toHaveLength(2);
+    for (const district of file!.subdivisions) {
+      expect(district.leanScalar).toBeUndefined();
+      expect(formatSubdivisionLean(district.leanScalar, district.leanStatus)).toContain(
+        "Unavailable"
+      );
+    }
+    expect(formatSubdivisionLean(0, "unavailable")).toContain("Unavailable");
+    expect(formatSubdivisionLean(0, "observed")).toBe("Even");
+  });
+});
 describe("county map persisted population", () => {
   it("uses runtime county stocks, including zero, rather than baseline headcounts", async () => {
     const baseline = await loadSubdivisionFile("counties", "WY");

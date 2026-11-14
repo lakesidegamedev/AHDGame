@@ -87,6 +87,7 @@ import {
   campaignContactByBucket,
 } from "@/lib/demographics/granularElectorate";
 import type { ParticipationSummary } from "@/lib/demographics/v2/rules";
+import { demographicsRegionKey } from "@/lib/demographics/v2/rules/regionKey";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
   scalePoolToRegistered,
@@ -267,7 +268,10 @@ export async function accumulateVoteTurn(
       currentYear: options.preload.currentYear,
       startingYear: options.preload.startingYear,
     });
-    regionDemographics = options.preload.regionDemographicsByState?.get(stateId) ?? null;
+    regionDemographics =
+      options.preload.regionDemographicsByState?.get(
+        demographicsRegionKey(election.countryId ?? "US", stateId)
+      ) ?? null;
     demographicsV2Active =
       options.preload.demographicsV2Countries?.has(election.countryId ?? "US") === true;
     votingAge = options.preload.votingAgeByCountry?.get(election.countryId ?? "US") ?? 18;

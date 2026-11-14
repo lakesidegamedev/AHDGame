@@ -58,13 +58,13 @@ export async function refreshIncomeTaxShares(db: Db): Promise<void> {
       { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
     ),
     statesCollection(db)
-      .find({}, { projection: { countryId: 1, population: 1, parentRegionId: 1 } })
+      .find({}, { projection: { countryId: 1, population: 1, parentRegionId: 1 }, batchSize: 2000 })
       .toArray(),
     federalBudgetCollection(db)
-      .find({}, { projection: { countryId: 1, taxRates: 1 } })
+      .find({}, { projection: { countryId: 1, taxRates: 1 }, batchSize: 2000 })
       .toArray(),
     stateBudgetsCollection(db)
-      .find({}, { projection: { countryId: 1, taxRates: 1 } })
+      .find({}, { projection: { countryId: 1, taxRates: 1 }, batchSize: 2000 })
       .toArray(),
   ]);
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;

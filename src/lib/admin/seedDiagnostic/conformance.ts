@@ -7,6 +7,7 @@ import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
   STARTING_POLITICAL_COLLECTIONS,
+  RETAINED_PARTY_COLLECTIONS,
   STARTING_POLITICAL_OFFICIAL_FILTER,
   startingPoliticalCountries,
   startingCountryFilter,
@@ -50,6 +51,7 @@ import {
   checkForex,
 } from "./conformanceMacro";
 import { checkEconomicOpening } from "./economicOpening";
+import { checkUS2027Opening } from "./us2027Opening";
 import { checkRegionDerivedCoverage } from "./regionDerivedCoverage";
 import { regionalMetricCoverage, seedTurnoutScopeFilter } from "./regionalCoverage";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -1091,8 +1093,11 @@ export async function runConformanceChecks(
     (supportsNoStartingParties(preset) &&
       gs?.preset === preset &&
       gs?.startingPartiesMode === "none");
+  const noStartingNpps =
+    preset === "2027-default" && gs?.preset === preset && gs?.startingPartiesMode === "no-npps";
 
-  const countries = noStartingParties ? await startingPoliticalCountries(db, preset) : [];
+  const countries =
+    noStartingParties || noStartingNpps ? await startingPoliticalCountries(db, preset) : [];
   const emptyCountries = countries === null ? null : new Set(countries);
 
   // Every group below is READ-ONLY (no write of any kind in this module), and
@@ -1114,14 +1119,17 @@ export async function runConformanceChecks(
     checkSectors(db, expect),
     checkRegions(db, expect),
     checkPolitical(db, expect, emptyCountries),
-    checkPartyRosters(db, expect, emptyCountries),
-    noStartingParties ? checkEmptyPoliticalStart(db, countries) : Promise.resolve([]),
+    checkPartyRosters(db, expect, noStartingParties ? emptyCountries : new Set()),
+    noStartingParties || noStartingNpps
+      ? checkEmptyPoliticalStart(db, countries, noStartingNpps)
+      : Promise.resolve([]),
     checkDemographics(db, expect),
     checkRuntimeCleanliness(db),
     checkConfig(db, worldsimBootstrap),
     checkRegionDerivedCoverage(db, expect),
     checkScotusSeed(db, preset),
     checkEconomicOpening(db, preset),
+    checkUS2027Opening(db, preset),
   ]);
   const checks: SeedDiagnosticCheck[] = groups.flat();
 
@@ -1131,7 +1139,8 @@ export async function runConformanceChecks(
 /** Intentional absence must not conceal a partial cleanup or occupied office. */
 async function checkEmptyPoliticalStart(
   db: Db,
-  countries: CountryId[] | null
+  countries: CountryId[] | null,
+  keepParties = false
 ): Promise<SeedDiagnosticCheck[]> {
   const checks: SeedDiagnosticCheck[] = [];
   const countryFilter = startingCountryFilter(countries, true);
@@ -1142,6 +1151,7 @@ async function checkEmptyPoliticalStart(
   const nppIds = npps.map((row) => row._id);
   const artifactFilters = await startingArtifactFilters(db, countries, nppIds);
   for (const collection of STARTING_POLITICAL_COLLECTIONS) {
+    if (keepParties && RETAINED_PARTY_COLLECTIONS.has(collection)) continue;
     const count = await db.collection(collection).countDocuments(artifactFilters[collection]);
     checks.push(
       check(

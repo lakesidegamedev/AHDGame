@@ -26,10 +26,12 @@ const ALLOWLIST = new Set([
 ]);
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir)) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const name = entry.name;
     if (name === "node_modules" || name.startsWith(".")) continue;
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) sourceFiles(path, out);
+    const directory = entry.isDirectory() || (!entry.isFile() && statSync(path).isDirectory());
+    if (directory) sourceFiles(path, out);
     else if (/\.(ts|tsx|json)$/.test(name)) out.push(path);
   }
   return out;
@@ -53,28 +55,49 @@ const besideMedia = (word: string) =>
   );
 const lanePrefix = (word: string) => new RegExp(`["'\`]${word}[.\\-]`);
 
+const retiredAutomobileValue = quoted(RETIRED_A);
+const retiredAutomobileKey = asKey(RETIRED_A);
+const retiredEntertainmentKey = asKey(RETIRED_E);
+const retiredEntertainmentType = typeField(RETIRED_E);
+const retiredEntertainmentSibling = besideMedia(RETIRED_E);
+const retiredEntertainmentLane = lanePrefix(RETIRED_E);
+
 /** Lines that name a retired type as a type, key, or quoted value. */
 function offences(file: string, text: string): string[] {
+  if (!text.includes(RETIRED_A) && !text.includes(RETIRED_E)) return [];
   const found: string[] = [];
   text.split("\n").forEach((line, index) => {
-    const where = `${file}:${index + 1}: ${line.trim()}`;
-    if (quoted(RETIRED_A).test(line) || asKey(RETIRED_A).test(line)) {
-      found.push(where);
+    if (!line.includes(RETIRED_A) && !line.includes(RETIRED_E)) return;
+    if (retiredAutomobileValue.test(line) || retiredAutomobileKey.test(line)) {
+      found.push(`${file}:${index + 1}: ${line.trim()}`);
       return;
     }
     if (
-      asKey(RETIRED_E).test(line) ||
-      typeField(RETIRED_E).test(line) ||
-      besideMedia(RETIRED_E).test(line) ||
-      lanePrefix(RETIRED_E).test(line)
+      retiredEntertainmentKey.test(line) ||
+      retiredEntertainmentType.test(line) ||
+      retiredEntertainmentSibling.test(line) ||
+      retiredEntertainmentLane.test(line)
     ) {
-      found.push(where);
+      found.push(`${file}:${index + 1}: ${line.trim()}`);
     }
   });
   return found;
 }
 
 describe("retired corporation types", () => {
+  it.each([
+    [`type: "${RETIRED_A}"`, 1],
+    [`"${RETIRED_A}.ev": true`, 1],
+    [`${RETIRED_A}?: string`, 1],
+    [`sectorType: "${RETIRED_E}"`, 1],
+    [`["media", "${RETIRED_E}"]`, 1],
+    [`"${RETIRED_E}-legacy": true`, 1],
+    [`mediaDiscriminator: "${RETIRED_E}"`, 0],
+    ['sectorType: "financial"', 0],
+  ])("preserves retired-type detection for %s", (source, expected) => {
+    expect(offences("fixture.ts", source as string)).toHaveLength(expected as number);
+  });
+
   it("are not corporation types or operating lanes", () => {
     for (const retired of [RETIRED_A, RETIRED_E]) {
       expect(CORPORATION_TYPES as readonly string[]).not.toContain(retired);

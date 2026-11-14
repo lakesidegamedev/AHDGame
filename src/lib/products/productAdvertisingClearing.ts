@@ -32,6 +32,8 @@ import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/bound
 import { oid } from "@/lib/banking/rules/boundary";
 import { netTolerance } from "@/lib/banking/rules/invariants";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
+import { productAdvertisingCashWitness } from "./productAdvertisingLedger";
+import { loadExchangeRatesMap } from "@/lib/lineOfCredit/netWorth";
 import {
   productAdvertisingDenominationWitness,
   type ProductAdvertisingDenominationWitness,
@@ -296,7 +298,8 @@ export function productAdvertisingClearingTransition(
   turn: number,
   payables: readonly ProductAdvertisingOwedPayable[],
   poolBalances: ReadonlyMap<string, number> = new Map(),
-  canPay: (allocation: ProductAdvertisingPayableAllocation) => boolean = () => true
+  canPay: (allocation: ProductAdvertisingPayableAllocation) => boolean = () => true,
+  witnessRates: Readonly<Partial<Record<CurrencyCode, number>>> = {}
 ): BankingTransition | null {
   const definition = ADVERTISING_FAMILY[family];
   // A seller that cannot receive cash right now (its denomination moved since
@@ -437,6 +440,7 @@ export function productAdvertisingClearingTransition(
     retryCreditLegOnGuardFailure: true,
     legs: [...debitGroups.map(debitLeg), ...creditLegs],
     projections: [
+      productAdvertisingCashWitness(key, turn, creditLegs, witnessRates),
       ...(residuals.length > 0
         ? [
             {
@@ -614,7 +618,8 @@ export async function clearProductAdvertisingPayables(
     turn,
     payableTables,
     new Map(pools.map((pool) => [pool._id, pool.cashLocal])),
-    canPay
+    canPay,
+    await loadExchangeRatesMap(db)
   );
   if (!transition) return [...touched.values()];
   const result = await settleTransition(db, transition);

@@ -55,6 +55,7 @@ export async function applyResetLawBillEnactment(
       {
         session,
         projection: {
+          preset: 1,
           resetWorldId: 1,
           currentYear: 1,
           startingYear: 1,
@@ -308,6 +309,7 @@ async function applyRegionalResetLawBillEnactment(
       {
         session,
         projection: {
+          preset: 1,
           resetWorldId: 1,
           currentYear: 1,
           startingYear: 1,

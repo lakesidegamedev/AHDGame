@@ -54,6 +54,31 @@ describe("processAutoSectorSeed — plants boost basis", () => {
     db.collectionMocks.unownedSectors!.updateMany.mockResolvedValue({ modifiedCount: 1 });
   });
 
+  it("seeds missing markets in one batch while preserving each region's identity", async () => {
+    const states = Array.from({ length: 250 }, (_, i) => ({
+      _id: `region-${i}`,
+      countryId: "US",
+      gdp: 1e10,
+    }));
+    db.collectionMocks.states!.find.mockReturnValue({ toArray: vi.fn().mockResolvedValue(states) });
+    db.collectionMocks.unownedSectors!.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+      project: vi.fn().mockReturnThis(),
+    });
+    await processAutoSectorSeed(db as unknown as Db, 48, { lastAutoSeedTurn: 0 });
+    expect(db.collectionMocks.unownedSectors!.insertOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.unownedSectors!.insertMany).toHaveBeenCalledTimes(1);
+    const rows = db.collectionMocks.unownedSectors!.insertMany.mock.calls[0][0];
+    expect(rows).toHaveLength(250);
+    expect(new Set(rows.map((row: { stateId: string }) => row.stateId)).size).toBe(250);
+    expect(
+      rows.every(
+        (row: { headroomUnits: number }) =>
+          Number.isFinite(row.headroomUnits) && row.headroomUnits >= 0
+      )
+    ).toBe(true);
+  });
+
   /** Replace the single open pool bucket the seeder will consider. */
   function setPool(doc: Record<string, unknown>) {
     const poolCursor = {

@@ -19,6 +19,7 @@ export async function loadCabinetGameplayEffects(
           { _id: "current" },
           {
             projection: {
+              preset: 1,
               currentTurn: 1,
               resetWorldId: 1,
               resetVersionSeeds: 1,

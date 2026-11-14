@@ -106,6 +106,7 @@ export function canonicalTurns(
         : undefined;
   return canonicalTurnsForCycle({
     electionType,
+    state,
     cycle,
     // Country-aware branches (NG concurrent-general; RU governor → republic-
     // soviet anchor, D10) need the owning country — without it the recalibrate
@@ -378,7 +379,9 @@ export const POST = withAdminRoute(async (_auth) => {
               expected,
               e.senateClass,
               e.chamberClass,
-              ctx
+              ctx,
+              e.countryId,
+              e.state
             );
             renumberOps.push({
               updateOne: {

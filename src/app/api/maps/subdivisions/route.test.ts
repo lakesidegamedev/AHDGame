@@ -49,3 +49,19 @@ describe("GET /api/maps/subdivisions", () => {
     expect((await call("country=US&type=governor&region=ZZ")).status).toBe(404);
   });
 });
+
+it("keeps Canadian riding and census-division requests country qualified", async () => {
+  const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
+  expect((await call("country=CA&type=caCommons&region=CA_ON")).status).toBe(200);
+  expect(vi.mocked(loadSubdivisionFile).mock.calls.at(-1)?.[0]).toBe(
+    "subdivisions/ca/federal-ridings"
+  );
+  expect((await call("country=CA&type=caCommons&region=CA_ON&layer=census-divisions")).status).toBe(
+    200
+  );
+  expect(vi.mocked(loadSubdivisionFile).mock.calls.at(-1)?.[0]).toBe(
+    "subdivisions/ca/census-divisions"
+  );
+  expect((await call("country=US&type=house&region=CA_ON")).status).toBe(400);
+  expect((await call("country=CA&type=caCommons&region=CA")).status).toBe(400);
+});

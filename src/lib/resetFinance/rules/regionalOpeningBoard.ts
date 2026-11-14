@@ -11,6 +11,8 @@ export interface ResetRegionalOpeningBoard {
   annualSpending: number;
   familyOwned: number;
   otherExistingServices: number;
+  /** Frozen category mix for modeled services that have no individual source law. */
+  existingServicesByCategory?: Record<string, number>;
   allocatedClaims: RegionalOpeningClaim[];
   estimateKind: "proportional-source-pool";
 }
@@ -35,6 +37,15 @@ export function regionalOpeningBoardPayload(boards: readonly ResetRegionalOpenin
       throw new Error(`Invalid regional opening board ${board._id}`);
     }
     ids.add(board._id);
+    if (
+      board.existingServicesByCategory &&
+      (Object.values(board.existingServicesByCategory).some((n) => !Number.isFinite(n) || n < 0) ||
+        Math.abs(
+          Object.values(board.existingServicesByCategory).reduce((sum, n) => sum + n, 0) -
+            board.otherExistingServices
+        ) > 0.01)
+    )
+      throw new Error(`Regional opening service categories do not reconcile in ${board._id}`);
     const sourceIds = new Set<string>();
     let owned = 0;
     for (const claim of board.allocatedClaims) {
@@ -71,6 +82,13 @@ export function regionalOpeningBoardPayload(boards: readonly ResetRegionalOpenin
         board.familyOwned,
         board.otherExistingServices,
         board.estimateKind,
+        ...(board.existingServicesByCategory
+          ? [
+              Object.entries(board.existingServicesByCategory).sort(([a], [b]) =>
+                a.localeCompare(b)
+              ),
+            ]
+          : []),
         [...board.allocatedClaims]
           .sort((a, b) => a.sourceId.localeCompare(b.sourceId))
           .map((claim) => [claim.sourceId, claim.familyId, claim.annualBooked]),

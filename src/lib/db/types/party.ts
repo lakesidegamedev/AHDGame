@@ -50,6 +50,7 @@ export interface PoliticalParty {
   campaignerIds?: ObjectId[];
   committeeIds: ObjectId[];
   memberCount: number;
+  /** Seed-owned designation; gameplay cannot rename this party or its abbreviation. */
   isDefault: boolean;
   createdBy: ObjectId | null;
   treasury: number;

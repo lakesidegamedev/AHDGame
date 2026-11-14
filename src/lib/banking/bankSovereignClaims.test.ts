@@ -1,3 +1,4 @@
+import { readFundedBankMaturityCash } from "@/lib/turn/bondTurnBankMaturityCash";
 import { ObjectId, type Db } from "mongodb";
 import { describe, expect, it, vi } from "vitest";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
@@ -508,6 +509,27 @@ describe("bank sovereign claims", () => {
     expect(memory.collection("bankMoneyMoves").docs).toContainEqual(
       expect.objectContaining({ _id: `${claim.id}:orphan-insurance:13`, status: "applied" })
     );
+  });
+
+  it.each([false, true])("reports actual bank maturity funding once, orphan=%s", async (orphan) => {
+    const claim: BankSovereignClaim = {
+      ...couponClaim(10),
+      kind: "maturity",
+      ledgerShadow: true,
+      treasuryCashLedgerEnabled: true,
+    };
+    const memory = world(claim);
+    await memory
+      .collection("federalBudget")
+      .updateOne({ _id: "federal" }, { $set: { treasuryCashLocal: 100 } });
+    if (orphan) await memory.collection("corporations").deleteOne({ _id: bankId });
+    const db = memory as unknown as Db;
+    await settleBankSovereignClaims(db, budget(memory), 13);
+    expect(await readFundedBankMaturityCash(db, 13)).toEqual({ US: 10 });
+    expect(await readFundedBankMaturityCash(db, 14)).toEqual({});
+    await settleBankSovereignClaims(db, budget(memory), 13);
+    expect(await readFundedBankMaturityCash(db, 13)).toEqual({ US: 10 });
+    expect(budget(memory).treasuryCashLocal).toBe(90);
   });
 
   it("retries an unfunded orphan claim after cash becomes available", async () => {

@@ -63,6 +63,21 @@ describe("seedParties", () => {
     db.collectionMocks.counters!.findOneAndUpdate.mockImplementation(async () => ({ seq: ++seq }));
   });
 
+  it.each([
+    ["1953-default", ["DEM", "REP"]],
+    ["1979-default", ["DEM", "REP", "LIB"]],
+    ["1991-default", ["DEM", "REP", "LIB"]],
+    ["1999-default", ["DEM", "REP", "LIB"]],
+    ["2007-default", ["DEM", "REP", "GRN", "LIB"]],
+    ["2027-default", ["DEM", "REP", "GRN", "LIB"]],
+  ])("seeds only historically available US defaults for %s", async (preset, abbreviations) => {
+    await seedParties(db as unknown as Db, () => {}, preset as string);
+    const rows = db.collectionMocks.politicalParties!.insertOne.mock.calls.map((call) => call[0]);
+    expect(rows.map((row) => row.abbreviation)).toEqual(abbreviations);
+    expect(rows.slice(0, 2).map((row) => row.sequentialId)).toEqual([1, 2]);
+    expect(rows.every((row) => !("validForPresets" in row) && !("seedOrder" in row))).toBe(true);
+  });
+
   it("inserts a default party that does not exist yet", async () => {
     await seedParties(db as unknown as Db, () => {});
 
@@ -87,8 +102,11 @@ describe("seedParties", () => {
     const updates = db.collectionMocks.politicalParties!.updateOne.mock.calls;
     expect(updates).toHaveLength(0);
     const inserted = db.collectionMocks.politicalParties!.insertOne.mock.calls;
-    expect(inserted).toHaveLength(1);
-    expect(inserted[0]![0]).toMatchObject({ name: "Republican Party" });
+    expect(inserted.map((call) => (call[0] as { name: string }).name)).toEqual([
+      "Republican Party",
+      "Green Party",
+      "Libertarian Party",
+    ]);
   });
 
   it("fills a field the stored row is missing, and only that field", async () => {

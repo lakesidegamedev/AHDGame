@@ -38,7 +38,7 @@ describe("complete metric implementation contracts", () => {
     expect(coverage.map((c) => c.countryId)).toEqual([...new Set(countries)].sort());
     expect(
       coverage.filter((c) => c.currentPath === "reviewed-v2-catalog").map((c) => c.countryId)
-    ).toEqual(["IE", "JP", "SCO", "UK", "US", "WAL"]);
+    ).toEqual(["CA", "IE", "JP", "SCO", "UK", "US", "WAL"]);
     expect(coverage.find((c) => c.countryId === "DE")!.currentPath).toBe("legacy");
     expect(coverage.every((c) => !c.targetModelReady)).toBe(true);
   });

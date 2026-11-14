@@ -30,7 +30,8 @@ export async function buildDistrictDocsForStates(
   db: Db,
   countryId: CountryId,
   now: Date,
-  stateIds?: string[]
+  stateIds?: string[],
+  preset?: string
 ): Promise<CongressionalDistrict[]> {
   const stateFilter =
     stateIds && stateIds.length > 0 ? { countryId, _id: { $in: stateIds } } : { countryId };
@@ -75,7 +76,7 @@ export async function buildDistrictDocsForStates(
     const rows = orgRows
       .filter((r) => r.stateId === stateId)
       .map((r) => ({ partyId: r.partyId, registration: r.registration ?? r.organization }));
-    const pvis = loadCookPvi(stateId, n);
+    const pvis = loadCookPvi(stateId, n, preset);
     let poolPercents = aggregatePoolPercents(rows, poolOf, poolDocByState.get(stateId) ?? null);
     // No real two-party registration signal (e.g. 1991 seeds with no party-org
     // rows) ⇒ derive from PVI/neutral so the budget isn't shipped all-grey.

@@ -161,6 +161,51 @@ describe("runDemographicFlows", () => {
     );
   });
 
+  it("uses a modeled preset's frozen fertility and mortality inputs on its first turn", async () => {
+    db.collection("gameState").findOne.mockResolvedValue({
+      currentTurn: 1,
+      preset: "2027-default",
+      resetWorldId: "modern-world",
+      metricsSystemVersion: "v2",
+      resetVersionSeeds: {
+        metrics: {
+          worldId: "modern-world",
+          revision: RESET_V2_SEED_REVISION.metrics,
+          sourceTurn: 1,
+          completedAt: "fixture",
+          verificationHash: "verified",
+        },
+      },
+    });
+    db.collection("resetMetricSnapshots").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          _id: "US:CA",
+          worldId: "modern-world",
+          countryId: "US",
+          regionId: "CA",
+          asOfTurn: 1,
+          observations: { "19": { value: 250 } },
+          openingValues: { "19": 250 },
+          modeledOpening: {
+            preset: "2027-default",
+            year: 2027,
+            birthRateIndex: 20,
+            migrationRate: 0,
+            life: { openingYears: 82, modeledYears: 82 },
+          },
+        },
+      ]),
+    });
+    const { runDemographicFlows } = await import("./phase");
+    await runDemographicFlows(db as unknown as Db, 2, undefined, { metrics: true });
+    expect(plannedRegions(db)[0]!.resetCohortReadingAfter).toMatchObject({
+      asOfTurn: 2,
+      fertilityPolicyIndex: 20,
+      periodLifeExpectancy: expect.any(Number),
+    });
+  });
+
   it("refuses stale or missing v2 health ownership rather than reverting to political inputs", async () => {
     db.collection("gameState").findOne.mockResolvedValue({
       currentTurn: 1,

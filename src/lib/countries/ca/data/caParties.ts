@@ -2,15 +2,15 @@ import type { PartySeed } from "@/lib/seeds/reference/politicalParties";
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 
 /**
- * Canada's default parties for the 2027 world, all fictional analogues.
+ * Canada's real federal parties for the modeled 2027 opening.
  * Positions sit on the -5 to +5 scale (negative is economically left and
  * socially liberal). The opening board follows the April 2025 federal result:
  * a centrist governing party ahead of a right-of-centre opposition, a
- * Quebec-only sovereigntist party, a shrunken left party and one Green seat.
+ * Quebec sovereigntist party, a shrunken left party and one Green seat.
  *
- * The Laurentian Alliance runs only in Quebec; the regional party machinery
- * enforces that, not this seed.
+ * All five parties can organize and contest elections throughout Canada.
  */
+// Legacy slugs remain stable saved-world IDs; the roster owns display identities.
 export const CA_PARTY_SLUGS = {
   federalUnity: "ca_federal_unity",
   nationalProsperity: "ca_national_prosperity",
@@ -21,11 +21,11 @@ export const CA_PARTY_SLUGS = {
 
 /** Default party abbreviation to stable slug, for rules keyed by slug. */
 export const CA_PARTY_SLUG_BY_ABBREVIATION: Readonly<Record<string, string>> = {
-  FUP: CA_PARTY_SLUGS.federalUnity,
-  NPA: CA_PARTY_SLUGS.nationalProsperity,
-  LCP: CA_PARTY_SLUGS.labourCommons,
-  AL: CA_PARTY_SLUGS.laurentian,
-  GHP: CA_PARTY_SLUGS.greenHorizon,
+  LIB: CA_PARTY_SLUGS.federalUnity,
+  CON: CA_PARTY_SLUGS.nationalProsperity,
+  NDP: CA_PARTY_SLUGS.labourCommons,
+  BQ: CA_PARTY_SLUGS.laurentian,
+  GRN: CA_PARTY_SLUGS.greenHorizon,
 };
 
 function caParty(
@@ -60,26 +60,26 @@ function caParty(
 }
 
 export const caParties: PartySeed[] = [
-  caParty(1, "Federal Unity Party", "FUP", "#C8312B", -1, -2, 1_200_000),
-  caParty(2, "National Prosperity Alliance", "NPA", "#1F4E9C", 3, 1, 1_200_000),
-  caParty(3, "Labour Commons Party", "LCP", "#E8801A", -3, -3, 700_000),
-  caParty(4, "Laurentian Alliance", "AL", "#2FA3D8", -1, -2, 600_000),
-  caParty(5, "Green Horizon Party", "GHP", "#3F9B49", -3, -4, 400_000),
+  caParty(1, "Liberal Party of Canada", "LIB", "#C8312B", -1, -2, 1_200_000),
+  caParty(2, "Conservative Party of Canada", "CON", "#1F4E9C", 3, 1, 1_200_000),
+  caParty(3, "New Democratic Party", "NDP", "#E8801A", -3, -3, 700_000),
+  caParty(4, "Bloc Québécois", "BQ", "#2FA3D8", -1, -2, 600_000),
+  caParty(5, "Green Party of Canada", "GRN", "#3F9B49", -3, -4, 400_000),
 ];
 
 /** Party slug to the seeded display name, for polling and organisation lookups. */
 export const CA_PARTY_SLUG_TO_NAME: Readonly<Record<string, string>> = {
-  [CA_PARTY_SLUGS.federalUnity]: "Federal Unity Party",
-  [CA_PARTY_SLUGS.nationalProsperity]: "National Prosperity Alliance",
-  [CA_PARTY_SLUGS.labourCommons]: "Labour Commons Party",
-  [CA_PARTY_SLUGS.laurentian]: "Laurentian Alliance",
-  [CA_PARTY_SLUGS.greenHorizon]: "Green Horizon Party",
+  [CA_PARTY_SLUGS.federalUnity]: "Liberal Party of Canada",
+  [CA_PARTY_SLUGS.nationalProsperity]: "Conservative Party of Canada",
+  [CA_PARTY_SLUGS.labourCommons]: "New Democratic Party",
+  [CA_PARTY_SLUGS.laurentian]: "Bloc Québécois",
+  [CA_PARTY_SLUGS.greenHorizon]: "Green Party of Canada",
 };
 
 /**
  * Opening regional vote shares (percent) after the April 2025 federal general
  * election, from Elections Canada official results rounded and mapped onto the
- * fictional analogues above. Shares need not sum to 100: independents and
+ * parties above. Shares need not sum to 100: independents and
  * minor parties stay unallocated rather than being folded into a named party.
  */
 export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<string, number>>>> = {
@@ -177,4 +177,4 @@ export const CA_REGION_POLLING_2025: Readonly<Record<string, Readonly<Record<str
 };
 
 /** Default parties that seed as Major; every other default party seeds Minor. */
-export const CA_MAJOR_DEFAULT_PARTIES: MajorDefaultParty[] = [{ abbr: "FUP" }, { abbr: "NPA" }];
+export const CA_MAJOR_DEFAULT_PARTIES: MajorDefaultParty[] = [{ abbr: "LIB" }, { abbr: "CON" }];

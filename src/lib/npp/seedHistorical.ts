@@ -364,7 +364,11 @@ export function buildOfficeType(seat: HistoricalSeat): OfficeType | null {
     case "house":
       return { type: "house", state: seat.state, seatsHeld: seat.seatsHeld ?? 1 };
     case "senate":
-      return { type: "senate", state: seat.state };
+      return {
+        type: "senate",
+        state: seat.state,
+        ...(seat.senateClass && { senateClass: seat.senateClass }),
+      };
     case "president":
       return { type: "president" };
     case "vicePresident":
@@ -842,7 +846,8 @@ export async function seedFromSeats(
 export async function seedHistoricalOfficials(
   db: Db,
   presetId: string = "2019-default",
-  seedMode: SeedMode = "winners"
+  seedMode: SeedMode = "winners",
+  log: (message: string) => void = console.warn
 ): Promise<SeedResult> {
   const seats = getPresetSeats(presetId);
   // Same idempotency contract as the econ-tier rosters: this seeds a country's
@@ -873,6 +878,9 @@ export async function seedHistoricalOfficials(
   // country seeders may have written a pending doc before officials existed.
   const { seedBRGovernmentFormation } = await import("@/lib/admin/seed/seedBR");
   await seedBRGovernmentFormation(db, () => {});
+
+  const { seedOpeningHouseHolders } = await import("@/lib/redistricting/seedOpeningHolders");
+  await seedOpeningHouseHolders(db, presetId, log);
 
   return result;
 }

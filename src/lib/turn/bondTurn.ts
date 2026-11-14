@@ -1,9 +1,15 @@
+import { readFundedBankMaturityCash } from "./bondTurnBankMaturityCash";
 /**
  * Bond turns settle coupons and principal while preserving holder denominations.
  * processBondTurn shares one monetary quote snapshot across payout conversions.
  */
 import { loadPoolCashPerFaceByCountry } from "@/lib/bonds/sovereignPrimarySettlement";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
+import { withSettlementReadSnapshot } from "@/lib/banking/settlementReadSnapshot";
+import {
+  withSovereignPricingSnapshot,
+  invalidateSovereignPricingSnapshot,
+} from "@/lib/bonds/sovereignPricingSnapshot";
 import { euroSettlementRates } from "@/lib/currency/euro/rules";
 import { loadConversionQuoteContext } from "@/lib/currency/euro/quotes";
 import { roundedAggregateCredit } from "@/lib/bonds/rules/roundedAggregateCredit";
@@ -61,7 +67,7 @@ import { loadBondPoolLedgerContext, withBondPoolLedgerBatch } from "@/lib/bonds/
 import { creditBondPool } from "@/lib/bonds/marketPool";
 import { processBondMarketPoolTurn } from "@/lib/bonds/marketPoolTurn";
 import { placeUnsoldBondUnits, settlePlacementProceeds } from "@/lib/bonds/primaryMarket";
-import { sovereignIssuanceFlowsByCountry } from "@/lib/resetFinance/rules/sovereignProceeds";
+import { readCapturedSovereignIssuance } from "./bondTurnIssuance";
 import { payNppBondReturns, type NppBondReturns } from "./nppBondCash";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import type { BondTurnResult, SovereignMaturityPlan } from "./bondTurnTypes";
@@ -91,6 +97,14 @@ export type { BondTurnResult } from "./bondTurnTypes";
  * 4. Settle matured bonds (return face value to holders)
  */
 export async function processBondTurn(
+  ...args: Parameters<typeof processBondTurnInScope>
+): Promise<BondTurnResult> {
+  return withSovereignPricingSnapshot(() =>
+    withSettlementReadSnapshot(() => processBondTurnInScope(...args))
+  );
+}
+
+async function processBondTurnInScope(
   turn: number,
   config?: Pick<
     GameConfig,
@@ -165,6 +179,7 @@ export async function processBondTurn(
   await processCrisisAutoActions(db, Date.now(), turn);
   steps.mark("crisisAutoActions");
   await processSovereignLegislativeTurn(db, Date.now(), turn);
+  invalidateSovereignPricingSnapshot();
   steps.mark("sovereignLegislative");
 
   const activeBonds = await bondsCollection(db).find({ matured: false }).toArray();
@@ -183,7 +198,10 @@ export async function processBondTurn(
 
   if (activeBonds.length === 0) {
     const flows = captureSovereignCashProceeds
-      ? sovereignIssuanceFlowsByCountry({ atParIssues, placements: [] })
+      ? await readCapturedSovereignIssuance(db, turn, config?.treasuryCashLedgerEnabled === true, {
+          atParIssues,
+          placements: [],
+        })
       : null;
     return {
       bondsProcessed: 0,
@@ -203,7 +221,11 @@ export async function processBondTurn(
               Object.entries(flows).map(([countryId, flow]) => [countryId, flow.face])
             ),
             sovereignCouponPaidByCountry: {},
-            sovereignMaturityCashPaidByCountry: {},
+            sovereignServiceAlreadyFunded: config?.treasuryCashLedgerEnabled === true,
+            sovereignMaturityCashPaidByCountry:
+              config?.treasuryCashLedgerEnabled === true
+                ? await readFundedBankMaturityCash(db, turn)
+                : {},
             sovereignDebtFaceRetiredByCountry: {},
           }
         : {}),
@@ -976,7 +998,7 @@ export async function processBondTurn(
     ? { bondsAutoRestructured: 0, bondsAutoRefinanced: 0 }
     : await autoResolveLingeringDefaults({ db, turn, now });
   const sovereignFlows = captureSovereignCashProceeds
-    ? sovereignIssuanceFlowsByCountry({
+    ? await readCapturedSovereignIssuance(db, turn, config?.treasuryCashLedgerEnabled === true, {
         atParIssues,
         placements: [...placement.sovereignFaceByCountry].map(([countryId, row]) => ({
           countryId,
@@ -985,6 +1007,16 @@ export async function processBondTurn(
         })),
       })
     : null;
+
+  if (captureSovereignCashProceeds && config?.treasuryCashLedgerEnabled === true) {
+    const bankCash = await readFundedBankMaturityCash(db, turn);
+    for (const [country, amount] of Object.entries(bankCash)) {
+      sovereignMaturityCashPaidByCountry.set(
+        country,
+        (sovereignMaturityCashPaidByCountry.get(country) ?? 0) + amount
+      );
+    }
+  }
 
   steps.mark("snapshotsLedgerNotify");
   return {
@@ -1007,6 +1039,7 @@ export async function processBondTurn(
           sovereignCouponPaidByCountry: Object.fromEntries(
             [...govCouponByCountry].map(([countryId, row]) => [countryId, row.total])
           ),
+          sovereignServiceAlreadyFunded: config?.treasuryCashLedgerEnabled === true,
           sovereignMaturityCashPaidByCountry: Object.fromEntries(
             sovereignMaturityCashPaidByCountry
           ),

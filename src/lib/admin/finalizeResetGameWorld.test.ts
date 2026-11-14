@@ -22,6 +22,12 @@ vi.mock("@/lib/constants/historicalSeats", () => ({
   getPresetById: vi.fn().mockReturnValue({ deleteDefaultParties: true }),
 }));
 
+// Roster materialization is covered by the CN seeder and native reset tests.
+// These fixtures intentionally mock default-party creation and have no CN roster.
+vi.mock("@/lib/admin/seed/seedCnStatePartyOrg", () => ({
+  seedCnStatePartyOrg: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/seeds/ensureDefaultParties", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/seeds/ensureDefaultParties")>()),
   ensureDefaultParties: vi.fn().mockResolvedValue(undefined),

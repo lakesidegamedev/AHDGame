@@ -8,6 +8,7 @@ import type { State } from "@/lib/db/types";
 import { regionRedistrictUrl } from "@/lib/urls";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { statesCollection } from "@/lib/db/repositories/states";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 // POST /api/admin/country/[code]/region/[id]/redistrict/trigger — reset a state's
 // district map to a neutral baseline and open it for manual redraw.
@@ -36,9 +37,14 @@ export const POST = withAdminRoute(
     }
 
     const now = new Date();
+    const gs = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    );
     const { regenerated } = await regenerateCongressionalDistricts(db, {
       countryId,
       stateIds: [stateId],
+      preset: gs?.preset,
       now,
     });
     if (regenerated === 0) {

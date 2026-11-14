@@ -74,6 +74,11 @@ const COUNTRY_CHROME: Record<
   ResetMetricCountry,
   { registry: string; seal: string; glyph: string }
 > = {
+  CA: {
+    registry: "Government of Canada · National Situation Registry",
+    seal: "Statistics Canada",
+    glyph: "CA",
+  },
   US: {
     registry: "Executive Office · National Situation Registry",
     seal: "Dept of National Statistics",

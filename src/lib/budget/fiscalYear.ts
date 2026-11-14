@@ -1,4 +1,9 @@
 import { financialAusteritySpending } from "@/lib/livingConflict/rules/financialFiscal";
+import {
+  caProvincialServiceClaims,
+  caProvincialGrantDistribution,
+} from "@/lib/countries/ca/rules/provincialServices";
+import type { RegionalProgramClaim } from "@/lib/governmentFinance/rules/regionalSettlement";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type {
   FederalBudget,
@@ -19,11 +24,7 @@ import {
   loadLatestSourcedImportAggregates,
 } from "./revenue";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
-import {
-  calculateFederalSpending,
-  calculateStateSpendingDetail,
-  normalizeStateSpending,
-} from "./spending";
+import { calculateFederalSpending, calculateStateSpendingDetail } from "./spending";
 import { applyLegacyTrustDelta } from "@/lib/sovereignDefault/sideEffects/trustHit";
 import { processAnnualDebt, resolveDebtCeilingCrisis, getDebtThreshold } from "./debt";
 import { raisedDebtCeiling } from "./rules/debtCeilingRaise";
@@ -63,7 +64,8 @@ import {
 import type { MacroCountryState } from "@/lib/world/macro/types";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { ensureBudgetDraftForFiscalYear } from "@/lib/db/collections/ukBudgets";
-import { settleRegionalBudget } from "@/lib/governmentFinance/rules/regionalSettlement";
+import { resolveRegionalSpending } from "./rules/regionalSpending";
+import { regionalLawClaims } from "./rules/regionalLawClaims";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   distributeAnnualRegionalGrantPool,
@@ -87,6 +89,8 @@ import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 import { macroCountriesCollection } from "@/lib/db/repositories/macroCountries";
 import { resetLawProgramsCollection } from "@/lib/db/repositories/resetLawPrograms";
+import type { ResetRegionalOpeningBoard } from "@/lib/resetFinance/rules/regionalOpeningBoard";
+import { regionalOpeningServiceClaims } from "@/lib/resetFinance/rules/regionalServiceClaims";
 
 // The current turn engine still processes fiscal-year rollover as one shared phase.
 // Pulling the anchor from country-systems makes the rule source explicit now, while
@@ -149,16 +153,19 @@ export async function processFiscalYear(
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
         resetVersionSeeds: 1,
+        preset: 1,
       },
     }
   );
-  const usResetLegislationV2 =
-    resetSystemVersionsForCountry(financeState, RESET_V2_READY, "US").legislation === "v2";
+  const regionalV2Countries = (["US", "CA"] as const).filter(
+    (country) =>
+      resetSystemVersionsForCountry(financeState, RESET_V2_READY, country).legislation === "v2"
+  );
   const regionalLegislationTypes = await legislationTypesCollection(db)
     .find(
       {
         $or: [
-          { countryScope: { $in: ["us", "uk", "jp"] } },
+          { countryScope: { $in: ["us", "uk", "jp", "ca"] } },
           // Legacy records without a countryScope are US laws throughout
           // the existing policy pipeline and receive administration
           // metadata from the same compatibility rule.
@@ -183,13 +190,18 @@ export async function processFiscalYear(
     macroMetricsCollection(db).find({}).toArray(),
   ]);
   const usResetRegionalPrograms =
-    usResetLegislationV2 && financeState?.resetWorldId
+    regionalV2Countries.length > 0 && financeState?.resetWorldId
       ? await resetLawProgramsCollection<ResetLawProgramDocument>(db)
           .find(
-            { country: "US", scope: "regional", worldId: financeState.resetWorldId },
+            {
+              country: { $in: regionalV2Countries },
+              scope: "regional",
+              worldId: financeState.resetWorldId,
+            },
             {
               projection: {
                 _id: 1,
+                country: 1,
                 regionId: 1,
                 familyId: 1,
                 choice: 1,
@@ -200,11 +212,49 @@ export async function processFiscalYear(
           .toArray()
       : [];
   const usResetProgramsByRegion = new Map<string, ResetLawProgramDocument[]>();
+  // One world-scoped preload, never a lookup per region. Other presets retain their rules.
+  const openingServices =
+    regionalV2Countries.length > 0 && financeState?.preset === "2027-default"
+      ? await resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db)
+          .find(
+            { countryId: { $in: regionalV2Countries }, worldId: financeState.resetWorldId },
+            {
+              projection: {
+                _id: 1,
+                countryId: 1,
+                worldId: 1,
+                regionId: 1,
+                sourceTurn: 1,
+                annualSpending: 1,
+                familyOwned: 1,
+                otherExistingServices: 1,
+                allocatedClaims: 1,
+                estimateKind: 1,
+                existingServicesByCategory: 1,
+              },
+            }
+          )
+          .toArray()
+      : [];
+  const openingServicesByRegion = new Map(
+    openingServices.map((board) => [`${board.countryId}:${board.regionId}`, board])
+  );
+  for (const board of openingServices) regionalOpeningServiceClaims(board);
+  if (
+    regionalV2Countries.length > 0 &&
+    financeState?.preset === "2027-default" &&
+    states.some(
+      (s) =>
+        (regionalV2Countries as readonly string[]).includes(s.countryId) &&
+        !openingServicesByRegion.has(`${s.countryId}:${s._id}`)
+    )
+  )
+    throw new Error("2027 v2 rollover requires current-world regional service baselines");
   for (const program of usResetRegionalPrograms) {
     if (!program.regionId) continue;
-    const programs = usResetProgramsByRegion.get(program.regionId) ?? [];
+    const programs = usResetProgramsByRegion.get(`${program.country}:${program.regionId}`) ?? [];
     programs.push(program);
-    usResetProgramsByRegion.set(program.regionId, programs);
+    usResetProgramsByRegion.set(`${program.country}:${program.regionId}`, programs);
   }
   const stateGdpGrowthMap = new Map(
     allStateMetrics
@@ -415,7 +465,13 @@ export async function processFiscalYear(
     const isUS = countryId === COUNTRY_CONFIGS.US.id;
     const formulaGrantDistribution = isUS
       ? await processFormulaGrants(db, federalRevenue.total, countryId)
-      : {};
+      : caProvincialGrantDistribution(
+          countryId,
+          financeState?.preset,
+          states
+            .filter((state) => state.countryId === countryId)
+            .map((state) => ({ id: String(state._id), gdp: state.gdp ?? 0 }))
+        );
     const departmentGrant = isUS
       ? resolveAnnualRegionalGrantPool({
           accounts: federalBudget.departmentAccounts ?? {},
@@ -443,7 +499,7 @@ export async function processFiscalYear(
       ])
     );
 
-    if (isUS) {
+    if (Object.keys(grantDistribution).length > 0) {
       for (const [stateId, grantAmount] of Object.entries(grantDistribution)) {
         await updateStateGrantRevenue(db, stateId, countryId, grantAmount);
       }
@@ -533,15 +589,12 @@ export async function processFiscalYear(
       }
     }
 
-    if (isUS) {
-      // US still uses the formulaGrants pool for state grants and overrides
-      // the enacted-law-derived total. Non-US countries already populated
-      // stateGrants from isGrant=true enacted laws inside calculateFederalSpending.
-      // The department-delivered pool is already charged in byCategory through
-      // its enacted law. Only the legacy formula-grant line is added here.
+    if (Object.keys(formulaGrantDistribution).length > 0) {
+      // Book the annual US formula or Canadian modeled pool with its regional receipts.
+      // Department-delivered grants remain charged through their enacted category.
       const totalStateGrants = Object.values(formulaGrantDistribution).reduce((a, b) => a + b, 0);
+      federalSpending.total += totalStateGrants - federalSpending.stateGrants;
       federalSpending.stateGrants = totalStateGrants;
-      federalSpending.total += totalStateGrants;
     }
 
     const surplus = federalRevenue.total - federalSpending.total;
@@ -690,7 +743,11 @@ export async function processFiscalYear(
         currentTurn,
         countryId === COUNTRY_CONFIGS.US.id,
         regionalLegislationTypeMap,
-        countryId === COUNTRY_CONFIGS.US.id ? (usResetProgramsByRegion.get(stateId) ?? []) : []
+        usResetProgramsByRegion.get(`${countryId}:${stateId}`) ?? [],
+        openingServicesByRegion.get(`${countryId}:${stateId}`),
+        (regionalV2Countries as readonly string[]).includes(countryId)
+          ? []
+          : caProvincialServiceClaims(countryId, financeState?.preset, stateId)
       );
     }
 
@@ -783,7 +840,9 @@ async function processStateFiscalYear(
   currentTurn = 0,
   regionalFinanceEnabled = false,
   legislationTypeMap: ReadonlyMap<string, LegislationType> = new Map(),
-  resetPrograms: readonly ResetLawProgramDocument[] = []
+  resetPrograms: readonly ResetLawProgramDocument[] = [],
+  openingServices?: ResetRegionalOpeningBoard,
+  standingServices: readonly (RegionalProgramClaim & { category: string })[] = []
 ): Promise<void> {
   const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
@@ -847,95 +906,37 @@ async function processStateFiscalYear(
     revenue,
     stateGdp: newStateGdp,
   });
-  const resetProgramAnnualCost = resetPrograms.reduce(
-    (sum, program) => sum + program.annualAgencyAllocation,
-    0
-  );
-  const authorizedSpending: StateBudget["spending"] = {
-    ...spendingDetail.spending,
-    byCategory: {
-      ...spendingDetail.spending.byCategory,
-      resetLegislation:
-        (spendingDetail.spending.byCategory.resetLegislation ?? 0) + resetProgramAnnualCost,
-    },
-    total: spendingDetail.spending.total + resetProgramAnnualCost,
-  };
-  let spending = authorizedSpending;
-  let regionalProgramSettlements = stateBudget.regionalProgramSettlements;
-
-  const regionalSettlementEnabled = regionalFinanceEnabled || resetPrograms.length > 0;
-  if (regionalSettlementEnabled) {
-    const previousIds = new Set(Object.keys(stateBudget.regionalProgramSettlements ?? {}));
-    const claims = [
-      ...spendingDetail.lawCosts.flatMap(({ law, annualCost }) => {
-        const type = legislationTypeMap.get(law.legislationTypeId);
-        const option =
-          typeof law.policyOptionIndex === "number"
-            ? type?.policyOptions?.[law.policyOptionIndex]
-            : undefined;
-        const implementation = option?.implementation;
-        const programId =
-          implementation?.programId ??
-          `${law.legislationTypeId}:${option?.id ?? law.policyOptionIndex ?? "current"}`;
-        return [
+  const serviceClaims = [
+    ...(openingServices ? regionalOpeningServiceClaims(openingServices) : []),
+    ...standingServices,
+  ];
+  const previousIds = new Set(Object.keys(stateBudget.regionalProgramSettlements ?? {}));
+  const result = resolveRegionalSpending({
+    baseSpending: spendingDetail.spending,
+    services: serviceClaims,
+    laws: regionalLawClaims(spendingDetail.lawCosts, legislationTypeMap, previousIds),
+    programs: buildResetRegionalProgramClaims({
+      programs: resetPrograms,
+      previousProgramIds: previousIds,
+    }),
+    revenue: revenue.total,
+    cash: stateBudget.balance ?? 0,
+    settle: regionalFinanceEnabled || resetPrograms.length > 0 || serviceClaims.length > 0,
+  });
+  const { spending, authorizedSpending } = result;
+  const regionalSettlementEnabled = result.settlement !== undefined;
+  const regionalProgramSettlements = result.settlement
+    ? Object.fromEntries(
+        result.settlement.programs.map((program) => [
+          program.programId,
           {
-            programId,
-            legislationTypeId: law.legislationTypeId,
-            policyOptionId: option?.id ?? String(law.policyOptionIndex ?? "current"),
-            authorizedCost: Math.max(0, annualCost),
-            obligationPriority: implementation?.obligationPriority ?? 5,
-            fundingSemantics: implementation?.fundingSemantics ?? "appropriation_included",
-            continuing: previousIds.has(programId),
-          } as const,
-        ];
-      }),
-      ...buildResetRegionalProgramClaims({
-        programs: resetPrograms,
-        previousProgramIds: previousIds,
-      }),
-    ];
-    const negativeCostCredit = spendingDetail.lawCosts.reduce(
-      (sum, row) => sum + Math.max(0, -row.annualCost),
-      0
-    );
-    const settlement = settleRegionalBudget({
-      availableBudget: revenue.total + Math.max(0, stateBudget.balance ?? 0) + negativeCostCredit,
-      reservedNonProgramSpending: authorizedSpending.resourceProspecting ?? 0,
-      claims,
-    });
-    const settlementByLawId = new Map(
-      settlement.programs.map((program) => [program.legislationTypeId, program])
-    );
-    const actualByCategory: Record<string, number> = {};
-    for (const row of spendingDetail.lawCosts) {
-      const funded =
-        row.annualCost <= 0
-          ? row.annualCost
-          : (settlementByLawId.get(row.law.legislationTypeId)?.fundedAmount ?? 0);
-      actualByCategory[row.category] = (actualByCategory[row.category] ?? 0) + funded;
-    }
-    actualByCategory.resetLegislation = resetPrograms.reduce(
-      (sum, program) =>
-        sum +
-        (settlement.programs.find((item) => item.programId === program._id)?.fundedAmount ?? 0),
-      0
-    );
-    spending = normalizeStateSpending({
-      byCategory: actualByCategory,
-      resourceProspecting: settlement.reservedNonProgramSpending,
-      total: 0,
-    });
-    regionalProgramSettlements = Object.fromEntries(
-      settlement.programs.map((program) => [
-        program.programId,
-        {
-          ...program,
-          lastSettledTurn: currentTurn,
-          validThroughTurn: currentTurn + TURNS_PER_YEAR - 1,
-        },
-      ])
-    );
-  }
+            ...program,
+            lastSettledTurn: currentTurn,
+            validThroughTurn: currentTurn + TURNS_PER_YEAR - 1,
+          },
+        ])
+      )
+    : stateBudget.regionalProgramSettlements;
 
   // Calculate surplus/deficit
   const surplus = revenue.total - spending.total;
@@ -1105,3 +1106,5 @@ export async function saveFiscalYearSnapshot(
 
   console.log(`[FiscalYear] Snapshot saved: ${snapshot._id}`);
 }
+
+import { resetRegionalOpeningBoardsCollection } from "@/lib/db/repositories/resetRegionalOpeningBoards";

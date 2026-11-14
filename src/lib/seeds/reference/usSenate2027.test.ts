@@ -4,12 +4,12 @@ import { US_CONGRESS_PROJECTION_2027 } from "./usCongressProjection2027";
 import { US_SENATE_2027 } from "./usSenate2027";
 
 describe("US_SENATE_2027", () => {
-  it("matches the frozen 50-50 aligned projection", () => {
+  it("matches the dated provisional opening", () => {
     const democrats = US_SENATE_2027.filter((seat) => seat.party === "democrat").length;
     const independents = US_SENATE_2027.filter((seat) => seat.party === "independent").length;
     const republicans = US_SENATE_2027.filter((seat) => seat.party === "republican").length;
 
-    expect(democrats).toBe(48);
+    expect(democrats).toBe(53);
     expect(independents).toBe(2);
     expect(democrats + independents).toBe(US_CONGRESS_PROJECTION_2027.senate.democraticAligned);
     expect(republicans).toBe(US_CONGRESS_PROJECTION_2027.senate.republican);

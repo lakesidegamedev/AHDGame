@@ -2,7 +2,7 @@ import type { PrimaryMetricDefinition } from "./catalog";
 import { politicalScoreFromLegacyValue } from "@/lib/politicalMetrics/derive/legacyInversion";
 import { legacyMetricCalibration } from "./rules/metricCalibration";
 
-export type ResetMetricScoreCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
+export type ResetMetricScoreCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL" | "CA";
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value));

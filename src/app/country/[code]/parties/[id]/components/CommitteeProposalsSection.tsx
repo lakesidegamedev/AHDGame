@@ -12,12 +12,14 @@ export function CommitteeProposalsSection({
   partyId,
   characterId: _characterId,
   isChair: _isChair,
+  isDefaultParty = false,
 }: {
   country: string;
   countryCode: string;
   partyId: string;
   characterId: string | null;
   isChair: boolean;
+  isDefaultParty?: boolean;
 }) {
   const [data, setData] = useState<ProposalsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,7 @@ export function CommitteeProposalsSection({
             partyId={partyId}
             countryCode={countryCode}
             isChair={canProposeMerge}
+            isDefaultParty={isDefaultParty}
             currentTransactionApprovalMode={data?.currentTransactionApprovalMode ?? "double"}
             onCreated={fetchProposals}
           />

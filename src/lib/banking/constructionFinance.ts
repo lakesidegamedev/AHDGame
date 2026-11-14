@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector, SectorBuildOrder } from "@/lib/db/types/corporation";
-import type { BankLoan } from "@/lib/db/types/bank";
 import { loadBankingSnapshot } from "./snapshot";
 import { loadBorrowerSnapshot } from "./lending";
 import { quoteConstructionFinance } from "./rules/constructionFinance";
@@ -375,6 +374,7 @@ export async function approveConstructionFinance(
     sectorId: sector._id,
     bank: loaded.snapshot,
     borrower: borrowerSnapshot,
+    cashWitnessContext: preloadedFundingContext?.cashWitnessContext,
   });
   return result.ok
     ? { ok: true, pending: false, loanId: claim.loanId, claimId: claim.claimId }

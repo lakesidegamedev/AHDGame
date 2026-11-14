@@ -22,7 +22,7 @@
     "exchangeName": "TSX",
     "financeMinisterCabinetId": "minister_of_finance",
     "regionalBillAssentTitle": "Premier",
-    "majorPartyIds": ["FUP", "NPA"],
+    "majorPartyIds": ["LIB", "CON"],
     "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
     "legislature": {
       "name": "Parliament",

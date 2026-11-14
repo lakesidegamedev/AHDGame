@@ -1,3 +1,4 @@
+import { isCanada } from "@/lib/countries/ca/rules/localGeography";
 // src/lib/maps/subdivisionConfig.ts
 // Registry of which (country, electionType) pairs have sub-region map data.
 // Adding a country = add an entry here + a build script + committed JSON.
@@ -19,6 +20,21 @@ export interface SubdivisionModeConfig {
 }
 
 const REGISTRY: Record<string, Partial<Record<SubdivisionMode, SubdivisionModeConfig>>> = {
+  CA: {
+    seatConsistent: {
+      electionTypes: ["caCommons", "snap_caCommons"],
+      dataDir: "subdivisions/ca/federal-ridings",
+      unitLabel: "Federal riding",
+      unitLabelPlural: "Federal ridings",
+    },
+    distributed: {
+      electionTypes: ["governor", "provincialLegislature", "regionalCouncil"],
+      dataDir: "subdivisions/ca/census-divisions",
+      populationCountryId: "CA",
+      unitLabel: "Census division",
+      unitLabelPlural: "Census divisions",
+    },
+  },
   UK: {
     seatConsistent: {
       electionTypes: ["commons", "snap_commons", "regionalCouncil"],
@@ -65,9 +81,17 @@ const REGISTRY: Record<string, Partial<Record<SubdivisionMode, SubdivisionModeCo
 
 export function getSubdivisionMode(
   countryId: string,
-  electionType: string
+  electionType: string,
+  layer?: string | null
 ): { mode: SubdivisionMode; config: SubdivisionModeConfig } | null {
   const country = REGISTRY[countryId];
+  if (
+    isCanada(countryId) &&
+    layer === "census-divisions" &&
+    (electionType === "caCommons" || electionType === "snap_caCommons")
+  ) {
+    return { mode: "distributed", config: REGISTRY.CA.distributed! };
+  }
   if (!country) return null;
   for (const [mode, config] of Object.entries(country) as [
     SubdivisionMode,

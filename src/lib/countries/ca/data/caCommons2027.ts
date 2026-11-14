@@ -15,7 +15,7 @@ const PARTY = {
 
 /**
  * Seats won at the April 2025 federal general election, by province and
- * territory, mapped onto the fictional analogues. One seated bloc per region
+ * territory. One seated bloc per region
  * and party, holding all of that party's seats there.
  * Source: Elections Canada, 45th general election official voting results,
  * table 7 (distribution of seats by political affiliation).

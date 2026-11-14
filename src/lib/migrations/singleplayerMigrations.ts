@@ -1,3 +1,4 @@
+import { migration as canadianCensusDivisions } from "./entries/2026-11-14-canadian-census-divisions";
 // Migrations for singleplayer worlds.
 //
 // A hosted world gets registry migrations from an operator and required
@@ -40,6 +41,7 @@ export const SINGLEPLAYER_MIGRATIONS: readonly Migration[] = [
   ...MIGRATIONS,
   countyPopulations,
   ukJpSubdivisionPopulations,
+  canadianCensusDivisions,
   restoreKillSwitchFlags,
 ];
 

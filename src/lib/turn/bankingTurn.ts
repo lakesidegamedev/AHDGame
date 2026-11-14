@@ -1,3 +1,4 @@
+import { bankPassLockKeys } from "./bankingPassLocks";
 import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
@@ -9,6 +10,7 @@ import { resumeTreasuryReserveTransfers } from "@/lib/budget/treasuryReserveTran
  * Discount-window interest remains due when proprietary trading is disabled.
  */
 import { ObjectId, type Db } from "mongodb";
+import { withSettlementReadSnapshot } from "@/lib/banking/settlementReadSnapshot";
 import { resumeReservePoolTransfers } from "@/lib/centralBank/reservePoolTransferCommands";
 import { resumeMonetaryOperations } from "@/lib/moneySupply/monetaryOperationJournal";
 import { resumeLiquidityAdvances } from "@/lib/moneySupply/liquidityAdvance";
@@ -131,7 +133,9 @@ export async function processBankingTurn(
   // Every settlement in the pass bumps the turn's banking telemetry document.
   // Unbatched, that was about 150 concurrent increments on one document per
   // turn; batched, one write when the pass ends. Counts are unchanged.
-  return withBankingTelemetryBatch(db, turn, () => runBankingTurn(db, turn, options));
+  return withSettlementReadSnapshot(() =>
+    withBankingTelemetryBatch(db, turn, () => runBankingTurn(db, turn, options))
+  );
 }
 
 async function runBankingTurn(
@@ -458,67 +462,6 @@ type BankPassResult = {
 
 /** Concurrent bank passes; a shared document still orders them. */
 const BANKING_LANES = 8;
-
-/**
- * Lock keys for each deposit taker's pass, as `<collection>:<id>`: the bank,
- * its currency's central bank and insurance fund, every player depositor and
- * every borrower of a loan this pass services.
- */
-async function bankPassLockKeys(
-  db: Db,
-  turn: number,
-  depositTakers: readonly DepositTaker[]
-): Promise<Map<string, string[]>> {
-  const keys = new Map<string, string[]>();
-  const bankIdsByCurrency = new Map<string, string[]>();
-  for (const { corp, charter } of depositTakers) {
-    const currency = charter.currency as CurrencyCode;
-    keys.set(corp._id.toString(), [
-      `corporations:${corp._id.toString()}`,
-      `centralBanks:${getBankId(getCountryIdForCurrency(currency))}`,
-      `depositInsuranceFunds:${currency}`,
-    ]);
-    bankIdsByCurrency.set(currency, [
-      ...(bankIdsByCurrency.get(currency) ?? []),
-      corp._id.toString(),
-    ]);
-  }
-  if (!depositTakers.length) return keys;
-  const [depositors, loans] = await Promise.all([
-    charactersCollection(db)
-      .find(
-        {
-          $or: [...bankIdsByCurrency].map(([currency, ids]) => ({
-            [`currencyBalances.savingsHolder.${currency}`]: { $in: ids },
-          })),
-        },
-        { projection: { _id: 1, "currencyBalances.savingsHolder": 1 } }
-      )
-      .toArray(),
-    bankLoansCollection(db)
-      .find(
-        {
-          bankCorporationId: { $in: depositTakers.map((row) => row.corp._id) },
-          borrowerType: { $in: ["character", "corporation"] },
-          status: { $in: ["current", "arrears"] },
-          lastProcessedTurn: { $ne: turn },
-        },
-        { projection: { bankCorporationId: 1, borrowerType: 1, borrowerId: 1 } }
-      )
-      .toArray(),
-  ]);
-  for (const depositor of depositors) {
-    const holders = (depositor.currencyBalances?.savingsHolder ?? {}) as Record<string, unknown>;
-    for (const bankId of Object.values(holders))
-      keys.get(String(bankId))?.push(`characters:${depositor._id.toString()}`);
-  }
-  for (const loan of loans) {
-    if (!loan.borrowerId) continue;
-    const collection = loan.borrowerType === "character" ? "characters" : "corporations";
-    keys.get(String(loan.bankCorporationId))?.push(`${collection}:${String(loan.borrowerId)}`);
-  }
-  return keys;
-}
 
 async function processOneBank(
   db: Db,
@@ -1577,9 +1520,7 @@ async function serviceNpcBulkBook(
     if (state.cb) state.cb.externalBroadMoney = poolAvailable;
   }
 
-  // One interest row for the whole book rather than one per band: this fires
-  // for every bank every turn, and seven rows per bank per turn would bury the
-  // ledger for no extra information the tranches do not already carry.
+  // The book's interest belongs to ring-fenced reserves, not parent-company cash.
   if (interestCollected > 0) {
     await emitTx(db, {
       type: "bank_npc_loan_interest",
@@ -1594,6 +1535,7 @@ async function serviceNpcBulkBook(
       counterpartyName: "NPC households",
       meta: {
         borrowerType: "npcBulk",
+        bankVaultMovement: true,
         tranches: work.length,
         lendingProfile: state.lendingProfile ?? DEFAULT_LENDING_PROFILE,
       },

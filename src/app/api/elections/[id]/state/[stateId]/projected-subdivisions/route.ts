@@ -1,3 +1,10 @@
+import { isCanadianCommons, isCanada } from "@/lib/countries/ca/rules/localGeography";
+import { projectCanadianRidings } from "@/lib/countries/ca/rules/ridingResults";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
+import {
+  SUBDIVISION_REGION_PATTERN,
+  subdivisionRegionMatchesCountry,
+} from "@/lib/maps/rules/region";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse, handleRouteError } from "@/lib/api/errors";
@@ -29,7 +36,7 @@ export async function GET(
     const { id, stateId } = await params;
     const regionId = stateId.toUpperCase();
     // regionId feeds a filesystem path — region-code shapes only.
-    if (!/^[A-Z]{2,3}$/.test(regionId)) return errorResponse(400, "Invalid region ID");
+    if (!SUBDIVISION_REGION_PATTERN.test(regionId)) return errorResponse(400, "Invalid region ID");
     const party = req.nextUrl.searchParams.get("party");
     if (party != null && !/^[\w-]{1,32}$/.test(party)) return errorResponse(400, "Invalid party");
 
@@ -41,14 +48,30 @@ export async function GET(
         : errorResponse(404, "Election not found");
     }
     const election = resolved.election;
-    const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType));
+    if (!subdivisionRegionMatchesCountry(election.countryId, regionId))
+      return errorResponse(400, "Region country mismatch");
+    const layer = req.nextUrl.searchParams.get("layer");
+    if (layer && layer !== "census-divisions") return errorResponse(400, "Invalid map layer");
+    if (
+      isCanada(election.countryId) &&
+      isCanadianCommons(election.electionType) &&
+      party == null &&
+      ["resolved", "completed"].includes(election.status)
+    )
+      return errorResponse(
+        400,
+        "Use recorded subdivision results for a completed Canadian election"
+      );
+    const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType), layer);
     if (!modeEntry)
       return errorResponse(404, "Sub-unit map data is not available for this election");
 
     const populationCountryId = modeEntry.config.populationCountryId;
     const file = await loadSubdivisionFile(modeEntry.config.dataDir, regionId, {
       preset: await getGameStatePresetOrDefault(db),
-      ...(populationCountryId && election.status === "active"
+      ...(populationCountryId &&
+      (election.status === "active" ||
+        (isCanada(election.countryId) && election.status === "upcoming"))
         ? { countyPopulations: await loadCountyPopulationMap(db, regionId, populationCountryId) }
         : {}),
     });
@@ -121,10 +144,50 @@ export async function GET(
       }
     }
 
-    const projected = projectSubunits(file.subdivisions, cands, mode);
+    let projected = projectSubunits(file.subdivisions, cands, mode);
+    if (
+      isCanada(election.countryId) &&
+      mode === "general" &&
+      isCanadianCommons(election.electionType) &&
+      !layer
+    ) {
+      const votes = Object.fromEntries(cands.map((c) => [c.id, Math.round(c.share * 10000)]));
+      const ranked = Object.entries(votes).map(([id, votes]) => ({
+        id,
+        votes,
+        party: candidateParties[id],
+      }));
+      const seats =
+        race.seatsEstimate ??
+        allocateSeats(
+          election.electionType,
+          regionId,
+          election.totalSeats ?? file.subdivisions.length,
+          ranked,
+          Object.values(votes).reduce((sum, n) => sum + n, 0)
+        ).seatsEstimate;
+      projected = projectCanadianRidings({
+        subdivisions: file.subdivisions,
+        votes,
+        seats,
+        candidateParties,
+        partyAbbreviations: Object.fromEntries(cands.map((c) => [c.partyId, c.partyAbbr ?? ""])),
+        boosts: election.districtCampaignBoosts,
+      });
+    }
+    if (isCanada(election.countryId) && projected.length === 0) {
+      projected = file.subdivisions.map((s) => ({
+        id: s.id,
+        name: s.name,
+        votes: {},
+        margin: 0,
+        winner: "",
+      }));
+    }
     const subById = new Map(file.subdivisions.map((s) => [s.id, s]));
     return NextResponse.json({
       viewBox: file.viewBox,
+      notice: file.notice,
       mode: "projected",
       unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
       unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",

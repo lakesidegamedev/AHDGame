@@ -15,7 +15,6 @@ import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { StateBudget } from "@/lib/db/types/budget";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getSharedFiscalYearStartTurnInYear } from "@/lib/countrySystems/fiscalCalendar";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resetMetricConditionScore } from "@/lib/resetMetrics/conditionScore";
 import { readResetGovernanceStyle } from "@/lib/resetMetrics/readGovernanceStyle";
 import { resetLawFamilies, resetLawFamilyById } from "@/lib/resetLegislation/catalog";
@@ -230,7 +229,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
           ),
         })
       : {};
-    const currentYear = 1991 + Math.floor((board.board.asOfTurn - 1) / TURNS_PER_YEAR);
     const metrics = primaryMetrics
       .filter((metric) => board.board.scope === "national" || metric.aggregation !== "national")
       .map((definition) => {
@@ -248,7 +246,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
                   definition,
                   observation?.value ?? null,
                   countryId,
-                  currentYear
+                  board.year
                 ),
           temporaryActionEffect: temporary
             ? {

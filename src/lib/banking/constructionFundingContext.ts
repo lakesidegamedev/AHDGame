@@ -3,6 +3,7 @@ import type { Corporation } from "@/lib/db/types/corporation";
 import type { BankingPolicySnapshot } from "@/lib/banking/rules/policy";
 import { isNamedLendingCharter } from "@/lib/banking/charterKinds";
 import type { BankingSnapshot, BorrowerSnapshot } from "@/lib/banking/rules/boundary";
+import type { ConstructionCashWitnessContext } from "./constructionCashWitness";
 
 /** The only bank document fields a construction request needs after batch load. */
 export type ConstructionFundingBankCorporation = Pick<Corporation, "_id" | "bankCharter">;
@@ -14,6 +15,7 @@ export interface PreloadedConstructionFundingContext {
   borrowerSnapshot: BorrowerSnapshot;
   turn: number;
   policy: BankingPolicySnapshot;
+  cashWitnessContext?: ConstructionCashWitnessContext | null;
 }
 
 export interface ConstructionFundingContextExpectation {

@@ -361,6 +361,18 @@ export async function payMaturedBonds({
       if (entries) {
         txBondEntries.push(...entries);
         bondsMatured++;
+
+        sovereignDebtFaceRetiredByCountry.set(
+          bond.countryId,
+          (sovereignDebtFaceRetiredByCountry.get(bond.countryId) ?? 0) +
+            sovereignBondOutstanding(bond)
+        );
+        const payment = entries.find((entry) => entry.type === "gov_bond_maturity_payment");
+        if (payment)
+          sovereignMaturityCashPaidByCountry.set(
+            bond.countryId,
+            (sovereignMaturityCashPaidByCountry.get(bond.countryId) ?? 0) - payment.amount!
+          );
       }
       continue;
     }

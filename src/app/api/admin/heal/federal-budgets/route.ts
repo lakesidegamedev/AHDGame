@@ -8,11 +8,14 @@ import {
   normalizeFederalTaxRates,
   normalizeStateTaxRates,
 } from "@/lib/budget/revenue";
+import { calculateFederalSpending, resolveNationalMedianIncome } from "@/lib/budget/spending";
 import {
-  calculateFederalSpending,
-  calculateStateSpending,
-  resolveNationalMedianIncome,
-} from "@/lib/budget/spending";
+  loadRegionalHealContext,
+  regionalSpendingForHeal,
+} from "@/lib/budget/healRegionalSpending";
+import { POLITICAL_LEGISLATION_EXCLUDED_SCOPES } from "@/lib/politicalMetrics/pipelinePreset";
+import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
+import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
 import { calculateEnactedLawAnnualCost } from "@/lib/budget/costs";
 import { getEraContext } from "@/lib/era/context";
 import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
@@ -59,6 +62,8 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
+    const regionalContext = await loadRegionalHealContext(db);
+    const couponBooks = await loadSovereignCouponBooks(db);
 
     // ── National budget diagnostics ──────────────────────────────────────
     const nationalBudgets = await federalBudgetCollection(db).find({}).toArray();
@@ -76,7 +81,15 @@ export async function GET() {
         (budget._id === "federal" ? "US" : budget._id)) as CountryId;
 
       const recalcRevenue = await calculateFederalRevenue(db, normalizedTaxRates, budget._id);
-      const debtInterest = budget.debt.principal * budget.debt.interestRate;
+      const debtInterest = sovereignStockAnnualService({
+        principal: budget.debt.principal,
+        book:
+          couponBooks.get(
+            String(budget.countryId ?? (budget._id === "federal" ? "US" : budget._id))
+          ) ?? null,
+        marginalRate: budget.debt.interestRate,
+        imfBailoutActive: budget.imfSovereignBailoutActive,
+      });
       const recalcSpending = await calculateFederalSpending(db, budget, debtInterest);
 
       const states = await statesCollection(db).find({ countryId: budgetCountryId }).toArray();
@@ -204,7 +217,11 @@ export async function GET() {
       );
 
       // Recalculate spending from enacted state-scope laws
-      const recalcSpending = await calculateStateSpending(db, sb.stateId, countryId, sb);
+      const recalcSpending = await regionalSpendingForHeal(
+        db,
+        { ...sb, countryId },
+        regionalContext
+      );
 
       const revenueDrift = Math.abs(recalcRevenue.total - sb.revenue.total);
       const spendingDrift = Math.abs(recalcSpending.total - sb.spending.total);
@@ -252,6 +269,8 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
+    const regionalContext = await loadRegionalHealContext(db);
+    const couponBooks = await loadSovereignCouponBooks(db);
     const now = new Date();
 
     // ── Step 1: Re-seed enacted laws from current legislation type definitions ──
@@ -264,7 +283,9 @@ export async function POST() {
     const preset =
       gameState?.preset ??
       ((gameState?.startingYear ?? 2019) <= 1991 ? "1991-default" : "2019-default");
-    const defaultLaws = generateDefaultEnactedLaws(preset);
+    const defaultLaws = generateDefaultEnactedLaws(preset).filter(
+      (law) => !POLITICAL_LEGISLATION_EXCLUDED_SCOPES.has(law.countryId?.toLowerCase() ?? "us")
+    );
     let lawsUpdated = 0;
     for (const law of defaultLaws) {
       const { _id, ...lawWithoutId } = law;
@@ -324,8 +345,11 @@ export async function POST() {
         | undefined;
       if (!lt?.policyOptions?.length) continue;
 
-      const centerIdx = Math.floor(lt.policyOptions.length / 2);
-      const option = lt.policyOptions[centerIdx];
+      // Preserve the enacted choice; healing must not silently move policy to the center.
+      const option =
+        typeof law.policyOptionIndex === "number"
+          ? lt.policyOptions[law.policyOptionIndex]
+          : undefined;
       if (!option) continue;
 
       const setFields: Record<string, unknown> = {};
@@ -387,7 +411,15 @@ export async function POST() {
       }
 
       const revenue = await calculateFederalRevenue(db, normalizedTaxRates, budget._id);
-      const debtInterest = budget.debt.principal * budget.debt.interestRate;
+      const debtInterest = sovereignStockAnnualService({
+        principal: budget.debt.principal,
+        book:
+          couponBooks.get(
+            String(budget.countryId ?? (budget._id === "federal" ? "US" : budget._id))
+          ) ?? null,
+        marginalRate: budget.debt.interestRate,
+        imfBailoutActive: budget.imfSovereignBailoutActive,
+      });
       const spending = await calculateFederalSpending(db, { ...budget, revenue }, debtInterest);
 
       // If no enacted laws produced spending, preserve existing baseline spending
@@ -443,20 +475,17 @@ export async function POST() {
       );
 
       // Recalculate spending from enacted state-scope laws
-      const recalcSpending = await calculateStateSpending(db, sb.stateId, sbCountryId, {
-        ...sb,
-        revenue,
-      });
+      const recalcSpending = await regionalSpendingForHeal(
+        db,
+        {
+          ...sb,
+          countryId: sbCountryId,
+          revenue,
+        },
+        regionalContext
+      );
 
-      // If no state-scope enacted laws exist, preserve baseline spending proportions
-      // but update the total to match current revenue (balanced budget assumption)
-      const finalSpending =
-        recalcSpending.total > 0
-          ? recalcSpending
-          : {
-              ...sb.spending,
-              total: Object.values(sb.spending.byCategory).reduce((a, b) => a + b, 0),
-            };
+      const finalSpending = recalcSpending;
 
       const surplus = revenue.total - finalSpending.total;
 
@@ -468,7 +497,6 @@ export async function POST() {
             revenue,
             spending: finalSpending,
             surplus,
-            balance: surplus,
             updatedAt: now,
           },
         }

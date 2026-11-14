@@ -333,8 +333,10 @@ export default async function RootLayout({
     typedWordmark,
   };
 
+  // The pre-paint consent script adds a browser-only attribute to this element.
   return (
     <html
+      suppressHydrationWarning
       lang={locale}
       data-store-app={isStoreApp ? "true" : undefined}
       data-store-os={isStoreApp ? (isIosStoreApp ? "ios" : "android") : undefined}

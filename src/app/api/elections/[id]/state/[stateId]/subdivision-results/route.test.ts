@@ -17,6 +17,73 @@ vi.mock("@/lib/db/collections/gameState", () => ({
 const ELECTION = new ObjectId();
 let tally: Record<string, unknown>;
 
+describe("frozen House district results", () => {
+  async function house(status = "resolved") {
+    const { resolveElectionRouteParam } = await import("@/lib/elections/electionParamResolution");
+    vi.mocked(resolveElectionRouteParam).mockResolvedValue({
+      ok: true,
+      election: { _id: ELECTION, electionType: "house", countryId: "US", state: "OH", status },
+    } as never);
+    const { GET } = await import("./route");
+    return GET(new NextRequest("http://t/api/elections/e/state/OH/subdivision-results"), {
+      params: Promise.resolve({ id: "e", stateId: "OH" }),
+    });
+  }
+  it("returns recorded winners and geometry without looking at current districts", async () => {
+    tally.houseDistrictResult = {
+      version: 1,
+      electionId: ELECTION.toString(),
+      countryId: "US",
+      stateId: "OH",
+      viewBox: "frozen viewBox",
+      geometryAvailable: true,
+      partyColors: { "1": "#123456" },
+      districts: [
+        {
+          id: "OH-01",
+          name: "OH-01",
+          path: "frozen path",
+          winner: "a",
+          party: "1",
+          margin: 0,
+          leanStatus: "unavailable",
+        },
+      ],
+    };
+    const { loadSubdivisionFile } = await import("@/lib/maps/subdivisionData");
+    vi.mocked(loadSubdivisionFile).mockResolvedValue(null);
+    const body = await (await house()).json();
+    expect(body).toMatchObject({
+      resultStatus: "frozen",
+      viewBox: "frozen viewBox",
+      subdivisions: [{ path: "frozen path", winner: "a" }],
+    });
+    expect(loadSubdivisionFile).not.toHaveBeenCalled();
+  });
+  it("labels old elections unsupported instead of substituting current holders", async () => {
+    const body = await (await house("completed")).json();
+    expect(body).toMatchObject({
+      resultStatus: "unsupported",
+      subdivisions: [],
+      geometryAvailable: false,
+    });
+    expect(body.notice).toContain("no recorded district winners");
+  });
+  it.each(["electionId", "countryId", "stateId"])(
+    "refuses a receipt with another %s",
+    async (field) => {
+      tally.houseDistrictResult = {
+        version: 1,
+        electionId: ELECTION.toString(),
+        countryId: "US",
+        stateId: "OH",
+        [field]: "foreign",
+      };
+      expect((await (await house()).json()).resultStatus).toBe("unsupported");
+    }
+  );
+});
+
 beforeEach(async () => {
   vi.clearAllMocks();
   tally = {

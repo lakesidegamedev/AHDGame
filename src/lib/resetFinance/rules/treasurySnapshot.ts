@@ -1,6 +1,6 @@
 import type { NationalClaims, NationalTreasuryState } from "./settlement";
 
-export type ResetTreasuryCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
+export type ResetTreasuryCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL" | "CA";
 
 /** A world-bound cash ledger, separate from the legacy signed budget balance. */
 export interface ResetNationalTreasurySnapshot extends NationalTreasuryState {

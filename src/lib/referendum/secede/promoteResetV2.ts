@@ -87,6 +87,7 @@ export async function promoteResetV2ForIndependence(
     { _id: "current" },
     {
       projection: {
+        preset: 1,
         currentTurn: 1,
         resetWorldId: 1,
         metricsSystemVersion: 1,

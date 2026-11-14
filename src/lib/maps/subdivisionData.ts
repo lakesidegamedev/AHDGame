@@ -6,8 +6,12 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import type { SubdivisionInput } from "@/lib/utils/subdivisionResults";
 import { loadCountyLeans } from "./countyLeans";
+import { usCongressionalGeometryDirectory } from "@/lib/countries/us/congressionalGeometry";
 
 export interface SubdivisionFile {
+  countryId?: string;
+  supportedPresets?: string[];
+  notice?: string;
   viewBox: string;
   subdivisions: (SubdivisionInput & { path: string })[];
 }
@@ -21,6 +25,7 @@ interface LegacyCountyFile {
 /** Legacy US CD file shape (src/data/congressional-districts/) — adapted at read time. */
 interface LegacyCdFile {
   viewBox: string;
+  leanBasis?: string;
   districts: { cd: string; path: string; cookPVI: number }[];
 }
 
@@ -34,9 +39,25 @@ export async function loadSubdivisionFile(
   options?: { preset?: string | null; countyPopulations?: ReadonlyMap<string, number> }
 ): Promise<SubdivisionFile | null> {
   try {
-    const filePath = join(process.cwd(), "src", "data", ...dataDir.split("/"), `${regionId}.json`);
+    const selectedDir =
+      dataDir === "congressional-districts"
+        ? usCongressionalGeometryDirectory(options?.preset)
+        : dataDir;
+    const filePath = join(
+      process.cwd(),
+      "src",
+      "data",
+      ...selectedDir.split("/"),
+      `${regionId}.json`
+    );
     const raw = await readFile(filePath, "utf-8");
     const parsed = JSON.parse(raw) as SubdivisionFile | LegacyCountyFile | LegacyCdFile;
+    if (
+      "supportedPresets" in parsed &&
+      parsed.supportedPresets &&
+      !parsed.supportedPresets.includes(options?.preset ?? "")
+    )
+      return null;
     if ("counties" in parsed) {
       if (
         options?.countyPopulations &&
@@ -74,7 +95,9 @@ export async function loadSubdivisionFile(
           name: d.cd,
           path: d.path,
           electorate: 0,
-          leanScalar: d.cookPVI,
+          ...(parsed.leanBasis === "unavailable-neutral-rendering-fallback"
+            ? { leanStatus: "unavailable" as const }
+            : { leanScalar: d.cookPVI }),
         })),
       };
     }

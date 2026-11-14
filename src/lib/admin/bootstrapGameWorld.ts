@@ -832,7 +832,10 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // Materialize scalar debt.principal into tradeable sovereign bond series.
   // Must run after every national-budget + NatCorp seeder so surplus countries
   // open with a bond float matching their debt rather than orphaned principal.
+  if (preset === "2027-default")
+    await (await import("./seed/seedUS2027Grants")).seedUS2027Grants(db);
   await guarded("seedSovereignBondInstruments", () => seedSovereignBondInstruments(db, log, 0));
+  await (await import("./seed/seedCaOpeningFinance")).seedCaOpeningFinance(db, preset);
   await seedCountryGameStates(db, preset, getStartingYearForPreset(preset), log);
   await worldEntityStatesCollection<Document>(db).deleteMany({});
   await federationSettlementApplicationsCollection<Document>(db).deleteMany({});
@@ -913,8 +916,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     const { applyEraCurrencyTopology } = await import("@/lib/admin/seed/applyEraCurrencyTopology");
     await applyEraCurrencyTopology(db, preset, log);
   });
-  if (noStartingParties && seedOnly) {
-    await clearStartingPolitics(db, preset);
+  if (startingParties !== "default" && seedOnly) {
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
     log("Cleared starting politics; economic NPP ownership retained with independent affiliation");
   }
 
@@ -1022,7 +1025,12 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
       preExistingNpps: preExistingNppsCount,
     })
   ) {
-    const result = await seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners");
+    const result = await seedHistoricalOfficials(
+      db,
+      preset,
+      preIteration ? "priors" : "winners",
+      log
+    );
     log(
       `Seeded ${preIteration ? "priors (candidate pool, vacant chambers) for" : "historical world:"} ${
         result.officialsCreated
@@ -1156,7 +1164,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // Seed governorOfficeState rows for every regional executive seat so the
   // office AP system and Devolution Policy defaults are in place before the
   // first action. Idempotent — safe to run alongside vacant/historical seeds.
-  if (noStartingParties) await clearStartingPolitics(db, preset);
+  if (startingParties !== "default")
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
 
   const officeStateResult = await seedOfficeStates(db, gameState.currentTurn, preset);
   log(
@@ -1405,7 +1414,8 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     );
   }
 
-  if (noStartingParties) await clearStartingPolitics(db, preset);
+  if (startingParties !== "default")
+    await clearStartingPolitics(db, preset, startingParties === "no-npps");
 
   // Only a genuinely fresh historical world receives this candidate bench.
   // Reference refreshes and existing live worlds retain their actor population.
@@ -1423,6 +1433,12 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     await seedModernPartyBench(db, preset, log);
     const { seedModernOpeningCandidates } = await import("@/lib/npp/seedModernOpeningCandidates");
     await seedModernOpeningCandidates(db, preset, now, log);
+    if (startingParties === "default") {
+      const { seedCaOpeningGovernment } = await import("@/lib/countries/ca/seedOpeningGovernment");
+      await seedCaOpeningGovernment(db, preset, log);
+      const { seedCaElectionBench } = await import("@/lib/countries/ca/seedElectionBench");
+      await seedCaElectionBench(db, preset, log);
+    }
   }
 
   const [
@@ -1461,39 +1477,4 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   return summary;
 }
 
-/**
- * Stamps gameState.currentYear/startingYear/preset for the given preset.
- *
- * bootstrapGameWorld() above seeds every country's region/party/demographic
- * data correctly for the requested `preset` (seedAllCountryData receives and
- * threads it throughout) — but it does NOT set the game-clock fields on the
- * gameState document. Those are normally set by the separate, higher-level
- * resetGameWorld() (src/lib/admin/resetGameWorld.ts) BEFORE it calls
- * bootstrapGameWorld() — bootstrapGameWorld's own internal
- * initializeGameState() call is idempotent (no-ops if a gameState doc
- * already exists), so resetGameWorld's earlier stamp survives. The
- * admin reset flow (resetAndBootstrapGameWorld → resetGameWorld then
- * bootstrapGameWorld) already gets this right.
- *
- * bootstrapGameWorld() is deliberately left alone here rather than made to
- * stamp the clock itself: it's also used to re-seed reference data on an
- * EXISTING, already-running world (resetReference re-seeds without
- * resetting), where forcibly resetting currentYear back to the preset's
- * starting year would be wrong.
- *
- * Direct callers that bootstrap a genuinely FRESH/EMPTY database — and
- * therefore DO need the clock to land correctly — must call this BEFORE
- * bootstrapGameWorld(), via initializeGameState() first (so the doc exists)
- * then this. See scripts/bootstrap-full.ts and scripts/sim/runWorld.ts.
- * Found the hard way: stamping after bootstrap (instead of before) leaves
- * region data correctly era-flavored but every election bootstrapGameWorld
- * spawns internally still anchors to whatever preset was in gameState at
- * call time — i.e. still wrong, just less obviously.
- */
-export async function stampInitialGameClock(db: Db, preset: string): Promise<void> {
-  const startingYear = getStartingYearForPreset(preset);
-  await gameStateCollection(db).updateOne(
-    { _id: "current" },
-    { $set: { currentYear: startingYear, startingYear, preset, updatedAt: new Date() } }
-  );
-}
+export { stampInitialGameClock } from "./stampInitialGameClock";

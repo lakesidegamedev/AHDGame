@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { State } from "@/lib/db/types";
@@ -37,14 +38,14 @@ import { statesCollection } from "@/lib/db/repositories/states";
 export const STATE_GDP_RECONCILE_TOLERANCE = 0.02;
 
 /**
- * Era gate: reconcile only pre-1999 eras (1953/1979/1991).
+ * Era gate: pre-1999 eras plus the explicitly modeled 2027 US opening.
  * Derived from the preset via {@link eraForPreset} — no ad-hoc preset
  * string-matching — so preset aliases (e.g. `empty`, `2019-no-parties`
  * → era 2019) follow their era family. See the module doc for why modern
- * eras are excluded (pending design decision on which GDP side is canonical).
+ * other modern eras are excluded (pending a canonical GDP decision).
  */
 export function shouldReconcileStateGdpForPreset(preset: string): boolean {
-  return Number(eraForPreset(preset)) < 1999;
+  return Number(eraForPreset(preset)) < 1999 || eraForPreset(preset) === "2027";
 }
 
 export interface CountryGdpScalar {
@@ -119,13 +120,15 @@ export async function reconcileStateGdpWithNationalSeeds(
   if (!shouldReconcileStateGdpForPreset(preset)) {
     log(
       `[GdpReconcile] skipped — era ${eraForPreset(preset)} (${preset}) is not gated for ` +
-        `seed-time regional-GDP reconciliation (pre-1999 eras only; refs #3247)`
+        `seed-time regional-GDP reconciliation (pre-1999 and 2027 US only)`
     );
     return [];
   }
   const { getNationalBudgetSeedConfigsForPreset } = await import("@/lib/seeds/reference/budgets");
   const configs = getNationalBudgetSeedConfigsForPreset(preset).filter(
-    (c) => !countryIds || countryIds.includes(c.countryId as CountryId)
+    (c) =>
+      (!countryIds || countryIds.includes(c.countryId as CountryId)) &&
+      (eraForPreset(preset) !== "2027" || countryHasFeature("usSeeds", c.countryId))
   );
   if (configs.length === 0) return [];
 

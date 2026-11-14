@@ -310,6 +310,14 @@ export function deriveLedgerEntry(
   emitSite = "financialTxLog/emit.ts:shim"
 ): LedgerEntryInput | null {
   if (
+    tx.meta?.ledgerOwnedBySettlement === true &&
+    (tx.type === "corp_revenue" ||
+      tx.type === "corp_operating_loss" ||
+      tx.type === "corp_tax_paid" ||
+      tx.type === "bond_default")
+  )
+    return null;
+  if (
     (tx.type === "player_income_tax" ||
       tx.type === "player_capital_gains_tax" ||
       (tx.type === "gov_tax_revenue" &&
@@ -321,7 +329,10 @@ export function deriveLedgerEntry(
   // These marked rows describe tax-base or holder-service statistics. Their
   // emitters never move treasury cash; the fiscal accrual owner witnesses that.
   if (
-    (tx.type === "gov_tax_revenue" || tx.type === "gov_coupon_payment") &&
+    (tx.type === "gov_tax_revenue" ||
+      tx.type === "gov_coupon_payment" ||
+      tx.type === "gov_bond_maturity_payment" ||
+      (tx.type === "corp_dissolution_distribution" && tx.subjectType === "government")) &&
     tx.meta?.treasuryCashMovement === false
   )
     return null;
@@ -337,6 +348,7 @@ export function deriveLedgerEntry(
   if (
     tx.meta?.bankVaultMovement === true &&
     (tx.type === "bank_cb_advance" ||
+      tx.type === "bank_npc_loan_interest" ||
       tx.type === "bank_prop_trade_buy" ||
       tx.type === "bank_prop_trade_sell")
   )

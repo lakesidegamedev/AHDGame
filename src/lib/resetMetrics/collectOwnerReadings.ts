@@ -792,7 +792,11 @@ export async function collectResetMetricOwnerReadings(
             ]?.[inheritedCalibrationRegion(board.countryId, board.regionId!).regionId];
           const income = current?.economic?.medianIncome?.value;
           const basket = current?.economic?.costOfLiving?.value;
-          if (opening && typeof income === "number" && typeof basket === "number") {
+          if (
+            (board.modeledOpening || opening) &&
+            typeof income === "number" &&
+            typeof basket === "number"
+          ) {
             try {
               updates["02"] = {
                 ...board.observations["02"]!,
@@ -802,7 +806,7 @@ export async function collectResetMetricOwnerReadings(
                 }),
                 status: "proxy",
                 source: "game-calibrated gross household income and consumer basket",
-                note: "Annual real household income in local currency at constant 1991 prices. Taxes and transfers are not yet included.",
+                note: `Annual real household income in local currency at constant ${board.modeledOpening?.preset ?? "1991"} prices. Taxes and transfers are not yet included.`,
               };
             } catch {
               // The missing due reading is surfaced by the persistence shell.
@@ -812,6 +816,7 @@ export async function collectResetMetricOwnerReadings(
         const cohort = liveMacro?.resetCohortReading;
         if (cohort?.asOfTurn === turn) {
           const lifeCalibration =
+            board.modeledOpening?.life ??
             openingLife[
               inheritedCalibrationRegion(board.countryId, board.regionId!)
                 .countryId as keyof typeof openingLife
@@ -826,7 +831,7 @@ export async function collectResetMetricOwnerReadings(
                     cohort.periodLifeExpectancy -
                     lifeCalibration.modeledYears
                   : null,
-              "Period life expectancy from this turn's age-specific mortality curve, calibrated to the 1991 opening regional anchor.",
+              "Period life expectancy from this turn's age-specific mortality curve, calibrated to the world opening regional anchor.",
             ],
             [
               "54",

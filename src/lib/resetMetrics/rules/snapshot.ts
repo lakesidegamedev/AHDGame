@@ -27,6 +27,15 @@ export interface ResetMetricSnapshot {
   history?: ResetMetricHistory;
   /** Immutable policy baseline, independent of the bounded history window. */
   openingValues?: Record<string, number>;
+  /** Frozen game-seed calibration for non-1991 openings; wiped with the board. */
+  modeledOpening?: {
+    preset: string;
+    year: number;
+    sourceFiscalYear?: number;
+    birthRateIndex?: number;
+    migrationRate?: number;
+    life?: { openingYears: number; modeledYears: number };
+  };
   /** First compatible gameplay baseline after a unit change; wiped on world reset. */
   gameplayReferences?: Record<string, { value: number; unit?: string; definitionVersion: 2 }>;
   /** Compact preceding owner values make lagged turn retries deterministic. */
@@ -145,6 +154,7 @@ export function resetMetricSnapshotPayload(rows: readonly ResetMetricSnapshot[])
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([id, series]) => [id, series.map((point) => [point.turn, point.value])]),
         Object.entries(row.openingValues ?? {}).sort(([a], [b]) => a.localeCompare(b)),
+        row.modeledOpening ?? null,
       ])
   );
 }

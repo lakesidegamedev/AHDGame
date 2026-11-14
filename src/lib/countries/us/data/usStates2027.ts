@@ -526,7 +526,7 @@ export const states2027: State[] = [
     population: 588753,
     gdp: 52600,
     houseDistricts: 1,
-    stateSenateSeats: 30,
+    stateSenateSeats: 31,
     region: "West",
   },
   // ─── Federal District ────────────────────────────────────────────────────

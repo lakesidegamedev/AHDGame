@@ -7,7 +7,7 @@ import { getCabinetMechanics, getCabinetPositions } from "@/lib/constants/cabine
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
-export type DepartmentCountryId = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
+export type DepartmentCountryId = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL" | "CA";
 
 export type DepartmentKind =
   | "spending_department"
@@ -666,7 +666,47 @@ const PORTFOLIO_DEPARTMENTS: readonly DepartmentDefinition[] = [
   },
   ...successorDepartments("SCO"),
   ...successorDepartments("WAL"),
+  ...canadianDepartments(),
 ] as const;
+
+function canadianDepartments(): DepartmentDefinition[] {
+  const portfolios: Record<string, PortfolioId[]> = {
+    minister_of_finance: ["finance"],
+    minister_of_foreign_affairs: ["foreign_affairs"],
+    minister_of_national_defence: ["defense"],
+    minister_of_justice: ["justice"],
+    minister_of_public_safety: ["interior_local_government"],
+    minister_of_industry: ["economy_industry"],
+    minister_of_labour: ["labor_social_protection"],
+    minister_of_health: ["health"],
+    minister_of_education_and_skills: ["education_research"],
+    minister_of_infrastructure: ["transport_infrastructure"],
+    minister_of_agriculture: ["agriculture_rural_affairs"],
+    minister_of_natural_resources: ["environment_energy"],
+    minister_of_housing: ["housing"],
+    director_of_intelligence: ["intelligence"],
+  };
+  return getCabinetPositions("CA").map((seat) => ({
+    id: `ca_${seat.id}_department`,
+    countryId: "CA",
+    kind:
+      seat.id === "minister_of_finance"
+        ? "finance_ministry"
+        : seat.id === "director_of_intelligence"
+          ? "security_agency"
+          : "spending_department",
+    canonicalName: getCabinetMechanics("CA", seat.id)?.department ?? seat.name,
+    portfolioIds: portfolios[seat.id] ?? [],
+    controllingPositionIds: [seat.id],
+    activeFromYear: 2027,
+    accountPolicyId:
+      seat.id === "minister_of_national_defence"
+        ? "defense"
+        : seat.id === "director_of_intelligence"
+          ? "intelligence"
+          : civil,
+  }));
+}
 
 // Offices without a law portfolio still own an account. They receive no
 // invented portfolio or appropriation, and start with zero legislative spending.

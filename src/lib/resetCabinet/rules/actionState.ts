@@ -16,12 +16,13 @@ export interface ResetCabinetActionState {
 
 export function openingCabinetActionStates(
   worldId: string,
-  sourceTurn: number
+  sourceTurn: number,
+  countries: readonly ResetCountry[] = RESET_V2_OPENING_COUNTRIES
 ): ResetCabinetActionState[] {
   if (!worldId || !Number.isSafeInteger(sourceTurn) || sourceTurn < 1) {
     throw new Error("Cabinet action opening requires a world and source turn");
   }
-  return RESET_V2_OPENING_COUNTRIES.map((countryId) => ({
+  return countries.map((countryId) => ({
     _id: countryId,
     worldId,
     countryId,

@@ -1,5 +1,9 @@
 /** Frozen reset law-family text. This data is not an enactable price list. */
 import catalog from "./familyCatalog.json";
+import {
+  CA_V2_NATIONAL_FAMILIES,
+  CA_V2_REGIONAL_FAMILIES,
+} from "@/lib/countries/ca/data/caV2Jurisdictions";
 
 export type LegislativePosition =
   "far_left" | "center_left" | "center" | "center_right" | "far_right";
@@ -32,12 +36,16 @@ export const resetLawFamilies: readonly LawFamilyDefinition[] = (
 ).map((family) => ({
   ...family,
   availability: {
-    national: family.availability.national.includes("UK")
-      ? [...family.availability.national, "IE", "SCO", "WAL"]
-      : family.availability.national,
-    regional: family.availability.regional.includes("UK")
-      ? [...family.availability.regional, "IE", "SCO", "WAL"]
-      : family.availability.regional,
+    national: [
+      ...family.availability.national,
+      ...(family.availability.national.includes("UK") ? ["IE", "SCO", "WAL"] : []),
+      ...(CA_V2_NATIONAL_FAMILIES.includes(family.id) ? ["CA"] : []),
+    ],
+    regional: [
+      ...family.availability.regional,
+      ...(family.availability.regional.includes("UK") ? ["IE", "SCO", "WAL"] : []),
+      ...(CA_V2_REGIONAL_FAMILIES.includes(family.id) ? ["CA"] : []),
+    ],
   },
 }));
 

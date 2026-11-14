@@ -27,8 +27,6 @@ import type {
   CreditRating,
   Corporation,
   FederalBudget,
-  GameConfig,
-  GameState,
 } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import {
@@ -75,6 +73,7 @@ export {
   type SovereignPrincipalResync,
 } from "./sovereignMaturity";
 import { fundSovereignSeries } from "./sovereignFunding";
+import { democraticSpreadSnapshot } from "./sovereignPricingSnapshot";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
@@ -117,9 +116,11 @@ export const SOVEREIGN_RECONCILE_DISTRIBUTION: Partial<Record<BondMaturityTurns,
 };
 
 export async function loadDemocraticSovereignSpread(db: Db, countryId: CountryId): Promise<number> {
-  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
-  const health = await loadDemocraticHealth(db, countryId, gameState);
-  return health == null ? 0 : democraticHealthSovereignSpread(health);
+  return democraticSpreadSnapshot(db, countryId, async () => {
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
+    const health = await loadDemocraticHealth(db, countryId, gameState);
+    return health == null ? 0 : democraticHealthSovereignSpread(health);
+  });
 }
 
 /**

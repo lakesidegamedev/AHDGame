@@ -33,6 +33,56 @@ function setup(treasuryBalance = 100000, principal = 3000) {
 const bond = { countryId: "US", currencyCode: "USD", totalIssued: 3000, couponRate: 0 } as const;
 
 describe("sovereign maturity cash and debt", () => {
+  it("witnesses actual pool cash once when public float cannot be novated", async () => {
+    const memory = setup(10_000, 2_000);
+    memory.collection("federalBudget").docs[0]!.treasuryCashLocal = 2_000;
+    memory.seed("bondMarketPools", [{ _id: "USD", cashLocal: 500 }]);
+    const dueBond = {
+      _id: new ObjectId(),
+      ...bond,
+      issuerType: "sovereign",
+      totalIssued: 2_000,
+      couponRate: 5,
+      maturityTurn: 48,
+      matured: false,
+      defaulted: false,
+      holders: [],
+      publicFloat: 2,
+    } as unknown as Bond;
+    memory.seed("bonds", [dueBond] as unknown as Record<string, unknown>[]);
+    const args = {
+      bond: dueBond,
+      turn: 48,
+      dueTurn: 48,
+      currencyCode: "USD" as const,
+      treasuryLocalPerAnchor: 1,
+      nonBankRepaymentLocal: 2_000,
+      holderLegs: [
+        {
+          collection: "bondMarketPools",
+          filter: { _id: "USD" },
+          path: "cashLocal",
+          amount: 2_000,
+          currencyCode: "USD" as const,
+          localPerAnchor: 1,
+          note: "Pay public float cash",
+        },
+      ],
+      now: new Date("2026-10-05T00:00:00Z"),
+    };
+    await settleFundedSovereignBondMaturity(memory as unknown as Db, args);
+    await settleFundedSovereignBondMaturity(memory as unknown as Db, args);
+    expect(memory.collection("bondMarketPools").docs[0]?.cashLocal).toBe(2_500);
+    const entries = memory.collection("ledgerEntries").docs;
+    expect(entries).toHaveLength(2);
+    const pool = entries.find((entry) => entry.emitSite === "bonds/sovereignPoolMaturity");
+    expect(pool?.legs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ account: "bond_pool:USD:USD", amount: 2_000, role: "primary" }),
+      ])
+    );
+  });
+
   it("novates only public float at par and pays the residual non-pool holders", async () => {
     const memory = setup(10_000, 3_000);
     memory.collection("federalBudget").docs[0]!.treasuryCashLocal = 1_000;
@@ -90,6 +140,18 @@ describe("sovereign maturity cash and debt", () => {
     });
 
     expect(result?.status).toBe("applied");
+    expect(result?.cashPaidLocal).toBe(1_000);
+    const witnesses = memory.collection("ledgerEntries").docs;
+    expect(witnesses).toHaveLength(1);
+    const cashLegs = witnesses[0]!.legs as { account: string; amount: number; role: string }[];
+    expect(
+      cashLegs.find((leg) => leg.account === "government_cash:US:USD" && leg.role === "primary")
+        ?.amount
+    ).toBe(-1_000);
+    expect(
+      cashLegs.find((leg) => leg.account === "government:US:USD" && leg.role === "primary")?.amount
+    ).toBe(-1_000);
+    expect(cashLegs.reduce((sum, leg) => sum + leg.amount, 0)).toBe(0);
     expect(memory.collection("bondMarketPools").docs[0]?.cashLocal).toBe(20_000);
     expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(1_000);
     expect(memory.collection("federalBudget").docs[0]).toMatchObject({
@@ -613,6 +675,7 @@ describe("funded sovereign maturity receipt", () => {
 
     expect(settled?.status).toBe("applied");
     expect(settled?.forcedRolloverFaceLocal).toBe(0);
+    expect(settled?.cashPaidLocal).toBe(1_000);
     expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(1_000);
     expect(memory.collection("federalBudget").docs[0]).toMatchObject({
       treasuryCashLocal: 0,
@@ -632,6 +695,8 @@ describe("funded sovereign maturity receipt", () => {
       now: new Date("2026-02-15T00:00:00.000Z"),
     });
     expect(replay?.status).toBe("applied");
+    expect(replay?.cashPaidLocal).toBe(1_000);
+    expect(memory.collection("ledgerEntries").docs).toHaveLength(1);
     expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(1_000);
   });
 });

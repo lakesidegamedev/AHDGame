@@ -323,7 +323,7 @@ function recomputeBaseline(country: GdpBaselineCountry, era: EraId): RecomputedC
   const rawMean = (sumGdpMillions * 1_000_000) / sumPop;
   let scalar = 1;
   let applied = false;
-  if (shouldReconcileStateGdpForPreset(preset)) {
+  if (shouldReconcileStateGdpForPreset(preset) && (era !== "2027" || country === "US")) {
     const national = getNationalBudgetSeedConfigsForPreset(preset).find(
       (c) => c.countryId === country
     )?.gdp;

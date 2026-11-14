@@ -454,9 +454,9 @@ describe("Quebec", () => {
           find: vi.fn().mockReturnValue({
             project: vi.fn().mockReturnValue({
               toArray: vi.fn().mockResolvedValue([
-                { sequentialId: 1, abbreviation: "FUP" },
-                { sequentialId: 2, abbreviation: "NPA" },
-                { sequentialId: 4, abbreviation: "AL" },
+                { sequentialId: 1, abbreviation: "LIB" },
+                { sequentialId: 2, abbreviation: "CON" },
+                { sequentialId: 4, abbreviation: "BQ" },
               ]),
             }),
           }),
@@ -467,7 +467,7 @@ describe("Quebec", () => {
     return { collection } as unknown as Db;
   }
 
-  it("moves Commons votes toward the Laurentian Alliance when sovereignty runs high", async () => {
+  it("moves Commons votes toward the Bloc Québécois when sovereignty runs high", async () => {
     const al = cand("4");
     const fup = cand("1");
     const npa = cand("2");

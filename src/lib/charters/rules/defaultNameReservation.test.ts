@@ -3,6 +3,8 @@ import { retainsDefaultPartyNameReservation } from "./defaultNameReservation";
 describe("Default party name reservations", () => {
   it.each([
     ["1991-default", "none", true, false],
+    ["2027-default", "none", true, false],
+    ["2027-default", "no-npps", true, true],
     ["1991-default", "none", false, true],
     ["1991-default", "default", true, true],
     ["1991-default", undefined, true, true],

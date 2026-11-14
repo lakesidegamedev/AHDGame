@@ -2,8 +2,32 @@ import { describe, expect, it } from "vitest";
 import { buildOpeningLawBoards1991 } from "./openingBoards1991";
 import { buildResetLawOpeningBoard } from "./rules/openingBoard";
 import { openingLawReference } from "./openingLaw";
+import { BSON } from "mongodb";
 
 describe("1991 current-law boards", () => {
+  it("normalizes old BSON null restrictions and omits undefined restrictions before persistence", () => {
+    const board = buildOpeningLawBoards1991("roundtrip", 1).find(
+      (b) => b.countryId === "US" && b.scope === "national"
+    )!;
+    const source = Object.values(board.references).flatMap((r) => r.sourceComponents)[0]!;
+    Object.assign(source, { replacementRestriction: null });
+    const rebuild = (references: typeof board.references) =>
+      buildResetLawOpeningBoard({
+        worldId: board.worldId,
+        countryId: "US",
+        sourceTurn: 1,
+        references: Object.values(references),
+      });
+    const normalized = rebuild(board.references);
+    const stored = BSON.deserialize(BSON.serialize(normalized));
+    expect(() => rebuild(stored.references)).not.toThrow();
+    expect(
+      Object.values(normalized.references)
+        .flatMap((r) => r.sourceComponents)
+        .filter((s) => s.replacementRestriction == null)
+        .every((s) => !Object.hasOwn(s, "replacementRestriction"))
+    ).toBe(true);
+  });
   it("builds four national and 79 regional boards with all 61 law and tax types", () => {
     const boards = buildOpeningLawBoards1991("world-test", 1);
     expect(boards).toHaveLength(83);

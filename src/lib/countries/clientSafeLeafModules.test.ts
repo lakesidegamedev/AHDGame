@@ -37,6 +37,11 @@ const CLIENT_SAFE_MODULES = [
  * Each heavy module re-exports its light half, so server callers are unchanged.
  */
 const CLIENT_SAFE_SPLITS = [
+  // Canadian local map controls need predicates, not reference manifests or placement rules.
+  "src/lib/countries/ca/localGeographyFacts.ts",
+  // Election labels need only the small provincial anchor table and pure year rule.
+  "src/lib/countries/ca/data/caProvincialLegislatures.ts",
+  "src/lib/countries/ca/rules/provincialElectionCalendar.ts",
   // approvalModifiers reads every country's geography through its era patches.
   "src/lib/approval/activeModifier.ts",
   // strengthUpkeep reads the whole tech tree for the dominance shield.

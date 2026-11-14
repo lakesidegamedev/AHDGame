@@ -10,6 +10,53 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type { LedgerLeg } from "@/lib/ledger/types";
 
+/** Cash and signed fiscal position overlap; mirror legs avoid counting two payments. */
+export function fundedTreasuryPaymentLegs(input: {
+  country: string;
+  currency: string;
+  amount: number;
+  rate: number;
+  signedPositionOwned: boolean;
+  incoming?: boolean;
+  reason?: string;
+}): LedgerLeg[] {
+  const { country, currency, amount, rate } = input;
+  if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(rate) || rate <= 0)
+    throw new Error("Invalid funded Treasury payment witness");
+  const code = currency as CurrencyCode;
+  const position = `government:${country}:${currency}`;
+  const legs: LedgerLeg[] = [
+    {
+      account: `government_cash:${country}:${currency}`,
+      amount: -amount,
+      currencyCode: code,
+      anchorAmount: -amount / rate,
+      role: "primary",
+    },
+    { account: position, amount, currencyCode: code, anchorAmount: amount / rate, role: "contra" },
+  ];
+  if (input.signedPositionOwned)
+    legs.push(
+      {
+        account: position,
+        amount: -amount,
+        currencyCode: code,
+        anchorAmount: -amount / rate,
+        role: "primary",
+      },
+      {
+        account: `sink:${input.reason ?? "bond_settlement"}:${currency}`,
+        amount,
+        currencyCode: code,
+        anchorAmount: amount / rate,
+        role: "contra",
+      }
+    );
+  return input.incoming
+    ? legs.map((leg) => ({ ...leg, amount: -leg.amount, anchorAmount: -leg.anchorAmount }))
+    : legs;
+}
+
 function treasuryAccrualReceipt(
   input: Omit<TreasuryAccrualReceipt, "cashDelta" | "components"> & {
     annualRevenue: number;

@@ -1,0 +1,100 @@
+{
+  "countryId": "CA",
+  "censusYear": 2021,
+  "boundaryOrder": 2023,
+  "electionYear": 2025,
+  "projection": "NAD83 / Statistics Canada Lambert (EPSG:3347)",
+  "simplificationMetres": 500,
+  "censusDivisions": 293,
+  "federalRidings": 343,
+  "censusPopulation": 36991981,
+  "populationBaseline": "ca-census-2021-proportional",
+  "supportedPresets": [
+    "2027-default"
+  ],
+  "sources": [
+    {
+      "file": "cd-planar.json",
+      "url": "https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Digital_boundary_files/MapServer/4/query?where=1%3D1&outFields=CDUID%2CDGUID%2CCDNAME%2CCDTYPE%2CPRUID&outSR=3347&f=geojson&maxAllowableOffset=500&geometryPrecision=1&returnGeometry=true",
+      "sha256": "35bb1fc797a8b45c87facd0afe43c49c9f3c56aa6222979e962eb0becb6fcbd5"
+    },
+    {
+      "file": "population-zip.zip",
+      "url": "https://www150.statcan.gc.ca/n1/tbl/csv/98100002-eng.zip",
+      "sha256": "36ab6c8f3f6b82d70d9dea927cb5cf04f6fbf9b543a7ad543695e6ea70d22876"
+    },
+    {
+      "file": "fed-boundaries.zip",
+      "url": "https://www.elections.ca/res/cir/mapsCorner/vector/FederalElectoralDistricts_2025_SHP.zip",
+      "sha256": "4004a6bff0303c46bc5d9318a3c0b4a0322599bc707712a3c41acffafbef0b93"
+    },
+    {
+      "file": "votes-table11.csv",
+      "url": "https://www.elections.ca/res/rep/off/ovrGE45/62/data_donnees/table_tableau11.csv",
+      "sha256": "7a406ddd90b4ef9dfc96c718c04addfca5628ccbc657539626de54f26505cf82"
+    },
+    {
+      "file": "votes-table12.csv",
+      "url": "https://www.elections.ca/res/rep/off/ovrGE45/62/data_donnees/table_tableau12.csv",
+      "sha256": "6ec3f8e1d8a555db36366223324bc53d95f4d095914012f27b6d0043cd6f90f9"
+    }
+  ],
+  "licence": [
+    "Statistics Canada Open Licence",
+    "Open Government Licence - Canada"
+  ],
+  "coverage": {
+    "CA_NL": {
+      "censusDivisions": 11,
+      "federalRidings": 7
+    },
+    "CA_PE": {
+      "censusDivisions": 3,
+      "federalRidings": 4
+    },
+    "CA_NS": {
+      "censusDivisions": 18,
+      "federalRidings": 11
+    },
+    "CA_NB": {
+      "censusDivisions": 15,
+      "federalRidings": 10
+    },
+    "CA_QC": {
+      "censusDivisions": 98,
+      "federalRidings": 78
+    },
+    "CA_ON": {
+      "censusDivisions": 49,
+      "federalRidings": 122
+    },
+    "CA_MB": {
+      "censusDivisions": 23,
+      "federalRidings": 14
+    },
+    "CA_SK": {
+      "censusDivisions": 18,
+      "federalRidings": 14
+    },
+    "CA_AB": {
+      "censusDivisions": 19,
+      "federalRidings": 37
+    },
+    "CA_BC": {
+      "censusDivisions": 29,
+      "federalRidings": 43
+    },
+    "CA_YT": {
+      "censusDivisions": 1,
+      "federalRidings": 1
+    },
+    "CA_NT": {
+      "censusDivisions": 6,
+      "federalRidings": 1
+    },
+    "CA_NU": {
+      "censusDivisions": 3,
+      "federalRidings": 1
+    }
+  }
+}

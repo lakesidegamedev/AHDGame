@@ -52,13 +52,16 @@ vi.mock("@/lib/bonds/sovereign", () => ({
   isCorporateBond: vi.fn((b: { isCorporate?: boolean }) => !!b.isCorporate),
   issueScheduledSovereignBondSeries: vi.fn().mockResolvedValue(undefined),
   freezeFundedSovereignBondMaturityQuote: vi.fn().mockResolvedValue({ id: "frozen" }),
-  settleFundedSovereignBondMaturity: vi.fn(async () => ({
-    status: "applied",
-    key: "sovereign-maturity:test:10",
-    appliedLegs: [],
-    appliedProjections: [],
-    newlyAppliedProjections: [],
-  })),
+  settleFundedSovereignBondMaturity: vi.fn(
+    async (_db, input: { nonBankRepaymentLocal: number }) => ({
+      status: "applied",
+      cashPaidLocal: input.nonBankRepaymentLocal,
+      key: "sovereign-maturity:test:10",
+      appliedLegs: [],
+      appliedProjections: [],
+      newlyAppliedProjections: [],
+    })
+  ),
   settleSovereignBondMaturity: vi.fn(async (_db, _bond, repaymentLocal: number) => ({
     amountLocal: repaymentLocal,
     currencyCode: "USD",
@@ -239,6 +242,66 @@ describe("processBondTurn", () => {
       },
       { projection: { countryId: 1, totalIssued: 1 } }
     );
+  });
+
+  it("captures durable funded issuance receipts including late maturity refunding", async () => {
+    db.collection("financialTxLog").find.mockReturnValue(
+      makeCursor([
+        { countryId: "US", amount: 90, meta: { face: 100 } },
+        { countryId: "US", amount: 20, meta: { face: 20 } },
+      ])
+    );
+    const result = await processBondTurn(10, {
+      treasuryCashLedgerEnabled: true,
+      captureSovereignCashProceeds: true,
+    });
+    expect(result.sovereignCashProceedsByCountry).toEqual({ US: 110 });
+    expect(result.sovereignDebtFaceIssuedByCountry).toEqual({ US: 120 });
+    expect(db.collectionMocks.financialTxLog!.find).toHaveBeenCalledWith(
+      { turn: 10, type: "gov_bond_issuance", "meta.ledgerOwnedBySettlement": true },
+      { projection: { countryId: 1, amount: 1, "meta.face": 1 } }
+    );
+  });
+
+  it.each([{}, { meta: {} }, { meta: { face: NaN } }])(
+    "rejects a funded issuance receipt without valid face: %j",
+    async (extra) => {
+      db.collection("financialTxLog").find.mockReturnValue(
+        makeCursor([{ countryId: "US", amount: 90, ...extra }])
+      );
+      await expect(
+        processBondTurn(10, { treasuryCashLedgerEnabled: true, captureSovereignCashProceeds: true })
+      ).rejects.toThrow(/face|cash event/);
+    }
+  );
+
+  it("captures bank maturity escrow funding with no remaining active bonds and on replay", async () => {
+    const funding = {
+      projections: [
+        {
+          applied: true,
+          projection: {
+            collection: "ledgerEntries",
+            insert: {
+              txType: "gov_bond_maturity_payment",
+              emitSite: "banking/bankSovereignClaims:funding",
+              legs: [{ account: "government_cash:CA:CAD", amount: -2000, role: "primary" }],
+            },
+          },
+        },
+      ],
+    };
+    db.collection("bankMoneyMoves").find.mockReturnValue(makeCursor([funding]));
+    const config = { treasuryCashLedgerEnabled: true, captureSovereignCashProceeds: true };
+    const first = await processBondTurn(10, config);
+    const replay = await processBondTurn(10, config);
+    expect(first.sovereignMaturityCashPaidByCountry).toEqual({ CA: 2000 });
+    expect(replay.sovereignMaturityCashPaidByCountry).toEqual(
+      first.sovereignMaturityCashPaidByCountry
+    );
+    expect(first.sovereignDebtFaceRetiredByCountry).toEqual({});
+    db.collection("bankMoneyMoves").find.mockReturnValue(makeCursor([]));
+    expect((await processBondTurn(11, config)).sovereignMaturityCashPaidByCountry).toEqual({});
   });
 
   it("defers maturity while a funded bank treasury reservation is pending", async () => {
@@ -479,6 +542,7 @@ describe("processBondTurn", () => {
       defaulted: false,
       holders: [],
       publicFloat: 3,
+      totalIssued: 3_000,
       corporationId: new ObjectId(),
       currencyCode: "USD" as const,
     };
@@ -497,9 +561,14 @@ describe("processBondTurn", () => {
       makeCursor([{ currencyCode: "USD", rate: 1 }])
     );
 
-    const result = await processBondTurn(10, { treasuryCashLedgerEnabled: true });
+    const result = await processBondTurn(10, {
+      treasuryCashLedgerEnabled: true,
+      captureSovereignCashProceeds: true,
+    });
 
     expect(result.bondsMatured).toBe(1);
+    expect(result.sovereignDebtFaceRetiredByCountry).toEqual({ US: 3_000 });
+    expect(result.sovereignMaturityCashPaidByCountry).toEqual({ US: 3_000 });
     expect(settleFundedSovereignBondMaturity).toHaveBeenCalledWith(
       db,
       expect.objectContaining({ bond, dueTurn: 10, nonBankRepaymentLocal: 3_000 })
@@ -538,13 +607,14 @@ describe("processBondTurn", () => {
     db.collectionMocks["exchangeRates"]!.find.mockReturnValue(
       makeCursor([{ currencyCode: "USD", rate: 1 }])
     );
-    vi.mocked(settleFundedSovereignBondMaturity).mockResolvedValueOnce({
+    vi.mocked(settleFundedSovereignBondMaturity).mockImplementationOnce(async (_db, input) => ({
       status: "partial",
+      cashPaidLocal: input.nonBankRepaymentLocal,
       key: "sovereign-maturity:exact-receipt:payout",
       appliedLegs: [],
       appliedProjections: [],
       newlyAppliedProjections: [],
-    });
+    }));
     const bankClaimId = `bank-sovereign-maturity:${bond._id.toHexString()}:bank:4`;
     db.collectionMocks["federalBudget"]!.findOne.mockResolvedValueOnce({
       _id: "federal",

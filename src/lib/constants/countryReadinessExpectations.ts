@@ -309,7 +309,7 @@ export const COUNTRY_READINESS_EXPECTATIONS: Partial<
   CA: {
     regionCount: 13,
     partyMin: 5,
-    partyRoster: "FUP, NPA, LCP, AL, GHP",
+    partyRoster: "LIB, CON, NDP, BQ, GRN",
     // Every party is organized in all 13 provinces and territories; the Quebec
     // party sits at the floor outside Quebec.
     statePartyOrgMin: 65,

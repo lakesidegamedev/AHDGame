@@ -1,5 +1,8 @@
 "use client";
 
+import { CanadianRidingCampaigns } from "@/components/maps/CanadianRidingCampaigns";
+import { isCanadianCommons, isCanada } from "@/lib/countries/ca/localGeographyFacts";
+
 import { JP_REGIONS } from "@/lib/countries/jp/data/jpRegionDirectory";
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
@@ -18,6 +21,7 @@ import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 interface Election {
   _id: string;
+  id?: string;
   /** US union values plus UK types ("commons", "snap_commons", "regionalCouncil", …). */
   electionType: string;
   state?: string;
@@ -40,12 +44,15 @@ interface CountyResult {
 }
 
 interface CDResult {
+  partyLabel?: string;
+  marginAvailable?: boolean;
   cd: string;
   path: string;
   winner: string;
   party: string;
   margin: number;
-  cookPVI: number;
+  cookPVI?: number;
+  leanStatus?: "unavailable" | "modeled" | "observed";
 }
 
 interface CountyResultsData {
@@ -57,6 +64,8 @@ interface CountyResultsData {
 }
 
 interface CDResultsData {
+  notice?: string;
+  geometryAvailable?: boolean;
   viewBox: string;
   districts: CDResult[];
   candidateNames: Record<string, string>;
@@ -65,6 +74,9 @@ interface CDResultsData {
 }
 
 interface SubdivisionResultEntry {
+  partyLabel?: string;
+  marginAvailable?: boolean;
+  leanStatus?: "unavailable" | "modeled" | "observed";
   id: string;
   name: string;
   path: string;
@@ -78,6 +90,8 @@ interface SubdivisionResultEntry {
 }
 
 interface SubdivisionResultsData {
+  notice?: string;
+  geometryAvailable?: boolean;
   viewBox: string;
   mode: string;
   unitLabel?: string;
@@ -223,6 +237,7 @@ export default function StateElectionResultsPage({
   const [subdivisionResults, setSubdivisionResults] = useState<SubdivisionResultsData | null>(null);
   const [cdResults, setCDResults] = useState<CDResultsData | null>(null);
   const [districtSquares, setDistrictSquares] = useState<DistrictSquareView[] | null>(null);
+  const [canadianLayer, setCanadianLayer] = useState<"ridings" | "census-divisions">("ridings");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -240,7 +255,12 @@ export default function StateElectionResultsPage({
   };
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchData() {
+      setError("");
+      setSubdivisionResults(null);
+      setCDResults(null);
+      setDistrictSquares(null);
       try {
         const electionRes = await fetch(`/api/elections?id=${encodeURIComponent(id)}&view=full`);
         if (!electionRes.ok) {
@@ -259,6 +279,7 @@ export default function StateElectionResultsPage({
           router.replace(`/elections/${encodeURIComponent(id)}?state=${stateUpper}`);
           return;
         }
+        if (cancelled) return;
         setElection(electionData);
 
         const isUS = countryHasFeature("usUi", code.toUpperCase());
@@ -266,13 +287,22 @@ export default function StateElectionResultsPage({
           // Non-US: the subdivision registry decides which election types are
           // supported — an unsupported type just 404s into the error state.
           const subRes = await fetch(
-            `/api/elections/${id}/state/${stateUpper}/subdivision-results`
+            `/api/elections/${id}/state/${stateUpper}/subdivision-results${canadianLayer === "census-divisions" && isCanada(code.toUpperCase()) ? "?layer=census-divisions" : ""}`
           );
-          if (subRes.ok) {
-            setSubdivisionResults(await subRes.json());
-          } else {
-            setError("Subdivision data not available");
+          let result = subRes.ok ? await subRes.json() : null;
+          if (
+            isCanada(code.toUpperCase()) &&
+            ["active", "upcoming"].includes(electionData.status) &&
+            (!result || result.subdivisions.length === 0)
+          ) {
+            const projection = await fetch(
+              `/api/elections/${id}/state/${stateUpper}/projected-subdivisions${canadianLayer === "census-divisions" ? "?layer=census-divisions" : ""}`
+            );
+            result = projection.ok ? await projection.json() : null;
           }
+          if (cancelled) return;
+          if (result) setSubdivisionResults(result);
+          else setError("Subdivision data not available for this region and preset");
           setLoading(false);
           return;
         }
@@ -314,14 +344,19 @@ export default function StateElectionResultsPage({
             // rendering below consumes (cd/cookPVI naming).
             const sub: SubdivisionResultsData = await cdRes.json();
             setCDResults({
+              notice: sub.notice,
+              geometryAvailable: sub.geometryAvailable,
               viewBox: sub.viewBox,
               districts: sub.subdivisions.map((s) => ({
                 cd: s.id,
                 path: s.path,
                 winner: s.winner,
                 party: s.party ?? "independent",
+                partyLabel: s.partyLabel,
+                marginAvailable: s.marginAvailable,
                 margin: s.margin,
-                cookPVI: s.leanScalar ?? 0,
+                cookPVI: s.leanScalar,
+                leanStatus: s.leanStatus,
               })),
               candidateNames: sub.candidateNames,
               candidateParties: sub.candidateParties,
@@ -333,6 +368,8 @@ export default function StateElectionResultsPage({
           // Live square overlay. Failure is non-fatal: the page falls back to the
           // legacy district map.
           try {
+            setDistrictSquares(null);
+            if (["resolved", "completed"].includes(electionData.status)) return;
             const sqRes = await fetch(`/api/congressional-districts/${stateUpper}`);
             if (sqRes.ok) {
               const sqData = (await sqRes.json()) as {
@@ -353,7 +390,10 @@ export default function StateElectionResultsPage({
       }
     }
     fetchData();
-  }, [id, stateUpper, code, router, refreshKey]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, stateUpper, code, router, refreshKey, canadianLayer]);
 
   if (loading) {
     return (
@@ -499,7 +539,33 @@ export default function StateElectionResultsPage({
                   ? `${unitLabel} Results`
                   : "Congressional district results"}
             </h2>
-            <div className="h-[min(70vh,640px)] min-h-[320px] w-full">
+            {isCanada(code.toUpperCase()) &&
+              isCanadianCommons(election.electionType) &&
+              ["active", "upcoming"].includes(election.status) && (
+                <div className="mb-3 flex gap-2" aria-label="Canadian map layer">
+                  {(["ridings", "census-divisions"] as const).map((layer) => (
+                    <button
+                      key={layer}
+                      type="button"
+                      aria-pressed={canadianLayer === layer}
+                      onClick={() => setCanadianLayer(layer)}
+                      className="rounded border border-card-border px-2 py-1 text-sm"
+                    >
+                      {layer === "ridings" ? "Federal ridings" : "Census divisions"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            {subdivisionResults?.notice && (
+              <p className="mb-3 text-sm text-muted">{subdivisionResults.notice}</p>
+            )}
+            <div
+              className={
+                cdResults?.geometryAvailable === false
+                  ? "w-full"
+                  : "h-[min(70vh,640px)] min-h-[320px] w-full"
+              }
+            >
               {subdivisionResults && (
                 <SubdivisionMap
                   viewBox={subdivisionResults.viewBox}
@@ -520,39 +586,70 @@ export default function StateElectionResultsPage({
                   backgroundStateColors={backgroundStateColors}
                 />
               )}
+              {cdResults?.notice && <p className="mb-3 text-sm text-muted">{cdResults.notice}</p>}
               {cdResults &&
-                (districtSquares ? (
-                  <div className="h-full overflow-auto">
-                    <DistrictCardGrid
-                      districts={districtSquares}
-                      redistrictHref={`/country/${code.toLowerCase()}/region/${stateUpper.toLowerCase()}/redistrict`}
-                      campaign={
-                        viewerPartySeqId
-                          ? { countryId: code, stateId: stateUpper, partySeqId: viewerPartySeqId }
-                          : undefined
-                      }
-                    />
-                  </div>
-                ) : (
-                  <SubdivisionMap
-                    viewBox={cdResults.viewBox}
-                    subdivisions={cdResults.districts.map((d) => ({
-                      id: d.cd,
-                      name: d.cd,
-                      path: d.path,
-                      winner: d.winner,
-                      party: d.party,
-                      margin: d.margin,
-                      leanScalar: d.cookPVI,
-                    }))}
-                    candidateNames={cdResults.candidateNames}
-                    candidateParties={cdResults.candidateParties}
-                    partyColors={cdResults.partyColors}
-                    showBackgroundMap={true}
-                    fitToParent={true}
-                  />
-                ))}
+                cdResults.geometryAvailable === false &&
+                cdResults.districts.length > 0 && (
+                  <ul>
+                    {cdResults.districts.map((d) => (
+                      <li key={d.cd}>
+                        {d.cd}: {cdResults.candidateNames[d.winner] ?? "Unknown candidate"}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              {cdResults && cdResults.geometryAvailable !== false && (
+                <SubdivisionMap
+                  viewBox={cdResults.viewBox}
+                  subdivisions={cdResults.districts.map((d) => ({
+                    id: d.cd,
+                    name: d.cd,
+                    path: d.path,
+                    winner: d.winner,
+                    party: d.party,
+                    partyLabel: d.partyLabel,
+                    marginAvailable: d.marginAvailable,
+                    margin: d.margin,
+                    leanScalar: d.cookPVI,
+                    leanStatus: d.leanStatus,
+                  }))}
+                  candidateNames={cdResults.candidateNames}
+                  candidateParties={cdResults.candidateParties}
+                  partyColors={cdResults.partyColors}
+                  showBackgroundMap={true}
+                  fitToParent={true}
+                />
+              )}
             </div>
+            {isCanada(code.toUpperCase()) &&
+              isCanadianCommons(election.electionType) &&
+              ["active", "upcoming"].includes(election.status) &&
+              viewerPartySeqId &&
+              subdivisionResults &&
+              canadianLayer === "ridings" &&
+              subdivisionResults.subdivisions.length > 0 && (
+                <CanadianRidingCampaigns
+                  electionId={election.id ?? election._id}
+                  stateId={stateUpper}
+                  partyId={viewerPartySeqId}
+                  ridings={subdivisionResults.subdivisions}
+                  onCampaign={() => setRefreshKey((key) => key + 1)}
+                />
+              )}
+            {districtSquares && !["resolved", "completed"].includes(election.status) && (
+              <div className="mt-4">
+                <h3 className="mb-2 font-semibold">Current district holders</h3>
+                <DistrictCardGrid
+                  districts={districtSquares}
+                  redistrictHref={`/country/${code.toLowerCase()}/region/${stateUpper.toLowerCase()}/redistrict`}
+                  campaign={
+                    viewerPartySeqId
+                      ? { countryId: code, stateId: stateUpper, partySeqId: viewerPartySeqId }
+                      : undefined
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {/* Vote Summary with donut */}
