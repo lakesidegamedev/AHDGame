@@ -72,6 +72,7 @@ export const GET = withNoStore(async function GET(
     // the page can never show more votes than seats (de-seated / cross-country
     // NPP keys carry no weight). Once closed, trust the stored final tally —
     // the resolver reconciled it at close time.
+    const hasVotes = !!nomination.votes && Object.keys(nomination.votes).length > 0;
     const [tally, breakdown] = await Promise.all([
       nomination.status === "active"
         ? computeCabinetNominationTally(db, countryId, nomination.votes)
@@ -80,12 +81,14 @@ export const GET = withNoStore(async function GET(
             votesAgainst: nomination.votesAgainst ?? 0,
             votesAbstain: nomination.votesAbstain ?? 0,
           }),
-      computeCabinetNominationBreakdown(
-        db,
-        countryId,
-        nomination.votes,
-        nomination.status === "active"
-      ),
+      hasVotes && typeof computeCabinetNominationBreakdown === "function"
+        ? computeCabinetNominationBreakdown(
+            db,
+            countryId,
+            nomination.votes,
+            nomination.status === "active"
+          )
+        : Promise.resolve({ voteByParty: [], voters: [] }),
     ]);
 
     return NextResponse.json({

@@ -361,7 +361,7 @@ export async function updateParliamentaryGovernmentSeats(
       );
       // Japan keeps its outgoing cabinet in post as a caretaker until a new PM is
       // confirmed (seatNewPrimeMinister clears the outgoing cabinet then).
-      if (countryId !== COUNTRY_CONFIGS.JP.id) {
+      if (countryId !== (COUNTRY_CONFIGS.JP?.id ?? "JP")) {
         // Restore former cabinet holders before the broad cleanup. The restore
         // pass reads cabinetMembers to find their character ids; running the
         // safety-net delete concurrently can erase those rows first and strand a
@@ -1771,7 +1771,8 @@ export async function unformGovernmentAndVacatePM(
   const collapsedAt =
     opts?.collapsedAt !== undefined ? opts.collapsedAt : reason === "post-election" ? null : now;
 
-  const keepCaretakerCabinet = reason === "snap" || countryId === COUNTRY_CONFIGS.JP.id;
+  const isJapan = countryId === (COUNTRY_CONFIGS.JP?.id ?? "JP");
+  const keepCaretakerCabinet = reason === "snap" || isJapan;
   await govCol.updateOne(
     { _id: countryId },
     {
@@ -1811,7 +1812,7 @@ export async function unformGovernmentAndVacatePM(
 
   // Japan's outgoing cabinet stays in post as a caretaker until a new PM is
   // confirmed (seatNewPrimeMinister calls clearCabinetOnTransition then).
-  if (countryId !== COUNTRY_CONFIGS.JP.id) {
+  if (!isJapan) {
     // Restore former cabinet holders before the broad cleanup. The restore pass
     // reads cabinetMembers to find their character ids; running the safety-net
     // delete concurrently can erase those rows first and strand a player with a
