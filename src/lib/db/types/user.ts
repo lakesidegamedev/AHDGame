@@ -41,7 +41,10 @@ export interface User {
   emailVerifiedAt?: Date;
   /** Earlier addresses, newest last, recorded when the central account changes the email. */
   emailHistory?: { email: string; changedAt: Date; source: "central" }[];
+  /** Lowercase sign-in key; the display form lives in `displayName`. */
   username: string;
+  /** Earlier usernames, newest last, recorded when the central account renames the player. */
+  usernameHistory?: { username: string; changedAt: Date; source: "central" }[];
   displayName: string;
   password: string;
   role: "admin" | "moderator" | "junior_dev" | "player";

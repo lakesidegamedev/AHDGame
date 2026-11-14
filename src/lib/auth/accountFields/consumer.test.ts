@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import {
   FEED_LEASE_MS,
@@ -36,6 +36,15 @@ function matches(doc: Doc, filter: Doc): boolean {
 function collection(rows: Doc[]) {
   return {
     findOne: async (filter: Doc) => rows.find((r) => matches(r, filter)) ?? null,
+    aggregate: () => ({
+      toArray: async () => {
+        const cutoff = Date.now() - 30 * 86_400_000;
+        const n = rows
+          .flatMap((r) => (r.usernameHistory as { changedAt: Date }[] | undefined) ?? [])
+          .filter((h) => h.changedAt.getTime() >= cutoff).length;
+        return n > 0 ? [{ n }] : [];
+      },
+    }),
     countDocuments: async (filter: Doc) => rows.filter((r) => matches(r, filter)).length,
     updateOne: async (filter: Doc, update: Doc, opts?: { upsert?: boolean }) => {
       let row = rows.find((r) => matches(r, filter));
@@ -99,7 +108,11 @@ function feed(pages: AccountChangesPage[]) {
   };
 }
 
+afterEach(() => vi.unstubAllEnvs());
+
 beforeEach(() => {
+  vi.stubEnv("AHD_ACCOUNT_FIELDS_MODE", "central");
+  vi.stubEnv("AHD_USERNAME_MODE", "");
   users = [
     { _id: new ObjectId(A), email: "old@example.invalid", password: "hash" },
     { _id: new ObjectId(B), email: "other@example.invalid", password: "hash2" },
@@ -280,5 +293,80 @@ describe("pollAccountChanges", () => {
     expect((await pollAccountChanges({ db, owner: "w1", now: () => T0, fetchPage })).status).toBe(
       "ok"
     );
+  });
+});
+
+describe("username changes", () => {
+  const WHEN = Date.parse("2029-12-31T00:00:00Z");
+
+  beforeEach(() => {
+    vi.stubEnv("AHD_USERNAME_MODE", "central");
+    users[0].username = "oldname";
+    users[0].displayName = "OldName";
+    users[1].username = "taken";
+    users[1].displayName = "Taken";
+  });
+
+  it("is ignored while the username switch is off", async () => {
+    vi.stubEnv("AHD_USERNAME_MODE", "off");
+    expect(await applyAccountChange(db, change(1, "username", { username: "NewName" }), T0)).toBe(
+      "ignored"
+    );
+    expect(users[0].username).toBe("oldname");
+  });
+
+  it("renames, keeps the lowercase key and records the old display name", async () => {
+    const out = await applyAccountChange(db, change(1, "username", { username: "NewName" }), T0);
+    expect(out).toBe("applied");
+    expect(users[0].username).toBe("newname");
+    expect(users[0].displayName).toBe("NewName");
+    expect(users[0].usernameHistory).toEqual([
+      { username: "OldName", changedAt: new Date(WHEN), source: "central" },
+    ]);
+  });
+
+  it("is idempotent on replay", async () => {
+    const c = change(1, "username", { username: "NewName" });
+    await applyAccountChange(db, c, T0);
+    expect(await applyAccountChange(db, c, T0)).toBe("unchanged");
+    expect(users[0].usernameHistory).toHaveLength(1);
+  });
+
+  it("does not write when another account holds the name in any case", async () => {
+    const out = await applyAccountChange(db, change(1, "username", { username: "TAKEN" }), T0);
+    expect(out).toEqual({ error: expect.stringContaining("already held") });
+    expect(users[0].username).toBe("oldname");
+    expect(users[0].usernameHistory).toBeUndefined();
+  });
+
+  it("a case-only change updates the display form without a history entry", async () => {
+    const out = await applyAccountChange(db, change(1, "username", { username: "OLDNAME" }), T0);
+    expect(out).toBe("applied");
+    expect(users[0].displayName).toBe("OLDNAME");
+    expect(users[0].usernameHistory).toBeUndefined();
+  });
+
+  it("follows two and twenty-two character names without truncation", async () => {
+    const long = "A_very_long_name_22ch";
+    const longer = long + "x";
+    expect(longer).toHaveLength(22);
+    await applyAccountChange(db, change(1, "username", { username: longer }), T0);
+    expect(users[0].displayName).toBe(longer);
+    expect(users[0].username).toBe(longer.toLowerCase());
+    await applyAccountChange(db, change(2, "username", { username: "Jo" }), T0);
+    expect(users[0].username).toBe("jo");
+    expect(users[0].usernameHistory).toHaveLength(2);
+  });
+
+  it("rejects a feed entry with no usable name", async () => {
+    const out = await applyAccountChange(db, change(1, "username", { username: "  " }), T0);
+    expect(out).toEqual({ error: expect.stringContaining("invalid username") });
+  });
+
+  it("reports the mode and recent rename count", async () => {
+    users[0].usernameHistory = [{ username: "A", changedAt: new Date(), source: "central" }];
+    const status = await getAccountFieldsStatus(db);
+    expect(status.usernameMode).toBe("central");
+    expect(status.usernameChangesLast30Days).toBe(1);
   });
 });

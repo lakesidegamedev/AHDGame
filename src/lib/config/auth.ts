@@ -33,6 +33,7 @@ export const authConfig = {
   migrationProofLoadSecret: () => process.env.AHD_MIGRATION_PROOF_LOAD_SECRET,
 
   accountFieldsMode: () => process.env.AHD_ACCOUNT_FIELDS_MODE,
+  usernameMode: () => process.env.AHD_USERNAME_MODE,
   centralLoginMode: () => process.env.AHD_CENTRAL_LOGIN_MODE,
   centralLoginTestUsers: () => process.env.AHD_CENTRAL_LOGIN_TEST_USERS,
   accountsUrl: () => process.env.LAKESIDE_ACCOUNTS_URL,
