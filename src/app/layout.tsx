@@ -12,19 +12,13 @@ import Script from "next/script";
 import { cookies, headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import { NavbarWrapper } from "@/components/NavbarWrapper";
-import { BugReportFab } from "@/components/BugReportFab";
-import { AskDrawer } from "@/components/askDrawer/AskDrawer";
-import { StatusBar } from "@/components/StatusBar";
 import {
-  DeferredSeasonRecapGate,
-  DeferredStatAllocationGate,
-  DeferredWealthTierRepickGate,
-  DeferredTutorialCoachMount,
-  DeferredSingleplayerGuide,
-  DeferredTurnProgressToast,
-  DeferredNominationChoicePrompt,
-} from "@/components/DeferredShellOverlays";
+  ShellOverlaysBottom,
+  ShellOverlaysTop,
+  type ShellFlags,
+} from "@/components/shell/ShellOverlays";
+import { LightShellGuard } from "@/components/LightShellGuard";
+import { shouldUseLightShell } from "@/lib/shell/lightShell";
 import { FeedbackProvider } from "@/contexts/FeedbackContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BrowserPreferencesProvider } from "@/contexts/BrowserPreferencesContext";
@@ -40,17 +34,9 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
-import { LiveRefreshBanner } from "@/components/LiveRefreshBanner";
-import { VpnGateBanner } from "@/components/VpnGateBanner";
-import { MassCrashAlertBanner } from "@/components/MassCrashAlertBanner";
-import { MaintenancePartialBanner } from "@/components/MaintenancePartialBanner";
-import { PollBannerNotice } from "@/components/PollBannerNotice";
 import { isSingleplayer } from "@/lib/singleplayer";
-import { AdSlot } from "@/components/AdSlot";
 import { CookieConsentBanner } from "@/components/CookieConsent";
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
-import { SiteFooter } from "@/components/SiteFooter";
-import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
 import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
@@ -319,6 +305,30 @@ export default async function RootLayout({
   // Server component, so this is a plain call. Throws on a deployment
   // that sets SINGLEPLAYER, by design: see @/lib/singleplayer.
   const singleplayer = isSingleplayer();
+  const lightShell = shouldUseLightShell({
+    // Only a path the proxy actually reported: a missing header must never
+    // select the light shell.
+    pathname: requestHeaders.get("x-pathname") ?? "",
+    hasSessionCookie,
+    singleplayer,
+    isWikiSubdomain,
+    isNativeApp,
+    isClientShell,
+    isStoreApp,
+  });
+  const shellFlags: ShellFlags = {
+    light: lightShell,
+    pathname,
+    isWikiSubdomain,
+    singleplayer,
+    isNativeApp,
+    isClientShell,
+    isStoreApp,
+    nativeStatusDock,
+    displayMode,
+    initialPageCountry,
+    typedWordmark,
+  };
 
   return (
     <html
@@ -374,30 +384,8 @@ export default async function RootLayout({
                     <FeedbackProvider>
                       <ToastProvider>
                         <CharacterStatsProvider>
-                          {!isWikiSubdomain && (
-                            <NavbarWrapper
-                              singleplayer={singleplayer}
-                              clientShell={isClientShell}
-                              phoneApp={isStoreApp}
-                              displayMode={displayMode}
-                              initialPageCountry={initialPageCountry}
-                              typedWordmark={typedWordmark}
-                            />
-                          )}
-                          {!isWikiSubdomain && <BugReportFab displayMode={displayMode} />}
-                          {/* Experimental opt-in (Settings). Singleplayer has no Ask service. */}
-                          {!isWikiSubdomain && !singleplayer && <AskDrawer />}
-                          {!isWikiSubdomain && <VpnGateBanner />}
-                          {!isWikiSubdomain && <MassCrashAlertBanner />}
-                          {!isWikiSubdomain && <MaintenancePartialBanner />}
-                          {/* Admin-controlled survey strip. Not auth-gated: it must reach
-                            signed-out visitors too. */}
-                          {!isWikiSubdomain && <PollBannerNotice />}
-                          <AuthConnectivityGate />
-                          <DeferredStatAllocationGate />
-                          <DeferredWealthTierRepickGate />
-                          <DeferredSeasonRecapGate />
-                          <DeferredNominationChoicePrompt />
+                          <ShellOverlaysTop {...shellFlags} />
+                          {lightShell && <LightShellGuard />}
                           {/* overflow-x-CLIP, not -hidden: hidden makes this element the
                             scroll container for every `position: sticky` descendant
                             (admin status bar / sidebars / table headers), which both
@@ -419,18 +407,7 @@ export default async function RootLayout({
                             )}
                             {children}
                           </main>
-                          {!isWikiSubdomain && !isNativeApp && <AdSlot />}
-                          {!isWikiSubdomain && <SiteFooter displayMode={displayMode} />}
-                          {!isWikiSubdomain && !nativeStatusDock && (
-                            <StatusBar
-                              showOnlineStatus={!isClientShell}
-                              turnStatusLink={!singleplayer}
-                            />
-                          )}
-                          {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
-                          {!isWikiSubdomain && singleplayer && <DeferredSingleplayerGuide />}
-                          {!isWikiSubdomain && <DeferredTutorialCoachMount />}
-                          {!isWikiSubdomain && <LiveRefreshBanner />}
+                          <ShellOverlaysBottom {...shellFlags} />
                           {/* Singleplayer loads no analytics (see below), so there is
                               nothing to consent to. */}
                           {!isNativeApp && !singleplayer && <CookieConsentBanner />}
