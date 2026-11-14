@@ -316,6 +316,9 @@ export default async function RootLayout({
     isClientShell,
     isStoreApp,
   });
+  // Loaded only when the shell is full, so the anonymous landing and sign-in
+  // bundles do not carry the signed-in overlays.
+  const shellFull = lightShell ? null : await import("@/components/shell/ShellOverlaysFull");
   const shellFlags: ShellFlags = {
     light: lightShell,
     pathname,
@@ -384,7 +387,7 @@ export default async function RootLayout({
                     <FeedbackProvider>
                       <ToastProvider>
                         <CharacterStatsProvider>
-                          <ShellOverlaysTop {...shellFlags} />
+                          <ShellOverlaysTop {...shellFlags} full={shellFull} />
                           {lightShell && <LightShellGuard />}
                           {/* overflow-x-CLIP, not -hidden: hidden makes this element the
                             scroll container for every `position: sticky` descendant
@@ -407,7 +410,7 @@ export default async function RootLayout({
                             )}
                             {children}
                           </main>
-                          <ShellOverlaysBottom {...shellFlags} />
+                          <ShellOverlaysBottom {...shellFlags} full={shellFull} />
                           {/* Singleplayer loads no analytics (see below), so there is
                               nothing to consent to. */}
                           {!isNativeApp && !singleplayer && <CookieConsentBanner />}
