@@ -1,13 +1,9 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
 /**
- * The United States voter archetype list. Kept free of value imports: the
- * canvassing panel reads it in the browser, while `demographicCategories.ts`
- * also carries every era's composition tables and the state position overrides.
- *
- * 12 Voter Archetypes (Phase 2 demographic overhaul)
- * Single category — mutually exclusive groups, no double-counting.
- * defaultTurnout is kept as a fallback; real derived turnout is computed in stateDemographics.
+ * The 12 United States voter groups the calibration model scores. A single
+ * category of mutually exclusive groups, no double-counting. `defaultTurnout`
+ * is a fallback; derived turnout is computed in stateDemographics.
  */
 export const demographicCategories: DemographicCategory[] = [
   {

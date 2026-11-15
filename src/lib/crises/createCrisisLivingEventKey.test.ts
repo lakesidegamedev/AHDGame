@@ -42,7 +42,7 @@ describe("createCrisisFromTemplate livingConflictEventId key", () => {
     });
     // Key absence is the contract: an explicit undefined would be serialized
     // as null by the driver and collide in the crises_living_event unique
-    // index (E11000 on { livingConflictEventId: null }, GlitchTip AHD-1JV).
+    // index (E11000 on { livingConflictEventId: null }).
     expect("livingConflictEventId" in insertedDoc()).toBe(false);
   });
 

@@ -79,7 +79,7 @@ export async function createCrisisFromTemplate(
   // serializes an explicit undefined as null, and the crises_living_event
   // unique index (sparse OR partial) tolerates missing fields but a sparse
   // one still indexes null — the second { livingConflictEventId: null }
-  // insert then fails E11000 on every spawner turn (GlitchTip AHD-1JV).
+  // insert then fails E11000 on every spawner turn.
   const livingConflictEventId = params.livingConflictEventId ?? template.livingConflictEventId;
 
   const crisis: Omit<Crisis, "_id"> = {

@@ -103,7 +103,6 @@ export const FRONT_DOOR_COLLECTIONS = [
   "counties",
   "parliamentSeatsHistory",
   "commodityFlows",
-  "codeQualitySnapshots",
   "eventDefinitions",
   "turnLogs",
   "influenceHistory",

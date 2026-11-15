@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * Ireland planning region demographic composition using the 8 IE voter archetypes.
+ * Ireland planning region demographic composition using the 8 IE voter groups.
  *
  * Each region defines the population share of each archetype (summing to 100%)
  * plus baseline lean and turnout. Regional character comes from the population

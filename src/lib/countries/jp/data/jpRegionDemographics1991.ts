@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * Japan region demographics , 1991 era (JP voter archetypes).
+ * Japan region demographics , 1991 era (JP voter groups).
  *
  * Era anchor: the bubble-economy peak under Kaifu/Miyazawa. Salaryman corporate
  * culture is at its zenith; the rural LDP machine is intact. The union/left bloc

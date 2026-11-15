@@ -42,7 +42,7 @@ export function LawsTab({ state }: { state: State }) {
 
   useEffect(() => {
     let cancelled = false;
-    // fetchJson rather than bare fetch: it reports failures to GlitchTip
+    // fetchJson rather than bare fetch: it reports failures to the error tracker
     // instead of letting them vanish into a silent catch.
     Promise.all([
       fetchJson<PolicyRecordResponse[]>(

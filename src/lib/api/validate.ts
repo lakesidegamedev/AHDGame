@@ -58,7 +58,7 @@ export async function parseJsonBody<T>(
  * `request.formData()` throws `TypeError: Failed to parse body as FormData`
  * when a client sends a malformed, truncated, or aborted multipart upload —
  * a client-side bad request, not a server fault. Calling it unguarded turns
- * those into 500s plus noisy GlitchTip events. This wrapper converts the
+ * those into 500s plus noisy error events. This wrapper converts the
  * parse failure into a clean 400 the caller can return directly.
  */
 export async function parseFormData(

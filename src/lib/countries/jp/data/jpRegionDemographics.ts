@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * Japan region demographics using JP voter archetypes.
+ * Japan region demographics using JP voter groups.
  *
  * Each region has a composition of the 10 JP voter groups (populations sum to
  * 100%). Economic and social leans calibrated to actual voting patterns.

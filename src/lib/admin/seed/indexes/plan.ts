@@ -139,7 +139,6 @@ export const LIVE_WORLD_MANUAL_SEED_INDEXES: Readonly<Record<string, string>> = 
   "ipGeoCache.ipGeoCache_expiresAt_ttl": TTL_REASON,
   "nonAtomicMoneyFlowReceipts.nonAtomicMoneyFlowReceipts_terminal_updatedAt_ttl": TTL_REASON,
   "rateLimitBuckets.rlb_expiresAt_ttl": TTL_REASON,
-  "siteTrafficPageviews.stpv_recordedAt_ttl": TTL_REASON,
 };
 
 /** `collection.name` label used in reports and in the manual-index list. */

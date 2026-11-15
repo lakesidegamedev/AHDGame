@@ -1490,7 +1490,7 @@ export default function CorporationDetailPage() {
                   {/* Render-time guard, not just the tab-reset effect above: a ?tab=shares
             deep link on a private corp mounts SharesTab on the FIRST render with
             the redacted payload (totalShares etc. stripped for non-CEO viewers)
-            and crashes before the effect can fall back (GlitchTip AHD-A1). */}
+            and crashes before the effect can fall back. */}
                   {tab === "shares" &&
                     !(corpIsPrivate && !isCeo && !corporation.viewerIsShareholder) && (
                       <SharesTab

@@ -1,6 +1,5 @@
 /**
- * SSR regression test for React #418 on /country/[code]/elections
- * (GlitchTip AHD-17C).
+ * SSR regression test for React #418 on /country/[code]/elections.
  *
  * The strip's absolute deadlines used to render via
  * `clock.formatAbsoluteDeadline` → `toLocaleString(undefined, …)`, whose

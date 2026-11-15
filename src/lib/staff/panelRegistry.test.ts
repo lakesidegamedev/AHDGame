@@ -206,7 +206,7 @@ describe("legacyRedirect", () => {
     expect(go("admin", "/admin", "tab=traffic")).toBe("/control/overview/dashboard");
     expect(go("admin", "/admin", "tab=feedback")).toBe("/control/support/suggestions");
     expect(go("admin", "/admin", "tab=support&sub=feedback")).toBe("/control/support/suggestions");
-    expect(go("admin", "/admin", "tab=world&sub=german-question")).toBe("/control/world/countries");
+    expect(go("admin", "/admin", "tab=world&sub=german-question")).toBe("/control/world/crises");
     expect(go("admin", "/admin", "tab=system&sub=code-quality")).toBe(
       "/control/diagnostics/game-health"
     );

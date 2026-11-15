@@ -5,7 +5,7 @@
  *
  * The pervasive `fetch(url).then(r => r.json())` pattern silently parses error
  * response bodies as if they were data — a 500/401 turns into an empty list,
- * $0 balance, or stale UI that looks "real," and nothing reaches GlitchTip.
+ * $0 balance, or stale UI that looks "real," and nothing reaches the error tracker.
  * `fetchJson` throws on network failure and non-2xx, and reports genuine faults
  * (network + 5xx) to Sentry tagged with the calling `feature`. Callers keep
  * their own try/catch to drive an error state.

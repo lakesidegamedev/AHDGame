@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * UK region demographics using UK voter archetypes.
+ * UK region demographics using UK voter groups.
  *
  * Each region has a composition of the 12 UK voter groups (populations sum to
  * 100%). `categoryWeights` uses `uk_voterGroups: 100` to match the UK

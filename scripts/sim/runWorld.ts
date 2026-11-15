@@ -16,7 +16,7 @@
  * inside bootstrapGameWorld's own callees — resolves to the sandbox.
  *
  * NEVER point SIM_MONGODB_URI at the production database. This agent
- * environment IS the production Hetzner box; there is no accidental-safety
+ * environment IS the production host; there is no accidental-safety
  * net here beyond this script's own guardrails.
  *
  * Usage:

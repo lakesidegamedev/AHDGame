@@ -70,7 +70,7 @@ units = (sector daily revenue * rate) / basePrice
 
 Under the plants tier, other sectors put the units their plants actually produced on the market (a mothballed plant supplies nothing), and their input demand scales with how much of their capacity they used.
 
-Only **owned** sectors participate. Unowned market share does not contribute supply or demand. What every [corporation](/wiki/corporations) runs, including its strategy and production policy, feeds the totals.
+Only sectors that a corporation runs participate. Demand that no plant serves yet adds no supply or demand. What every [corporation](/wiki/corporations) runs, including its strategy and production policy, feeds the totals.
 
 **Cross-currency normalization:** Sector revenues are normalized to the anchor currency (₳) before computing commodity flows, so corporations headquartered in different countries contribute consistently to shared global supply and demand curves.
 

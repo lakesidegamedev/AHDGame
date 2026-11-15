@@ -53,8 +53,8 @@
       "untyped": 1
     },
     "src/lib/admin/economyReset/apply.ts": {
-      "dynamic": 3,
-      "untyped": 3
+      "dynamic": 2,
+      "untyped": 2
     },
     "src/lib/admin/economyReset/census.ts": {
       "dynamic": 3,

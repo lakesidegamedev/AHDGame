@@ -11,7 +11,7 @@
     "design:check": "node scripts/build-design-md.mjs --check",
     "export:lore-corpus": "tsx scripts/exportLoreCorpus.ts",
     "export:seed-audit-reference": "tsx scripts/exportSeedAuditReference.ts",
-    "build": "node scripts/build-with-cache-recovery.mjs && tsx scripts/postbuild-quality.ts",
+    "build": "node scripts/build-with-cache-recovery.mjs",
     "start": "next start",
     "start:turn-worker": "NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=3072 --max-semi-space-size=128\" tsx scripts/turn-worker.ts",
     "lint": "eslint --cache --cache-strategy content --cache-location .cache/eslint/.eslintcache",

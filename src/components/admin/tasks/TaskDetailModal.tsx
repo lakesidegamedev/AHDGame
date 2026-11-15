@@ -42,7 +42,7 @@ export function TaskDetailModal({ task, onClose, onStatusChange, onDelete }: Tas
 
   useEffect(() => {
     fetch(`/api/admin/tasks/${task._id}/comments`)
-      // Reject with a real Error: bare reject() surfaces in GlitchTip as
+      // Reject with a real Error: bare reject() surfaces in the error tracker as
       // "Non-Error promise rejection captured with value: undefined".
       .then((r) =>
         r.ok ? r.json() : Promise.reject(new Error(`Task comments fetch failed: ${r.status}`))

@@ -1,6 +1,6 @@
 export const gameStartingStateContent = `# Game Starting State
 
-Before you pick a country, it helps to know what board you are stepping onto. Every world begins from a fixed opening: default parties, generated non-player politicians (NPPs), starting treasuries, national numbers, sovereign debt, regional sector specialties and an unowned market in every sector. The opening you join decides which countries you can play, who sits in the legislatures and what the economy looks like.
+Before you pick a country, it helps to know what board you are stepping onto. Every world begins from a fixed opening: default parties, generated non-player politicians (NPPs), starting treasuries, national numbers, sovereign debt, regional sector specialties and a market in every sector. The opening you join decides which countries you can play, who sits in the legislatures and what the economy looks like.
 
 ## Which start date opens which countries
 
@@ -29,7 +29,7 @@ Economic and social positions each run from -5 to +5. Economic: -5 is far left a
 - **Generated NPPs** ([NPP Behavior](/wiki/npp-behavior) starts from these seeds) who take their party's own economic and social position, plus randomised favorability, loyalty, ambition and stubbornness.
 - **National budgets, debt, credit ratings, tax bases and currencies**, using that era's values where they are authored.
 - **Regional demographics and metrics** for that era.
-- **An unowned market in all 17 sector types** in every region, except where a command economy's state enterprises hold that market instead, and separate per-region capacity ceilings for extractable resources.
+- **Market demand in all 17 sector types** in every region, with no corporation in it yet except where a command economy's state enterprises hold that market, and separate per-region capacity ceilings for extractable resources.
 
 Parliamentary governments are assembled from the starting seats ([Coalition Formation](/wiki/coalition-formation)). The 1991 preset also anchors its first elections to the real post-1991 calendar (for example the 1992 US and UK elections and the 1994 Bundestag), and leaves out parties that did not exist yet (for example AfD, Die Linke and Reform UK).
 

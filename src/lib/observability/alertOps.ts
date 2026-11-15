@@ -3,7 +3,7 @@
  *
  * Sends a webhook message to a Discord channel when Sentry captures a fatal
  * error. This gives us real-time pings for critical failures without watching
- * the GlitchTip dashboard.
+ * the error tracker dashboard.
  *
  * Configure with the `DISCORD_ALERT_WEBHOOK_URL` env var. If unset, alerts are
  * skipped silently — no crash, no noise.
@@ -66,7 +66,7 @@ export function alertOps(
     body: JSON.stringify(payload),
   }).catch((err) => {
     // Swallow — Discord alerting must never break the request. Log to the
-    // server console only (never GlitchTip: this IS the alerting path).
+    // server console only (never the error tracker: this IS the alerting path).
     console.error("ops alert webhook delivery failed", err);
   });
 }
