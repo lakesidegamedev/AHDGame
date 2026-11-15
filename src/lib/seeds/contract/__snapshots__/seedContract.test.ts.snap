@@ -2,12 +2,7 @@
 
 exports[`seed contract per preset > 1953-default matches the recorded gap list 1`] = `
 [
-  "budget:IT dollarIncome",
-  "budget:JP dollarIncome",
   "commodityPrices commodityPriceLevel",
-  "fxRates:BAL no starting rate for 1953-default",
-  "fxRates:BLR no starting rate for 1953-default",
-  "fxRates:UKR no starting rate for 1953-default",
 ]
 `;
 
@@ -32,7 +27,6 @@ exports[`seed contract per preset > 1979-default matches the recorded gap list 1
 
 exports[`seed contract per preset > 1991-default matches the recorded gap list 1`] = `
 [
-  "census:TR duplicate",
   "commodityPrices commodityPriceLevel",
 ]
 `;
