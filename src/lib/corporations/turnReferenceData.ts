@@ -9,12 +9,19 @@ import type {
   CentralBank,
 } from "@/lib/db/types";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
+import { subsidiesCollection } from "@/lib/db/repositories/subsidies";
 
 export type TurnStateProjection = Pick<
   State,
   "_id" | "name" | "countryId" | "sectorSpecializations" | "gdp"
 >;
-export type TurnStateBudgetProjection = Pick<StateBudget, "_id" | "taxRates">;
+type TurnStateBudgetProjection = Pick<StateBudget, "_id" | "taxRates">;
 
 export interface TurnReferenceData {
   commodityPrices: CommodityPrice[];
@@ -67,16 +74,14 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
     stateBudgetsForTax,
     centralBanks,
   ] = await Promise.all([
-    db.collection<CommodityPrice>("commodityPrices").find({}).toArray(),
-    db
-      .collection<State>("states")
+    commodityPricesCollection(db).find({}).toArray(),
+    statesCollection(db)
       .find({}, { projection: { _id: 1, name: 1, countryId: 1, sectorSpecializations: 1, gdp: 1 } })
       .toArray() as Promise<TurnStateProjection[]>,
-    db.collection<Tariff>("tariffs").find({}).toArray(),
-    db.collection<Subsidy>("subsidies").find({ active: true }).toArray(),
-    db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
+    tariffsCollection(db).find({}).toArray(),
+    subsidiesCollection(db).find({ active: true }).toArray(),
+    exchangeRatesCollection(db).find({}).toArray(),
+    stateBudgetsCollection(db)
       .find(
         {},
         {
@@ -90,7 +95,7 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
         }
       )
       .toArray() as Promise<TurnStateBudgetProjection[]>,
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
   ]);
 
   const activeFtaPairs = await loadActiveFtaPairs(db);
@@ -105,10 +110,4 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
     stateBudgetsForTax,
     centralBanks,
   };
-}
-
-// Test hook: lets vitest reset the module cache between suites without
-// re-requiring the module (which doesn't work reliably under vi.mock).
-export function __resetTurnReferenceDataCacheForTest(): void {
-  cache.clear();
 }

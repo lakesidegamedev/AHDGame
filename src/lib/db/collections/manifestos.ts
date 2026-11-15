@@ -4,7 +4,7 @@ import type { Manifesto, Pledge } from "@/lib/db/types/manifesto";
 import { MANIFESTO_PLEDGE_COUNT } from "@/lib/db/types/manifesto";
 
 /**
- * Persistence for UK manifestos (epic #856, ticket #857).
+ * Persistence for UK manifestos.
  * Collection: "manifestos" — one document per party per election.
  *
  * A manifesto is created/edited as a DRAFT (lockedAt: null) by the party leader,

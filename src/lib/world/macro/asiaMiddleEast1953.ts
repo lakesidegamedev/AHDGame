@@ -1,5 +1,5 @@
 /**
- * Asian and Middle Eastern 1953 sphere-macro roster (#3720, #3723).
+ * Asian and Middle Eastern 1953 sphere-macro roster.
  *
  * GDP magnitudes use the same game units as Austria's oracle (AT = 7_500).
  * Populations: UN Demographic Yearbook / national censuses early-1950s.
@@ -11,7 +11,7 @@
  * phosphates/tin/gems use rare_earth or iron proxies where noted.
  *
  * IN/PK/IR/IQ/EG/SA/SY/ID/KP/KR/NVN/SVN were added by the 1953 Tier-1 matrix
- * (#3723) as unconfigured proposed Tier-1 → sphere-macro; authored here so
+ * as unconfigured proposed Tier-1 → sphere-macro; authored here so
  * seedMacroCountries never falls back to a modern preset.
  */
 import type { OperatingSectorType } from "@/lib/constants/corporations";
@@ -27,7 +27,7 @@ export const LAOS_ENTITY_ID = "LA";
 export const CAMBODIA_ENTITY_ID = "KH";
 export const THAILAND_ENTITY_ID = "TH";
 
-/** Matrix-reclassified proposed Tier-1 entities without CountryConfig (#3723). */
+/** Matrix-reclassified proposed Tier-1 entities without CountryConfig. */
 export const INDIA_ENTITY_ID = "IN";
 export const PAKISTAN_ENTITY_ID = "PK";
 export const IRAN_ENTITY_ID = "IR";

@@ -1,22 +1,20 @@
 /**
- * Settle the German Question from a peace TERM rather than from a war's outcome.
+ * Settle the German Question from a peace TERM rather than a war's outcome.
  *
- * The ordinary road is `settleFrozenCrisisFromConflict`: the war is fought, somebody
- * wins it, and a turn sweep reads the result. This is the other one. A `reunification`
- * term is the challenger asking for that outcome directly, while the fighting is
- * still going on, so the settlement has to happen when the term is APPLIED rather
- * than on a later tick.
+ * The ordinary road is `settleFrozenCrisisFromConflict`: the war is fought,
+ * somebody wins, and a turn sweep reads the result. A `reunification` term is
+ * the challenger asking for that outcome directly while the fighting is still
+ * ongoing, so settlement happens when the term is APPLIED, not on a later tick.
  *
- * Synchronous for the same reason the dictate route applies its term synchronously:
- * the offer has been accepted, and a player who has just agreed to reunification
- * should not load a map that still shows two Germanies until the next hour turns.
+ * Synchronous for the same reason the dictate route applies its term
+ * synchronously: a player who just agreed to reunification should not load a
+ * map still showing two Germanies until the next hour turns.
  *
  * ALWAYS THE CHALLENGER'S OUTCOME, whoever proposed the term. Either founding
- * belligerent may put a reunification on the table — from the incumbent it is a
- * capitulation — but what it settles does not change with the sender, so the outcome
- * is hardcoded here rather than passed in and a future caller cannot quietly use this
- * to hand the question to the incumbent instead. That outcome is not a settlement
- * anybody imposes: it is what happens when nothing changes.
+ * belligerent may put a reunification on the table, from the incumbent it is a
+ * capitulation, but the settled outcome does not change with the sender. The
+ * outcome is hardcoded here rather than passed in so a future caller cannot
+ * quietly hand the question to the incumbent instead.
  */
 import type { Db } from "mongodb";
 import type { SettlementCrisisDoc } from "@/lib/db/types/settlementCrisis";
@@ -87,21 +85,15 @@ export async function reunifyByPeaceTerm(
   };
   const result = await actuateSettlementOutcome(db, resolved, currentTurn);
 
-  // FILE THE DISPATCH HERE, because no tick will file it for us. `settlementPhase`
-  // announces a settlement when IT actuates one, and its sweep skips anything
-  // already carrying `actuationCompletedTurn` — which a successful actuation on
-  // this path has just written. Actuating from a request therefore hides the
-  // crisis from the only code that would have announced it, and Germany reunifies
-  // in silence.
+  // FILE THE DISPATCH HERE: `settlementPhase` only announces settlements it
+  // actuates, and its sweep skips anything with `actuationCompletedTurn` set,
+  // which this path just wrote. Without this the crisis goes unannounced.
   //
-  // Safe from a request path, unlike most posts: `emitSettlementWire` claims the
-  // `postedWireEvents` stamp with a `$ne` guard BEFORE sending, so a retried request
-  // finds the stamp and sends nothing. That is the property `acceptPeace` lacks and
-  // why it stamps the war instead of posting.
+  // Safe from a request path: `emitSettlementWire` claims `postedWireEvents`
+  // with a `$ne` guard before sending, so retries are no-ops.
   //
-  // Gated on `actuated`, for the reason the phase gives at its own call site: a
-  // reunification that was claimed and then failed halfway is the one lie the wire
-  // could tell. The RESOLVED document, because the copy branches on the outcome.
+  // Gated on `actuated` so a failed half-run cannot post. Uses the RESOLVED
+  // document because the copy branches on the outcome.
   if (result.actuated) {
     await emitSettlementWire(db, resolved, currentTurn, { events: ["settled"] });
     return { actuated: true, deferred: false };

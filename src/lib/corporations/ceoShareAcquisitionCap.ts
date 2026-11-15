@@ -5,6 +5,9 @@ import {
   CEO_SELF_ACQUISITION_CAP_FRACTION,
   CEO_SELF_ACQUISITION_WINDOW_TURNS,
 } from "@/lib/constants/corporations";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
+import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
 
 export type CeoHolderField = "characterId" | "imperialCharacterId";
 
@@ -34,8 +37,7 @@ export async function ceoSelfAcquisitionWindow(
   currentTurn: number
 ): Promise<CeoSelfAcquisitionWindow> {
   const windowStart = currentTurn - CEO_SELF_ACQUISITION_WINDOW_TURNS;
-  const rows = await db
-    .collection<ShareTradeHistory>("shareTradeHistory")
+  const rows = await shareTradeHistoryCollection(db)
     .find({
       corporationId: corp._id,
       [`to.${holderField}`]: ceoId,
@@ -51,14 +53,12 @@ export async function ceoSelfAcquisitionWindow(
     if (oldestInWindowTurn === null || r.turn < oldestInWindowTurn) oldestInWindowTurn = r.turn;
   }
 
-  const openOrders = await db
-    .collection<ShareOrder>("shareOrders")
+  const openOrders = await shareOrdersCollection(db)
     .find({ corporationId: corp._id, characterId: ceoId, type: "buy", status: "open" })
     .toArray();
   const openOrderShares = openOrders.reduce((s, o) => s + (o.sharesRemaining ?? 0), 0);
 
-  const openOffers = await db
-    .collection<ShareOffer>("shareOffers")
+  const openOffers = await shareOffersCollection(db)
     .find({ corporationId: corp._id, buyerCharacterId: ceoId, status: "pending" })
     .toArray();
   const openOfferShares = openOffers.reduce((s, o) => s + (o.shares ?? 0), 0);

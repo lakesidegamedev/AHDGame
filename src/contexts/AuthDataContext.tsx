@@ -45,9 +45,6 @@ export interface ClientNavBootstrap {
   imperialCharacter: Record<string, unknown> | null;
   isImperialMode: boolean;
   wikiDisabled: boolean;
-  /** When true, the Conflicts subsystem is live — drives the conditional
-   *  "Conflicts" link in the World dropdown. */
-  conflictsEnabled: boolean;
   /** When true a settlement crisis is actually running — drives the
    *  conditional "The German Question" link nested under Crises. Not merely
    *  the subsystem flag: the question can be opened and closed at will. */
@@ -70,6 +67,8 @@ export interface ClientNavBootstrap {
    * pending or the feature is off.
    */
   pendingSeasonRecapId?: string | null;
+  /** Crises where the viewer has an action available now. Drives the Crises nav badge. */
+  crisisActionCount?: number;
 }
 
 type AuthMeResult =
@@ -257,13 +256,4 @@ export function useSignedIn(): boolean {
 export function useHasSession(): boolean {
   const ctx = useContext(AuthDataContext);
   return ctx ? ctx.hasSession : true;
-}
-
-/**
- * Non-throwing accessor for the Conflicts-subsystem flag. Returns false when
- * rendered outside an AuthDataProvider (e.g. isolated component tests), so
- * conflicts-gated UI stays hidden rather than crashing.
- */
-export function useConflictsEnabled(): boolean {
-  return useContext(AuthDataContext)?.navData?.conflictsEnabled ?? false;
 }

@@ -1,14 +1,11 @@
 "use client";
 
 /**
- * Market-identity primitives for the player-corporation surface.
- *
- * Ported from the approved design prototype
- * (docs/superpowers/specs/2026-05-31-player-corp-prototype/src/pcomponents.jsx),
- * translated to project semantic tokens so all themes keep working:
- *  - prototype `up`/`down`   → `success`/`error`
- *  - prototype `brand-*`     → the scoped `--brand` CSS var (set from the corp's
- *                              brandColor by the masthead) for accents
+ * Market-identity primitives for the player-corporation surface, translated to
+ * project semantic tokens so all themes keep working:
+ *  - `up`/`down` → `success`/`error`
+ *  - `brand-*` → the scoped `--brand` CSS var (set from the corp's brandColor
+ *    by the masthead) for accents
  *  - SVG strokes use `currentColor` driven by a text-color class (theme-safe)
  */
 

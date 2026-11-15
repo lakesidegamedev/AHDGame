@@ -19,11 +19,10 @@ function party(
     color,
     economicPosition,
     socialPosition,
-    // Intentional empty-party disposition (#2072): these are historical
-    // ballot organizations, not fabricated player memberships. NPP affiliation
-    // is assigned later and live membership is recomputed from character/NPP
-    // records; an actorless seed has no members to count. Health reporting
-    // excludes empty-party warnings when there are no player characters.
+    // Zero members is intentional: these are historical ballot organizations,
+    // not fabricated player memberships. NPP affiliation is assigned later and
+    // live membership is recomputed from character/NPP records. Health reporting
+    // skips empty-party warnings when there are no player characters.
     memberCount: 0,
     isDefault: true,
     validForPresets: ["2019-default"],

@@ -7,17 +7,13 @@ import type { OrderOfBattleEntry } from "@/lib/seeds/reference/ordersOfBattle";
 /**
  * GR's institutions, as pure data.
  *
- * ⚠ GENERATED FROM `__snapshots__/gr.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * GENERATED from `__snapshots__/gr.pre-move.json`. Regenerate with
+ * `npx tsx scripts/countries/gen-country-institutions.ts GR --force`.
  *
- *     npx tsx scripts/countries/gen-country-institutions.ts GR --force
- *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair:
- * registries that want one seat id or the legislative process import from HERE,
- * while `institutions.ts` composes these with the cabinet and is heavy. A
- * registry that reads a single string through the heavy module ships the whole
- * cabinet to the browser, which is a regression this work has already shipped
- * once. `clientSafeLeafModules.test.ts` enforces it.
+ * KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair:
+ * `institutions.ts` composes these with the cabinet and is heavy. Importing a
+ * single string through the heavy module ships the whole cabinet to the
+ * browser. `clientSafeLeafModules.test.ts` enforces this.
  */
 
 export const GR_CONFIG: CountryConfig = {
@@ -109,7 +105,6 @@ export const GR_CONFIG: CountryConfig = {
     lockHomeState: false,
     nppsPerState: 1,
   },
-  demographicProfileId: "gr_archetypes",
   centralBank: {
     name: "Bank of Greece",
     abbreviation: "BoG",

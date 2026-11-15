@@ -1,0 +1,136 @@
+import type { DeLawText } from "./deLawTextTypes";
+
+export const DE_LAW_TEXT_SOCIETY: Record<string, DeLawText> = {
+  "society.integration.primary": [
+    "Equal Treatment and Integration Act",
+    "Equal standing for everyone living in the country, written into statute.",
+    3,
+    [
+      ["No Statutory Protection", "No law protects against discrimination."],
+      ["Public Places Rule", "Discrimination is barred in public services."],
+      ["Equality Agency", "An agency receives and resolves complaints."],
+      ["Broad Enforcement", "Equal treatment applies to work, housing and services."],
+      ["Full Equality Charter", "Comprehensive protections apply with active integration support."],
+    ],
+  ],
+  "society.womensOpportunity.primary": [
+    "Gender Equality and Family Services Act",
+    "The state's hand in women's working lives.",
+    3,
+    [
+      ["No Programmes", "No public programmes exist."],
+      ["Equality Offices", "Equality offices advise employers."],
+      ["Equal Pay Rules", "Equal pay is enforced."],
+      ["Childcare Network", "A right to childcare supports working parents."],
+      ["Full Opportunity System", "Quotas, childcare and pay rules combine."],
+    ],
+  ],
+  "society.socialMobility.primary": [
+    "Opportunity and Advancement Act",
+    "Ladders over class lines, built at public expense.",
+    2,
+    [
+      ["No Programmes", "No help exists."],
+      ["Scholarship Ladders", "Scholarships help bright pupils."],
+      ["Advancement Programmes", "Mentoring and grants support disadvantaged students."],
+      ["Mobility Guarantee", "Study grants cover living costs."],
+      ["Open Society Drive", "A coordinated drive opens every door."],
+    ],
+  ],
+  "society.demography.primary": [
+    "Population and Family Policy Act",
+    "The registers, and what the state does about what they show.",
+    2,
+    [
+      ["Count Only", "The state only counts."],
+      ["Registration Service", "A registry tracks births and deaths."],
+      ["Family Programmes", "Programmes support family formation."],
+      ["Population Policy", "A policy aims to stabilize numbers."],
+      ["Full Demographic Policy", "A comprehensive policy covers births, ageing and migration."],
+    ],
+  ],
+  "society.civicLife.primary": [
+    "Associations and Volunteering Act",
+    "The clubs, charities and volunteers the state quietly supports.",
+    3,
+    [
+      ["No Support", "Civic life is on its own."],
+      ["Charity Framework", "Charities have a legal status."],
+      ["Community Facilities", "Halls and venues receive funds."],
+      ["Civic Service", "A voluntary service year is supported."],
+      ["Civic Renaissance Drive", "A major drive supports associations."],
+    ],
+  ],
+  "society.familyStability.primary": [
+    "Child Benefit and Family Support Act",
+    "Child benefit, parental allowances and everything behind them.",
+    3,
+    [
+      ["No Allowances", "Families get no public support."],
+      ["Child Allowance", "A basic allowance per child."],
+      ["Family Allowances", "Allowances grow with family size."],
+      ["Family Support System", "Allowances, leave and tax relief work together."],
+      ["Full Family Charter", "A generous system supports every family."],
+    ],
+  ],
+  "society.tradition.primary": [
+    "Heritage and Churches Act",
+    "Church treaties, monuments and the keeping of old ways.",
+    2,
+    [
+      ["No Programmes", "No public heritage effort."],
+      ["National Observances", "Public holidays and ceremonies are protected."],
+      ["Heritage Programmes", "Monuments are maintained."],
+      ["National Tradition Drive", "Church and cultural bodies are funded."],
+      ["National Identity Charter", "Tradition is a core aim of public policy."],
+    ],
+  ],
+  "sec.citizenshipAndEqualStanding": [
+    "Citizenship and Equal Standing Act",
+    "Whether residents of every origin stand equal in law.",
+    3,
+    [
+      ["No Statutory Protections", "No law secures equal standing."],
+      ["Public Standing Rules", "Public bodies must treat all alike."],
+      ["Standing Commission", "A commission monitors."],
+      ["Broad Enforcement", "Enforcement reaches private actors."],
+      ["Full Standing Charter", "Equal standing is guaranteed everywhere."],
+    ],
+  ],
+  "sec.migrationAndResidence": [
+    "Migration and Residence Act",
+    "Who may come and stay, and what citizenship means.",
+    2,
+    [
+      ["Closed Door", "Entry is closed."],
+      ["Restricted Entry", "Few visas are granted."],
+      ["Skilled Migration", "Skilled workers may enter."],
+      ["Managed Expansion", "Legal pathways widen under quotas."],
+      ["Open Door Policy", "Entry is broadly open."],
+    ],
+  ],
+  "sec.parentalLeaveAndChildcare": [
+    "Parental Leave and Childcare Act",
+    "Paid leave, daycare and care for the youngest.",
+    3,
+    [
+      ["No Programmes", "No public support."],
+      ["Maternity Services", "Basic maternity leave exists."],
+      ["Parental Leave", "Paid leave is shared by both parents."],
+      ["Childcare Entitlement", "Every child has a place in daycare."],
+      ["Universal Family Support", "Generous leave and free care apply."],
+    ],
+  ],
+  "sec.payTransparency": [
+    "Pay Transparency Act",
+    "Reporting duties and enforcement behind equal pay.",
+    2,
+    [
+      ["No Implementation", "No duty to report."],
+      ["Public Sector Reporting", "Public bodies report pay gaps."],
+      ["Large Employer Reporting", "Large firms report."],
+      ["Enforcement Powers", "Individuals may claim."],
+      ["Full Employment Equality", "Gaps are corrected systematically."],
+    ],
+  ],
+};

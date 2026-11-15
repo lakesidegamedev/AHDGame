@@ -23,7 +23,7 @@ function mockDb(): Db {
     }
     if (name === "militaryUnits") {
       return {
-        find: () => ({ toArray: async () => unitDocs }),
+        find: () => ({ toArray: async () => structuredClone(unitDocs) }),
         bulkWrite: async (
           ops: {
             updateOne: { filter: { _id: string }; update: { $set: Record<string, unknown> } };
@@ -82,6 +82,23 @@ beforeEach(() => {
 });
 
 describe("processNavairTurn repair", () => {
+  it("persists a supply-only change for an undamaged player-stationed wing at home", async () => {
+    unitDocs.push(
+      hull({
+        countryId: "US",
+        domain: "air",
+        type: "Fighter Wing",
+        station: "noa",
+        stationSetByPlayer: true,
+        mission: "STANDDOWN",
+        integrity: 100,
+        supply: 10,
+      })
+    );
+    const result = await processNavairTurn(mockDb(), 100);
+    expect(unitDocs[0].supply).toBe(100);
+    expect(result.formationsUpdated).toBe(1);
+  });
   it("mends a damaged hull resting in its home port", async () => {
     unitDocs.push(hull({ integrity: 40, mission: "PORT", station: "weu" }));
 

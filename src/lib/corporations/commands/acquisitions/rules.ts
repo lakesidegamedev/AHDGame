@@ -1,16 +1,15 @@
 /**
- * Portable rules for player acquisition of AI-run (NPP) corporations (#217).
+ * Portable rules for player acquisition of AI-run (NPP) corporations.
  *
  * Pure data in, plain data out: no database, no clock, no randomness, no
- * environment. The shell (`acquisitionOffers.ts`) loads the documents, calls
- * these, and writes the results back.
+ * environment. The shell (`acquisitionOffers.ts`) loads the documents and
+ * writes results back.
  *
- * An NPP-run target has no human CEO who can press "Accept", so a qualifying
- * offer auto-resolves deterministically against the existing reference
- * valuation anchor: accept at or above a modest premium over fair value,
- * reject below it. The premium is the friction against cheap roll-ups of
- * small NPP corps; concentration and bank-charter concerns stay with the
- * existing merger-review gate and executor guards, which run unchanged.
+ * NPP targets have no CEO to accept, so qualifying offers auto-resolve
+ * deterministically: accept at or above a modest premium over fair value,
+ * reject below. The premium deters cheap roll-ups; concentration and
+ * bank-charter concerns are handled by the existing merger-review gate and
+ * executor guards.
  */
 
 export const NPP_ACQUISITION_PREMIUM_MULTIPLIER = 1.1;

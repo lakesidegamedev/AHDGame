@@ -1,15 +1,13 @@
 /**
- * Next turn's reference price from this turn's settled market (market recovery
- * plan, phases 4 and 6). A price answers to what actually happened, not to a
- * memory of past shortages:
+ * Next turn's reference price from this turn's settled market. A price answers
+ * to what happened, not to remembered shortages:
  *
  * - funded buyers went short at the price -> it rises;
  * - sellers were left holding stock -> it falls;
- * - otherwise it moves toward the volume-weighted price trades settled at.
+ * - otherwise it moves toward the volume-weighted settled price.
  *
- * The move is capped per turn (same 6% pace as the legacy glide) so a single
- * turn cannot whipsaw. Administered prices, inflation and policy apply after
- * this, outside the rule.
+ * The move is capped per turn (REFERENCE_MAX_MOVE) so it cannot whipsaw.
+ * Administered prices, inflation and policy apply after this, outside the rule.
  *
  * Pure: last reference and this turn's book totals in, next reference out.
  */

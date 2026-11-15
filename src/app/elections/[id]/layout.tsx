@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Election } from "@/lib/db/types";
 import { isSeatId } from "@/lib/elections/resolveElection";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface LayoutProps {
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   president: "Presidential Election",
+  special_president: "Special Presidential Election",
   senate: "Senate Election",
   house: "House Election",
   governor: "Governor Election",
@@ -39,23 +41,22 @@ export async function generateMetadata({
   // ObjectId. The old ObjectId-only guard bailed on those, so the pages that
   // players actually share shipped no title and no OG tags at all.
   const election = isSeatId(id)
-    ? await db
-        .collection<Election>("elections")
+    ? await electionsCollection(db)
         .find({ seatId: id }, { projection })
         .sort({ cycle: -1 })
         .limit(1)
         .next()
     : ObjectId.isValid(id)
-      ? await db
-          .collection<Election>("elections")
-          .findOne({ _id: new ObjectId(id) }, { projection })
+      ? await electionsCollection(db).findOne({ _id: new ObjectId(id) }, { projection })
       : null;
   if (!election) return {};
 
   const typeLabel = ELECTION_TYPE_LABELS[election.electionType] ?? "Election";
   const stateStr =
     election.state &&
-    !["president", "commons", "primeMinister", "uachtaran"].includes(election.electionType)
+    !["president", "special_president", "commons", "primeMinister", "uachtaran"].includes(
+      election.electionType
+    )
       ? ` — ${election.state}`
       : "";
   const title = `${typeLabel}${stateStr} | A House Divided`;

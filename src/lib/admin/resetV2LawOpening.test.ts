@@ -3,6 +3,11 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { RESET_V2_SEED_REVISION } from "@/lib/resetVersions/rules";
 
+// Seed data is checked by the seed contract suite; this suite covers orchestration.
+vi.mock("@/lib/seeds/contract/checkSeedContract", () => ({
+  assertSeedContract: vi.fn(),
+  checkSeedContract: vi.fn(() => []),
+}));
 vi.mock("@/lib/admin/resetGameWorld", () => ({ resetGameWorld: vi.fn() }));
 vi.mock("@/lib/admin/bootstrapGameWorld", () => ({ bootstrapGameWorld: vi.fn() }));
 vi.mock("@/lib/admin/finalizeResetGameWorld", () => ({ finalizeResetGameWorld: vi.fn() }));

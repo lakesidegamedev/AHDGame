@@ -1,21 +1,9 @@
 /**
- * Live KPI cells for a sector-type dossier.
- *
- * The design proposed three type-specific metrics per sector type (input
- * cover, foot traffic, loan book, audience reach, ...). Most of those describe
- * systems the game does not have, and a dossier that prints them as literals
- * is a static board wearing a live page's clothes. So every cell here resolves
- * from the sectors the corporation actually owns.
- *
- * Where the design's metric IS computable it keeps the design's label:
- * manufacturing still says "Line utilisation" and "Output mix", logistics
- * still says "Freight capacity", "Network coverage" and "Sprawl relief".
- * Where it is not, the slot is filled by the nearest live figure instead of a
- * dash, so the strip never carries a cell that means nothing.
- *
- * Money is deliberately NOT computed here. Revenue and profit are the first
- * two cells of the strip and they need the corp's currency formatter, so the
- * dossier builds them itself from the same sectors.
+ * Design's type-specific metrics mostly describe systems the game lacks, so
+ * each cell resolves from sectors the corp actually owns. Where a design metric
+ * is computable its label is kept; otherwise the nearest live figure fills the
+ * slot so no cell is a meaningless literal. Money KPIs are built by the dossier
+ * itself (needs the currency formatter), not here.
  */
 
 import type { OperatingSectorType } from "@/lib/constants/corporations";
@@ -120,13 +108,11 @@ export function typeMarketShare(sectors: SectorDetail[]): number | null {
  * The strategy a sector is actually running, resolved the way the ENGINE
  * resolves it.
  *
- * A stored `strategyId` can name a strategy this type no longer has (a rename,
- * a removed production method, a row that predates a rebalance). `getStrategy`
- * is the turn processor's own resolver and falls back to the type's first
- * strategy; going through it means this module, the strategy panel and the
- * engine cannot disagree about which recipe a sector is on. Rolling a private
- * fallback here is what let the panel silently drop such a sector while this
- * file still counted it.
+ * A stored `strategyId` can name a strategy this type no longer has.
+ * `getStrategy` is the turn processor's own resolver and falls back to the
+ * type's first strategy, so this module, the strategy panel and the engine
+ * cannot disagree. A private fallback here is what let the panel silently
+ * drop such a sector while this file still counted it.
  */
 export function resolveSectorStrategy(sector: SectorDetail) {
   const type = getOperatingSectorType(

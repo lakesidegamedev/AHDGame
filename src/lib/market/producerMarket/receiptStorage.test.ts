@@ -171,4 +171,35 @@ describe("chunked producer receipts", () => {
       "row exceeds"
     );
   });
+  it("hashes rows with no large array exactly as the plain JSON envelope", () => {
+    const small = {
+      a: [1, "two", { three: [3, null] }],
+      b: { c: undefined, d: new Date(0), e: new Map([[1, 2]]) },
+      f: Array.from({ length: 128 }, (_, i) => ({ i })),
+    };
+    const expected = createHash("sha256")
+      .update(
+        JSON.stringify({
+          $producerReceiptVersion: 2,
+          chunks: [],
+          value: JSON.parse(JSON.stringify({ ...small, b: { d: {}, e: {} } })),
+        })
+      )
+      .digest("hex");
+    expect(encodeReceipt(small).digest).toBe(expected);
+  });
+
+  it("keeps an own __proto__ key and still encodes arrays nested in changed objects", async () => {
+    const ids = Array.from({ length: 200 }, (_, i) => `s${i}`);
+    const withProto = JSON.parse('{"__proto__":{"x":1},"keep":2}') as Record<string, unknown>;
+    const original = { rows: [{ ids, tag: "a", nested: { ids } }], withProto };
+    const encoded = encodeReceipt(original);
+    expect(encoded.chunks).toHaveLength(1);
+    const memory = createInMemoryDb();
+    await stageReceiptChunks(memory as unknown as Db, encoded.chunks);
+    const restored = (await decodeReceipt(memory as unknown as Db, encoded)) as typeof original;
+    expect(restored.rows[0].ids).toEqual(ids);
+    expect(Object.keys(restored.withProto)).toEqual(["__proto__", "keep"]);
+    expect(Object.getPrototypeOf(restored.withProto)).toBe(Object.prototype);
+  });
 });

@@ -1,26 +1,22 @@
 /**
- * Market recovery stage 5 (kanban 254504): AI companies hand off-type plants to
- * a same-type AI company.
+ * AI companies hand off-type plants to a same-type AI company.
  *
- * Any sector whose type differs from its corporation's type carries the -15
- * type-mismatch margin penalty (specialization/rules.ts). At turn 273, 4,306 of
- * 7,978 producing plants carried it and 3,796 belonged to AI companies, which
- * built across industries. The owner kept the penalty; instead each standalone
- * AI company sells at most one off-type plant per turn, at book value plus
- * inventory, to an existing AI company of the plant's type in the same country
- * that can pay. Nothing is deleted: the plant row is re-parented whole
- * (capacity, crew, inventory, build queue, production history).
+ * A sector whose type differs from its corporation's type carries the -15
+ * type-mismatch margin penalty. Each standalone AI company sells at most one
+ * off-type plant per turn, at book value plus inventory, to an existing AI
+ * company of the plant's type in the same country that can pay. The plant row
+ * is re-parented whole (capacity, crew, inventory, build queue, production
+ * history); nothing is deleted.
  *
  * Deferred, not forced: plants with secured construction, defence contracts or
- * an active supply agreement on one of their outputs, extraction plants, and
+ * an active supply agreement on an output, extraction plants, and
  * cross-currency pairs wait. Player, caretaker, state and subsidiary companies
  * are never sellers or buyers.
  *
  * Crash safety: one keyed receipt per (turn, sector) in `offTypeHandovers`,
  * advanced pending -> debited -> moved -> done, one bulk write per leg. Buyer
- * debits and seller credits carry a per-turn marker on the corporation, so a
- * retried turn resumes from the recorded leg without repeating a money move.
- * Buyers share the seller's currency, so re-parenting needs no re-denomination.
+ * debits and seller credits carry a per-turn marker, so a retried turn resumes
+ * without repeating a money move.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
@@ -43,6 +39,14 @@ import {
   marketRecoveryStageActive,
   normalizeMarketRecoveryStage,
 } from "@/lib/market/marketRecoveryStages";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
+import { offTypeHandoversCollection } from "@/lib/db/repositories/offTypeHandovers";
 
 /** A standalone AI company: not player, caretaker, state-owned or a subsidiary. */
 export function isStandaloneAiCompany(corp: Corporation): boolean {
@@ -123,20 +127,19 @@ export async function runOffTypeHandover(
   const out = { moved: 0, deferred: 0 };
   if (!marketRecoveryStageActive(args.stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER))
     return out;
-  const corpsCol = db.collection<Corporation>("corporations");
-  const sectorsCol = db.collection<CorporateSector>("corporateSectors");
-  const receipts = db.collection<HandoverReceipt>("offTypeHandovers");
+  const corpsCol = corporationsCollection(db);
+  const sectorsCol = corporateSectorsCollection(db);
+  const receipts = offTypeHandoversCollection<HandoverReceipt>(db);
 
   const corps = (await corpsCol.find({ ceoType: "npp" }).toArray()).filter(isStandaloneAiCompany);
   if (corps.length === 0) return out;
   const corpById = new Map(corps.map((c) => [c._id.toString(), c]));
   const [sectors, contractSectorIds, activeAgreements, priorReceipts] = await Promise.all([
     sectorsCol.find({ corporationId: { $in: corps.map((c) => c._id) } }).toArray(),
-    db
-      .collection("defenceContracts")
-      .distinct("sectorId", { status: { $nin: ["cancelled", "completed", "expired"] } }),
-    db
-      .collection("supplyAgreements")
+    defenceContractsCollection<Document>(db).distinct("sectorId", {
+      status: { $nin: ["cancelled", "complete", "declined"] },
+    }),
+    supplyAgreementsCollection<Document>(db)
       .find(
         { status: { $in: ["active", "pending", "cancelling"] } },
         { projection: { supplierCorpId: 1, commodity: 1 } }
@@ -435,12 +438,14 @@ export async function runOffTypeHandover(
 /** Turn phase entry: reads the stage, clock and era scale, then runs. */
 export async function processOffTypeHandover(db: Db, turn: number) {
   const [config, gameState] = await Promise.all([
-    db
-      .collection("gameConfig")
-      .findOne({ _id: "default" as never }, { projection: { marketRecoveryStage: 1 } }),
-    db
-      .collection("gameState")
-      .findOne({ _id: "current" as never }, { projection: { currentYear: 1 } }),
+    gameConfigCollection<Document>(db).findOne(
+      { _id: "default" as never },
+      { projection: { marketRecoveryStage: 1 } }
+    ),
+    gameStateCollection<Document>(db).findOne(
+      { _id: "current" as never },
+      { projection: { currentYear: 1 } }
+    ),
   ]);
   const stage = normalizeMarketRecoveryStage(config?.marketRecoveryStage);
   if (!marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER)) {

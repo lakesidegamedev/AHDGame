@@ -6,6 +6,9 @@ import {
   approveJapanShugiinReform,
   isJapanShugiinReformEligible,
 } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 
 /**
  * Enacted electoral law: the franchise, and how easily voters reach the rolls.
@@ -107,12 +110,17 @@ export async function applyElectoralLawProvision(
   const cc = countryId.toUpperCase();
 
   if (provision.japanShugiinReform) {
-    if (countryId !== "JP" || !enactment || !Number.isSafeInteger(enactment.turn)) {
+    if (
+      !countryHasFeature("jpElections", countryId) ||
+      !enactment ||
+      !Number.isSafeInteger(enactment.turn)
+    ) {
       throw new Error("Japan Shugiin reform requires a passed bill in a Japan election year");
     }
-    const game = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1 } });
+    const game = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1 } }
+    );
     if (
       !isJapanShugiinReformEligible({
         preset: game?.preset,
@@ -122,7 +130,7 @@ export async function applyElectoralLawProvision(
     ) {
       throw new Error("Japan Shugiin reform is unavailable before its 1994 decision window");
     }
-    const countryStates = db.collection<CountryGameState>("countryGameStates");
+    const countryStates = countryGameStatesCollection(db);
     const existing = await countryStates.findOne(
       { _id: "JP" },
       { projection: { jpShugiinElectoralMandate: 1 } }
@@ -165,7 +173,7 @@ export async function applyElectoralLawProvision(
   }
 
   if (Object.keys(update).length > 0) {
-    await db.collection<GameState>("gameState").updateOne({ _id: "current" }, { $set: update });
+    await gameStateCollection(db).updateOne({ _id: "current" }, { $set: update });
   }
   // The mandate is persisted separately from election snapshots: only future
   // elections consult it, and the previous rules remain the default otherwise.

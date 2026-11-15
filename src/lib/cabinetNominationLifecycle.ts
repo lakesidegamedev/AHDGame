@@ -37,14 +37,19 @@ import type { OfficeType } from "@/lib/db/types/character";
 import type { CountryId } from "@/lib/constants/countries";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { cabinetOfficeTypeForCountry } from "@/lib/actions/officeActionBonus";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
+import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNominations";
 
 /**
  * NPP vote based on party lines: same party as nominee -> for; opposite -> against.
  * Independent/minor party nominee: slight support (55% for).
  *
- * Exported (not just cabinet-internal) so other Senate-confirmation lifecycles
- * built on the same machinery — e.g. SCOTUS justice confirmation, #3598 — reuse
- * this exact party-line behavior instead of re-implementing it.
+ * Exported so other Senate-confirmation lifecycles (e.g. SCOTUS justice
+ * confirmation) reuse this exact party-line behavior instead of re-implementing it.
  */
 export function nppCabinetVote(
   nppParty: string | undefined,
@@ -88,8 +93,7 @@ async function castNPPCabinetVotes(
 ): Promise<void> {
   const nppOfficials =
     preload?.nppOfficials ??
-    (await db
-      .collection<ElectedOfficial>("electedOfficials")
+    (await electedOfficialsCollection(db)
       .find({
         countryId: nomination.countryId ?? "US",
         officeType: { $in: ["senate", "house"] },
@@ -106,8 +110,7 @@ async function castNPPCabinetVotes(
       const nppIds = nppOfficials
         .map((o) => o.nppId)
         .filter((id): id is ObjectId => id instanceof ObjectId);
-      return db
-        .collection<NPP>("npps")
+      return nppsCollection(db)
         .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
         .toArray()
         .then((npps) => new Map(npps.map((n) => [n._id.toString(), n])));
@@ -117,7 +120,7 @@ async function castNPPCabinetVotes(
   const presidentParty =
     preload?.presidentParty ??
     (
-      await db.collection<ElectedOfficial>("electedOfficials").findOne({
+      await electedOfficialsCollection(db).findOne({
         countryId: nomination.countryId ?? "US",
         officeType: "president",
         characterId: { $ne: null },
@@ -178,7 +181,7 @@ async function castNPPCabinetVotes(
   }
 
   if (voteOps.length > 0) {
-    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(voteOps);
+    await cabinetNominationsCollection(db).bulkWrite(voteOps);
   }
 }
 
@@ -197,7 +200,7 @@ async function seatConfirmedVicePresident(
   if (!nom.nomineeCharacterId) return;
 
   // Clear the nominee's other seats so they don't hold two offices simultaneously.
-  await db.collection<ElectedOfficial>("electedOfficials").updateMany(
+  await electedOfficialsCollection(db).updateMany(
     { characterId: nom.nomineeCharacterId, officeType: { $nin: ["president", "vicePresident"] } },
     {
       $set: {
@@ -211,20 +214,18 @@ async function seatConfirmedVicePresident(
   );
 
   // Clear any existing VP holder's currentOffice.
-  const existingVp = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(getExecutiveOfficialFilter(countryId, "vicePresident"));
+  const existingVp = await electedOfficialsCollection(db).findOne(
+    getExecutiveOfficialFilter(countryId, "vicePresident")
+  );
   if (existingVp?.characterId) {
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: existingVp.characterId },
-        { $set: { currentOffice: null, updatedAt: now } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: existingVp.characterId },
+      { $set: { currentOffice: null, updatedAt: now } }
+    );
   }
 
   // Seat the nominee as VP in electedOfficials.
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await electedOfficialsCollection(db).updateOne(
     getExecutiveOfficialFilter(countryId, "vicePresident"),
     {
       $set: {
@@ -250,7 +251,7 @@ async function seatConfirmedVicePresident(
     partyCountryId: countryId,
     date: now,
   };
-  await db.collection<Character>("characters").updateOne(
+  await charactersCollection(db).updateOne(
     { _id: nom.nomineeCharacterId },
     {
       $set: { currentOffice: vpOffice, updatedAt: now },
@@ -305,12 +306,11 @@ export async function processCabinetNominationLifecycle(
   await expireUnansweredCabinetNominationChoices(db, now, currentTurn);
 
   // Pre-fetch US NPP officials and NPPs once. This preload is US-scoped and is
-  // ONLY reused for US nominations below; non-US nominations (e.g. NG) resolve
-  // their own country-scoped NPP officials/president inside castNPPCabinetVotes
-  // so foreign votes maps are not polluted with US NPP senators. See ticket #923.
+  // ONLY reused for US nominations below; non-US nominations resolve their own
+  // country-scoped NPP officials/president inside castNPPCabinetVotes so foreign
+  // votes maps are not polluted with US NPP senators.
   const [nppOfficials, president] = await Promise.all([
-    db
-      .collection<ElectedOfficial>("electedOfficials")
+    electedOfficialsCollection(db)
       .find({
         countryId: "US",
         officeType: { $in: ["senate", "house"] },
@@ -318,17 +318,18 @@ export async function processCabinetNominationLifecycle(
         nppId: { $exists: true },
       })
       .toArray(),
-    db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId: "US", officeType: "president", characterId: { $ne: null } }),
+    electedOfficialsCollection(db).findOne({
+      countryId: "US",
+      officeType: "president",
+      characterId: { $ne: null },
+    }),
   ]);
   const nppIds = nppOfficials
     .map((o) => o.nppId)
     .filter((id): id is ObjectId => id instanceof ObjectId);
   const npps =
     nppIds.length > 0
-      ? await db
-          .collection<NPP>("npps")
+      ? await nppsCollection(db)
           .find({ _id: { $in: nppIds } }, { projection: { party: 1 } })
           .toArray()
       : [];
@@ -341,8 +342,7 @@ export async function processCabinetNominationLifecycle(
 
   // ── A. NPP catch-up votes on active nominations ─────────────────────────────
   // Turn-number first, date fallback for legacy nominations.
-  const activeNominations = await db
-    .collection<CabinetNomination>("cabinetNominations")
+  const activeNominations = await cabinetNominationsCollection(db)
     .find({
       status: "active",
       $or: [
@@ -353,13 +353,12 @@ export async function processCabinetNominationLifecycle(
     .toArray();
 
   for (const nom of activeNominations) {
-    const preload = (nom.countryId ?? "US") === "US" ? cabinetPreload : undefined;
+    const preload = countryHasFeature("usLib", nom.countryId ?? "US") ? cabinetPreload : undefined;
     await castNPPCabinetVotes(db, nom, preload);
   }
 
   // ── B. Close expired votes ───────────────────────────────────────────────
-  const expired = await db
-    .collection<CabinetNomination>("cabinetNominations")
+  const expired = await cabinetNominationsCollection(db)
     .find({
       status: "active",
       $or: [
@@ -383,8 +382,7 @@ export async function processCabinetNominationLifecycle(
     }));
   const priorCabinetMembers =
     cabinetMemberFilters.length > 0 || cabinetNomineeFilters.length > 0
-      ? await db
-          .collection<CabinetMember>("cabinetMembers")
+      ? await cabinetMembersCollection(db)
           .find(
             {
               $or: [
@@ -452,18 +450,18 @@ export async function processCabinetNominationLifecycle(
       !!nom.nomineeCharacterId &&
       bankHolders.has(nom.nomineeCharacterId.toString());
     // Remember the ballot result: a winner blocked only by a bank office is
-    // offered the seat instead of being rejected outright (ticket #1713).
+    // offered the seat instead of being rejected outright.
     const votePassed = passed;
     if (blockedByBankOffice) passed = false;
 
     // Both branches notify the same two people, so read each once per
     // nomination and share the call site: a duplicated read here counts as a
     // new per-row Mongo operation in the turn-code architecture review.
-    const presidentChar = await db
-      .collection<Character>("characters")
-      .findOne({ _id: nom.proposedByPresidentId });
+    const presidentChar = await charactersCollection(db).findOne({
+      _id: nom.proposedByPresidentId,
+    });
     const nomineeChar = nom.nomineeCharacterId
-      ? await db.collection<Character>("characters").findOne({ _id: nom.nomineeCharacterId })
+      ? await charactersCollection(db).findOne({ _id: nom.nomineeCharacterId })
       : null;
     const posName = isVpNomination
       ? "Vice President"
@@ -528,8 +526,7 @@ export async function processCabinetNominationLifecycle(
           : undefined;
         const nominationNation = (nom.countryId ?? "US") as CountryId;
         const nominationOffice = cabinetOfficeTypeForCountry(nominationNation);
-        await db
-          .collection<CabinetMember>("cabinetMembers")
+        await cabinetMembersCollection(db)
           // Country-scoped: position ids are not unique across countries, so an
           // unscoped delete here could evict another country's seat holder.
           .deleteOne({ countryId: nom.countryId, positionId: nom.positionId });
@@ -542,9 +539,10 @@ export async function processCabinetNominationLifecycle(
         // nomination stays active forever, failing the whole phase. A
         // Senate-confirmed move vacates the old office.
         if (nom.nomineeCharacterId) {
-          await db
-            .collection<CabinetMember>("cabinetMembers")
-            .deleteMany({ countryId: nom.countryId, characterId: nom.nomineeCharacterId });
+          await cabinetMembersCollection(db).deleteMany({
+            countryId: nom.countryId,
+            characterId: nom.nomineeCharacterId,
+          });
         }
 
         const member: Omit<CabinetMember, "_id"> & {
@@ -571,9 +569,7 @@ export async function processCabinetNominationLifecycle(
           createdAt: now,
           updatedAt: now,
         };
-        await db
-          .collection<CabinetMember>("cabinetMembers")
-          .insertOne(member as unknown as CabinetMember);
+        await cabinetMembersCollection(db).insertOne(member as unknown as CabinetMember);
 
         // Clear the predecessor's setting cooldowns so the new secretary can change
         // settings immediately (cabinetSettings is keyed by position, not holder).
@@ -587,7 +583,7 @@ export async function processCabinetNominationLifecycle(
         // leftover from an earlier design that routed DE through
         // nominations; removing it keeps the parliamentary appointment
         // flow uniform across UK/JP/DE/CN.
-        if (nom.countryId === "US" && nom.nomineeCharacterId) {
+        if (countryHasFeature("usLib", nom.countryId) && nom.nomineeCharacterId) {
           const cabinetOffice: OfficeType = { type: "usCabinet", positionId: nom.positionId };
           const careerEvent: CareerEvent = {
             type: "appointed",
@@ -597,9 +593,10 @@ export async function processCabinetNominationLifecycle(
             partyCountryId: nom.countryId,
             date: now,
           };
-          await db
-            .collection<Character>("characters")
-            .updateOne({ _id: nom.nomineeCharacterId }, { $push: { careerHistory: careerEvent } });
+          await charactersCollection(db).updateOne(
+            { _id: nom.nomineeCharacterId },
+            { $push: { careerHistory: careerEvent } }
+          );
         }
         const outgoing = new Map(
           [oldSeatHolder, nomineeOldSeat]
@@ -646,7 +643,7 @@ export async function processCabinetNominationLifecycle(
         }
       }
 
-      await db.collection<CabinetNomination>("cabinetNominations").updateOne(
+      await cabinetNominationsCollection(db).updateOne(
         { _id: nom._id },
         {
           $set: {
@@ -694,11 +691,9 @@ export async function processCabinetNominationLifecycle(
         });
       }
     } else {
-      // Rejected — either at the ballot or because the nominee took an office
-      // that cannot be held with a cabinet seat while the vote was open. The
-      // reason is recorded and sent to the nominee as well as the president:
-      // a nominee who won the vote must not learn of the outcome from an empty
-      // seat and no notice (ticket #1713).
+      // Rejected at the ballot or because the nominee took an incompatible
+      // office while the vote was open. The reason is recorded and sent to the
+      // nominee as well as the president.
       const rejectionReason: CabinetNominationRejectionReason = blockedByBankOffice
         ? "incompatible_bank_office"
         : "senate_vote";
@@ -763,7 +758,7 @@ export async function processCabinetNominationLifecycle(
   }
 
   if (nominationUpdates.length > 0) {
-    await db.collection<CabinetNomination>("cabinetNominations").bulkWrite(nominationUpdates);
+    await cabinetNominationsCollection(db).bulkWrite(nominationUpdates);
   }
 
   await createNotifications(notificationInputs);

@@ -10,6 +10,10 @@ import { getCountryFlagUrl } from "@/lib/constants";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import type { Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +24,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { code } = await params;
   const id = code.toUpperCase() as CountryId;
-  if (id !== "IE") return { title: "Áras Not Found | A House Divided" };
+  if (!countryHasFeature("ieUi", id)) return { title: "Áras Not Found | A House Divided" };
   return {
     title: "Áras an Uachtaráin | A House Divided",
     description:
@@ -31,27 +35,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ArasPage({ params }: PageProps) {
   const { code } = await params;
   const id = code.toUpperCase() as CountryId;
-  if (id !== "IE") notFound();
+  if (!countryHasFeature("ieUi", id)) notFound();
 
   const db = await getDb();
 
   // Sitting Uachtarán
-  const uachtaranOfficial = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const uachtaranOfficial = await electedOfficialsCollection(db).findOne({
     countryId: "IE",
     officeType: "uachtaran",
   });
   let uachtaran: Character | null = null;
   let uachtaranParty: PoliticalParty | null = null;
   if (uachtaranOfficial?.characterId) {
-    uachtaran = await db
-      .collection<Character>("characters")
-      .findOne({ _id: uachtaranOfficial.characterId });
+    uachtaran = await charactersCollection(db).findOne({ _id: uachtaranOfficial.characterId });
     if (uachtaran?.party) {
       const seq = Number.parseInt(uachtaran.party, 10);
       if (!Number.isNaN(seq)) {
-        uachtaranParty = await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: "IE", sequentialId: seq });
+        uachtaranParty = await politicalPartiesCollection(db).findOne({
+          countryId: "IE",
+          sequentialId: seq,
+        });
       }
     }
   }
@@ -60,7 +63,7 @@ export default async function ArasPage({ params }: PageProps) {
   const govFormation = await getGovernmentFormationsCollection(db).findOne({ _id: "IE" });
   const taoiseachId = govFormation?.pmCharacterId ?? null;
   const taoiseach = taoiseachId
-    ? await db.collection<Character>("characters").findOne({ _id: taoiseachId })
+    ? await charactersCollection(db).findOne({ _id: taoiseachId })
     : null;
   // Tánaiste is seated through the cabinet (positionId "tanaiste"), so the
   // unified cabinetMembers collection is the source of truth — same as the
@@ -70,7 +73,7 @@ export default async function ArasPage({ params }: PageProps) {
     positionId: "tanaiste",
   });
   const tanaiste = tanaisteMember?.characterId
-    ? await db.collection<Character>("characters").findOne({ _id: tanaisteMember.characterId })
+    ? await charactersCollection(db).findOne({ _id: tanaisteMember.characterId })
     : null;
 
   const heroSrc = getCountryFlagUrl("IE");

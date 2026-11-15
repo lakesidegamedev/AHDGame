@@ -11,7 +11,11 @@ import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { isResetV2Country, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { resolveGameYear } from "@/lib/era/era";
-import { buildResetMetricSnapshot, type ResetMetricSnapshot } from "./rules/snapshot";
+import {
+  buildResetMetricSnapshot,
+  normalizeNationalMetricBoard,
+  type ResetMetricSnapshot,
+} from "./rules/snapshot";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { evaluateResetApprovalModifiers, resetApprovalBaseMetrics } from "./rules/approval";
 import { loadCabinetGameplayEffects } from "@/lib/resetCabinet/loadGameplayEffects";
@@ -19,6 +23,7 @@ import {
   cabinetApprovalResponse,
   cabinetEffectsForRegion,
 } from "@/lib/resetCabinet/rules/gameplay";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 /** Approval needs current observations, never their notes or retained history. */
 export const RESET_APPROVAL_BOARD_PROJECTION = {
@@ -43,7 +48,7 @@ export const RESET_APPROVAL_BOARD_PROJECTION = {
 /**
  * A board one failed refresh behind is still the latest owned reading. Approval
  * reads it rather than failing every approval consumer (corporations, votes,
- * share prices) until the refresh catches up; on 2026-10-31 a strict match
+ * share prices) until the refresh catches up; a strict match
  * turned one failed refresh into a turn with no economy. Matches the health
  * input lag the demographic phase accepts. Future boards still fail closed.
  */
@@ -63,17 +68,20 @@ export async function loadResetApprovalModifiers(
     resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).metrics !== "v2"
   )
     return null;
-  const boards =
+  // Prefetched boards can span every reset country; lag is judged per country.
+  const boards = (
     prefetchedBoards ??
-    (await db
-      .collection<ResetMetricSnapshot>("resetMetricSnapshots")
+    (await resetMetricSnapshotsCollection<ResetMetricSnapshot>(db)
       .find(
         { worldId: gameState!.resetWorldId, countryId },
         {
           projection: RESET_APPROVAL_BOARD_PROJECTION,
         }
       )
-      .toArray());
+      .toArray())
+  )
+    .filter((board) => board.countryId === countryId)
+    .map(normalizeNationalMetricBoard);
   const byId = new Map(boards.map((board) => [board._id, board]));
   const expectedTurn = turn ?? gameState!.currentTurn;
   // A whole country one failed refresh behind reads its last refresh. A mix of
@@ -124,7 +132,7 @@ export async function loadResetApprovalModifiers(
   const context = {
     countryId,
     preset: gameState?.preset,
-    year: gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null,
+    year: gameState ? resolveGameYear(gameState) : null,
   };
   const modifiersByRegion = new Map<string, ActiveModifier[]>();
   const cabinetEffects =

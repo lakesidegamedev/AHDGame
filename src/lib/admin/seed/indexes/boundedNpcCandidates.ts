@@ -5,6 +5,8 @@
  */
 import type { Db } from "mongodb";
 import type { IndexSpecTuple } from "./writeGuardSpecs";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import type { Document } from "mongodb";
 const legacyName = "unique_active_election_candidate_per_character";
 export const BOUNDED_NPC_CANDIDATE_GUARDS: IndexSpecTuple[] = [
   [
@@ -43,7 +45,7 @@ function canonical(value: unknown): string {
   return JSON.stringify(value) ?? "undefined";
 }
 export async function ensureBoundedNpcCandidateGuards(db: Db): Promise<void> {
-  const collection = db.collection("electionCandidates");
+  const collection = electionCandidatesCollection<Document>(db);
   // Do not use tolerant ensureIndex here: its same-key fallback does not
   // establish that a partial filter protects the intended population.
   for (const [, key, options] of BOUNDED_NPC_CANDIDATE_GUARDS) {

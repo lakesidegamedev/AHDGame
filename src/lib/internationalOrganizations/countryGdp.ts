@@ -10,17 +10,15 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { gdpToAnchor, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { aggregateNationalGdp } from "@/lib/utils/nationalGdp";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 /**
  * USD-normalized national GDP (millions) for the given countries. `state.gdp`
  * is stored in the unit the era's regional seed authored it in, so cross-country
- * comparison goes through `getGdpAnchorRate` — which is ERA-SCOPED.
- *
- * Reading the base config here (refs #3778) is what made the world-organizations
- * GDP table rank France at ~$3.9T in a 1953 world: frRegions1953 is authored in
- * old francs at 350 FRF/$, and the base config carries FR's 1979 rate of 0.238.
- * `preset` may be supplied by callers that already hold it; otherwise it is read
- * from the `gameState` singleton.
+ * comparison must go through `getGdpAnchorRate`, which is ERA-SCOPED: using a
+ * base-config rate misranks countries seeded under different currency regimes.
+ * `preset` may be supplied by callers that already hold it; otherwise it is
+ * read from the `gameState` singleton.
  */
 export async function loadUsdGdpByCountry(
   db: Db,
@@ -30,8 +28,9 @@ export async function loadUsdGdpByCountry(
   const result = new Map<CountryId, number>();
   if (countries.length === 0) return result;
   const activePreset = preset ?? (await loadWorldPreset(db));
-  const states = await db
-    .collection<{ countryId: CountryId; gdp?: number; population: number }>("states")
+  const states = await statesCollection<{ countryId: CountryId; gdp?: number; population: number }>(
+    db
+  )
     .find({ countryId: { $in: countries } })
     .project<{ countryId: CountryId; gdp?: number; population: number }>({
       countryId: 1,

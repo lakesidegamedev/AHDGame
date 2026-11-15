@@ -27,10 +27,8 @@ export interface ReferendumPartyPosition {
 /**
  * One document per active/historical independence/reunification referendum.
  * Scoped to a UK devolved region (SCO/WAL/NIR). Collection: "referendums".
- *
- * The lifecycle is driven by `processReferendumLifecycle` each turn; see
- * `docs/superpowers/specs/2026-06-16-independence-process-design.md` for the
- * state machine and rationale.
+ * Lifecycle is driven by `processReferendumLifecycle` each turn; see
+ * `docs/superpowers/specs/independence-process-design.md` for the state machine.
  */
 export interface Referendum {
   _id?: ObjectId;

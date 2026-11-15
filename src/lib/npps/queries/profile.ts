@@ -1,15 +1,18 @@
 import { ObjectId, type Db } from "mongodb";
 import type { NPP, PoliticalParty, State } from "@/lib/db/types";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 export async function getNppProfile(db: Db, nppId: ObjectId) {
-  const npp = await db.collection<NPP>("npps").findOne({ _id: nppId });
+  const npp = await nppsCollection(db).findOne({ _id: nppId });
   if (!npp) return null;
 
   const [state, party] = await Promise.all([
-    db.collection<State>("states").findOne({ _id: npp.homeState, countryId: npp.countryId }),
+    statesCollection(db).findOne({ _id: npp.homeState, countryId: npp.countryId }),
     Number.isFinite(Number(npp.party))
-      ? db.collection<PoliticalParty>("politicalParties").findOne({
+      ? politicalPartiesCollection(db).findOne({
           sequentialId: Number(npp.party),
           countryId: npp.countryId ?? "US",
         })

@@ -4,6 +4,7 @@ import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import { getVotingUpperChamberKey } from "@/lib/countries/rules/officeLayout";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import type { DueSoonContext, DueSoonItem } from "./types";
+import { billsCollection } from "@/lib/db/repositories/bills";
 
 /** Statuses where a seated member can still cast a floor vote. */
 const VOTING_STATUSES: Bill["status"][] = [
@@ -79,8 +80,7 @@ export async function nationalBillVotes(ctx: DueSoonContext): Promise<DueSoonIte
     const chamberOfficeTypes = (upperKey ? [lowerKey, upperKey] : [lowerKey]).map(officeTypeFor);
     if (!seatOfficeTypes.some((type) => chamberOfficeTypes.includes(type))) continue;
 
-    const bills = await ctx.db
-      .collection<Bill>("bills")
+    const bills = await billsCollection(ctx.db)
       .find(
         { countryId, status: { $in: VOTING_STATUSES } },
         {
@@ -135,8 +135,7 @@ export async function presidentialBillActions(ctx: DueSoonContext): Promise<DueS
     ),
   ];
   if (countries.length === 0) return [];
-  const bills = await ctx.db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(ctx.db)
     .find(
       // An enrolled bill held in the Lords is not on anyone's desk.
       { countryId: { $in: countries }, status: "enrolled", currentChamber: { $ne: "lords" } },

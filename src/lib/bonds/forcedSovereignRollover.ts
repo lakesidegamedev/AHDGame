@@ -6,13 +6,15 @@
  * Debt principal and Treasury cash are untouched by the exchange itself.
  */
 import { type Db } from "mongodb";
-import type { Bond, FederalBudget } from "@/lib/db/types";
+import type { Bond } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, type BondMaturityTurns } from "@/lib/db/types/bond";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { planForcedPoolRollover } from "./rules/forcedSovereignRollover";
 import { primaryDocumentId } from "./sovereignPrimarySettlement";
 import { frozenClaimPoolCashPerFace } from "./sovereignMaturityPayoutTargets";
 import { sovereignRolloverBondId, sovereignRolloverBondUpsert } from "./sovereignRolloverBond";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 
@@ -130,15 +132,16 @@ export async function rollOverUnfundedSovereignPoolFloat(
           // The source guard below is the one-shot receipt: a replay aborts
           // the transaction before these units are added twice.
           const shared = sovereignRolloverBondUpsert(sharedIdentity, units, now);
-          await db
-            .collection<Bond>("bonds")
-            .updateOne(shared.filter, shared.update, { upsert: true, session });
+          await bondsCollection(db).updateOne(shared.filter, shared.update, {
+            upsert: true,
+            session,
+          });
         } else {
-          await db
-            .collection<Bond>("bonds")
-            .insertOne({ _id: replacementId, ...replacement } as Bond, { session });
+          await bondsCollection(db).insertOne({ _id: replacementId, ...replacement } as Bond, {
+            session,
+          });
         }
-        const source = await db.collection<Bond>("bonds").updateOne(
+        const source = await bondsCollection(db).updateOne(
           {
             _id: bond._id,
             issuerType: "sovereign",
@@ -183,7 +186,7 @@ export async function rollOverUnfundedSovereignPoolFloat(
         );
         if (source.matchedCount !== 1)
           throw new Error("Sovereign bond changed before forced rollover commit");
-        const budget = await db.collection<FederalBudget>("federalBudget").updateOne(
+        const budget = await federalBudgetCollection(db).updateOne(
           { _id: budgetId, countryId },
           {
             $inc: {
@@ -201,9 +204,10 @@ export async function rollOverUnfundedSovereignPoolFloat(
       { client }
     );
   } catch (error) {
-    const latest = await db
-      .collection<Bond>("bonds")
-      .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+    const latest = await bondsCollection(db).findOne(
+      { _id: bond._id },
+      { projection: { sovereignMaturityClaim: 1 } }
+    );
     if (!latest?.sovereignMaturityClaim?.forcedRollover) throw error;
   }
   return true;
@@ -211,8 +215,9 @@ export async function rollOverUnfundedSovereignPoolFloat(
 
 /** Face (local currency) a forced rollover moved off this bond instead of paying it from Treasury cash. */
 export async function readForcedRolloverFaceLocal(db: Db, bond: Bond): Promise<number> {
-  const stored = await db
-    .collection<Bond>("bonds")
-    .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1 } });
+  const stored = await bondsCollection(db).findOne(
+    { _id: bond._id },
+    { projection: { sovereignMaturityClaim: 1 } }
+  );
   return stored?.sovereignMaturityClaim?.forcedRollover?.faceLocal ?? 0;
 }

@@ -26,6 +26,9 @@ import {
   type CommodityPriceRatioFn,
   type PlacementSignals,
 } from "@/lib/turn/npp/marketSignals";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export async function loadNppPlacementSignals(
   db: Db,
@@ -34,12 +37,11 @@ export async function loadNppPlacementSignals(
   statePriceRatioOf: NonNullable<PlacementSignals["statePriceRatioOf"]>
 ): Promise<PlacementSignals> {
   const [capacity, eraUnitScale, config, gameState] = await Promise.all([
-    db
-      .collection<StateResourceCapacity>("stateResourceCapacity")
+    stateResourceCapacityCollection(db)
       .find({}, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
     loadWorldEraUnitScale(db),
-    db.collection<GameConfig>("gameConfig").findOne(
+    gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -50,12 +52,10 @@ export async function loadNppPlacementSignals(
         },
       }
     ),
-    db
-      .collection<GameState>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
-      ),
+    gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentYear: 1, startingYear: 1, currentTurn: 1 } }
+    ),
   ]);
   const extractionOutputScaleEnabled = await getExtractionOutputScaleEnabled(config);
   const extractionSectors = sectors.filter((sector) => sector.sectorType === "extraction");

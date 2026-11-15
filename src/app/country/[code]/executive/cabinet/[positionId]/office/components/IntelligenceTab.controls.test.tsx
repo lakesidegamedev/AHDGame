@@ -42,6 +42,8 @@ const BASE = {
 
 let serviceView: typeof BASE;
 
+vi.mock("./CyberOperationsPanel", () => ({ CyberOperationsPanel: () => null }));
+
 vi.mock("@/lib/observability/fetchJson", () => ({
   fetchJson: vi.fn(async () => structuredClone(serviceView)),
 }));

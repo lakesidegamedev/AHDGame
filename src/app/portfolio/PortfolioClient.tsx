@@ -411,11 +411,8 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
-  // True net worth: stock holdings + bond holdings + all cash & savings − outstanding LOC debt.
-  // Previously this only summed stocks + bonds, which is why a player with £16M cash and £10M
-  // loans showed a "Net Worth" identical to their stock-only total.
-  // Net worth uses the same debt reading as the profile page, even if the
-  // separate loan-controls request is disabled or temporarily unavailable.
+  // True net worth: stocks + bonds + funds + cash − outstanding LOC debt. Uses
+  // the same debt reading as the profile page, even if loan controls are disabled.
   const loanObligation = portfolioLoanDebtValue;
   const combinedTotal = personalPortfolioNetWorth({
     stockValue: totalValue,

@@ -45,30 +45,18 @@ export interface CategoryWeights {
 
 /**
  * Durable per-(dimension, bucket) Layer-1 census-position deltas, keyed
- * `dim -> bucketKey -> delta`. Additive on top of the era/state static
- * position tables (`DEMOGRAPHIC_POSITIONS` / `STATE_POSITION_OVERRIDES` in
- * `src/lib/seeds/demographicCategories.ts`, or a `CountryLayer1Model`'s
- * `positions` for non-US worlds) BEFORE granular-cell derivation — see
- * `applyPositionOverlay` in `src/lib/demographics/granularElectorate.ts`.
+ * `dim -> bucketKey -> delta`, additive on top of the static position tables
+ * before granular-cell derivation (see `applyPositionOverlay`).
  *
- * This is the ONLY channel through which an era checkpoint
- * (`src/lib/demographics/eraCheckpoints.ts`) reaches the
- * granular vote path: that substrate derives cell leans
- * from the static position tables, not from `StateDemographicGroup`
- * leans, so an archetype-level shift on `groups[id]` (below) is invisible to
- * it.
+ * The ONLY channel through which an era checkpoint reaches the granular vote
+ * path: that substrate derives cell leans from static tables, not from
+ * archetype leans, so a `groups[id]` shift is invisible to it.
  *
- * On the `demographicDefaults` snapshot doc this is the DURABLE base: written
- * by the era-checkpoint turn and by `permanent: true` legislation, only ever
- * growing, never decayed, matching the checkpoint's "durable base-value shift,
- * not a capped deviation" design.
- *
- * On the LIVE `stateDemographics` doc the same shape carries the TEMPORARY
- * drift of a `{ dim, bucket }` legislation effect — banded around zero and
- * decaying back to it, exactly like the archetype drift on `groups[id]`, and
- * folded onto unit leans AFTER derivation rather than before it so the two
- * cannot double-count. See `addBucketDriftUpdates` in
- * `src/lib/demographicEffects.ts`.
+ * On `demographicDefaults` this is the DURABLE base (era-checkpoint turn and
+ * `permanent: true` legislation), only growing, never decayed. On the LIVE
+ * `stateDemographics` doc the same shape carries TEMPORARY drift of a
+ * `{ dim, bucket }` legislation effect, banded around zero and decaying back,
+ * folded onto unit leans AFTER derivation to avoid double-counting.
  */
 export type Layer1PositionOverlay = Record<
   string,
@@ -76,37 +64,18 @@ export type Layer1PositionOverlay = Record<
 >;
 
 /**
- * Durable per-(dimension, bucket) Layer-1 TURNOUT-RATE deltas, keyed
- * `dim -> bucketKey -> delta` (percentage points). The turnout counterpart of
- * {@link Layer1PositionOverlay} — same "durable overlay applied before cell
- * derivation" shape — but NOT a drop-in reuse of it: turnout is a single
- * bounded 0-100 percentage per bucket, not a signed two-axis
- * (economicLean/socialLean) lean, so each bucket carries one plain number
- * rather than an `{ economicLean, socialLean }` pair, and the accumulator is
- * clamped to its own signed percentage-point bound (see
- * `src/lib/demographics/durableRealignment.ts`), not the lean axis's ±5.
+ * Durable per-(dimension, bucket) Layer-1 turnout-rate deltas in percentage
+ * points, keyed `dim -> bucketKey -> delta`. Same shape as
+ * {@link Layer1PositionOverlay} but NOT interchangeable: turnout is one plain
+ * number per bucket, not a signed two-axis lean, and it is clamped to its own
+ * signed percentage-point bound.
  *
- * This is the ONLY channel through which a durable ("permanent") turnout
- * shift — legislation's `DemographicEffect.permanent && target: "turnout"`,
- * or an era checkpoint's `axis: "turnout"` target — reaches the
- * granular vote path: cell turnout is derived from
- * `DEMOGRAPHIC_TURNOUT_RATES` bucket baselines (see
- * `buildUsTurnoutRates`/`applyTurnoutRateOverlay` in
- * `src/lib/demographics/granularElectorate.ts`), not from
- * `StateDemographicGroup.turnout` — and for any state with a registered
- * Layer-1 census, the LEGACY engine's `resolveTurnout` similarly rebuilds
- * archetype turnout from those same Layer-1 baselines and ignores the stored
- * `groups[id].turnout` drift (see `src/lib/electionEngine/resolvedTurnout.ts`).
- * An archetype-level durable write to `groups[id].turnout` still happens
- * alongside this overlay (for non-Layer-1 worlds and admin/UI reads), but on
- * its own it is invisible to both vote engines for a Layer-1 US state — this
- * overlay is what actually moves the number both paths compute from.
+ * This is the ONLY channel through which a durable turnout shift reaches the
+ * vote path: both engines rebuild turnout from `DEMOGRAPHIC_TURNOUT_RATES`
+ * baselines rather than `StateDemographicGroup.turnout`, so an archetype-level
+ * write to `groups[id].turnout` is invisible to them for a Layer-1 US state.
  *
- * Only ever written by the durable-relocation channels above, on the
- * `demographicDefaults` collection's snapshot doc (never the live
- * `stateDemographics` doc — there is no live turnout-RATE-table substrate to
- * keep in sync, unlike lean's dual live+default write), and only ever grows —
- * nothing decays it.
+ * Written only on the `demographicDefaults` snapshot doc, and only grows.
  */
 export type Layer1TurnoutOverlay = Record<string, Record<string, number>>;
 
@@ -114,7 +83,6 @@ export interface StateDemographics {
   _id: string;
   countryId: CountryId;
   categoryWeights: CategoryWeights;
-  groups: Record<string, StateDemographicGroup>;
   cachedEconomicLean?: number;
   cachedSocialLean?: number;
   lastUpdated: Date;
@@ -144,4 +112,13 @@ export interface StateDemographics {
     slantSocial?: number;
     strength: number;
   };
+}
+
+/**
+ * Group-shaped view of a region's census units, built by the census substrate
+ * and the seed generators for the lean and weighting helpers. It is never
+ * stored: persisted `stateDemographics` documents carry no group rows.
+ */
+export interface CensusGroupView extends StateDemographics {
+  groups: Record<string, StateDemographicGroup>;
 }

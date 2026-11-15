@@ -62,20 +62,17 @@ describe.skipIf(!REAL_MONGO_ENABLED)("isolated group turn ownership and persiste
     } as unknown as Corporation;
     commands = [];
     replyBytes = 0;
-    expect(await loadGroupDirectionMembership(db, false, [directed])).toBeUndefined();
     expect(
-      await loadGroupDirectionMembership(db, true, [{ ...directed, groupDirection: undefined }])
+      await loadGroupDirectionMembership(db, [{ ...directed, groupDirection: undefined }])
     ).toBeUndefined();
     expect(commands).toEqual([]);
-    const groups = await loadGroupDirectionMembership(db, true, [directed]);
+    const groups = await loadGroupDirectionMembership(db, [directed]);
     expect(groups?.rootByCorpId.get(child.toString())).toBe(root.toString());
     expect(commands).toEqual(["find", "find", "find"]);
     const readBytes = replyBytes;
     commands = [];
     replyBytes = 0;
-    expect(await loadGroupDirectionMembership(db, true, Array(100).fill(directed), groups)).toBe(
-      groups
-    );
+    expect(await loadGroupDirectionMembership(db, Array(100).fill(directed), groups)).toBe(groups);
     expect(commands).toEqual([]);
     expect(replyBytes).toBe(0);
     process.stdout.write(
@@ -92,10 +89,10 @@ describe.skipIf(!REAL_MONGO_ENABLED)("isolated group turn ownership and persiste
     const market = buildMarketContext("plants");
     commands = [];
     replyBytes = 0;
-    expect(await configureGroupSupply(db, market, true, false)).toBeUndefined();
+    expect(await configureGroupSupply(db, market, false)).toBeUndefined();
     expect(commands).toEqual([]);
     expect(replyBytes).toBe(0);
-    const groups = await configureGroupSupply(db, market, true, true);
+    const groups = await configureGroupSupply(db, market, true);
     expect(groups?.membersByRootId.get(root.toString())).toHaveLength(2);
     expect(groups?.eligibleManagementRoots?.has(root.toString())).toBe(true);
     expect(commands).toEqual(["find", "find", "find"]);

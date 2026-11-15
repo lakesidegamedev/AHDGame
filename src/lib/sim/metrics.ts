@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import type { NPP } from "@/lib/db/types/npp";
-import type { Bond } from "@/lib/db/types/bond";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { IndexFundPosition, IndexFund } from "@/lib/db/types/indexFund";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
@@ -20,6 +19,28 @@ import {
 } from "@/lib/economy/marketAccessVisibility";
 import type { LivingConflictState } from "@/lib/livingConflict/types";
 import { collectEconomyTelemetry, type EconomyTelemetry } from "@/lib/sim/economyTelemetry";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
+import { gameHealthSnapshotsCollection } from "@/lib/db/repositories/gameHealthSnapshots";
+import { militaryUnitsCollection } from "@/lib/db/repositories/militaryUnits";
+import { livingConflictsCollection } from "@/lib/db/repositories/livingConflicts";
+import { economicVitalSignsCollection } from "@/lib/db/repositories/economicVitalSigns";
+import { battleReportsCollection } from "@/lib/db/repositories/battleReports";
 
 /**
  * Read-only balance-metric aggregations over a (sandbox) world DB, for the
@@ -466,8 +487,7 @@ export async function computeNppWealthAnchorMap(
   const nppIds = npps.map((n) => n._id);
 
   const bondHoldingsByNpp = new Map<string, number>();
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(
       { "holders.nppId": { $in: nppIds } },
       { projection: { holders: 1, currencyCode: 1, countryId: 1 } }
@@ -491,13 +511,11 @@ export async function computeNppWealthAnchorMap(
   }
 
   const indexHoldingsByNpp = new Map<string, number>();
-  const positions = await db
-    .collection<IndexFundPosition>("indexFundPositions")
+  const positions = await indexFundPositionsCollection(db)
     .find({ holderKind: "npp", nppId: { $in: nppIds } })
     .toArray();
   if (positions.length > 0) {
-    const funds = await db
-      .collection<IndexFund>("indexFunds")
+    const funds = await indexFundsCollection(db)
       .find(
         { _id: { $in: positions.map((p) => p.fundId) } },
         { projection: { quotedNav: 1, anchorCurrencyCode: 1 } }
@@ -567,8 +585,7 @@ export async function computeNppWarChestAnchorMap(
 }
 
 async function collectWealthMetrics(db: Db): Promise<WealthMetrics> {
-  const npps = await db
-    .collection<NPP>("npps")
+  const npps = await nppsCollection(db)
     .find(
       { retiredAt: null },
       {
@@ -618,15 +635,13 @@ async function collectWealthMetrics(db: Db): Promise<WealthMetrics> {
 }
 
 async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({}, { projection: { status: 1 } })
     .toArray();
   const totalElections = elections.length;
   const resolvedElections = elections.filter((e) => e.status === "resolved").length;
 
-  const candidateCounts = await db
-    .collection("electionCandidates")
+  const candidateCounts = await electionCandidatesCollection<Document>(db)
     .aggregate<{ _id: unknown; count: number }>([
       { $match: { status: "active" } },
       { $group: { _id: "$electionId", count: { $sum: 1 } } },
@@ -635,8 +650,7 @@ async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
   const contestedCount = candidateCounts.filter((c) => c.count > 1).length;
   const contestedPct = candidateCounts.length > 0 ? contestedCount / candidateCounts.length : 0;
 
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(FILLED_OFFICE_FILTER, { projection: { party: 1 } })
     .toArray();
   const byParty = new Map<string, number>();
@@ -657,8 +671,7 @@ async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
   const resolvedIds = elections.filter((e) => e.status === "resolved").map((e) => e._id);
   const margins: number[] = [];
   if (resolvedIds.length > 0) {
-    const tallies = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
+    const tallies = await electionVoteTalliesCollection(db)
       .find({ electionId: { $in: resolvedIds } }, { projection: { totalVotes: 1 } })
       .toArray();
     for (const t of tallies) {
@@ -680,8 +693,7 @@ async function collectElectoralMetrics(db: Db): Promise<ElectoralMetrics> {
 }
 
 async function collectOfficeTurnoverMetrics(db: Db): Promise<OfficeTurnoverMetrics> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find(FILLED_OFFICE_FILTER, { projection: { isNPP: 1, electedAt: 1 } })
     .toArray();
   const officeCount = officials.length;
@@ -703,8 +715,7 @@ async function collectOfficeTurnoverMetrics(db: Db): Promise<OfficeTurnoverMetri
 
 export async function collectCrisisMetrics(db: Db): Promise<CrisisMetrics> {
   const [crises, livingConflicts] = await Promise.all([
-    db
-      .collection<Crisis>("crises")
+    crisesCollection(db)
       .find(
         {},
         {
@@ -718,18 +729,20 @@ export async function collectCrisisMetrics(db: Db): Promise<CrisisMetrics> {
         }
       )
       .toArray(),
-    db.collection<LivingConflictState>("livingConflicts").find({}).toArray(),
+    livingConflictsCollection<LivingConflictState>(db).find({}).toArray(),
   ]);
   const livingCrisisIds = crises
     .filter((crisis) => crisis.livingConflictEventId || crisis.globalResponse?.conflictKey)
     .map((crisis) => crisis._id);
   const [pendingDecisions, resolvedDecisions] = await Promise.all([
-    db
-      .collection("crisisInteractions")
-      .countDocuments({ crisisId: { $in: livingCrisisIds }, resolvedAt: null }),
-    db
-      .collection("crisisInteractions")
-      .countDocuments({ crisisId: { $in: livingCrisisIds }, resolvedAt: { $ne: null } }),
+    crisisInteractionsCollection<Document>(db).countDocuments({
+      crisisId: { $in: livingCrisisIds },
+      resolvedAt: null,
+    }),
+    crisisInteractionsCollection<Document>(db).countDocuments({
+      crisisId: { $in: livingCrisisIds },
+      resolvedAt: { $ne: null },
+    }),
   ]);
   const totalSpawned = crises.length;
   const active = crises.filter((c) => c.status === "active").length;
@@ -799,12 +812,10 @@ export function summarizeEconomyMetrics(
 
 async function collectEconomyMetrics(db: Db): Promise<EconomyMetrics> {
   const [commodities, budgets] = await Promise.all([
-    db
-      .collection<EconomyCommodityRow>("commodityPrices")
+    commodityPricesCollection<EconomyCommodityRow>(db)
       .find({ basePrice: { $gt: 0 } }, { projection: { basePrice: 1, globalPrice: 1 } })
       .toArray(),
-    db
-      .collection<EconomyBudgetRow>("federalBudget")
+    federalBudgetCollection<EconomyBudgetRow>(db)
       .find(
         {},
         {
@@ -825,8 +836,7 @@ async function collectEconomyMetrics(db: Db): Promise<EconomyMetrics> {
  * cheap enough to run unconditionally alongside the other collectors.
  */
 async function collectCapacityMetrics(db: Db): Promise<CapacityMetrics> {
-  const sectors = await db
-    .collection("corporateSectors")
+  const sectors = await corporateSectorsCollection<Document>(db)
     .find(
       {},
       {
@@ -880,7 +890,7 @@ async function collectCapacityMetrics(db: Db): Promise<CapacityMetrics> {
 }
 
 export async function collectBalanceMetrics(db: Db): Promise<BalanceReport> {
-  const gameState = await db.collection("gameState").findOne({ _id: "current" as never });
+  const gameState = await gameStateCollection<Document>(db).findOne({ _id: "current" as never });
   const turn = (gameState?.currentTurn as number | undefined) ?? 0;
 
   const [
@@ -904,9 +914,7 @@ export async function collectBalanceMetrics(db: Db): Promise<BalanceReport> {
     collectCrisisMetrics(db),
     collectEconomyMetrics(db),
     collectCapacityMetrics(db),
-    db
-      .collection<EconomicVitalSigns>("economicVitalSigns")
-      .findOne({ turn }, { sort: { turn: -1 } }),
+    economicVitalSignsCollection(db).findOne({ turn }, { sort: { turn: -1 } }),
     collectBankingGateMetrics(db),
     collectFiscalMetrics(db),
     collectInflationMetrics(db),
@@ -934,7 +942,7 @@ export async function collectBalanceMetrics(db: Db): Promise<BalanceReport> {
 }
 
 async function collectFiscalMetrics(db: Db): Promise<FiscalCountryMetrics[]> {
-  const rows = await db.collection("federalBudget").find({}).toArray();
+  const rows = await federalBudgetCollection(db).find({}).toArray();
   return rows
     .map((row) => ({
       countryId: String(row.countryId ?? row._id),
@@ -953,7 +961,10 @@ async function collectFiscalMetrics(db: Db): Promise<FiscalCountryMetrics[]> {
 }
 
 async function collectInflationMetrics(db: Db): Promise<InflationCountryMetrics[]> {
-  const snapshot = await db.collection("gameHealthSnapshots").findOne({}, { sort: { turn: -1 } });
+  const snapshot = await gameHealthSnapshotsCollection<Document>(db).findOne(
+    {},
+    { sort: { turn: -1 } }
+  );
   const rows = (snapshot?.economy?.byCountry ?? {}) as Record<string, Record<string, unknown>>;
   return Object.entries(rows)
     .map(([countryId, row]) => ({
@@ -969,9 +980,8 @@ async function collectCorporateCashFlowMetrics(
   db: Db,
   turn: number
 ): Promise<CorporateCashFlowMetrics> {
-  const rows = await db.collection("corporationHistory").find({ turn }).toArray();
-  const corps = await db
-    .collection("corporations")
+  const rows = await corporationHistoryCollection<Document>(db).find({ turn }).toArray();
+  const corps = await corporationsCollection(db)
     .find({}, { projection: { countryOwnerId: 1, countryId: 1 } })
     .toArray();
   const countries = new Map(
@@ -1008,7 +1018,7 @@ async function collectCorporateCashFlowMetrics(
 }
 
 async function collectMilitaryMetrics(db: Db): Promise<MilitaryMetrics> {
-  const units = await db.collection("militaryUnits").find({}).toArray();
+  const units = await militaryUnitsCollection<Document>(db).find({}).toArray();
   const acc = new Map<string, { units: number; personnel: number; readiness: number }>();
   for (const unit of units) {
     const countryId = String(unit.countryId ?? "unknown");
@@ -1029,8 +1039,8 @@ async function collectMilitaryMetrics(db: Db): Promise<MilitaryMetrics> {
     ])
   );
   const [activeConflicts, battleReports] = await Promise.all([
-    db.collection("livingConflicts").countDocuments({ hasOpened: true }),
-    db.collection("battleReports").countDocuments({}),
+    livingConflictsCollection<Document>(db).countDocuments({ hasOpened: true }),
+    battleReportsCollection<Document>(db).countDocuments({}),
   ]);
   return {
     unitCount: units.length,

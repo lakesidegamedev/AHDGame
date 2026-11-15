@@ -1,22 +1,15 @@
 /**
- * Shared helper for the reduced FX spread (SECTOR_FX_SPREAD, 0.5%) charged on
- * cross-currency corp asset flows — sector expansion / growth / acquisition,
- * takeovers, HQ relocation. Centralizes the "are these two currencies different,
- * and if so what's the spread + routing" decision so every command applies it
- * identically. The caller folds `spreadAnchor` into its debit and routes the legs
- * via distributeConversionSpread(fee, from, to) after the cost is committed.
+ * Reduced FX spread (SECTOR_FX_SPREAD, 0.5%) charged on cross-currency corp asset flows.
+ * Centralizes the "different currencies?" decision plus spread and routing so every
+ * command applies it identically. The caller folds `spreadAnchor` into its debit and
+ * routes legs via distributeConversionSpread(fee, from, to) after cost is committed.
  *
- * Conservation invariant (verified for #2825 — no double-charge): this proxy is
- * the ONLY spread on these flows. Sector economics are normalized to the corp's
- * own currency in the data model — no foreign currency is actually held — so the
- * base cost is moved with pure-rate conversions (anchorToCorpLiquidCapital, no
- * embedded spread) and no real market-maker conversion runs on the same money.
- * The payer is debited base+spread exactly once, the counterparty receives the
- * plain base, and the spread legs route to central banks via
- * distributeConversionSpread — debits equal credits. If foreign sector
- * treasuries are ever re-denominated in their local currency (real conversions,
- * which carry their own spread), this helper must be retired in the same change
- * or the flow WOULD be double-charged.
+ * This proxy is the ONLY spread on these flows. Sector economics are normalized to the
+ * corp's own currency, so base cost uses pure-rate conversions (no embedded spread).
+ * Payer is debited base+spread once, counterparty receives plain base, spread legs route
+ * to central banks. If foreign sector treasuries are ever re-denominated in local
+ * currency (real conversions with their own spread), retire this helper in the same
+ * change or flows will be double-charged.
  */
 import {
   COUNTRY_CURRENCY_MAP,

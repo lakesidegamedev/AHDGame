@@ -1,14 +1,14 @@
 /**
- * UK government confidence gauge (epic #856, ticket #858 — Cluster B).
+ * UK government confidence gauge.
  *
- * A running government-stability value in [0, 100]. Dissolution / a general
- * election is triggered only when it BOTTOMS OUT (reaches 0), not on any single
- * lost vote — see ops-knowledge `uk-rework-design-2026-08-25`.
+ * A running government-stability value in [0, 100]. Dissolution or a general
+ * election is triggered only when it BOTTOMS OUT (reaches 0), not on any
+ * single lost vote.
  *
- * This module is pure gauge arithmetic, decoupled from the existing
- * no-confidence command flow; integration (persisting the value, firing
- * dissolution) is wired separately. All magnitudes are first-pass and are the
- * primary thing to calibrate in worldsim before the gauge drives live outcomes.
+ * This module is pure gauge arithmetic, decoupled from the no-confidence
+ * command flow; persisting the value and firing dissolution are wired
+ * separately. All magnitudes are first-pass and are the primary thing to
+ * calibrate in worldsim before the gauge drives live outcomes.
  */
 
 export const CONFIDENCE_MIN = 0;

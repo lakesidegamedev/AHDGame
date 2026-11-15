@@ -19,6 +19,7 @@
  */
 import type { Db, Document } from "mongodb";
 import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Turns of money-journal history kept live, matching `financialTxLog`. */
 export const MONEY_JOURNAL_RETENTION_TURNS = TX_TTL_TURNS;
@@ -118,9 +119,10 @@ export async function pruneMoneyJournals(
   db: Db,
   opts: MoneyJournalPruneOptions = {}
 ): Promise<MoneyJournalPruneResult> {
-  const state = await db
-    .collection<GameStateLock>("gameState")
-    .findOne({ _id: "current" }, { projection: { currentTurn: 1, isProcessing: 1 } });
+  const state = await gameStateCollection<GameStateLock>(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isProcessing: 1 } }
+  );
   const currentTurn = state?.currentTurn;
   if (typeof currentTurn !== "number" || !Number.isFinite(currentTurn)) {
     return { skipped: "no-game-state", cutoff: 0, ledgerEntries: 0, bankMoneyMoves: 0 };

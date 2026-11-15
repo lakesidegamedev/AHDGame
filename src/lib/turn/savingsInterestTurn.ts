@@ -7,7 +7,7 @@ import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import type { Db } from "mongodb";
-import type { Character, CentralBank, SavingsLedgerEntry } from "@/lib/db/types";
+import type { Character, SavingsLedgerEntry } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadTxThresholds, emitTxBulk } from "@/lib/financialTxLog/emit";
 import type { CountryId } from "@/lib/constants/countries";
@@ -27,6 +27,12 @@ import { getNppAutonomyLevel, nppAutonomyLevelAtLeast } from "@/lib/nppAutonomy/
 import { processNppSavingsInterest } from "@/lib/turn/nppSavingsInterest";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { ensureCentralBankPricingPhaseIn } from "@/lib/monetaryPolicy/centralBankPricing";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import type { Document } from "mongodb";
+import { savingsLedgerCollection } from "@/lib/db/repositories/savingsLedger";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -37,7 +43,9 @@ const DEFAULT_PRIME = 2.5;
  */
 async function bookCentralBankInterestCreation(
   db: Db,
-  interestByCountry: Map<CountryId, number>
+  interestByCountry: Map<CountryId, number>,
+  turn: number,
+  rerunSafe: boolean
 ): Promise<void> {
   const rows = [...interestByCountry.entries()].filter(([, amount]) => amount > 0);
   if (rows.length === 0) return;
@@ -50,15 +58,20 @@ async function bookCentralBankInterestCreation(
     byBankId.set(bankId, (byBankId.get(bankId) ?? 0) + amount);
   }
 
-  await db.collection<CentralBank>("centralBanks").bulkWrite(
+  await centralBanksCollection(db).bulkWrite(
     [...byBankId.entries()].map(([bankId, amount]) => ({
       updateOne: {
-        filter: { _id: bankId },
+        // Booked once per bank and turn: the stamp rides the same update.
+        filter: {
+          _id: bankId,
+          ...(rerunSafe ? { savingsInterestBookedTurn: { $ne: turn } } : {}),
+        },
         update: {
           $inc: {
             netMoneyCreatedLifetime: Math.round(amount * 100) / 100,
             savingsInterestPaidLifetime: Math.round(amount * 100) / 100,
           },
+          ...(rerunSafe ? { $set: { savingsInterestBookedTurn: turn } } : {}),
         },
       },
     }))
@@ -79,7 +92,9 @@ async function bookCentralBankInterestCreation(
  */
 export async function processSavingsInterestTurn(
   db: Db,
-  turn: number
+  turn: number,
+  /** Turn resilience stage 2 and above: accrual is stamped per turn so a rerun cannot double it. */
+  rerunSafe = false
 ): Promise<{ charactersProcessed: number; totalInterest: number }> {
   const centralBankPricing = await ensureCentralBankPricingPhaseIn(db, turn);
   const forexEnabled = await isForexEnabled();
@@ -89,8 +104,7 @@ export async function processSavingsInterestTurn(
   const bankingPolicy = await loadBankingPolicy(db);
   const accountsAuthoritative = bankingPolicy.savingsAccounts === "authoritative";
 
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project({ _id: 1, primeRate: 1, nationalSavingsBalance: 1, inflationHistory: 1 })
     .toArray();
@@ -140,8 +154,9 @@ export async function processSavingsInterestTurn(
         [`currencyBalances.savings.${c}`]: { $gt: 0 },
       })),
     };
-    const accrualCharacters = await db
-      .collection<Character>("characters")
+    const accrualCharacters = await (
+      await getCharactersCollection(db)
+    )
       .find(accrualFilter)
       .project({ _id: 1, currencyBalances: 1 })
       .toArray();
@@ -189,10 +204,15 @@ export async function processSavingsInterestTurn(
         if (accountsAuthoritative) {
           accountAccrualOps.push({
             updateOne: {
-              filter: { ownerType: "character", ownerId: char._id, currency },
+              filter: {
+                ownerType: "character",
+                ownerId: char._id,
+                currency,
+                ...(rerunSafe ? { accrualTurn: { $ne: turn } } : {}),
+              },
               update: {
                 $inc: { accruedInterest: interest, version: 1 },
-                $set: { updatedAt: new Date() },
+                $set: { updatedAt: new Date(), ...(rerunSafe ? { accrualTurn: turn } : {}) },
               },
             },
           });
@@ -204,16 +224,24 @@ export async function processSavingsInterestTurn(
         perCharFilter[`currencyBalances.savingsHolder.${currency}`] = holder ?? null;
       }
       if (Object.keys(perCharInc).length > 0) {
+        // The stamp lands in the same update as the accrual, so running this
+        // turn's accrual again after a process death skips what already applied.
+        if (rerunSafe) perCharFilter.savingsAccrualTurn = { $ne: turn };
         accrualOps.push({
-          updateOne: { filter: perCharFilter, update: { $inc: perCharInc } },
+          updateOne: {
+            filter: perCharFilter,
+            update: rerunSafe
+              ? { $inc: perCharInc, $set: { savingsAccrualTurn: turn } }
+              : { $inc: perCharInc },
+          },
         });
       }
     }
     if (accrualOps.length > 0) {
-      await db.collection("characters").bulkWrite(accrualOps);
+      await charactersCollection(db).bulkWrite(accrualOps);
     }
     if (accountAccrualOps.length > 0) {
-      await db.collection("savingsAccounts").bulkWrite(accountAccrualOps);
+      await savingsAccountsCollection<Document>(db).bulkWrite(accountAccrualOps);
     }
 
     // Write national savings balances to centralBanks for inflationRecalc to read.
@@ -233,7 +261,7 @@ export async function processSavingsInterestTurn(
       },
     }));
     if (nationalSavingsOps.length > 0) {
-      await db.collection<CentralBank>("centralBanks").bulkWrite(nationalSavingsOps);
+      await centralBanksCollection(db).bulkWrite(nationalSavingsOps);
     }
 
     // Phase 2 (quarterly): flush pending → savings balance, log ledger transaction
@@ -244,8 +272,9 @@ export async function processSavingsInterestTurn(
           [`currencyBalances.pendingSavingsInterest.${c}`]: { $gt: 0 },
         })),
       };
-      const creditCharacters = await db
-        .collection<Character>("characters")
+      const creditCharacters = await (
+        await getCharactersCollection(db)
+      )
         .find(creditFilter)
         .project({ _id: 1, currencyBalances: 1 })
         .toArray();
@@ -347,16 +376,17 @@ export async function processSavingsInterestTurn(
         // Booked AFTER the credit lands: crediting first and failing here
         // understates money created, which is recoverable from the ledger;
         // booking first and failing there overstates it, which is not.
-        await bookCentralBankInterestCreation(db, interestPaidByCountry);
+        await bookCentralBankInterestCreation(db, interestPaidByCountry, turn, rerunSafe);
       }
       if (ledgerBatch.length > 0) {
-        await db.collection("savingsLedger").insertMany(ledgerBatch);
+        await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
 
         // Emit savings_interest tx log entries for each quarterly credit
         const thresholds = await loadTxThresholds(db);
         const charIds = [...new Set(ledgerBatch.map((e) => e.characterId))];
-        const nameDocs = await db
-          .collection<Character>("characters")
+        const nameDocs = await (
+          await getCharactersCollection(db)
+        )
           .find({ _id: { $in: charIds } })
           .project({ _id: 1, name: 1 })
           .toArray();
@@ -380,11 +410,9 @@ export async function processSavingsInterestTurn(
       }
     }
 
-    // v3 full-agency: accrue/compound interest on autonomous NPP savings in an
-    // isolated pass (same forex two-phase model, writing to `npps`). Gated so
-    // the player path is unaffected below v3.
-    // v3 AND ABOVE — a strict `=== "v3"` here used to switch NPP savings
-    // interest back off the moment the level was raised to v4.
+    // v3+: accrue/compound interest on autonomous NPP savings in an isolated
+    // pass (same two-phase forex model, writing to `npps`). Must be a minimum
+    // version gate, not `=== "v3"`, or raising the autonomy level disables it.
     if (nppAutonomyLevelAtLeast(await getNppAutonomyLevel(db), "v3")) {
       await processNppSavingsInterest(
         db,
@@ -392,7 +420,8 @@ export async function processSavingsInterestTurn(
         resolvePrime,
         resolveInflation,
         resolvePoolTotal,
-        centralBankPricing.depositBonusPercentPoints
+        centralBankPricing.depositBonusPercentPoints,
+        rerunSafe
       );
     }
 
@@ -403,8 +432,9 @@ export async function processSavingsInterestTurn(
   // Legacy path (non-forex): per-turn credit, unchanged
   // ─────────────────────────────────────────
   const legacyFilter = { $or: [{ savingsOnHand: { $gt: 0 } }] };
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await (
+    await getCharactersCollection(db)
+  )
     .find(legacyFilter)
     .project({ _id: 1, name: 1, countryId: 1, savingsOnHand: 1, currencyBalances: 1 })
     .toArray();
@@ -474,9 +504,9 @@ export async function processSavingsInterestTurn(
   );
   for (const [index, credit] of legacySettled.entries())
     ledgerBatch[index].balanceAfter -= credit.gross - credit.net;
-  await bookCentralBankInterestCreation(db, legacyInterestByCountry);
+  await bookCentralBankInterestCreation(db, legacyInterestByCountry, turn, rerunSafe);
   if (ledgerBatch.length > 0) {
-    await db.collection("savingsLedger").insertMany(ledgerBatch);
+    await savingsLedgerCollection<Document>(db).insertMany(ledgerBatch);
 
     // Emit savings_interest tx log entries (legacy path — per-turn credit)
     const thresholds = await loadTxThresholds(db);
@@ -499,7 +529,7 @@ export async function processSavingsInterestTurn(
     );
   }
   if (legacyNationalBalance.size > 0) {
-    await db.collection<CentralBank>("centralBanks").bulkWrite(
+    await centralBanksCollection(db).bulkWrite(
       [...legacyNationalBalance.entries()].map(([cid, balance]) => ({
         updateOne: {
           filter: { _id: getBankId(cid) },

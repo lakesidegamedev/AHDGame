@@ -3,6 +3,7 @@ import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 
 import { MARKET_MODE_ORDER, type MarketSystemMode } from "@/lib/market/modes";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Structural market rework rollout mode ("Nothing Wants to Sell", audit t806).
@@ -40,9 +41,10 @@ export async function getMarketSystemMode(
     mode = preloadedConfig?.marketSystemMode;
   } else {
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { marketSystemMode: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { marketSystemMode: 1 } }
+    );
     mode = config?.marketSystemMode;
   }
   return isMarketSystemMode(mode) ? mode : "off";
@@ -59,9 +61,10 @@ export async function getMarketSystemMode(
  * collection resolves to legacy behaviour rather than throwing.
  */
 export async function getMarketSystemModeForDb(db: Db): Promise<MarketSystemMode> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { marketSystemMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { marketSystemMode: 1 } }
+  );
   return isMarketSystemMode(config?.marketSystemMode) ? config.marketSystemMode : "off";
 }
 
@@ -76,9 +79,10 @@ export async function getExtractionOutputScaleEnabled(
 ): Promise<boolean> {
   if (preloadedConfig !== undefined) return preloadedConfig?.extractionOutputScaleEnabled === true;
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { extractionOutputScaleEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { extractionOutputScaleEnabled: 1 } }
+  );
   return config?.extractionOutputScaleEnabled === true;
 }
 
@@ -92,9 +96,10 @@ export async function getDemographicsDemandEnabled(
 ): Promise<boolean> {
   if (preloadedConfig !== undefined) return preloadedConfig?.demographicsDemandEnabled === true;
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { demographicsDemandEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { demographicsDemandEnabled: 1 } }
+  );
   return config?.demographicsDemandEnabled === true;
 }
 
@@ -111,8 +116,9 @@ export async function getHouseholdConsumptionEnabled(
 ): Promise<boolean> {
   if (preloadedConfig !== undefined) return preloadedConfig?.householdConsumptionEnabled === true;
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { householdConsumptionEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { householdConsumptionEnabled: 1 } }
+  );
   return config?.householdConsumptionEnabled === true;
 }

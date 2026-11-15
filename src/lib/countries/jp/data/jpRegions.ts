@@ -1,18 +1,16 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * Japan regions as State-compatible documents.
+ * Japan regions as State-compatible documents: 8 game regions as the playable
+ * tier, with prefecture population stocks persisting beneath each.
  *
- * Japan uses 8 game regions (each containing multiple prefectures) as the
- * playable tier. Prefecture population stocks persist beneath their parent region.
- *
- * Population figures approximate 2020 census data.
+ * Population approximates 2020 census data.
  * GDP in millions of JPY (approximate 2020 prefectural GDP sums).
  * `houseDistricts` = Shugiin (House of Representatives) seats per region.
- * `stateSenateSeats` = Prefectural assembly (Regional Council) seats per region.
- *   Matches the US/UK pattern: sub-national legislature seats, not national upper chamber.
- *   Sangiin seat counts live in `JP_SANGIIN_SEATS` constant (src/lib/constants/states.ts).
- *   Each region participates in both Sangiin classes — half seats contested per class.
+ * `stateSenateSeats` = Prefectural assembly (Regional Council) seats per region,
+ *   matching the US/UK pattern of sub-national legislature seats, not the
+ *   national upper chamber. Sangiin counts live in `JP_SANGIIN_SEATS`
+ *   (src/lib/constants/states.ts); each region joins both Sangiin classes.
  *
  * Seat totals: Shugiin = 465, Sangiin = 248, Regional Council = 2,679.
  */

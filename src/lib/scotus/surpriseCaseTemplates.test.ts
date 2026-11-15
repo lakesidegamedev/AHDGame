@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SURPRISE_CASE_TEMPLATES, templatesForYear } from "./surpriseCaseTemplates";
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
+import { getProjectedPoliticalLegislationTypes } from "@/lib/admin/seed/seedPoliticalLegislation";
 
 describe("SURPRISE_CASE_TEMPLATES", () => {
   // #3607 scoped this to a small pool. Era windows changed what "small" has to
@@ -9,7 +10,7 @@ describe("SURPRISE_CASE_TEMPLATES", () => {
   // matters is per-era depth, asserted in the era block below.
   it("stays a small authored pool, per #3607 scope", () => {
     expect(SURPRISE_CASE_TEMPLATES.length).toBeGreaterThanOrEqual(5);
-    expect(SURPRISE_CASE_TEMPLATES.length).toBeLessThanOrEqual(16);
+    expect(SURPRISE_CASE_TEMPLATES.length).toBeLessThanOrEqual(40);
   });
 
   it("has unique, non-empty templateKeys and titles", () => {
@@ -30,7 +31,9 @@ describe("SURPRISE_CASE_TEMPLATES", () => {
   });
 
   it("every effect references a real, currently-seeded legislationTypeId and policyOptionId", () => {
-    const typesById = new Map(legislationTypes.map((lt) => [lt._id, lt]));
+    const typesById = new Map(
+      [...legislationTypes, ...getProjectedPoliticalLegislationTypes()].map((lt) => [lt._id, lt])
+    );
     for (const t of SURPRISE_CASE_TEMPLATES) {
       for (const effect of [t.positiveEffect, t.negativeEffect]) {
         const lt = typesById.get(effect.legislationTypeId);
@@ -53,7 +56,7 @@ describe("SURPRISE_CASE_TEMPLATES", () => {
 });
 
 describe("era windows", () => {
-  const ERAS = [1953, 1960, 1979, 1991, 2019, 2026];
+  const ERAS = [1953, 1960, 1979, 1991, 2019, 2026, 2027, 2035, 2050];
 
   it("keeps a usable pool in every era, on both axes", () => {
     for (const year of ERAS) {
@@ -82,6 +85,16 @@ describe("era windows", () => {
     expect(y2019).not.toContain("confederated-cannery-workers-v-bureau-of-the-budget");
     expect(y2019).not.toContain("phantom-fizz-bottling-v-interstate-commerce-guild");
     expect(y2019).toContain("sunbelt-solar-cartel-v-federal-power-commission");
+  });
+
+  it("gives the modern court a deep, two-axis pool from 2027", () => {
+    const pool = templatesForYear(SURPRISE_CASE_TEMPLATES, 2027);
+    expect(pool.length).toBeGreaterThanOrEqual(16);
+    expect(pool.filter((t) => t.axis === "economic").length).toBeGreaterThanOrEqual(6);
+    expect(pool.filter((t) => t.axis === "social").length).toBeGreaterThanOrEqual(6);
+    expect(templatesForYear(SURPRISE_CASE_TEMPLATES, 2019).map((t) => t.templateKey)).not.toContain(
+      "harborlight-analytics-v-federal-algorithm-review-board"
+    );
   });
 
   it("keeps the whole pool when the era clock is off", () => {

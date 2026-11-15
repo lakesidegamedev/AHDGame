@@ -3,6 +3,7 @@
  * Background governments remain seeded. Cleanup removes player-country politicians, retaining
  * economic owners and the historical institutions: see clearStartingPolitics.
  */
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { ObjectId, type Db, type Filter, type Document } from "mongodb";
 import type { Bond, CentralBank, Corporation, GameState, NPP } from "@/lib/db/types";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
@@ -11,19 +12,31 @@ import { invalidateCachedCountryState } from "@/lib/countryState/cache";
 import { getCountryStateCollection } from "@/lib/db/collections/countryState";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import type { StateRegistrationPool } from "@/lib/db/types/stateRegistrationPool";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { governorOfficeStateCollection } from "@/lib/db/repositories/governorOfficeState";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
-export type StartingPartiesMode = "default" | "none";
+export type StartingPartiesMode = "default" | "none" | "no-npps";
 
-/** No preset alias: the historical economy, institutions and clock stay in 1991. */
+/** No preset alias: the economy, institutions and clock stay those of the preset. */
 export function resolveStartingPartiesMode(
   preset: string,
   mode: StartingPartiesMode = "default"
 ): StartingPartiesMode {
-  if (mode !== "default" && mode !== "none") throw new Error("Invalid starting parties mode");
+  if (mode !== "default" && mode !== "none" && mode !== "no-npps")
+    throw new Error("Invalid starting parties mode");
   if (preset === "2019-no-parties") return "none";
-  if (mode === "none" && preset !== "1991-default") {
-    throw new Error("No starting parties is supported only for 1991-default");
+  if (mode === "none" && !supportsNoStartingParties(preset)) {
+    throw new Error(`No starting parties is not supported for ${preset}`);
   }
+  if (mode === "no-npps" && preset !== "2027-default")
+    throw new Error("No NPPs is supported only for 2027-default");
   return mode;
 }
 
@@ -165,11 +178,21 @@ export async function startingArtifactFilters(
  * Reset-only cleanup, never a turn policy. Economic owners survive as independents;
  * players can create parties and enter the ordinary election lifecycle afterwards.
  */
-export async function clearStartingPolitics(db: Db, preset: string): Promise<void> {
+export const RETAINED_PARTY_COLLECTIONS = new Set<string>([
+  "politicalParties",
+  "partyCharters",
+  "statePartyOrg",
+  "partyBudget",
+]);
+
+export async function clearStartingPolitics(
+  db: Db,
+  preset: string,
+  keepParties = false
+): Promise<void> {
   const countries = await startingPoliticalCountries(db, preset);
   const countryFilter = startingCountryFilter(countries, true);
-  const targetNpps = await db
-    .collection<NPP>("npps")
+  const targetNpps = await nppsCollection(db)
     .find(countryFilter)
     .project<Pick<NPP, "_id">>({ _id: 1 })
     .toArray();
@@ -179,8 +202,7 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
   const keep = (id: unknown) => {
     if (id instanceof ObjectId) owners.set(id.toHexString(), id);
   };
-  const corporations = await db
-    .collection<Corporation>("corporations")
+  const corporations = await corporationsCollection(db)
     .find({})
     .project<Pick<Corporation, "ceoId" | "ceoType" | "shareholders">>({
       ceoId: 1,
@@ -192,14 +214,12 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     if (corporation.ceoType === "npp") keep(corporation.ceoId);
     for (const holder of corporation.shareholders ?? []) keep(holder.nppId);
   }
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({})
     .project<Pick<Bond, "holders">>({ holders: 1 })
     .toArray();
   for (const bond of bonds) for (const holder of bond.holders ?? []) keep(holder.nppId);
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project<Pick<CentralBank, "chairNppId" | "fomcBoard">>({ chairNppId: 1, fomcBoard: 1 })
     .toArray();
@@ -215,16 +235,14 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
       .toArray();
     for (const position of positions) keep(position.nppId);
   }
-  const accounts = await db
-    .collection<SavingsAccount>("savingsAccounts")
+  const accounts = await savingsAccountsCollection(db)
     .find({ ownerType: "npp" })
     .project<Pick<SavingsAccount, "ownerId">>({ ownerId: 1 })
     .toArray();
   for (const account of accounts) keep(account.ownerId);
   // Keep outstanding credit liabilities, but not unreferenced seeded politician wallets.
   // The no-party baseline is captured after cleanup, not during intermediate seeding.
-  const borrowers = await db
-    .collection<NPP>("npps")
+  const borrowers = await nppsCollection(db)
     .find({})
     .project<Pick<NPP, "_id" | "lineOfCredit">>({ lineOfCredit: 1 })
     .toArray();
@@ -236,8 +254,8 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     if (amounts.some((amount) => typeof amount === "number" && amount !== 0)) keep(borrower._id);
   }
   const retained = [...owners.values()];
-  await db.collection<NPP>("npps").deleteMany({ _id: { $in: targetIds, $nin: retained } });
-  await db.collection<NPP>("npps").updateMany(
+  await nppsCollection(db).deleteMany({ _id: { $in: targetIds, $nin: retained } });
+  await nppsCollection(db).updateMany(
     { _id: { $in: targetIds } },
     {
       $set: { party: "independent", currentOffice: null },
@@ -245,27 +263,43 @@ export async function clearStartingPolitics(db: Db, preset: string): Promise<voi
     }
   );
   for (const collection of STARTING_POLITICAL_COLLECTIONS) {
+    if (keepParties && RETAINED_PARTY_COLLECTIONS.has(collection)) continue;
     await db.collection(collection).deleteMany(artifactFilters[collection]);
   }
-  await db
-    .collection("electedOfficials")
-    .deleteMany({ $and: [countryFilter, STARTING_POLITICAL_OFFICIAL_FILTER] });
+  await electedOfficialsCollection<Document>(db).deleteMany({
+    $and: [countryFilter, STARTING_POLITICAL_OFFICIAL_FILTER],
+  });
   await getCountryStateCollection(db).updateMany(
     countries === null ? {} : { _id: { $in: countries } },
     { $set: { rulingPartyId: null } }
   );
   for (const countryId of countries ?? COUNTRY_ORDER) invalidateCachedCountryState(db, countryId);
-  await db.collection("governorOfficeState").updateMany(countryFilter, {
+  await governorOfficeStateCollection<Document>(db).updateMany(countryFilter, {
     $set: { characterId: null, characterName: "Vacant" },
   });
+  await congressionalDistrictsCollection(db).updateMany(countryFilter, {
+    $set: { holderCharacterId: null, holderNppId: null, holderParty: null },
+  });
+  if (keepParties) {
+    await politicalPartiesCollection(db).updateMany(countryFilter, {
+      $set: {
+        chairId: null,
+        viceChairId: null,
+        treasurerId: null,
+        committeeIds: [],
+        campaignerIds: [],
+        memberCount: 0,
+      },
+    });
+    return;
+  }
   // Party registrants become unattached voters; engagement is not changed.
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find(countryFilter)
     .project<Pick<StateRegistrationPool, "_id" | "unregistered">>({ unregistered: 1 })
     .toArray();
   if (pools.length > 0) {
-    await db.collection<StateRegistrationPool>("stateRegistrationPool").bulkWrite(
+    await stateRegistrationPoolCollection(db).bulkWrite(
       pools.map((pool) => ({
         updateOne: {
           filter: { _id: pool._id },
@@ -283,11 +317,16 @@ export async function loadStartingPartiesMode(
   explicit?: StartingPartiesMode
 ): Promise<StartingPartiesMode> {
   if (explicit !== undefined) return resolveStartingPartiesMode(preset, explicit);
-  const state = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, startingPartiesMode: 1 } });
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1, startingPartiesMode: 1 } }
+  );
   return resolveStartingPartiesMode(
     preset,
     state?.preset === preset ? state.startingPartiesMode : "default"
   );
 }
+
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

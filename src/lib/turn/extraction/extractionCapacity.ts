@@ -119,9 +119,7 @@ export function computeExtractionCapacityMultipliers(
       //
       // A lease is a reserved floor, not a ceiling: whatever a holder wants
       // beyond its reserved share competes for the open-access pool on the same
-      // terms as everyone else. Before ticket 1619 a holder was shut out of the
-      // pool entirely, so buying a 10% lease on a deposit the company was
-      // already mining alone cut its dig to 10% of the deposit.
+      // terms as everyone else.
       const reservedByCorporation = new Map<string, { allocated: number; desired: number }>();
       for (const [corporationId, corporationSectors] of contractedByCorporation) {
         const share = contractsForResource!.get(corporationId)!;

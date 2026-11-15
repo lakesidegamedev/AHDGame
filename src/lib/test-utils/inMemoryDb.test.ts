@@ -354,6 +354,9 @@ describe("inMemoryDb — query and update operators", () => {
       await db.collection("parties").findOne({ name: { $regex: "^lab", $options: "i" } })
     ).toMatchObject({ _id: 1 });
     expect(await db.collection("parties").findOne({ name: { $regex: "^zz" } })).toBeNull();
+    expect(await db.collection("parties").findOne({ name: { $regex: /^lab/i } })).toMatchObject({
+      _id: 1,
+    });
   });
 
   it("$not inverts a nested operator expression", async () => {

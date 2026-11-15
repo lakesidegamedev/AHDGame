@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { resolveBankingPolicy } from "@/lib/banking/rules/policy";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Whether player line-of-credit is enabled (admin toggle on gameConfig).
@@ -17,8 +18,9 @@ export async function isLineOfCreditEnabled(
     return resolveBankingPolicy(preloadedConfig).lineOfCredit;
   }
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { lineOfCreditEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { lineOfCreditEnabled: 1 } }
+  );
   return resolveBankingPolicy(config).lineOfCredit;
 }

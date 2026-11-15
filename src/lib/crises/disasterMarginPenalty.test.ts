@@ -252,3 +252,31 @@ describe("buildDisasterEffectsByState physicality passthrough", () => {
     expect(entries[0].physicality).toBeUndefined();
   });
 });
+
+describe("buildDisasterEffectsByState with a v2 output", () => {
+  it("turns a v2 crisis's output cuts into standing physical penalties", () => {
+    const crisis = {
+      effects: [],
+      startTurn: 3,
+      durationTurns: null,
+      regionIds: ["tx"],
+      v2Output: { routedTurn: 9, productionCuts: [{ sectorType: "energy", points: -8 }] },
+    };
+    const byState = buildDisasterEffectsByState([crisis]);
+    expect(byState.get("tx")).toEqual([
+      expect.objectContaining({
+        value: -8,
+        sectorType: "energy",
+        physicality: "physical",
+        persistent: true,
+      }),
+    ]);
+    const split = computeDisasterPenaltySplit(
+      byState.get("tx")!,
+      { sectorType: "energy", strategyId: null },
+      40,
+      true
+    );
+    expect(split.productionPenalty).toBe(-8);
+  });
+});

@@ -2,12 +2,13 @@ import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PrivateFacilityClaim, PrivateFirmSuccessionPlan } from "./rules/privateFacilities";
 import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  WORLD_ENTITY_STATES_COLLECTION,
   type FederationSettlementApplicationRecord,
   type RuntimeWorldEntityState,
   validateAppliedEntityStates,
 } from "./runtimeEntities";
+import { federationFacilityClaimsCollection } from "@/lib/db/repositories/federationFacilityClaims";
+import { worldEntityStatesCollection } from "@/lib/db/repositories/worldEntityStates";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
 
 export const FEDERATION_FACILITY_CLAIMS_COLLECTION = "federationFacilityClaims";
 
@@ -56,9 +57,7 @@ export async function stageFederationFacilityClaims(
   if (new Set(ids).size !== ids.length)
     throw new Error("Facility claim staging has duplicate liabilities");
 
-  const collection = db.collection<FederationFacilityClaimRecord>(
-    FEDERATION_FACILITY_CLAIMS_COLLECTION
-  );
+  const collection = federationFacilityClaimsCollection<FederationFacilityClaimRecord>(db);
   if (claims.length === 0) return [];
   const intended = claims.map((claim, index): FederationFacilityClaimRecord => ({
     ...claim,
@@ -114,21 +113,17 @@ export async function activateFederationFacilityClaim(
 ): Promise<FederationFacilityClaimRecord> {
   if (!applicationId.trim() || !claimId.trim() || !corporationId.trim() || !creditorCountryId)
     throw new Error("Facility claim activation needs an application, firm and creditor");
-  const application = await db
-    .collection<FederationSettlementApplicationRecord>(
-      FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-    )
-    .findOne({ _id: applicationId, status: "applied" }, { session });
+  const application =
+    await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+      db
+    ).findOne({ _id: applicationId, status: "applied" }, { session });
   if (!application) throw new Error("Facility claim cannot activate before its settlement");
-  const entityStates = await db
-    .collection<RuntimeWorldEntityState>(WORLD_ENTITY_STATES_COLLECTION)
+  const entityStates = await worldEntityStatesCollection<RuntimeWorldEntityState>(db)
     .find({ applicationId }, { session })
     .toArray();
   validateAppliedEntityStates(application.presetId, [application], entityStates);
   const _id = `${applicationId}:${claimId}`;
-  const collection = db.collection<FederationFacilityClaimRecord>(
-    FEDERATION_FACILITY_CLAIMS_COLLECTION
-  );
+  const collection = federationFacilityClaimsCollection<FederationFacilityClaimRecord>(db);
   const existing = await collection.findOne({ _id }, { session });
   if (
     !existing ||

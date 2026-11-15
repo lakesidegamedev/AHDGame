@@ -20,11 +20,10 @@ export interface PoliticalCabinetContributionDoc {
   /** Per-region extras. Absent on pre-#1129 snapshots — treat as {}. */
   regional?: Record<string, Record<string, number>>;
   /**
-   * The same contribution split by producing channel (ticket #1129), which is
-   * what the dynamics step caps and accumulates against. `contribution` and
-   * `regional` above stay the SUM so every other reader is unaffected.
-   * Absent on snapshots written before the split: the consumer then treats the
-   * whole snapshot as one channel for that turn, and the next turn writes it.
+   * The same contribution split by producing channel, which the dynamics step
+   * caps and accumulates against. `contribution` and `regional` above stay the
+   * SUM so every other reader is unaffected. Absent on old snapshots: the
+   * consumer treats the whole snapshot as one channel for that turn.
    */
   sources?: Record<
     string,

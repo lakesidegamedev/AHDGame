@@ -1,5 +1,10 @@
 import type { Db } from "mongodb";
 import type { Achievement, Character } from "@/lib/db/types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { userSubscriptionsCollection } from "@/lib/db/repositories/userSubscriptions";
 
 export interface AchievementProgress {
   current: number;
@@ -23,7 +28,7 @@ export async function getAchievementProgress(
         if (typeof actionType === "string") filter.actionType = actionType;
         else if (Array.isArray(actionTypes)) filter.actionType = { $in: actionTypes };
         return {
-          current: await db.collection("actionLogs").countDocuments(filter),
+          current: await actionLogsCollection<Document>(db).countDocuments(filter),
           target,
         };
       }
@@ -31,16 +36,16 @@ export async function getAchievementProgress(
         const target = Number(config.count);
         if (!Number.isFinite(target)) return null;
         return {
-          current: await db
-            .collection("electedOfficials")
-            .countDocuments({ characterId: character._id }),
+          current: await electedOfficialsCollection<Document>(db).countDocuments({
+            characterId: character._id,
+          }),
           target,
         };
       }
       case "influence_count": {
         const target = Number(config.count);
         return {
-          current: await db.collection("actionLogs").countDocuments({
+          current: await actionLogsCollection<Document>(db).countDocuments({
             characterId: character._id,
             actionType: { $in: ["supportPlayer", "attackPlayer", "barnstorm"] },
           }),
@@ -50,9 +55,9 @@ export async function getAchievementProgress(
       case "subscriber_count": {
         const target = Number(config.count);
         return {
-          current: await db
-            .collection("userSubscriptions")
-            .countDocuments({ subscribedToCharacterId: character._id }),
+          current: await userSubscriptionsCollection<Document>(db).countDocuments({
+            subscribedToCharacterId: character._id,
+          }),
           target,
         };
       }
@@ -60,7 +65,7 @@ export async function getAchievementProgress(
         return { current: character.funds ?? 0, target: Number(config.amount) };
       case "news_reply":
         return {
-          current: await db.collection("newsPosts").countDocuments({
+          current: await newsPostsCollection<Document>(db).countDocuments({
             authorId: character._id,
             parentId: { $ne: null },
           }),

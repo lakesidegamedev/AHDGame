@@ -40,16 +40,6 @@ describe("armSettlementLadder", () => {
     vi.mocked(loadSettlementActorContext).mockResolvedValue(ctx(usSeat) as never);
   });
 
-  it("refuses when the feature gate is off", async () => {
-    const { loadSettlementActorContext } = await import("../actorContext");
-    vi.mocked(loadSettlementActorContext).mockResolvedValue(null);
-    const { armSettlementLadder } = await import("./armLadder");
-    expect(await armSettlementLadder(db as unknown as Db, characterId)).toMatchObject({
-      ok: false,
-      status: 404,
-    });
-  });
-
   it("refuses a character with no delegation", async () => {
     const { loadSettlementActorContext } = await import("../actorContext");
     vi.mocked(loadSettlementActorContext).mockResolvedValue(ctx(null) as never);

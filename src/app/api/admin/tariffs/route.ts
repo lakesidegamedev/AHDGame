@@ -14,6 +14,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { Tariff } from "@/lib/db/types";
 import { ZOD_COUNTRY_ENUM, type CountryId } from "@/lib/constants/countries";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 const upsertSchema = z.object({
   countryId: z.enum(ZOD_COUNTRY_ENUM),
@@ -30,7 +31,7 @@ export const GET = withAdminRoute(async (_auth, request: Request) => {
   if (!countryId) throw badRequest("countryId required");
 
   const db = await getDb();
-  const tariffs = await db.collection<Tariff>("tariffs").find({ countryId }).toArray();
+  const tariffs = await tariffsCollection(db).find({ countryId }).toArray();
   return NextResponse.json({ tariffs });
 });
 
@@ -58,7 +59,7 @@ export const POST = withAdminRoute(async (_auth, request: Request) => {
     targetCorporationId: targetCorporationId ? new ObjectId(targetCorporationId) : null,
   };
 
-  await db.collection<Tariff>("tariffs").updateOne(
+  await tariffsCollection(db).updateOne(
     filter,
     {
       $set: { rate, sourceBillId: adminBillId, updatedAt: now },
@@ -76,7 +77,7 @@ export const DELETE = withAdminRoute(async (_auth, request: Request) => {
   if (!id || id.length !== 24) throw badRequest("Valid tariff id required");
 
   const db = await getDb();
-  const result = await db.collection<Tariff>("tariffs").deleteOne({ _id: new ObjectId(id) });
+  const result = await tariffsCollection(db).deleteOne({ _id: new ObjectId(id) });
   if (result.deletedCount === 0) throw notFound("Tariff not found");
 
   return NextResponse.json({ success: true });

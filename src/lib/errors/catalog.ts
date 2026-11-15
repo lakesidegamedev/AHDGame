@@ -26,6 +26,12 @@ export const ERROR_CATALOG = {
     message: "Link your Discord account before creating a new character.",
     retryable: false,
   },
+  VPN_BLOCKED: {
+    status: 403,
+    message:
+      "You're connected through a VPN. Turn it off to play, or ask staff for VPN access in a Discord ticket.",
+    retryable: false,
+  },
   FORBIDDEN: {
     status: 403,
     message: "You do not have access to this.",

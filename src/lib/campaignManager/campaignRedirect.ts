@@ -1,4 +1,5 @@
 import { EMBEDDED_PARAM } from "./links";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * `/campaign/[id]` now lives on the race page. This decides whether the old
@@ -30,7 +31,7 @@ export function campaignRedirectTarget(
 ): string | null {
   if (!race) return null;
   if (race.electionType !== "president") return null;
-  if (race.countryId === "RU") return null;
+  if (countryHasFeature("ruLib", race.countryId)) return null;
   if (race.isUpcoming) return null;
   if (query[EMBEDDED_PARAM] !== undefined) return null;
 

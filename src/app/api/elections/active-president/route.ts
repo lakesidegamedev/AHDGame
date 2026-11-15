@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
 import type { Election } from "@/lib/db/types";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 /**
  * GET - Returns the active presidential election ID + seatId for navbar direct
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
   try {
     const country = (new URL(request.url).searchParams.get("country") ?? "US").toUpperCase();
     const db = await getDb();
-    const election = await db.collection<Election>("elections").findOne(
+    const election = await electionsCollection(db).findOne(
       {
         electionType: "president",
         state: country,

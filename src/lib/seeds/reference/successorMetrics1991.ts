@@ -15,23 +15,17 @@ import { huRegions1991 } from "@/lib/countries/hu/data/huRegions1991";
 import { roRegions1991 } from "@/lib/countries/ro/data/roRegions1991";
 import { bgRegions1991 } from "@/lib/countries/bg/data/bgRegions1991";
 import { yuRegions1991 } from "@/lib/countries/yu/data/yuRegions1991";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * 1991 national anchors: World Bank WDI annual indicators, with CS weighted
  * from Czech/Slovak WDI by census population. YU is a 1990 opening estimate
  * because the SFRY series ends before this scenario's January start. The
  * baseline builder supplies the metric schema and plausible infrastructure/
- * health priors; the transition economy, election and media indicators below
- * replace its 1979 command-system values. `governance.voterTurnout` is the
- * last-election/scenario metric; it is distinct from the demographic model's
- * capped turnout propensity for future simulated elections. Regional income and urbanization
- * differences are transparent GDP-per-resident estimates, not claimed census
- * observations. Sources (replace country and indicator in the URL):
- * https://api.worldbank.org/v2/country/POL/indicator/SP.DYN.LE00.IN?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/SP.URB.TOTL.IN.ZS?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/SL.UEM.TOTL.ZS?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/SP.DYN.CBRT.IN?date=1991&format=json
- * https://api.worldbank.org/v2/country/POL/indicator/NY.GDP.MKTP.KD.ZG?date=1991&format=json
+ * health priors; the indicators below replace its 1979 command-system values.
+ * `governance.voterTurnout` is the last-election metric, distinct from the
+ * demographic model's capped turnout propensity. Regional income and
+ * urbanization differences are GDP-per-resident estimates, not census data.
  */
 const profiles = {
   RU: {
@@ -124,23 +118,21 @@ export const SUCCESSOR_STATE_METRICS_1991: StateMetrics[] = (
 ).flatMap((countryId) => {
   const profile = profiles[countryId];
   const states = regions[countryId];
-  const population =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_POPULATION
-      : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
-          (sum, count) => sum + count,
-          0
-        );
-  const nationalGdp =
-    countryId === "RU"
-      ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
-      : SUCCESSOR_NOMINAL_GDP_1991[countryId];
+  const population = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_POPULATION
+    : Object.values(SUCCESSOR_REGION_POPULATION_1991[countryId]).reduce(
+        (sum, count) => sum + count,
+        0
+      );
+  const nationalGdp = countryHasFeature("ruSeeds", countryId)
+    ? SOVIET_UNION_1991_GDP_MILLION_RUB * 1_000_000
+    : SUCCESSOR_NOMINAL_GDP_1991[countryId];
   const nationalGdpPerResident = nationalGdp / population;
   const overrides = Object.fromEntries(
     states.map((state) => {
       const relative = (state.gdp * 1_000_000) / state.population / nationalGdpPerResident;
       const regionalUrban =
-        countryId === "RU" && state._id.startsWith("SU_")
+        countryHasFeature("ruSeeds", countryId) && state._id.startsWith("SU_")
           ? demographicAnchor1991(countryId, state._id).urban
           : clamp(profile.urban + 8 * Math.log(relative), 20, 95);
       return [
@@ -166,7 +158,9 @@ export const SUCCESSOR_STATE_METRICS_1991: StateMetrics[] = (
     ...row,
     economic: {
       ...row.economic,
-      smallBusinessFormation: metric(countryId === "PL" || countryId === "HU" ? 4 : 2),
+      smallBusinessFormation: metric(
+        countryHasFeature("plSeeds", countryId) || countryHasFeature("huSeeds", countryId) ? 4 : 2
+      ),
       matchingFriction: metric(6),
       laborParticipation: metric(68),
       economicFreedom: metric(profile.freedom),

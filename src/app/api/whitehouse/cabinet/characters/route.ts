@@ -6,8 +6,11 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Character, ElectedOfficial, NPP } from "@/lib/db/types";
+import type { ElectedOfficial, NPP } from "@/lib/db/types";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/whitehouse/cabinet/characters — Returns US player characters for the cabinet nomination dropdown (President only).
 // Auth: requireBasicAuth
@@ -25,14 +28,16 @@ export async function GET(request: Request) {
 
     const db = await getDb();
 
-    const presidentOfficial = await db
-      .collection<ElectedOfficial>("electedOfficials")
-      .findOne({ countryId, officeType: "president", characterId: { $ne: null } });
+    const presidentOfficial = await electedOfficialsCollection(db).findOne({
+      countryId,
+      officeType: "president",
+      characterId: { $ne: null },
+    });
     if (!presidentOfficial?.characterId) {
       return errorResponse(400, "No President in office");
     }
 
-    const myCharacter = await db.collection<Character>("characters").findOne({
+    const myCharacter = await charactersCollection(db).findOne({
       userId: new ObjectId(authUser.userId),
     });
     if (!myCharacter || !presidentOfficial.characterId.equals(myCharacter._id)) {
@@ -43,14 +48,12 @@ export async function GET(request: Request) {
     // Same-country NPPs are listed alongside so the President can nominate
     // either kind. Follows the nomineeMode pattern on CabinetNomination.
     const [characters, npps] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find({ userId: { $exists: true }, countryId })
         .project({ _id: 1, name: 1, party: 1, homeState: 1, currentOffice: 1 })
         .sort({ name: 1 })
         .toArray(),
-      db
-        .collection<NPP>("npps")
+      nppsCollection(db)
         .find({ $or: [{ countryId }, { countryId: { $exists: false } }] })
         .project({ _id: 1, name: 1, party: 1, homeState: 1, currentOffice: 1 })
         .sort({ name: 1 })

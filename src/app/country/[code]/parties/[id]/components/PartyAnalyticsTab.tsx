@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -16,18 +17,9 @@ import type {
 } from "@/lib/partyAnalytics/types";
 import { apiErrorText } from "@/lib/errors/catalog";
 
-function getRiskBadgeColor(riskLabel: PartyAnalyticsRiskItem["riskLabel"]) {
-  switch (riskLabel) {
-    case "Critical":
-      return "error";
-    case "Elevated":
-      return "warning";
-    default:
-      return "secondary";
-  }
-}
-
-function getCaucusRiskBadgeColor(riskLabel: PartyAnalyticsCaucusRiskItem["exitRiskLabel"]) {
+function getRiskBadgeColor(
+  riskLabel: PartyAnalyticsRiskItem["riskLabel"] | PartyAnalyticsCaucusRiskItem["exitRiskLabel"]
+) {
   switch (riskLabel) {
     case "Critical":
       return "error";
@@ -158,7 +150,7 @@ function RiskRow({ item }: { item: PartyAnalyticsRiskItem }) {
           <Badge color={getRiskBadgeColor(item.riskLabel)}>{item.riskLabel}</Badge>
         </div>
         <p className="text-body-sm text-muted">
-          {item.homeState}
+          {displayCanadianRegionCode(item.homeState)}
           {item.currentOffice ? ` · ${item.currentOffice}` : ""}
         </p>
       </div>
@@ -180,7 +172,7 @@ function CaucusRiskRow({ item }: { item: PartyAnalyticsCaucusRiskItem }) {
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium text-foreground">{item.nppName}</p>
-          <Badge color={getCaucusRiskBadgeColor(item.exitRiskLabel)}>{item.exitRiskLabel}</Badge>
+          <Badge color={getRiskBadgeColor(item.exitRiskLabel)}>{item.exitRiskLabel}</Badge>
         </div>
         <p className="text-body-sm text-muted">
           {item.caucusName}
@@ -205,7 +197,7 @@ function SlateItemRow({ item }: { item: PartyAnalyticsSlateItem }) {
     >
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-foreground">{item.electionLabel}</p>
-        <p className="text-body-sm text-muted">{item.state}</p>
+        <p className="text-body-sm text-muted">{displayCanadianRegionCode(item.state)}</p>
       </div>
       <Badge color={item.statusLabel.startsWith("No") ? "warning" : "error"}>
         {item.statusLabel}
@@ -222,7 +214,9 @@ function SlateCoverageRow({ item }: { item: PartyAnalyticsSlateCoverageItem }) {
       className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-muted/50 px-3 py-2 transition-colors hover:border-primary/40 hover:bg-card-muted"
     >
       <div>
-        <p className="text-sm font-medium text-foreground">{item.state}</p>
+        <p className="text-sm font-medium text-foreground">
+          {displayCanadianRegionCode(item.state)}
+        </p>
         <p className="text-body-sm text-muted">
           {item.coveredRaces}/{item.totalRaces} covered · {item.filedRaces} filed
         </p>

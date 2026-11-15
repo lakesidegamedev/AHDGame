@@ -17,6 +17,11 @@ import {
   aggregateIncomeTaxRate,
   type IncomeShares,
 } from "./rules/incomeTaxTiers";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 
 function regionIncomePopulation(
   state: Pick<State, "_id" | "countryId">,
@@ -26,7 +31,7 @@ function regionIncomePopulation(
   const live =
     year == null
       ? null
-      : state.countryId === "US"
+      : countryHasFeature("usLib", state.countryId)
         ? getUsSubstrateForYear(state._id, year)?.config
         : getCountrySubstrateForYear(state.countryId, state._id, year)?.marginals;
   const census =
@@ -42,29 +47,24 @@ function regionIncomePopulation(
 /** Four batched reads and two batched writes, independent of population size. */
 export async function refreshIncomeTaxShares(db: Db): Promise<void> {
   const [gameState, states, national, regional] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        preset?: string;
-        currentYear?: number;
-        currentTurn?: number;
-        startingYear?: number;
-      }>("gameState")
-      .findOne(
-        { _id: "current" },
-        { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
-      ),
-    db
-      .collection<State>("states")
-      .find({}, { projection: { countryId: 1, population: 1, parentRegionId: 1 } })
+    gameStateCollection<{
+      _id: string;
+      preset?: string;
+      currentYear?: number;
+      currentTurn?: number;
+      startingYear?: number;
+    }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
+    ),
+    statesCollection(db)
+      .find({}, { projection: { countryId: 1, population: 1, parentRegionId: 1 }, batchSize: 2000 })
       .toArray(),
-    db
-      .collection<FederalBudget>("federalBudget")
-      .find({}, { projection: { countryId: 1, taxRates: 1 } })
+    federalBudgetCollection(db)
+      .find({}, { projection: { countryId: 1, taxRates: 1 }, batchSize: 2000 })
       .toArray(),
-    db
-      .collection<StateBudget>("stateBudgets")
-      .find({}, { projection: { countryId: 1, taxRates: 1 } })
+    stateBudgetsCollection(db)
+      .find({}, { projection: { countryId: 1, taxRates: 1 }, batchSize: 2000 })
       .toArray(),
   ]);
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
@@ -114,7 +114,6 @@ export async function refreshIncomeTaxShares(db: Db): Promise<void> {
         },
       };
     });
-  if (nationalOps.length)
-    await db.collection<FederalBudget>("federalBudget").bulkWrite(nationalOps);
-  if (regionalOps.length) await db.collection<StateBudget>("stateBudgets").bulkWrite(regionalOps);
+  if (nationalOps.length) await federalBudgetCollection(db).bulkWrite(nationalOps);
+  if (regionalOps.length) await stateBudgetsCollection(db).bulkWrite(regionalOps);
 }

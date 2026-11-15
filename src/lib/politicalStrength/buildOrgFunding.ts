@@ -10,7 +10,7 @@ import {
 /**
  * Treasury cost of the Build Org action — pure helpers.
  *
- * Build Org has always cost Political Strength; from 2026-09-02 it also costs
+ * Build Org has always cost Political Strength; it also costs
  * money. PS remains the action's gate; cash is charged alongside it from the
  * SAME tier that pays the PS (a `state` click debits `statePartyOrg.treasury`,
  * a national-scope click debits `politicalParties.treasury`).
@@ -71,14 +71,13 @@ export type OrgBuildFunding =
  * so a country's average state sits at `1`.
  *
  * `normalizer` is the country's mean of `sqrt(population)` across its regions.
- * Dividing by that (rather than by `sqrt(mean population)`) is what makes the
- * average multiplier exactly 1 — the concave curve would otherwise pull the
- * country's average below 1 and quietly cut the overall cost level that
- * `ORG_BUILD_TREASURY_FRACTION` was calibrated against.
+ * Dividing by that (not `sqrt(mean population)`) makes the average multiplier
+ * exactly 1; the concave curve would otherwise pull the country's average below
+ * 1 and cut the overall cost level `ORG_BUILD_TREASURY_FRACTION` was calibrated
+ * against.
  *
- * Returns a neutral `1` whenever the inputs cannot support a ratio (no
- * demographics seeded, a single-region country mid-migration, bad data), so a
- * world without population data prices exactly as it did before this existed.
+ * Returns `1` when inputs cannot support a ratio, so a world without population
+ * data prices as before.
  *
  * @param population - The state's population
  * @param normalizer - Country mean of `sqrt(population)` over its regions

@@ -65,14 +65,13 @@ function generateTips(poll: StoredPoll, pollData: PollData): string[] {
 
   // 2. Position alignment — check if there's a directional opportunity
   // Look at the top groups by population to see where the voters are
-  const allGroups = (poll.categories ?? []).flatMap((c) => c.groups);
-  if (allGroups.length > 0) {
-    // Weight each group's lean by its turnout population to find the electorate center
-    const totalTurnout = allGroups.reduce((s, g) => s + g.turnoutPop, 0) || 1;
-    const avgEconLean =
-      allGroups.reduce((s, g) => s + g.economicLean * g.turnoutPop, 0) / totalTurnout;
-    const avgSocialLean =
-      allGroups.reduce((s, g) => s + g.socialLean * g.turnoutPop, 0) / totalTurnout;
+  const cells = poll.granular.cells;
+  if (cells.length > 0) {
+    // Weight each cell's lean by its turned-out share to find the electorate center
+    const weights = cells.map((c) => c.share * c.turnout);
+    const totalWeight = weights.reduce((s, w) => s + w, 0) || 1;
+    const avgEconLean = cells.reduce((s, c, i) => s + c.economicLean * weights[i], 0) / totalWeight;
+    const avgSocialLean = cells.reduce((s, c, i) => s + c.socialLean * weights[i], 0) / totalWeight;
 
     const econGap = avgEconLean - economicPosition;
     const socialGap = avgSocialLean - socialPosition;

@@ -7,20 +7,18 @@ import * as Sentry from "@sentry/nextjs";
 let warnedNonAtomicFallback = false;
 
 /**
- * Run a unit of work inside a Mongo transaction when replica-set support is
- * available, and fall back to the provided sequential implementation on
- * standalone dev mongods that reject sessions/transactions.
+ * Run a unit of work in a Mongo transaction when replica-set support is
+ * available, else fall back to the sequential implementation on standalone
+ * mongods that reject sessions/transactions.
  *
- * Topology is detected with the server's hello response, not URI query options.
- * A replica set can accept transactions through a direct connection without a
- * replicaSet query parameter. Standalone deployments use the supplied fallback;
- * callers remain responsible for partial-write safety on that path.
+ * Topology comes from the server's hello response, not URI query options: a
+ * replica set can accept transactions over a direct connection without a
+ * `replicaSet` parameter. On standalone, callers own partial-write safety;
+ * money flows must use keyed idempotent legs in
+ * `src/lib/db/nonAtomicMoneyFlow.ts`.
  *
- * Production topology is deployment state. Verify it with the boot probe and a
- * transaction against the target deployment instead of inferring it from this
- * helper or from the connection string.
- * Callers moving money on standalone deployments must use keyed idempotent
- * legs in `src/lib/db/nonAtomicMoneyFlow.ts` to reconcile partial writes.
+ * Production topology is deployment state: verify with the boot probe, not
+ * from this helper or the connection string.
  */
 export async function runWithOptionalTransaction<T>(
   runInTransaction: (session: ClientSession) => Promise<T>,

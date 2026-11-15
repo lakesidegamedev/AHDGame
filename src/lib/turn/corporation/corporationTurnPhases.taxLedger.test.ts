@@ -6,6 +6,7 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { CorporationLookups, CorpSnapshot } from "./types";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
+import { deriveLedgerEntry } from "@/lib/ledger/deriveFromTx";
 
 /**
  * Ticket #1260 regression: corporate tax was booked TWICE on a corp's own ledger.
@@ -98,6 +99,21 @@ describe("emitCorporationTurnTx — corporate tax is booked once (ticket #1260)"
       thresholds: {} as never,
     });
   }
+  it.each([false, true])(
+    "retains the legacy shadow importer unless a settlement owns cash: %s",
+    async (owned) => {
+      await run(
+        "USD",
+        1,
+        makeSnapshot({ operatingCashIncomeLocal: 80, operatingCashLedgerOwnedBySettlement: owned })
+      );
+      const rows = corpRows().filter(
+        (row) => row.type === "corp_revenue" || row.type === "corp_tax_paid"
+      );
+      expect(rows).toHaveLength(2);
+      for (const row of rows) expect(deriveLedgerEntry(row) === null).toBe(owned);
+    }
+  );
 
   it("emits a valid dividend receipt when independently accumulated capital exceeds the total by roundoff", async () => {
     const holder = new ObjectId();

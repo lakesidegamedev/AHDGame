@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { DemographicCategory, StateDemographics, State } from "@/lib/db/types";
-import { calculateStateLean } from "@/lib/utils/demographics";
-import { REGION_DEMOGRAPHIC_CATEGORY_IDS } from "@/app/country/[code]/region/[id]/regionData";
+import type { State } from "@/lib/db/types";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
+import { bucketProfileLean, getBucketProfileForRegion } from "@/lib/demographics/bucketProfile";
+import { eraYearContextFromGameState } from "@/lib/era/context";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
 }
 
-// GET /api/country/[code]/region/[id]/demographics — Return demographic group data and political lean for a region
+// GET /api/country/[code]/region/[id]/demographics — Return the census bucket breakdown and political lean for a region
 // Auth: public
 // Errors: 400, 404
 export async function GET(_request: Request, { params }: RouteParams) {
@@ -25,47 +26,51 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const db = await getDb();
 
-    // Verify state exists
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const [state, gameState] = await Promise.all([
+      statesCollection(db).findOne({ _id: stateId, countryId }),
+      getGameStateCollection(db).then((games) =>
+        games.findOne(
+          { _id: "current" },
+          { projection: { preset: 1, currentYear: 1, currentTurn: 1, startingYear: 1 } }
+        )
+      ),
+    ]);
     if (!state) {
       return errorResponse(404, "State not found");
     }
 
-    const demographics = await db
-      .collection<StateDemographics>("stateDemographics")
-      .findOne({ _id: stateId });
-
-    if (!demographics) {
+    const sections = getBucketProfileForRegion(
+      countryId,
+      stateId,
+      gameState?.preset,
+      null,
+      eraYearContextFromGameState(gameState)
+    );
+    if (!sections) {
       return errorResponse(404, "Demographics not found for this state");
     }
 
-    const categoryFilter = REGION_DEMOGRAPHIC_CATEGORY_IDS[countryId];
-    const categories = categoryFilter
-      ? await db
-          .collection<DemographicCategory>("demographicCategories")
-          .find({ _id: { $in: categoryFilter } })
-          .toArray()
-      : await loadDemographicCategories(db);
-
-    const calculatedLean =
+    const lean =
       state.cachedEconomicLean != null && state.cachedSocialLean != null
-        ? {
-            economicLean: state.cachedEconomicLean,
-            socialLean: state.cachedSocialLean,
-          }
-        : calculateStateLean(demographics, categories);
+        ? { economicLean: state.cachedEconomicLean, socialLean: state.cachedSocialLean }
+        : bucketProfileLean(sections);
 
-    // Return public data (exclude category weights - admin only)
     return NextResponse.json({
       stateId,
       stateName: state.name,
-      groups: demographics.groups,
-      calculatedEconomicLean: calculatedLean.economicLean,
-      calculatedSocialLean: calculatedLean.socialLean,
-      categories: categories.map((c) => ({
-        id: c._id,
-        name: c.name,
-        groups: c.groups.map((g) => ({ id: g.id, name: g.name, defaultTurnout: g.defaultTurnout })),
+      calculatedEconomicLean: lean.economicLean,
+      calculatedSocialLean: lean.socialLean,
+      sections: sections.map((section) => ({
+        id: section.dim,
+        name: section.dimLabel,
+        rows: section.buckets.map((b) => ({
+          id: b.id,
+          name: b.label,
+          population: b.sharePct,
+          economicLean: b.economicLean,
+          socialLean: b.socialLean,
+          turnout: b.turnout,
+        })),
       })),
     });
   } catch (error) {

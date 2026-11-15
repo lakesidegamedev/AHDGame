@@ -21,6 +21,7 @@ import { cnParties } from "@/lib/seeds/cn/cnParties";
 import { cnRegions } from "@/lib/seeds/cn/cnRegions";
 import { ieParties } from "@/lib/seeds/ie/ieParties";
 import { ieRegions } from "@/lib/seeds/ie/ieRegions";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export type StartingCountryId = Exclude<
   CountryId,
@@ -47,6 +48,8 @@ export type StartingCountryId = Exclude<
   | "DD"
   | "SCO"
   | "WAL"
+  | "CA"
+  | "QC"
 >;
 
 interface StartingEconomyFacts {
@@ -97,7 +100,7 @@ export const PARTY_SEEDS_BY_COUNTRY: Record<StartingCountryId, readonly PartySee
 };
 
 export const REGIONS_BY_COUNTRY: Record<StartingCountryId, readonly State[]> = {
-  US: states.filter((state) => state.countryId === "US"),
+  US: states.filter((state) => countryHasFeature("usUi", state.countryId)),
   UK: ukRegions,
   DE: deRegions,
   JP: jpRegions,

@@ -1,33 +1,17 @@
 /**
- * B6 — currency regimes and the impossible trinity.
+ * Currency regimes and the impossible trinity.
  *
- * The pieces of an exchange-rate regime already existed, but not as a regime.
- * `hardPeg` was an ADMIN field — an operator tool, never a monetary choice a
- * player makes. `interventionPolicy` was a chair-set band. Which regime a
- * country ran was implied by which fields happened to be set, and choosing one
- * cost nothing, because nothing else in the model knew about the choice.
+ * A country cannot have all three of: a FIXED exchange rate, FREE capital
+ * movement, and an INDEPENDENT monetary policy. Pick any two. That constraint is
+ * what makes a regime a decision rather than a label, and what gives a peg a
+ * real cost instead of free stability.
  *
- * ## The trinity is the mechanic
+ * Peg and keep the capital account open and the policy rate is no longer yours:
+ * it is whatever defending the peg requires. Want the rate back? Float, or close
+ * the capital account.
  *
- * A country cannot have all three of:
- *
- *   1. a FIXED exchange rate,
- *   2. FREE capital movement,
- *   3. an INDEPENDENT monetary policy.
- *
- * Pick any two. That is not a flavour note, it is the entire reason an
- * exchange-rate regime is a decision rather than a label — and it is what makes
- * a peg cost something instead of being free stability.
- *
- * So: peg your currency and keep your capital account open, and the policy rate
- * is no longer yours — it is set by whatever defending the peg requires. Want
- * the rate back? Either float, or close the capital account and accept what
- * that does to your economy.
- *
- * Note what is NOT modelled here: the peg does not silently break when it is
- * inconsistent. A regime that quietly stopped working would teach the player
- * nothing. The constraint binds where the player can see it — at the moment
- * they try to change the rate.
+ * The peg does not silently break when inconsistent. The constraint binds where
+ * the player can see it, at the moment they try to change the rate.
  */
 
 export type FxRegime = "float" | "band" | "peg";

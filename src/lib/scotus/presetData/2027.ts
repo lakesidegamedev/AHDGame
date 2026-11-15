@@ -1,17 +1,15 @@
 import type { ScotusPresetSeed } from "./types";
 
 /**
- * Turn-one Supreme Court for `2027-default` (#2170).
+ * Turn-one Supreme Court for `2027-default`.
  *
- * The roster is the nine-member Court listed by the Supreme Court when this
- * fallback was reviewed on 2026-09-20, carried forward to the January 2027
- * preset. No seat is vacant in the reviewed roster. This is explicitly a
- * projection, not a claim to know the future bench. The preset also cannot
- * truthfully ship a curated historical docket for decisions after its start
- * date: those outcomes do not exist yet. Its explicit, reviewed fallback is
- * therefore an empty curated docket plus the existing procedural surprise-case system.
- * This is intentionally different from copying the 2019 docket, whose
- * 2020-2024 cases would all be overdue and resolve on turn one.
+ * The roster is a projection of the nine-member Court carried forward to the
+ * January 2027 preset, not a claim to know the future bench. No seat is
+ * vacant. The preset cannot ship a curated historical docket for decisions
+ * after its start date, so its reviewed fallback is an empty curated docket
+ * plus the existing procedural surprise-case system. This is intentionally
+ * different from copying the 2019 docket, whose 2020-2024 cases would all be
+ * overdue and resolve on turn one.
  *
  * Lean and party values retain the established 2019 content model. They are
  * game inputs, not claims about formal party membership.
@@ -22,8 +20,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 1,
       historicalOccupants: [
         {
-          key: "roberts-2027",
-          name: "John Roberts",
+          key: "rowe-2027",
+          name: "Jonathan Rowe",
           party: "2",
           economicLean: -1,
           socialLean: -1,
@@ -37,8 +35,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 2,
       historicalOccupants: [
         {
-          key: "thomas-2027",
-          name: "Clarence Thomas",
+          key: "thornton-2027",
+          name: "Calvin Thornton",
           party: "2",
           economicLean: 4,
           socialLean: 5,
@@ -52,8 +50,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 3,
       historicalOccupants: [
         {
-          key: "barrett-2027",
-          name: "Amy Coney Barrett",
+          key: "cole-2027",
+          name: "Margaret Ellison Cole",
           party: "2",
           economicLean: 3,
           socialLean: 4,
@@ -67,8 +65,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 4,
       historicalOccupants: [
         {
-          key: "jackson-2027",
-          name: "Ketanji Brown Jackson",
+          key: "jamison-2027",
+          name: "Kendra Brooks Jamison",
           party: "1",
           economicLean: -3,
           socialLean: -4,
@@ -82,8 +80,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 5,
       historicalOccupants: [
         {
-          key: "alito-2027",
-          name: "Samuel Alito",
+          key: "amato-2027",
+          name: "Salvatore Amato",
           party: "2",
           economicLean: 4,
           socialLean: 5,
@@ -97,8 +95,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 6,
       historicalOccupants: [
         {
-          key: "sotomayor-2027",
-          name: "Sonia Sotomayor",
+          key: "valdemoro-2027",
+          name: "Sofia Valdemoro",
           party: "1",
           economicLean: -3,
           socialLean: -5,
@@ -112,8 +110,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 7,
       historicalOccupants: [
         {
-          key: "kagan-2027",
-          name: "Elena Kagan",
+          key: "kaminski-2027",
+          name: "Elise Kaminski",
           party: "1",
           economicLean: -3,
           socialLean: -4,
@@ -127,8 +125,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 8,
       historicalOccupants: [
         {
-          key: "gorsuch-2027",
-          name: "Neil Gorsuch",
+          key: "gorham-2027",
+          name: "Nathan Gorham",
           party: "2",
           economicLean: 3,
           socialLean: 2,
@@ -142,8 +140,8 @@ export const SCOTUS_2027_DEFAULT_SEED: ScotusPresetSeed = {
       seatNumber: 9,
       historicalOccupants: [
         {
-          key: "kavanaugh-2027",
-          name: "Brett Kavanaugh",
+          key: "keegan-2027",
+          name: "Bradley Keegan",
           party: "2",
           economicLean: -1,
           socialLean: 3,

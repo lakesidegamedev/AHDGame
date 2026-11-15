@@ -1,47 +1,17 @@
 /**
- * Era-aware calibration for seed-time sector market sizing.
+ * `SECTOR_SEED_SCALE` is a GDP multiple, so it is era-neutral. The minimum
+ * (`MIN_UNOWNED_SECTOR_REVENUE`, 1,000,000) is an absolute amount calibrated
+ * against modern nominal GDP and must be deflated per era so it stays a fixed
+ * share of the economy. Without this, pre-modern seeds clamp nearly every
+ * (state, sector) bucket to the floor and lose all differentiation.
  *
- * `SECTOR_SEED_SCALE` (constants/corporations.ts) is a pure GDP MULTIPLE, so it
- * is already era-neutral: a state's market is `gdp × usdExchangeRate × SCALE ×
- * weight`, which keeps sector revenue a fixed share of the economy in any era.
- * The MINIMUM (`MIN_UNOWNED_SECTOR_REVENUE`, ₳1,000,000) is not — it is an
- * absolute ₳ amount calibrated against MODERN nominal GDP magnitudes.
+ * Keyed on the seed preset (via `eraForPreset`), not the in-game year: sector
+ * seed revenue is written once from frozen seed data and does not graduate with
+ * the world clock.
  *
- * WHY THIS MODULE EXISTS: the 1953 world is denominated in 1953 dollars (the ₳
- * anchor tracks the US, whose 1953 national seed GDP is $387B vs $27,000B in
- * 2019 — ~70x smaller in nominal terms). A ₳1,000,000 floor that binds on ~1%
- * of modern (state, sector) buckets binds on nearly ALL of them at 1953
- * magnitudes: before this fix, 13 of 26 seeded entities had EVERY unowned
- * sector at exactly the floor — one single revenue value across the whole
- * country, zero regional or sectoral differentiation (the UK, a player-enabled
- * country, had all 204 of its sectors identical). The floor, not the economy,
- * was setting sector revenue for half the world.
- *
- * THE FIX mirrors `getGdpIndexedCostScale` (budget/costs.ts), which deflates
- * absolute per-capita law costs for pre-1991 economies so that cost/GDP stays
- * invariant instead of clamping modern-authored absolutes onto a 10-100x
- * smaller nominal economy. Here the same reasoning applies to a minimum: the
- * floor is deflated by the era's nominal-economy ratio so it stays the same
- * SHARE of the economy it was calibrated at, and differentiation comes from
- * the GDP-and-weight term again.
- *
- * KEYING: on the SEED PRESET (via `eraForPreset`), not the current in-game
- * year — unlike `constants/monetaryEra.ts`, whose anchors are per-turn runtime
- * values and therefore graduate as a world's clock advances. Sector seed
- * revenue is written ONCE at seed time from frozen seed data, so it keys on
- * the preset that produced it. A 1953 world that plays on to 1975 keeps the
- * sector markets it was seeded with; only its monetary anchors graduate.
- *
- * NO-OP GUARANTEE: only eras listed in {@link SECTOR_SEED_ERA_FLOORS} deviate.
- * Every other preset — including all modern presets (1991/1999/2007/2019/2023),
- * the 1979 era, aliases such as `empty` / `2019-no-parties`, unknown preset
- * strings, and callers that pass no preset at all — resolves the unchanged
- * modern constants. See `sectorSeedEra.test.ts`.
- *
- * 1979 IS DELIBERATELY NOT LISTED: its nominal economy (US $2,632B seed GDP)
- * is only ~10x below 2019 and its base `usdExchangeRate` values are already
- * 1979-calibrated, so it is left byte-identical here pending its own
- * measurement pass.
+ * Only presets listed in {@link SECTOR_SEED_ERA_FLOORS} deviate; all others
+ * (modern presets, aliases, unknowns, no preset) resolve the unchanged modern
+ * constants. 1979 is deliberately omitted pending its own measurement pass.
  */
 
 import type { EraId } from "@/lib/seeds/presetSelector";
@@ -68,17 +38,15 @@ export const US_NATIONAL_SEED_GDP_BY_ERA: Partial<Record<EraId, number>> = {
 };
 
 /**
- * The era's nominal-money scale relative to 2019, from
- * {@link US_NATIONAL_SEED_GDP_BY_ERA}. 1953 ≈ 0.0143 ($387B / $27,000B); every
- * era without an entry (all modern presets, 1979/1991, aliases, no preset)
- * returns exactly 1, so this is a strict no-op outside the listed eras.
+ * Nominal-money scale of the era relative to 2019, from
+ * {@link US_NATIONAL_SEED_GDP_BY_ERA}. Returns 1 for any era without an entry
+ * (all modern presets, aliases, no preset), so it is a no-op outside the listed
+ * eras.
  *
- * Use it wherever an ABSOLUTE ₳ amount was calibrated on modern nominal GDP and
- * has to keep the same SHARE of a smaller nominal economy. Two consumers today:
- * the unowned-sector revenue floor below, and NPP corporations' default starting
- * capital (`spawnNppCorporation`, refs #3778 §3), which capitalized a 1953 NPP
- * corp at ₳2,000,000 — roughly 70x a whole 1953 regional sector market — so a
- * spawned NPP corp could buy its market outright on day one.
+ * Use wherever an ABSOLUTE ₳ amount was calibrated on modern nominal GDP and
+ * must keep the same SHARE of a smaller nominal economy. Two consumers today:
+ * the unowned-sector revenue floor below, and NPP corporations' default
+ * starting capital (`spawnNppCorporation`).
  */
 export function getEraNominalScale(preset?: string): number {
   const modern = US_NATIONAL_SEED_GDP_BY_ERA["2019"];
@@ -89,25 +57,18 @@ export function getEraNominalScale(preset?: string): number {
 }
 
 /**
- * UNIT-BASIS scale for the plants tier: how many capacity units the era's
- * money buys per modern-priced unit.
+ * UNIT-BASIS scale for the plants tier: capacity units the era's money
+ * buys per modern-priced unit.
  *
- * Every ₳↔unit conversion in the plants stack (impliedOutputUnits, RPU,
- * capacityPricePerUnit, headroom, contract per-unit pricing) was calibrated on
- * the 2019 `COMMODITY_BASE_PRICES` table. In a 1953 world the ₳ figures being
- * converted are ~70x smaller, so with the modern table a "unit" stays a
- * modern-sized quantum and the whole world collapses into a handful of units:
- * markets of single-digit capacity, quantization dead zones, and per-unit
- * prices that dwarf era incomes.
+ * ₳↔unit conversions are calibrated on 2019 `COMMODITY_BASE_PRICES`, but
+ * era ₳ figures are far smaller, so without this a 1953 world collapses
+ * into single-digit capacity, quantization dead zones and per-unit prices
+ * that dwarf era incomes.
  *
- * This scale is the reciprocal of {@link getEraNominalScale} (~70 for 1953,
- * exactly 1 for every modern preset, alias, unknown string and absent preset).
- * Multiplying unit counts by it — equivalently dividing per-unit ₳ figures by
- * it — re-expresses the unit in the era's own prices, so a 1953 state sector
- * holds a modern-comparable number of units and one unit earns era-scale
- * revenue. Both directions of every conversion MUST use the same scale or the
- * two legs of a stored (revenue, units) pair drift by the era ratio; that is
- * why the scale is resolved here once and threaded, never recomputed ad hoc.
+ * Reciprocal of {@link getEraNominalScale} (~70 for 1953, 1 for modern,
+ * aliases, unknown and absent presets). Both legs of every conversion must
+ * use the same scale or a stored (revenue, units) pair drifts by the era
+ * ratio, so resolve once and thread it.
  */
 export function getEraUnitScale(preset?: string): number {
   const nominal = getEraNominalScale(preset);
@@ -159,22 +120,13 @@ export function getSectorSeedScale(preset?: string): number {
 /**
  * Era-scaled baseline price for one commodity, in ₳.
  *
- * `COMMODITY_BASE_PRICES` is a single 2019-calibrated table (steel ₳800/ton,
- * energy ₳60/MWh). Seeding those into a 1953 world prices a mid-century economy
- * in modern money: the same ~70x nominal mismatch the unowned-sector floor had,
- * applied to every commodity market at once, so sector revenue, extraction
- * economics and trade all start on the wrong scale.
+ * `COMMODITY_BASE_PRICES` is a 2019-calibrated table, so seeding it into older
+ * eras prices a mid-century economy in modern money and puts sector revenue,
+ * extraction economics and trade on the wrong scale.
  *
- * Deliberately a UNIFORM deflation by {@link getEraNominalScale} rather than a
- * per-commodity historical table. Real relative prices did move — oil outran
- * the general price level by roughly 3x between 1953 and 2019 — but authoring
- * that per commodity would be inventing a specific history and baking it in.
- * A uniform scale moves the whole price LEVEL, which is what the era actually
- * needs, and leaves relative prices to the market. Gentle by construction.
- *
- * Same no-op guarantee and the same SEED-PRESET keying as the floor above: only
- * eras present in {@link US_NATIONAL_SEED_GDP_BY_ERA} deviate, and seed-time
- * values key on the preset that produced them rather than the live clock.
+ * Uniform deflation by {@link getEraNominalScale} rather than per-commodity
+ * history: it moves the price level and leaves relative prices to the market.
+ * Same no-op and SEED-PRESET keying as the floor above.
  */
 export function getEraCommodityBasePrice(modernBasePrice: number, preset?: string): number {
   const scale = getEraNominalScale(preset);
@@ -208,20 +160,15 @@ export function getEraNominalAmount(modernAmount: number, preset?: string): numb
 /**
  * Issued share count for a NEWLY MINTED corporation, in the era's own money.
  *
- * The share base and the treasury that backs it must deflate together, or the
- * per-share price collapses below `MIN_SHARE_PRICE` and floors. A 1953
- * founding seeds ~14,333 over a fixed 10,000,000 shares — a true price of
- * $0.0014 that floors at $0.01, opening the corporation at a ~$100,000 market
- * cap against a $14,333 treasury (~7x). Modern is exact by construction
- * (1,000,000 / 10,000,000 = the $0.10 default). Scaling the share base by the
- * same factor restores that identity in every era: market cap at founding
- * equals the treasury, and the opening price is $0.10 whatever the year.
+ * The share base and the treasury that backs it must deflate together, or
+ * the per-share price floors below `MIN_SHARE_PRICE`. Scaling the share base
+ * by the same factor restores the identity: market cap at founding equals the
+ * treasury, and the opening price is $0.10 whatever the year.
  *
  * MINT SITES ONLY. Read paths that fall back to `CEO_INITIAL_SHARES` for
- * legacy documents (`corp.totalShares ?? CEO_INITIAL_SHARES`) must keep using
- * the raw modern constant — those rows were written with a 10,000,000 base,
- * and reinterpreting them at the era count would silently restate existing
- * cap tables.
+ * legacy documents must keep using the raw modern constant: those rows were
+ * written with a 10,000,000 base, and reinterpreting them at the era count
+ * would silently restate existing cap tables.
  */
 export function getEraFounderShares(modernShares: number, preset?: string): number {
   return getEraNominalAmount(modernShares, preset);

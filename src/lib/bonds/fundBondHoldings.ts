@@ -9,6 +9,7 @@ import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export type FundBondHoldingRow = {
   bondId: ObjectId;
@@ -36,8 +37,7 @@ export async function listFundBondHoldings(
   db: Db,
   fundId: ObjectId
 ): Promise<FundBondHoldingRow[]> {
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({
       matured: false,
       defaulted: { $ne: true },
@@ -105,8 +105,7 @@ export async function sumFundBondHoldingsByFundId(
   if (funds.length === 0) return totals;
   const fundIds = funds.map((fund) => fund._id);
   const wanted = new Set(fundIds.map(String));
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find(
       {
         matured: false,

@@ -1,0 +1,100 @@
+{
+  "config": {
+    "id": "WAL",
+    "name": "Wales",
+    "code": "WAL",
+    "status": "coming-soon",
+    "flagEmoji": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "First Minister",
+    "executiveRealmPhrase": "Wales",
+    "executiveLabel": "Welsh Government",
+    "executivePath": "/country/wal/executive",
+    "governmentType": "parliamentaryRepublic",
+    "governmentTypeLabel": "Parliamentary Republic",
+    "descriptor": "A parliamentary republic where the First Minister leads government through a Senedd majority, elected by the Additional Member System across Wales's regions.",
+    "heroImage": "https://flagcdn.com/w640/gb-wls.png",
+    "overviewPath": "/country/wal",
+    "mapPath": "/country/wal/map",
+    "currencyCode": "GBP",
+    "centralGovernmentLabel": "Welsh Block Grant",
+    "exchangeName": "FTSE",
+    "financeMinisterCabinetId": "financeSecretary",
+    "regionalBillAssentTitle": "Leader",
+    "majorPartyIds": ["PC", "LAB"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "legislature": {
+      "name": "Senedd Cymru",
+      "path": "/country/wal/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "senedd",
+        "name": "Senedd Cymru",
+        "shortName": "Senedd",
+        "seats": 60,
+        "description": "60 Members of the Senedd elected by the Additional Member System - 40 constituency seats plus 20 regional list seats."
+      }
+    },
+    "subNationalChamber": {
+      "key": "regionalCouncil",
+      "name": "Regional Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "firstMinister",
+        "label": "First Minister",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "First Ministers"
+      },
+      {
+        "key": "senedd",
+        "label": "Member of the Senedd",
+        "chamberKey": "senedd",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Members of the Senedd"
+      },
+      {
+        "key": "governor",
+        "label": "Leader",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Leaders"
+      },
+      {
+        "key": "regionalCouncil",
+        "label": "Regional Councillor",
+        "chamberKey": "regionalCouncil",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Regional Councillors"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Bank of England",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the Bank of England"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "ams",
+      "subNationalChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "centralBank": {
+      "name": "Bank of England",
+      "abbreviation": "BoE",
+      "heroImage": "/api/images/hero/bank-of-england",
+      "defaultPrimeRate": 3,
+      "sharedBankId": "UK"
+    },
+    "usdExchangeRate": 1
+  }
+}

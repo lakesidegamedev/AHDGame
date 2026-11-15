@@ -1,20 +1,18 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
+ * SEED INDEPENDENCE , DO NOT DERIVE FROM ANOTHER ERA.
  * Each era seed is self-contained. This file MUST NOT import and transform
  * another era's seed data. All values are authored for 1979 directly.
  * Type-only imports are allowed.
  *
- * US state seed for the 1979-default preset (Carter / 96th Congress snapshot —
- * stagflation, energy crisis, the New Deal coalition fraying on the eve of the
- * 1980 Reagan realignment). population = 1980 Census (April 1, 1980); gdp = BEA
- * 1979 nominal Gross State Product (millions USD).
+ * US state seed for the 1979-default preset (Carter / 96th Congress snapshot).
+ * population = 1980 Census (April 1, 1980); gdp = BEA 1979 nominal Gross State
+ * Product (millions USD).
  *
- * houseDistricts = **1970-Census apportionment** — the map used for the 93rd–97th
- * Congresses (1973–1983). This is one cycle EARLIER than states1991's 1990 map:
- * the 1980 Census did not reapportion the House until the 1983 (98th) Congress,
- * so a 1979/1980 world runs on the 1970 seat allocation (CA 43, NY 39, PA 25 —
- * pre-Sun-Belt shift). They sum to 435 across the 50 states; DC = 0.
- * stateSenateSeats/region are era-invariant.
+ * houseDistricts = 1970-Census apportionment (93rd,97th Congresses, 1973,1983).
+ * One cycle EARLIER than states1991's 1990 map: the 1980 Census did not
+ * reapportion the House until 1983 (98th), so a 1979/1980 world runs on the 1970
+ * allocation (CA 43, NY 39, PA 25). They sum to 435 across the 50 states;
+ * DC = 0. stateSenateSeats/region are era-invariant.
  * National anchors: US 1980 pop ≈ 226.5M; nominal GDP 1979 ≈ $2.63T.
  */
 import type { State } from "@/lib/db/types";

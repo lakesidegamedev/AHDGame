@@ -1,21 +1,16 @@
 /**
- * RU (Soviet Union) seat apportionment constants — spec D11.
+ * RU (Soviet Union) seat apportionment constants.
  *
  * The Soviet of the UNION has no map here: its apportionment is
  * `region.houseDistricts` (ruRegions1953 / ruRegions), invariant-tested in
- * sovietSeatMap.test.ts — a parallel map would drift.
+ * sovietSeatMap.test.ts. A parallel map would drift.
  *
  * The Soviet of NATIONALITIES is republic-weighted, not population-weighted:
- * 25 seats per union republic a macro-region groups, plus 11 per autonomous
- * republic, with an in-game floor of 20 per region so every region has
- * contestable seats. The real formula's autonomous-oblast (5) and national-
- * okrug (1) tiers are omitted: the 14-region model does not represent those
- * entities. Ukraine, Byelorussia and the Baltics used to be RU regions and are
- * absent now: they are their own countries, and their 125 combined Nationalities
- * seats (25 + 25 + 75) left with them, taking the total from 640 to 515.
- * The Karelo-Finnish SSR is abstracted as the Karelian ASSR
- * under NWR. One table serves both Cold-War presets: the formula is
- * population-independent.
+ * 25 seats per union republic, 11 per autonomous republic, 20-per-region floor.
+ * Autonomous-oblast (5) and national-okrug (1) tiers are omitted because the
+ * 14-region model does not represent them. The Karelo-Finnish SSR is
+ * abstracted as the Karelian ASSR under NWR. One table serves both Cold-War
+ * presets: the formula is population-independent.
  */
 
 /** Soviet of Nationalities seats per region. Total: 515. */

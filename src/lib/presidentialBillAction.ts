@@ -4,7 +4,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import type { Bill, BillWhip, Character, ElectedOfficial, GameState } from "@/lib/db/types";
+import type { Bill, BillWhip, ElectedOfficial, GameState } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { applyEnactedBillEffects } from "@/lib/legislature/commands/applyEnactedBillEffects";
 import { createNotification } from "@/lib/notifications";
@@ -15,6 +15,11 @@ import { sendCountryGameEvent, buildBillVetoedDiscordEmbed } from "@/lib/discord
 import { billChamberVoteSplits } from "@/lib/charts/voteSplitChart";
 import { claimStatusTransition } from "@/lib/turn/atomicClaim";
 import { captureBillStatusChanged } from "@/lib/analytics/billStatusAnalytics";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 const OVERRIDE_WINDOW_HOURS = 24;
 const OVERRIDE_WINDOW_MS = OVERRIDE_WINDOW_HOURS * 60 * 60 * 1000;
@@ -40,7 +45,7 @@ export async function executePresidentialBillAction(
 ): Promise<PresidentialActionResult> {
   const now = new Date();
 
-  const bill = await db.collection<Bill>("bills").findOne({ _id: billId });
+  const bill = await billsCollection(db).findOne({ _id: billId });
   if (!bill) {
     return { success: false, message: "", error: "Bill not found" };
   }
@@ -62,7 +67,7 @@ export async function executePresidentialBillAction(
       }
 
       if (budgetResult.warning === "DEBT_CEILING_EXCEEDED") {
-        const gameState = await db.collection<GameState>("gameState").findOne({ _id: "main" });
+        const gameState = await gameStateCollection(db).findOne({ _id: "main" });
         await triggerDebtCeilingCrisis(db, gameState?.currentYear || 2024);
       }
     }
@@ -83,7 +88,7 @@ export async function executePresidentialBillAction(
         error: "This bill is not awaiting presidential action.",
       };
     }
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 1;
     await captureBillStatusChanged({
       db,
@@ -116,9 +121,10 @@ export async function executePresidentialBillAction(
       } catch (e) {
         console.error("Achievement check failed:", e);
       }
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsor?.userId) {
         await createNotification({
           userId: sponsor.userId,
@@ -134,9 +140,10 @@ export async function executePresidentialBillAction(
     // character row is missing or sponsorId is null (e.g. admin-proposed bills).
     const sponsorName = bill.sponsorId
       ? ((
-          await db
-            .collection<Character>("characters")
-            .findOne({ _id: bill.sponsorId }, { projection: { name: 1 } })
+          await charactersCollection(db).findOne(
+            { _id: bill.sponsorId },
+            { projection: { name: 1 } }
+          )
         )?.name ??
         bill.sponsorName ??
         "Unknown")
@@ -148,7 +155,7 @@ export async function executePresidentialBillAction(
     return { success: true, message: `"${bill.title}" has been signed into law.` };
   } else {
     const trimmedVetoMessage = vetoMessage?.trim();
-    const vetoGameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const vetoGameState = await gameStateCollection(db).findOne({ _id: "current" });
     const vetoTurn = vetoGameState?.currentTurn ?? 1;
     // Atomically claim the enrolled→veto_override transition so a concurrent
     // action cannot open a second override window and re-announce the veto.
@@ -198,7 +205,7 @@ export async function executePresidentialBillAction(
     // starts a distinct vote in both chambers, so every party and caucus gets
     // a clean whip slate just as every member gets a blank override ballot.
     try {
-      await db.collection<BillWhip>("billWhips").deleteMany({
+      await billWhipsCollection(db).deleteMany({
         targetType: "bill",
         targetId: billId,
         // Do not race-delete a new override whip issued immediately after the
@@ -230,9 +237,10 @@ export async function executePresidentialBillAction(
     });
 
     if (bill.sponsorId) {
-      const sponsor = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+      const sponsor = await charactersCollection(db).findOne(
+        { _id: bill.sponsorId },
+        { projection: { userId: 1 } }
+      );
       if (sponsor?.userId) {
         await createNotification({
           userId: sponsor.userId,
@@ -244,8 +252,7 @@ export async function executePresidentialBillAction(
       }
     }
     // Notify the bill country's seated House and Senate members that override voting is open
-    const officials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const officials = await electedOfficialsCollection(db)
       .find({
         officeType: { $in: ["house", "senate"] },
         countryId: bill.countryId ?? "US",
@@ -257,8 +264,7 @@ export async function executePresidentialBillAction(
       .map((o) => o.characterId)
       .filter((id): id is ObjectId => id instanceof ObjectId);
     if (charIds.length > 0) {
-      const chars = await db
-        .collection<Character>("characters")
+      const chars = await charactersCollection(db)
         .find({ _id: { $in: charIds } }, { projection: { _id: 1, userId: 1 } })
         .toArray();
       await Promise.all(
@@ -280,9 +286,10 @@ export async function executePresidentialBillAction(
     );
 
     // Announce the veto on the bill country's game-events Discord webhook (fire-and-forget).
-    const president = await db
-      .collection<Character>("characters")
-      .findOne({ _id: characterId }, { projection: { name: 1 } });
+    const president = await charactersCollection(db).findOne(
+      { _id: characterId },
+      { projection: { name: 1 } }
+    );
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
     const billUrl = `${baseUrl}/congress/bills/${bill._id.toString()}`;
     sendCountryGameEvent(

@@ -46,13 +46,21 @@ interface StrategyPanelProps {
   onReviewComplete?: () => void;
 }
 
+/** Short player copy for why a production method cannot be picked. */
+function lockReasonLabel(reason: string | null | undefined, opensYear?: number | null): string {
+  if (reason === "research") return "awaiting a research breakthrough in this sector";
+  if (reason === "prerequisite") return "waiting on research in other sectors";
+  if (reason === "sunset") return "retired, closed to new sites";
+  if (reason === "diffusion") {
+    return opensYear != null ? `reaches this country in ${opensYear}` : "not yet in this country";
+  }
+  return reason ?? "locked";
+}
+
 /**
- * A strategy's whole effect is the commodity supply/demand mix it imposes, which
- * lands on BOTH the effective margin and realized revenue. Combine the two legs
- * into the one number the decision actually turns on: the change in daily
- * operating profit. Without this a player has to weigh "more revenue vs the loss
- * in profit margin" in their head with neither figure shown — the complaint
- * OGBuildz raised in #gameplay-advisors on 2026-07-29.
+ * A strategy's effect is the commodity supply/demand mix it imposes, which
+ * affects both effective margin and realized revenue. Combine both legs into
+ * the number the decision turns on: change in daily operating profit.
  */
 export function projectStrategyOutcome(
   s: AvailableStrategy,
@@ -155,6 +163,8 @@ export default function StrategyPanel({
       <p className="text-xs text-muted mb-4">
         Changes commodity inputs and outputs. Switching costs{" "}
         {formatAmount(strategy.retoolCost, liquidCode)} and takes 12 turns to complete.
+        {strategy.availableStrategies.some((s) => (s.retoolCostMultiplier ?? 1) < 1) &&
+          " Your current method is retired, so switching to one of its successors costs less."}
       </p>
       {plantsCapacityUnits != null && plantsCapacityUnits > 0 && (
         <p className="mb-4 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs text-foreground">
@@ -336,11 +346,20 @@ export default function StrategyPanel({
                             : zeroYield
                               ? "no deposits in this state"
                               : s.locked
-                                ? (s.lockReason ?? "locked")
+                                ? lockReasonLabel(s.lockReason, s.lockOpensYear)
                                 : s.projectedRevenuePerTurn != null
                                   ? `≈ ${formatAmount(s.projectedRevenuePerTurn, liquidCode)}/turn gross`
                                   : ""}
                         </span>
+                        {!isCurrent &&
+                          !unavailable &&
+                          s.retoolCost != null &&
+                          (s.retoolCostMultiplier ?? 1) < 1 && (
+                            <span className="block text-[10px] font-medium text-success">
+                              Switch costs {formatAmount(s.retoolCost, liquidCode)}: retired method
+                              discount
+                            </span>
+                          )}
                         {s.id === suggestedStrategyId && !isCurrent && !unavailable && (
                           <span className="block text-[10px] font-medium text-info">
                             Buyers here are short of what this makes
@@ -422,6 +441,10 @@ export default function StrategyPanel({
               targetStrategyId={pendingStrategyId}
               dailyRevenue={sector.revenue ?? 0}
               liquidCurrencyCode={corporation.liquidCurrencyCode}
+              retoolCostMultiplier={
+                strategy.availableStrategies.find((s) => s.id === pendingStrategyId)
+                  ?.retoolCostMultiplier
+              }
               loading={strategyUpdating}
               onConfirm={() => {
                 onStrategyChange(pendingStrategyId);

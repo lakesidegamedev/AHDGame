@@ -1,6 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Crisis, CrisisEffect, CrisisInteraction } from "@/lib/db/types/crisis";
-import type { Character, FederalBudget, Union } from "@/lib/db/types";
+import type { Union } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { applyUnionLawProvision, isUnionsBanned } from "@/lib/labour/unionLaws";
 import { spendFromTreasury } from "@/lib/budget/treasurySpend";
@@ -14,6 +14,10 @@ import {
   UNION_BAN_STRIKE_TEMPLATE_KEY,
 } from "./unionBanStrikeCopy";
 import { announceUnionBanStrikeEnd, announceUnionBanStrikeStart } from "./unionBanStrikeWire";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Wildcat general strike triggered by an enacted union ban.
@@ -35,11 +39,11 @@ import { announceUnionBanStrikeEnd, announceUnionBanStrikeStart } from "./unionB
  */
 
 /**
- * Which archetypes read as labour/liberal and which as business/conservative in
- * each country, so the same crisis can charge the right constituencies without
- * branching on the country id at every call site. Countries with no row use
- * `default`, which carries only archetypes shared across the tables in
- * `archetypeAffinities.ts`.
+ * Which census buckets ("dimension:bucket") read as labour/liberal and which as
+ * business/conservative in each country, so the same crisis can charge the
+ * right constituencies without branching on the country id at every call site.
+ * Countries with no row use `default`, which carries only the income buckets
+ * shared by every non-US census.
  */
 export interface StrikeSegments {
   labour: string[];
@@ -48,20 +52,20 @@ export interface StrikeSegments {
 
 export const UNION_BAN_SEGMENTS: Record<string, StrikeSegments> = {
   default: {
-    labour: ["public_sector"],
-    business: ["small_business", "rural_traditionalists"],
+    labour: ["income:low"],
+    business: ["income:high"],
   },
   US: {
-    labour: ["union_trades", "college_liberals", "public_sector"],
-    business: ["small_business", "libertarians", "rural_traditionalists"],
+    labour: ["wealth:low", "education:no_college", "age:young"],
+    business: ["wealth:high", "age:mature"],
   },
   UK: {
-    labour: ["post_industrial_workers", "urban_progressives", "public_sector"],
-    business: ["small_business", "populist_right", "rural_traditionalists"],
+    labour: ["income:low", "education:no_qualifications", "urbanization:urban"],
+    business: ["income:high", "age:mature", "urbanization:rural"],
   },
   IE: {
-    labour: ["working_class", "young_urban"],
-    business: ["small_business", "rural_traditional"],
+    labour: ["income:low", "education:primary_or_less", "age:young"],
+    business: ["income:high", "urbanization:rural"],
   },
 };
 
@@ -74,9 +78,9 @@ export function segmentsFor(countryId: string): StrikeSegments {
 export interface ExecutiveCost {
   /** Points off `Character.favorability` (0-100). */
   favorability: number;
-  /** Points off each labour/liberal archetype's approval of them. */
+  /** Points off each labour/liberal bucket's approval of them. */
   labourSegment: number;
-  /** Points off each business/conservative archetype's approval of them. */
+  /** Points off each business/conservative bucket's approval of them. */
   businessSegment: number;
 }
 
@@ -147,8 +151,7 @@ export function diminishEffects(effects: CrisisEffect[], factor: number): Crisis
 
 /** Mean `Union.approval` across a country's unions; 50 when it has none. */
 async function countryLabourApproval(db: Db, countryId: string): Promise<number> {
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({ countryId: countryId as CountryId }, { projection: { approval: 1 } })
     .toArray();
   if (unions.length === 0) return 50;
@@ -158,15 +161,16 @@ async function countryLabourApproval(db: Db, countryId: string): Promise<number>
 
 /** True when the country has at least one union to be banned. */
 async function countryHasUnions(db: Db, countryId: string): Promise<boolean> {
-  const union = await db
-    .collection<Union>("unions")
-    .findOne({ countryId: countryId as CountryId }, { projection: { _id: 1 } });
+  const union = await unionsCollection(db).findOne(
+    { countryId: countryId as CountryId },
+    { projection: { _id: 1 } }
+  );
   return union !== null;
 }
 
 /** The live wildcat strike in a country, if one is running. */
 async function getActiveUnionBanStrike(db: Db, countryId: string): Promise<Crisis | null> {
-  return db.collection<Crisis>("crises").findOne({
+  return crisesCollection(db).findOne({
     templateKey: UNION_BAN_STRIKE_TEMPLATE_KEY,
     countryIds: countryId,
     status: "active",
@@ -179,7 +183,7 @@ export async function extendUnionBanStrikeFromUnderground(
   countryId: CountryId,
   currentTurn: number
 ): Promise<boolean> {
-  const result = await db.collection<Crisis>("crises").updateOne(
+  const result = await crisesCollection(db).updateOne(
     {
       templateKey: UNION_BAN_STRIKE_TEMPLATE_KEY,
       countryIds: countryId,
@@ -254,7 +258,7 @@ export async function triggerUnionBanStrike(
   // module reaches this file through the template registry, and a static import
   // back would close the cycle.
   const { announceCrisisStart } = await import("@/lib/turn/crisisTurn");
-  const crisis = await db.collection<Crisis>("crises").findOne({ _id: crisisId });
+  const crisis = await crisesCollection(db).findOne({ _id: crisisId });
   if (crisis) await announceCrisisStart(db, crisis);
   await announceUnionBanStrikeStart(countryId);
 
@@ -276,21 +280,19 @@ async function endUnionBanStrike(
   outcome: string
 ): Promise<void> {
   const now = new Date();
-  await db
-    .collection<Crisis>("crises")
-    .updateOne(
-      { _id: crisis._id, status: "active" },
-      { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: now } }
-    );
+  await crisesCollection(db).updateOne(
+    { _id: crisis._id, status: "active" },
+    { $set: { status: "resolved", endTurn: currentTurn, resolvedAt: now } }
+  );
   await announceUnionBanStrikeEnd(crisis.countryIds[0] ?? "", outcome);
 }
 
 /**
  * Charge a resolution to the executive who chose it.
  *
- * Personal favorability and per-archetype approval are the two channels the
+ * Personal favorability and per-bucket approval are the two channels the
  * game already models for "this decision cost you standing with these people"
- * (`Character.favorability` and `Character.archetypeApprovals`, both read by
+ * (`Character.favorability` and `Character.bucketApprovals`, both read by
  * `effectiveFavorability`). Deltas land on the deciding character only: the
  * strike's country-wide approval damage is carried by the crisis's own
  * `targetType: "approval"` effects, which is a different thing from what the
@@ -306,38 +308,39 @@ async function chargeExecutive(
   const inc: Record<string, number> = {};
   if (cost.favorability) inc.favorability = -cost.favorability;
   if (cost.labourSegment) {
-    for (const id of segments.labour) inc[`archetypeApprovals.${id}`] = -cost.labourSegment;
+    for (const id of segments.labour) inc[`bucketApprovals.${id}`] = -cost.labourSegment;
   }
   if (cost.businessSegment) {
-    for (const id of segments.business) inc[`archetypeApprovals.${id}`] = -cost.businessSegment;
+    for (const id of segments.business) inc[`bucketApprovals.${id}`] = -cost.businessSegment;
   }
   if (Object.keys(inc).length === 0) return;
 
-  await db.collection<Character>("characters").updateOne({ _id: characterId }, { $inc: inc });
+  await charactersCollection(db).updateOne({ _id: characterId }, { $inc: inc });
 
-  // Clamp after the fact, exactly as `applyArchetypeImpactsToVoters` does:
-  // favorability is a 0-100 scale and archetype approvals are -100..100, and a
+  // Clamp after the fact, exactly as `applyBucketImpactsToVoters` does:
+  // favorability is a 0-100 scale and bucket approvals are -100..100, and a
   // bare `$inc` respects neither.
-  const character = await db
-    .collection<Character>("characters")
-    .findOne({ _id: characterId }, { projection: { favorability: 1, archetypeApprovals: 1 } });
+  const character = await charactersCollection(db).findOne(
+    { _id: characterId },
+    { projection: { favorability: 1, bucketApprovals: 1 } }
+  );
   if (!character) return;
 
   const set: Record<string, unknown> = {};
   const clampedFavorability = Math.max(0, Math.min(100, character.favorability ?? 0));
   if (clampedFavorability !== character.favorability) set.favorability = clampedFavorability;
-  if (character.archetypeApprovals) {
+  if (character.bucketApprovals) {
     const clamped: Record<string, number> = {};
     let drifted = false;
-    for (const [id, value] of Object.entries(character.archetypeApprovals)) {
+    for (const [id, value] of Object.entries(character.bucketApprovals)) {
       const next = Math.max(-100, Math.min(100, value));
       clamped[id] = next;
       if (next !== value) drifted = true;
     }
-    if (drifted) set.archetypeApprovals = clamped;
+    if (drifted) set.bucketApprovals = clamped;
   }
   if (Object.keys(set).length > 0) {
-    await db.collection<Character>("characters").updateOne({ _id: characterId }, { $set: set });
+    await charactersCollection(db).updateOne({ _id: characterId }, { $set: set });
   }
 }
 
@@ -367,7 +370,7 @@ async function respondWithArmy(
   // Troops restore production at once, but create new clandestine sympathy.
   // Budget law is authoritative even when the Union.suspended mirror is stale.
   if (await isUnionsBanned(db, countryId as CountryId)) {
-    await db.collection<Union>("unions").updateMany(
+    await unionsCollection(db).updateMany(
       { countryId: countryId as CountryId },
       {
         $inc: { undergroundStrength: ARMY_UNDERGROUND_SYMPATHY_GAIN },
@@ -396,9 +399,10 @@ async function respondWithNegotiation(
   const approval = await countryLabourApproval(db, countryId);
   const settled = Math.random() < negotiateSuccessChance(approval);
 
-  const budget = await db
-    .collection<FederalBudget>("federalBudget")
-    .findOne({ countryId: countryId as CountryId }, { projection: { gdp: 1, gdpSmoothed: 1 } });
+  const budget = await federalBudgetCollection(db).findOne(
+    { countryId: countryId as CountryId },
+    { projection: { gdp: 1, gdpSmoothed: 1 } }
+  );
   const gdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
   const intensity = await countryUndergroundIntensity(db, countryId as CountryId);
@@ -436,12 +440,10 @@ async function respondByRidingItOut(
   countryId: string
 ): Promise<UnionBanStrikeResponseResult> {
   const intensity = await countryUndergroundIntensity(db, countryId as CountryId);
-  await db
-    .collection<Crisis>("crises")
-    .updateOne(
-      { _id: crisis._id },
-      { $set: { effects: diminishEffects(crisis.effects, rideOutEffectRetention(intensity)) } }
-    );
+  await crisesCollection(db).updateOne(
+    { _id: crisis._id },
+    { $set: { effects: diminishEffects(crisis.effects, rideOutEffectRetention(intensity)) } }
+  );
   await chargeExecutive(db, characterId, countryId, UNION_BAN_EXECUTIVE_COSTS.rideOut);
   return {};
 }
@@ -495,7 +497,7 @@ export async function runUnionBanStrikeResponse(args: {
   // The crisis on the context is a snapshot taken when the decision was
   // submitted. Re-read it so a strike that expired or was already resolved on
   // another path cannot be resolved a second time.
-  const live = await db.collection<Crisis>("crises").findOne({ _id: crisis._id, status: "active" });
+  const live = await crisesCollection(db).findOne({ _id: crisis._id, status: "active" });
   if (!live) return { nextNodeId: UNION_BAN_STRIKE_NODES.alreadyOver };
 
   switch (response) {

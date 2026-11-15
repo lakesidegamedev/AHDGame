@@ -4,7 +4,7 @@
  * transaction and preserves Congress until a separate certified chamber handover.
  */
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type { CountryGameState, Election, State, StateRegistrationPool } from "@/lib/db/types";
+import type { Election } from "@/lib/db/types";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
 import { calendarTurn, turnToGameMonth } from "@/lib/utils/gameDate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
@@ -14,6 +14,12 @@ import { planRussianCouncilDistricts } from "./rules/councilDistricts";
 import { freezeRussianCouncilElectorate } from "./rules/councilElectorate";
 import { planRussianDumaBallot } from "./rules/assemblySchedule";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
+import { STATE_POPULATION_FIELDS } from "@/lib/db/collections/states";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
+import { russianCouncilElectionOpeningsCollection } from "@/lib/db/repositories/russianCouncilElectionOpenings";
 
 export const RUSSIAN_COUNCIL_OPENINGS_COLLECTION = "russianCouncilElectionOpenings";
 export interface RussianCouncilOpeningRecord {
@@ -66,7 +72,7 @@ export async function materializeRussianCouncilElectionOpening(input: {
     ru1993LegislatureStage(calendarTurn(turn, clock)) === "congress"
   )
     return null;
-  const countries = db.collection<CountryGameState>("countryGameStates");
+  const countries = countryGameStatesCollection(db);
   const country = await countries.findOne(
     { _id: "RU" },
     {
@@ -88,8 +94,8 @@ export async function materializeRussianCouncilElectionOpening(input: {
     )
   )
     return null;
-  const elections = db.collection<Election>("elections");
-  const openings = db.collection<RussianCouncilOpeningRecord>(RUSSIAN_COUNCIL_OPENINGS_COLLECTION);
+  const elections = electionsCollection(db);
+  const openings = russianCouncilElectionOpeningsCollection<RussianCouncilOpeningRecord>(db);
   if (country.ruFirstCouncilElectionCohortId) {
     const opening = await openings.findOne(
       { _id: country.ruFirstCouncilElectionCohortId.toHexString() },
@@ -156,15 +162,10 @@ export async function materializeRussianCouncilElectionOpening(input: {
     { session, projection: { _id: 1 } }
   );
   if (conflict) throw new Error("An unresolved Russian Council ballot already exists");
-  const regions = await db
-    .collection<State>("states")
-    .find(
-      { countryId: "RU" },
-      { session, projection: { _id: 1, population: 1, votingEligiblePopulation: 1 } }
-    )
+  const regions = await statesCollection(db)
+    .find({ countryId: "RU" }, { session, projection: STATE_POPULATION_FIELDS })
     .toArray();
-  const pools = await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const pools = await stateRegistrationPoolCollection(db)
     .find({ countryId: "RU" }, { session, projection: { stateId: 1, unregistered: 1 } })
     .toArray();
   if (new Set(pools.map((row) => row.stateId)).size !== pools.length)

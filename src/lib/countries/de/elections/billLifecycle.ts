@@ -1,8 +1,9 @@
 import { CONCURRENT_VOTE_STAGE } from "@/lib/turn/billLifecycle/configs/concurrentVoteStage";
 import type { Db } from "mongodb";
 import { createNotifications } from "@/lib/notifications";
-import type { Bill, Character } from "@/lib/db/types";
+import type { Bill } from "@/lib/db/types";
 import type { BillLifecycleConfig } from "@/lib/turn/billLifecycle/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const VOTING_HOURS = 24;
 
@@ -15,9 +16,10 @@ async function notifyDESponsor(db: Db, bill: Bill, status: Bill["status"]): Prom
   if (status !== "signed" && status !== "failed") return;
   if (!bill.sponsorId) return;
   try {
-    const sponsor = await db
-      .collection<Character>("characters")
-      .findOne({ _id: bill.sponsorId }, { projection: { userId: 1 } });
+    const sponsor = await charactersCollection(db).findOne(
+      { _id: bill.sponsorId },
+      { projection: { userId: 1 } }
+    );
     if (!sponsor) return;
 
     const message =
@@ -40,10 +42,9 @@ async function notifyDESponsor(db: Db, bill: Bill, status: Bill["status"]): Prom
 }
 
 /**
- * Germany national lifecycle: single Bundestag vote → immediate enactment on
- * pass, failed on reject. No override, no gov-pending freeze. Reproduces the
- * phase previously in deBillLifecycle.ts; the engine additionally scopes votes to
- * current seat holders (#0836/#0982).
+ * Germany national lifecycle: single Bundestag vote, immediate enactment on
+ * pass, failed on reject. No override, no gov-pending freeze. The engine
+ * additionally scopes votes to current seat holders.
  */
 export const DE_NATIONAL_CONFIG: BillLifecycleConfig = {
   country: "DE",

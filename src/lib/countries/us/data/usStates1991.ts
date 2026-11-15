@@ -1,22 +1,11 @@
 /**
  * US states, 1990 Census + 1991 nominal Gross State Product baseline.
  *
- * Population values are 1990 US Census apportionment counts.
- *   Source: US Census Bureau, 1990 Census of Population, Table 1.
- * GDP figures are 1991 nominal Gross State Product in millions of USD.
- *   Source: Bureau of Economic Analysis, GSP by State, 1991 (approximate;
- *   the modern GDP series is consistent with the BEA's 1997 revision).
- * House districts reflect the 1990 reapportionment, effective for the
- *   103rd Congress (1993-1995). For a 1991 game start the 102nd Congress
- *   uses the 1980 apportionment — but the game's chamber sizing follows
- *   the 1990 numbers because the 102nd's apportionment is irrelevant
- *   after the first cycle. Total = 435 in both apportionments.
- * State senate seat counts use the modern configured chamber sizes
- *   because 1990 state senate seat counts are not material to gameplay.
- *
- * DC is included as a federal-district entity with 0 House districts
- * and 0 state senate seats. 1990 DC population 606,900 from the
- * 1990 Census.
+ * Population: 1990 Census apportionment counts.
+ * GDP: 1991 nominal GSP, millions USD (BEA, approximate).
+ * House districts: 1990 reapportionment, 435 total.
+ * State senate seats: modern configured sizes, not material to gameplay.
+ * DC is a federal-district entity with 0 House districts and 0 senate seats.
  */
 
 import type { State } from "@/lib/db/types";

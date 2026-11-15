@@ -14,6 +14,7 @@ import { getControllingCorporateParent } from "@/lib/corporations/corporateOwner
 import { getMechanicalLawLevels } from "./levels";
 import { controlGroups } from "./enforcementRules";
 import { foreignInvestmentRuleForLevel, subsidiaryCapForLevel } from "./rules";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface LawRejection {
   status: 400;
@@ -46,8 +47,7 @@ const CONTROL_PROJECTION = {
  */
 export async function controllingRoot(db: Db, corp: ControlFields): Promise<ControlFields> {
   if (!getControllingCorporateParent(corp as Corporation)) return corp;
-  const all = (await db
-    .collection<Corporation>("corporations")
+  const all = (await corporationsCollection(db)
     .find({}, { projection: CONTROL_PROJECTION })
     .toArray()) as ControlFields[];
   const byId = new Map(all.map((c) => [c._id.toString(), c]));
@@ -79,8 +79,7 @@ export async function assertSubsidiaryWithinCap(
   const cap = subsidiaryCapForLevel(levels.subsidiaryLimits);
   if (cap == null) return null;
   const root = await controllingRoot(db, parent);
-  const corps = (await db
-    .collection<Corporation>("corporations")
+  const corps = (await corporationsCollection(db)
     .find({}, { projection: CONTROL_PROJECTION })
     .toArray()) as ControlFields[];
   const rows = corps.map((c) => {

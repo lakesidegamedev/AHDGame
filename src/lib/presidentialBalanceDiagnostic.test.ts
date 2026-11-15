@@ -9,13 +9,14 @@
  * Blocks 1–3: direct calls to distributeVotesByGroupLevelAllocation with real seed data.
  * Block 4: full accumulatePresidentVoteTurn integration with mock DB + EV counting.
  */
+import { electorateFromFixture } from "@/lib/demographics/electorateFixture";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ObjectId } from "mongodb";
-import { calcStateTurnout, turnVoteWeight, type EnrichedCandidate } from "@/lib/electionEngine";
+import { calcStateTurnout, turnVoteWeight, type EnrichedCandidate } from "@/lib/elections/engine";
 // Presidential now runs on the §7.3.2 swing-flow engine (D2, 2026-06-18), so the
 // direct-call diagnostics below exercise the same function the production
 // presidential path uses.
-import { distributeVotesBySwingFlow as distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistributionSwingFlow";
+import { distributeVotesBySwingFlow as distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistributionSwingFlow";
 import { demographicCategories } from "@/lib/seeds/demographicCategories";
 import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
@@ -86,7 +87,10 @@ function getEffectiveTurnPool(
   population: number
 ): { effectiveTurnPool: number; totalPool: number } {
   const demographics = getDemographics(stateId);
-  const totalPool = calcStateTurnout(population, demographics, demographicCategories);
+  const totalPool = calcStateTurnout(
+    population,
+    electorateFromFixture(demographics, demographicCategories)
+  );
   const turnPool = turnVoteWeight(12, 6, totalPool);
   return { effectiveTurnPool: turnPool * 1.0, totalPool };
 }
@@ -116,8 +120,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -147,8 +150,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -176,8 +178,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -205,8 +206,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -234,8 +234,7 @@ describe("Vote share margins — symmetric race", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -300,8 +299,7 @@ describe("Vote share margins — parametrized state matrix", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -338,8 +336,7 @@ describe("Position sensitivity — 1-step move should shift outcome by ≤10pp",
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       PRESIDENTIAL_OPTIONS
     );
@@ -683,7 +680,8 @@ describe("Electoral College — symmetric race competitiveness", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];
@@ -728,7 +726,8 @@ describe("Electoral College — symmetric race competitiveness", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];
@@ -838,8 +837,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -875,8 +873,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -888,8 +885,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -925,8 +921,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -962,8 +957,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -1010,8 +1004,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -1022,8 +1015,7 @@ describe("Multi-party races — 6-7 candidate field", () => {
       effectiveTurnPool,
       totalPool,
       population,
-      demographics,
-      demographicCategories,
+      electorateFromFixture(demographics, demographicCategories),
       partyOrgByParty,
       MULTI_PARTY_OPTIONS
     );
@@ -1471,7 +1463,8 @@ describe("Electoral College — 7-way race EV amplification", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];
@@ -1559,7 +1552,8 @@ describe("Electoral College — 7-way race EV amplification", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({ collection } as never);
 
-    const { accumulatePresidentVoteTurn } = await import("./presidentialElectionEngine");
+    const { accumulatePresidentVoteTurn } =
+      await import("@/lib/elections/presidential/presidentialElectionEngine");
     await accumulatePresidentVoteTurn(electionId, 1, new Date("2024-11-03T12:00:00Z"));
 
     const [, update] = updateOne.mock.calls[0];

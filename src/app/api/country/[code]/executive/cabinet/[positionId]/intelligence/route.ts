@@ -12,7 +12,6 @@ import {
   getIntelligenceNetworksCollection,
   getIntelligenceOpLogCollection,
 } from "@/lib/db/collections/intelligence";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import {
   intelligenceAccrualPerTurn,
   resolveIntelligenceLineFrom,
@@ -26,6 +25,7 @@ import {
   requireIntelligenceHolder,
   type IntelligenceRouteParams,
 } from "./shared";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 const INCIDENT_LIMIT = 25;
 
@@ -51,12 +51,10 @@ export async function GET(_request: Request, { params }: IntelligenceRouteParams
 
     // The money, from the budget rather than the agency: the pot has to survive a
     // reunification merge, which purges the intelligence collections.
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { countryId },
-        { projection: { gdp: 1, spending: 1, intelligenceAppropriation: 1 } }
-      );
+    const budget = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { gdp: 1, spending: 1, intelligenceAppropriation: 1 } }
+    );
     const gdp = budget?.gdp ?? 0;
     const enactedLine = resolveIntelligenceLineFrom(budget);
 

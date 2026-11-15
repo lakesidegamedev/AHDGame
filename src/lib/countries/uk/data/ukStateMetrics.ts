@@ -6,19 +6,16 @@ function mv(value: number, trend?: number) {
 }
 
 /**
- * UK region metrics — unique per region, calibrated to ONS / UK Census 2021 data.
- *
- * Key structural differences from the US baseline:
- *   - incarcerationRate: ~140 per 100k (much lower than US ~600)
- *   - crimeRate / violentCrimeRate: calibrated to ONS Crime Survey (England & Wales)
- *     and Scotland/NI equivalents; uses crimes per 100k population
- *   - educationSpending: per-pupil spend in GBP
- *   - medianIncome: annual gross median household income in GBP
- *   - gdpGrowth: regional GVA growth rate (ONS Regional Economic Indicators)
- *   - costOfLiving: index relative to UK mean (100 = UK average)
- *   - urbanizationRate: % living in urban areas (ONS definition)
+ * UK region metrics, calibrated to ONS / UK Census 2021.
+ * Units differ from the US baseline:
+ *   - incarcerationRate: per 100k (~140, vs US ~600)
+ *   - crimeRate / violentCrimeRate: crimes per 100k (ONS Crime Survey)
+ *   - educationSpending: per-pupil GBP
+ *   - medianIncome: annual gross median household income GBP
+ *   - gdpGrowth: regional GVA growth (ONS)
+ *   - costOfLiving: index, 100 = UK mean
+ *   - urbanizationRate: % urban (ONS definition)
  *   - renewableEnergy: % of regional electricity from renewables (BEIS)
- *
  * All figures are approximate 2021-era estimates.
  */
 const ukStateMetricsBase: StateMetrics[] = [

@@ -7,12 +7,12 @@ export interface ChangelogEntry {
   categories: PublicCategory[];
 }
 
-export interface PublicCategory {
+interface PublicCategory {
   name: string;
   subcategories: PublicSubcategory[];
 }
 
-export interface PublicSubcategory {
+interface PublicSubcategory {
   name: string | null;
   items: string[];
 }
@@ -258,10 +258,3 @@ export const TAG_STYLES: Record<ItemTag, { label: string; classes: string }> = {
   backend: { label: "BE", classes: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" },
   both: { label: "BE+FE", classes: "bg-violet-500/10 text-violet-400 border-violet-500/25" },
 };
-
-export const TAG_FILTER_OPTIONS: { value: TagFilter; label: string; desc: string }[] = [
-  { value: "all", label: "All", desc: "Show everything" },
-  { value: "frontend", label: "Frontend", desc: "UI, components, pages" },
-  { value: "backend", label: "Backend", desc: "API routes, DB, server logic" },
-  { value: "both", label: "Full-stack", desc: "Touches both layers" },
-];

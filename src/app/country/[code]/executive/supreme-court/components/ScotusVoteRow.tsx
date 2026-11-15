@@ -18,7 +18,7 @@ export interface ScotusNominationRow {
 }
 
 /**
- * Senate-side SCOTUS confirmation vote row (#3605). Mirrors `CabinetVoteRow`
+ * Senate-side SCOTUS confirmation vote row. Mirrors `CabinetVoteRow`
  * (src/app/whitehouse/cabinet/components) field-for-field, swapping the fixed
  * cabinet position name for the numbered Court seat and the player-only
  * nominee name for `nomineeName` (works for both a player character and a

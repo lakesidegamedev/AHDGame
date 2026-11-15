@@ -17,6 +17,8 @@ import { IMF_BOARD_OVERRIDE_WINDOW_HOURS, IMF_BOARD_OVERRIDE_WINDOW_TURNS } from
 import { emitBailoutGrantedNews } from "../crisisNews";
 import { applyExecutivePoliticalImpact } from "../political/executivePoliticalImpact";
 import { emitCivilUnrestEvents } from "../political/civilUnrestEvents";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
@@ -50,7 +52,7 @@ export async function applyBailoutResolution(
   const { countryCode, currentTurn, realtimeMs, decisionId } = input;
 
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return { ok: false, reason: "no-budget" };
 
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
@@ -89,9 +91,7 @@ export async function applyBailoutResolution(
     crisisLegislativeDeadlineAt: null,
   };
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: update });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: update });
 
   if (!input.skipDecisionUpdate) {
     const decisionUpdate: Partial<SovereignCrisisDecision> = {
@@ -101,9 +101,10 @@ export async function applyBailoutResolution(
       resolvedAt: new Date(realtimeMs),
       resolvedReason: "IMF bailout granted (phase 5 auto-ratify)",
     };
-    await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne({ _id: decisionId }, { $set: decisionUpdate });
+    await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decisionId },
+      { $set: decisionUpdate }
+    );
   }
 
   await emitBailoutGrantedNews(countryCode, currentTurn, terms.principal);
@@ -111,9 +112,7 @@ export async function applyBailoutResolution(
   // Phase 11b: hit the proposing character with calibrated favorability/infamy
   // delta. Re-read the decision so we get the proposer who actually made the
   // call (may differ from the current executive at ratification time).
-  const decision = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-    .findOne({ _id: decisionId });
+  const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "bailout");
 
   // Phase 11b: civil-unrest event chain (1 event for the bailout path).

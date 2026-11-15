@@ -2,21 +2,12 @@ import type { SectorBuildOrder } from "@/lib/db/types";
 import type { SectorUpdateOp } from "./types";
 
 /**
- * Apply the sector ops a turn emitted to a plain document, the way Mongo's
- * ordered `bulkWrite` would.
+ * Applies turn sector ops to a plain document the way Mongo's ordered
+ * `bulkWrite` would.
  *
- * C4: the turn no longer persists `buildQueue` with a whole-array `$set` — it
- * emits the delta it owns (`$pull` of the orders that landed, `$inc` of the CIP
- * they released, and a `$push` for the flip-turn growth credit). A test can
- * therefore no longer read the post-turn queue off `$set`, and asserting on the
- * raw ops would pin the encoding rather than the behaviour.
- *
- * This is a deliberately tiny interpreter of exactly the operators the turn
- * uses. It is also what makes the race tests meaningful: a COMMAND write can be
- * applied to the same document part-way through, which is precisely the
- * interleaving that used to lose a player's charged build order.
- *
- * Test-support only — nothing in the engine calls it.
+ * Test-support only. Tiny interpreter of exactly the operators the turn
+ * uses, so assertions target behaviour rather than the op encoding, and
+ * race tests can inject a COMMAND write mid-way through.
  */
 export function applySectorTurnOps(
   doc: Record<string, unknown>,

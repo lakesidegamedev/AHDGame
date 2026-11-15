@@ -1,8 +1,13 @@
+import { servicesConfig } from "@/lib/config/services";
+import { sendSmtp } from "@/lib/emailSmtp";
+
 /**
- * Transactional email via the Resend HTTP API.
+ * Transactional email.
  *
- * No SDK dependency: a single fetch to https://api.resend.com/emails. Degrades
- * to a "not configured" no-op when RESEND_API_KEY or EMAIL_FROM is unset,
+ * Two routes, no SDK dependency for either:
+ *  - SMTP_HOST set: hand the message to that mail relay (see emailSmtp.ts).
+ *  - otherwise RESEND_API_KEY set: a single fetch to the Resend HTTP API.
+ * Degrades to a "not configured" no-op when EMAIL_FROM or both routes are unset,
  * matching how Turnstile and the OAuth providers degrade elsewhere in this
  * codebase, so local dev works without email credentials.
  */
@@ -23,13 +28,21 @@ export async function sendEmail({
   html,
   text,
 }: SendEmailArgs): Promise<SendEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  if (!apiKey || !from) {
+  const apiKey = servicesConfig.resendApiKey();
+  const from = servicesConfig.emailFrom();
+  const smtpHost = servicesConfig.smtpHost();
+  if (!from || (!apiKey && !smtpHost)) {
     return { sent: false, reason: "email-not-configured" };
   }
 
   try {
+    if (smtpHost) {
+      await sendSmtp(
+        { host: smtpHost, port: servicesConfig.smtpPort() },
+        { from, to, subject, html, text }
+      );
+      return { sent: true };
+    }
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -45,7 +58,7 @@ export async function sendEmail({
     const data = (await res.json().catch(() => ({}))) as { id?: string };
     return { sent: true, id: data.id };
   } catch (error) {
-    console.error("sendEmail: request failed", error);
+    console.error("sendEmail: request or mail relay failed", error);
     return { sent: false, reason: "send-failed" };
   }
 }

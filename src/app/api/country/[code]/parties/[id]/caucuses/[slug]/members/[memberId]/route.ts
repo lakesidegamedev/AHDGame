@@ -8,6 +8,7 @@ import { findCaucusBySlug } from "@/lib/db/caucusLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { cleanupCaucusParticipationForCharacters } from "@/lib/caucus/cleanupCaucusParticipationForCharacters";
 import type { CaucusMembership } from "@/lib/db/types";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 // DELETE /api/country/[code]/parties/[id]/caucuses/[slug]/members/[memberId] — Remove a member
 // Auth: requireAuthWithCharacter (member can leave themselves; chair can kick anyone but themselves)
@@ -43,9 +44,11 @@ export async function DELETE(
     const { caucus } = resolved;
 
     const memberOid = new ObjectId(memberId);
-    const membership = await db
-      .collection<CaucusMembership>("caucusMemberships")
-      .findOne({ caucusId: caucus._id, memberId: memberOid, status: "active" });
+    const membership = await caucusMembershipsCollection(db).findOne({
+      caucusId: caucus._id,
+      memberId: memberOid,
+      status: "active",
+    });
     if (!membership) {
       return errorResponse(404, "Membership not found");
     }
@@ -72,7 +75,7 @@ export async function DELETE(
     }
 
     const now = new Date();
-    await db.collection<CaucusMembership>("caucusMemberships").updateOne(
+    await caucusMembershipsCollection(db).updateOne(
       { _id: membership._id },
       {
         $set: {

@@ -17,6 +17,7 @@ import type { Db } from "mongodb";
 import type { StateMetrics } from "@/lib/db/types";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import { MACRO_CATEGORIES } from "./paths";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 /**
  * Everything the political BOARD now owns, and which this extractor therefore
@@ -92,7 +93,7 @@ export async function writeSplitMetricsBulk(db: Db, docs: StateMetrics[]): Promi
       updateOne: { filter: { _id: macroId }, update: { $set: macroData }, upsert: true },
     };
   });
-  await db.collection<MacroMetricsDoc>("macroMetrics").bulkWrite(ops as never, { ordered: true });
+  await macroMetricsCollection<MacroMetricsDoc>(db).bulkWrite(ops as never, { ordered: true });
 }
 
 export { MACRO_CATEGORIES };

@@ -8,6 +8,7 @@ import { getGameState } from "@/lib/gameState";
 import { getDb } from "@/lib/mongodb";
 import type { Election } from "@/lib/db/types";
 import CountryOverviewClient from "./CountryOverviewClient";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -47,7 +48,7 @@ export default async function CountryPage({ params }: Props) {
   let activePresidentElection: { id: string; seatId?: string; status: string } | null = null;
   if (countryId === COUNTRY_CONFIGS.US.id) {
     const db = await getDb();
-    const election = await db.collection<Election>("elections").findOne(
+    const election = await electionsCollection(db).findOne(
       {
         electionType: "president",
         state: "US",

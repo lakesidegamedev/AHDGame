@@ -1,19 +1,19 @@
 /** A bank cannot replace or resolve the epoch behind an unfinished construction debit. */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation } from "@/lib/db/types/corporation";
 import type { ConstructionBuildClaim } from "./rules/constructionBuild";
-import type { BankLoan } from "@/lib/db/types/bank";
-import type { CorporateSector } from "@/lib/db/types/corporation";
 import { oid } from "./rules/boundary";
 import { releaseConstructionAdmission } from "./constructionAdmission";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { resumeSettlement, settleTransition } from "./settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export async function acquireConstructionFundingLease(
   db: Db,
   claim: ConstructionBuildClaim
 ): Promise<boolean> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const bankId = new ObjectId(claim.bankId);
   const acquired = await corporations.updateOne(
     {
@@ -57,7 +57,7 @@ export async function abortUnfundedConstruction(
   sectorId: ObjectId,
   turn: number
 ): Promise<boolean> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const identity = {
     _id: new ObjectId(claim.bankId),
     "bankConstructionFunding.loanId": claim.loanId,
@@ -78,9 +78,10 @@ export async function abortUnfundedConstruction(
   // A contribution that stopped between debit and escrow credit must finish
   // under its original quote before any refund can be calculated.
   const contributionKey = `construction:${claim.claimId}:contribution`;
-  const contribution = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: contributionKey }, { projection: { _id: 1 } });
+  const contribution = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: contributionKey },
+    { projection: { _id: 1 } }
+  );
   if (contribution) {
     const recovered = await resumeSettlement(db, contributionKey);
     const unfunded =
@@ -90,9 +91,10 @@ export async function abortUnfundedConstruction(
     if (!unfunded && (recovered.error || !["applied", "replayed"].includes(recovered.status)))
       return false;
   }
-  const sector = await db
-    .collection<CorporateSector>("corporateSectors")
-    .findOne({ _id: sectorId }, { projection: { constructionFinancing: 1 } });
+  const sector = await corporateSectorsCollection(db).findOne(
+    { _id: sectorId },
+    { projection: { constructionFinancing: 1 } }
+  );
   const current = sector?.constructionFinancing;
   if (!current || current.claimId !== claim.claimId || current.loanFunded) return false;
   if (!Number.isFinite(current.escrowLocal) || current.escrowLocal < 0) return false;
@@ -158,7 +160,7 @@ export async function abortUnfundedConstruction(
     { ...identity, "bankConstructionFunding.kind": "aborting" },
     { $unset: { bankConstructionFunding: "" } }
   );
-  await db.collection<BankLoan>("bankLoans").updateOne(
+  await bankLoansCollection(db).updateOne(
     {
       _id: new ObjectId(claim.loanId),
       constructionSettlementOwner: `construction:${claim.claimId}:funding`,
@@ -173,7 +175,7 @@ export async function releaseConstructionFundingLease(
   db: Db,
   claim: ConstructionBuildClaim
 ): Promise<void> {
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     {
       _id: new ObjectId(claim.bankId),
       "bankConstructionFunding.loanId": claim.loanId,
@@ -201,23 +203,24 @@ export async function releaseCompletedConstructionFunding(
   // Paid queue publication can precede acknowledgement of its atomic receipt.
   // Finish that original receipt before another recovery may change the queue.
   const paidKey = `construction:${claim.claimId}:paid:${claim.order.startTurn}`;
-  const paidJournal = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: paidKey }, { projection: { _id: 1 } });
+  const paidJournal = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: paidKey },
+    { projection: { _id: 1 } }
+  );
   if (paidJournal) {
     const paid = await resumeSettlement(db, paidKey);
     if (paid.error || !["applied", "replayed"].includes(paid.status)) return false;
   }
   if (claim.effects && !claim.effectsPaid) return false;
   await releaseConstructionFundingLease(db, claim);
-  await db.collection<BankLoan>("bankLoans").updateOne(
+  await bankLoansCollection(db).updateOne(
     {
       _id: new ObjectId(claim.loanId),
       constructionSettlementOwner: `construction:${claim.claimId}:funding`,
     },
     { $unset: { constructionSettlementOwner: "" } }
   );
-  await db.collection<CorporateSector>("corporateSectors").updateOne(
+  await corporateSectorsCollection(db).updateOne(
     {
       "constructionFinancing.claimId": claim.claimId,
       "constructionFinancing.loanId": claim.loanId,

@@ -9,15 +9,16 @@
  */
 
 import { type Db, type ObjectId } from "mongodb";
-import type { Character, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Returns a Set of stringified character `_id` values for every character
  * owned by a banned user. Returns an empty Set when no users are banned.
  */
 export async function getBannedCharacterIds(db: Db): Promise<Set<string>> {
-  const bannedUsers = await db
-    .collection<User>("users")
+  const bannedUsers = await usersCollection(db)
     .find({ isBanned: true })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();
@@ -25,8 +26,7 @@ export async function getBannedCharacterIds(db: Db): Promise<Set<string>> {
   if (bannedUsers.length === 0) return new Set();
 
   const userIds = bannedUsers.map((u) => u._id);
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId: { $in: userIds } })
     .project<{ _id: ObjectId }>({ _id: 1 })
     .toArray();

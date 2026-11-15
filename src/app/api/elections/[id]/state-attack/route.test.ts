@@ -14,6 +14,9 @@ vi.mock("@/lib/api/rateLimit", () => ({
 vi.mock("@/lib/elections/electionParamResolution", () => ({
   resolveElectionRouteParam: vi.fn(),
 }));
+vi.mock("@/lib/currency/campaignFxRate", () => ({
+  loadCampaignFxRate: vi.fn().mockResolvedValue(1),
+}));
 vi.mock("@/lib/time/gameTime", () => ({ getGameTime: vi.fn() }));
 vi.mock("@/lib/elections/raceWireEmit", () => ({ emitStateAttackWire: vi.fn() }));
 // The real helper opens a Mongo session against a client this test does not
@@ -247,7 +250,8 @@ describe("POST /api/elections/[id]/state-attack", () => {
   it("charges the war chest in the campaign's own currency", async () => {
     // The constant is anchor-denominated. Comparing it against a local balance
     // would let a campaign in a weak currency buy at a fraction of the price.
-    db.collection("exchangeRates").findOne.mockResolvedValue({ currencyCode: "USD", rate: 2 });
+    const { loadCampaignFxRate } = await import("@/lib/currency/campaignFxRate");
+    vi.mocked(loadCampaignFxRate).mockResolvedValueOnce(2);
     const res = await callRoute();
     expect(res.status).toBe(200);
     const [, update] = db.collectionMocks.campaigns!.updateOne.mock.calls[0];

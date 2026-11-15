@@ -28,6 +28,18 @@ import type {
   RecapActionBreakdown,
   RecapRankedStat,
 } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
+import { achievementsCollection } from "@/lib/db/repositories/achievements";
+import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { newsPostsCollection } from "@/lib/db/repositories/newsPosts";
+import { userSubscriptionsCollection } from "@/lib/db/repositories/userSubscriptions";
+import { portfolioHistoryCollection } from "@/lib/db/repositories/portfolioHistory";
+import type { Document } from "mongodb";
+import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 
 /** Bill statuses that count as "passed" (enacted) for the recap. */
 const PASSED_BILL_STATUSES = ["signed", "enrolled", "veto_override", "override_shugiin"];
@@ -130,8 +142,7 @@ async function latestPortfolioNetValues(
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   try {
-    const rows = await db
-      .collection("portfolioHistory")
+    const rows = await portfolioHistoryCollection<Document>(db)
       .aggregate<{ _id: ObjectId; v: number | null }>([
         {
           $match: {
@@ -182,15 +193,13 @@ export async function buildSeasonRecaps(
 
   const [actionRows, billRows, achievementRows, subRows, newsRows, investorSnap] =
     await Promise.all([
-      db
-        .collection<ActionLog>("actionLogs")
+      actionLogsCollection(db)
         .aggregate<{ _id: { c: ObjectId; t: ActionType }; n: number }>([
           { $match: { characterId: { $in: ids } } },
           { $group: { _id: { c: "$characterId", t: "$actionType" }, n: { $sum: 1 } } },
         ])
         .toArray(),
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .aggregate<{ _id: ObjectId | null; sponsored: number; passed: number }>([
           { $match: { sponsorId: { $in: ids } } },
           {
@@ -202,22 +211,19 @@ export async function buildSeasonRecaps(
           },
         ])
         .toArray(),
-      db
-        .collection<CharacterAchievement>("characterAchievements")
+      characterAchievementsCollection(db)
         .aggregate<{ _id: ObjectId; n: number }>([
           { $match: { characterId: { $in: ids } } },
           { $group: { _id: "$characterId", n: { $sum: 1 } } },
         ])
         .toArray(),
-      db
-        .collection<UserSubscription>("userSubscriptions")
+      userSubscriptionsCollection(db)
         .aggregate<{ _id: ObjectId; n: number }>([
           { $match: { subscribedToCharacterId: { $in: ids } } },
           { $group: { _id: "$subscribedToCharacterId", n: { $sum: 1 } } },
         ])
         .toArray(),
-      db
-        .collection<NewsPost>("newsPosts")
+      newsPostsCollection(db)
         .aggregate<{ _id: ObjectId; posts: number; likes: number }>([
           { $match: { authorId: { $in: ids }, isSystem: { $ne: true } } },
           {
@@ -229,7 +235,7 @@ export async function buildSeasonRecaps(
           },
         ])
         .toArray(),
-      db.collection<InvestorRankingSnapshot>("investorRankingSnapshots").findOne({ _id: "global" }),
+      investorRankingSnapshotsCollection(db).findOne({ _id: "global" }),
     ]);
 
   // ── Fold aggregate rows into per-character maps ────────────────────────────
@@ -319,8 +325,7 @@ export async function buildSeasonRecaps(
   ];
   const partyDocs =
     partyKeys.length > 0
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
+      ? await politicalPartiesCollection(db)
           .find({
             $or: partyKeys.map((k) => ({ countryId: k.countryId, sequentialId: k.sequentialId })),
           })
@@ -343,8 +348,7 @@ export async function buildSeasonRecaps(
   }
   const achDefs =
     highlightIds.size > 0
-      ? await db
-          .collection<Achievement>("achievements")
+      ? await achievementsCollection(db)
           .find({ _id: { $in: [...highlightIds.values()] } })
           .toArray()
       : [];
@@ -401,9 +405,10 @@ export async function buildSeasonRecaps(
   // Money symbols as this world's era showed them (1953 DM, not euros).
   let era: Pick<GameState, "preset" | "eurozoneEnabled"> | null = null;
   try {
-    era = await db
-      .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1, eurozoneEnabled: 1 } });
+    era = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, eurozoneEnabled: 1 } }
+    );
   } catch (err) {
     if (requireComplete) throw err;
   }
@@ -486,7 +491,7 @@ export async function buildSoloRecap(
   character: Character,
   ctx: RecapBuildContext
 ): Promise<CharacterRecap | null> {
-  const field = await db.collection<Character>("characters").find({}).toArray();
+  const field = await charactersCollection(db).find({}).toArray();
   if (!field.some((c) => c._id.equals(character._id))) field.push(character);
   const recaps = await buildSeasonRecaps(db, [character], ctx, { field, rankActions: false });
   return recaps.get(character._id.toString()) ?? null;

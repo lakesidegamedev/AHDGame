@@ -1,35 +1,14 @@
 /**
- * Spain 1953 metric overlays — Francoist autarky years.
+ * Spain 1953 metric overlays for the Francoist autarky years.
  *
- * Base `esStateMetrics` is authored on ~1979 (Transition) values. Without this
- * overlay a 1953-default world keeps 1979 life expectancy (~75.5), literacy 93,
- * and urbanization (~70) — far above autarky-era Spain, where agriculture still
- * employed ~49% of the workforce (1950 Census of Spain / INE) and life
- * expectancy sat near 62 (UN Demographic Yearbook 1950-55). Region ids match
- * `esRegionCensusData1953`.
+ * Base esStateMetrics is authored on ~1979 values, so this overlay supplies
+ * autarky-era life expectancy (~62), literacy, and urbanization, plus region
+ * ids matching esRegionCensusData1953.
  *
- * `medianIncome` is annual household income in 1953 NOMINAL pesetas, the unit
- * the 1953 GDP seed is denominated in (budgets.ts ES FY1953: ₧198B).
- *
- * The original authoring took `1979 nominal ₧700,000 × 0.33` (the Maddison
- * Project REAL GDP/cap ratio 1953≈2,500 vs 1979≈7,500 1990 Int$) and called
- * the result a 1953 nominal peseta figure. Applying a real-volume ratio to a
- * nominal value skips the price level entirely, and Spanish prices rose about
- * an order of magnitude between the autarky years and the Transition (INE
- * consumer price series, 1953→1979 ≈ 12-13×). The nominal chain is
- *
- *   ₧_1953 = ₧_1979 × 0.33 (real income ratio) ÷ ~12.5 (INE price level)
- *
- * i.e. roughly ₧_1979 / 38 — the figures below are the previous ones ÷ ~16
- * after re-rounding to authored values.
- *
- * Cross-check against the seed's own national accounts: GDP/capita = ₧198B /
- * 28.2M = ₧7,021, so the ~₧13,400 population-weighted median household (3.2
- * persons) is ~1.9× GDP/capita, i.e. aggregate household income ≈ 60% of GDP.
- * Against the record: INE puts the mid-1950s average annual industrial wage
- * near ₧11,000-13,000, with Andalusian braceros far below it and
- * Barcelona/Bilbao industry above — the ₧8,800-22,000 spread seeded here.
- * Broadband/internet did not exist.
+ * medianIncome is annual household income in 1953 nominal pesetas, the unit
+ * the 1953 GDP seed is denominated in (budgets.ts ES FY1953: 198B). Values
+ * convert 1979 nominal pesetas by the real income ratio divided by the
+ * 1953-1979 price level, not by the real ratio alone.
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 
@@ -57,12 +36,9 @@ const NATIONAL_1953: Record<string, number> = {
   "education.universityEnrollment": 2, // university <2% of adults (INE 1950)
   "population.urbanizationRate": 45, // INE 1950 — rural→urban migration to Catalonia/Madrid barely begun
   "population.medianAge": 28, // high fertility; young pyramid
-  // 0-100 fertility INDEX (population.birthRate; metricDefinitions
-  // `unit: "index"`), NOT a crude per-1000 rate. Real Spain 1953 TFR ≈2.5
-  // (INE) — birthRateIndexToTFR(68, 2.06) = 2.06*(0.4+0.68*1.2) = 2.48. This
-  // field was previously ABSENT, so ES fell through seedCohortVectors'
-  // DEFAULT_BIRTH_RATE = 50 (TFR 2.06) — understating Francoist-era
-  // pronatalist Spain's above-replacement fertility.
+  // 0-100 fertility INDEX (population.birthRate; `unit: "index"`), NOT a crude
+  // per-1000 rate. Real Spain 1953 TFR ≈2.5 (INE); birthRateIndexToTFR(68, 2.06) = 2.48.
+  // Authored so the seed does not fall through to DEFAULT_BIRTH_RATE = 50 (TFR 2.06).
   "population.birthRate": 68,
   "population.populationGrowth": 0.9,
   "infrastructure.broadbandAccess": 0, // internet did not exist

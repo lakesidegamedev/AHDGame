@@ -11,12 +11,13 @@ export interface StaffDropdownPanelProps extends StaffNavOpts {
 export function StaffDropdownPanel({
   isAdmin = false,
   isModerator = false,
+  isJuniorDev = false,
   isSingleplayerOwner = false,
   onClose,
 }: StaffDropdownPanelProps) {
   const t = useTranslations("nav");
 
-  const visible = visibleStaffNavItems({ isAdmin, isModerator, isSingleplayerOwner });
+  const visible = visibleStaffNavItems({ isAdmin, isModerator, isJuniorDev, isSingleplayerOwner });
 
   const itemClass =
     "flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60";

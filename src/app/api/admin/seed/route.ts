@@ -1,20 +1,16 @@
 /**
  * POST /api/admin/seed
  *
- * Universal seeder endpoint. Admin-only (no SEED_SECRET needed).
+ * Admin-only universal seeder.
  *
  * Body (JSON):
- *   targets: string[]   - which datasets to seed. Valid values:
- *       "states", "policies", "demographics", "gameConfig",
- *       "parties", "statePartyOrg", "regionMetrics",
- *       "legislationTypes", "achievements", "statePolicies",
- *       "politicalLegislation", "indexes"
- *   reset: boolean       - drop target collections first (default false)
- *   scope: CountryId|"both" - which country's targets a full seed covers (default "US")
- *   preset: string       - era baseline for preset-aware seeders, e.g.
- *                          "2019-default" (default) or "1991-default"
- *
- * If targets is empty or omitted, seeds everything (full seed).
+ *   targets: string[]   - datasets to seed ("states", "policies", "demographics",
+ *     "gameConfig", "parties", "statePartyOrg", "regionMetrics",
+ *     "legislationTypes", "achievements", "statePolicies",
+ *     "politicalLegislation", "indexes"); empty/omitted seeds everything
+ *   reset: boolean      - drop target collections first (default false)
+ *   scope: CountryId|"both" - country for a full seed (default "US")
+ *   preset: string      - era baseline for preset-aware seeders (default "2019-default")
  */
 
 import { NextResponse } from "next/server";
@@ -73,7 +69,6 @@ import {
   seedDEStateMetrics,
   seedDEBaselines,
   seedDEGovernmentFormation,
-  seedDELegislation,
   seedDEElections,
   seedDEBundestag2021,
   seedDEMinisterPresidents2020,
@@ -182,7 +177,6 @@ const DE_TARGETS = [
   "deStateMetrics",
   "deBaselines",
   "deGovernmentFormation",
-  "deLegislation",
   "deElections",
   "deBudgets",
   "deBundestag2021",
@@ -351,7 +345,6 @@ export async function GET() {
         deStateMetrics: "Land-level economic and social metrics for Germany",
         deBaselines: "Metric decay baselines for each German Land",
         deGovernmentFormation: "Germany government formation document for Chancellor appointment",
-        deLegislation: "DE-scoped legislation types (tax, labor, energy, immigration)",
         deElections: "Spawn missing Bundestag elections for every Land",
         deBudgets: "DE national budget, regional budgets, and enacted laws",
         deBundestag2021:
@@ -525,7 +518,6 @@ export async function POST(request: Request) {
     if (targets.includes("deStateMetrics")) await seedDEStateMetrics(db, reset, log, preset);
     if (targets.includes("deBaselines")) await seedDEBaselines(db, reset, log, preset);
     if (targets.includes("deGovernmentFormation")) await seedDEGovernmentFormation(db, log, preset);
-    if (targets.includes("deLegislation")) await seedDELegislation(db, log);
     if (targets.includes("deElections")) await seedDEElections(log);
     if (targets.includes("deBudgets")) await seedDeBudgets(db, reset, log, preset);
     if (targets.includes("deBundestag2021")) await seedDEBundestag2021(db, reset, log);

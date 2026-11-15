@@ -17,6 +17,9 @@ import {
   ADDRESS_BODY_MAX_LENGTH,
 } from "@/lib/constants/governorOffice";
 import type { GameState } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import type { Document } from "mongodb";
 
 // POST /api/country/[code]/region/[id]/office/address — Deliver a State of the State address.
 // Auth: requireHumanSessionWithCharacter; must be the office-holder.
@@ -55,15 +58,15 @@ export async function POST(
       return errorResponse(parsed.status, parsed.error);
     }
 
-    // The target must be a bucket THIS country's electorate actually has.
-    // Validated here rather than in the schema because the valid set depends on
-    // the game's preset. A stale or foreign bucket used to be accepted, charged,
-    // and then applied to no voters at all.
+    // Target must be a bucket this country's electorate has. Valid set
+    // depends on game preset, so checked here not in the schema. Otherwise
+    // a stale bucket is accepted, charged, and applied to no voters.
     const targetId = parsed.data.targetDemographicGroupId;
     if (targetId) {
-      const gs = await db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1 } });
+      const gs = await gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { preset: 1 } }
+      );
       if (!isTargetValidForCountry(targetId, countryId, gs?.preset ?? null)) {
         return errorResponse(400, "Unknown demographic target");
       }
@@ -108,13 +111,12 @@ export async function GET(
 
     const stateId = id.toUpperCase();
     const db = await getDb();
-    const recent = await db
-      .collection("governorAddresses")
+    const recent = await governorAddressesCollection<Document>(db)
       .find({ countryId, stateId })
       .sort({ deliveredAtTurn: -1 })
       .limit(1)
       .toArray();
-    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
     const last = recent[0] ?? null;
     return NextResponse.json({

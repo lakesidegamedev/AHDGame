@@ -9,11 +9,9 @@
  */
 
 /**
- * Fraction of the output gap that closes per year (tunable). v0 balance fix
- * (2026-06-30): raised 0.5 → 1.5 so the steady-state gap (= impulse / GAP_CLOSURE)
- * stays well inside the ±15 bound instead of pinning for high-demand regions —
- * keeping the gap responsive to new demand shocks. See
- * docs/plans/2026-06-30-macro-balance-v0.md (#2).
+ * Fraction of the output gap that closes per year (tunable). Sized so the
+ * steady-state gap (impulse / GAP_CLOSURE) stays inside the bound instead of
+ * pinning for high-demand regions, keeping it responsive to new shocks.
  */
 export const GAP_CLOSURE = 1.5;
 /** Output gap is bounded so a mis-fed signal can't open an unbounded gap (%). */

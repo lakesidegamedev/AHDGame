@@ -1,0 +1,109 @@
+{
+  "config": {
+    "governmentType": "parliamentaryMonarchy",
+    "regionLabel": "Autonomous Community",
+    "legislature": {
+      "name": "Cortes Generales",
+      "lowerChamber": {
+        "key": "congresoDiputados",
+        "name": "Congress of Deputies",
+        "shortName": "Congreso",
+        "seats": 350,
+        "description": "350 deputies elected by proportional representation (D'Hondt) in provincial constituencies for four-year terms."
+      },
+      "upperChamber": {
+        "key": "senado",
+        "name": "Senate",
+        "shortName": "Senado",
+        "seats": 208,
+        "description": "208 senators elected on a provincial basis (plus regional appointees) for four-year terms.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "labelPlural": "Prime Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "monarch",
+        "label": "King",
+        "labelPlural": "Kings",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "congresoDiputados",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "senator",
+        "label": "Senator",
+        "labelPlural": "Senators",
+        "chamberKey": "senado",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Banco de España",
+        "labelPlural": "Governors of the Banco de España",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": true }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "governmentType": "onePartyState",
+      "regionLabel": "Province",
+      "legislature": {
+        "name": "Cortes Españolas",
+        "lowerChamber": {
+          "key": "congresoDiputados",
+          "name": "Cortes Españolas",
+          "shortName": "Cortes",
+          "seats": 350,
+          "description": "350 procuradores of the Cortes Españolas — a corporatist chamber seated by 'organic democracy' (syndicates, municipalities, families, and direct Franco appointment), not by competitive election."
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "caudillo",
+          "label": "Caudillo",
+          "labelPlural": "Caudillos",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "procurador",
+          "label": "Procurador",
+          "labelPlural": "Procuradores",
+          "chamberKey": "congresoDiputados",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the Banco de España",
+          "labelPlural": "Governors of the Banco de España",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ],
+      "lowerElectionSystem": { "snapElectionsAllowed": false },
+      "upperElectionSystem": null
+    }
+  }
+}

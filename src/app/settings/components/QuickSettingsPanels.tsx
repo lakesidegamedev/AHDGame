@@ -11,7 +11,6 @@ import {
   Gauge,
   Globe2,
   Languages,
-  Music2,
   Pause,
   RotateCcw,
   SlidersHorizontal,
@@ -445,15 +444,5 @@ export function DataQuickSettings() {
         </p>
       )}
     </div>
-  );
-}
-
-export function AudioSectionHint() {
-  const t = useTranslations("settings");
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-      <Music2 className="h-3.5 w-3.5" />
-      {t("quick.audio.profileMusicBelow")}
-    </span>
   );
 }

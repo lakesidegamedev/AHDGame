@@ -1,6 +1,4 @@
-// DELETE: cancel an open/partial limit order, refund remaining escrowed funds
-// Auth: requireAuthWithCharacter
-// Errors: 400 (invalid ID), 401, 403 (not owner / forex disabled), 404
+// DELETE: cancel an open/partial limit order, refund remaining escrow. Auth: requireAuthWithCharacter. Errors: 400, 401, 403, 404.
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -11,6 +9,8 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import type { CurrencyOrder } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
 interface RouteParams {
   params: Promise<{ orderId: string }>;
@@ -33,9 +33,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const { applyCancelRefund, cancelClaimKey, recoverFillClaim } =
       await import("@/lib/forex/fillRecovery");
-    let order = await db
-      .collection<CurrencyOrder>("currencyOrders")
-      .findOne({ _id: new ObjectId(orderId) });
+    let order = await currencyOrdersCollection(db).findOne({ _id: new ObjectId(orderId) });
 
     if (!order) throw notFound("Order not found");
     if (order.characterId.toString() !== auth.user.character._id.toString()) {
@@ -46,9 +44,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       // undone first so the cancel can proceed; a live one is never stolen.
       const recovery = await recoverFillClaim(db, order._id);
       if (recovery.outcome === "completed" || recovery.outcome === "rolled-back") {
-        const reread = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .findOne({ _id: order._id });
+        const reread = await currencyOrdersCollection(db).findOne({ _id: order._id });
         if (!reread) throw notFound("Order not found");
         order = reread;
       }
@@ -67,44 +63,36 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     await runWithOptionalTransaction(
       async (session) => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .findOneAndUpdate(
-            claimFilter,
-            { $set: { status: "processing", updatedAt: now } },
-            { returnDocument: "before", session }
-          );
+        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+          claimFilter,
+          { $set: { status: "processing", updatedAt: now } },
+          { returnDocument: "before", session }
+        );
         if (!claimedOrder) throw badRequest("Only open or partial orders can be cancelled");
 
         if (refundAmount > 0) {
-          await db
-            .collection("characters")
-            .updateOne(
-              { _id: order.characterId },
-              { $inc: buildPersonalBalanceInc(refundAmount, order.fromCurrency, true) },
-              { session }
-            );
-        }
-
-        const cancelResult = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .updateOne(
-            { _id: order._id, status: "processing" },
-            { $set: { status: "cancelled", updatedAt: now } },
+          await charactersCollection(db).updateOne(
+            { _id: order.characterId },
+            { $inc: buildPersonalBalanceInc(refundAmount, order.fromCurrency, true) },
             { session }
           );
+        }
+
+        const cancelResult = await currencyOrdersCollection(db).updateOne(
+          { _id: order._id, status: "processing" },
+          { $set: { status: "cancelled", updatedAt: now } },
+          { session }
+        );
         if (cancelResult.matchedCount === 0) {
           throw badRequest("Only open or partial orders can be cancelled");
         }
       },
       async () => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .findOneAndUpdate(
-            claimFilter,
-            { $set: { status: "processing", updatedAt: now } },
-            { returnDocument: "before" }
-          );
+        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+          claimFilter,
+          { $set: { status: "processing", updatedAt: now } },
+          { returnDocument: "before" }
+        );
         if (!claimedOrder) throw badRequest("Only open or partial orders can be cancelled");
 
         try {
@@ -120,22 +108,18 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             now
           );
 
-          const cancelResult = await db
-            .collection<CurrencyOrder>("currencyOrders")
-            .updateOne(
-              { _id: order._id, status: "processing" },
-              { $set: { status: "cancelled", updatedAt: now } }
-            );
+          const cancelResult = await currencyOrdersCollection(db).updateOne(
+            { _id: order._id, status: "processing" },
+            { $set: { status: "cancelled", updatedAt: now } }
+          );
           if (cancelResult.matchedCount === 0) {
             throw badRequest("Only open or partial orders can be cancelled");
           }
         } catch (error) {
-          await db
-            .collection<CurrencyOrder>("currencyOrders")
-            .updateOne(
-              { _id: order._id, status: "processing" },
-              { $set: { status: order.status, updatedAt: new Date() } }
-            );
+          await currencyOrdersCollection(db).updateOne(
+            { _id: order._id, status: "processing" },
+            { $set: { status: order.status, updatedAt: new Date() } }
+          );
           throw error;
         }
       }

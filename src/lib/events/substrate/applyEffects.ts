@@ -12,12 +12,12 @@ import type { ElectionCandidate } from "@/lib/db/types/election";
 import type { EventEffect } from "@/lib/db/types/events";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
 import type { SentimentPulse } from "@/lib/db/types/sentimentPulse";
+import { anchorToLocal, campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import {
-  anchorToLocal,
-  campaignAnchorToLocal,
-  loadCampaignFxRate,
-} from "@/lib/campaigns/campaignCurrency";
-import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
+  buildPersonalBalanceInc,
+  getHomeCurrency,
+  loadCharacterFxRate,
+} from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { creditTreasury, spendFromTreasury } from "@/lib/budget/treasurySpend";
 import { emitTx } from "@/lib/financialTxLog/emit";
@@ -37,6 +37,14 @@ import {
 } from "./countryModifiers";
 import { applyCivilLibertiesDelta } from "@/lib/politicalMetrics/civilLiberties";
 import type { EventResolveContext } from "./types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
+import { sentimentPulsesCollection } from "@/lib/db/repositories/sentimentPulses";
 
 function isCompletedSettlement(result: SettlementResult): boolean {
   return result.status === "applied" || (result.status === "replayed" && !result.error);
@@ -84,9 +92,10 @@ async function resumeFrozenFundedEvent(
   if (!isCompletedSettlement(resumed)) {
     throw new Error(resumed.error ?? `Funded Treasury event receipt ${receiptKey} is incomplete`);
   }
-  const receipt = await db
-    .collection<{ _id: string; event?: { meta?: Record<string, unknown> } }>("bankMoneyMoves")
-    .findOne({ _id: receiptKey }, { projection: { _id: 1, event: 1 } });
+  const receipt = await bankMoneyMovesCollection<{
+    _id: string;
+    event?: { meta?: Record<string, unknown> };
+  }>(db).findOne({ _id: receiptKey }, { projection: { _id: 1, event: 1 } });
   if (!receipt)
     throw new Error(`Funded Treasury event receipt ${receiptKey} disappeared during recovery`);
   return parseFundedEventQuote(receipt, receiptKey);
@@ -97,7 +106,7 @@ function clampStat(value: number): number {
 }
 
 async function loadCharacter(ctx: EventResolveContext): Promise<Character | null> {
-  return ctx.db.collection<Character>("characters").findOne({ _id: ctx.instance.scopeId });
+  return charactersCollection(ctx.db).findOne({ _id: ctx.instance.scopeId });
 }
 
 /**
@@ -165,7 +174,7 @@ async function applyCountryEffects(
       case "approvalDelta": {
         if (effect.delta === 0) break;
         if (ctx.treasuryCashLedgerEnabled) {
-          await ctx.db.collection("governmentApprovals").updateOne(
+          await governmentApprovalsCollection<Document>(ctx.db).updateOne(
             {
               _id: countryId as unknown as ObjectId,
               appliedEventEffects: { $ne: effectKey },
@@ -176,12 +185,10 @@ async function applyCountryEffects(
             }
           );
         } else {
-          await ctx.db
-            .collection("governmentApprovals")
-            .updateOne(
-              { _id: countryId as unknown as ObjectId },
-              { $inc: { approvalRating: effect.delta } }
-            );
+          await governmentApprovalsCollection<Document>(ctx.db).updateOne(
+            { _id: countryId as unknown as ObjectId },
+            { $inc: { approvalRating: effect.delta } }
+          );
         }
         break;
       }
@@ -224,12 +231,10 @@ async function applyCountryEffects(
       }
       case "presidentialHealthRelief": {
         if (effect.pct <= 0 || effect.durationTurns <= 0) break;
-        const official = await ctx.db
-          .collection<ElectedOfficial>("electedOfficials")
-          .findOne(
-            { countryId, officeType: "president", characterId: { $ne: null } },
-            { sort: { electedAt: -1 }, projection: { party: 1, characterId: 1 } }
-          );
+        const official = await electedOfficialsCollection(ctx.db).findOne(
+          { countryId, officeType: "president", characterId: { $ne: null } },
+          { sort: { electedAt: -1 }, projection: { party: 1, characterId: 1 } }
+        );
         if (!official?.party || !official.characterId) break;
         await writePresidentialHealthRelief(ctx.db, {
           countryId,
@@ -340,10 +345,10 @@ async function applyFundedCountryTreasuryDelta(
   receiptKey: string,
   requestedPreset?: string
 ): Promise<void> {
-  const journals = db.collection<{
+  const journals = bankMoneyMovesCollection<{
     _id: string;
     event?: { meta?: Record<string, unknown> };
-  }>("bankMoneyMoves");
+  }>(db);
   const existing = await journals.findOne(
     { _id: receiptKey },
     { projection: { _id: 1, event: 1 } }
@@ -510,9 +515,10 @@ export async function applyCountryApprovalDelta(
   delta: number
 ): Promise<void> {
   if (delta === 0) return;
-  await db
-    .collection("governmentApprovals")
-    .updateOne({ _id: countryId as unknown as ObjectId }, { $inc: { approvalRating: delta } });
+  await governmentApprovalsCollection<Document>(db).updateOne(
+    { _id: countryId as unknown as ObjectId },
+    { $inc: { approvalRating: delta } }
+  );
 }
 
 export async function applyDeclarativeEffects(
@@ -556,7 +562,7 @@ export async function applyDeclarativeEffects(
         politicalInfluence = Math.max(0, politicalInfluence + effect.delta);
         break;
       case "personalWealth": {
-        const { rate } = await loadCampaignFxRate(ctx.db, character.countryId, ctx.preset);
+        const { rate } = await loadCharacterFxRate(ctx.db, homeCurrency);
         const localAmount = forexEnabled
           ? anchorToLocal(effect.deltaAnchor, rate)
           : effect.deltaAnchor;
@@ -582,10 +588,12 @@ export async function applyDeclarativeEffects(
           campaignRates,
           ctx.preset
         );
-        const campaignField = forexEnabled ? "currencyBalances.campaign" : "funds";
-        await ctx.db
-          .collection("campaigns")
-          .updateOne({ characterId, electionId }, { $inc: { [campaignField]: localDelta } });
+        // Campaign documents hold their spendable money in `funds`; every
+        // campaign reader and upkeep path uses it, with or without forex.
+        await campaignsCollection<Document>(ctx.db).updateOne(
+          { characterId, electionId },
+          { $inc: { funds: localDelta } }
+        );
         break;
       }
       case "campaignSupport": {
@@ -597,16 +605,15 @@ export async function applyDeclarativeEffects(
           candidateIdRaw instanceof ObjectId
             ? candidateIdRaw
             : new ObjectId(String(candidateIdRaw));
-        const candidate = await ctx.db
-          .collection<ElectionCandidate>("electionCandidates")
-          .findOne({ _id: candidateId });
+        const candidate = await electionCandidatesCollection(ctx.db).findOne({ _id: candidateId });
         if (!candidate) {
           break;
         }
         const next = clampStat((candidate.support ?? 50) + effect.delta);
-        await ctx.db
-          .collection<ElectionCandidate>("electionCandidates")
-          .updateOne({ _id: candidateId }, { $set: { support: next } });
+        await electionCandidatesCollection(ctx.db).updateOne(
+          { _id: candidateId },
+          { $set: { support: next } }
+        );
         break;
       }
       case "corpSentiment": {
@@ -622,7 +629,7 @@ export async function applyDeclarativeEffects(
           createdAt: new Date(),
           eventType: `pree.${ctx.instance.kind}`,
         };
-        await ctx.db.collection<SentimentPulse>("sentimentPulses").insertOne({
+        await sentimentPulsesCollection(ctx.db).insertOne({
           _id: new ObjectId(),
           ...pulse,
         });
@@ -645,5 +652,5 @@ export async function applyDeclarativeEffects(
   if (Object.keys(charUpdates).length > 0) {
     update.$inc = charUpdates;
   }
-  await ctx.db.collection<Character>("characters").updateOne({ _id: characterId }, update);
+  await charactersCollection(ctx.db).updateOne({ _id: characterId }, update);
 }

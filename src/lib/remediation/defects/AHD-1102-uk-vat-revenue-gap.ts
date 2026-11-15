@@ -7,46 +7,27 @@ import type {
   HealContext,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { federalBudgetSnapshotsCollection } from "@/lib/db/repositories/federalBudgetSnapshots";
 
 /**
- * Ticket #1102. The Poon Choi Economic Act passed in the UK and collected
- * nothing.
+ * Credits UK tax revenue missed while was live. The enactment
+ * path required `legislationType.taxRateChange`, but tax-slider laws store
+ * their move in `taxSlider`, so enactment silently no-opped and the UK
+ * collected nothing for {@link GAP_TURNS} turns.
  *
- * `onBillEnacted` required `legislationType.taxRateChange`, but a tax-slider law
- * stores its move in `taxSlider`, so enactment silently no-opped. The UK's sales
- * tax and tariffs stayed at 0 while the statute book said otherwise. Fixed in
- * code by commit c36e18dda9 (`taxRateChange ?? taxSlider`), which stops new
- * bills dropping their rate but does nothing for the revenue already missed.
+ * The credit is an ESTIMATE: `GAP_TURNS` is the gap between enactment and
+ * the code fix, and the per-turn rate is derived from the first full
+ * fiscal-year snapshot after the fix (sales tax 5%, tariffs 2%), divided by
+ * TURNS_PER_YEAR. It assumes a steady tax base across the window, which
+ * cannot be verified (snapshots are annual, no per-turn counterfactual).
  *
- * WHAT THIS CREDITS, AND HOW THE NUMBER WAS DERIVED
+ * Credits `treasuryBalance` only. `debt.principal` is owned by the sovereign
+ * bond ledger and must not be raced here.
  *
- * The credit is an ESTIMATE, and the derivation is written down here rather than
- * buried in a commit message because anyone auditing this heal later deserves to
- * see exactly how a nine-figure number was arrived at.
- *
- *   Window. `enactedLaws` pins the Act at 2026-08-13T23:00:25Z and the code fix
- *   deployed 2026-08-16T17:57Z. One turn is one real hour, so the Act was law
- *   for {@link GAP_TURNS} turns while collecting nothing.
- *
- *   Rate. The first full fiscal-year snapshot AFTER the fix (UK:FY1957) is the
- *   only clean observation of what the Act actually charges: sales tax 5% and
- *   tariffs 2%. Its recorded annual revenue for those two lines is read at heal
- *   time and divided by TURNS_PER_YEAR to get a per-turn figure, then multiplied
- *   by the gap.
- *
- * The estimate is therefore anchored to observed post-fix revenue rather than to
- * a hand-picked constant, but it still assumes the tax base was roughly steady
- * across the window. It was not measured and cannot be: the snapshots are
- * annual, and no per-turn record of the counterfactual exists.
- *
- * The credit lands on `treasuryBalance` only. `debt.principal` belongs to
- * the sovereign bond ledger (see bonds/sovereignPrincipal.ts) and is never
- * re-derived from the balance, so this heal leaves `debt` alone rather than
- * racing the engine for the same field (refs #1975).
- *
- * This heal MINTS MONEY on purpose. It is recreating revenue a country should
- * have collected and did not, so `moneyDelta` is deliberately non-zero and the
- * `money-conserving` guard is deliberately absent.
+ * MINTS MONEY on purpose: it recreates revenue a country should have
+ * collected, so `moneyDelta` is non-zero and the money-conserving guard is
+ * deliberately absent.
  */
 
 /** Marker written on the healed budget. Presence is what makes a re-run a no-op. */
@@ -82,7 +63,7 @@ interface SnapshotDoc {
 }
 
 async function loadUkBudget(db: Db): Promise<BudgetDoc | null> {
-  return db.collection<BudgetDoc>("federalBudget").findOne({ countryId: "UK" });
+  return federalBudgetCollection<BudgetDoc>(db).findOne({ countryId: "UK" });
 }
 
 function alreadyHealed(budget: BudgetDoc | null): boolean {
@@ -111,9 +92,9 @@ async function detect(db: Db): Promise<DetectResult> {
   if (alreadyHealed(budget)) {
     return { affected: 0, sample: [], notes: ["UK budget already carries the AHD-1102 marker"] };
   }
-  const snapshot = await db
-    .collection<SnapshotDoc>("federalBudgetSnapshots")
-    .findOne({ _id: REFERENCE_SNAPSHOT_ID });
+  const snapshot = await federalBudgetSnapshotsCollection<SnapshotDoc>(db).findOne({
+    _id: REFERENCE_SNAPSHOT_ID,
+  });
   const credit = estimateGapCredit(snapshot, GAP_TURNS);
   if (credit <= 0) {
     return {
@@ -135,9 +116,9 @@ async function detect(db: Db): Promise<DetectResult> {
 
 async function plan(db: Db): Promise<HealPlan> {
   const budget = await loadUkBudget(db);
-  const snapshot = await db
-    .collection<SnapshotDoc>("federalBudgetSnapshots")
-    .findOne({ _id: REFERENCE_SNAPSHOT_ID });
+  const snapshot = await federalBudgetSnapshotsCollection<SnapshotDoc>(db).findOne({
+    _id: REFERENCE_SNAPSHOT_ID,
+  });
   const credit = budget && !alreadyHealed(budget) ? estimateGapCredit(snapshot, GAP_TURNS) : 0;
 
   if (!budget || credit <= 0) {
@@ -172,7 +153,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   // Guarded on the marker being absent, so two concurrent runs cannot both
   // credit: the second matches nothing.
-  const res = await db.collection<BudgetDoc>("federalBudget").updateOne(
+  const res = await federalBudgetCollection<BudgetDoc>(db).updateOne(
     { _id: payload.budgetId, [MARKER]: { $exists: false } },
     {
       $inc: { treasuryBalance: payload.credit },

@@ -8,34 +8,21 @@ import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { User } from "@/lib/db/types/user";
 
 /**
- * Watchlist read side (forensics v2, Wave 2 "watchlist + alerts"). Builds
- * the "recent activity summary" + "new since last review" view for
- * `GET /api/admin/watchlist`.
+ * Watchlist read side. Builds the "recent activity summary" + "new since last
+ * review" view for `GET /api/admin/watchlist`.
  *
- * ── Alert-detection logic ──────────────────────────────────────────────
- * Each `WatchlistEntry` carries an optional `lastNotifiedTurn`. The
- * baseline used for "what's new" is `entry.lastNotifiedTurn ?? 0` — an
- * entry that has never been notified treats its *entire* history as
- * outstanding, which is the right default for "I just pinned this account,
- * show me everything so far".
+ * The baseline for "what's new" is `entry.lastNotifiedTurn ?? 0`: an entry
+ * never notified treats its entire history as outstanding, right for "I just
+ * pinned this account, show me everything so far". Two signals compare against
+ * it: `actionAuditLog` rows where `actor.userId` is the watched user and
+ * `turn > baseline`; and `altLinks` edges touching the watched user with
+ * `turn > baseline` (run.ts bumps turn on every upsert, so both new edges and
+ * fresh signals on existing edges show up).
  *
- * Two independent signals are compared against that baseline:
- *   1. `actionAuditLog` rows where `actor.userId` is the watched user and
- *      `turn > baseline` → "the watched account acted since last review".
- *   2. `altLinks` edges touching the watched user (`userA` or `userB`) with
- *      `turn > baseline` → "a new alt link appeared since last review"
- *      (either a brand-new pairwise edge, or an existing edge that got a
- *      fresh signal added on a later turn — `run.ts` bumps `turn` on every
- *      upsert, so both cases show up here).
- *
- * This module only *reads* `lastNotifiedTurn` — nothing here advances it.
- * Advancing it (marking an entry "reviewed") is intentionally left to a
- * future feature (the Wave 2 daily digest, or a manual "mark reviewed"
- * action); wiring `GET` itself to silently clear alerts on every fetch
- * would mean the moderator who opens the panel first "consumes" the alert
- * before anyone else — including the person who opened it — gets to read
- * the response. Keeping `GET` a pure read avoids that race and keeps the
- * endpoint idempotent.
+ * This module only reads `lastNotifiedTurn`. Advancing it is left to a future
+ * digest or manual "mark reviewed": clearing alerts on GET would let the first
+ * moderator to open the panel consume them before anyone else reads them, and
+ * GET must stay idempotent.
  */
 
 const WATCHLIST_RECENT_ACTIONS_LIMIT = 5;

@@ -18,7 +18,7 @@ import {
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { resolveCabinetRoster } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear, getManuallyEnabledSeats } from "@/lib/cabinet/liveGameYear";
-import type { Character, PoliticalParty } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { ObjectId } from "mongodb";
 import { getUKCabinetCooldownsCollection } from "@/lib/db/collections/ukGovernment";
@@ -26,7 +26,9 @@ import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getGameTime } from "@/lib/time/gameTime";
 import { getCountryState } from "@/lib/countryState";
-import { canReshuffle, getReshuffleIdentity } from "@/lib/uk/cabinet/reshuffleLimit";
+import { canReshuffle, getReshuffleIdentity } from "@/lib/countries/uk/cabinet/reshuffleLimit";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -71,9 +73,7 @@ async function handleParliamentaryCabinet(countryId: CountryId) {
   const pmCharId = govFormation?.pmCharacterId ?? null;
 
   const myCharacter = authUser
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ userId: new ObjectId(authUser.userId) })
+    ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
     : null;
   const isPrimeMinister = !!pmCharId && !!myCharacter && pmCharId.equals(myCharacter._id);
 
@@ -93,8 +93,7 @@ async function handleParliamentaryCabinet(countryId: CountryId) {
         ],
       })
       .toArray(),
-    db
-      .collection<PoliticalParty>("politicalParties")
+    politicalPartiesCollection(db)
       .find({ countryId })
       .project({ sequentialId: 1, name: 1, color: 1, logoUrl: 1 })
       .toArray(),
@@ -115,8 +114,7 @@ async function handleParliamentaryCabinet(countryId: CountryId) {
   const charIdsToFetch = pmCharId ? [...memberCharIds, pmCharId] : memberCharIds;
   const characters =
     charIdsToFetch.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find({ _id: { $in: charIdsToFetch } })
           .project({ sequentialId: 1, avatarUrl: 1, borderKey: 1, tintColor: 1, party: 1 })
           .toArray()

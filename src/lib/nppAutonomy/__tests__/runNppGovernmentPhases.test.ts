@@ -24,8 +24,8 @@ const {
   foreignPolicyMock: vi.fn(),
 }));
 vi.mock("@/lib/mongodb", () => ({ getDb: () => getDbMock() }));
-vi.mock("@/lib/country/registeredCountries", () => ({
-  getRegisteredCountryIds: (...a: unknown[]) => registeredMock(...a),
+vi.mock("@/lib/country/countryTier", () => ({
+  getFullSimulationCountryIds: (...a: unknown[]) => registeredMock(...a),
 }));
 vi.mock("../featureFlag", async (importOriginal) => ({
   nppAutonomyAtLeast: (...a: unknown[]) => atLeastMock(...a),

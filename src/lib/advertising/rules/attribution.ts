@@ -1,19 +1,19 @@
 /**
- * Portable attribution rules for advertising settlement (issue #2235).
+ * Portable attribution rules for advertising settlement.
  *
  * Rules zone: plain data in, plain data out. No database, clock, randomness,
  * environment, or network.
  *
- * Attribution partitions the buyer's ALREADY-SETTLED marketing spend: the
- * corporation turn owns every cash movement, this module only decides how
- * much of that spend each active agreement covers and what it was worth.
- * Totals always reconcile: contracted + spot == settled, and effective
- * delivery never exceeds settled x (1 + AD_MAX_COVERAGE_BONUS).
+ * Attribution partitions the buyer's already-settled marketing spend;
+ * this module only decides how much of that spend each active agreement
+ * covers and what it was worth. Totals reconcile: contracted + spot ==
+ * settled, and effective delivery never exceeds settled x (1 +
+ * AD_MAX_COVERAGE_BONUS).
  *
  * Delivery semantics:
  * - A supplier that delivered nothing covers nothing: its attributed spend
- *   has zero efficacy and (in cash, which this module does not move) no
- *   receipt, because the turn routes nothing to a zero-delivery seller.
+ *   has zero efficacy and no receipt, because the turn routes nothing to a
+ *   zero-delivery seller.
  * - Covered contracted spend earns the overlap efficacy factor.
  * - Contracted spend beyond the supplier's delivery, and all unallocated
  *   (spot) spend, are neutral (x1): the advertising ran, just untargeted.

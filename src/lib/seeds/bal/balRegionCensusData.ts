@@ -4,22 +4,10 @@
  * Each dimension sums to 100. Same bucket convention as the 1953 bundle: an
  * Estonian in Riga counts as `other` in BAL_LVA.
  *
- * Shares follow the 1979 all-Union census, and the movement since 1953 is the
- * whole story of the era:
- *   - Latvia: Latvians 53.7%, Russians 32.8%. Three decades of all-Union
- *     enterprise construction staffed from outside have taken the titular
- *     nation to the edge of losing its majority in its own republic. Riga
- *     itself is already minority Latvian.
- *   - Estonia: Estonians 64.7%, Russians 27.9%. The same process, a step
- *     behind, concentrated in the northeast shale towns and Tallinn.
- *   - Lithuania: Lithuanians 80.0%, Russians 8.9%, essentially unchanged since
- *     1959. Lithuania's grievance in 1979 is religious and cultural, not
- *     demographic; the others' is demographic first.
- *
- * Everything else reflects a mature Soviet industrial society: near-complete
- * secondary schooling, a large vocational stream feeding the plants, and
- * urbanisation in the 60s and 70s. Lithuania remains the most rural and the
- * youngest; Estonia and Latvia are the most educated and the oldest.
+ * Shares follow the 1979 all-Union census. Latvia sits near a titular
+ * minority (Riga itself is already minority Latvian); Estonia lags a step
+ * behind; Lithuania is essentially unchanged since 1959 and is the most rural
+ * and youngest. Estonia and Latvia are the most educated and oldest.
  */
 export const balRegionCensusData = {
   BAL_LTU: {

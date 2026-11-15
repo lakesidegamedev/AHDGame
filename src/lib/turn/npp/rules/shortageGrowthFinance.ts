@@ -1,27 +1,18 @@
 /**
  * Short-lane growth finance for AI companies.
  *
- * Live turn 677: player demand rose four to five times in twenty turns. Food,
- * retail, vehicles and advertising sold out at a profit, but 973 of 1,212 AI
- * companies sat below their cash floor. The existing-plant growth leg sizes off
- * cash above the floor, so it never sized at all, and an order that did size
- * could only borrow up to that same headroom. 3,221 sector build decisions died
- * as `insufficient_cash` while 279 were placed.
- *
  * With `nppShortageGrowthFinanceStage` on, a sector whose own output lane is
- * genuinely short (last turn's buyers got at most 75% of what they ordered) and
- * whose plant earns back a new unit inside the payback horizon may size one
- * growth step anyway and ask a bank to fund it. The bank's own underwriting,
- * collateral limit and reserves still decide; this only lets the request be
- * made and bounds it:
- *   - the company's own share of the order (about a quarter of its cost) is
- *     capped at its headroom over the floor or a quarter of the cash it holds,
- *     whichever is larger, and the order is sized to fit that;
+ * genuinely short (buyers got at most 75% of what they ordered) and whose
+ * plant pays back inside the horizon may size one growth step and ask a bank
+ * to fund it. The bank's underwriting, collateral limit and reserves still
+ * decide; this only permits the request and bounds it:
+ *   - the company's own share is capped at headroom over the floor or a quarter
+ *     of cash, whichever is larger, and the order is sized to fit;
  *   - total outstanding construction finance stays within a set number of
- *     turns of the company's average profit;
- *   - a separate per-turn cap ranks requests by pressure over payback.
+ *     turns of average profit;
+ *   - a per-turn cap ranks requests by pressure over payback.
  *
- * Plain data in, plain data out; the NPP shell loads the books and the loans.
+ * Plain data in, plain data out; the NPP shell loads the books and loans.
  */
 import { LOAN_ORIGINATION_FEE_FRACTION } from "@/lib/banking/rules/loanFees";
 import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";

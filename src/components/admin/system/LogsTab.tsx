@@ -181,16 +181,11 @@ function formatTelemetryValue(value: unknown) {
 }
 
 /**
- * Render guard for log fields typed `string | null` that historically have NOT
- * always been strings on disk. `adminLogs` rows written by ad-hoc heal scripts
- * have carried structured objects in `details`; rendering one directly throws
- * React error #31 ("Objects are not valid as a React child"), which escapes to
- * the admin error boundary and replaces the ENTIRE panel with "Couldn't load
- * admin panel" — not just this tab.
- *
- * The route now coerces these (see api/admin/logs/route.ts), so this is
- * belt-and-braces; it is kept because the blast radius of getting it wrong is
- * the whole admin panel rather than one row.
+ * Render guard for log fields typed `string | null` that are not always
+ * strings on disk. Rendering a structured object in `details` directly
+ * throws React error #31 and replaces the ENTIRE admin panel, not just
+ * this tab. The route now coerces these; kept because the blast radius of
+ * getting it wrong is the whole panel.
  */
 function asText(value: unknown): string | null {
   if (value === null || value === undefined) return null;

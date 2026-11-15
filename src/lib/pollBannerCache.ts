@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import { resolvePollBannerSnapshot, type PollBannerSnapshot } from "@/lib/pollBanner";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * SERVER half of the poll banner: the cached `gameConfig` read.
@@ -34,7 +35,7 @@ export async function getCachedPollBanner(): Promise<PollBannerSnapshot> {
   }
 
   const db = await getDb();
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: {

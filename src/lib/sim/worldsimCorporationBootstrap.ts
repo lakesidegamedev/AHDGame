@@ -8,6 +8,7 @@ import {
 } from "@/lib/constants/corporations";
 import { batchSpawnNppCorporations, NPP_CAPITAL_STATES } from "@/lib/admin/spawnNppCorporation";
 import { loadPrivateEnterpriseBlockedCountries } from "@/lib/economy/queries/privateEnterpriseGate";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface WorldsimCorporationBootstrapOptions {
   /** Scope-filtered country ids the caller wants seeded (e.g. runWorld's sim scope). */
@@ -80,8 +81,7 @@ export async function bootstrapWorldsimCorporations(
     // country. A country-wide existence check used to skip the entire 17-sector
     // sweep in that case, leaving pure-NPP worlds without producers. Fill only
     // the missing slots so a partial bootstrap and a retry are both safe.
-    const existing = await db
-      .collection<{ type: string }>("corporations")
+    const existing = await corporationsCollection<{ type: string }>(db)
       .find({ ceoType: "npp", countryId })
       .project<{ type: string; industryModel?: string | null; mediaDiscriminator?: string | null }>(
         { type: 1, industryModel: 1, mediaDiscriminator: 1 }

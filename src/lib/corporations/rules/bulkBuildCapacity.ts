@@ -1,5 +1,5 @@
 /**
- * Rules for building capacity across many sectors at once (suggestion 391).
+ * Rules for building capacity across many sectors at once.
  *
  * Pure: plain data in, plain data out. The command shell loads the sectors,
  * prices each one through the single-sector build path, and uses these helpers

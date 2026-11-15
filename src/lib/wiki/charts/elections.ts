@@ -2,7 +2,7 @@ import {
   ELECTION_DAY_TURNS,
   RAMP_TURNS,
   turnVoteWeight,
-} from "@/lib/electionEngine/voteCalculations";
+} from "@/lib/elections/engine/voteCalculations";
 import {
   MAX_STATE_ORG_BONUS_GENERAL,
   MAX_STATE_ORG_BONUS_PRIMARY,
@@ -10,7 +10,7 @@ import {
   STATE_ORG_REFERENCE_FRACTION,
   stateOrgBonusFraction,
   stateOrgLevelCost,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import { APPROVAL_SCALAR_EXPONENT, approvalScalar } from "@/lib/utils/demographicAppeal";
 import { calcPrimaryScore } from "@/lib/primaryScore";
 import { resolveRedistrictCaps } from "@/lib/redistricting/caps";

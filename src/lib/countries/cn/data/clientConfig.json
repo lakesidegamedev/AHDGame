@@ -1,0 +1,145 @@
+{
+  "config": {
+    "id": "CN",
+    "name": "China",
+    "code": "CN",
+    "status": "active",
+    "flagEmoji": "🇨🇳",
+    "regionLabel": "Province",
+    "regionLabelPlural": "Provinces",
+    "executiveTitle": "Premier",
+    "executiveRealmPhrase": "China",
+    "executiveLabel": "State Council",
+    "executivePath": "/country/cn/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A unitary state governed by the Chinese Communist Party, where the Premier leads the State Council through confidence of the 2,980-seat National People's Congress across seven geographic regions.",
+    "heroImage": "https://flagcdn.com/w640/cn.png",
+    "overviewPath": "/country/cn",
+    "mapPath": "/country/cn/map",
+    "currencyCode": "CNY",
+    "centralGovernmentLabel": "Central Government Transfers",
+    "exchangeName": "SSE",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "hasLeaderConfidenceModel": true,
+    "majorPartyIds": ["ccp"],
+    "partyCreationNPPs": { "statesRequired": 2, "lockHomeState": false, "nppsPerState": 1 },
+    "partyRoleLabels": {
+      "chair": "General Secretary",
+      "viceChair": "Deputy General Secretary",
+      "committee": "Secretariat"
+    },
+    "legislature": {
+      "name": "National People's Congress",
+      "path": "/country/cn/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "npc",
+        "name": "National People's Congress",
+        "shortName": "NPC",
+        "seats": 2980,
+        "description": "2,980 delegates representing provinces, municipalities, autonomous regions, the armed forces, and special administrative regions. Five-year terms."
+      },
+      "upperChamber": {
+        "key": "cppcc",
+        "name": "CPPCC",
+        "shortName": "CPPCC",
+        "seats": 2169,
+        "description": "2,169 members of the Chinese People's Political Consultative Conference - an advisory body representing diverse social and economic constituencies."
+      }
+    },
+    "subNationalChamber": {
+      "key": "peoplesCongress",
+      "name": "People's Congress",
+      "shortName": "People's Congress",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "premier",
+        "label": "Premier",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "Premiers"
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Presidents"
+      },
+      {
+        "key": "npcDelegate",
+        "label": "NPC Delegate",
+        "chamberKey": "npc",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "NPC Delegates"
+      },
+      {
+        "key": "peoplesCongress",
+        "label": "Provincial Delegate",
+        "chamberKey": "peoplesCongress",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Provincial Delegates"
+      },
+      {
+        "key": "governor",
+        "label": "Governor",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Governors"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the PBoC",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Governors of the PBoC"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "pr_hareQuota",
+      "subNationalChamber": "pr_hareQuota",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "People's Bank of China",
+      "abbreviation": "PBoC",
+      "heroImage": "/api/images/hero/peoples-bank-of-china",
+      "defaultPrimeRate": 4
+    },
+    "usdExchangeRate": 0.138
+  },
+  "eraOverrides": {
+    "1991-default": { "usdExchangeRate": 0.18796992481203006 },
+    "1953-default": {
+      "legislature": {
+        "name": "National People's Congress",
+        "path": "/country/cn/legislature",
+        "bicameral": false,
+        "lowerChamber": {
+          "key": "npc",
+          "name": "National People's Congress",
+          "shortName": "NPC",
+          "seats": 1226,
+          "description": "1,226 deputies of the First National People's Congress (1954 convocation)."
+        },
+        "upperChamber": {
+          "key": "cppcc",
+          "name": "CPPCC",
+          "shortName": "CPPCC",
+          "seats": 2169,
+          "description": "Members of the Chinese People's Political Consultative Conference - an advisory body representing diverse social and economic constituencies."
+        }
+      },
+      "usdExchangeRate": 1
+    }
+  }
+}

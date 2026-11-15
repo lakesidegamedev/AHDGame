@@ -46,3 +46,10 @@ export { DEFAULT_SEED_PRESET };
 export async function getGameStatePresetOrDefault(db?: Db): Promise<string> {
   return (await getGameStatePreset(db)) ?? DEFAULT_SEED_PRESET;
 }
+
+/** World preset plus the pre-iteration window, read by era transitions that only fire in the live game. */
+export const GAME_STATE_PRE_ITERATION_FIELDS = {
+  preset: 1,
+  preIteration: 1,
+  preIterationTurns: 1,
+} as const;

@@ -2,22 +2,27 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui";
-import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { ActingLockNote, useActingLock } from "./ActingLock";
 import { apiErrorText } from "@/lib/errors/catalog";
 
-const MATURITY_OPTIONS = [
-  { turns: 48, label: "1-Year" },
-  { turns: 96, label: "2-Year" },
-  { turns: 240, label: "5-Year" },
-] as const;
+const MATURITY_LABELS: Record<number, string> = {
+  48: "1-Year",
+  96: "2-Year",
+  240: "5-Year",
+  480: "10-Year",
+  1440: "30-Year",
+};
+const CLASSIC_MATURITIES = [48, 96, 240];
 
 interface Props {
   countryCode: string;
   positionId: string;
   canAct: boolean;
   currentProfile: Record<number, number> | null;
+  /** Maturities this world allows; absent means the classic 1, 2 and 5 year set. */
+  maturities?: number[];
   debtPrincipal: number;
   sovereignBondsOutstanding: number;
   onUpdate: () => void;
@@ -28,6 +33,7 @@ export function BondProfilePanel({
   positionId,
   canAct: canActProp,
   currentProfile,
+  maturities,
   debtPrincipal,
   sovereignBondsOutstanding,
   onUpdate,
@@ -38,12 +44,22 @@ export function BondProfilePanel({
 
   const countryId = countryCode.toUpperCase() as CountryId;
   const sym = CURRENCY_SYMBOLS[COUNTRY_CURRENCY_MAP[countryId]] ?? "$";
+  const maturityOptions = useMemo(
+    () =>
+      (maturities ?? CLASSIC_MATURITIES).map((turns) => ({
+        turns,
+        label: MATURITY_LABELS[turns] ?? `${turns}-turn`,
+      })),
+    [maturities]
+  );
 
   const initial = useMemo(() => {
     const base: Record<number, string> = {
       48: "25",
       96: "35",
       240: "40",
+      480: "0",
+      1440: "0",
     };
     if (currentProfile) {
       for (const [k, v] of Object.entries(currentProfile)) {
@@ -62,16 +78,16 @@ export function BondProfilePanel({
   const parsed = useMemo(() => {
     const out: Record<number, number> = {};
     let total = 0;
-    for (const opt of MATURITY_OPTIONS) {
+    for (const opt of maturityOptions) {
       const n = parseFloat(values[opt.turns] || "0");
       out[opt.turns] = isNaN(n) ? 0 : n;
       total += out[opt.turns];
     }
     return { out, total };
-  }, [values]);
+  }, [values, maturityOptions]);
 
   const isValid = parsed.total > 99.9 && parsed.total < 100.1;
-  const isDirty = MATURITY_OPTIONS.some(
+  const isDirty = maturityOptions.some(
     (opt) => parseFloat(values[opt.turns] || "0") !== parseFloat(initial[opt.turns] || "0")
   );
 
@@ -81,7 +97,7 @@ export function BondProfilePanel({
     setFeedback(null);
 
     const distribution: Record<number, number> = {};
-    for (const opt of MATURITY_OPTIONS) {
+    for (const opt of maturityOptions) {
       distribution[opt.turns] = parsed.out[opt.turns] / 100;
     }
 
@@ -122,8 +138,8 @@ export function BondProfilePanel({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3 mb-4">
-        {MATURITY_OPTIONS.map((opt) => (
+      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-4">
+        {maturityOptions.map((opt) => (
           <label key={opt.turns} className="flex flex-col text-sm">
             <span className="text-muted mb-1">
               {opt.label} ({opt.turns} turns)

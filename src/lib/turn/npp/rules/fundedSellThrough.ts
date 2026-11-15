@@ -7,17 +7,15 @@
  * clearing pass let the plant run because buyers would take no more: below 1
  * means unsold demand room ran out, a glut signal.
  *
- * The funded producer market used to write the same field as sold / capacity
- * (`fundedDemandThrottle` now writes sell-through, ticket 1728). That mixes two different causes of low output: a
- * plant whose buyers stopped taking its goods, and a plant that could not make
- * its goods because inputs or cash ran short. A farm without fertilizer runs at
- * a quarter of nameplate and sells every unit, yet reads 0.25. Read as a glut,
- * that holds back growth and entry in exactly the markets that are short.
- *
- * On a funded world the reading is therefore sell-through from the plant's
- * latest settlement receipt: units sold over units offered (this turn's output
- * plus stock put up for sale). 1 means every offered unit found a buyer, so the
+ * On a funded world the reading is sell-through from the plant's latest
+ * settlement receipt: units sold over units offered (this turn's output plus
+ * stock put up for sale). 1 means every offered unit found a buyer, so the
  * market took all the plant could bring; under 1 means output went unsold.
+ * Sell-through is used because a shared throttle-style field would mix two
+ * causes of low output: buyers stopped taking goods, and the plant could not
+ * make them because inputs or cash ran short. A farm without fertilizer runs
+ * at a quarter of nameplate and sells every unit; read as a glut, that would
+ * hold back growth and entry in exactly the markets that are short.
  */
 
 import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";

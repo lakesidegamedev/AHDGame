@@ -1,16 +1,16 @@
 /**
- * Administered pricing kernels (P2).
+ * Administered pricing kernels.
  *
- * In a planned economy, consumer-good prices are SET by the plan, not cleared by
- * the market: they hold flat at an administered path (plus a turnover-tax wedge
- * that is the state's main indirect revenue) and do NOT respond to the
+ * In a planned economy, consumer-good prices are SET by the plan, not cleared
+ * by the market: they hold flat at an administered path (plus a turnover-tax
+ * wedge that is the state's main indirect revenue) and do NOT respond to the
  * supply/demand balance. The unmet demand at that held price is the physical
  * shortage. For dual-track economies both regimes coexist, split by the dial's
  * `plannedShare`.
  *
- * Pure and NaN-guarded — consumed by the country-scoped national-price leg of
- * `commodityPriceTurn` (never the shared global leg: an administered branch that
- * leaked into the global price is the naira-100x incident class).
+ * Pure and NaN-guarded. Consumed ONLY by the country-scoped national-price
+ * leg of `commodityPriceTurn`, never the shared global leg: an administered
+ * branch that leaked into the global price corrupts every country's price.
  */
 
 const finite = (v: number, fallback: number): number => (Number.isFinite(v) ? v : fallback);

@@ -7,15 +7,17 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 const schema = z.object({ enabled: z.boolean() }).strict();
 export async function GET() {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
     const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { governmentConfidenceEnabled: 1 } });
+    const config = await gameConfigCollection(db).findOne(
+      { _id: "default" },
+      { projection: { governmentConfidenceEnabled: 1 } }
+    );
     return NextResponse.json({ enabled: governmentConfidenceEnabled(config) });
   } catch (error) {
     return handleRouteError(error);
@@ -29,13 +31,11 @@ export async function PATCH(request: Request) {
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const { enabled } = parsed.data;
     const db = await getDb();
-    await db
-      .collection<GameConfig>("gameConfig")
-      .updateOne(
-        { _id: "default" },
-        { $set: { governmentConfidenceEnabled: enabled } },
-        { upsert: true }
-      );
+    await gameConfigCollection(db).updateOne(
+      { _id: "default" },
+      { $set: { governmentConfidenceEnabled: enabled } },
+      { upsert: true }
+    );
     await createAdminLog({
       category: "system",
       action: "government_confidence_gate_changed",

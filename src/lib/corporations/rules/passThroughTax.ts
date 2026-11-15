@@ -1,27 +1,22 @@
 /**
  * Pass-through owner taxation.
  *
- * A pass-through structure (US LLC and S-Corp, UK LLP) pays no corporate tax
- * because its owners are taxed on their full share of the profit, whether or not
- * it is paid out. Before this reform the game taxed only the dividends owners
- * actually received, so every unpaid share of profit escaped tax entirely and
- * pass-through firms compounded untaxed earnings.
- *
+ * A pass-through (US LLC and S-Corp, UK LLP) pays no corporate tax because its
+ * owners are taxed on their full share of profit, whether or not it is paid out.
  * The reform taxes the whole profit at the owners' rates, collected at source:
  * - character holders pay the home country's top personal income rate plus the
  *   headquarters state's top personal income rate;
  * - every other holder (parent corporations, NPPs, funds, unplaced float) pays
- *   the home country's domestic corporate rate plus the state corporate rate,
- *   the rate their own profit would face.
+ *   the home country's domestic corporate rate plus the state corporate rate.
  * Distributions from a pass-through are then not taxed a second time.
  *
- * Forms real law taxes as companies move to standard corporate tax instead:
- * a Japanese godo kaisha, any pass-through whose shares trade publicly, and an
- * S-Corp that fails the S-Corp ownership test (see passThroughStatus).
+ * Forms real law taxes as companies instead: a Japanese godo kaisha, any
+ * pass-through whose shares trade publicly, and an S-Corp failing the S-Corp
+ * ownership test (see passThroughStatus).
  *
- * Both changes phase in linearly over PASS_THROUGH_PHASE_IN_TURNS from the
- * configured start turn. Before the start turn every helper returns the legacy
- * value, so worlds without the config are byte-identical.
+ * Phases in linearly over PASS_THROUGH_PHASE_IN_TURNS from the configured start
+ * turn; before that every helper returns the legacy value, so worlds without the
+ * config are byte-identical.
  */
 import type { LegalStructure, LegalStructureId } from "@/lib/constants/legalStructures";
 

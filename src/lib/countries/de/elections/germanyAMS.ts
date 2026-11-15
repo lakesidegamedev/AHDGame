@@ -1,24 +1,11 @@
 /**
- * German AMS (Mixed-Member Proportional) election orchestrator — aggregate-native.
- *
- * The whole game persists chamber seats as AGGREGATE `electedOfficials` docs:
- * one doc per (party, region) with a `seatsHeld` count and a single
- * representative `characterId`. The Bundestag direct tier (Wahlkreis mandates)
- * uses this same model. This orchestrator therefore reads/writes seats as
- * aggregate counts, not one-official-per-seat.
- *
- * Phases:
- * 1. Read direct mandates (aggregate seatsHeld per party / per Land)
- * 2. Derive Zweitstimmen from Erststimmen via ticket-split crossover
- * 3. Federal Sainte-Laguë allocation (era-sized chamber — 630 seats for a
- *    modern-default world, 487 for 1953 — via getLiveLowerChamberSeats;
- *    5% / 3-direct threshold)
- * 4. Per-Land list distribution; list = max(0, Land quota − direct seats)
- *    (overhang clamps to 0 — no per-Wahlkreis individual dropping)
- * 5. Persist aggregate list officials (one per party+Land, seatSource="list")
- *
- * Entry point: allocateBundestag(db, cycle) / maybeReconcileBundestag(db, cycle)
- * Runs once per cycle AFTER all 16 Land Bundestag elections are resolved.
+ * German AMS (Mixed-Member Proportional) election orchestrator, aggregate-native.
+ * Chamber seats persist as aggregate `electedOfficials` docs: one per (party, region)
+ * with `seatsHeld` and one representative `characterId`. Read/write seats as counts.
+ * Phases: read direct mandates; derive Zweitstimmen via ticket-split crossover;
+ * federal Sainte-Laguë allocation (era-sized chamber, 5%/3-direct threshold);
+ * per-Land list distribution, list = max(0, quota - direct seats); persist list officials.
+ * Runs once per cycle after all Land elections resolve.
  */
 
 import type { Db, ObjectId as MongoObjectId } from "mongodb";
@@ -35,16 +22,23 @@ import type {
 import {
   allocateViaSainteLague,
   BUNDESTAG_VOTE_THRESHOLD,
-} from "@/lib/turn/election/sainteLagueAllocation";
+} from "@/lib/elections/resolution/sainteLagueAllocation";
 import {
   crossoverRatesForPreset,
   deriveZweitstimmen,
   type ErststimmeInput,
-} from "@/lib/turn/election/ticketSplitCrossover";
+} from "@/lib/elections/resolution/ticketSplitCrossover";
 import { buildDEPartySlugToSeqId } from "@/lib/seeds/de/deStatePartyOrgCalculations";
 import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { reconcileBundestagHolderOffices } from "./bundestagHolderOffices";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { landeslistenCollection } from "@/lib/db/repositories/landeslisten";
 
 const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
@@ -133,10 +127,8 @@ export async function allocateBundestag(db: Db, cycle: number): Promise<Bundesta
   // ─── Phase 3: Federal Sainte-Laguë allocation (5% / 3-direct threshold) ───
   // Chamber size is era-aware: `getLiveLowerChamberSeats` reads the world's
   // `gameState.preset` and returns that era's configured Bundestag size (487
-  // for 1953-default, 630 for a modern-default world / no preset). A prior
-  // version hardcoded 630 here regardless of era, which over-seated a 1953
-  // Bundestag by 51% — 630 held against a 251-seat direct-mandate founding
-  // cycle instead of the era's true 487 (issue #3896).
+  // for 1953-default, 630 for a modern-default world / no preset).
+
   const bundestagSeats = await getLiveLowerChamberSeats(db, "DE");
   const federalAllocation = allocateViaSainteLague(
     Object.entries(zweitstimmen.national).map(([partyId, votes]) => ({ partyId, votes })),
@@ -216,8 +208,7 @@ export function aggregateDirectMandates(officials: ElectedOfficial[]): DirectMan
 
 /** Read DE Bundestag direct-mandate officials (seatSource direct or absent) and aggregate. */
 async function fetchDirectMandates(db: Db): Promise<DirectMandates> {
-  const officials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const officials = await electedOfficialsCollection(db)
     .find({
       countryId: "DE",
       officeType: "bundestag",
@@ -233,8 +224,7 @@ async function fetchDirectMandates(db: Db): Promise<DirectMandates> {
 
 export async function computeZweitstimmen(db: Db, cycle: number): Promise<ZweitstimmenByLand> {
   // Fetch all Bundestag elections and their tallies for this cycle.
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       countryId: "DE",
       electionType: { $in: ["bundestag", "snap_bundestag"] },
@@ -247,8 +237,7 @@ export async function computeZweitstimmen(db: Db, cycle: number): Promise<Zweits
   }
 
   const electionById = new Map(elections.map((e) => [e._id.toString(), e]));
-  const tallies = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
+  const tallies = await electionVoteTalliesCollection(db)
     .find({ electionId: { $in: elections.map((e) => e._id) } })
     .toArray();
 
@@ -270,14 +259,15 @@ export async function computeZweitstimmen(db: Db, cycle: number): Promise<Zweits
   // Derive per-Land Zweitstimmen via ticket-split crossover.
   //
   // The rate table is slug-keyed and era-scoped, so it is resolved against the
-  // live party roster once per cycle (#810). `buildDEPartySlugToSeqId` only
-  // returns parties that exist under the active preset, so a rule naming a
-  // party this world does not have is dropped rather than inventing votes.
+  // live party roster once per cycle. `buildDEPartySlugToSeqId` only returns
+  // parties that exist under the active preset, so a rule naming a party this
+  // world does not have is dropped rather than inventing votes.
   const [slugToPartyId, gameState] = await Promise.all([
     buildDEPartySlugToSeqId(db),
-    db
-      .collection<{ _id: string; preset?: string }>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+    gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1 } }
+    ),
   ]);
   const rates = crossoverRatesForPreset(gameState?.preset);
 
@@ -352,10 +342,7 @@ async function buildCandidateMap(
   allocations: LandListAllocation[]
 ): Promise<Map<string, RepIdentity[]>> {
   const map = new Map<string, RepIdentity[]>();
-  const lists = await db
-    .collection<Landesliste>("landeslisten")
-    .find({ countryId: "DE", cycle })
-    .toArray();
+  const lists = await landeslistenCollection(db).find({ countryId: "DE", cycle }).toArray();
   const listByKey = new Map(lists.map((l) => [`${l.partyId}:${l.landId}`, l]));
 
   // First pass: determine the ordered candidate ObjectIds per bloc.
@@ -369,8 +356,7 @@ async function buildCandidateMap(
     if (list && list.candidates.length > 0) {
       ids = list.candidates;
     } else {
-      const members = await db
-        .collection<Character>("characters")
+      const members = await charactersCollection(db)
         .find(
           { countryId: "DE", party: a.partyId, homeState: a.landId },
           { projection: { _id: 1, nationalInfluence: 1 } }
@@ -393,8 +379,7 @@ async function buildCandidateMap(
   // Resolve names for every referenced candidate in one batch.
   const nameById = new Map<string, string>();
   if (allIds.length > 0) {
-    const chars = await db
-      .collection<Character>("characters")
+    const chars = await charactersCollection(db)
       .find({ _id: { $in: allIds } }, { projection: { _id: 1, name: 1 } })
       .toArray();
     for (const c of chars) {
@@ -467,21 +452,21 @@ export function assignListSeats(
  * list officials before inserting fresh ones, so re-running a cycle replaces
  * cleanly. Direct-tier officials are untouched.
  *
- * Concurrency safety: `deleteMany` + `insertMany` is not atomic, so two overlapping
- * reconciliation runs (e.g. a non-atomic turn retry — see #2815) could both delete,
- * then both insert, doubling every (party, Land) list bloc and inflating the chamber
- * (observed in prod: 963/630, ticket #929 / issue #2957). The partial unique index
- * on `{countryId, officeType, state, party}` for `seatSource:"list"` (created by
- * scripts/heal-de-bundestag-dup-list.ts) makes the second insert of a duplicate key
- * fail; we insert unordered and swallow the E11000 so the losing racer converges to
- * the same single set instead of crashing the turn or doubling seats.
+ * Concurrency safety: `deleteMany` + `insertMany` is not atomic, so two
+ * overlapping reconciliation runs could both delete, then both insert, doubling
+ * every (party, Land) list bloc and inflating the chamber. The partial unique
+ * index on `{countryId, officeType, state, party}` for `seatSource:"list"`
+ * (created by scripts/heal-de-bundestag-dup-list.ts) makes the second insert of
+ * a duplicate key fail; we insert unordered and swallow the E11000 so the losing
+ * racer converges to the same single set instead of crashing the turn or
+ * doubling seats.
  */
 export async function persistBundestagResult(
   db: Db,
   result: BundestagElectionResult,
   now: Date = new Date()
 ): Promise<void> {
-  await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+  await electedOfficialsCollection(db).deleteMany({
     countryId: "DE",
     officeType: "bundestag",
     seatSource: "list",
@@ -495,7 +480,7 @@ export async function persistBundestagResult(
       updatedAt: now,
     }));
     try {
-      await db.collection<ElectedOfficial>("electedOfficials").insertMany(docs, { ordered: false });
+      await electedOfficialsCollection(db).insertMany(docs, { ordered: false });
     } catch (err) {
       // E11000 = duplicate key: a concurrent run already inserted this bloc set.
       // Any non-duplicate error is real and must propagate.
@@ -525,7 +510,7 @@ export async function maybeReconcileBundestag(
   cycle: number,
   now: Date = new Date()
 ): Promise<BundestagElectionResult | null> {
-  const pending = await db.collection<Election>("elections").countDocuments({
+  const pending = await electionsCollection(db).countDocuments({
     countryId: "DE",
     electionType: { $in: ["bundestag", "snap_bundestag"] },
     cycle,
@@ -533,7 +518,7 @@ export async function maybeReconcileBundestag(
   });
   if (pending > 0) return null;
 
-  const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gs = await gameStateCollection(db).findOne({ _id: "current" });
   const lastReconciled = gs?.lastBundestagReconciledCycle ?? -1;
   if (lastReconciled >= cycle) return null;
 
@@ -546,8 +531,7 @@ export async function maybeReconcileBundestag(
     gs?.currentTurn ?? 0,
     telemetryActors
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         countryId: "DE",
@@ -559,7 +543,7 @@ export async function maybeReconcileBundestag(
     )
     .toArray();
   if (elections.length)
-    await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+    await electionVoteTalliesCollection(db).bulkWrite(
       elections.map((election) => {
         const resolvedSeatHolders = holders
           .filter((holder) => holder.state === election.state)
@@ -586,12 +570,10 @@ export async function maybeReconcileBundestag(
         };
       })
     );
-  await db
-    .collection<GameState>("gameState")
-    .updateOne(
-      { _id: "current" },
-      { $set: { lastBundestagReconciledCycle: cycle, updatedAt: now } }
-    );
+  await gameStateCollection(db).updateOne(
+    { _id: "current" },
+    { $set: { lastBundestagReconciledCycle: cycle, updatedAt: now } }
+  );
   await captureBundestagElectionWinners(db, elections, holders, telemetryActors, gs);
   return result;
 }
@@ -610,15 +592,13 @@ export async function captureBundestagElectionWinners(
   try {
     const electionIds = elections.map((election) => election._id);
     const [candidates, tallies] = await Promise.all([
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find(
           { electionId: { $in: electionIds } },
           { projection: { _id: 1, electionId: 1, characterId: 1, isNPP: 1 } }
         )
         .toArray(),
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find(
           { electionId: { $in: electionIds } },
           { projection: { electionId: 1, totalVotes: 1 } }

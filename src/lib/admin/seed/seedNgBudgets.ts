@@ -1,6 +1,8 @@
 import type { Db } from "mongodb";
 import { seedCountryBudgets } from "./seedCountryBudgets";
 import { getInitialRates } from "@/lib/constants/currencies";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import type { Document } from "mongodb";
 
 export async function seedNgBudgets(
   db: Db,
@@ -20,7 +22,7 @@ export async function seedNgBudgets(
       // this writer just runs first in bootstrap ordering. $setOnInsert keeps any
       // live rate that may have been set via admin tooling.
       const ngnRate = getInitialRates(preset)["NG"] ?? 1550;
-      await db.collection("exchangeRates").updateOne(
+      await exchangeRatesCollection<Document>(db).updateOne(
         { _id: "NG" as never },
         {
           $setOnInsert: {

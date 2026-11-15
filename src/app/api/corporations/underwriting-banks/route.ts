@@ -8,6 +8,7 @@ import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/curre
 import type { CountryId } from "@/lib/constants/countries";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /** Same-currency eligible banks for founding an IPO; flag-off does not read bank corporations. */
 export async function GET(request: Request) {
@@ -25,9 +26,10 @@ export async function GET(request: Request) {
     }
     const [forexEnabled, gameState] = await Promise.all([
       isForexEnabled(),
-      db
-        .collection<{ _id: string; preset?: string }>("gameState")
-        .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+      gameStateCollection<{ _id: string; preset?: string }>(db).findOne(
+        { _id: "current" },
+        { projection: { preset: 1 } }
+      ),
     ]);
     const currencyCode = forexEnabled
       ? getSeedCurrencyCode(countryId as CountryId, gameState?.preset ?? DEFAULT_SEED_PRESET)

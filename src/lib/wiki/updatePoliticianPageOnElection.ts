@@ -14,6 +14,11 @@ import type {
   PoliticalParty,
 } from "@/lib/db/types";
 import { formatElectionTypeLabel, MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { politicianOverridesCollection } from "@/lib/db/repositories/politicianOverrides";
 
 export async function updatePoliticianPagesAfterElection(
   db: Db,
@@ -27,19 +32,17 @@ export async function updatePoliticianPagesAfterElection(
 ): Promise<void> {
   if (election.status !== "completed") return;
 
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ _id: { $in: candidateIds.map((id) => new ObjectId(id)) } })
     .toArray();
 
   const totalVotes = tally ? Object.values(tally.totalVotes).reduce((s, v) => s + v, 0) : 0;
   const state = election.state
-    ? await db
-        .collection<State>("states")
-        .findOne({ _id: election.state, countryId: election.countryId })
+    ? await statesCollection(db).findOne({ _id: election.state, countryId: election.countryId })
     : null;
   const stateName =
-    state?.name ?? (election.state === "US" ? "United States" : (election.state ?? "Unknown"));
+    state?.name ??
+    (countryHasFeature("usLib", election.state) ? "United States" : (election.state ?? "Unknown"));
   const year = election.endTime
     ? new Date(election.endTime).getFullYear()
     : new Date().getFullYear();
@@ -60,7 +63,7 @@ export async function updatePoliticianPagesAfterElection(
     // cand.party stores the sequentialId as a string.
     const candPartySeqId = Number(cand.party);
     const party = Number.isFinite(candPartySeqId)
-      ? await db.collection<PoliticalParty>("politicalParties").findOne({
+      ? await politicalPartiesCollection(db).findOne({
           sequentialId: candPartySeqId,
           countryId: election.countryId ?? "US",
         })
@@ -81,18 +84,17 @@ export async function updatePoliticianPagesAfterElection(
       completedAt: election.endTime ?? now,
     };
 
-    const existing = await db
-      .collection<PoliticianOverride>("politicianOverrides")
-      .findOne({ politicianId });
+    const existing = await politicianOverridesCollection(db).findOne({ politicianId });
     const history = existing?.electionHistory ?? [];
     const updated = [entry, ...history.filter((e) => e.electionId !== entry.electionId)];
 
     if (existing) {
-      await db
-        .collection<PoliticianOverride>("politicianOverrides")
-        .updateOne({ politicianId }, { $set: { electionHistory: updated, updatedAt: now } });
+      await politicianOverridesCollection(db).updateOne(
+        { politicianId },
+        { $set: { electionHistory: updated, updatedAt: now } }
+      );
     } else {
-      await db.collection<PoliticianOverride>("politicianOverrides").insertOne({
+      await politicianOverridesCollection(db).insertOne({
         politicianId,
         electionHistory: updated,
         updatedAt: now,

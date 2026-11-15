@@ -1,32 +1,22 @@
 /**
- * Era interpolation — the numeric spine of era continuity.
+ * Era interpolation: the numeric spine of era continuity.
  *
- * Era-keyed tables (`Record<EraId, T>`) are points on a curve over the LIVE
- * in-game year: pick the two anchor eras bracketing the year, lerp every
- * number between them, and the world slides along the curve as the clock
- * advances. Without this, each table would be resolved once from the frozen
- * seed preset and the world would keep that value forever.
+ * Era-keyed tables are points on a curve over the live in-game year: pick the
+ * two bracketing anchor eras, lerp every number, so the world slides along the
+ * curve as the clock advances rather than freezing at the seed preset.
  *
- * Design rules (see the era-continuity program, tracker project
- * `era-continuity`):
+ * - Anchor identity: at an anchor year the result is value-identical to the
+ *   authored table, so a world seeded at an anchor is a no-op.
+ * - Clamped, never extrapolated: outside the anchor range the nearest holds,
+ *   otherwise a ±5 axis can be exceeded.
+ * - Structural mismatch throws: anchors whose trees differ in shape are an
+ *   authoring problem, surfaced not silently dropped. Callers with a genuine
+ *   identity change across eras handle it above this module.
+ * - Results are always freshly built, even at t = 0/1, since some era tables
+ *   share a mutable base object by reference.
  *
- * - **Anchor identity.** At an anchor year the result is value-identical to
- *   the authored table. A world seeded at an anchor is a no-op on day one,
- *   and every existing per-era calibration test stays green unchanged.
- * - **Clamped, never extrapolated.** Outside [first anchor, last anchor] the
- *   nearest anchor holds. Extrapolating authored leans past the last anchor
- *   is how a ±5 axis gets exceeded.
- * - **Throw on structural mismatch.** Two anchors whose trees differ in shape
- *   (a bucket present in 1979 but not in 1953) are an authoring problem to
- *   surface, not a value to silently drop. Callers with a genuine identity
- *   change across eras handle it ABOVE this module.
- * - **Fresh values out, always.** Results are newly built objects even at
- *   t = 0/1 — several era tables share a mutable base object by reference
- *   (see `getEraPositions`), and handing that base out has bitten before.
- *
- * Gravity, not rails: this module moves BASELINES. Player effects are stored
- * as deltas on those baselines and must be re-applied downstream, never
- * recomputed here.
+ * Gravity, not rails: this moves BASELINES only. Player effects are deltas on
+ * those baselines, re-applied downstream, never recomputed here.
  */
 import type { EraId } from "./presetSelector";
 

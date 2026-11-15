@@ -18,6 +18,7 @@ export interface RegionUnitRequest {
 export type RegionUnitsResponse = CountyApiResponse & {
   unitLabel?: string;
   unitLabelPlural?: string;
+  notice?: string;
 };
 
 /**

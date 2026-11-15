@@ -1,5 +1,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Election, ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 /**
  * County drift from the world's own history.
@@ -37,8 +40,7 @@ export interface LiveStateLean {
 const FINISHED: Election["status"][] = ["completed", "resolved"];
 
 export async function loadLiveStateLean(db: Db, countryId: string): Promise<LiveStateLean | null> {
-  const races = await db
-    .collection<Election>("elections")
+  const races = await electionsCollection(db)
     .find(
       {
         countryId: countryId as Election["countryId"],
@@ -88,15 +90,15 @@ async function statePviForRace(
   countryId: string,
   electionId: ObjectId
 ): Promise<Map<string, number> | null> {
-  const tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
-    .findOne({ electionId }, { projection: { totalVotesByUnit: 1, candidateParties: 1 } });
+  const tally = await electionVoteTalliesCollection(db).findOne(
+    { electionId },
+    { projection: { totalVotesByUnit: 1, candidateParties: 1 } }
+  );
   const byUnit = tally?.totalVotesByUnit;
   if (!byUnit || !tally.candidateParties) return null;
 
   const seqIds = [...new Set(Object.values(tally.candidateParties))].map(Number).filter(Boolean);
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find(
       { sequentialId: { $in: seqIds }, countryId: countryId as PoliticalParty["countryId"] },
       { projection: { sequentialId: 1, economicPosition: 1 } }

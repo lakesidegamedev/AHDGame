@@ -18,7 +18,7 @@ function statusView(over: Partial<NuclearStatusView> = {}): NuclearStatusView {
     productionCap: 2,
     warheadUnitCost: 800,
     deterrence: 19,
-    eligibility: { capable: true, coldWarEnabled: true, doctrineAdopted: true, eligible: true },
+    eligibility: { capable: true, doctrineAdopted: true, eligible: true },
     year: 1957,
     ...over,
   };
@@ -46,20 +46,18 @@ describe("NuclearTab", () => {
   });
 
   // A locked programme must say why, gate by gate, rather than showing a dead tree.
-  it("explains the three entry gates when ineligible", () => {
+  it("explains the two entry gates when ineligible", () => {
     setup({
       status: statusView({
         eligibility: {
           capable: true,
-          coldWarEnabled: true,
           doctrineAdopted: false,
           eligible: false,
         },
       }),
     });
-    expect(screen.getByText(/Three gates open it/)).toBeTruthy();
+    expect(screen.getByText(/Two gates open it/)).toBeTruthy();
     expect(screen.getByText(/Nuclear Delivery/)).toBeTruthy();
-    expect(screen.getByText(/Cold War subsystem/)).toBeTruthy();
     expect(screen.queryByText("Device ladder")).toBeNull();
   });
 

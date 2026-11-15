@@ -2,9 +2,7 @@ import type { Db } from "mongodb";
 import { ensureIndex } from "./helpers";
 
 /**
- * Indexes for the crash-safe money-flow receipts (issue #1672,
- * `nonAtomicMoneyFlowReceipts`). Absorbs the missing registration the
- * primitive's header comment called out: one small receipt document is
+ * Indexes for the crash-safe money-flow receipts. One receipt document is
  * written per keyed flow, so without a TTL the collection grows without
  * bound.
  *

@@ -94,17 +94,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
   us: {
     nationalStateId: "federal",
     defaults: {
-      // ── Education ──────────────────────────────────────────────────────────
-      us_federal_education_funding: { economic: 1, social: 0 }, // 1953: no federal K-12 funding; states pay all; right of center
-      us_federal_science_funding: { economic: 0, social: 0 }, // 1953: NSF created 1950; defense R&D via DoD; center
-      us_school_standards: { economic: 1, social: 1 }, // 1953: entirely local control; pre-standards movement; right
-      // ── Healthcare ─────────────────────────────────────────────────────────
-      us_federal_healthcare_funding: { economic: 1, social: 0 }, // 1953: no Medicare/Medicaid; VA only; right
-      us_drug_pricing_medicare: { economic: 1, social: 0 }, // 1953: no Medicare drug benefit; free-market pricing; right
-      us_public_health: { economic: 0, social: 0 }, // 1953: CDC/NIH baseline; polio epidemic ongoing; center
-      // ── Environment ────────────────────────────────────────────────────────
-      us_clean_energy: { economic: 1, social: 0 }, // 1953: coal and oil dominant; no EPA; right
-      us_conservation: { economic: 0, social: 0 }, // 1953: CCC legacy but no modern enviro law; center
       // ── Economy ────────────────────────────────────────────────────────────
       us_federal_income_tax_rate: { economic: -2, social: 0 }, // 1953: 92% top marginal rate — far left of any later era
       us_federal_domestic_corporate_tax_rate: { economic: -2, social: 0 }, // 1953: 52% statutory corporate rate — far left
@@ -112,35 +101,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: { economic: 0, social: 0 }, // 1953: combined OASDI+HI ≈ 3.0% — very low
       us_federal_tariff_rate: { economic: 0, social: 0 }, // 1953: GATT era; relatively low tariffs; center
       us_federal_sales_tax_rate: { economic: 0, social: 0 }, // 1953: no federal sales tax
-      us_federal_spending_stimulus: { economic: 0, social: 0 }, // 1953: Eisenhower balanced-budget conservatism; center
-      us_transportation: { economic: 1, social: 0 }, // 1953: pre-Interstate; no federal highway investment yet; right
-      us_broadband_energy: { economic: 1, social: 0 }, // 1953: no broadband; coal/oil energy; right
-      us_minimum_wage: { economic: 0, social: 0 }, // 1953: $0.75/hr minimum wage (1950); center
-      us_workforce_development: { economic: 0, social: 0 }, // 1953: no CETA; GI Bill winding down; center
-      us_housing: { economic: -1, social: 0 }, // 1953: FHA/VA mortgages + Levittown suburban boom; left
-      us_food_nutrition: { economic: 1, social: 0 }, // 1953: no food stamps yet (FSEP started 1961); right
-      // ── Safety Net ─────────────────────────────────────────────────────────
-      us_social_security: { economic: 0, social: 0 }, // 1953: 1950/1952 expansions; Eisenhower expanded further; center
-      us_medicaid: { economic: 1, social: 0 }, // 1953: no Medicaid (1965); right
-      us_medicaid_expansion: { economic: 1, social: 0 }, // 1953: no Medicaid at all; right
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      us_law_enforcement_criminal_justice: { economic: 1, social: 1 }, // 1953: McCarthy era; anti-communist enforcement; right
-      us_prison_rehabilitation: { economic: 1, social: 1 }, // 1953: punitive; rehabilitation ideal nascent; right
-      // ── Defense & Foreign ──────────────────────────────────────────────────
-      us_defense_spending: { economic: -2, social: 0 }, // 1953: Korean War + NATO; ~14% GDP; very high (far left on spending)
-      us_foreign_policy: { economic: -1, social: 1 }, // 1953: internationalist Republicanism; NATO; anti-communist; center-right
-      // ── Immigration ────────────────────────────────────────────────────────
-      us_border_security_enforcement: { economic: 1, social: 1 }, // 1953: "Operation Wetback" (1954); restrictionist; right
-      us_legal_immigration_visas: { economic: 1, social: 1 }, // 1953: McCarran-Walter Act (1952); quota system; right
-      // ── Social ─────────────────────────────────────────────────────────────
-      us_reproductive_rights: { economic: 0, social: 2 }, // 1953: Roe is 20 years away; abortion mostly illegal; very right
-      us_paid_family_leave: { economic: 1, social: 1 }, // 1953: no leave law; right
-      us_gun_control: { economic: 0, social: 1 }, // 1953: NFA (1934) baseline; no GCA-68 yet; right-of-center
-      // ── Governance ─────────────────────────────────────────────────────────
-      us_government_ethics: { economic: 1, social: 1 }, // 1953: McCarthy era; executive secrecy; right
-      us_civics_voting_rights: { economic: 1, social: 2 }, // 1953: Jim Crow legal; poll taxes; VRA 12 years away; far right
-      us_media_communications: { economic: -1, social: 0 }, // 1953: Fairness Doctrine + AT&T monopoly in force; left
-      us_emergency_services: { economic: 0, social: 0 }, // 1953: pre-FEMA; civil defense focus; center
     },
     optionIndexes: {
       us_federal_income_tax_rate: 7, // 92% top marginal rate — highest in US history; above 1979's 70% (index 6)
@@ -149,15 +109,10 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       us_federal_payroll_tax_rate: 1, // combined OASDI ≈ 3.0% in 1953 (far below 12.26% in 1979; index 4)
       us_federal_tariff_rate: 0, // 0% game baseline; GATT era
       us_federal_sales_tax_rate: 0, // 0% — no federal sales tax
-      us_social_security: 3, // 1953: benefit levels lower; coverage narrower; below 1979's index 5
       // Korean War peak (~14% GDP): maximum peacetime ladder rung. (Political-
       // legislation v2 owns day-one spending on 1953-default; this pins any
       // legacy matching path / non-v2 tooling that still reads optionIndexes.)
-      us_defense_spending: 6,
       // Pre-Medicare/Medicaid: VA-only federal healthcare → cheapest right rung.
-      us_federal_healthcare_funding: 6,
-      us_medicaid: 6,
-      us_medicaid_expansion: 6,
     },
     regions: states1953,
   },
@@ -172,54 +127,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
     defaults: {
       // ── Healthcare ─────────────────────────────────────────────────────────
       uk_nhs_funding: { economic: 1, social: 0 }, // 1953: NHS (est. 1948) chronically underfunded; dentistry charges introduced 1952; Conservative cuts
-      uk_social_care: { economic: 1, social: 0 }, // 1953: minimal state social care; Poor Law institutions still transitioning
-      uk_mental_health: { economic: 0, social: 1 }, // 1953: mental hospitals (asylums); community care not yet on agenda; conservative
-      uk_public_health: { economic: 0, social: 0 }, // 1953: NHS baseline; Great Smog 1952 still fresh; center
-      // ── Education ──────────────────────────────────────────────────────────
-      uk_tuition_fees: { economic: 0, social: 0 }, // 1953: no tuition fees (grants available); university expansion just beginning
-      uk_education_standards: { economic: 0, social: 1 }, // 1953: 11+ exam system; grammar schools; selective and conservative
-      uk_education_funding: { economic: 1, social: 0 }, // 1953: tight Treasury control; Conservative austerity
-      uk_research_science: { economic: 0, social: 0 }, // 1953: MRC/DSIR active; Watson-Crick DNA discovery 1953; center
-      // ── Economic ───────────────────────────────────────────────────────────
-      uk_fiscal_spending: { economic: 1, social: 0 }, // 1953: balance-of-payments crisis; "Robot" plan (failed); tight fiscal stance
-      uk_local_government_funding: { economic: 0, social: 0 }, // 1953: rates system; local authorities have substantial roles
-      // ── Infrastructure ─────────────────────────────────────────────────────
-      uk_transport_rail: { economic: -1, social: 0 }, // 1953: British Railways nationalized (1948); massive rail network; state investment
-      uk_energy_grid: { economic: -1, social: 0 }, // 1953: British Electricity Authority nationalized (1948); coal-dominated; state-run
-      // ── Environment ────────────────────────────────────────────────────────
-      uk_climate_net_zero: { economic: 0, social: 0 }, // 1953: no climate framework; coal dominant; center by default
-      uk_north_sea_energy: { economic: 0, social: 0 }, // 1953: North Sea not yet drilled (first production 1969); no policy exists
-      // ── Law & Justice ──────────────────────────────────────────────────────
-      uk_policing_crime: { economic: 0, social: 1 }, // 1953: traditional policing; capital punishment in force; conservative
-      uk_prison_rehabilitation: { economic: 0, social: 1 }, // 1953: punitive; rehabilitation ideal nascent
-      // ── Defence ────────────────────────────────────────────────────────────
-      uk_defence_spending: { economic: -2, social: 0 }, // 1953: Korean War rearmament; ~8% GDP; very high spending
-      uk_trident_defence: { economic: -1, social: 0 }, // 1953: nuclear weapons programme (first UK bomb tested 1952); high priority
-      // ── Foreign Policy ─────────────────────────────────────────────────────
-      uk_foreign_policy: { economic: -1, social: 0 }, // 1953: NATO; Commonwealth; "special relationship" with US; Korean War
-      // ── Welfare ────────────────────────────────────────────────────────────
-      uk_universal_credit: { economic: 0, social: 0 }, // 1953: National Insurance (Beveridge 1942 → 1948); predecessor welfare
-      uk_state_pensions: { economic: 0, social: 0 }, // 1953: National Insurance pensions established; modest benefit levels
-      uk_childcare: { economic: 1, social: 0 }, // 1953: minimal state childcare; family/Church-reliant
-      // ── Immigration ────────────────────────────────────────────────────────
-      uk_immigration_asylum: { economic: 0, social: 1 }, // 1953: British Nationality Act 1948 opened Commonwealth immigration; Empire Windrush era; but tightening sentiment
-      uk_work_visas: { economic: 0, social: 0 }, // 1953: Commonwealth citizens free entry (no visa requirement yet)
-      // ── Labour ─────────────────────────────────────────────────────────────
-      uk_workers_rights: { economic: -1, social: 0 }, // 1953: strong trade unions; TUC at peak power; high union density ~45%
-      uk_workforce_development: { economic: 0, social: 0 }, // 1953: apprenticeship tradition; no formal training agencies
-      // ── Housing ────────────────────────────────────────────────────────────
-      uk_housing_planning: { economic: -1, social: 0 }, // 1953: massive council house building programme (Macmillan: 300,000/year target); left
-      uk_leasehold_reform: { economic: 0, social: 0 }, // 1953: leasehold system unchanged; no reform
-      // ── Governance ─────────────────────────────────────────────────────────
-      uk_devolution_local_powers: { economic: 1, social: 0 }, // 1953: pre-devolution; Westminster supremacy; centralized
-      uk_government_ethics: { economic: 0, social: 0 }, // 1953: Profumo scandal not yet; Westminster conventions respected
-      uk_electoral_reform: { economic: 0, social: 0 }, // 1953: FPTP unchallenged; no PR debate
-      // ── Media ──────────────────────────────────────────────────────────────
-      uk_bbc_public_media: { economic: -1, social: 0 }, // 1953: BBC monopoly; ITV not yet launched (1955); public broadcaster dominant
-      uk_digital_broadband: { economic: 0, social: 0 }, // 1953: no digital; radio and nascent television era
-      // ── Civil Liberties ────────────────────────────────────────────────────
-      uk_surveillance_privacy: { economic: 0, social: 1 }, // 1953: MI5 active; anti-communist surveillance; Cold War intelligence
-      uk_drug_policy: { economic: 0, social: 1 }, // 1953: Dangerous Drugs Act framework; conservative
     },
     optionIndexes: {
       uk_income_tax_rate: 9, // 1953: 97.5% top marginal — highest in British history; higher than 1991's 25% basic
@@ -229,12 +136,8 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       uk_domestic_corporation_tax: 7, // 1953: standard profits tax ~50%; high by any later standard
       uk_foreign_corporation_tax: 6, // day-one parity below domestic
       uk_nhs_funding: 2, // 1953: low NHS funding (underfunded in first years)
-      uk_tuition_fees: 0, // 1953: no tuition fees; grants available
-      uk_state_pensions: 2, // 1953: modest flat-rate Beveridge pension
-      uk_fiscal_spending: 2, // 1953: tight austerity stance; below 1991
       // Korean War / NATO rearmament (~8% GDP). Legacy ladder only — v2 owns
       // day-one UK spending on 1953-default.
-      uk_defence_spending: 6,
     },
     regions: ukRegions1953,
   },
@@ -491,20 +394,13 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       se_local_grants: { economic: -1, social: 0 }, // 1953: standard transfer to kommuner/landsting
     },
     optionIndexes: {
-      // se_income_tax/se_social_charges corrected from idx4/idx2 to the
-      // ladder's own CENTER "standard" bracket (idx3 "the standard steep
-      // progressive schedule" 60%; idx1 "the standard high employer fees" 33%)
-      // — fiscal-scale audit, 2026-07-28. The prior picks (idx4 "Solidarity
-      // Surtax Act" 75%, idx2 "Expanded Welfare Act" 45%) are each ONE STEP
-      // LEFT of "standard," i.e. already at the 1979-mature-welfare-state
-      // bracket the option's own name describes — inconsistent with this
-      // country's "folkhem under active construction" (not yet built) 1953
-      // framing. Combined with SE's high taxBaseRatios (0.42 income / 0.45
-      // wages), the two aggressive picks alone produced ~45% of GDP in
-      // income+payroll receipts, driving a $200B+/23%-of-GDP day-1 surplus
-      // (verified via getInitialNationalBudgetsForPreset("1953-default")).
-      // The standard brackets land revenue ≈48% of GDP against the unchanged
-      // 36.8%-of-GDP spend — an ≈11% of GDP surplus, not >20%.
+      // se_income_tax/se_social_charges use the ladder's CENTER "standard" bracket
+      // (idx3 60%, idx1 33%): the option's own name describes the target-bracket
+      // maturity, inconsistent with this country's 1953 "folkhem under active
+      // construction" framing. Combined with SE's high taxBaseRatios (0.42 income /
+      // 0.45 wages), aggressive picks produced ~45% of GDP in income+payroll
+      // receipts, a >20%-of-GDP day-1 surplus. Standard brackets land revenue ≈48%
+      // of GDP against 36.8%-of-GDP spend, an ≈11% surplus.
       se_income_tax: 3, // 1953: "the standard steep progressive schedule" (60%)
       se_corporate_tax: 3, // 1953: moderate; center
       se_vat: 0, // 1953: no Moms (VAT); sales tax system
@@ -626,7 +522,7 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       fi_sales_tax: 2,
       fi_social_charges: 1,
       // fi_customs_tariff corrected from idx2 to idx1 (fiscal-scale audit
-      // follow-up, 2026-07-28). idx2 is "National Industry Protection Act"
+      // follow-up). idx2 is "National Industry Protection Act"
       // (25% rate) — the ladder's MOST protectionist/autarkic option — which
       // is inconsistent with the defaults comment above ("licensing + import
       // controls; left", a moderate stance, not maximalist). idx1 is the
@@ -1063,13 +959,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: { economic: 0, social: 0 }, // 1953: major revenue source; high turnover tax on enterprise output; center
       su_social_insurance: { economic: 0, social: 0 }, // 1953: state provides all; danwei equivalent; center
       su_customs_tariff: { economic: -3, social: 0 }, // 1953: foreign trade state monopoly; autarky; very left
-      su_economic_system: { economic: -4, social: 0 }, // 1953: maximum Gosplan central planning; most planned system
-      su_political_system: { economic: 0, social: 3 }, // 1953: SU one-party maximum (Stalin just died; still Stalinist)
-      su_price_controls: { economic: -3, social: 0 }, // 1953: all prices state-set; maximum control
-      su_agriculture: { economic: -3, social: 0 }, // 1953: collective farms at maximum; peasants have no private plots; maximum state
-      su_civil_liberties: { economic: 0, social: 3 }, // 1953: MGB/KGB; Gulag; maximum repression (Stalinist peak)
-      su_defense_spending: { economic: -3, social: 1 }, // 1953: Korean War + nuclear arms race; highest defense share of any era; very left
-      su_housing: { economic: -3, social: 0 }, // 1953: state housing allocation; communal apartments; very left
     },
     optionIndexes: {
       su_enterprise_levy: 5, // 1953: maximum enterprise levy (Stalinist extraction)
@@ -1077,13 +966,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       su_turnover_tax: 3, // 1953: high turnover tax; above 1979 levels
       su_social_insurance: 1, // 1953: unified; state-provided
       su_customs_tariff: 2, // 1953: foreign trade monopoly at maximum
-      su_economic_system: 5, // 1953: pure Gosplan; maximum centralization
-      su_political_system: 3, // 1953: maximum SED/CPSU leading role (Stalinist)
-      su_price_controls: 3, // 1953: maximum state price setting
-      su_agriculture: 3, // 1953: maximum collectivization; no private plots
-      su_civil_liberties: 1, // 1953: minimum civil liberties (Gulag at peak; inverted: 1=least free)
-      su_defense_spending: 3, // 1953: maximum defense share (Korean War + nuclear)
-      su_housing: 3, // 1953: state housing allocation maximum
     },
     regions: ruRegions1953,
   },
@@ -1101,11 +983,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       dd_product_tax: { economic: 0, social: 0 }, // 1953: commodity tax on output; center
       dd_social_insurance: { economic: 0, social: 0 }, // 1953: state social insurance comprehensive; center
       dd_foreign_trade: { economic: -3, social: 0 }, // 1953: foreign trade state monopoly; very left
-      dd_economic_system: { economic: -4, social: 0 }, // 1953: maximum central planning (Gosplan-style); very left
-      dd_political_system: { economic: 0, social: 3 }, // 1953: SED leading role at maximum (Stalinist; Ulbricht consolidating after June 17)
-      dd_price_controls: { economic: -3, social: 0 }, // 1953: all prices state-set; maximum
-      dd_civil_liberties: { economic: 0, social: 3 }, // 1953: Stasi nascent (founded 1950); harsh repression; maximum
-      dd_housing: { economic: -2, social: 0 }, // 1953: state housing allocation; acute shortage; left
     },
     optionIndexes: {
       dd_enterprise_levy: 4, // 1953: maximum VEB surplus remittance
@@ -1113,11 +990,6 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
       dd_product_tax: 2, // 1953: commodity tax; above 1979
       dd_social_insurance: 1, // 1953: unified state social insurance
       dd_foreign_trade: 2, // 1953: foreign trade monopoly at maximum
-      dd_economic_system: 4, // 1953: maximum centralization (stricter than 1979)
-      dd_political_system: 4, // 1953: maximum SED/Stalinist control (stricter than 1979)
-      dd_price_controls: 3, // 1953: maximum price regulation
-      dd_civil_liberties: 1, // 1953: minimum civil liberties (Stasi; inverted: 1=least free)
-      dd_housing: 2, // 1953: state allocation; acute shortage
     },
     regions: ddRegions1953,
   },
@@ -1125,9 +997,9 @@ export const COUNTRY_POLICY_CONFIGS_1953: Record<string, CountryPolicyConfig> = 
   // ═══════════════════════════════════════════════════════════════════════════
   //  WARSAW-PACT SATELLITES — 1953
   //
-  //  These six previously had NO 1953 policy config, so `makeEasternBlocBudget`
-  //  fell through to `COUNTRY_POLICY_CONFIGS` — the modern shared map — and a
-  //  1953 world seeded them with Brezhnev-era tax and spending defaults.
+  //  These six need a 1953 policy config: without one `makeEasternBlocBudget`
+  //  falls through to `COUNTRY_POLICY_CONFIGS` (the modern shared map) and a
+  //  1953 world is seeded with Brezhnev-era tax and spending defaults.
   //
   //  `easternBlocPolicyConfig1953` supplies the high-Stalinist baseline: total
   //  surplus remittance, maximal turnover tax, total centralisation, vanguard

@@ -10,6 +10,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Tariff } from "@/lib/db/types";
 import { ALL_COUNTRY_IDS, type CountryId } from "@/lib/constants/countries";
 import { reconcileSignedTariffBills } from "@/lib/tariffs/reconcileTariffs";
+import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 export async function GET(request: Request) {
   try {
@@ -22,8 +23,7 @@ export async function GET(request: Request) {
 
     const db = await getDb();
     await reconcileSignedTariffBills(db, countryId);
-    const tariffs = await db
-      .collection<Tariff>("tariffs")
+    const tariffs = await tariffsCollection(db)
       .find({ countryId })
       .sort({ scopeType: 1, createdAt: 1 })
       .toArray();

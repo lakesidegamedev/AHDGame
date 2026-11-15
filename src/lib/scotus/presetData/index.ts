@@ -7,18 +7,13 @@ import { SCOTUS_1953_SEED } from "./1953";
 import { SCOTUS_2027_DEFAULT_SEED } from "./2027";
 
 /**
- * SCOTUS content extension point (#3598 core mechanics).
+ * SCOTUS content extension point.
  *
- * ============================================================================
- * TICKETS #3599 (1953), #3600 (1979), #3601 (1991), #3602 (2019-default):
- * fill in `seats`/`docket` for your preset below. Each preset needs its own
- * historically-accurate 9-seat Original Roster and its own Docket of real
- * landmark cases from that preset's start year to present — see
- * `src/lib/scotus/presetData/types.ts` for the shape, and the ahd-scotus-context
- * / ahd-scotus-adr-* docs in ops-knowledge for the full domain glossary + ADRs.
- * Until filled in, `seedScotus` no-ops for that preset (logs and returns) so
- * the seeding hook is safe to ship ahead of content.
- * ============================================================================
+ * Each preset needs its own historically-accurate 9-seat Original Roster and
+ * its own Docket of real landmark cases from that preset's start year to
+ * present. See `src/lib/scotus/presetData/types.ts` for the shape. Until
+ * filled in, `seedScotus` no-ops for that preset (logs and returns) so the
+ * seeding hook is safe to ship ahead of content.
  */
 const SCOTUS_PRESET_DATA: Partial<Record<ResetPresetId, ScotusPresetSeed>> = {
   "1953-default": SCOTUS_1953_SEED, // #3599: 1953 Original Roster + Docket

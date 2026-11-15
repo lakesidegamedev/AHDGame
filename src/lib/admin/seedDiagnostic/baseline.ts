@@ -1,5 +1,5 @@
 /**
- * Seed diagnostic baseline snapshot (PR 2).
+ * Seed diagnostic baseline snapshot.
  *
  * Captures a flat dotted-key map of seeded macro values into
  * `seedDiagnosticBaselines` singleton `{_id:'current'}`. Keys match Mode B
@@ -10,12 +10,18 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getRateDoc, rateFromDoc } from "@/lib/world/forex";
-import type { ExchangeRate } from "@/lib/db/types";
 import { buildSeedExpectations, expectedPrimeRate, type SeedExpectations } from "./expectations";
 import { calendarTurnFromGameState } from "./types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
+import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
+import { seedDiagnosticBaselinesCollection } from "@/lib/db/repositories/seedDiagnosticBaselines";
 
-const BASELINE_COLLECTION = "seedDiagnosticBaselines";
 export const BASELINE_ID = "current" as const;
 
 export interface SeedDiagnosticBaseline {
@@ -44,13 +50,11 @@ function setMetric(metrics: Record<string, number>, id: string, value: number | 
  * At fresh seed most output sits in unowned; after play it migrates to corps.
  */
 async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
-  const unowned = await db
-    .collection<{ revenue?: number }>("unownedSectors")
+  const unowned = await unownedSectorsCollection<{ revenue?: number }>(db)
     .find({ countryId })
     .project({ revenue: 1 })
     .toArray();
-  const corps = await db
-    .collection<{ revenue?: number }>("corporations")
+  const corps = await corporationsCollection<{ revenue?: number }>(db)
     .find({ countryId })
     .project({ revenue: 1 })
     .toArray();
@@ -65,8 +69,7 @@ async function sumSectorAggregate(db: Db, countryId: string): Promise<number> {
  * no usable rows exist.
  */
 async function commodityPriceIndex(db: Db): Promise<number | null> {
-  const rows = await db
-    .collection<{ globalPrice?: number; basePrice?: number }>("commodityPrices")
+  const rows = await commodityPricesCollection<{ globalPrice?: number; basePrice?: number }>(db)
     .find({})
     .project({ globalPrice: 1, basePrice: 1 })
     .toArray();
@@ -93,14 +96,13 @@ export async function collectLiveMetrics(
   const metrics: Record<string, number> = {};
   const countries = expect.seededCountryIds;
 
-  const budgets = await db
-    .collection<{
-      countryId?: string;
-      gdp?: number;
-      population?: number;
-      treasuryBalance?: number;
-      debt?: { principal?: number; interestRate?: number };
-    }>("federalBudget")
+  const budgets = await federalBudgetCollection<{
+    countryId?: string;
+    gdp?: number;
+    population?: number;
+    treasuryBalance?: number;
+    debt?: { principal?: number; interestRate?: number };
+  }>(db)
     .find({})
     .toArray();
   const budgetByCountry = new Map(budgets.map((b) => [String(b.countryId ?? b), b] as const));
@@ -115,13 +117,12 @@ export async function collectLiveMetrics(
     setMetric(metrics, `budget.${countryId}.treasuryBalance`, doc.treasuryBalance);
   }
 
-  const banks = await db
-    .collection<{
-      _id: string;
-      countryId?: CountryId;
-      primeRate?: number;
-      inflationHistory?: Array<{ rate?: number }>;
-    }>("centralBanks")
+  const banks = await centralBanksCollection<{
+    _id: string;
+    countryId?: CountryId;
+    primeRate?: number;
+    inflationHistory?: Array<{ rate?: number }>;
+  }>(db)
     .find({})
     .toArray();
   const bankById = new Map(banks.map((b) => [String(b._id), b]));
@@ -137,7 +138,7 @@ export async function collectLiveMetrics(
     }
   }
 
-  const rates = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+  const rates = await exchangeRatesCollection(db).find({}).toArray();
   const rateMap = new Map(rates.map((r) => [r.countryId, r]));
 
   for (const countryId of expect.forexActiveCountries) {
@@ -159,8 +160,8 @@ export async function collectLiveMetrics(
 
 /**
  * Reconstruct a baseline metrics map from seed-file expectations when no
- * `seedDiagnosticBaselines` doc exists (worlds reset before this feature).
- * Sector aggregates and commodity index are omitted (not in seed tables).
+ * `seedDiagnosticBaselines` doc exists. Sector aggregates and commodity
+ * index are omitted (not in seed tables).
  */
 export function reconstructMetricsFromExpectations(
   expect: SeedExpectations
@@ -196,9 +197,9 @@ export function reconstructMetricsFromExpectations(
  * Load the singleton baseline, or null if missing.
  */
 export async function loadSeedBaseline(db: Db): Promise<SeedDiagnosticBaseline | null> {
-  const doc = await db
-    .collection<SeedDiagnosticBaseline>(BASELINE_COLLECTION)
-    .findOne({ _id: BASELINE_ID });
+  const doc = await seedDiagnosticBaselinesCollection<SeedDiagnosticBaseline>(db).findOne({
+    _id: BASELINE_ID,
+  });
   if (!doc || typeof doc.metrics !== "object" || doc.metrics == null) return null;
   return doc;
 }
@@ -212,13 +213,11 @@ export async function captureSeedBaseline(
   opts?: CaptureSeedBaselineOptions
 ): Promise<SeedDiagnosticBaseline> {
   const now = opts?.now ?? new Date();
-  const gs = await db
-    .collection<{
-      preset?: string;
-      currentTurn?: number;
-      preIterationTurns?: number;
-    }>("gameState")
-    .findOne({ _id: "current" as never });
+  const gs = await gameStateCollection<{
+    preset?: string;
+    currentTurn?: number;
+    preIterationTurns?: number;
+  }>(db).findOne({ _id: "current" as never });
 
   const preset =
     opts?.preset ?? (typeof gs?.preset === "string" ? gs.preset : null) ?? DEFAULT_SEED_PRESET;
@@ -236,9 +235,11 @@ export async function captureSeedBaseline(
     metrics,
   };
 
-  await db
-    .collection<SeedDiagnosticBaseline>(BASELINE_COLLECTION)
-    .replaceOne({ _id: BASELINE_ID }, baseline, { upsert: true });
+  await seedDiagnosticBaselinesCollection<SeedDiagnosticBaseline>(db).replaceOne(
+    { _id: BASELINE_ID },
+    baseline,
+    { upsert: true }
+  );
 
   return baseline;
 }

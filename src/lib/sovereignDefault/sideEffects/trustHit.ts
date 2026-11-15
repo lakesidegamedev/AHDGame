@@ -1,27 +1,16 @@
 /**
  * Apply a cross-country trust delta after a sovereign default.
  *
- * Trust is design-fractional (0..1) but the legacy metric was stored 0..100, so
- * the delta is scaled by 100 before it is converted.
+ * Deltas arrive in the LEGACY 0..100 unit and are scaled to design-fractional
+ * trust. Board countries take the hit on `governance.integrity` (mapped by
+ * ADAPTER_TIER1 to `governance.publicTrust`) via the same scale conversion the
+ * legislation bridge uses.
  *
- * BOARD COUNTRIES take the hit on `governance.integrity`, the family
- * `ADAPTER_TIER1` maps `governance.publicTrust` onto. The legacy-unit delta is
- * converted to board points by the same scale conversion the legislation bridge
- * uses, so a given trust hit means the same thing on either side.
+ * Shifts the VALUE, not the residual: the dynamics phase drifts value back to
+ * its law-implied target, so an event's damage decays. Shifting the residual
+ * would move the equilibrium and act like enacted law instead of an event.
  *
- * VALUE, not residual — the distinction matters. A default is an EVENT: it
- * damages trust, and trust recovers. Shifting the value gives exactly that,
- * because the dynamics phase drifts the value back toward its law-implied
- * target each turn — the board's own analogue of the natural decay the legacy
- * `$inc` relied on. Shifting the RESIDUAL instead would move the equilibrium
- * and make a single default permanently redefine how trustworthy the country
- * is, which is what enacted LAW does, not what an event does.
- *
- * The write goes through `applyBoardDelta` rather than a dotted update path;
- * see that module for why the obvious `$inc` silently does nothing.
- *
- * There is no legacy branch: since Phase 3 no country has a `stateMetrics` doc,
- * so a fallback would be dead code pretending to be a safety net.
+ * Writes through `applyBoardDelta`; a dotted `$inc` silently does nothing.
  */
 
 import type { Db } from "mongodb";

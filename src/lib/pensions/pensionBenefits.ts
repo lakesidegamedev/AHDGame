@@ -1,27 +1,16 @@
 /**
  * A8 phase 2, part A: benefits in payment.
  *
- * A scheme that only ever collects is a savings account. This is the turn pass
- * where the promise comes due.
+ * Union membership is modelled in aggregate, so there is no member to pay.
+ * A retiring player character is deleted by `retireCharacter`, which
+ * removes the wallet a benefit could be credited to. Benefits are a flow
+ * paid to the modelled covered workforce, ledgered against
+ * `counterpartyType: "system"`. The scheme's assets fall by what it
+ * pays; nothing is created.
  *
- * ## Who gets paid
- *
- * Nobody addressable, and that is a finding rather than a shortcut. Union
- * membership is modelled in aggregate (a sector's unionization rate and a
- * union's membership pressure); there is no member document and no link from a
- * character to a union. A player character who retires is DELETED outright by
- * `retireCharacter`, which snapshots them into `retiredCharacters` and removes
- * the wallet a benefit could be credited to. So benefits are a flow paid to the
- * modelled covered workforce and out of the instrumented perimeter, ledgered
- * against `counterpartyType: "system"` exactly like every other payment to
- * households. The scheme's assets fall by what it pays; nothing is created.
- *
- * ## The cut
- *
- * Benefits are paid from CASH. When the cash is short every pensioner takes the
- * same proportional cut and the unpaid claim stays on the books. This is the
- * whole consequence of underfunding and the reason the funding ratio is worth
- * computing. See `pensionBenefitPayment` for why the scheme never overdraws.
+ * Benefits are paid from CASH. When cash is short every pensioner takes
+ * the same proportional cut and the unpaid claim stays on the books.
+ * See `pensionBenefitPayment` for why the scheme never overdraws.
  */
 
 import type { Db } from "mongodb";
@@ -34,7 +23,7 @@ import {
   pensionBenefitsDueForTurn,
   pensionRetirementsForTurn,
 } from "./rules";
-import { PENSION_SCHEMES } from "./schemeAssets";
+import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
 export interface PensionBenefitsResult {
   schemesPaying: number;
@@ -57,7 +46,9 @@ export interface PensionBenefitsResult {
  */
 export async function runPensionBenefitsTurn(
   db: Db,
-  currentTurn: number
+  currentTurn: number,
+  /** Turn resilience stage 2 and above: a scheme is paid at most once per turn. */
+  rerunSafe = false
 ): Promise<PensionBenefitsResult> {
   const result: PensionBenefitsResult = {
     schemesPaying: 0,
@@ -68,9 +59,11 @@ export async function runPensionBenefitsTurn(
     errors: [],
   };
 
-  const schemes = await db
-    .collection<PensionScheme>(PENSION_SCHEMES)
-    .find({ liabilitiesAnchor: { $gt: 0 } })
+  const schemes = await pensionSchemesCollection<PensionScheme>(db)
+    .find({
+      liabilitiesAnchor: { $gt: 0 },
+      ...(rerunSafe ? { lastBenefitTurn: { $ne: currentTurn } } : {}),
+    })
     .toArray();
   if (schemes.length === 0) return result;
 
@@ -96,8 +89,13 @@ export async function runPensionBenefitsTurn(
       // between the read and the write, the payment simply does not happen
       // rather than driving the balance negative. A pension scheme with
       // negative assets would be a mint wearing a disguise.
-      const update = await db.collection<PensionScheme>(PENSION_SCHEMES).updateOne(
-        { _id: scheme._id, assetsAnchor: { $gte: payment.paidAnchor } },
+      const update = await pensionSchemesCollection<PensionScheme>(db).updateOne(
+        {
+          _id: scheme._id,
+          assetsAnchor: { $gte: payment.paidAnchor },
+          // Paid at most once per turn: the stamp below lands in this same update.
+          ...(rerunSafe ? { lastBenefitTurn: { $ne: currentTurn } } : {}),
+        },
         {
           $inc: {
             assetsAnchor: -payment.paidAnchor,

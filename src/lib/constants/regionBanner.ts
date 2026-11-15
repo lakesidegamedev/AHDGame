@@ -73,72 +73,45 @@ export function resolveRegionOfficeBannerImage(
   return resolveRegionBannerImage(countryId, stateId, stateBannerImage);
 }
 
+const REGION_IMAGE_RESOLVERS: Partial<Record<CountryId, (stateId: string) => string | undefined>> =
+  {
+    US: getUSStateImage,
+    UK: getUKRegionImage,
+    JP: getJPRegionImage,
+    DE: getDERegionImage,
+    CN: getCNRegionImage,
+    IE: getIERegionImage,
+    RU: getRURegionImage,
+    DD: getDDRegionImage,
+    BR: getBRRegionImage,
+    NG: getNGRegionImage,
+    HU: getHURegionImage,
+    PL: getPLRegionImage,
+    RO: getRORegionImage,
+    YU: getYURegionImage,
+    BG: getBGRegionImage,
+    UKR: getUARegionImage,
+    BLR: getBLRRegionImage,
+    CS: getCSRegionImage,
+    BAL: getBALRegionImage,
+    FR: getFRRegionImage,
+    IT: getITRegionImage,
+    ES: getESRegionImage,
+    SE: getSERegionImage,
+    TR: getTRRegionImage,
+    GR: getGRRegionImage,
+    AT: getATRegionImage,
+    FI: getFIRegionImage,
+    SCO: getSCORegionImage,
+    WAL: getWALRegionImage,
+  };
+
 export function resolveRegionBannerImage(
   countryId: CountryId,
   stateId: string,
   stateBannerImage?: string | null
 ): string | undefined {
   if (stateBannerImage) return stateBannerImage;
-  switch (countryId) {
-    case "US":
-      return getUSStateImage(stateId);
-    case "UK":
-      return getUKRegionImage(stateId);
-    case "JP":
-      return getJPRegionImage(stateId);
-    case "DE":
-      return getDERegionImage(stateId);
-    case "CN":
-      return getCNRegionImage(stateId);
-    case "IE":
-      return getIERegionImage(stateId);
-    case "RU":
-      return getRURegionImage(stateId);
-    case "DD":
-      return getDDRegionImage(stateId);
-    case "BR":
-      return getBRRegionImage(stateId);
-    case "NG":
-      return getNGRegionImage(stateId);
-    case "HU":
-      return getHURegionImage(stateId);
-    case "PL":
-      return getPLRegionImage(stateId);
-    case "RO":
-      return getRORegionImage(stateId);
-    case "YU":
-      return getYURegionImage(stateId);
-    case "BG":
-      return getBGRegionImage(stateId);
-    case "UKR":
-      return getUARegionImage(stateId);
-    case "BLR":
-      return getBLRRegionImage(stateId);
-    case "CS":
-      return getCSRegionImage(stateId);
-    case "BAL":
-      return getBALRegionImage(stateId);
-    case "FR":
-      return getFRRegionImage(stateId);
-    case "IT":
-      return getITRegionImage(stateId);
-    case "ES":
-      return getESRegionImage(stateId);
-    case "SE":
-      return getSERegionImage(stateId);
-    case "TR":
-      return getTRRegionImage(stateId);
-    case "GR":
-      return getGRRegionImage(stateId);
-    case "AT":
-      return getATRegionImage(stateId);
-    case "FI":
-      return getFIRegionImage(stateId);
-    case "SCO":
-      return getSCORegionImage(stateId);
-    case "WAL":
-      return getWALRegionImage(stateId);
-    default:
-      return undefined;
-  }
+  if (!Object.hasOwn(REGION_IMAGE_RESOLVERS, countryId)) return undefined;
+  return REGION_IMAGE_RESOLVERS[countryId]?.(stateId);
 }

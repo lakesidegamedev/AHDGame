@@ -3,23 +3,17 @@
 import { useId, useState } from "react";
 
 /**
- * Charts for changelog dev-diary posts, authored inline in the markdown as a
- * ```chart fence containing a JSON spec. Rendered as inline SVG — no chart
- * library, no runtime dependency, and it works inside the existing
- * ReactMarkdown pipeline.
+ * Charts for changelog dev-diary posts, authored inline as a ```chart fence
+ * with a JSON spec. Rendered as inline SVG, no chart library, works in the
+ * existing ReactMarkdown pipeline.
  *
- * Colour: slots come from the validated categorical palette, using the steps
- * that clear every check against BOTH a light and a dark chart surface. The app
- * ships ~10 user-selectable themes (globals.css `[data-theme=...]`), from pure
- * black OLED to cream broadsheet, so a light-set/dark-set swap would need to
- * enumerate them and would break on the next theme added. One theme-invariant
- * set avoids that entirely. Verified with the palette validator against
- * #ffffff, #1d1d2a, #000000 and #fbf8f0: all checks pass on each.
+ * Colors use one theme-invariant categorical set that passes palette checks
+ * against both light and dark surfaces, so the ~10 user-selectable themes
+ * need no per-theme enumeration or swap.
  *
- * Text never wears a series colour — identity comes from the coloured mark
+ * Text never wears a series color; identity comes from the colored mark
  * beside the label. Every value is also directly labelled and repeated in a
- * table view, which satisfies the relief rule and keeps the chart readable
- * without colour at all.
+ * table view, so the chart stays readable without color.
  */
 
 /** Categorical slots 1-3. Past three series, author a second chart or facet. */

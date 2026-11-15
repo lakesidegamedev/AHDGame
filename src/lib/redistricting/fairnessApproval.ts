@@ -2,10 +2,9 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CongressionalDistrict } from "@/lib/db/types";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
-import { getGameState } from "@/lib/gameState";
-import { isRedistrictingEnabled } from "./flag";
 import { computeEfficiencyGap } from "./legality";
 import { computeRedistrictCaps } from "./caps";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 const PENALTY_MIN = 2;
 const PENALTY_MAX = 5;
@@ -20,18 +19,14 @@ export function fairnessApprovalPenalty(eg: number, ceiling: number): number {
 
 /**
  * Per-state approval modifiers for unfair congressional maps. Empty when the
- * flag is off or the country has no district docs.
+ * country has no district docs.
  */
 export async function getActiveFairnessGapModifiers(
   db: Db,
   countryId: CountryId
 ): Promise<Map<string, ActiveModifier[]>> {
   const out = new Map<string, ActiveModifier[]>();
-  const gs = await getGameState(db);
-  if (!isRedistrictingEnabled(gs)) return out;
-
-  const districts = (await db
-    .collection<CongressionalDistrict>("congressionalDistricts")
+  const districts = (await congressionalDistrictsCollection(db)
     .find({ countryId } as Partial<CongressionalDistrict>)
     .toArray()) as CongressionalDistrict[];
   if (districts.length === 0) return out;

@@ -6,10 +6,11 @@ import {
   MEDIA_OPERATING_MODELS,
   mediaOperatingModelOutputRates,
 } from "./catalog";
+import { getMediaOperatingModelStrategies } from "@/lib/constants/sectorStrategies";
 
 describe("media operating model catalog", () => {
   it("lists only the current media and entertainment sector lanes", () => {
-    expect(MEDIA_OPERATING_MODELS).toHaveLength(8);
+    expect(MEDIA_OPERATING_MODELS).toHaveLength(12);
     expect(
       [...new Set(MEDIA_OPERATING_MODELS.flatMap((model) => model.sectorTypes))].sort()
     ).toEqual(["media", "media_entertainment"]);
@@ -85,5 +86,59 @@ describe("media operating model catalog", () => {
     expect(mediaOperatingModelOutputRates({ advertising: Number.NaN }, { advertising: 1 })).toEqual(
       {}
     );
+  });
+});
+
+describe("post-2005 media operating models", () => {
+  it("makes social platforms the incumbent model of the 2027 world", () => {
+    expect(effectiveMediaOperatingModelId("social_platform", "media", 2027)).toBe(
+      "social_platform"
+    );
+    expect(effectiveMediaOperatingModelId("creator_network", "media", 2027)).toBe(
+      "creator_network"
+    );
+    expect(effectiveMediaOperatingModelId("ai_generated_media", "media", 2027)).toBeUndefined();
+    expect(
+      effectiveMediaOperatingModelId("immersive_media", "media_entertainment", 2027)
+    ).toBeUndefined();
+  });
+
+  it("opens AI-generated media in 2030 and immersive media in 2040", () => {
+    expect(effectiveMediaOperatingModelId("ai_generated_media", "media", 2029)).toBeUndefined();
+    expect(effectiveMediaOperatingModelId("ai_generated_media", "media", 2030)).toBe(
+      "ai_generated_media"
+    );
+    expect(
+      effectiveMediaOperatingModelId("immersive_media", "media_entertainment", 2039)
+    ).toBeUndefined();
+    expect(effectiveMediaOperatingModelId("immersive_media", "media_entertainment", 2040)).toBe(
+      "immersive_media"
+    );
+    expect(effectiveMediaOperatingModelId("immersive_media", "media", 2045)).toBeUndefined();
+  });
+});
+
+describe("post-2005 media model economics", () => {
+  const strategy = (sector: string, id: string) =>
+    getMediaOperatingModelStrategies(sector).find((s) => s.id === id)!;
+  const inputTotal = (demand: Record<string, number | undefined>) =>
+    Object.values(demand).reduce<number>((t, v) => t + (v ?? 0), 0);
+
+  it("builds a priced strategy for every new model on every lane it lists", () => {
+    for (const id of ["social_platform", "creator_network", "ai_generated_media"]) {
+      expect(strategy("media", id).requiresTechUnlock).toBe(true);
+      expect(strategy("media", id).supply.advertising).toBeGreaterThan(0);
+    }
+    for (const id of ["creator_network", "ai_generated_media", "immersive_media"]) {
+      expect(strategy("media_entertainment", id).supply.advertising).toBeGreaterThan(0);
+    }
+  });
+
+  it("charges AI-generated media heavy compute, energy and network inputs", () => {
+    const ai = strategy("media", "ai_generated_media").demand;
+    const social = strategy("media", "social_platform").demand;
+    expect(ai.network_services ?? 0).toBeGreaterThan(0);
+    expect(ai.energy ?? 0).toBeGreaterThan(0);
+    expect(inputTotal(ai)).toBeGreaterThan(inputTotal(social));
   });
 });

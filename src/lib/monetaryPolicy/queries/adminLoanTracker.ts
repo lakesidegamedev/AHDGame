@@ -5,7 +5,7 @@
 import { getPresetMonetaryScope } from "../presetMonetaryScope";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { Db } from "mongodb";
-import type { Character, CentralBank, Corporation } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import {
   COUNTRY_CURRENCY_MAP,
@@ -37,6 +37,9 @@ import {
 } from "@/lib/lineOfCredit/creditMath";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { getGameState } from "@/lib/gameState";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -98,12 +101,10 @@ async function computeSpreadForCharacter(
   const incomeEstimate = await estimatePerTurnCurrencyIncomeHomeFace(db, char, rates);
   const incomeScore = incomeScoreFromPerTurnCurrency(incomeEstimate);
 
-  const corporation = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { ceoId: char._id, countryId: char.countryId },
-      { projection: { creditCompositeSnapshot: 1 } }
-    );
+  const corporation = await corporationsCollection(db).findOne(
+    { ceoId: char._id, countryId: char.countryId },
+    { projection: { creditCompositeSnapshot: 1 } }
+  );
 
   const homeCurrency = getHomeCurrency(char, preset);
   const primeHome =
@@ -145,8 +146,7 @@ export async function loadAdminLoanTracker(params: { db: Db; countryId: CountryI
     ? getSeedCurrencyCode(countryId, gameState.preset)
     : (COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode);
   const rates = await loadExchangeRatesMap(db);
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({})
     .project({ _id: 1, primeRate: 1 })
     .toArray();
@@ -156,8 +156,7 @@ export async function loadAdminLoanTracker(params: { db: Db; countryId: CountryI
     primeByCountryId.set(id, bank.primeRate ?? DEFAULT_PRIME);
   }
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({
       userId: { $exists: true },
       $or: [

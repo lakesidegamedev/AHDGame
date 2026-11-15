@@ -1,11 +1,10 @@
 /**
- * Read model for the UK Commons vacancy/recall status surface (ticket #860).
+ * Read model for the UK Commons vacancy/recall status surface.
  *
- * Loads the player-reachable slice in a fixed order with one query per
- * collection (no per-row reads): live vacancies, active recall petitions,
- * the `special_commons` races covering the vacancy states, their candidates,
- * and the viewer's own held Commons seat. Plain JSON-safe data out so both
- * the GET route and tests can consume it without touching BSON.
+ * Loads the player-reachable slice in a fixed order: live vacancies, active
+ * recall petitions, `special_commons` races covering vacancy states, their
+ * candidates, and the viewer's held Commons seat. Plain JSON-safe data out so
+ * the GET route and tests consume it without touching BSON.
  */
 
 import { ObjectId } from "mongodb";
@@ -16,12 +15,15 @@ import {
   getUkCommonsVacanciesCollection,
   getUkRecallPetitionsCollection,
 } from "@/lib/db/collections/ukByElection";
-import { RECALL_SIGNATURES_REQUIRED } from "@/lib/uk/elections/commonsRecallRules";
+import { RECALL_SIGNATURES_REQUIRED } from "@/lib/countries/uk/elections/commonsRecallRules";
 import {
   SPECIAL_COMMONS_ELECTION_TYPE,
   commonsByElectionGate,
   type CommonsByElectionGate,
 } from "@/lib/turn/commonsByElections";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export interface CommonsVacancyDto {
   id: string;
@@ -105,8 +107,7 @@ export async function loadCommonsVacancyStatus(
   const states = [...new Set([...vacancies.map((v) => v.state), ...petitions.map((p) => p.state)])];
   const elections =
     states.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find({
             countryId: "UK",
             electionType: SPECIAL_COMMONS_ELECTION_TYPE,
@@ -119,8 +120,7 @@ export async function loadCommonsVacancyStatus(
   const openStates = [...new Set(vacancies.filter((v) => v.status === "open").map((v) => v.state))];
   const liveGenerals =
     openStates.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             {
               countryId: "UK",
@@ -152,8 +152,7 @@ export async function loadCommonsVacancyStatus(
   const electionIds = elections.map((e) => e._id);
   const candidates =
     electionIds.length > 0
-      ? await db
-          .collection<ElectionCandidate>("electionCandidates")
+      ? await electionCandidatesCollection(db)
           .find({ electionId: { $in: electionIds } })
           .toArray()
       : [];
@@ -167,7 +166,7 @@ export async function loadCommonsVacancyStatus(
 
   let viewer: CommonsVacancyStatus["viewer"] = { officialId: null, state: null };
   if (options?.viewer) {
-    const held = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const held = await electedOfficialsCollection(db).findOne({
       officeType: "commons",
       countryId: "UK",
       characterId: options.viewer._id,

@@ -56,13 +56,10 @@ interface SummarizePrimaryProjectionInput {
 }
 
 /**
- * Canonical reconciliation between per-state primary projections and national
- * delegate totals. `projectPrimaryDelegateTotals` answers "who has how many
- * delegates," but the per-state page shows raw vote share, which can diverge
- * dramatically from delegate share under winner-take-all. This helper exposes
- * BOTH numbers from the SAME canonical state-by-state source so display callers
- * never have to re-derive vote share from a different code path (which is how
- * overview-vs-state inconsistencies historically appear).
+ * Reconciles per-state primary projections with national delegate totals from
+ * the SAME canonical state-by-state source. Under winner-take-all, vote share
+ * can diverge sharply from delegate share, so this exposes both numbers and
+ * callers never re-derive vote share from a different code path.
  */
 export function summarizePrimaryProjection({
   stateIds,
@@ -284,7 +281,7 @@ export function projectPrimaryDelegateTotals({
  * winner) and sit in the integer part; national vote share is a [0,1) fraction
  * that breaks delegate ties and keeps the ordering sensible before any delegates
  * are awarded. Feeds `primaryScore` so downstream consumers that re-sort by
- * `primaryScore` still match the delegate winner (#3022). Kept small on purpose:
+ * `primaryScore` still match the delegate winner. Kept small on purpose:
  * some surfaces render `primaryScore` directly (e.g. the wiki results table), so
  * a candidate reads as e.g. `12.3` (12 delegates, leading the vote tiebreak),
  * never a millions-scale composite.
@@ -311,7 +308,7 @@ export function applyProjectedDelegateShares(
         sharePct: totalDelegates > 0 ? Math.round((delegates / totalDelegates) * 1000) / 10 : 0,
         // Overwrite the ideology-based primaryScore with a delegate-consistent
         // standing so every primaryScore-sorted surface agrees with the
-        // delegate winner (#3022). Only applied when a votes map is supplied
+        // delegate winner. Only applied when a votes map is supplied
         // (presidential path); other callers keep the original primaryScore.
         primaryScore: nationalVotesByCandidate
           ? presidentialPrimaryStanding(

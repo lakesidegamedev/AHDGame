@@ -8,6 +8,7 @@ import type { Union } from "@/lib/db/types";
 import { unionApproval } from "./unionDues";
 import type { UnionServiceId } from "./unionServices";
 import { loadFundedUnionServices, UNION_SERVICE_FUNDING_PROJECTION } from "./unionServiceFunding";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Per-union approval + active service slate, everything `unionizationDriftTarget`
@@ -36,8 +37,7 @@ export async function buildUnionEffectsById(
   db: Db,
   currentTurn: number
 ): Promise<Map<string, RepresentingUnionEffects>> {
-  const unions = await db
-    .collection<Union>("unions")
+  const unions = await unionsCollection(db)
     .find({}, { projection: { _id: 1, approval: 1, ...UNION_SERVICE_FUNDING_PROJECTION } })
     .toArray();
   const fundedServices = loadFundedUnionServices(unions, currentTurn);

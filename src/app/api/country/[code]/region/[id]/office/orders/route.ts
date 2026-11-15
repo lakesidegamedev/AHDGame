@@ -7,6 +7,8 @@ import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { canManageOffice } from "@/lib/governorOffice/access";
 import { issueOrder } from "@/lib/governorOffice/orders/issueOrder";
+import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
+import type { Document } from "mongodb";
 
 // POST /api/country/[code]/region/[id]/office/orders — Issue an executive order
 // Auth: requireHumanSessionWithCharacter; must be the office-holder, an
@@ -87,12 +89,10 @@ export async function GET(
       return errorResponse(403, "Not authorized for this office");
     }
 
-    const active = await db
-      .collection("governorExecutiveOrders")
+    const active = await governorExecutiveOrdersCollection<Document>(db)
       .find({ countryId, stateId, status: "active" })
       .toArray();
-    const history = await db
-      .collection("governorExecutiveOrders")
+    const history = await governorExecutiveOrdersCollection<Document>(db)
       .find({ countryId, stateId, status: { $in: ["expired", "rescinded", "superseded"] } })
       .sort({ issuedAtTurn: -1 })
       .limit(20)

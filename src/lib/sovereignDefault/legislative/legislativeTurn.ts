@@ -1,16 +1,10 @@
 /**
  * Per-turn processor for sovereign-crisis legislative ratification.
  *
- * Per "executiveProposed" decision:
- *   1. Find the active phase via currentChamberIndex.
- *   2. Skip if outcome is no longer pending or window hasn't expired.
- *   3. Tally: votesFor > votesAgainst → passed; otherwise rejected.
- *   4. Rejected → mark decision rejected and auto-Repudiate the country.
- *   5. Passed → stamp phase outcome; if upper chamber exists and we just
- *      cleared the lower, append the upper phase + advance index.
- *      Otherwise: ratified — dispatch to the chosen Phase 5/6 orchestrator.
- *
- * Idempotent: re-running is a no-op for decisions in terminal states.
+ * Per "executiveProposed" decision: tally the active phase; reject and
+ * auto-Repudiate on failure; on success stamp the phase, appending an upper
+ * chamber if the lower just cleared, otherwise dispatch to the chosen Phase
+ * 5/6 orchestrator. Idempotent for decisions in terminal states.
  */
 
 import { type Db, type ObjectId } from "mongodb";
@@ -24,6 +18,7 @@ import { applyBailoutResolution } from "@/lib/sovereignDefault/resolution/bailou
 import { applyMonetizeResolution } from "@/lib/sovereignDefault/resolution/monetize";
 import { runNpcLegislatorAutoVote } from "@/lib/sovereignDefault/npc/npcLegislatorAutoVote";
 import { applyLegislatorImpactsForChamber } from "./applyLegislatorImpactsForChamber";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 export interface LegislativeTurnReport {
   decisionsEvaluated: number;
@@ -37,8 +32,7 @@ export async function processSovereignLegislativeTurn(
   realtimeMs: number,
   currentTurn: number
 ): Promise<LegislativeTurnReport> {
-  const decisions = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
+  const decisions = await sovereignCrisisDecisionsCollection(db)
     .find({ state: "executiveProposed" })
     .toArray();
 
@@ -78,9 +72,9 @@ export async function processSovereignLegislativeTurn(
     // `phases` array as the basis for any subsequent
     // `legislativePhases: updatedPhases` write — otherwise we'd overwrite the
     // votes map with stale in-memory data and lose the NPC votes.
-    const refreshed = await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .findOne({ _id: decision._id as ObjectId });
+    const refreshed = await sovereignCrisisDecisionsCollection(db).findOne({
+      _id: decision._id as ObjectId,
+    });
     const livePhases = refreshed?.legislativePhases ?? phases;
     const refreshedPhase = livePhases[idx];
     const outcome = tallyChamberOutcome(refreshedPhase ?? phase);
@@ -104,7 +98,7 @@ export async function processSovereignLegislativeTurn(
 
     if (outcome === "rejected") {
       const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
-      await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+      await sovereignCrisisDecisionsCollection(db).updateOne(
         { _id: decision._id as ObjectId },
         {
           $set: {
@@ -142,7 +136,7 @@ export async function processSovereignLegislativeTurn(
     if (upperPhase) {
       const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
       updatedPhases.push(upperPhase);
-      await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+      await sovereignCrisisDecisionsCollection(db).updateOne(
         { _id: decision._id as ObjectId },
         {
           $set: {
@@ -211,7 +205,7 @@ export async function processSovereignLegislativeTurn(
         ...baseInput,
         skipDecisionUpdate: true,
       });
-      await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+      await sovereignCrisisDecisionsCollection(db).updateOne(
         { _id: decision._id as ObjectId },
         {
           $set: {
@@ -228,7 +222,7 @@ export async function processSovereignLegislativeTurn(
       continue;
     }
 
-    await db.collection<SovereignCrisisDecision>("sovereignCrisisDecisions").updateOne(
+    await sovereignCrisisDecisionsCollection(db).updateOne(
       { _id: decision._id as ObjectId },
       {
         $set: {

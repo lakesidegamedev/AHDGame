@@ -167,4 +167,10 @@ describe("Phase 4 / 5 / 6 / 7 / 8 / 9a news catalogue completeness", () => {
     const [, category] = vi.mocked(createSystemNewsPost).mock.calls[0];
     expect(category).toBe("sovereign");
   });
+
+  it.each(emitters)("%s headline uses no em or en dash", async (_label, emit) => {
+    await emit();
+    const [content] = vi.mocked(createSystemNewsPost).mock.calls[0];
+    expect(content).not.toMatch(/[\u2013\u2014]/);
+  });
 });

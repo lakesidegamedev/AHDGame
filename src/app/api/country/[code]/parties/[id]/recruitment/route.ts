@@ -22,6 +22,7 @@ import {
   recruitmentCooldownRemainingTurns,
   recruitmentCooldownUntilIso,
 } from "@/lib/npp/recruitmentCooldown";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 // GET /api/country/[code]/parties/[id]/recruitment — Return NPP recruitment status and cooldown for the party
 // Auth: requireAuthWithCharacter
@@ -56,9 +57,9 @@ export async function GET(
     }
 
     // Count party NPPs
-    const partyNPPCount = await db
-      .collection<NPP>("npps")
-      .countDocuments(activePartyNppFilter(countryId, String(party.sequentialId)));
+    const partyNPPCount = await nppsCollection(db).countDocuments(
+      activePartyNppFilter(countryId, String(party.sequentialId))
+    );
 
     const now = new Date();
     // Turn-first cooldown remaining (+ Date fallback in helper); read currentTurn

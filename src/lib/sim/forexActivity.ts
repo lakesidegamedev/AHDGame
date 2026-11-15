@@ -7,22 +7,23 @@ import type { CurrencyOrder } from "@/lib/db/types/currencyOrder";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { TradeHistoryEntry } from "@/lib/db/types/tradeHistory";
 import { summarizeForexActivity, type ForexActivityRecord } from "@/lib/sim/rules/forexActivity";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 export async function collectForexActivity(db: Db): Promise<ForexActivityRecord> {
   const [state, orders, trades, rates] = await Promise.all([
-    db
-      .collection<{ forexEnabled?: boolean }>("gameState")
-      .findOne({ _id: "current" } as never, { projection: { forexEnabled: 1 } }),
-    db
-      .collection<CurrencyOrder>("currencyOrders")
+    gameStateCollection<{ forexEnabled?: boolean }>(db).findOne({ _id: "current" } as never, {
+      projection: { forexEnabled: 1 },
+    }),
+    currencyOrdersCollection(db)
       .find({}, { projection: { status: 1, amount: 1, filledAmount: 1 } })
       .toArray(),
-    db
-      .collection<TradeHistoryEntry>("tradeHistory")
+    tradeHistoryCollection(db)
       .find({}, { projection: { amount: 1, rate: 1, spread: 1 } })
       .toArray(),
-    db
-      .collection<ExchangeRate>("exchangeRates")
+    exchangeRatesCollection(db)
       .find({}, { projection: { "interventionPolicy.recentInterventions": 1 } })
       .toArray(),
   ]);

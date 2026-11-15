@@ -478,4 +478,100 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       ],
     },
   ],
+  "2039": [
+    {
+      name: "Lights-Out Batch Plants",
+      description: "Batch lines run unattended between scheduled checks.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.06 },
+        { kind: "inputCost", commodity: "energy", pct: 0.07 },
+      ],
+    },
+    {
+      name: "Performance Chemical Contracts",
+      description: "Contracts priced on results replace sales by the tonne.",
+      effects: [
+        { kind: "plantOutput", pct: 0.018 },
+        { kind: "inputEfficiency", pct: 0.02 },
+      ],
+    },
+    {
+      name: "Verified Carbon Removal",
+      description: "Audited removal credits clear every carbon border charge.",
+      effects: [{ kind: "tariffShield", pct: 0.13 }],
+    },
+    {
+      name: "Fully Circular Plastics",
+      description: "Every grade of old plastic is broken down and fed back in.",
+      effects: [
+        { kind: "inputCost", commodity: "oil", pct: 0.14 },
+        { kind: "outputRate", commodity: "plastics", pct: 0.09 },
+      ],
+    },
+    {
+      name: "Designed Biologic Ingredients",
+      description: "Model-designed biologic ingredients sell to drug makers at patent prices.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "pharmaceuticals", pct: 0.08 },
+      ],
+    },
+    {
+      name: "Strategic Chemical Reserves",
+      description:
+        "Holding national reserves of key chemicals guarantees access whatever politics does.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.23 },
+        { kind: "tariffShield", pct: 0.18 },
+      ],
+    },
+  ],
+  "2049": [
+    {
+      name: "Self-Running Reactor Halls",
+      description: "Reactor halls run for months with no one on the floor.",
+      effects: [
+        { kind: "laborCostReduction", pct: 0.065 },
+        { kind: "inputCost", commodity: "energy", pct: 0.075 },
+      ],
+    },
+    {
+      name: "Molecule-as-a-Service",
+      description: "Buyers pay for the function a molecule delivers, not the drum.",
+      effects: [
+        { kind: "plantOutput", pct: 0.019 },
+        { kind: "inputEfficiency", pct: 0.022 },
+      ],
+    },
+    {
+      name: "Certified Net-Negative Output",
+      description: "Audited net-negative products clear every carbon border charge.",
+      effects: [{ kind: "tariffShield", pct: 0.14 }],
+    },
+    {
+      name: "Infinite Polymer Loops",
+      description: "Plastics are unmade and remade forever with no new oil.",
+      effects: [
+        { kind: "inputCost", commodity: "oil", pct: 0.15 },
+        { kind: "outputRate", commodity: "plastics", pct: 0.095 },
+      ],
+    },
+    {
+      name: "Programmable Drug Precursors",
+      description: "Precursors designed for one patient group sell to drug makers at a premium.",
+      effects: [
+        { kind: "plantOutput", pct: 0.03 },
+        { kind: "outputRate", commodity: "pharmaceuticals", pct: 0.085 },
+      ],
+    },
+    {
+      name: "Planetary Chemical Commons",
+      description:
+        "Running shared reserves for many nations guarantees access whatever politics does.",
+      effects: [
+        { kind: "dominanceShield", pct: 0.24 },
+        { kind: "tariffShield", pct: 0.19 },
+      ],
+    },
+  ],
 };

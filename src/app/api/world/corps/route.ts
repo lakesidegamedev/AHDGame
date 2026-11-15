@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /** Maps CountryId → ISO 3166-1 numeric code used by the world map */
 const COUNTRY_TO_ISO: Record<string, string> = {
@@ -28,8 +28,7 @@ export async function GET() {
   try {
     const db = await getDb();
 
-    const counts = await db
-      .collection<Corporation>("corporations")
+    const counts = await corporationsCollection(db)
       .aggregate<{ _id: string; count: number }>([
         {
           $lookup: {

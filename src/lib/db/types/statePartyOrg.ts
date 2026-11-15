@@ -67,23 +67,13 @@ export interface StatePartyOrg {
   nppRecruitmentCooldownUntilTurn?: number;
 
   /**
-   * Party Registration percent in this state — slow-moving partisan lean,
-   * NOT a literal vote-share promise.
+   * Party registration percent in this state: slow-moving partisan lean, not a literal vote-share promise.
    *
-   * Phase 1: schema added; field defaults to undefined on existing rows.
-   * Phase 1.5 / Phase 2 prerequisite: bootstrap backfill from the plan's
-   *   Bootstrap Seed appendix populates real values.
-   * Phase 3+: Reg drift / decay / poach actions mutate this field.
+   * Bounds 0..100 per row. The full state pool is normalized to 100% across all parties' `registration` plus `StateRegistrationPool.{independent, unregistered}`.
    *
-   * Bounds 0..100 per individual row. The full state registration pool
-   * is normalized to 100% across all parties' `registration` plus
-   * `StateRegistrationPool.{independent, unregistered}` in the same state.
+   * undefined means not yet seeded; readers treat as 0 and show honest placeholder UI.
    *
-   * Defaulting: undefined means "not yet computed / seeded" — readers must
-   * treat as 0 and surface honest placeholder UI rather than fabricating
-   * a derived value.
-   *
-   * See docs/design/political-system-reg-support.md §4.2 for the full model.
+   * See docs/design/political-system-reg-support.md §4.2.
    */
   registration?: number;
 

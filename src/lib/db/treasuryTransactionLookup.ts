@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { TreasuryTransaction, TreasuryTransactionCategory } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
+import { treasuryTransactionsCollection } from "@/lib/db/repositories/treasuryTransactions";
 
 export interface ListTransactionsOptions {
   /** Pagination cursor — `createdAt` of the oldest row already shown. */
@@ -97,8 +98,7 @@ export async function listPartyTreasuryTransactions(
   if (options.category) filter.category = options.category;
   if (options.direction) filter.direction = options.direction;
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
-  const rawRows = await db
-    .collection<TreasuryTransaction>("treasuryTransactions")
+  const rawRows = await treasuryTransactionsCollection(db)
     .find(filter)
     .sort({ createdAt: -1 })
     .toArray();
@@ -126,8 +126,7 @@ export async function listHolderTreasuryTransactions(
   if (opts.category) filter.category = opts.category;
   if (opts.direction) filter.direction = opts.direction;
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
-  return db
-    .collection<TreasuryTransaction>("treasuryTransactions")
+  return treasuryTransactionsCollection(db)
     .find(filter)
     .sort({ createdAt: -1 })
     .limit(limit)

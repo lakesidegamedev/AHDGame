@@ -19,6 +19,11 @@ import { resolveWhipIssuerRole } from "@/lib/congress/billWhipPanelData";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import { getGameState } from "@/lib/gameState";
 import { isBillWhipInCurrentPhase } from "@/lib/congress/billWhipPhase";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
+import { billWhipsCollection } from "@/lib/db/repositories/billWhips";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -64,9 +69,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
     const partyKey = getPartyIdString(party);
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const statePartyOrg = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ _id: statePartyKey });
+    const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
     if (!statePartyOrg) {
       return errorResponse(404, "State party organization not found");
@@ -114,8 +117,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     };
 
     const [activeFederalBills, activeLocalBills, partyOfficials] = await Promise.all([
-      db
-        .collection<Bill>("bills")
+      billsCollection(db)
         .find({
           $and: [
             federalBillCountryFilter,
@@ -147,8 +149,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           ],
         })
         .toArray(),
-      db
-        .collection<StateBill>("stateBills")
+      stateBillsCollection(db)
         .find({
           stateId,
           $or: [
@@ -160,8 +161,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
           ],
         })
         .toArray(),
-      db
-        .collection<ElectedOfficial>("electedOfficials")
+      electedOfficialsCollection(db)
         .find({
           party: partyKey,
           state: stateId,
@@ -189,8 +189,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       ...activeFederalBills.map((bill) => bill._id),
       ...activeLocalBills.map((bill) => bill._id),
     ];
-    const existingWhips = await db
-      .collection<BillWhip>("billWhips")
+    const existingWhips = await billWhipsCollection(db)
       .find({
         targetType: "bill",
         targetId: { $in: billIds },

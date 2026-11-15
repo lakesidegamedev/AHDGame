@@ -40,13 +40,12 @@ const toMP = (geom: RegionOverlayFeature["geometry"]): MultiPoly =>
 /**
  * Which single-owner shards still produce an overlay blob.
  *
- * - `false` — splits only (Cold War boards). A unified country keeps its
- *   countries-110m base polygon.
- * - `true` — every fully-owned shard, including single-homeland detail
- *   (USA/France/…). Too heavy for the spinning /world globe.
- * - `"structural"` — splits, PLUS single-owner shards that cover more than one
- *   base feature (USSR, Yugoslavia, Czechoslovakia, Baltics, …). Those overlays
- *   change the political silhouette; coastline-detail shards do not.
+ * - `false`: splits only. A unified country keeps its base polygon.
+ * - `true`: every fully-owned shard, including single-homeland detail.
+ *   Too heavy for the spinning /world globe.
+ * - `"structural"`: splits plus single-owner shards covering more than one
+ *   base feature (USSR, Yugoslavia, Baltics, ...). These change the political
+ *   silhouette; coastline-detail shards do not.
  */
 export type RegionOverlayInclusion = boolean | "structural";
 

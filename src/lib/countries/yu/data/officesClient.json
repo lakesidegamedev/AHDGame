@@ -1,0 +1,113 @@
+{
+  "config": {
+    "governmentType": "onePartyState",
+    "regionLabel": "Republic",
+    "legislature": {
+      "name": "Federal Assembly",
+      "lowerChamber": {
+        "key": "federalAssembly",
+        "name": "Federal Assembly",
+        "shortName": "Assembly",
+        "seats": 308,
+        "description": "308 delegates of the Skupština, drawn from the republics and provinces under the self-management system led by the League of Communists."
+      },
+      "upperChamber": {
+        "key": "presidency",
+        "name": "Presidency",
+        "shortName": "Presidency",
+        "seats": 9,
+        "description": "The collective State Presidency - a rotating federal head of state representing the republics and provinces.",
+        "elected": false
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "assemblyDelegate",
+        "label": "Delegate",
+        "labelPlural": "Delegates",
+        "chamberKey": "federalAssembly",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the NBY",
+        "labelPlural": "Governors of the NBY",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": false }
+  },
+  "eraOverrides": {
+    "1991-default": {
+      "governmentType": "parliamentaryRepublic",
+      "legislature": {
+        "name": "Federal Assembly",
+        "lowerChamber": {
+          "key": "federalAssembly",
+          "name": "Federal Chamber",
+          "shortName": "Federal",
+          "seats": 220,
+          "description": "220 delegates chosen through the republic and province delegate system."
+        },
+        "upperChamber": {
+          "key": "councilRepublicsProvinces",
+          "name": "Council of Republics and Provinces",
+          "shortName": "Republics",
+          "seats": 88,
+          "description": "Twelve delegates per republic and eight per autonomous province.",
+          "elected": false
+        }
+      },
+      "officeTypes": [
+        {
+          "key": "primeMinister",
+          "label": "Prime Minister",
+          "labelPlural": "Prime Ministers",
+          "isExecutive": true,
+          "isSubNational": false
+        },
+        {
+          "key": "president",
+          "label": "Chair of the Presidency",
+          "labelPlural": "Chairs of the Presidency",
+          "isExecutive": true,
+          "isSubNational": false,
+          "isHeadOfState": true
+        },
+        {
+          "key": "assemblyDelegate",
+          "label": "Federal Delegate",
+          "labelPlural": "Federal Delegates",
+          "chamberKey": "federalAssembly",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "councilDelegate",
+          "label": "Republic or Province Delegate",
+          "labelPlural": "Republic or Province Delegates",
+          "chamberKey": "councilRepublicsProvinces",
+          "isExecutive": false,
+          "isSubNational": false
+        },
+        {
+          "key": "centralBankChair",
+          "label": "Governor of the NBY",
+          "labelPlural": "Governors of the NBY",
+          "isExecutive": false,
+          "isSubNational": false
+        }
+      ]
+    }
+  }
+}

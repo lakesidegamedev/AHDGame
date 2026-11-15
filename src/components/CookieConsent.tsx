@@ -2,9 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { shouldRenderGooglePrivacyMessaging } from "@/lib/googlePrivacyMessaging";
 
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
 
@@ -13,31 +11,6 @@ export const CONSENT_EVENT = "ahd:cookie-consent-changed";
 export const CONSENT_RESET_EVENT = "ahd:cookie-consent-reset";
 
 export type CookieConsentValue = "accepted" | "rejected";
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-    googlefc?: {
-      callbackQueue?: Array<() => void>;
-      showRevocationMessage?: () => void;
-    };
-  }
-}
-
-function applyFallbackGoogleConsent(choice: CookieConsentValue | null) {
-  if (typeof window === "undefined") return;
-  if (shouldRenderGooglePrivacyMessaging(window.location.pathname, window.location.hostname))
-    return;
-  if (!window.gtag) return;
-
-  const state = choice === "accepted" ? "granted" : "denied";
-  window.gtag("consent", "update", {
-    ad_storage: state,
-    analytics_storage: state,
-    ad_user_data: state,
-    ad_personalization: state,
-  });
-}
 
 export function getStoredConsent(): CookieConsentValue | null {
   if (typeof window === "undefined") return null;
@@ -57,17 +30,10 @@ export function openCookiePreferences() {
   } catch {
     // localStorage unavailable
   }
-  applyFallbackGoogleConsent(null);
+  // Re-show the first-paint banner immediately: the gate attribute is what
+  // hides it, and clearing it here avoids waiting for the effect below.
+  delete document.documentElement.dataset.cookieConsent;
   window.dispatchEvent(new Event(CONSENT_RESET_EVENT));
-
-  if (shouldRenderGooglePrivacyMessaging(window.location.pathname, window.location.hostname)) {
-    window.googlefc = window.googlefc || {};
-    window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
-    window.googlefc.callbackQueue.push(() => {
-      window.googlefc?.showRevocationMessage?.();
-    });
-    return;
-  }
 }
 
 function subscribe(callback: () => void) {
@@ -100,33 +66,34 @@ function setConsent(choice: CookieConsentValue) {
   } catch {
     // localStorage unavailable (private mode, quota) — still notify listeners
   }
-  applyFallbackGoogleConsent(choice);
+  // Hide (or re-show) the banner before React re-renders: the first paint of a
+  // returning player must never be gated on the post-hydration snapshot.
+  document.documentElement.dataset.cookieConsent = choice;
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }));
 }
 
 export function CookieConsentBanner() {
-  const pathname = usePathname();
   const consent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const usesGoogleCmp =
-    typeof window !== "undefined" &&
-    shouldRenderGooglePrivacyMessaging(pathname, window.location.hostname);
 
   useEffect(() => {
     if (consent === UNSET) return;
-    applyFallbackGoogleConsent(consent);
+    const root = document.documentElement;
+    if (consent) {
+      root.dataset.cookieConsent = consent;
+    } else {
+      delete root.dataset.cookieConsent;
+    }
   }, [consent]);
 
-  if (usesGoogleCmp) return null;
-
-  if (consent === UNSET || consent !== null) return null;
-
-  // Small screens: a compact sheet (tighter type and padding, full-width
-  // buttons side by side, height capped) plus an in-flow spacer, so the
-  // register and login forms can always scroll clear of it. On a 390px phone
-  // the old card covered the sign-in buttons. Copy, choices and defaults are
-  // unchanged.
+  // The banner is part of the first paint, not a post-hydration mount. It used
+  // to appear only after the client store resolved localStorage, which made a
+  // fixed overlay the Largest Contentful Paint element on anonymous loads
+  // (/world measured 3.9s of render delay). Rendering it server-side and
+  // hiding it with `html[data-cookie-consent]` (set by the inline script in the
+  // root layout) keeps consenting players from ever seeing it while giving a
+  // first-time visitor the banner at FCP.
   return (
-    <>
+    <div data-cookie-consent-banner="true">
       <div aria-hidden="true" className="h-56 sm:hidden" />
       <div
         role="dialog"
@@ -142,7 +109,7 @@ export function CookieConsentBanner() {
               permission, PostHog records how you use the game and we may record a sample of
               sessions to find confusing flows and technical problems. You can reject optional
               analytics or change your choice at any time. See our{" "}
-              <Link href="/privacy" className="text-primary hover:underline">
+              <Link href="/privacy" className="text-muted underline hover:text-foreground">
                 Privacy policy
               </Link>
               .
@@ -168,6 +135,6 @@ export function CookieConsentBanner() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

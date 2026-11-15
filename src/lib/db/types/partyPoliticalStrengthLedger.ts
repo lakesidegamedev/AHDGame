@@ -4,17 +4,10 @@ import type { CountryId } from "../../constants/countries";
 /**
  * Source of a `partyPoliticalStrengthLedger` row.
  *
- * - `passive` — the per-turn `+1` trickle granted by `partyActionGeneration`.
- * - `treasury` — country-normalized treasury-driven gain (also from
- *   `partyActionGeneration`), limited by the hard cap headroom.
- * - `spend` — a debit from `spendPoliticalStrength` when a player / chair
- *   action consumes PS (Org Building, Influence, Contest, Recruitment, etc.).
- * - `decay` — reserved for future PS decay rules (Phase 3 has none, but the
- *   union slot is here so the ledger can absorb a decay processor without a
- *   schema change).
- *
- * Distinct from `orgRegLedger` per Phase 0.5 §5.6: that ledger tracks
- * Org / Reg / Support mutations; this one tracks PS reserve movements only.
+ * - `passive` per-turn +1 from `partyActionGeneration`.
+ * - `treasury` country-normalized treasury gain, capped by headroom.
+ * - `spend` debit from `spendPoliticalStrength` when an action consumes PS.
+ * - `decay` reserved slot for future PS decay rules.
  */
 export type PartyPoliticalStrengthSource = "passive" | "treasury" | "spend" | "decay";
 

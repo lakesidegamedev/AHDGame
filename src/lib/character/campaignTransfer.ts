@@ -40,17 +40,12 @@ function mapLegError(index: number, outcome: MoneyFlowLegOutcome): Error {
 }
 
 /**
- * Move campaign funds between two same-country characters so the result is
- * exactly-once on every topology (issue #1672).
- *
- * Under real transactions the legs and the idempotency receipt join the
- * transaction and commit atomically, preserving the old behavior. On a
- * standalone deployment the fallback runs the same legs through keyed
- * idempotent writes: a crash between the debit and the credit leaves an
- * `in_progress` receipt, and retrying with the same key reconciles to
- * exactly one completed transfer instead of destroying or duplicating
- * money. A retry after a terminal failure throws `MoneyFlowTerminalError`
- * (fail closed); a new attempt needs a new key.
+ * Move campaign funds between two same-country characters exactly once.
+ * Under transactions the legs and receipt commit atomically. On standalone
+ * deployments they run as keyed idempotent writes: a crash between debit and
+ * credit leaves an in_progress receipt, and a retry reconciles to one
+ * completed transfer. A retry after terminal failure throws
+ * MoneyFlowTerminalError; a new attempt needs a new key.
  */
 export async function transferCharacterCampaignFunds(
   db: Db,

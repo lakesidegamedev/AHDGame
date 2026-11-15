@@ -18,7 +18,6 @@ const req = () => new Request("http://x/api/country/us/executive/truces");
 /** Seat `countries` in `orgId` on the live roll the panel's alliance bar reads. */
 function allyRoll(orgId: string, countries: string[], preset = "1953-default") {
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    conflictsEnabled: true,
     currentTurn: 40,
     preset,
   });
@@ -32,7 +31,6 @@ beforeEach(async () => {
   vi.clearAllMocks();
   for (const c of ["gameState", "organizationMemberships"]) db.collection(c);
   db.collectionMocks.gameState.findOne.mockResolvedValue({
-    conflictsEnabled: true,
     currentTurn: 40,
   });
   trucesSpy.mockResolvedValue([]);
@@ -52,12 +50,6 @@ describe("GET truces", () => {
     const body = await (await GET(req(), params)).json();
     expect(body.truces).toEqual([{ other: "CN", expiresTurn: 88 }]);
     expect(body.currentTurn).toBe(40);
-  });
-
-  it("404s when the conflicts subsystem is off", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { GET } = await import("./route");
-    expect((await GET(req(), params)).status).toBe(404);
   });
 
   it("400s on a country code that does not exist", async () => {

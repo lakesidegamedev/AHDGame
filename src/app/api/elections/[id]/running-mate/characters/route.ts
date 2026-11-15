@@ -9,7 +9,6 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import type {
-  Character,
   Election,
   ElectionCandidate,
   ElectedOfficial,
@@ -20,6 +19,12 @@ import { isHexObjectIdString } from "@/lib/utils/objectIdHex";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -54,7 +59,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Resolve election by seatId or ObjectId
     let election: Election | null = null;
     if (isSeatId(electionId)) {
-      election = await db.collection<Election>("elections").findOne({
+      election = await electionsCollection(db).findOne({
         seatId: electionId,
         status: { $in: ["active", "upcoming"] },
       });
@@ -65,13 +70,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       } catch {
         return errorResponse(400, "Invalid election ID");
       }
-      election = await db.collection<Election>("elections").findOne({ _id: electionObjectId });
+      election = await electionsCollection(db).findOne({ _id: electionObjectId });
     }
     if (!election || election.electionType !== "president") {
       return errorResponse(400, "Not a presidential election");
     }
 
-    const myCandidate = await db.collection<ElectionCandidate>("electionCandidates").findOne({
+    const myCandidate = await electionCandidatesCollection(db).findOne({
       electionId: election._id,
       characterId: character._id,
       status: "active",
@@ -82,14 +87,13 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const electionCountry = (election.countryId ?? COUNTRY_CONFIGS.US.id) as CountryId;
     const countryConfig = getCountryConfig(electionCountry);
-    const currentPresident = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const currentPresident = await electedOfficialsCollection(db).findOne({
       ...getExecutiveOfficialFilter(electionCountry, "president"),
       characterId: { $ne: null },
     });
     const presidentCharId = currentPresident?.characterId?.toString() ?? null;
 
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find({
         userId: { $exists: true },
         federationPendingResidenceId: { $exists: false },
@@ -112,17 +116,12 @@ export async function GET(request: Request, { params }: RouteParams) {
     const userIds = characters.map((c) => c.userId).filter(Boolean);
     const [users, parties, activeCandidates] = await Promise.all([
       userIds.length > 0
-        ? db
-            .collection<User>("users")
+        ? usersCollection(db)
             .find({ _id: { $in: userIds } })
             .toArray()
         : [],
-      db
-        .collection<PoliticalParty>("politicalParties")
-        .find({ countryId: electionCountry })
-        .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      politicalPartiesCollection(db).find({ countryId: electionCountry }).toArray(),
+      electionCandidatesCollection(db)
         // Suspended candidates (who dropped out to endorse) remain eligible as a
         // running mate — only genuinely-active candidates in this race are excluded.
         .find({

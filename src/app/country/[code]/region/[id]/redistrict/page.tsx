@@ -1,4 +1,5 @@
 "use client";
+import { regionUrl } from "@/lib/urls";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { use, useEffect, useState } from "react";
@@ -44,7 +45,7 @@ export default function RedistrictPage({
       <div className="mx-auto max-w-7xl space-y-5">
         <div>
           <Link
-            href={`/country/${code.toLowerCase()}/region/${id.toLowerCase()}`}
+            href={`${regionUrl(code.toLowerCase(), id.toLowerCase())}`}
             className="text-sm text-primary hover:underline"
           >
             ← Back to {id.toUpperCase()}

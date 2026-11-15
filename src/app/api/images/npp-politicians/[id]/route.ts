@@ -1,55 +1,50 @@
 /**
  * NPP politician portrait image route.
- * Redirects to the Wikipedia thumbnail URL for the requested politician ID.
+ * Serves the portrait bytes for an opaque portrait token (or a legacy pool id).
  *
- * Auth:    Public (no auth required — used as an <img src>)
- * Cache:   7 days (politician portrait URLs are stable)
- * Errors:  404 if ID not in the image data file
+ * Proxies rather than redirects so the response never carries the upstream
+ * file name, which usually names the person pictured.
+ *
+ * Auth:   Public (used as an <img src>)
+ * Cache:  7 days
+ * Errors: 404 if the id is not in the pool; 502 if the source is unavailable
  */
 
-import fs from "fs";
-import path from "path";
 import { NextResponse } from "next/server";
+import { resolvePortraitSource } from "@/lib/npp/portraitTokens";
 
-interface PoliticianImage {
-  id: string;
-  url: string;
-}
-
-// Module-level cache so we only read the file once per server lifecycle
-let imageMapCache: Map<string, string> | null = null;
-
-function getImageMap(): Map<string, string> {
-  if (imageMapCache) return imageMapCache;
-
-  const filePath = path.join(process.cwd(), "src", "data", "npp-politician-images.json");
-  if (!fs.existsSync(filePath)) {
-    imageMapCache = new Map();
-    return imageMapCache;
-  }
-
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as PoliticianImage[];
-    imageMapCache = new Map(data.filter((p) => p.url).map((p) => [p.id, p.url]));
-  } catch {
-    imageMapCache = new Map();
-  }
-
-  return imageMapCache;
-}
+const UPSTREAM_TIMEOUT_MS = 8000;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const url = getImageMap().get(id);
+  const source = resolvePortraitSource(id);
 
-  if (!url) {
+  if (!source) {
     return new NextResponse("Not Found", { status: 404 });
   }
 
-  return NextResponse.redirect(url, {
-    status: 307,
+  let upstream: Response;
+  try {
+    upstream = await fetch(source, {
+      headers: { "User-Agent": "AHouseDivided/1.0 (portrait proxy)" },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+  } catch {
+    return new NextResponse("Bad Gateway", { status: 502 });
+  }
+
+  const contentType = upstream.headers.get("content-type") ?? "";
+  if (!upstream.ok || !upstream.body || !contentType.startsWith("image/")) {
+    return new NextResponse("Bad Gateway", { status: 502 });
+  }
+
+  return new NextResponse(upstream.body, {
+    status: 200,
     headers: {
+      "Content-Type": contentType,
+      "Content-Disposition": "inline",
       "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400, no-transform",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

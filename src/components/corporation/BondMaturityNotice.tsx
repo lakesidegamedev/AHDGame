@@ -30,22 +30,18 @@ function dismissKey(corporationId: string, maturityTurn: number): string {
 }
 
 /**
- * Standing notice to a CEO of what this corporation still owes its bondholders.
+ * Standing notice to a CEO of what the corporation still owes bondholders.
  *
- * Page-level rather than inside the Bonds tab on purpose: the repayment is a
- * surprise precisely because nobody visits that tab between issuing a bond and
- * the turn the face value leaves liquid capital. CEOs read the coupon as the
- * whole cost of borrowing, so the number they never saw was the principal.
+ * Page-level, not just the Bonds tab: CEOs read the coupon as the whole cost
+ * of borrowing, so the principal they never see surprises them on repayment.
  *
- * CEO-only. Everything here is addressed to whoever has to find the cash, and
- * the same figures are on the Bonds tab for anyone else who wants them.
- * `bondInfo.isCeo` is the server's own answer to that question, the same flag
- * that gates the issue form, so this cannot drift from who may actually act.
+ * CEO-only, gated on `bondInfo.isCeo` (the same flag gating the issue form)
+ * so it cannot drift from who may act. Non-CEOs see the same figures on the
+ * Bonds tab.
  *
- * All arithmetic runs in ₳. A corporation that has relocated keeps bonds in the
- * currency they were issued in while its own liquid capital is re-denominated,
- * so neither the sum across bonds nor the comparison against cash is safe in
- * raw local units.
+ * All arithmetic runs in ₳: a relocated corporation keeps bonds in their
+ * issuance currency while liquid capital is re-denominated, so raw local
+ * sums or comparisons are unsafe.
  */
 export default function BondMaturityNotice({
   bondInfo,

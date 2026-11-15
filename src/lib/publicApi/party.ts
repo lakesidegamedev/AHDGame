@@ -3,6 +3,11 @@ import type { Db, Filter } from "mongodb";
 import type { PoliticalParty, Character, Election } from "@/lib/db/types";
 import { getLeanLabel } from "@/lib/utils/demographics";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import type { Document } from "mongodb";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 
@@ -25,13 +30,11 @@ export async function queryParty(
   } = params;
   const seqId = Number(id);
 
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      (isNaN(seqId)
-        ? { _id: id as unknown as PoliticalParty["_id"], countryId: country }
-        : { sequentialId: seqId, countryId: country }) as Filter<PoliticalParty>
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    (isNaN(seqId)
+      ? { _id: id as unknown as PoliticalParty["_id"], countryId: country }
+      : { sequentialId: seqId, countryId: country }) as Filter<PoliticalParty>
+  );
   if (!party) return null;
 
   const partySeqStr = String(party.sequentialId);
@@ -40,22 +43,21 @@ export async function queryParty(
   const skip = (Math.max(membersPage, 1) - 1) * clampedLimit;
 
   const [officials, topMembers, recentElections, allMembersResult] = await Promise.all([
-    db.collection("electedOfficials").find({ party: partySeqStr, countryId: country }).toArray(),
-    db
-      .collection<Character>("characters")
+    electedOfficialsCollection<Document>(db)
+      .find({ party: partySeqStr, countryId: country })
+      .toArray(),
+    charactersCollection(db)
       .find({ party: partySeqStr, countryId: country } as Filter<Character>)
       .sort({ nationalInfluence: -1 })
       .limit(5)
       .toArray(),
-    db
-      .collection<Election>("elections")
+    electionsCollection(db)
       .find({ countryId: country, status: { $in: ["completed", "resolved"] } } as Filter<Election>)
       .sort({ endTime: -1 })
       .limit(3)
       .toArray(),
     includeMembers
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find({ party: partySeqStr, countryId: country } as Filter<Character>)
           .sort({ nationalInfluence: -1 })
           .skip(skip)
@@ -68,9 +70,10 @@ export async function queryParty(
 
   const chairName = party.chairId
     ? ((
-        (await db
-          .collection<Character>("characters")
-          .findOne({ _id: party.chairId }, { projection: { name: 1 } })) as { name?: string } | null
+        (await charactersCollection(db).findOne(
+          { _id: party.chairId },
+          { projection: { name: 1 } }
+        )) as { name?: string } | null
       )?.name ?? null)
     : null;
 
@@ -128,8 +131,7 @@ export async function queryParty(
 export async function queryPartyList(db: Db, params: { country: string }) {
   const cid = params.country.toUpperCase() as CountryId;
 
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: cid })
     .sort({ memberCount: -1 })
     .toArray();
@@ -139,7 +141,7 @@ export async function queryPartyList(db: Db, params: { country: string }) {
   // Seat share per party from the elected-officials roster (same source the
   // legislature widgets aggregate), so seats always reconcile with members.
   const seatCounts = new Map<string, number>();
-  const officials = db.collection("electedOfficials");
+  const officials = electedOfficialsCollection<Document>(db);
   const rows = await officials
     .aggregate([{ $match: { countryId: cid } }, { $group: { _id: "$party", seats: { $sum: 1 } } }])
     .toArray();

@@ -3,6 +3,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 // GET /api/game/state-player-counts — Returns { counts: { [stateId]: number } } of
 // active (non-retired) players per home state, scoped to enabled countries for non-admins.
@@ -19,8 +20,7 @@ export async function GET() {
       match.countryId = { $in: enabledCountries };
     }
 
-    const rows = await db
-      .collection("characters")
+    const rows = await charactersCollection(db)
       .aggregate<{ _id: string | null; count: number }>([
         { $match: match },
         { $group: { _id: "$homeState", count: { $sum: 1 } } },

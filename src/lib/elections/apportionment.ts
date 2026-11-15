@@ -12,6 +12,8 @@ import { getHouseSeats, type ElectoralVoteUnit } from "@/lib/constants/states";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { admittedStateIdsAsOf } from "./statehoodAdmission";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { statesCollection } from "@/lib/db/repositories/states";
+import type { Document } from "mongodb";
 
 /** US senators per state (the +2 in EV = houseSeats + senators). */
 const SENATORS_PER_STATE = 2;
@@ -22,11 +24,8 @@ const SENATORS_PER_STATE = 2;
  */
 const DC_ELECTORAL_VOTES = 3;
 /**
- * The 23rd Amendment was ratified 29 March 1961. Before that DC cast NO
- * electoral votes at all — which is why `ELECTORAL_VOTES_1953` has no DC entry.
- * The builder used to add DC's 3 unconditionally, so a 1953 world contradicted
- * its own seed constant and handed DC three votes it would not hold for another
- * eight years.
+ * The 23rd Amendment was ratified in 1961. Before that DC cast no electoral
+ * votes, which is why ELECTORAL_VOTES_1953 has no DC entry.
  */
 const DC_ELECTORAL_VOTES_FROM_YEAR = 1961;
 /**
@@ -90,9 +89,9 @@ export function electoralVoteUnitsFromSeats(
     const districts = seats[stateId] ?? 0;
     if (splitsFrom !== undefined && year >= splitsFrom && districts > 0) {
       // At-large leg: derived from this state's districts, never simulated.
-      // See `ElectoralVoteUnit` — every unit used to draw the WHOLE state's
-      // electorate from `stateId`, so a split state counted its voters once per
-      // leg (#1464).
+      // See `ElectoralVoteUnit`, every unit draws the WHOLE state's
+      // electorate from `stateId`, so a split state must not count its voters
+      // once per leg.
       units.push({
         unitId: stateId,
         ev: SENATORS_PER_STATE,
@@ -174,8 +173,7 @@ export async function loadApportionment(
   year?: number | null,
   houseSeatsOverride?: Readonly<Record<string, number>>
 ): Promise<Apportionment> {
-  const usStates = (await db
-    .collection("states")
+  const usStates = (await statesCollection<Document>(db)
     .find({ countryId: "US" }, { projection: { _id: 1, houseDistricts: 1, admittedYear: 1 } })
     .toArray()) as unknown as Array<{
     _id: string;

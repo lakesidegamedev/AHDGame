@@ -4,7 +4,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { draftCharterSchema } from "@/lib/api/schemas/charters";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { PoliticalParty, Character, StatePartyOrg } from "@/lib/db/types";
+import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { resolvePartyTier } from "@/lib/parties/partyTier";
 import { ObjectId } from "mongodb";
 import { getPartyHex } from "@/lib/utils/politics";
@@ -12,6 +12,12 @@ import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { draftCharter } from "@/lib/charters/draftCharter";
 import { getPartyFrontiers } from "@/lib/parties/partyFrontier";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // GET /api/country/[code]/parties — Return all political parties in the country with member counts and leadership
 // Auth: public
@@ -33,8 +39,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     // active, joinable, or merge-targetable party in the country listing.
     const partyFilter = { countryId, isDefunct: { $ne: true } };
 
-    const parties = await db
-      .collection<PoliticalParty>("politicalParties")
+    const parties = await politicalPartiesCollection(db)
       .find(partyFilter)
       .sort({ isDefault: -1, name: 1 })
       .toArray();
@@ -52,8 +57,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
 
     // Live member counts: players (non-banned) and NPPs, aggregated per party
     const orgAggPromise = includeOrg
-      ? db
-          .collection<StatePartyOrg>("statePartyOrg")
+      ? statePartyOrgCollection(db)
           .aggregate<{ _id: string; totalOrg: number }>([
             {
               $match: {
@@ -68,8 +72,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       : Promise.resolve([]);
 
     const [leaders, bannedUserDocs, nppAgg, orgAgg, allCharsInParties] = await Promise.all([
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find(
           { _id: { $in: leaderIds } },
           {
@@ -85,12 +88,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         )
         .toArray(),
       // fetch banned user IDs so we can exclude their characters
-      db
-        .collection("users")
+      usersCollection<Document>(db)
         .find({ isBanned: true }, { projection: { _id: 1 } })
         .toArray(),
-      db
-        .collection("npps")
+      nppsCollection<Document>(db)
         .aggregate<{ _id: string; count: number }>([
           {
             $match: {
@@ -104,8 +105,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         ])
         .toArray(),
       orgAggPromise,
-      db
-        .collection<Character>("characters")
+      charactersCollection(db)
         .find(
           { party: { $in: partyIdStrings }, countryId },
           { projection: { _id: 1, party: 1, userId: 1 } }

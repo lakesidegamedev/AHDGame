@@ -6,7 +6,7 @@ const loadRuntimeCountryOffices = vi.fn();
 const ensureRegionalDelegateElections = vi.fn();
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
-vi.mock("@/lib/turn/perpetualElections/shared", () => ({
+vi.mock("@/lib/elections/scheduling/shared", () => ({
   ruElectionsLive: (...args: unknown[]) => ruElectionsLive(...args),
   ensureRegionalDelegateElections: (...args: unknown[]) => ensureRegionalDelegateElections(...args),
   ensureRegionalGovernorElections: vi.fn(),

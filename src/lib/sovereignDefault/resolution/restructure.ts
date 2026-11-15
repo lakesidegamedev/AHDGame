@@ -8,7 +8,6 @@
 
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bond } from "@/lib/db/types/bond";
 import type { FederalBudget, SovereignCrisisState } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
@@ -33,6 +32,9 @@ import {
   RESTRUCTURE_GDP_PENALTY,
   RESTRUCTURE_GDP_PENALTY_TURNS,
 } from "../constants";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 export interface RestructureResolutionInput {
   countryCode: CountryId;
@@ -63,7 +65,7 @@ export async function applyRestructureResolution(
   const { countryCode, currentTurn, realtimeMs, decisionId } = input;
 
   const budgetId = getNationalBudgetId(countryCode);
-  const budget = await db.collection<FederalBudget>("federalBudget").findOne({ _id: budgetId });
+  const budget = await federalBudgetCollection(db).findOne({ _id: budgetId });
   if (!budget) return { ok: false, reason: "no-budget" };
 
   const state: SovereignCrisisState = budget.sovereignCrisisState ?? "normal";
@@ -83,8 +85,7 @@ export async function applyRestructureResolution(
   // Cascade: load the bonds we just restructured and write down their holders.
   // Restructure does not flip `defaulted: true`, so filter on the haircut field
   // we just stamped (the mutator stamps every bond with the same RESTRUCTURE_HAIRCUT).
-  const justRestructuredBonds = await db
-    .collection<Bond>("bonds")
+  const justRestructuredBonds = await bondsCollection(db)
     .find({
       issuerType: "sovereign",
       countryId: countryCode,
@@ -100,15 +101,14 @@ export async function applyRestructureResolution(
     countryCode,
   });
 
-  // Genuine sovereign-ledger write-down (refs #3813, #1975): the haircut stamped
+  // Genuine sovereign-ledger write-down: the haircut stamped
   // on the bonds above IS the write-down, so the stored stock is re-pointed at
   // the post-haircut outstanding sum read back from the ledger. Treasury cash
   // is a separate position and is deliberately untouched: a haircut writes down
   // obligations, never cash. Reading the ledger back (rather than scaling the
   // pre-crisis stock) keeps this a pure function of bond state, so crash/retry
   // replay converges to the same value.
-  const postHaircutBonds = await db
-    .collection<Bond>("bonds")
+  const postHaircutBonds = await bondsCollection(db)
     .find(
       { issuerType: "sovereign", countryId: countryCode, matured: false, defaulted: false },
       // The outstanding helper re-checks the query-filtered fields, so they
@@ -155,9 +155,7 @@ export async function applyRestructureResolution(
     debtToGdpRatio: terms.debtToGdpRatio,
   };
 
-  await db
-    .collection<FederalBudget>("federalBudget")
-    .updateOne({ _id: budgetId }, { $set: update });
+  await federalBudgetCollection(db).updateOne({ _id: budgetId }, { $set: update });
 
   if (!input.skipDecisionUpdate) {
     const decisionUpdate: Partial<SovereignCrisisDecision> = {
@@ -167,9 +165,10 @@ export async function applyRestructureResolution(
       resolvedAt: new Date(realtimeMs),
       resolvedReason: "Sovereign debt restructured (phase 6 auto-ratify)",
     };
-    await db
-      .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-      .updateOne({ _id: decisionId }, { $set: decisionUpdate });
+    await sovereignCrisisDecisionsCollection(db).updateOne(
+      { _id: decisionId },
+      { $set: decisionUpdate }
+    );
   }
 
   await emitRestructuredNews(countryCode, currentTurn, RESTRUCTURE_HAIRCUT, bondsAffected);
@@ -177,9 +176,7 @@ export async function applyRestructureResolution(
   await emitMassCascadeAlert(db, countryCode, cascadeResult.totalCorpsInsolvent, currentTurn);
 
   // Phase 11b: executive personal political impact.
-  const decision = await db
-    .collection<SovereignCrisisDecision>("sovereignCrisisDecisions")
-    .findOne({ _id: decisionId });
+  const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "restructure");
 
   // Phase 11b: civil-unrest event (1 for restructure path).

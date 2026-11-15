@@ -22,15 +22,15 @@ import { TR_GEOGRAPHY } from "@/lib/countries/tr/geography";
 import { GR_GEOGRAPHY } from "@/lib/countries/gr/geography";
 import { AT_GEOGRAPHY } from "@/lib/countries/at/geography";
 import { FI_GEOGRAPHY } from "@/lib/countries/fi/geography";
+import { CA_GEOGRAPHY } from "@/lib/countries/ca/geography";
 
 export type { MetricPresetBundle };
 type PresetBundles = Partial<Record<ResetPresetId, MetricPresetBundle>>;
 
 /**
  * Country → preset → { regionId → { metricPath → value } } overlays for the new ROOT
- * metrics. Mirrors POPULATION_ANCHOR_BUNDLES (populationAnchors.ts); `selectPresetBundle`
- * falls back to `2019-default`, so a country with only a 2019 bundle never throws for a
- * 1991 world. Countries register here as their presets are authored.
+ * metrics. Mirrors POPULATION_ANCHOR_BUNDLES (populationAnchors.ts). A preset without its
+ * own overlay gets none. Countries register here as their presets are authored.
  */
 export const METRIC_PRESET_BUNDLES: Partial<Record<CountryId, PresetBundles>> = {
   IE: IE_GEOGRAPHY.metricPresets,
@@ -59,11 +59,12 @@ export const METRIC_PRESET_BUNDLES: Partial<Record<CountryId, PresetBundles>> = 
   AT: AT_GEOGRAPHY.metricPresets,
   FI: FI_GEOGRAPHY.metricPresets,
   GR: GR_GEOGRAPHY.metricPresets,
+  CA: CA_GEOGRAPHY.metricPresets,
 };
 
 /**
- * Per-region metric-value overlay for a reset preset. Falls back to the 2019 bundle when
- * a preset is absent; null when the country has no bundle or the region has no entry.
+ * Per-region metric-value overlay for a reset preset; null when the preset has no overlay
+ * for the country or the region has no entry.
  * Applied by the per-country seeder AFTER `applyEra1991Adjustments`.
  */
 export function getRegionMetricPresets(

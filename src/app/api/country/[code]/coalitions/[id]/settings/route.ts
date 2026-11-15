@@ -9,6 +9,7 @@ import type { Coalition } from "@/lib/db/types/coalition";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
+import { coalitionsCollection } from "@/lib/db/repositories/coalitions";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(3).max(60).optional(),
@@ -61,9 +62,10 @@ export async function PATCH(
 
     const db = await getDb();
 
-    const coalition = await db
-      .collection<Coalition>("coalitions")
-      .findOne({ sequentialId: parseInt(id, 10), countryId });
+    const coalition = await coalitionsCollection(db).findOne({
+      sequentialId: parseInt(id, 10),
+      countryId,
+    });
     if (!coalition) {
       throw notFound("Coalition not found.");
     }
@@ -74,7 +76,7 @@ export async function PATCH(
     }
 
     if (name !== undefined) {
-      const duplicate = await db.collection<Coalition>("coalitions").findOne({
+      const duplicate = await coalitionsCollection(db).findOne({
         _id: { $ne: coalition._id },
         countryId,
         name: { $regex: new RegExp(`^${escapeRegex(name)}$`, "i") },
@@ -96,12 +98,10 @@ export async function PATCH(
       updates.discordInviteUrl = normalizedDiscordInviteUrl;
     }
 
-    const result = await db
-      .collection<Coalition>("coalitions")
-      .updateOne(
-        { _id: coalition._id, countryId, chairCharacterId: character._id },
-        { $set: updates }
-      );
+    const result = await coalitionsCollection(db).updateOne(
+      { _id: coalition._id, countryId, chairCharacterId: character._id },
+      { $set: updates }
+    );
     if (result.matchedCount === 0)
       throw forbidden("Coalition chair changed. Refresh and try again.");
 

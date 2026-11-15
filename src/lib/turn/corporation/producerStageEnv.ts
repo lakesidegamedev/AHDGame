@@ -64,6 +64,7 @@ export function producerStageEnv(
         fundedValuationOwnSiteCreditStage?: number;
         producerJointRunStage?: number;
         producerRunPlanStage?: number;
+        producerTariffStage?: number;
         producerSalesAdvancePriceStage?: number;
         producerZombieRestartStage?: number;
         producerHouseholdIncomeSpendStage?: number;
@@ -100,6 +101,7 @@ export function producerStageEnv(
     ownSiteValuationCredit: (config?.fundedValuationOwnSiteCreditStage ?? 0) >= 1,
     jointRunStage: config?.producerJointRunStage,
     runPlanStage: config?.producerRunPlanStage,
+    tariffStage: config?.producerTariffStage,
     salesAdvanceAtClearing: (config?.producerSalesAdvancePriceStage ?? 0) >= 1,
     salesAdvanceRevenueShare: config?.producerSalesAdvanceRevenueShare,
     restartProbes: (config?.producerZombieRestartStage ?? 0) >= 1,

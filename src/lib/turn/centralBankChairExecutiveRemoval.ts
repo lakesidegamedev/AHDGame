@@ -21,6 +21,8 @@ import { persistVacancy } from "@/lib/turn/centralBankChairSelection";
 import { createNotifications } from "@/lib/notifications";
 import { createSystemNewsPost } from "@/lib/news";
 import { logger } from "../observability/logger";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 export interface CentralBankChairExecutiveRemovalResult {
   banksChecked: number;
@@ -39,8 +41,7 @@ export async function processCentralBankChairExecutiveRemoval(
     pendingCleared: 0,
   };
 
-  const banks = await db
-    .collection<CentralBank>("centralBanks")
+  const banks = await centralBanksCollection(db)
     .find({
       $or: [{ chairCharacterId: { $ne: null } }, { chairSelectionPending: { $ne: null } }],
     })
@@ -63,9 +64,10 @@ export async function processCentralBankChairExecutiveRemoval(
 
     // 1. Seated chair who has taken an executive office.
     if (bank.chairCharacterId && executiveIds.has(bank.chairCharacterId.toString())) {
-      const chair = await db
-        .collection<Character>("characters")
-        .findOne({ _id: bank.chairCharacterId }, { projection: { _id: 1, name: 1, userId: 1 } });
+      const chair = await charactersCollection(db).findOne(
+        { _id: bank.chairCharacterId },
+        { projection: { _id: 1, name: 1, userId: 1 } }
+      );
       await persistVacancy(db, bank._id, gameNow);
       // Independence removal must clear the committee seat as well, otherwise
       // the new executive keeps voting the bank's rate from seat 0.

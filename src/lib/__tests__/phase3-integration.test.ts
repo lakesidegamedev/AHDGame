@@ -34,10 +34,11 @@ describe("Phase 3 Integration - All configured countries", () => {
       "AT",
       "FI",
       "DD",
+      "CA",
     ]);
-    // 24, not 26: BLR and BAL are latent (constituent Soviet union republics,
+    // 25, not 27: BLR and BAL are latent (constituent Soviet union republics,
     // seeded as RU regions BEL/BLT), so they are configured but not ordered.
-    expect(COUNTRY_ORDER.length).toBe(24);
+    expect(COUNTRY_ORDER.length).toBe(25);
   });
 
   // `LegislatureConfig.upperChamber` is optional, so the per-country checks

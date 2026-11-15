@@ -6,6 +6,7 @@ import { handleRouteError } from "@/lib/api/errors";
 import { getSupporterRequestsCollection } from "@/lib/db/collections/supporterRequests";
 import type { SupporterRequest } from "@/lib/db/types/supporterRequests";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 function serialize(
   r: SupporterRequest,
@@ -60,8 +61,7 @@ export async function GET() {
     ).map((id) => new ObjectId(id));
 
     const users = userIds.length
-      ? await db
-          .collection<User>("users")
+      ? await usersCollection(db)
           .find({ _id: { $in: userIds } })
           .project<{
             _id: ObjectId;

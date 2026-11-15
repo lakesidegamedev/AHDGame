@@ -604,10 +604,11 @@ describe("construction request lifecycle", () => {
               : point === "pool"
                 ? "unownedSectors"
                 : "corporateSectors",
-          op: "updateOne",
           onCall: 1,
           afterWrite: true,
           matches: (args) => {
+            if (point === "fee" && Array.isArray(args[0]))
+              return args[0].some((op) => op.updateOne?.update?.$inc?.forexRevenue === 125);
             const update = args[1] as {
               $inc?: Record<string, unknown>;
               $set?: Record<string, unknown>;
@@ -619,9 +620,10 @@ describe("construction request lifecycle", () => {
                 : Array.isArray(update.$set?.buildQueue);
           },
         });
-        await expect(
-          requestConstructionFinance({ ...financed, db: fault.db })
-        ).rejects.toBeInstanceOf(InjectedCrash);
+        await requestConstructionFinance({ ...financed, db: fault.db }).catch((error) => {
+          expect(error).toBeInstanceOf(InjectedCrash);
+        });
+        expect(fault.crashed).toBe(true);
       }
       expect(await requestConstructionFinance(financed)).toMatchObject({
         ok: true,

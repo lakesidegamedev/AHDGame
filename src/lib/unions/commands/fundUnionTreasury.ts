@@ -1,24 +1,17 @@
 /**
  * Move CAMPAIGN FUNDS into the treasury of a union you lead.
  *
- * Player ticket #1121 asked "how do I send money to a union", while still
- * building one, and the honest answer was that there was no way at all. Dues
- * were the only inflow, and dues are collected once a turn from a membership the
- * union must first win, so a new union had no route from zero treasury to the
- * 1,000 an organizing drive costs. A head could found a union and then be unable
- * to act with it. Ticket #1112 ("what is the treasury and how do I get more of
- * it") is the same gap read from the other side.
+ * Dues are the only other inflow and require an existing membership, so a new
+ * union otherwise cannot afford an organizing drive.
  *
- * Campaign funds rather than personal wealth, matching what founding costs.
- * Backing a union is political spending, so it comes out of the same war chest
- * that pays for campaigning and direct action. Personal wealth is deliberately
- * not a route in: it would let a rich character bankroll an industry's labour
- * movement out of pocket, and it would make the treasury a laundering path
- * between a character's own balances.
+ * Campaign funds rather than personal wealth, matching what founding costs:
+ * backing a union is political spending. Personal wealth is deliberately
+ * excluded so a rich character cannot bankroll labour out of pocket or launder
+ * funds between their own balances.
  *
- * Head-only on purpose. Letting any character push money into any union would be
- * a clean channel for moving funds between players with no trace of why, which is
- * exactly the shape of the alt-funding rings the forensics work exists to catch.
+ * Head-only on purpose: letting any character push money into any union would
+ * be a clean, untraceable channel between players, the shape of alt-funding
+ * rings.
  */
 import type { Db } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";
@@ -26,6 +19,8 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { rejectIfTurnProcessing, resolveOwnedUnion } from "./unionActions";
 import type { UnionActionResult } from "./unionActions";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { unionsCollection } from "@/lib/db/repositories/unions";
 
 /**
  * Smallest contribution worth a write. Not a balance question: it stops a
@@ -76,13 +71,11 @@ export async function fundUnionTreasury(
 
   // Conditional single-document debit: two concurrent contributions can never
   // both pass on a stale balance, and the balance can never go negative.
-  const debited = await db
-    .collection<Character>("characters")
-    .findOneAndUpdate(
-      { _id: character._id, [campaignFundsField]: { $gte: contribution } },
-      { $inc: { [campaignFundsField]: -contribution }, $set: { updatedAt: new Date() } },
-      { returnDocument: "after" }
-    );
+  const debited = await charactersCollection(db).findOneAndUpdate(
+    { _id: character._id, [campaignFundsField]: { $gte: contribution } },
+    { $inc: { [campaignFundsField]: -contribution }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after" }
+  );
   if (!debited) {
     const available = useForexCampaignBalance
       ? (character.currencyBalances?.campaign ?? 0)
@@ -95,21 +88,20 @@ export async function fundUnionTreasury(
   }
 
   try {
-    const credited = await db
-      .collection<Union>("unions")
-      .updateOne(
-        { _id: union._id },
-        { $inc: { treasury: contribution }, $set: { updatedAt: new Date() } }
-      );
+    const credited = await unionsCollection(db).updateOne(
+      { _id: union._id },
+      { $inc: { treasury: contribution }, $set: { updatedAt: new Date() } }
+    );
     if (credited.modifiedCount === 0) {
       throw new Error("union treasury credit matched no document");
     }
   } catch {
     // Pure $inc back, never gated on balance, so the refund cannot itself fail
     // the way the guarded debit can.
-    await db
-      .collection<Character>("characters")
-      .updateOne({ _id: character._id }, { $inc: { [campaignFundsField]: contribution } });
+    await charactersCollection(db).updateOne(
+      { _id: character._id },
+      { $inc: { [campaignFundsField]: contribution } }
+    );
     return {
       ok: false,
       status: 500,

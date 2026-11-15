@@ -1,19 +1,13 @@
 /**
  * General-government revenue, expenditure and balance as a share of GDP.
- * The five European transition entries are 1991 observations. Russia's
- * combined federal/subnational deficit was 11.3% of GDP and expenditure was
- * about 48%; its 36.7% revenue is the residual, not an observed line.
- * Yugoslavia uses the latest pre-start (1990) estimate: expenditure about 40%
- * of gross social product and a 2.9% cash surplus through Q3. Its 42.9%
- * opening revenue is a scenario estimate, not a 1991 outturn.
- * IMF Working Paper 94/104, Table 1:
- * https://www.elibrary.imf.org/view/journals/001/1994/104/article-A001-en.xml
- * Russia World Bank fiscal reviews:
- * https://documents1.worldbank.org/curated/en/633081468294634409/pdf/multi0page.pdf
- * https://documents1.worldbank.org/curated/en/510691468763189627/pdf/multi0page.pdf
- * Yugoslavia IMF/GATT pre-start estimates:
- * https://www.elibrary.imf.org/view/journals/001/1991/043/article-A001-en.xml
- * https://www.wto.org/gatt_docs/English/SULPDF/91530268.pdf
+ *
+ * Five European transition entries are 1991 observations. Russia's deficit and
+ * expenditure are observed; its revenue is the residual, not an observed line.
+ * Yugoslavia uses the latest pre-start (1990) estimate; its opening revenue is a
+ * scenario estimate, not a 1991 outturn.
+ *
+ * Sources: IMF Working Paper 94/104, Table 1; Russia World Bank fiscal reviews;
+ * Yugoslavia IMF/GATT pre-start estimates.
  */
 export const SUCCESSOR_1991_GENERAL_GOVERNMENT_GDP_PERCENT = {
   BG: { revenue: 42.3, expenditure: 50.7, reportedBalance: -15.1 },

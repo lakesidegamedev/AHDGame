@@ -43,9 +43,7 @@ function dbWith(gameState: Record<string, unknown> | null, existingConflict = fa
 beforeEach(() => {
   vi.clearAllMocks();
   requireAdmin.mockResolvedValue({ ok: true, admin: { username: "root" } });
-  getDb.mockResolvedValue(
-    dbWith({ conflictsEnabled: true, currentTurn: 12, preset: "1953-default" })
-  );
+  getDb.mockResolvedValue(dbWith({ currentTurn: 12, preset: "1953-default" }));
   createConflict.mockResolvedValue({ _id: "cw_svn_12", conflictId: 3 });
 });
 
@@ -60,13 +58,6 @@ describe("POST /api/admin/conflicts/cold-war/create", () => {
     expect(input.createdBy).toBe("event");
     expect(input.hostEntities).toEqual(["NVN", "SVN"]);
     expect(input.hostCountry).toBe("SVN");
-  });
-
-  it("404s when the conflicts subsystem is off", async () => {
-    getDb.mockResolvedValue(dbWith({ conflictsEnabled: false }));
-    const res = await POST(req());
-    expect(res.status).toBe(404);
-    expect(createConflict).not.toHaveBeenCalled();
   });
 
   it("400s a faction id that collides with a playable country", async () => {
@@ -87,9 +78,7 @@ describe("POST /api/admin/conflicts/cold-war/create", () => {
   it("409s a second conflict in the same host on the same turn", async () => {
     // The id is host+turn, so createConflict would otherwise throw a duplicate key and
     // the admin would see a 500 rather than a sentence they can act on.
-    getDb.mockResolvedValue(
-      dbWith({ conflictsEnabled: true, currentTurn: 12, preset: "1953-default" }, true)
-    );
+    getDb.mockResolvedValue(dbWith({ currentTurn: 12, preset: "1953-default" }, true));
     const res = await POST(req());
     expect(res.status).toBe(409);
     expect(createConflict).not.toHaveBeenCalled();

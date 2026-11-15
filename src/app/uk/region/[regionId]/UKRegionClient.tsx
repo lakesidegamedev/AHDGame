@@ -18,7 +18,7 @@ import { RelocateButton } from "@/components/RelocateButton";
 import { UKRegionPageTabs } from "@/components/uk/UKRegionPageTabs";
 import { ApprovalTooltip } from "@/components/ApprovalTooltip";
 import { regionUrl, regionApprovalUrl } from "@/lib/urls";
-import type { State, StateDemographics, DemographicCategory } from "@/lib/db/types";
+import type { State, StateDemographics } from "@/lib/db/types";
 import type {
   PartyOrgDisplay,
   SerializedPlayer,
@@ -65,7 +65,6 @@ interface UKRegionClientProps {
       })
     | null;
   demographics: (Omit<StateDemographics, "lastUpdated"> & { lastUpdated: string | null }) | null;
-  categories: DemographicCategory[];
   censusData: RegionCensus | null;
   partyOrg: PartyOrgDisplay[];
   calculatedLeans: { economicLean: number; socialLean: number } | null;
@@ -110,19 +109,11 @@ interface UKRegionClientProps {
   approvalModifiersForOverview?: ActiveModifier[];
 }
 
-const NATION_COLORS: Record<string, string> = {
-  ENG: "#4f7ac7",
-  SCO: "#1a5fa8",
-  WAL: "#2a7c3e",
-  NIR: "#7a4ba8",
-};
-
 export default function UKRegionClient({
   region,
   nation,
   state,
   demographics,
-  categories,
   censusData,
   partyOrg,
   calculatedLeans,
@@ -146,8 +137,6 @@ export default function UKRegionClient({
   regionalConditionsOverviewEnabled = false,
   approvalModifiersForOverview = [],
 }: UKRegionClientProps) {
-  const _nationColor = NATION_COLORS[region.nationId] ?? "#4f7ac7";
-
   const population = state?.population ?? nation?.population ?? 0;
   const gdp = state?.gdp ?? 0;
   const constituencies = region.constituencies;
@@ -296,7 +285,6 @@ export default function UKRegionClient({
           region={region}
           state={state}
           demographics={demographics}
-          categories={categories}
           censusData={censusData}
           partyOrg={partyOrg}
           calculatedLeans={calculatedLeans}

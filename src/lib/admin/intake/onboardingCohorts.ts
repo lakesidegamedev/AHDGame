@@ -1,22 +1,19 @@
 import type { Db } from "mongodb";
 import { FOUNDING_WINDOW_TURNS } from "@/lib/onboarding/stepStamps";
 import { ONBOARDING_STEP_IDS } from "@/lib/onboarding/checklist";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 /**
  * First-days outcomes for new characters, split by whether they joined during
  * the founding races or into a running world. Measures the onboarding fix:
  * success is fewer mid-world joiners stuck at zero political influence.
  *
- * "Campaigned within 24h" comes from `actionLogs` (indexed on characterId +
- * actionType), so it is exact for cohorts from before step stamps existed.
- * "No influence growth after 72h" compares current influence with what the
- * character started with, for characters at least 72 hours old. From 1.16 new
- * characters start at 10 (`startingPoliticalInfluence`), and influence only
- * decays on its own, so a character that never campaigned sits at or below its
- * start. Older characters started at 0, so for them this is the original
- * "still at zero" measure and the pre-1.16 baseline (45% of mid-world joiners)
- * stays comparable. `startedWithInfluence` counts the 1.16-onward characters
- * so the two populations can be told apart.
+ * "No influence growth" compares current influence with the starting value
+ * for characters at least 72 hours old. From 1.16 characters start at 10 and
+ * influence only decays on its own, so a never-campaigning character sits at
+ * or below its start. Older characters started at 0, so the measure stays
+ * comparable. `startedWithInfluence` counts 1.16-onward characters so the two
+ * populations can be told apart.
  */
 export interface OnboardingCohort {
   characters: number;
@@ -63,8 +60,7 @@ export async function computeOnboardingCohorts(
   since: Date,
   now: Date = new Date()
 ): Promise<OnboardingCohorts> {
-  const rows = (await db
-    .collection("characters")
+  const rows = (await charactersCollection(db)
     .aggregate([
       { $match: { createdAt: { $gte: since } } },
       {

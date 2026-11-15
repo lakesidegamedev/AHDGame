@@ -110,6 +110,13 @@ export const FULLTREE: Record<string, TraitTreeCategory> = {
           "Mission Command national doctrine"
         ),
         N("fx5", "Adaptive Commander", 2000, 4, "+10% cross-domain flexibility", { cv: 1.08 }),
+        N("fx6", "Hybrid Warfare Commander", 2020, 4, "+8% against irregular and cyber threats", {
+          cv: 1.05,
+          enemy: 0.97,
+        }),
+        N("fx7", "Multi-Domain Commander", 2040, 4, "+10% joint land, air, space and cyber", {
+          cv: 1.08,
+        }),
       ]),
       P("discipline", "Disciplinarian", "#c9a24b", [
         N("di1", "Strict Order", 1900, 1, "+5% cohesion"),
@@ -196,6 +203,16 @@ export const FULLTREE: Record<string, TraitTreeCategory> = {
           null,
           "Aggressive Commander"
         ),
+        N(
+          "de6",
+          "Counter-Drone Defender",
+          2020,
+          3,
+          "−10% losses from drones and loitering munitions",
+          { cas: 0.92 },
+          null,
+          "Counter-Drone Air Defense"
+        ),
       ]),
     ],
   },
@@ -271,6 +288,9 @@ export const FULLTREE: Record<string, TraitTreeCategory> = {
           "Strategic Logistics"
         ),
         N("su5", "Sustainment Expert", 1950, 3, "+20 supply to their front", { supply: 20 }),
+        N("su6", "Autonomous Logistics Planner", 2040, 4, "+15 supply from robotic convoys", {
+          supply: 15,
+        }),
       ]),
       P("maintenance", "Maintenance Commander", "#c9a24b", [
         N("ma1", "Field Repairs", 1920, 2, "−10% vehicle downtime", { ready: 2 }),
@@ -350,6 +370,16 @@ export const FULLTREE: Record<string, TraitTreeCategory> = {
         N("il5", "Intelligence-Driven Operations", 2000, 4, "+12% ISR-led operations", {
           cv: 1.08,
         }),
+        N(
+          "il6",
+          "Drone Network Commander",
+          2030,
+          4,
+          "+10% targeting from persistent drone and satellite cover",
+          { cv: 1.05, enemy: 0.95 },
+          null,
+          "Drone Swarm Doctrine"
+        ),
       ]),
     ],
   },
@@ -670,11 +700,9 @@ export function nodeStatus(
 }
 
 /**
- * The trait that must be learned before this one, or null when nothing blocks it.
- *
- * A trait path is a strict chain, so exactly one node can be the blocker. Named so
- * the UI can say WHICH trait is required rather than a bare "Earlier trait required",
- * matching what the doctrine tree already tells the Secretary of Defense.
+ * The trait that must be learned before this one, or null when nothing blocks
+ * it. A trait path is a strict chain, so exactly one node can block. Returns
+ * the name so the UI can say WHICH trait is required.
  */
 export function missingTraitPrerequisite(
   learned: string[],

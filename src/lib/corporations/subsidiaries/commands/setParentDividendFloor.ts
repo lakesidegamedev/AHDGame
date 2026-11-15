@@ -4,6 +4,7 @@ import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporations";
 import { resolveControllingCorporateParent } from "@/lib/corporations/reservedCorporateHoldings";
 import { canActOnCorporationAsParent } from "../authorization";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SetParentDividendFloorInput {
   sub: Corporation;
@@ -34,7 +35,7 @@ export async function setParentDividendFloor(
   if (!Number.isFinite(floorPct)) return fail("Invalid dividend floor.");
   const clamped = Math.max(0, Math.min(MAX_DIVIDEND_RATE, Math.round(floorPct)));
 
-  await db.collection<Corporation>("corporations").updateOne(
+  await corporationsCollection(db).updateOne(
     { _id: sub._id },
     {
       $set: {

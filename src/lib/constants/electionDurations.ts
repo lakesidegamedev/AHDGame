@@ -41,9 +41,9 @@ export const DEFAULT_DURATIONS: Record<
   // Governor by-election (mid-term vacancy fill) — 24-turn filing/primary and 24-turn general; the
   // spawner sets timing directly, this entry just registers the type.
   special_governor: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
-  // Commons by-election (#860) — compressed regular race like its governor
-  // cousin, but WITH a filing/primary window so candidates can file. Mirrors
-  // the regular Commons 24h + 24h split; the spawner sets timing directly.
+  // Special presidential election (vacancy fill): 24-turn filing window, 24-turn general; the spawner sets timing directly.
+  special_president: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // Commons by-election: compressed race but WITH filing/primary window so candidates can file. Mirrors regular Commons 24h + 24h split.
   special_commons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // CN NPC Delegate elections (5-year cycle, 48h election window)
   npcDelegate: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
@@ -94,23 +94,29 @@ export const DEFAULT_DURATIONS: Record<
   holyrood: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // WAL Senedd Cymru — 5-year AMS cycle, 48h election window. Stood up at secession.
   senedd: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
-  // Beta-country parliamentary lower chambers (FR/IT/ES/SE/TR, issue #3239):
-  // 48h election window; the multi-year cycle gap is handled by the canonical
-  // schedule in ensureBetaParliamentElections.
+  // QC National Assembly: fixed four-year cycle, stood up at independence.
+  qcAssembly: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // Beta-country parliamentary lower chambers: 48h window; multi-year cycle gap handled by canonical schedule in the beta chamber specs.
   assembleeNationale: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   cameraDeputati: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   congresoDiputados: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   riksdag: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // CA House of Commons: 48h window, fixed four-year cycle.
+  caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  snap_caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // Canadian Commons by-election, same split as the UK one.
+  special_caCommons: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
+  // CA provincial legislatures: 48h window, four-year fixed-date cycles.
+  provincialLegislature: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   milletMeclisi: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // GR/AT/FI unicameral lower chambers — same beta-tier treatment as
-  // FR/IT/ES/SE/TR (#3791). Previously missing entirely: `ensureBetaParliamentElections`
-  // no-ops when `DEFAULT_DURATIONS[electionType]` is undefined, so even after
-  // the countryGameStates status fix these three still would not have spawned.
+  // FR/IT/ES/SE/TR. A chamber spec is rejected without a duration entry, so
+  // each type needs one here before its country can spawn.
   vouli: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   nationalrat: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   eduskunta: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   // FR Sénat / IT+TR Senato / ES Senado — upper-chamber re-election spawners
-  // (#3791). See canonicalCycle.ts for cycle-length/anchor commentary.
+  // See canonicalCycle.ts for cycle-length/anchor commentary.
   senat: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   senato: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },
   senado: { durationHours: 48, primaryDurationHours: 24, generalDurationHours: 24 },

@@ -1,3 +1,4 @@
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -41,7 +42,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const { code, id: partyId, landId } = await params;
     const countryId = code.toUpperCase() as CountryId;
-    if (countryId !== "DE") {
+    if (!countryHasFeature("landesliste", countryId)) {
       return NextResponse.json(badRequest("Landesliste is a German-only concept").toJson(), {
         status: 400,
       });
@@ -80,7 +81,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     const { code, id: partyId, landId } = await params;
     const countryId = code.toUpperCase() as CountryId;
-    if (countryId !== "DE") {
+    if (!countryHasFeature("landesliste", countryId)) {
       return NextResponse.json(badRequest("Landesliste is a German-only concept").toJson(), {
         status: 400,
       });

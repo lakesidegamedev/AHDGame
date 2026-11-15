@@ -1,19 +1,13 @@
 /**
- * Strategy cadence rules (#2693).
+ * Strategy cadence rules.
  *
- * The NPP strategy loop has two halves with different cadences:
+ * ACCRUAL records what the current strategy is achieving; cheap, runs for every
+ * corporation every turn. EVALUATION judges and possibly switches; only
+ * reachable on the corporation's stagger slot once tenure has elapsed, or on
+ * first sight.
  *
- *   ACCRUAL    recording what the current strategy is achieving. Cheap, runs
- *              for every corporation every turn (`advanceStrategy` always does
- *              it before anything else).
- *   EVALUATION judging the strategy and possibly switching. Only reachable on
- *              the corporation's stagger slot once the tenure window has
- *              elapsed, or on first sight.
- *
- * Everything the evaluation half needs that is expensive to derive (headroom
- * scans over the unowned pools) is therefore only worth computing when the
- * evaluation can actually run. These helpers say when, and when the persisted
- * memory actually needs rewriting. Pure: no db, clock, random or env.
+ * Expensive inputs for evaluation (headroom scans over unowned pools) are only
+ * worth computing when evaluation can run. Pure: no db, clock, random or env.
  */
 
 import { NPP_CORP_STRATEGIES, tenureSatisfied, type NppStrategyState } from "../corpStrategy";

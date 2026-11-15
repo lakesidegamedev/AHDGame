@@ -6,6 +6,7 @@ import { ObjectId } from "mongodb";
 import { requireAuth } from "@/lib/api/requireAuth";
 import { getDb } from "@/lib/mongodb";
 import type { GlobalAlert } from "@/lib/db/types/globalAlert";
+import { globalAlertsCollection } from "@/lib/db/repositories/globalAlerts";
 
 export async function GET(request: Request) {
   const auth = await requireAuth();
@@ -15,8 +16,7 @@ export async function GET(request: Request) {
   const userId = new ObjectId(auth.user.userId);
   const nowMs = Date.now();
 
-  const alerts = await db
-    .collection<GlobalAlert>("globalAlerts")
+  const alerts = await globalAlertsCollection(db)
     .find({
       expiresAtRealtimeMs: { $gt: nowMs },
       dismissedByUserIds: { $ne: userId },

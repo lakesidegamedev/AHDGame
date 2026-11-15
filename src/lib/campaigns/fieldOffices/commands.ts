@@ -31,6 +31,11 @@ import {
   type FieldOfficeScopeRules,
 } from "./rules";
 import { loadFieldOfficeRegionMap } from "./subdivisions";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 export const FIELD_OFFICES_COLLECTION = "campaignFieldOffices";
 
@@ -48,8 +53,7 @@ export async function loadFieldOfficeRegions(
 ): Promise<Pick<State, "_id" | "name">[]> {
   // Leaf regions only: UK regions carry a parent (ENG, GBN) that is not
   // itself an election region, so filter out parents rather than children.
-  const all = await db
-    .collection<State>("states")
+  const all = await statesCollection(db)
     .find({ countryId: election.countryId }, { projection: { _id: 1, name: 1, parentRegionId: 1 } })
     .sort({ name: 1 })
     .toArray();
@@ -68,19 +72,17 @@ export async function loadCampaignOrientation(
 ): Promise<number> {
   const seq = Number(campaign.party);
   if (!Number.isFinite(seq) || seq <= 0) return 0;
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne(
-      { sequentialId: seq, countryId: countryId as PoliticalParty["countryId"] },
-      { projection: { economicPosition: 1 } }
-    );
+  const party = await politicalPartiesCollection(db).findOne(
+    { sequentialId: seq, countryId: countryId as PoliticalParty["countryId"] },
+    { projection: { economicPosition: 1 } }
+  );
   return Math.sign(party?.economicPosition ?? 0);
 }
 
 async function loadContext(db: Db, campaignId: ObjectId, user: Actor) {
   const campaign = await getCampaignOrThrow(db, campaignId);
   await assertCampaignManagerOrNominee(db, campaign, user);
-  const election = await db.collection<Election>("elections").findOne({ _id: campaign.electionId });
+  const election = await electionsCollection(db).findOne({ _id: campaign.electionId });
   if (!election) throw notFound("Election not found");
   if (!user.isAdmin) {
     assertSameCountry(user.character, election, {
@@ -124,7 +126,7 @@ export async function openFieldOffice(params: {
     subdivisionId: params.subdivisionId ?? null,
   });
 
-  const offices = db.collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION);
+  const offices = campaignFieldOfficesCollection<CampaignFieldOffice>(db);
   const cap = FIELD_OFFICE_CAP;
   const cost = getFieldOfficeCostAnchor(rules);
   const [rates, priceLevel, preset, turn] = await Promise.all([
@@ -144,7 +146,7 @@ export async function openFieldOffice(params: {
 
   // Guarded charge: affordability and the office cap are checked in the same
   // write, so two concurrent opens cannot both slip under the cap.
-  const charged = await db.collection<Campaign>("campaigns").findOneAndUpdate(
+  const charged = await campaignsCollection(db).findOneAndUpdate(
     {
       _id: campaignId,
       funds: { $gte: openLocal },
@@ -165,9 +167,10 @@ export async function openFieldOffice(params: {
     { returnDocument: "after", projection: { funds: 1, actions: 1, fieldOfficeCount: 1 } }
   );
   if (!charged) {
-    const fresh = await db
-      .collection<Campaign>("campaigns")
-      .findOne({ _id: campaignId }, { projection: { fieldOfficeCount: 1 } });
+    const fresh = await campaignsCollection(db).findOne(
+      { _id: campaignId },
+      { projection: { fieldOfficeCount: 1 } }
+    );
     if ((fresh?.fieldOfficeCount ?? 0) >= cap) {
       throw badRequest(`This race allows at most ${cap} field offices`);
     }
@@ -195,7 +198,7 @@ export async function openFieldOffice(params: {
   } catch (err) {
     // Unique (campaignId, regionId, subdivisionId) for county scope: a
     // concurrent open of the same county lost the race. Refund it.
-    await db.collection<Campaign>("campaigns").updateOne(
+    await campaignsCollection(db).updateOne(
       { _id: campaignId },
       {
         $inc: {
@@ -263,15 +266,14 @@ export async function closeFieldOffice(params: {
 }): Promise<{ closed: boolean }> {
   const { db, campaignId, officeId, user } = params;
   await loadContext(db, campaignId, user);
-  const res = await db
-    .collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION)
-    .deleteOne({ _id: officeId, campaignId });
+  const res = await campaignFieldOfficesCollection<CampaignFieldOffice>(db).deleteOne({
+    _id: officeId,
+    campaignId,
+  });
   if (res.deletedCount === 0) throw notFound("Field office not found");
-  await db
-    .collection<Campaign>("campaigns")
-    .updateOne(
-      { _id: campaignId, fieldOfficeCount: { $gt: 0 } },
-      { $inc: { fieldOfficeCount: -1 } }
-    );
+  await campaignsCollection(db).updateOne(
+    { _id: campaignId, fieldOfficeCount: { $gt: 0 } },
+    { $inc: { fieldOfficeCount: -1 } }
+  );
   return { closed: true };
 }

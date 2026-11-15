@@ -18,12 +18,10 @@ import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
 export const FINANCIAL_FOG_QUARTER_TURNS = 12;
 
 /**
- * Widest deviation any fogged figure can carry (±10%).
+ * Widest deviation any fogged figure can carry (+/-10%).
  *
- * C3: this constant is what the UI is allowed to tell a non-insider. The
- * per-corp `fogFactor` itself used to be served on the payload, which handed
- * every outsider the exact multiplier and made every fogged number trivially
- * invertible — the fog was decoration. Only the envelope is public now.
+ * The per-corp fogFactor must never be exposed: sharing it would make every
+ * fogged number trivially invertible. Only this public envelope is safe.
  */
 export const FINANCIAL_FOG_MAX_DEVIATION = 0.1;
 
@@ -233,15 +231,12 @@ export function buildQuarterlySnapshot(history: CorporationHistory | null): {
 /**
  * Coarse fill-rate disclosure band.
  *
- * Fill rate (sold ÷ produced) is ATTACK-TARGETING INTEL, not a financial
- * headline. A rival who can read "this plant is running at 31%" knows the
- * incumbent cannot defend the market and knows precisely how much unsold
- * capacity is sitting there — which is a far sharper weapon than the ±10%
- * money estimate, because it does not degrade with the size of the corp.
- *
- * So the raw ratio is owner/insider-only, and outsiders get one of three
- * bands. The bands are wide enough that watching them across quarters does
- * not reconstruct the number.
+ * Fill rate (sold ÷ produced) is attack-targeting intel: a rival reading
+ * "running at 31%" learns the incumbent cannot defend the market and
+ * exactly how much unsold capacity exists, without the ±10% degradation of
+ * a money estimate. So raw ratio is owner/insider only, and outsiders get
+ * one of three bands wide enough that cross-quarter watching cannot
+ * reconstruct the number.
  */
 export type FillRateBand = "high" | "medium" | "low";
 
@@ -328,16 +323,13 @@ export interface SectorPhysicalsFogFactors {
 /**
  * Draw the physical fog factors for a corp/quarter.
  *
- * `base` is the same factor the money lines use, deliberately: under plants,
- * revenue is capacity × mix price, so capacity and revenue must move together
- * or the two published figures contradict each other and the pair discloses the
- * true value anyway.
+ * `base` matches the money-line factor: under plants, revenue is capacity x mix
+ * price, so capacity and revenue must move together or the figures contradict
+ * each other and disclose the true value anyway.
  *
- * `produced` and `sold` are SALTED SEPARATELY. Under the previous single-factor
- * scheme the factor cancelled exactly in `sold / produced`, so the pair
- * published the true FILL RATE to the last digit — the one number the module
- * goes out of its way to withhold, handed over in full by the very transform
- * meant to hide it. Independent draws break the cancellation.
+ * `produced` and `sold` are SALTED SEPARATELY. With a single shared factor it
+ * cancels in `sold / produced`, publishing the true FILL RATE the module means
+ * to withhold. Independent draws break the cancellation.
  */
 export function getSectorPhysicalsFogFactors(
   corpId: string,

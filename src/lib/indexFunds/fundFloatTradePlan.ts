@@ -27,6 +27,9 @@ import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { loadQueuedPayoutAuditContext } from "./queuedPayoutSettlement";
 import { type FundFloatPlan, type SettlementFund } from "./fundFloatSettlement";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type FloatAuditContext = Awaited<ReturnType<typeof loadQueuedPayoutAuditContext>>;
 export async function loadFloatAuditContext(
@@ -38,7 +41,7 @@ export async function loadFloatAuditContext(
   // Existing transactions require sequential commands on their session.
   const thresholds = preloadedThresholds ?? (await loadTxThresholds(db));
   const turnLength = await loadTurnLengthMinutes(db);
-  const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+  const config = await gameConfigCollection(db).findOne({ _id: "default" });
   return {
     thresholds,
     turnLength,
@@ -529,7 +532,7 @@ export async function prepareFundFloatTrade(db: Db, input: Input) {
     input.shares <= 0
   )
     return undefined;
-  const fundRow = await db.collection<SettlementFund>("indexFunds").findOne(
+  const fundRow = await indexFundsCollection<SettlementFund>(db).findOne(
     { _id: input.fund._id },
     {
       projection: {
@@ -541,7 +544,7 @@ export async function prepareFundFloatTrade(db: Db, input: Input) {
       },
     }
   );
-  const snapshot = await db.collection<CorpSnapshot>("corporations").findOne(
+  const snapshot = await corporationsCollection<CorpSnapshot>(db).findOne(
     { _id: input.corp._id },
     {
       projection: {
@@ -568,12 +571,10 @@ export async function prepareFundFloatTrade(db: Db, input: Input) {
   if (input.direction === "buy" && fund.cashAnchor < input.amountAnchor) return undefined;
   if (input.direction === "buy" && fund.mandate?.mode === "picked_stocks") {
     const manager = fund.sponsorCorporationId
-      ? await db
-          .collection<Corporation>("corporations")
-          .findOne(
-            { _id: fund.sponsorCorporationId },
-            { projection: { bankCharter: 1, userId: 1 } }
-          )
+      ? await corporationsCollection(db).findOne(
+          { _id: fund.sponsorCorporationId },
+          { projection: { bankCharter: 1, userId: 1 } }
+        )
       : null;
     if (
       !bankMayManageFunds(manager?.bankCharter) ||
@@ -703,7 +704,7 @@ export async function openFundFloatBatch(
     orderFlowWindowSellValue: 1,
   };
   const [fundRow, snapshotRows] = await Promise.all([
-    db.collection<SettlementFund>("indexFunds").findOne(
+    indexFundsCollection<SettlementFund>(db).findOne(
       { _id: ctx.fund._id },
       {
         projection: {
@@ -715,8 +716,7 @@ export async function openFundFloatBatch(
         },
       }
     ),
-    db
-      .collection<CorpSnapshot>("corporations")
+    corporationsCollection<CorpSnapshot>(db)
       .find({ _id: { $in: ctx.corps.map((corp) => corp._id) } }, { projection: snapshotProjection })
       .toArray(),
   ]);

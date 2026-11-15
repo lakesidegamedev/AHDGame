@@ -7,6 +7,7 @@ import {
   v2VotePosition,
   type V2PoliticalProvision,
 } from "./politicalPositions";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 export {
   V2_POLITICAL_ROUTES,
   v2VotePosition,
@@ -20,7 +21,9 @@ export const V2_FAMILY_APPROVAL_SPAN = 4;
 
 /** Successor countries retain the UK census bucket vocabulary. */
 export function voterAffinityCountry(countryId: string): string {
-  return countryId === "SCO" || countryId === "WAL" ? "UK" : countryId;
+  return countryHasFeature("scoSeeds", countryId) || countryHasFeature("walSeeds", countryId)
+    ? "UK"
+    : countryId;
 }
 
 const CHOICES = ["far_left", "center_left", "center", "center_right", "far_right"] as const;

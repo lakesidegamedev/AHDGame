@@ -3,20 +3,9 @@ import { checkGovernmentFormation } from "@/lib/constants/readinessChecks";
 
 /**
  * What a fully seeded Japan looks like, for the admin readiness audit.
- *
- * Moved out of `src/lib/constants/countryReadinessExpectations.ts`, which now
- * forwards to this. Values unchanged.
- *
- * ⚠ THESE ARE FLOORS, NOT TARGETS. Every `*Min` is a lower bound: seeding
- * more than the number is fine, seeding fewer is the finding. `seatMin` is the
- * one DERIVED value -- 713 is 465 Shugiin + 248 Sangiin -- so if the seat tables
- * in `constants/states.ts` change and this does not follow, the audit happily
- * passes a Diet of the wrong size. `japanReachable.test.ts` asserts the two
- * agree, which is the only thing keeping them honest.
- *
- * ⚠ `legislationTypesMin: 0` IS DELIBERATE. Japan seeds no bespoke
- * legislation types and runs on the shared catalogue, so any non-zero floor here
- * reports a permanent false failure.
+ * ⚠ These are FLOORS, not targets: more is fine, fewer is a finding.
+ * ⚠ seatMin 713 = 465 Shugiin + 248 Sangiin (derived from constants/states.ts; japanReachable.test.ts asserts they agree).
+ * ⚠ legislationTypesMin: 0 is deliberate: Japan uses the shared catalogue, any non-zero floor reports a permanent false failure.
  */
 export const JP_READINESS_EXPECTATIONS: CountryReadinessExpectations = {
   regionCount: 47,

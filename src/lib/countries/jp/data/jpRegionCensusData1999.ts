@@ -1,17 +1,14 @@
 /**
- * Japan Region Census Profiles — 1999 era.
+ * Japan Region Census Profiles , 1999 era.
  *
  * 1999-default companion to {@link jpRegionCensusData} (the 2019 profiles).
  *
- * Era anchor: 2000 Population Census of Japan (lost decade). All values
- * independently authored from historical knowledge of each region circa 1999 —
+ * All values independently authored for circa 1999 from historical knowledge ,
  * NOT derived by scaling any other era's file.
  *
- * Character of the era: post-bubble stagnation, the youth "employment ice
- * age", aging accelerating (seniors in the mid-20s% of adults in rural
- * regions), foreign residents beginning to rise (Chinese students/workers in
- * Tokyo, Nikkei Brazilians in the Chubu factory belt counted under
- * other_foreign), university advancement climbing past 35% nationally.
+ * Character of the era: post-bubble stagnation, youth "employment ice age",
+ * aging accelerating (seniors mid-20s% in rural regions), foreign residents
+ * rising, university advancement past 35% nationally.
  * Income uses era-neutral relative tiers.
  */
 

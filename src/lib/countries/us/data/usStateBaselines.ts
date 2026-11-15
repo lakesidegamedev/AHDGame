@@ -78,9 +78,6 @@ export const US_STATE_IDS = [
   "WV",
   "WI",
   "WY",
-  // DC was missing from this list entirely (confirmed via seed-audit
-  // MCP 2026-07-22: baselines absent for DC in both a fresh world and a
-  // 994-turn sandbox, unlike every other collection which had it).
   // Appended rather than alphabetically inserted so every existing state's
   // stateIndex-derived baseline value is unchanged on a reseed.
   "DC",

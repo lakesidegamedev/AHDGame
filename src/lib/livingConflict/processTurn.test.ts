@@ -4,11 +4,6 @@ import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { LivingConflictState } from "./types";
 
-vi.mock("@/lib/crises/featureFlag", () => ({
-  isCrisisInteractionEnabled: vi.fn().mockResolvedValue(true),
-  isCrisisAidBillsEnabled: vi.fn().mockResolvedValue(false),
-}));
-
 import { processLivingConflictsTurn } from "./processTurn";
 
 function pathValue(value: Record<string, unknown>, path: string): unknown {
@@ -95,7 +90,7 @@ describe("living-conflict turn integration", () => {
 
   it("opens Vietnam in 1955 as one role-aware crisis and is replay-safe", async () => {
     const { db, stores } = fakeDb();
-    const first = await processLivingConflictsTurn(db, 97, 1955, true);
+    const first = await processLivingConflictsTurn(db, 97, 1955);
     expect(first.eventsOpened).toBe(1);
 
     const crisis = stores.get("crises")?.[0] as unknown as Crisis;
@@ -127,7 +122,7 @@ describe("living-conflict turn integration", () => {
     const stateBefore = {
       ...(stores.get("livingConflicts")?.[0] as unknown as LivingConflictState),
     };
-    const replay = await processLivingConflictsTurn(db, 97, 1955, true);
+    const replay = await processLivingConflictsTurn(db, 97, 1955);
     const stateAfter = stores.get("livingConflicts")?.[0] as unknown as LivingConflictState;
     expect(replay.eventsOpened).toBe(0);
     expect(stateAfter.totalTurns).toBe(stateBefore.totalTurns);
@@ -136,7 +131,7 @@ describe("living-conflict turn integration", () => {
 
   it("opens the Northern Ireland crisis in 1991 and closes it after actual reunification", async () => {
     const { db, stores } = fakeDb();
-    await processLivingConflictsTurn(db, 1, 1991, true);
+    await processLivingConflictsTurn(db, 1, 1991);
     const northernIreland = () =>
       (stores.get("livingConflicts") ?? []).find((row) => row.defKey === "northern_ireland");
     expect(northernIreland()).toMatchObject({
@@ -154,12 +149,12 @@ describe("living-conflict turn integration", () => {
         status: "completed",
       },
     ]);
-    await processLivingConflictsTurn(db, 2, 1991, true);
+    await processLivingConflictsTurn(db, 2, 1991);
     expect(northernIreland()?.status).toBe("closed");
     const crisisCount = (stores.get("crises") ?? []).filter((row) =>
       String(row.livingConflictEventId ?? "").startsWith("northern_ireland:")
     ).length;
-    await processLivingConflictsTurn(db, 3, 1991, true);
+    await processLivingConflictsTurn(db, 3, 1991);
     expect(northernIreland()?.status).toBe("closed");
     expect(
       (stores.get("crises") ?? []).filter((row) =>
@@ -175,7 +170,7 @@ describe("living-conflict turn integration", () => {
       ["US", "UK", "DE", "CS", "HU"].map((countryId) => ({ countryId }))
     );
     stores.set("macroCountries", []);
-    await processLivingConflictsTurn(db, 1, 1991, true);
+    await processLivingConflictsTurn(db, 1, 1991);
     const state = (stores.get("livingConflicts") ?? []).find(
       (row) => row.defKey === "yugoslav_dissolution"
     );
@@ -201,7 +196,7 @@ describe("living-conflict turn integration", () => {
         result: { passed: true },
       },
     ]);
-    await processLivingConflictsTurn(db, 1, 1991, true);
+    await processLivingConflictsTurn(db, 1, 1991);
     expect(
       (stores.get("livingConflicts") ?? []).find((row) => row.defKey === "northern_ireland")
     ).toMatchObject({ hasOpened: true, status: "active" });
@@ -209,7 +204,7 @@ describe("living-conflict turn integration", () => {
 
   it("materializes non-Vietnam chains through the same crisis interaction path", async () => {
     const { db, stores } = fakeDb();
-    await processLivingConflictsTurn(db, 241, 1960, true);
+    await processLivingConflictsTurn(db, 241, 1960);
     const crises = (stores.get("crises") ?? []) as unknown as Crisis[];
     const keys = crises.map((crisis) => crisis.globalResponse?.conflictKey);
     expect(keys).toEqual(
@@ -228,7 +223,7 @@ describe("living-conflict turn integration", () => {
       ["RU", "US", "UK", "DE"].map((countryId) => ({ countryId }))
     );
     stores.set("macroCountries", [{ entityId: "UKR" }]);
-    await processLivingConflictsTurn(db, 1057, 2013, true);
+    await processLivingConflictsTurn(db, 1057, 2013);
     const state = (stores.get("livingConflicts") ?? []).find(
       (row) => row.defKey === "russia_ukraine_security"
     );
@@ -267,7 +262,7 @@ describe("living-conflict turn integration", () => {
         ["RU", "US", "UK", "DE"].map((countryId) => ({ countryId }))
       );
       stores.set("macroCountries", macroCountries);
-      await processLivingConflictsTurn(db, 1057, 2013, true);
+      await processLivingConflictsTurn(db, 1057, 2013);
       expect(
         (stores.get("livingConflicts") ?? []).find(
           (row) => row.defKey === "russia_ukraine_security"
@@ -285,7 +280,7 @@ describe("living-conflict turn integration", () => {
     const { db, stores } = fakeDb();
     stores.set("states", []);
     stores.set("macroCountries", []);
-    const result = await processLivingConflictsTurn(db, 1057, 2013, true);
+    const result = await processLivingConflictsTurn(db, 1057, 2013);
     expect(result.eventsOpened).toBe(0);
     expect(stores.get("livingConflicts") ?? []).toEqual([]);
   });
@@ -309,7 +304,7 @@ describe("living-conflict turn integration", () => {
       },
     ]);
 
-    await processLivingConflictsTurn(db, 241, 1960, true);
+    await processLivingConflictsTurn(db, 241, 1960);
     const keys = ((stores.get("crises") ?? []) as unknown as Crisis[]).map(
       (crisis) => crisis.globalResponse?.conflictKey
     );
@@ -318,9 +313,9 @@ describe("living-conflict turn integration", () => {
 
   it("opens the next consultation on the exact turn the prior window expires", async () => {
     const { db, stores } = fakeDb();
-    await processLivingConflictsTurn(db, 97, 1955, true);
+    await processLivingConflictsTurn(db, 97, 1955);
     for (let turn = 98; turn <= 121; turn++) {
-      await processLivingConflictsTurn(db, turn, 1955, true);
+      await processLivingConflictsTurn(db, turn, 1955);
     }
 
     const vietnamCrises = ((stores.get("crises") ?? []) as unknown as Crisis[]).filter(
@@ -346,7 +341,7 @@ describe("living-conflict turn integration", () => {
       },
     ]);
 
-    await processLivingConflictsTurn(db, 250, 1964, true);
+    await processLivingConflictsTurn(db, 250, 1964);
     const vietnam = (stores.get("livingConflicts") ?? []).find(
       (row) => row.defKey === "vietnam"
     ) as unknown as LivingConflictState;
@@ -390,7 +385,7 @@ describe("living-conflict turn integration", () => {
       },
     ]);
 
-    await processLivingConflictsTurn(db, 441, 1961, true);
+    await processLivingConflictsTurn(db, 441, 1961);
 
     const vietnam = (stores.get("livingConflicts") ?? []).find(
       (row) => row.defKey === "vietnam"
@@ -438,7 +433,7 @@ describe("living-conflict turn integration", () => {
       },
     ]);
 
-    await processLivingConflictsTurn(db, 441, 1961, true);
+    await processLivingConflictsTurn(db, 441, 1961);
 
     let vietnam = (stores.get("livingConflicts") ?? []).find(
       (row) => row.defKey === "vietnam"
@@ -457,7 +452,7 @@ describe("living-conflict turn integration", () => {
     if (!priorResponse) throw new Error("expected the prior Vietnam response");
     priorResponse.status = "resolved";
 
-    await processLivingConflictsTurn(db, 442, 1961, true);
+    await processLivingConflictsTurn(db, 442, 1961);
 
     vietnam = (stores.get("livingConflicts") ?? []).find(
       (row) => row.defKey === "vietnam"
@@ -499,7 +494,7 @@ describe("living-conflict turn integration", () => {
       },
     ]);
 
-    await processLivingConflictsTurn(db, 441, null, true);
+    await processLivingConflictsTurn(db, 441, null);
 
     const vietnam = (stores.get("livingConflicts") ?? []).find(
       (row) => row.defKey === "vietnam"

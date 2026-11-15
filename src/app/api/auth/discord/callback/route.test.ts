@@ -4,37 +4,51 @@ import { ObjectId } from "mongodb";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { reauthClock } from "@/lib/auth/sessionIssue";
 
-const { cookieState, exchangeCodeForToken, fetchDiscordUser, getDb } = vi.hoisted(() => {
-  const map = new Map<string, string>();
-  return {
-    cookieState: {
-      map,
-      reset(init: Record<string, string>) {
-        map.clear();
-        for (const [key, value] of Object.entries(init)) map.set(key, value);
+const { cookieState, exchangeCodeForToken, fetchDiscordUser, getDb, checkIpFireAndForget } =
+  vi.hoisted(() => {
+    const map = new Map<string, string>();
+    return {
+      cookieState: {
+        map,
+        reset(init: Record<string, string>) {
+          map.clear();
+          for (const [key, value] of Object.entries(init)) map.set(key, value);
+        },
+        set: vi.fn((name: string, value: string) => {
+          map.set(name, value);
+        }),
+        get: vi.fn((name: string) => {
+          const value = map.get(name);
+          return value === undefined ? undefined : { value };
+        }),
+        delete: vi.fn((name: string) => {
+          map.delete(name);
+        }),
       },
-      set: vi.fn((name: string, value: string) => {
-        map.set(name, value);
-      }),
-      get: vi.fn((name: string) => {
-        const value = map.get(name);
-        return value === undefined ? undefined : { value };
-      }),
-      delete: vi.fn((name: string) => {
-        map.delete(name);
-      }),
-    },
-    exchangeCodeForToken: vi.fn(),
-    fetchDiscordUser: vi.fn(),
-    getDb: vi.fn(),
-  };
-});
+      exchangeCodeForToken: vi.fn(),
+      fetchDiscordUser: vi.fn(),
+      getDb: vi.fn(),
+      checkIpFireAndForget: vi.fn().mockResolvedValue(null),
+    };
+  });
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => cookieState),
   headers: vi.fn(async () => ({ get: () => null })),
 }));
 vi.mock("@/lib/mongodb", () => ({ getDb }));
+vi.mock("@/lib/ip/ipteoh", () => ({ checkIpFireAndForget }));
+vi.mock("@/lib/auth/registrationGate", () => ({
+  assertRegistrationAllowed: vi.fn().mockResolvedValue({}),
+}));
+vi.mock("@/lib/adminLog", () => ({ createAdminLog: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/notifications", () => ({
+  createNotification: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/analytics/intakeEvents", () => ({
+  captureIntakeEvent: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/identityHistory/recordObservation", () => ({ recordIdentitySignals: vi.fn() }));
 vi.mock("@/lib/discord", () => ({ exchangeCodeForToken, fetchDiscordUser }));
 vi.mock("@/lib/utils/network", () => ({
   getBaseUrl: vi.fn().mockReturnValue("https://ahousedividedgame.com"),
@@ -202,5 +216,75 @@ describe("GET /api/auth/discord/callback: Android app hand-back (ticket 1461)", 
     const { GET } = await import("./route");
     const res = await GET(callback("s1", browser));
     expect(res.headers.get("location")).toContain("reason=session_expired");
+  });
+});
+
+describe("GET /api/auth/discord/callback: login failures and signup IP detection", () => {
+  const callback = () =>
+    new Request("https://ahousedividedgame.com/api/auth/discord/callback?code=abc&state=state-1");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    cookieState.reset({
+      discord_oauth_mode: "login",
+      discord_oauth_state: "state-1",
+    });
+    process.env.DISCORD_CLIENT_ID = "test-client";
+    process.env.DISCORD_CLIENT_SECRET = "test-secret";
+    process.env.DISCORD_REDIRECT_URI = "https://ahousedividedgame.com/api/auth/discord/callback";
+    exchangeCodeForToken.mockResolvedValue({ access_token: "tok" });
+    fetchDiscordUser.mockResolvedValue(discordUser);
+    checkIpFireAndForget.mockResolvedValue(null);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  function mockSignupDb(gameConfigDoc: Record<string, unknown>) {
+    getDb.mockResolvedValue({
+      collection: (name: string) => {
+        if (name === "gameConfig") {
+          // Honors the projection, so a field the code forgot to request is absent.
+          return {
+            findOne: vi.fn(async (_filter: unknown, options?: { projection?: object }) => {
+              const keys = Object.keys(options?.projection ?? {});
+              return Object.fromEntries(
+                Object.entries(gameConfigDoc).filter(([key]) => keys.includes(key))
+              );
+            }),
+          };
+        }
+        return {
+          findOne: vi.fn().mockResolvedValue(null),
+          insertOne: vi.fn().mockResolvedValue({ insertedId: userId }),
+          updateOne: vi.fn().mockResolvedValue({ matchedCount: 1 }),
+        };
+      },
+    });
+  }
+
+  it("runs IP detection for a Discord signup when it is enabled", async () => {
+    mockSignupDb({ maintenanceMode: "off", testMode: false, ipDetectionEnabled: true });
+    const { GET } = await import("./route");
+    const res = await GET(callback());
+    expect(res.headers.get("location")).toContain("status=login_success");
+    expect(checkIpFireAndForget).toHaveBeenCalledWith("203.0.113.5");
+  });
+
+  it("skips IP detection for a Discord signup when it is disabled", async () => {
+    mockSignupDb({ maintenanceMode: "off", testMode: false, ipDetectionEnabled: false });
+    const { GET } = await import("./route");
+    const res = await GET(callback());
+    expect(res.headers.get("location")).toContain("status=login_success");
+    expect(checkIpFireAndForget).not.toHaveBeenCalled();
+  });
+
+  it("turns a thrown login error into the handled error redirect", async () => {
+    getDb.mockResolvedValue({
+      collection: () => ({ findOne: vi.fn().mockRejectedValue(new Error("db down")) }),
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { GET } = await import("./route");
+    const res = await GET(callback());
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("reason=exchange_failed");
   });
 });

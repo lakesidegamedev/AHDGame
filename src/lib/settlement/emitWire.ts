@@ -1,20 +1,17 @@
 /**
  * Deciding what goes on the wire this tick, and stamping it so it goes once.
  *
- * Split from `wire.ts` because that module is pure builders and this one is the
- * db-touching half — which keeps the copy testable without a database and the
- * stamping testable without asserting on prose.
+ * Split from `wire.ts` (pure builders) so copy is testable without a database
+ * and stamping is testable without asserting on prose.
  *
- * THE STAMP, NOT THE STATE, is what makes a one-off post one-off. A crisis can
- * sit at DEFCON 1 for twenty turns and the tick sees `armed` on every one of
- * them; a frozen crisis stays frozen for as long as the war runs. Keying on
- * `postedWireEvents` is what turns "this is true now" into "this became true".
+ * THE STAMP, NOT THE STATE, makes a one-off post one-off: a crisis can sit at
+ * DEFCON 1 for twenty turns, so keying on `postedWireEvents` turns "this is
+ * true now" into "this became true".
  *
- * Every write is guarded on the stamp being absent, so two overlapping turn
- * runs cannot both post: the loser's `$ne` filter matches nothing and it
- * returns without sending. The stamp is written BEFORE the post goes out, which
- * means a crash between the two loses a dispatch rather than repeating one —
- * the right way round for something that cannot be unsent.
+ * Each write is guarded on the stamp being absent, so overlapping turn runs
+ * cannot both post. The stamp is written BEFORE the post goes out: a crash
+ * between the two loses a dispatch rather than repeating one, the right way
+ * round for something that cannot be unsent.
  */
 import type { Db, Filter } from "mongodb";
 import { getSettlementCrisesCollection } from "@/lib/db/collections";

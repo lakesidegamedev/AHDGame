@@ -1,5 +1,6 @@
 import type { Db, Filter, ObjectId } from "mongodb";
 import type { Bond } from "@/lib/db/types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
 
 export type BondHolderTarget =
   | { field: "characterId"; id: ObjectId }
@@ -24,7 +25,7 @@ export async function reserveBondUnitsForHolder(
     holderSet["holders.$.avgCostPerUnit"] = options.avgCostPerUnit;
   }
 
-  const existingHolderResult = await db.collection<Bond>("bonds").updateOne(
+  const existingHolderResult = await bondsCollection(db).updateOne(
     {
       _id: bondId,
       publicFloat: { $gte: units },
@@ -47,7 +48,7 @@ export async function reserveBondUnitsForHolder(
     newHolder.avgCostPerUnit = options.avgCostPerUnit;
   }
 
-  const pushResult = await db.collection<Bond>("bonds").updateOne(
+  const pushResult = await bondsCollection(db).updateOne(
     {
       _id: bondId,
       publicFloat: { $gte: units },
@@ -65,7 +66,7 @@ export async function reserveBondUnitsForHolder(
   );
   if (pushResult.modifiedCount > 0) return true;
 
-  const retryExistingHolderResult = await db.collection<Bond>("bonds").updateOne(
+  const retryExistingHolderResult = await bondsCollection(db).updateOne(
     {
       _id: bondId,
       publicFloat: { $gte: units },

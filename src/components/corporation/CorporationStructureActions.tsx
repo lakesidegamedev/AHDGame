@@ -97,8 +97,8 @@ function GoPublicCard({
 
   const maxFloat = dualClass ? SUPERSHARE_IPO_MAX_FLOAT_PCT : IPO_MAX_FLOAT_PCT;
   // Dual-class floats above the single-class cap permanently dilute economic
-  // ownership below 51%. Ticket #1033: players dragged the slider to the 75%
-  // supershare max expecting a small listing. Gate those with an explicit ack.
+  // ownership below 51%. Players drag the slider to the 75% supershare max
+  // expecting a small listing, so gate those with an explicit ack.
   const requiresHighFloatAck = floatPct > IPO_MAX_FLOAT_PCT;
 
   const preview = useMemo(() => {

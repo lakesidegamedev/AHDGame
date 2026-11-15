@@ -30,6 +30,7 @@ export interface CountryProfileReadiness {
 
 const MODE_LABELS: Record<CountryBackgroundMode, string> = {
   npp: "NPP registered",
+  background: "Background, outside the full simulation",
   latent: "Latent and seeded",
   absent: "Absent from this era",
 };

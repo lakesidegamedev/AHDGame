@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
@@ -41,6 +41,11 @@ import {
   releaseConstructionPropertyTransition,
   reserveSectorsForTransition,
 } from "@/lib/corporations/securedConstructionProperty";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { nationalizationAuctionsCollection } from "@/lib/db/repositories/nationalizationAuctions";
 
 export interface CarveSelection {
   sectorId: ObjectId;
@@ -101,7 +106,7 @@ export async function privatizeAsset(
   // FOUR callers: the executive privatize route, the legislative provision
   // (`legislativePrivatize`), the court-ordered reversal fallback
   // (`reverseNationalization`), and the auction path. Gating the route covered
-  // one of the four, which is how #676 left this open and let a Soviet SOE be
+  // one of the four, which is how left this open and let a Soviet SOE be
   // auctioned into private hands 300 turns later.
   //
   // Runs before any collection access so a blocked country costs two reads and
@@ -109,8 +114,8 @@ export async function privatizeAsset(
   await assertPrivateEnterprisePermitted(db, params.countryId);
 
   const now = new Date();
-  const corps = db.collection<Corporation>("corporations");
-  const sectors = db.collection<CorporateSector>("corporateSectors");
+  const corps = corporationsCollection(db);
+  const sectors = corporateSectorsCollection(db);
 
   if (params.selections.length === 0) throw new Error("No sectors selected to privatize");
   // Reject duplicate sector selections — otherwise a repeated id double-counts the
@@ -173,7 +178,7 @@ export async function privatizeAsset(
 
   // ── 4. Value the carve: per-sector full value × fraction (₳), summed → local. ──
   const [centralBanks, fxByCurrency, marketMode, gameState] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").find({}).toArray(),
+    centralBanksCollection(db).find({}).toArray(),
     loadFxRatesByCurrency(db),
     getMarketSystemModeForDb(db),
     getGameState(db),
@@ -235,9 +240,10 @@ export async function privatizeAsset(
   // winner's region on sale, so the selector is IPO-only in the UI.)
   let headquartersState = firstSector.stateId;
   if (params.headquartersState) {
-    const region = await db
-      .collection<{ _id: string; countryId: string }>("states")
-      .findOne({ _id: params.headquartersState, countryId: params.countryId });
+    const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne({
+      _id: params.headquartersState,
+      countryId: params.countryId,
+    });
     if (!region) throw new Error("Invalid headquarters region for this country");
     headquartersState = params.headquartersState;
   }
@@ -338,24 +344,14 @@ export async function privatizeAsset(
     if (!transitionKey) throw new Error("A secured sector reservation was lost");
     const keep = 1 - fraction;
     const keptRevenue = Math.round(sector.revenue * keep);
-    // PLANTS-GATED: the two `revenue` writes below (the carved insert's
-    // `revenue: Math.round(sector.revenue * fraction)` and the source row's
-    // `revenue: keptRevenue`) are the LEGACY nameplate only. Under plants
-    // `sectorTurn` restates both from `capitalStock × mix price` on the next
-    // tick, so the quantity that actually moves is the plant state split
-    // alongside them by `carveSectorPlantFields` at the identical fraction.
-    // Writing revenue in lockstep keeps the two views agreeing for the turn
-    // before the restatement, and keeps non-plants readers correct.
-    //
-    // Plant state splits by the same fraction as revenue/workers. Without this
-    // the buyer paid a BOOK price (above) for capacity that stayed behind on
-    // the NatCorp row: the carved sector would own zero plants, produce nothing
-    // under plants, and value at zero the instant it changed hands — while the
-    // seller kept 100% of the capacity it had just been paid for. `costPaidAnchor`
-    // is ₳ and is split, never FX-rescaled (see sectorTransferCapex). The D13
-    // `legacyRevenueShadow` restore point rides along in the same fold and is
-    // split by the same fraction — without it the carved corp would land in the
-    // rollback script's "no restore point, needs a human decision" bucket.
+    // PLANTS-GATED: revenue writes here are the LEGACY nameplate only: under plants,
+    // sectorTurn restates both from capitalStock x mix price next tick. Write
+    // revenue in lockstep with the plant state split (same fraction) so views
+    // agree for one turn and non-plants readers stay correct. Without splitting
+    // plant state too, the buyer pays a book price for capacity that stays on
+    // the NatCorp row and the carved sector values at zero. costPaidAnchor is
+    // in local currency, split never FX-rescaled; the legacyRevenueShadow
+    // restore point is split too.
     const openingPlantCount = seedPlantLedger(sector, sector.capitalStock).plantCount;
     // Split once and pass complementary counts to both rows. Rounding each leg
     // independently could give both halves the sole small facility.
@@ -380,21 +376,13 @@ export async function privatizeAsset(
       createdAt: now,
       updatedAt: now,
     } as CorporateSector);
-    // "Did the carve leave anything behind?" — capacity-aware under plants.
+    // "Did the carve leave anything behind?" Capacity-aware under plants.
     //
-    // This was `if (keptRevenue <= 0)`, which is the same defect as the
-    // nationalization sweep's donor guard: under plants `revenue` is DERIVED
-    // from `capitalStock`, so a MOTHBALLED source row reports revenue 0 while
-    // still holding its whole capital stock. A PARTIAL carve of such a row
-    // (fraction 0.4, say) computed `keptRevenue = 0` and DELETED the source —
-    // destroying the 60% of capacity, CIP and queued build orders that
-    // `keptPlant` had just been computed to preserve. The buyer got 40%, the
-    // seller got nothing, and 60% of the world's plant left the balance sheet.
-    //
-    // The condition wanted is "the remainder is empty". Below plants revenue is
-    // the only quantity carried, so `keptRevenue <= 0` says that exactly and
-    // this stays byte-identical. Under plants the remainder is empty only when
-    // no capacity and no queued orders survive the split.
+    // Under plants `revenue` is DERIVED from `capitalStock`, so a MOTHBALLED
+    // source row reports revenue 0 while still holding its whole capital stock;
+    // a partial carve of such a row would delete it, destroying the kept capacity.
+    // The remainder is empty only when no capacity and no queued orders survive.
+    // Below plants revenue is the only quantity, so `keptRevenue <= 0` is exact.
     const keptPlantIsEmpty =
       !plantsEnabled || (!(keptPlant.capitalStock > 0) && keptPlant.buildQueue.length === 0);
     if (keptRevenue <= 0 && keptPlantIsEmpty) {
@@ -431,7 +419,7 @@ export async function privatizeAsset(
   if (isAuction) {
     auctionId = new ObjectId();
     const reservePrice = Math.round(params.reservePrice ?? valuationLocal);
-    await db.collection<NationalizationAuction>("nationalizationAuctions").insertOne({
+    await nationalizationAuctionsCollection(db).insertOne({
       _id: auctionId,
       corporationId: newCorpId,
       countryId: params.countryId,

@@ -1,17 +1,20 @@
 import { ObjectId, type Db } from "mongodb";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types/corporation";
 import { computeSectorListingValuation } from "@/lib/corporations/sectorValuation";
 import {
   loadFxRatesByCurrency,
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 
 /** Expose defaulted security to funded buyers. A book mark never pays a creditor. */
 export async function listDefaultedConstructionCollateral(db: Db, turn: number): Promise<number> {
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find({
       "constructionFinancing.status": "building",
       "constructionFinancing.defaultedTurn": { $lt: turn },
@@ -29,17 +32,15 @@ export async function listDefaultedConstructionCollateral(db: Db, turn: number):
       : []
   );
   const [loans, owners, rates, eraUnitScale, gameState] = await Promise.all([
-    db
-      .collection<BankLoan>("bankLoans")
+    bankLoansCollection(db)
       .find({ _id: { $in: loanIds }, status: "defaulted", outstanding: { $gt: 0 } })
       .toArray(),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ _id: { $in: sectors.map((sector) => sector.corporationId) } })
       .toArray(),
     loadFxRatesByCurrency(db),
     loadWorldEraUnitScale(db),
-    db.collection<{ _id: string; currentYear?: number }>("gameState").findOne({ _id: "current" }),
+    gameStateCollection<{ _id: string; currentYear?: number }>(db).findOne({ _id: "current" }),
   ]);
   const loanMap = new Map(loans.map((loan) => [String(loan._id), loan]));
   const ownerMap = new Map(owners.map((owner) => [String(owner._id), owner]));
@@ -70,7 +71,7 @@ export async function listDefaultedConstructionCollateral(db: Db, turn: number):
     });
     if (!Number.isFinite(valuation.priceAnchor) || valuation.priceAnchor <= 0) continue;
     const now = new Date();
-    const result = await db.collection<CorporateSector>("corporateSectors").updateOne(
+    const result = await corporateSectorsCollection(db).updateOne(
       {
         _id: sector._id,
         corporationId: owner._id,

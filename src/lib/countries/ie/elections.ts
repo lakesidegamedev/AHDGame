@@ -1,9 +1,9 @@
 import type { MajorDefaultParty } from "@/lib/seeds/defaultPartyTiers";
 import type { CountryElections } from "../contract";
 import type { CountryElectionPhaseEntry } from "@/lib/turn/countryPhases";
-import type { SpawnElectionsResult } from "@/lib/turn/perpetualElections/registry";
+import type { SpawnElectionsResult } from "@/lib/elections/scheduling/registry";
 import { IE_DAIL_SEATS_PER_REGION } from "@/lib/seeds/ie/ieRegions";
-import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/turn/perpetualElections/shared";
+import { IE_LOCAL_COUNCIL_SEATS } from "@/lib/elections/scheduling/shared";
 import {
   ensureIECathaoirleachElections,
   ensureIEElections,
@@ -17,20 +17,15 @@ const sum = (table: Readonly<Record<string, number>>): number =>
 /**
  * Ireland's elections.
  *
- * ⚠️ SERVER ONLY. The spawners reach `getDb`.
+ * SERVER ONLY: spawners reach `getDb`.
  *
- * ⚠️ THE TOTALS ARE DERIVED, NOT DECLARED, AND THAT IS THE DIFFERENCE HERE.
- * Germany and China have `TOTAL_*` constants to import, so importing them
- * leaves one source. Ireland has none, so a hand-written `160` would BE a
- * second source -- one that agrees today and silently stops agreeing the first
- * time a constituency moves. Summing the same object cannot drift from it.
+ * Totals are summed from the tables, not declared as constants. A hand-written
+ * `160` would be a second source that silently drifts when a constituency
+ * moves.
  *
- * ⚠️ THE COUNCIL TOTAL IS 295, AND IT IS NOT THE NUMBER OF SEATS IN PLAY. The
- * table is 200 councillors across the eight NUTS-III regions plus NIR's 95,
- * which exist only once Ireland reunifies. Both were checked against the
- * comments on the tables: the Dáil sums to 160 as documented, and the council
- * sums to 200 without NIR. Reporting 295 as the standing chamber size would
- * overstate it by nearly half, so the reunification seats are named separately.
+ * The council total is 295, but only 200 seats are in play; the extra 95 are
+ * NIR seats that exist only on reunification. Report the standing chamber
+ * separately from reunification seats.
  */
 /*
  * ⚠️ `currentTurn` IS THE IN-FLIGHT TURN AND MUST BE THREADED. The turn
@@ -53,13 +48,10 @@ const spawn = async (now: Date, currentTurn?: number): Promise<SpawnElectionsRes
 const { NIR: NIR_COUNCIL_SEATS, ...COUNCIL_SEATS_EXCLUDING_NIR } = IE_LOCAL_COUNCIL_SEATS;
 
 /**
- * The election phases, in the order `countryPhases.ts` declares them.
+ * Election turn phases, in the order `countryPhases.ts` declares them.
  *
- * ⚠️ `spawn` AND `electionPhases` ARE DIFFERENT LISTS AND THIS COUNTRY HAS
- * BOTH. `spawn` is the continuity check the perpetual-election registry runs;
- * these are the turn phases. They overlap but are not the same set -- the
- * folder previously carried only `spawn`, so anything reading the folder for a
- * country's phases got nothing. The harness compares this list against
+ * Distinct from `spawn`: `spawn` is the perpetual-election continuity check,
+ * these are turn phases. The harness compares this list against
  * `COUNTRY_ELECTION_PHASES` entry by entry, `fn` by reference.
  */
 const phases: CountryElectionPhaseEntry[] = [

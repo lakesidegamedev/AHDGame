@@ -2,15 +2,9 @@
  * POST /api/suggestions/screenshot — multipart image for player suggestion compose flow.
  * Blob path: player-suggestion-screenshots/
  */
-import { NextResponse } from "next/server";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { parseFormData } from "@/lib/api/validate";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { isR2Enabled, uploadFile } from "@/lib/r2";
-
-const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const MAX_SIZE = 8 * 1024 * 1024;
+import { storeScreenshotUpload } from "@/lib/feedback/screenshotUpload";
 
 // POST /api/suggestions/screenshot — Upload screenshot for forum suggestion submission.
 // Auth: requireBasicAuth
@@ -27,51 +21,5 @@ export async function POST(request: Request) {
       "Too many screenshot uploads in a short time. Please wait a minute and try again."
     );
 
-  const parsed = await parseFormData(request);
-  if (!parsed.success) {
-    return errorResponse(parsed.status, parsed.error);
-  }
-  const formData = parsed.data;
-
-  const file = formData.get("file");
-  if (!file || !(file instanceof Blob)) {
-    return errorResponse(400, "No file uploaded");
-  }
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return errorResponse(400, "Only PNG, JPEG, and WebP images are allowed.");
-  }
-  if (file.size > MAX_SIZE) {
-    return errorResponse(400, "Screenshot must be under 8 MB.");
-  }
-
-  const ext = file.type === "image/jpeg" ? "jpg" : file.type === "image/webp" ? "webp" : "png";
-  const timestamp = Date.now();
-  const userId = user.userId.toString().slice(-8);
-
-  try {
-    let url: string;
-
-    if (isR2Enabled()) {
-      url = await uploadFile(
-        `player-suggestion-screenshots/${timestamp}-${userId}.${ext}`,
-        Buffer.from(await file.arrayBuffer())
-      );
-    } else {
-      const fs = await import("fs/promises");
-      const path = await import("path");
-
-      const dir = path.join(process.cwd(), "uploads", "player-suggestion-screenshots");
-      await fs.mkdir(dir, { recursive: true });
-
-      const filename = `${timestamp}-${userId}.${ext}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await fs.writeFile(path.join(dir, filename), buffer);
-
-      url = `/api/uploads/player-suggestion-screenshots/${filename}`;
-    }
-
-    return NextResponse.json({ url });
-  } catch (err) {
-    return handleRouteError(err);
-  }
+  return storeScreenshotUpload(request, user.userId, "player-suggestion-screenshots");
 }

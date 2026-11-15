@@ -15,33 +15,24 @@ export interface NavalRepairResult {
 /**
  * Per-turn: buy back hull and airframe condition with materiel from the national arsenal.
  *
- * The paid tier of repair. Free repair, in the naval and air pass, is capped by where a
- * formation is: a home port restores it completely, an allied port most of the way, and
- * holding station well short of full. This is how the rest is bought.
+ * The paid tier of repair. Free repair (naval and air pass) is capped by basing: a home
+ * port fully restores, an allied port most of the way, holding station well short of full.
  *
- * Not gated on basing, and once it starts it has no ceiling: a forward hull bought out of
- * the hole is carried all the way back to full without ever going home. That is the whole
- * point of the tier, and what stops it being a mere speed-up on something a fleet would
- * get free anyway by rotating out.
+ * Not gated on basing, and once started it has no ceiling: a forward hull bought out of
+ * the hole is carried to full without going home. That is the point of the tier.
  *
- * It DOES have an entry threshold: nothing ABOVE the station ceiling is touched, because
- * a lot buys a single point of condition up there against a hundred at the bottom, and
- * without the threshold this sweep would drain the store on scratches and starve
- * `applyDefenceRefit`, which runs immediately after it. A formation sitting exactly ON the
- * ceiling IS eligible, which matters because free repair parks every forward-deployed hull
- * on exactly that number.
+ * Entry threshold: nothing ABOVE the station ceiling is touched, because a lot buys one
+ * point up there versus a hundred at the bottom, and without it this sweep would drain
+ * the store on scratches and starve `applyDefenceRefit`, which runs right after. A
+ * formation exactly ON the ceiling IS eligible, since free repair parks forward hulls
+ * there. Consequence: a formation between the ceiling and full that is not resting
+ * somewhere better stays there; it fights fine and a home port fixes it for free.
  *
- * The consequence, stated plainly: a formation between the station ceiling and full that
- * is not resting somewhere better will stay there. It is above the worn-hull knee and
- * fighting perfectly well, and a home port fixes it for nothing.
+ * Runs BEFORE `applyDefenceRefit` deliberately: a wreck restored to service is worth
+ * more per lot than topping up racks, which `computeEffectivePower` caps at a few
+ * percent. When the store is short, lots go where they buy the most fighting strength.
  *
- * Runs BEFORE `applyDefenceRefit`, which is a change to the established order and a
- * deliberate one: a wreck restored to service is worth far more per lot than topping up a
- * working hull's racks, which `computeEffectivePower` caps at a few percent. When the
- * store is short, the lots should go where they buy the most fighting strength.
- *
- * Naval and air only. No other domain carries `integrity`, so no other domain can be
- * charged for repairing it.
+ * Naval and air only; no other domain carries `integrity`.
  */
 export async function applyNavalRepair(
   db: Db,

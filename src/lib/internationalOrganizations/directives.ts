@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { getDirectiveDef } from "@/lib/constants/orgDirectives";
+import { getDirectiveDef, isTreatyTerm } from "@/lib/constants/orgDirectives";
 import { getOrganizationLegislationCollection } from "@/lib/db/collections";
 import { getMembers } from "@/lib/internationalOrganizations/service";
 
@@ -18,15 +18,24 @@ import { getMembers } from "@/lib/internationalOrganizations/service";
  * affected by several directives targeting the same metric) accumulates them.
  * Unknown directive keys are skipped. Keyed by **bare metricId**; the caller
  * resolves each to a node id before merging into `targetNudges`.
+ *
+ * Treaty terms count once per organisation: renewing terms that are still in force
+ * extends them rather than doubling their effect.
  */
 export function buildDirectiveNudgesByCountry(
   directives: Array<{ organizationId: string; directiveKey?: string }>,
   membersByOrg: Map<string, CountryId[]>
 ): Map<CountryId, Map<string, number>> {
   const out = new Map<CountryId, Map<string, number>>();
+  const treatyTermsSeen = new Set<string>();
   for (const d of directives) {
     const def = getDirectiveDef(d.directiveKey);
     if (!def) continue;
+    if (isTreatyTerm(def)) {
+      const termKey = `${d.organizationId}:${def.key}`;
+      if (treatyTermsSeen.has(termKey)) continue;
+      treatyTermsSeen.add(termKey);
+    }
     const members = membersByOrg.get(d.organizationId) ?? [];
     for (const country of members) {
       let byMetric = out.get(country);

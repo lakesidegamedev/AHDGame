@@ -55,12 +55,11 @@ export interface CommoditySourcingDoc {
   itemizedFlowCount: number;
   totalFlowCount: number;
   /**
-   * Exact country-pair delivered trade for this commodity (#2333), never
-   * capped. Same-country interstate haulage appears as exporter === importer.
-   * Absent on documents written before the research trade panel existed.
+   * Exact country-pair delivered trade, never capped; same-country haulage has
+   * exporter === importer. Absent on documents written before the field existed.
    */
   countryPairs?: Omit<SourcingPairAggregate, "commodity">[];
-  /** Exact per-destination-country buyer-intent outcome (#2333). */
+  /** Exact per-destination-country buyer-intent outcome. */
   destinations?: Omit<SourcingDestinationAggregate, "commodity">[];
   createdAt: Date;
 }

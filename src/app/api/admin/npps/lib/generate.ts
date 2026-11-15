@@ -6,7 +6,12 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { Db } from "@/lib/mongodb";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { getEraContext } from "@/lib/era/context";
-import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/electionEngine/electionFormulaFactors";
+import { DEFAULT_CANDIDATE_SUPPORT } from "@/lib/elections/engine/electionFormulaFactors";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 type PartyData = { countryId: string; partyId: string };
 
@@ -27,7 +32,7 @@ export async function handleGenerateNPPs(
     electionQuery.state = { $in: stateFilter };
   }
 
-  const elections = await db.collection<Election>("elections").find(electionQuery).toArray();
+  const elections = await electionsCollection(db).find(electionQuery).toArray();
 
   if (elections.length === 0) {
     return NextResponse.json({
@@ -43,8 +48,7 @@ export async function handleGenerateNPPs(
   );
 
   // Load party docs to map sequentialIds and determine country
-  const allPartyDocs = await db
-    .collection<import("@/lib/db/types").PoliticalParty>("politicalParties")
+  const allPartyDocs = await politicalPartiesCollection<import("@/lib/db/types").PoliticalParty>(db)
     .find({ isDefault: true })
     .toArray();
   // Build country-aware party list
@@ -88,8 +92,7 @@ export async function handleGenerateNPPs(
       allStatePartyKeys.push(`${stateId}_${partyId}`);
     }
   }
-  const statePartyOrgDocs = await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const statePartyOrgDocs = await statePartyOrgCollection(db)
     .find({ _id: { $in: allStatePartyKeys } })
     .toArray();
   const statePartyOrgMap = new Map(statePartyOrgDocs.map((doc) => [doc._id as string, doc]));
@@ -100,16 +103,15 @@ export async function handleGenerateNPPs(
   // single-digit org). States with no org data at all keep the legacy default
   // so unseeded/test worlds still work.
   const statesWithOrgData = new Set<string>(
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .distinct("stateId", { stateId: { $in: [...electionsByState.keys()] } })
+    await statePartyOrgCollection(db).distinct("stateId", {
+      stateId: { $in: [...electionsByState.keys()] },
+    })
   );
 
   // Pre-batch: which (electionId, partyId) pairs already have an active candidate
   const allElectionIds = elections.map((e) => e._id as import("mongodb").ObjectId);
   const allPartyIds = partiesToGenerateWithCountry.map((p) => p.partyId);
-  const existingCandidateDocs = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const existingCandidateDocs = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: allElectionIds }, party: { $in: allPartyIds }, status: "active" },
       { projection: { electionId: 1, party: 1 } }
@@ -251,7 +253,7 @@ export async function handleGenerateNPPs(
         const sequentialId = await getNextSequentialId(db, "npp");
         const nppWithId: NPP = { ...npp, sequentialId };
 
-        await db.collection<NPP>("npps").insertOne(nppWithId);
+        await nppsCollection(db).insertOne(nppWithId);
 
         const candidateEntry: ElectionCandidate = {
           _id: new ObjectId(),
@@ -267,7 +269,7 @@ export async function handleGenerateNPPs(
           enteredAt: new Date(),
         };
 
-        await db.collection<ElectionCandidate>("electionCandidates").insertOne(candidateEntry);
+        await electionCandidatesCollection(db).insertOne(candidateEntry);
 
         totalGenerated++;
         details.push(`${stateId} ${election.electionType} (${partyId})`);

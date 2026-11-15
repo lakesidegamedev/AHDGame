@@ -1,0 +1,148 @@
+import type { JpLawText } from "./jpLawTextTypes";
+
+export const JP_LAW_TEXT_INFRASTRUCTURE: Record<string, JpLawText> = {
+  "infrastructure.publicHousing.primary": [
+    "Public Housing and Rent Support Act",
+    "Public housing, rent support and the building of affordable homes.",
+    2,
+    [
+      ["No Housing Programme", "Housing is left to the market."],
+      ["Housing Allowance", "Low income renters receive a rent allowance."],
+      ["Public Housing Programme", "Prefectures build and run public apartments."],
+      ["Large Building Drive", "Large estates are built for families on modest incomes."],
+      ["Universal Housing Duty", "The state guarantees a decent home to every household."],
+    ],
+  ],
+  "infrastructure.transit.primary": [
+    "Railways and Local Transport Act",
+    "Support and investment for the railways and local transport networks.",
+    4,
+    [
+      ["No Support", "Railways stand or fall on fares."],
+      ["Operating Grants", "Grants keep rural lines running."],
+      ["Modernization Support", "Stations, signalling and rolling stock are upgraded."],
+      ["Network Investment", "New lines and fast trains join the national network."],
+      ["Total Network Renewal", "Every line is rebuilt to the highest standard."],
+    ],
+  ],
+  "infrastructure.utilities.primary": [
+    "Broadband and Utilities Expansion Act",
+    "Pushing fibre, water and power to remote islands and mountain villages.",
+    3,
+    [
+      ["No Programme", "Remote areas wait for the market."],
+      ["Rural Connection Grants", "Grants help remote villages connect."],
+      ["Connection Programme", "Fibre, water and power reach most remote communities."],
+      ["Universal Service Drive", "The service duty extends to every inhabited island."],
+      ["Total Connection Mandate", "Every home is connected at the same standard."],
+    ],
+  ],
+  "infrastructure.condition.primary": [
+    "Public Works Maintenance Act",
+    "Keeping bridges, tunnels, roads and buildings in repair.",
+    3,
+    [
+      ["Deferred Maintenance", "Repairs wait until things fail."],
+      ["Emergency Repairs", "Funds go to the worst failures."],
+      ["Maintenance Programme", "Scheduled inspections and repairs cover ageing structures."],
+      ["Resilience Standard", "Structures are rebuilt to withstand quakes and typhoons."],
+      ["Gold-Standard Upkeep", "Every structure is kept like new."],
+    ],
+  ],
+  "infrastructure.highways.primary": [
+    "Expressway and National Roads Act",
+    "The expressway network and the national roads.",
+    3,
+    [
+      ["No Roads Programme", "Roads are left as they are."],
+      ["Maintenance Only", "Funds cover repairs and tolls cover costs."],
+      ["Improvement Programme", "Bypasses and widened roads relieve congestion."],
+      ["Expressway Programme", "New expressways link every region."],
+      ["National Expressway Grid", "A dense expressway grid reaches every city."],
+    ],
+  ],
+  "infrastructure.ownership.primary": [
+    "Home Ownership and Housing Loan Act",
+    "Mortgage support and the push for owner occupation.",
+    3,
+    [
+      ["No Support", "Buying a home is left to the market."],
+      ["Savings Framework", "Savings schemes help households put by a deposit."],
+      ["Guarantee Scheme", "A public lender backs long mortgages."],
+      ["Ownership Drive", "Tax breaks and cheap loans push owner occupation."],
+      ["Property-Owning Society", "Owning a home becomes the norm for every family."],
+    ],
+  ],
+  "infrastructure.development.primary": [
+    "City Planning and Building Standards Act",
+    "The permission process between a drawing and a building.",
+    3,
+    [
+      ["No Planning Control", "Anyone may build anywhere."],
+      ["Planning Permissions", "Building needs a permit under zoning rules."],
+      ["Streamlined Consent", "Permits are faster and rules are clearer."],
+      ["Development Districts", "Special districts allow dense building near stations."],
+      ["Open Building Charter", "Building is allowed wherever safety rules are met."],
+    ],
+  ],
+  "sec.freightCorridors": [
+    "Freight Corridors Act",
+    "Haulage corridors, port links and the goods the network must carry.",
+    3,
+    [
+      ["No Programme", "Freight takes what routes exist."],
+      ["Corridor Improvements", "Key corridors are improved."],
+      ["Freight Modernization", "Ports, rail freight terminals and trunk roads are upgraded."],
+      ["National Logistics Drive", "A national plan links ports, rail and road."],
+      ["Pacific Belt Freight", "A high capacity network connects every port and city."],
+    ],
+  ],
+  "sec.ruralDevelopment": [
+    "Rural Development Act",
+    "Lifelines for villages and thinly populated districts.",
+    2,
+    [
+      ["No Programme", "Rural areas manage alone."],
+      ["Rural Boards", "Regional boards coordinate aid."],
+      ["Development Programme", "Funds back services, jobs and local transport."],
+      ["Countryside Modernization", "Broad investment modernizes rural life."],
+      ["Rural Renaissance Drive", "Rural districts receive sustained priority support."],
+    ],
+  ],
+  "sec.urbanRenewal": [
+    "Urban Renewal Act",
+    "Redeveloping decayed districts and rebuilding city centres.",
+    3,
+    [
+      ["No Programme", "Old districts decay unaided."],
+      ["Renewal Orders", "Councils may designate districts for renewal."],
+      ["Renewal and Relocation", "Dense wooden districts are rebuilt and residents rehoused."],
+      ["Comprehensive Redevelopment", "Whole districts are rebuilt with taller, safer buildings."],
+      ["Cities Rebuilt Drive", "Every ageing district is renewed."],
+    ],
+  ],
+  "sec.newTownDistricts": [
+    "New Town Districts Act",
+    "Whole new neighbourhoods planned from scratch.",
+    2,
+    [
+      ["No Programme", "No new districts are planned."],
+      ["First Designations", "A handful of sites are chosen."],
+      ["New Districts Programme", "New towns are built around stations."],
+      ["Second Generation", "Ageing new towns are rebuilt alongside new ones."],
+      ["Model Districts Drive", "Model districts are built across the country."],
+    ],
+  ],
+  "sec.localPublicTransport": [
+    "Local Public Transport Act",
+    "Subways, trams and buses that carry people to work.",
+    3,
+    [
+      ["No Programme", "Local transport pays its own way."],
+      ["Operating Support", "Grants keep buses and trams running."],
+      ["Fleet Investment", "Vehicles and stations are renewed."],
+      ["Metropolitan Programme", "Metros are extended and linked into one system."],
+      ["Transit Renaissance", "Frequent public transport serves every community."],
+    ],
+  ],
+};

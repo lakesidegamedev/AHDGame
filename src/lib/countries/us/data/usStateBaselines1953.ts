@@ -1,60 +1,37 @@
 /**
- * 1953-era adjustments for `StateMetricBaseline` documents. Mirrors the
- * field-level anchors in `stateMetrics1953.ts` so freshly-seeded 1953
- * worlds have baselines aligned with the era-floored metric values
- * (zero decay pressure at game start).
+ * 1953-era adjustments for StateMetricBaseline docs. Aligns freshly-seeded
+ * 1953 worlds with era-floored metric values (stateMetrics1953.ts), so decay
+ * pressure at game start is zero. Applied at seed time when preset is
+ * 1953-default. Pure: deep-clone plus field-level shift, no DB or Date.
  *
- * Applied at seed time by each country's `seedXBaselines` function
- * (and `runCoreSeed` for US) when the active preset is `1953-default`.
+ * Field rules (each guarded by a presence check):
+ * - infrastructure.broadbandAccess -> 0 (no internet).
+ * - mediaInformation.socialMediaSentiment -> 0 (no platforms).
+ * - mediaInformation.disinformationRisk -> clamped <=5 (no viral misinfo).
+ * - mediaInformation.mediaPolarization -> -20 (clamped 5..25; no cable/echo chambers).
+ * - mediaInformation.pressFreedom -> +8 (clamped 45..90; trusted press).
+ * - mediaInformation.newsTrust -> +15 (clamped 50..90; pre-Vietnam/Watergate trust).
+ * - economic.medianIncome -> x0.06 (~6% of 2019 nominal).
+ * - economic.costOfLiving -> x0.06.
+ * - economic.povertyRate -> +5pp (clamped 15..35; pre-welfare state).
+ * - economic.gdpGrowth -> +0.5pp (clamped 3..8; Korean War boom).
+ * - healthcare.lifeExpectancy -> -10 (clamped 44..70; US ~68 in 1953).
+ * - healthcare.uninsuredRate -> +15pp (clamped 30..70; pre-Medicare/Medicaid).
+ * - publicSafety.crimeRate -> x0.65 (below 1960s-70s peak).
+ * - publicSafety.violentCrimeRate -> x0.60.
+ * - publicSafety.incarcerationRate -> x0.35 (pre-mass-incarceration).
+ * - population.urbanizationRate -> x0.75.
+ * - population.medianAge -> -8 only when input is still modern-old, else
+ * pass through; clamped 15..36 (must match stateMetricsEra1953 band so
+ * decay target is not narrower than the live metric). Skip the -8 when
+ * already <=24 (young-era; blanket ageing assumes a modern input).
+ * - population.populationGrowth -> +0.5pp (clamped 0.5..3.5; baby boom).
+ * - (no birthRate baseline field; fertility lives on metrics only.)
+ * - governance.voterTurnout -> +5pp (clamped 50..80; high Cold War participation).
+ * - governance.debtToGdp -> x0.6 (clamped 15..80; postwar debt eroded by growth).
  *
- * Pattern mirrors `stateBaselines1991.ts` — deep-clone + field-level
- * shift, not a separately-curated baseline file. Pure: no DB, no Date.
- *
- * Field-level rules (each guarded by a presence check):
- *
- *   - infrastructure.broadbandAccess → 0 (internet did not exist).
- *   - mediaInformation.socialMediaSentiment → 0 (no platforms).
- *   - mediaInformation.disinformationRisk → clamped ≤5 (pre-TV mass
- *     media; state propaganda exists but no viral misinformation).
- *   - mediaInformation.mediaPolarization → −20 (clamped 5..25;
- *     no cable news, no talk radio echo chambers).
- *   - mediaInformation.pressFreedom → +8 (clamped 45..90; trusted
- *     newspapers, no social-media-driven threats).
- *   - mediaInformation.newsTrust → +15 (clamped 50..90; pre-Vietnam,
- *     pre-Watergate era of relatively high institutional trust).
- *   - economic.medianIncome → ×0.06 (1953 nominal ~$3,900 vs 2019
- *     ~$65,000; the ratio is ~6%).
- *   - economic.costOfLiving → ×0.06.
- *   - economic.povertyRate → +5pp (clamped 15..35; pre-welfare state,
- *     pre-Great Society programs).
- *   - economic.gdpGrowth → +0.5pp (clamped 3..8; Korean War boom
- *     was tapering but growth was structurally higher in the era).
- *   - healthcare.lifeExpectancy → −10 (clamped 44..70; US 1953 ≈ 68;
- *     developing-world countries significantly lower).
- *   - healthcare.uninsuredRate → +15pp (clamped 30..70; no
- *     Medicare/Medicaid before 1965; most care is private/OOP).
- *   - publicSafety.crimeRate → ×0.65 (below the 1960s-70s peak).
- *   - publicSafety.violentCrimeRate → ×0.60.
- *   - publicSafety.incarcerationRate → ×0.35 (mass incarceration
- *     didn't begin until the 1970s-80s).
- *   - population.urbanizationRate → ×0.75 (significantly less urban
- *     than modern values in most countries).
- *   - population.medianAge → −8 when the input is still modern-old,
- *     else pass through; clamped 15..36 (same band as
- *     stateMetricsEra1953 — decay target must not be narrower than
- *     the live metric). Skip the −8 when already ≤24 (young-era;
- *     blanket ageing assumes a modern input — see Nigeria).
- *   - population.populationGrowth → +0.5pp (clamped 0.5..3.5;
- *     post-WWII baby boom).
- *   - (no birthRate baseline field — fertility index lives on metrics
- *     only; see stateMetricsEra1953 birthRate band [30, 95].)
- *   - governance.voterTurnout → +5pp (clamped 50..80; high Cold War
- *     civic participation in democracies).
- *   - governance.debtToGdp → ×0.6 (clamped 15..80; post-WWII debt
- *     being eroded by rapid nominal GDP growth).
- *
- * Country-specific fields handled below with `!== undefined` guards
- * so countries lacking those fields pass through unchanged.
+ * Country-specific fields use `!== undefined` guards so countries lacking
+ * them pass through unchanged.
  */
 
 import { clamp } from "@/lib/numeric/rules";

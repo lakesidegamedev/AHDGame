@@ -17,23 +17,14 @@ import type { EngineNodeContext, RegistryNode } from "../types";
 
 /**
  * Per-capita publicSafety spend at which the channel reaches half its max
- * response. Calibrated against the real achievable per-capita range (spend-
- * response recalibration pass, ticket #826 item 14 follow-up): summing the
- * four US publicSafety-tagged legislationTypes' policyOption per-capita costs
- * (federal us_law_enforcement_criminal_justice + us_prison_rehabilitation,
- * state us_state_policing + us_state_prison_rehabilitation — spendingProvider.ts
- * sums federal-per-capita + state-per-capita into this one channel) gives
- * MIN $418/capita (cheapest option on all four bills) .. MAX $1935/capita
- * (priciest option on all four), with a "center"/moderate-stance default
- * around $829/capita. The old HALF_SAT=1 saturated the channel to ~99.9%
- * response across that entire range (confirmed live in prod: NY/CA
- * policePerCapita.simBaseline=4.36, ~96% of its ~4.5 max, at ordinary enacted
- * spend) — a policy bill moving spend within its real range barely moved the
- * response at all. HALF_SAT=900 sits near the geometric mean of the range
- * (sqrt(418*1935)≈899) and close to the $829 center default, giving ~32%
- * response at the cheap end, ~48% at the moderate center, and ~68% at the
- * expensive end — real slope across the whole playable range instead of a
- * flat ~100% line.
+ * response. The achievable per-capita range sums the four US
+ * publicSafety-tagged legislationTypes' policyOption costs (federal
+ * us_law_enforcement_criminal_justice + us_prison_rehabilitation, state
+ * us_state_policing + us_state_prison_rehabilitation) into this one channel:
+ * MIN $418/capita .. MAX $1935/capita, with a moderate-stance default around
+ * $829/capita. HALF_SAT=900 sits near the geometric mean of the range
+ * (sqrt(418*1935)≈899) and close to the center default, giving real slope
+ * across the playable range instead of a saturated flat line.
  */
 const PS_SPEND_HALF_SAT = 900;
 
@@ -83,7 +74,7 @@ export const crimeRateNode: RegistryNode = {
       (povLag - 13) * 180 +
       (unempLag - 5) * 120 -
       (grad - 88) * 40 -
-      // #887: police→crime channel trimmed 400→200. Policing LAWS now carry a
+      // Police→crime channel trimmed 400→200. Policing LAWS now carry a
       // direct crimeRate stance effect (CRIME_TICK_RATES_7); halving the funding
       // channel's sensitivity keeps the two from double-counting while leaving
       // the baseline at the reference police level (2.5) unchanged.

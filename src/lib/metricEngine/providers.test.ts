@@ -71,6 +71,58 @@ describe("sectorRevenueTaxProvider", () => {
     expect((await sectorRevenueTaxProvider(db as unknown as Db)).plantsEnabled).toBe(false);
   });
 
+  describe("output basis marker", () => {
+    const sector = {
+      _id: "sec1",
+      stateId: "s1",
+      revenue: 100,
+      currentGrowthRate: 2,
+      sectorType: "retail",
+      producedUnits: 100,
+    };
+
+    async function volumeFor(config: Record<string, unknown> | null) {
+      setupCollection("corporateSectors", [sector]);
+      setupCollection("unownedSectors", []);
+      setupCollection("federalBudget", []);
+      setupCollection("stateBudgets", []);
+      db.collection("gameConfig");
+      db.collectionMocks.gameConfig!.findOne = vi.fn().mockResolvedValue(config);
+      const { sectorRevenueTaxProvider } = await import("./providers");
+      const out = await sectorRevenueTaxProvider(db as unknown as Db);
+      return out.ownedByState.get("s1")![0]!.outputVolume;
+    }
+
+    it("uses value added for a world marked value_added", async () => {
+      const { constantPriceOutput, valueAddedOutput } = await import("./rules/outputVolume");
+      const added = await volumeFor({
+        _id: "default",
+        marketSystemMode: "plants",
+        outputBasis: "value_added",
+      });
+      expect(added).toBe(valueAddedOutput(sector as never, 0));
+      expect(added).toBeLessThan(constantPriceOutput(sector as never, 0)!);
+    });
+
+    it("keeps gross output when the marker is absent, so a live world does not shift", async () => {
+      const { constantPriceOutput } = await import("./rules/outputVolume");
+      const legacy = await volumeFor({ _id: "default", marketSystemMode: "plants" });
+      expect(legacy).toBe(constantPriceOutput(sector as never, 0));
+      const explicit = await volumeFor({
+        _id: "default",
+        marketSystemMode: "plants",
+        outputBasis: "gross",
+      });
+      expect(explicit).toBe(legacy);
+    });
+
+    it("does not observe output below the plants tier whatever the marker says", async () => {
+      expect(
+        await volumeFor({ _id: "default", marketSystemMode: "capital", outputBasis: "value_added" })
+      ).toBeUndefined();
+    });
+  });
+
   it("uses the legacy growthRate fallback when currentGrowthRate is absent", async () => {
     setupCollection("corporateSectors", [
       { _id: "sec1", stateId: "s1", revenue: 100, growthRate: 3, corporationId: undefined },

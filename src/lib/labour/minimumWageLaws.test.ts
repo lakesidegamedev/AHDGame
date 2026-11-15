@@ -9,11 +9,15 @@ function fakeDb(rows: Record<string, unknown>[]) {
 }
 
 const rows = [
-  { stateId: "federal", legislationTypeId: "us_minimum_wage", policyOptionIndex: 2 },
+  {
+    stateId: "federal",
+    legislationTypeId: "us.economy.workerSecurity.primary",
+    policyOptionIndex: 3,
+  },
   {
     stateId: "jp_national",
-    legislationTypeId: "jp_minimum_wage",
-    policyOptionId: "jp_minimum_wage_opt_1",
+    legislationTypeId: "jp.economy.workerSecurity.primary",
+    policyOptionId: "l4",
   },
   { stateId: "ie_national", legislationTypeId: "ie_minimum_wage", policyOptionIndex: 0 },
   { stateId: "su_national", legislationTypeId: "ng_minimum_wage", policyOptionIndex: 0 },

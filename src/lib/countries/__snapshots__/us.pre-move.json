@@ -34815,7 +34815,6 @@
         "lockHomeState": true,
         "nppsPerState": 2
       },
-      "demographicProfileId": "us_archetypes",
       "executiveTermLimit": {
         "officeKey": "president",
         "maxTermsPerCharacter": 2,

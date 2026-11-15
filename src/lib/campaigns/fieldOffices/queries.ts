@@ -11,12 +11,8 @@ import {
 } from "@/lib/campaigns/campaignCurrency";
 import { getCurrentTurn } from "@/lib/campaigns/commands/campaignManagementCommands";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
-import type { Campaign, CampaignFieldOffice, Election } from "@/lib/db/types";
-import {
-  FIELD_OFFICES_COLLECTION,
-  loadCampaignOrientation,
-  loadFieldOfficeRegions,
-} from "./commands";
+import type { Campaign, CampaignFieldOffice } from "@/lib/db/types";
+import { loadCampaignOrientation, loadFieldOfficeRegions } from "./commands";
 import { fieldOfficeRamp, fieldOfficeRegionEffect, fieldOfficeYield } from "./effects";
 import { loadLiveStateLean } from "./liveLean";
 import {
@@ -28,6 +24,9 @@ import {
 } from "./rules";
 import { loadFieldOfficeRegionMap } from "./subdivisions";
 import { countyLeanSourceLabel } from "@/lib/maps/countyLeans";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import { campaignFieldOfficesCollection } from "@/lib/db/repositories/campaignFieldOffices";
 
 export interface FieldOfficeDto {
   id: string;
@@ -97,7 +96,7 @@ export async function getFieldOfficeView(
   user: AuthUserWithCharacter | null,
   requestedRegion: string | null
 ): Promise<FieldOfficeView> {
-  const campaign = await db.collection<Campaign>("campaigns").findOne(
+  const campaign = await campaignsCollection(db).findOne(
     { _id: campaignId },
     {
       projection: {
@@ -114,12 +113,10 @@ export async function getFieldOfficeView(
     }
   );
   if (!campaign) throw notFound("Campaign not found");
-  const election = await db
-    .collection<Election>("elections")
-    .findOne(
-      { _id: campaign.electionId },
-      { projection: { countryId: 1, electionType: 1, state: 1, status: 1 } }
-    );
+  const election = await electionsCollection(db).findOne(
+    { _id: campaign.electionId },
+    { projection: { countryId: 1, electionType: 1, state: 1, status: 1 } }
+  );
   if (!election) throw notFound("Election not found");
 
   const rules = getFieldOfficeRules(election.countryId);
@@ -160,8 +157,7 @@ export async function getFieldOfficeView(
 
   const [regions, officeRows] = await Promise.all([
     loadFieldOfficeRegions(db, election),
-    db
-      .collection<CampaignFieldOffice>(FIELD_OFFICES_COLLECTION)
+    campaignFieldOfficesCollection<CampaignFieldOffice>(db)
       .find({ campaignId })
       .sort({ openedTurn: 1, createdAt: 1 })
       .toArray(),

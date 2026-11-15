@@ -6,20 +6,11 @@
  */
 
 /**
- * US party registration + organization seed for the 1999-default preset.
+ * US party registration and organization seed for the 1999-default preset.
  *
- * Anchored to the 1998–2000 registration landscape and the 2000 Gore–Bush
- * result (the era's election oracle). 1999-era characteristics:
- *   - Independents/unaffiliated at their LOWEST (~10–12 pts) — the de-alignment
- *     surge is entirely later. Formal party registration is correspondingly high.
- *   - The ancestral-Democrat South is at its strongest: WV/KY/LA/OK carried
- *     roughly 55–62% Democratic *registration* in 1999 even while trending
- *     Republican federally (override states below).
- *   - 2000 was a near-tie nationally: FL/NH/OH/MO/NV/TN are competitiveR;
- *     WI/IA/OR/NM are competitiveD (Gore won each by <1 pt).
+ * Anchored to 1998-2000 registration and the 2000 election. Unaffiliated is at its lowest (~10-12 pts); formal registration is high. The ancestral-Democrat South still has ~55-62% Democratic registration. Competitive states: FL/NH/OH/MO/NV/TN lean R; WI/IA/OR/NM lean D.
  *
- * US-only: non-US countries fall back to their 2019 lanes on a 1999 reset.
- * Curated from state SoS 1998–2000 registration data + 2000 election results.
+ * Non-US countries fall back to 2019 lanes.
  */
 
 import type { StateRegistrationSeed } from "@/lib/seeds/registration/registrationLanes";

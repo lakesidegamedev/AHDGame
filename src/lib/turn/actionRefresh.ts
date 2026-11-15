@@ -1,9 +1,7 @@
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Character, GameConfig, NPP } from "@/lib/db/types";
-import type { CentralBank } from "@/lib/db/types/centralBank";
+import type { Character, GameConfig } from "@/lib/db/types";
 import type { CongressLeader, LeadershipRole } from "@/lib/db/types/leadership";
-import type { PoliticalParty } from "@/lib/db/types/party";
 import {
   applyNationalInfluenceTurn,
   applyPoliticalInfluenceDecay,
@@ -50,6 +48,16 @@ import {
   loadStatePartyChairIds,
   resolveCeoNiTier,
 } from "./actionRefreshRoles";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
@@ -85,9 +93,10 @@ export async function processActionRefresh(
   const accountability = await observeGovernmentAccountability(db, executives);
   const currentTurn =
     (
-      await db
-        .collection<{ _id: string; currentTurn?: number }>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
     )?.currentTurn ?? 0;
   /** Political-influence decay multiplier for a member of `party` in `countryId`. */
   const influenceDecayMultiplier = (countryId: string | undefined, party: string | undefined) => {
@@ -106,8 +115,7 @@ export async function processActionRefresh(
    * `centralBanks` document, not on `character.currentOffice`, so we load
    * chair ids up-front rather than keying off currentOffice.type.
    */
-  const chairRows = await db
-    .collection<CentralBank>("centralBanks")
+  const chairRows = await centralBanksCollection(db)
     .find({ chairCharacterId: { $ne: null } }, { projection: { chairCharacterId: 1 } })
     .toArray();
   const chairCharacterIds = new Set(
@@ -124,8 +132,7 @@ export async function processActionRefresh(
    * holds. Only player-held seats (justiceCharacterId set) draw the bonuses; NPP-
    * or historical-roster-held seats have no controlling player to benefit.
    */
-  const justiceSeatRows = await db
-    .collection<SupremeCourtSeat>("supremeCourtSeats")
+  const justiceSeatRows = await supremeCourtSeatsCollection(db)
     .find({ justiceCharacterId: { $ne: null } }, { projection: { justiceCharacterId: 1 } })
     .toArray();
   const seatedJusticeCharacterIds = new Set(
@@ -141,8 +148,7 @@ export async function processActionRefresh(
   // 1.5 cabinet / governors / justices / central bank chair / minority
   // leaders, 1.0 national legislators, 0.5 sub-national legislators and state
   // party chairs, 0.3 / 0.15 CEOs. Office tiers live in `resolveOfficeNiBonus`.
-  const congressLeaderRows = await db
-    .collection<CongressLeader>("congressLeaders")
+  const congressLeaderRows = await congressLeadersCollection(db)
     .find({ characterId: { $ne: null } }, { projection: { characterId: 1, role: 1 } })
     .toArray();
   const leaderRolesByCharId = new Map<string, LeadershipRole[]>();
@@ -156,8 +162,9 @@ export async function processActionRefresh(
 
   const partyChairIds = new Set<string>();
   const partySubChairIds = new Set<string>();
-  const partyRows = await db
-    .collection<PoliticalParty>("politicalParties")
+  const partyRows = await (
+    await getPoliticalPartiesCollection(db)
+  )
     .find(
       {
         $or: [
@@ -214,10 +221,11 @@ export async function processActionRefresh(
     .map((c) => c._id);
   const electedRows =
     cabinetSeatCharIds.length > 0
-      ? await db
-          .collection<{ characterId: ObjectId; officeType: string; countryId?: CountryId }>(
-            "electedOfficials"
-          )
+      ? await electedOfficialsCollection<{
+          characterId: ObjectId;
+          officeType: string;
+          countryId?: CountryId;
+        }>(db)
           .find(
             { characterId: { $in: cabinetSeatCharIds } },
             { projection: { characterId: 1, officeType: 1, countryId: 1 } }
@@ -357,9 +365,9 @@ export async function processActionRefresh(
     );
 
     // Personal AP grant always applies against the live balance. Matching the
-    // snapshotted actions value (optimistic concurrency) let a mid-turn spend
-    // cancel the whole refresh while partyInfluenceTurn still added its bonus
-    // via a live $actions pipeline - leaving only the party grant (Refs #4457).
+    // snapshotted actions value would let a mid-turn spend cancel the whole
+    // refresh while partyInfluenceTurn still added its bonus via a live
+    // $actions pipeline, leaving only the party grant.
     const liveActions = { $ifNull: ["$actions", 0] };
     const hoardPenalty = {
       $cond: [{ $gt: [liveActions, energyThreshold] }, ACTION_HOARD_PENALTY, 0],
@@ -457,7 +465,7 @@ export async function processActionRefresh(
   }
 
   if (ops.length > 0) {
-    await db.collection("characters").bulkWrite(ops);
+    await charactersCollection(db).bulkWrite(ops);
   }
 
   // Seat and chair achievements are awarded here, not on profile visits, so a
@@ -465,7 +473,7 @@ export async function processActionRefresh(
   await awardOfficeHolderAchievements(db, characters);
 
   // NPP stat decay mirrors player decay and keeps both stats in the 0-100 range.
-  const nppCursor = db.collection<NPP>("npps").find(
+  const nppCursor = (await getNppsCollection(db)).find(
     { retiredAt: null },
     {
       projection: {
@@ -520,6 +528,6 @@ export async function processActionRefresh(
   }
 
   if (nppOps.length > 0) {
-    await db.collection("npps").bulkWrite(nppOps);
+    await nppsCollection<Document>(db).bulkWrite(nppOps);
   }
 }

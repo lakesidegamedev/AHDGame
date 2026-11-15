@@ -1,6 +1,5 @@
 /**
- * Staged release of carried public budget (#5454, stage
- * `producerPublicCarryReleaseStage`). See publicCarryRules for the carry itself.
+ * Staged release of carried public budget. See publicCarryRules for the carry itself.
  *
  * Pure: lines and carry in, released lines and held carry out.
  */
@@ -16,10 +15,9 @@ function positive(x: number | undefined): number {
 
 /**
  * Most a line may draw from its carry in one turn, as a share of its fresh
- * outlay (issue #5448, stage `producerPublicCarryReleaseStage`). Without it a
- * line that sat short for four turns spent five turns of budget the moment
- * supply landed, then fell back: a seller saw revenue jump several times over
- * for one turn. Held carry stays in the wallet and is drawn on later turns.
+ * outlay. Without it a line that sat short for several turns spends its whole
+ * budget the moment supply lands, spiking seller revenue for one turn. Held
+ * carry stays in the wallet for later turns.
  */
 export const PUBLIC_CARRY_RELEASE_SHARE = 0.5;
 

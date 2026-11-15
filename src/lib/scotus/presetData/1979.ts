@@ -1,7 +1,7 @@
 import type { ScotusPresetSeed } from "./types";
 
 /**
- * 1979 preset SCOTUS content (#3600, spec #3581). Seeds the Burger Court at
+ * 1979 preset SCOTUS content. Seeds the Burger Court at
  * its actual 1979 composition, plus a Docket of real landmark cases from
  * 1979 through the docket cutoff (2026, "present").
  *
@@ -90,8 +90,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 1,
     historicalOccupants: [
       {
-        key: "burger-1979",
-        name: "Warren E. Burger",
+        key: "bergman-1979",
+        name: "Walter E. Bergman",
         party: US_REP,
         economicLean: 2,
         socialLean: 3,
@@ -100,8 +100,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "rehnquist-cj-1986",
-        name: "William H. Rehnquist",
+        key: "renwick-cj-1986",
+        name: "William H. Renwick",
         party: US_REP,
         economicLean: 4,
         socialLean: 4,
@@ -110,8 +110,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "roberts-2005",
-        name: "John G. Roberts Jr.",
+        key: "rowe-2005",
+        name: "Jonathan Rowe",
         party: US_REP,
         economicLean: 3,
         socialLean: 3,
@@ -126,8 +126,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 2,
     historicalOccupants: [
       {
-        key: "brennan-1979",
-        name: "William J. Brennan Jr.",
+        key: "brannigan-1979",
+        name: "Walter J. Brannigan",
         party: US_REP,
         economicLean: -4,
         socialLean: -5,
@@ -136,8 +136,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "souter-1990",
-        name: "David H. Souter",
+        key: "seaver-1990",
+        name: "Douglas H. Seaver",
         party: US_REP,
         economicLean: -2,
         socialLean: -3,
@@ -146,8 +146,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "sotomayor-2009",
-        name: "Sonia Sotomayor",
+        key: "valdemoro-2009",
+        name: "Sofia Valdemoro",
         party: US_DEM,
         economicLean: -3,
         socialLean: -4,
@@ -162,8 +162,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 3,
     historicalOccupants: [
       {
-        key: "stewart-1979",
-        name: "Potter Stewart",
+        key: "stanwick-1979",
+        name: "Porter Stanwick",
         party: US_REP,
         economicLean: 1,
         socialLean: 0,
@@ -172,8 +172,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "oconnor-1981",
-        name: "Sandra Day O'Connor",
+        key: "ostrander-1981",
+        name: "Susan Ostrander",
         party: US_REP,
         economicLean: 1,
         socialLean: 1,
@@ -182,8 +182,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "alito-2006",
-        name: "Samuel A. Alito Jr.",
+        key: "amato-2006",
+        name: "Salvatore Amato",
         party: US_REP,
         economicLean: 4,
         socialLean: 4,
@@ -198,8 +198,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 4,
     historicalOccupants: [
       {
-        key: "white-1979",
-        name: "Byron R. White",
+        key: "whitcomb-1979",
+        name: "Raymond T. Whitcomb",
         party: US_DEM,
         economicLean: 0,
         socialLean: 1,
@@ -208,8 +208,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "ginsburg-1993",
-        name: "Ruth Bader Ginsburg",
+        key: "sterling-1993",
+        name: "Miriam Gold Sterling",
         party: US_DEM,
         economicLean: -3,
         socialLean: -5,
@@ -218,8 +218,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "barrett-2020",
-        name: "Amy Coney Barrett",
+        key: "cole-2020",
+        name: "Margaret Ellison Cole",
         party: US_REP,
         economicLean: 4,
         socialLean: 5,
@@ -234,8 +234,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 5,
     historicalOccupants: [
       {
-        key: "marshall-1979",
-        name: "Thurgood Marshall",
+        key: "marlow-1979",
+        name: "Thaddeus Marlow",
         party: US_DEM,
         economicLean: -5,
         socialLean: -5,
@@ -244,8 +244,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "thomas-1991",
-        name: "Clarence Thomas",
+        key: "thornton-1991",
+        name: "Calvin Thornton",
         party: US_REP,
         economicLean: 5,
         socialLean: 5,
@@ -260,8 +260,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 6,
     historicalOccupants: [
       {
-        key: "blackmun-1979",
-        name: "Harry A. Blackmun",
+        key: "blaylock-1979",
+        name: "Henry A. Blaylock",
         party: US_REP,
         economicLean: -1,
         socialLean: -3,
@@ -270,8 +270,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "breyer-1994",
-        name: "Stephen G. Breyer",
+        key: "brewster-1994",
+        name: "Simon Brewster",
         party: US_DEM,
         economicLean: -2,
         socialLean: -3,
@@ -280,8 +280,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "jackson-2022",
-        name: "Ketanji Brown Jackson",
+        key: "jamison-2022",
+        name: "Kendra Brooks Jamison",
         party: US_DEM,
         economicLean: -3,
         socialLean: -4,
@@ -296,8 +296,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 7,
     historicalOccupants: [
       {
-        key: "powell-1979",
-        name: "Lewis F. Powell Jr.",
+        key: "prewitt-1979",
+        name: "Leland F. Prewitt Jr.",
         party: US_REP,
         economicLean: 1,
         socialLean: 1,
@@ -306,8 +306,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kennedy-1988",
-        name: "Anthony M. Kennedy",
+        key: "kessler-1988",
+        name: "Arthur M. Kessler",
         party: US_REP,
         economicLean: 2,
         socialLean: -1,
@@ -316,8 +316,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kavanaugh-2018",
-        name: "Brett M. Kavanaugh",
+        key: "keegan-2018",
+        name: "Bradley Keegan",
         party: US_REP,
         economicLean: 3,
         socialLean: 3,
@@ -334,8 +334,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 8,
     historicalOccupants: [
       {
-        key: "rehnquist-assoc-1979",
-        name: "William H. Rehnquist",
+        key: "renwick-assoc-1979",
+        name: "William H. Renwick",
         party: US_REP,
         economicLean: 4,
         socialLean: 4,
@@ -344,8 +344,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "scalia-1986",
-        name: "Antonin Scalia",
+        key: "varela-1986",
+        name: "Anthony Varela",
         party: US_REP,
         economicLean: 4,
         socialLean: 5,
@@ -354,8 +354,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "death",
       },
       {
-        key: "gorsuch-2017",
-        name: "Neil M. Gorsuch",
+        key: "gorham-2017",
+        name: "Nathan Gorham",
         party: US_REP,
         economicLean: 3,
         socialLean: 2,
@@ -370,8 +370,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
     seatNumber: 9,
     historicalOccupants: [
       {
-        key: "stevens-1979",
-        name: "John Paul Stevens",
+        key: "stetson-1979",
+        name: "Paul Stetson",
         party: US_REP,
         economicLean: -3,
         socialLean: -4,
@@ -380,8 +380,8 @@ const SCOTUS_1979_SEATS: ScotusPresetSeed["seats"] = [
         departureReason: "retirement",
       },
       {
-        key: "kagan-2010",
-        name: "Elena Kagan",
+        key: "kaminski-2010",
+        name: "Elise Kaminski",
         party: US_DEM,
         economicLean: -3,
         socialLean: -3,
@@ -420,11 +420,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: -1,
     decisionYear: 1992,
     effect: {
-      legislationTypeId: "us_reproductive_rights",
+      legislationTypeId: "us.society.demography.primary",
       // Diverged alternative: the Court instead overturns the right
       // outright rather than reaffirming it under the undue-burden standard.
-      policyOptionId: "us_reproductive_rights_opt_6",
-      effectDirection: -1,
+      policyOptionId: "l4",
+      effectDirection: 1,
     },
   },
   {
@@ -443,10 +443,10 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2000,
     effect: {
-      legislationTypeId: "us_civics_voting_rights",
+      legislationTypeId: "us.governance.participation.primary",
       // Diverged alternative: the recount continues / election-process
       // access expands instead of the Court halting the recount.
-      policyOptionId: "us_civics_voting_rights_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -467,12 +467,12 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2008,
     effect: {
-      legislationTypeId: "us_gun_control",
+      legislationTypeId: "us.order.safety.primary",
       // Diverged alternative: no individual right recognized, i.e. the
       // District's handgun restrictions (and similar) stand — a real
       // gun-control tightening rather than the historical individual-right
       // holding.
-      policyOptionId: "us_gun_control_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -483,10 +483,10 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2010,
     effect: {
-      legislationTypeId: "us_government_ethics",
+      legislationTypeId: "us.governance.integrity.primary",
       // Diverged alternative: campaign-finance/corporate-spending
       // restrictions are upheld and strengthened instead of struck down.
-      policyOptionId: "us_government_ethics_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -497,11 +497,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: -1,
     decisionYear: 2012,
     effect: {
-      legislationTypeId: "us_medicaid_expansion",
+      legislationTypeId: "us.health.universalCare.primary",
       // Diverged alternative: the ACA/Medicaid-expansion framework this
       // case upheld (mandate as tax; expansion made optional for states)
       // is instead struck down/restructured away from federal expansion.
-      policyOptionId: "us_medicaid_expansion_opt_5",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
   },
@@ -512,10 +512,10 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2013,
     effect: {
-      legislationTypeId: "us_civics_voting_rights",
+      legislationTypeId: "us.governance.participation.primary",
       // Diverged alternative: the Voting Rights Act preclearance formula
       // is upheld instead of struck down.
-      policyOptionId: "us_civics_voting_rights_opt_2",
+      policyOptionId: "l3",
       effectDirection: 1,
     },
   },
@@ -556,11 +556,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2022,
     effect: {
-      legislationTypeId: "us_clean_energy",
+      legislationTypeId: "us.environment.conservation.primary",
       // Diverged alternative: EPA's broader authority to regulate power-plant
       // emissions (and shift the generation mix) is upheld instead of
       // curbed under the major-questions doctrine.
-      policyOptionId: "us_clean_energy_opt_1",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -571,11 +571,11 @@ const SCOTUS_1979_DOCKET: ScotusPresetSeed["docket"] = [
     historicalMajorityDirection: 1,
     decisionYear: 2022,
     effect: {
-      legislationTypeId: "us_reproductive_rights",
+      legislationTypeId: "us.society.demography.primary",
       // Diverged alternative: Roe/Casey is instead reaffirmed rather than
       // overturned.
-      policyOptionId: "us_reproductive_rights_opt_1",
-      effectDirection: 1,
+      policyOptionId: "l0",
+      effectDirection: -1,
     },
   },
   {

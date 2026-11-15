@@ -5,19 +5,15 @@ import {
 } from "@/lib/market/brandLoyalty";
 
 /**
- * Per-turn brand-loyalty rollup (Package A, phase A2). Pure.
+ * Per-turn brand-loyalty rollup. Pure.
  *
  * Loyalty is a CORP-level reputation, but pricing/delivery happen per sector,
  * so each corp is rolled up as a revenue-weighted mean of its selling sectors'
- * effective posture and fill. The "contested" signal — required for accrual —
- * asks whether any RIVAL corp posts at least CONTEST_GAP cheaper in a commodity
- * the corp sells (loyalty earned with no cheaper rival to resist is meaningless,
- * so it is zero there).
+ * effective posture and fill. Accrual requires a "contested" signal: some
+ * RIVAL corp posts at least CONTEST_GAP cheaper in a commodity the corp sells.
  *
- * The turn layer supplies each corp's sectors already joined to their clearing
- * results (effective posture + soldFraction) and prior loyalty state; this
- * module owns the aggregation and the contest index so it can be tested without
- * the DB.
+ * The turn layer supplies pre-joined sectors and prior loyalty; this module
+ * owns aggregation and contest indexing for testability.
  */
 
 export interface LoyaltySectorInput {

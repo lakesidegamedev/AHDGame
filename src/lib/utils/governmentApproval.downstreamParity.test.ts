@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildGovModifierByParty } from "@/lib/electionEngine/govCoattail";
+import { buildGovModifierByParty } from "@/lib/elections/engine/govCoattail";
 
 /**
  * P6d GATE 3 — downstream-behavior parity. The cutover moves approval by a

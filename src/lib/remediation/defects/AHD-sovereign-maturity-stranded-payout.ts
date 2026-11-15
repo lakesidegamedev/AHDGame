@@ -1,23 +1,19 @@
 /**
- * Paired code fix: #4754 (sovereign maturity legs resolve to live targets at
- * preparation). Kept registered as a detector for any journal that still
- * strands, e.g. one resumed after its holder was deleted.
+ * Detector for sovereign maturity journals that still strand escrowed cash.
  *
- * A funded sovereign maturity payout applies its escrow debit first, then one
- * credit per frozen holder leg in order. Two kinds of credit leg could never
- * apply, which stranded the escrowed cash in a `partial` journal forever:
+ * A funded payout applies its escrow debit, then one credit per frozen holder
+ * leg in order. Two credit legs could never apply, leaving the journal
+ * `partial` forever:
  *
  * - a central-bank leg keyed by the raw country id of a shared bank
  *   (`centralBanks {_id: "DE"}` while the document is `{_id: "ECB"}`);
- * - a holder leg whose holder document was deleted after the quote froze
- *   (an NPP culled by a party merge). Every later leg, including the large
- *   market-pool credit, waits behind it.
+ * - a holder leg whose holder was deleted after the quote froze (e.g. an NPP
+ *   culled by a party merge). Every later leg, including the large market-pool
+ *   credit, waits behind it.
  *
- * The heal rewrites only those unapplied legs of the stored journal, to the
- * exact legs the fixed preparation now produces from the same frozen quote
- * (`resolveSovereignMaturityPayoutLegs`). It moves no money: the next bond
- * turn resumes the journal, delivers the remaining credits, applies the
- * projections, and retires the bond.
+ * The heal rewrites only those unapplied legs, to the exact legs fixed
+ * preparation now produces from the same frozen quote. It moves no money: the
+ * next bond turn resumes the journal and delivers the remaining credits.
  */
 import type { Collection, Db } from "mongodb";
 import {
@@ -36,6 +32,13 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export const DEFECT_ID = "AHD-sovereign-maturity-stranded-payout";
 const PAYOUT_KIND = "sovereign_maturity_payout";
@@ -109,8 +112,7 @@ export function repairStrandedPayoutLeg(
 }
 
 async function survey(db: Db): Promise<PayoutPatch[]> {
-  const records = await db
-    .collection<PayoutRecord>(MONEY_MOVE_COLLECTION)
+  const records = await bankMoneyMovesCollection<PayoutRecord>(db)
     .find({ kind: PAYOUT_KIND, status: "partial" })
     .toArray();
   // Batch every read: one $in for the bonds, one per holder kind for targets.
@@ -140,18 +142,17 @@ async function survey(db: Db): Promise<PayoutPatch[]> {
     return rows.map((row) => `${name}:${String(row._id)}`);
   };
   const [bonds, ...liveGroups] = await Promise.all([
-    db
-      .collection<Bond>("bonds")
+    bondsCollection(db)
       .find(
         { _id: { $in: candidates.map((c) => c.bondKey as Bond["_id"]) } },
         { projection: { sovereignMaturityClaim: 1 } }
       )
       .toArray(),
-    liveIds("characters", db.collection<{ _id: unknown }>("characters")),
-    liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
-    liveIds("corporations", db.collection<{ _id: unknown }>("corporations")),
-    liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
-    liveIds("npps", db.collection<{ _id: unknown }>("npps")),
+    liveIds("characters", charactersCollection<{ _id: unknown }>(db)),
+    liveIds("imperialCharacters", imperialCharactersCollection<{ _id: unknown }>(db)),
+    liveIds("corporations", corporationsCollection<{ _id: unknown }>(db)),
+    liveIds("indexFunds", indexFundsCollection<{ _id: unknown }>(db)),
+    liveIds("npps", nppsCollection<{ _id: unknown }>(db)),
   ]);
   const live = new Set(liveGroups.flat());
   const bondsById = new Map(bonds.map((bond) => [String(bond._id), bond]));
@@ -223,7 +224,7 @@ async function apply(db: Db, healPlan: HealPlan, _ctx: HealContext): Promise<Hea
   for (const payout of payouts) {
     for (const { index, from, to } of payout.patches) {
       const path = `legs.${index}`;
-      const result = await db.collection<PayoutRecord>(MONEY_MOVE_COLLECTION).updateOne(
+      const result = await bankMoneyMovesCollection<PayoutRecord>(db).updateOne(
         {
           _id: payout.key,
           kind: PAYOUT_KIND,

@@ -2,12 +2,13 @@ import { loadNationalApproval } from "./nationalApproval";
 import { getDb } from "@/lib/mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import type { State, MetricCategoryId, GameState } from "@/lib/db/types";
-import type { StateDemographics } from "@/lib/db/types/demographics";
 import {
   calculateStateApproval,
   computeStateApprovalBase,
   buildFlatMetrics,
   BASE_APPROVAL,
+  loadElectorateGroups,
+  weightingFor,
 } from "@/lib/utils/governmentApproval";
 import {
   isPoliticalApprovalCountry,
@@ -24,6 +25,8 @@ import { computeAllNationalMetricTickRates } from "@/lib/api/stateTickRates";
 import { IS_HIGHER_BETTER } from "@/lib/utils/metricScoring";
 import { marginEffectForModifier } from "@/lib/states/conditions/marginEffects";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 interface MetricSummary {
   average: number;
@@ -110,7 +113,7 @@ export async function loadNationalMetrics(
   const db = await getDb();
 
   // Fetch states filtered by country, then metrics for those state IDs
-  const allStates = await db.collection<State>("states").find({ countryId }).toArray();
+  const allStates = await statesCollection(db).find({ countryId }).toArray();
   const stateIds = allStates.map((s) => s._id);
   // SP5: merged two-store view.
   const allMetrics = await findMergedRegionMetricsMany(db, {
@@ -126,19 +129,15 @@ export async function loadNationalMetrics(
   const stateMap = new Map(allStates.map((s) => [s._id, s]));
   const totalPopulation = allStates.reduce((sum, s) => sum + s.population, 0);
 
-  // P6d: per-state demographic groups so displayed approval matches the
+  // P6d: per-state census electorate so displayed approval matches the
   // electorate-weighted value the snapshot stores.
-  const [demographics, gameStateDoc] = await Promise.all([
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .find({ _id: { $in: stateIds }, countryId }, { projection: { _id: 1, groups: 1 } })
-      .toArray(),
-    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+  const [groupsByState, gameStateDoc] = await Promise.all([
+    loadElectorateGroups(db, { _id: { $in: stateIds }, countryId }),
+    gameStateCollection(db).findOne({ _id: "current" }),
   ]);
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
   // Live year for era-aware scoring; null while the flag is off (legacy path).
-  const year = gameStateDoc?.eraSystemEnabled ? resolveGameYear(gameStateDoc) : null;
-  const groupsByState = new Map(demographics.map((d) => [d._id, Object.values(d.groups ?? {})]));
+  const year = gameStateDoc ? resolveGameYear(gameStateDoc) : null;
 
   const categories = categoryFilter
     ? [categoryFilter]
@@ -279,8 +278,7 @@ export async function loadNationalMetrics(
     const state = stateMap.get(metrics._id);
     if (!state) continue;
     const flat = buildFlatMetrics(metrics);
-    const groups = groupsByState.get(metrics._id);
-    const weighting = groups && groups.length > 0 ? { groups } : undefined;
+    const weighting = weightingFor(groupsByState, countryId, String(metrics._id));
     const baseOverride = isPoliticalApprovalCountry(countryId, true)
       ? (politicalBases?.byRegion.get(metrics._id) ?? BASE_APPROVAL)
       : undefined;

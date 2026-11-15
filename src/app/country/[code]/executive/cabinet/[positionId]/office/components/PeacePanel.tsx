@@ -85,12 +85,9 @@ export interface PeaceWar {
 /**
  * Sue for peace, and answer offers made to us.
  *
- * Lives on the foreign seat's OVERVIEW tab, deliberately not the "Foreign Relations"
- * tab: that tab is gated to US/UK/JP by `FOREIGN_POSITION_IDS`, so putting peace
- * behind it would make the feature unreachable for every other country that has a
- * foreign minister.
- *
- * Spec: docs/superpowers/specs/2026-08-04-suing-for-peace-design.md
+ * Lives on the OVERVIEW tab, not "Foreign Relations": that tab is gated to
+ * US/UK/JP by `FOREIGN_POSITION_IDS`, so peace there would be unreachable for
+ * every other country with a foreign minister.
  */
 /**
  * What an offer is asking for, as one clause appended to who is offering.
@@ -154,13 +151,9 @@ function offerDirectionText(o: OfferView, resolveCountryName: (id: CountryId) =>
 }
 
 /**
- * What accepting THIS offer would actually do to the war, named for the reader.
- *
- * The panel used to state flatly that "the fighting continues for everyone else",
- * which is only sometimes true and was plainly wrong in the shape that prompted this:
- * a side of one, facing a side whose principal takes its treaty ally out with it.
- * EITHER departure ends that war, and a player reading the old line would have
- * expected the survivors to fight on.
+ * What accepting THIS offer would do to the war, named for the reader.
+ * EITHER departure can end that war, so do not claim the fighting continues
+ * for everyone else: survivors may not fight on.
  */
 function departureConsequence(
   leaverName: string,

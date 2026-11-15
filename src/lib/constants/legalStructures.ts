@@ -56,6 +56,8 @@ export type LegalStructureId =
   | "ng_plc"
   | "ng_ltd"
   | "ng_ulc"
+  | "ca_corp"
+  | "ca_private_corp"
   | "generic_corp";
 
 /**
@@ -353,5 +355,29 @@ export const LEGAL_STRUCTURES: LegalStructure[] = [
     minimumDividendRate: 0.25,
     description:
       "Nigeria's most flexible structure. Pass-through taxation with mandatory profit distribution.",
+  },
+  // ── Canada ────────────────────────────────────────────────────────────────
+  {
+    id: "ca_corp",
+    countryId: "CA",
+    name: "Corporation",
+    shortName: "Corp",
+    isDefault: true,
+    taxTreatment: "standard",
+    shareholderVoteThreshold: 0.45,
+    description:
+      "A listed Canadian corporation under federal or provincial corporate law. Standard company taxation with balanced shareholder oversight.",
+  },
+  {
+    id: "ca_private_corp",
+    countryId: "CA",
+    name: "Private Corporation",
+    shortName: "Private Corp",
+    isDefault: false,
+    isPrivateDefault: true,
+    taxTreatment: "standard",
+    shareholderVoteThreshold: 0.55,
+    description:
+      "A closely held Canadian corporation with a lighter reporting burden. Same company tax treatment as a listed corporation.",
   },
 ];

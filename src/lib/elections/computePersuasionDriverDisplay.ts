@@ -5,32 +5,25 @@
  * `getPersuasionDriverBreakdown`.
  *
  * Driver coverage:
- *   - **Policy alignment**: always — candidate EP/SP positions are public.
- *   - **Candidate Support**: rendered when the DTO exposes per-candidate
- *     Support (privileged viewers only per the server-side fog-of-war
- *     in `enrichElection`). Otherwise defaults to neutral → 0 row.
- *   - **Money**: rendered when `fundsByParty` is supplied. Server-side
- *     enrichment populates this from `Campaign.spendThisTurn` per-party
- *     aggregation in general phase.
- *   - **Incumbency**: rendered when `incumbentSeatShareByParty` is
- *     supplied. Server-side enrichment populates this from the prior-
- *     cycle resolved tally on the same seat key.
- *   - **Presidential / Gubernatorial Coattails**: nominal-share "%" tilt
- *     rows (not persuasion drivers), appended only when their inputs
- *     (`presidentialCoattailPctByParty` / `gubernatorialCoattailPctByParty`)
- *     are supplied. Each carries a value only for the sitting executive's
- *     party.
+ * - Policy alignment: always; candidate EP/SP positions are public.
+ * - Candidate Support: only when the DTO exposes per-candidate Support
+ *   (privileged viewers per server-side fog-of-war in `enrichElection`);
+ *   otherwise neutral -> 0 row.
+ * - Money: only when `fundsByParty` is supplied.
+ * - Incumbency: only when `incumbentSeatShareByParty` is supplied.
+ * - Presidential / Gubernatorial Coattails: nominal-share tilt rows, not
+ *   persuasion drivers; appended only when their inputs are supplied.
  *
- * Missing inputs degrade to neutral rows so the card always shows the
- * full driver framework even when not all data is plumbed yet.
+ * Missing inputs degrade to neutral rows so the card always shows the full
+ * driver framework.
  */
 
 import {
   getPersuasionDriverBreakdown,
   type PersuasionDriverComponent,
-} from "@/lib/electionEngine/persuasionDrivers";
-import { effectivePeelableFraction } from "@/lib/electionEngine/electionFormulaFactors";
-import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/electionEngine/types";
+} from "@/lib/elections/engine/persuasionDrivers";
+import { effectivePeelableFraction } from "@/lib/elections/engine/electionFormulaFactors";
+import type { DistributeVotesOptions, EnrichedCandidate } from "@/lib/elections/engine/types";
 import type { PersuasionDriver } from "@/lib/elections/generalViewModel";
 
 interface PublicCandidate {
@@ -128,7 +121,7 @@ function toEnriched(c: PublicCandidate): EnrichedCandidate {
     infamy: 0,
     partyEcon: c.partyEcon,
     partySocial: c.partySocial,
-    archetypeApprovals: {},
+    bucketApprovals: {},
     support: typeof c.support === "number" ? c.support : 50,
   };
 }
@@ -283,7 +276,7 @@ export function computePersuasionDriverDisplay(
 }
 
 /**
- * Persuadable slice of a party's vote, in percent, for display (ticket #1131).
+ * Persuadable slice of a party's vote, in percent, for display.
  *
  * The engine can only ever move `pool × transferableShare(reg) × (1 −
  * persuasionResistance(reg))` of a party's vote in one cycle, no matter how

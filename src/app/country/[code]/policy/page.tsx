@@ -32,9 +32,8 @@ export default async function PolicyPage({ params }: { params: Promise<{ code: s
     return <PolicyClient />;
   }
 
-  // The record loader returns the timeline in the engine's own point/event types;
-  // the client consumes the same JSON shape as RecordPayload (this is the exact
-  // cast that previously happened across the fetch boundary).
+  // The loader returns engine point/event types; the client consumes
+  // the same JSON shape as RecordPayload, hence the cast.
   return (
     <PolicyClient
       initialRecords={records}

@@ -6,8 +6,7 @@ import { MILITARY_COUNTRY_SCALE } from "@/lib/constants/militaryCore";
 
 /**
  * Per-country military scale for the Combat Command engine (upkeep + supply demand).
- * The single source of truth is `MILITARY_COUNTRY_SCALE`, shared with the defense-budget
- * envelope — the battle engine no longer keeps its own US-only copy.
+ * Single source of truth: `MILITARY_COUNTRY_SCALE`, shared with the defense-budget envelope.
  */
 export function countryScale(country: string): number {
   return MILITARY_COUNTRY_SCALE[country as CountryId] ?? 1;

@@ -1,14 +1,13 @@
 /**
- * Captive deliveries as sales (funded-market cutover). A plant that supplies
- * its own company's other sites books those units as internal deliveries: no
- * sale, no revenue. Every planning signal that reads sold units then sees a
- * plant that sells nothing. The demand plan cuts it to the probe run, the
- * zero-sales counter climbs, and an AI owner mothballs it after two turns,
- * which takes the input away from the sister plant it was feeding.
+ * Captive deliveries as sales for planning signals. A plant supplying its own
+ * company's other sites books internal deliveries with no sale or revenue, so
+ * every signal reading sold units sees a plant that sells nothing: the demand
+ * plan cuts it to the probe run, the zero-sales counter climbs, and an AI
+ * owner mothballs it, taking input away from the sister plant it was feeding.
  *
- * Here internal deliveries count as sold units for those signals, valued at the
- * plant's own asking price for the profit test. No money moves: this changes
- * what the plan reads, not what the settlement pays.
+ * Here internal deliveries count as sold units for those signals, valued at
+ * the plant's own asking price for the profit test. No money moves: this
+ * changes what the plan reads, not what settlement pays.
  *
  * Pure: a settled receipt in, the receipt the planning signals read out.
  */

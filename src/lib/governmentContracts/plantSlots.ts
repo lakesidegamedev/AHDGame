@@ -1,5 +1,7 @@
 /** Defence factory operations use stable owner keys and request fencing so an old request cannot unlock its resumed successor. */
 import type { Db, ObjectId } from "mongodb";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import type { Document } from "mongodb";
 export async function lockContractPlant(
   db: Db,
   sectorId: ObjectId,
@@ -7,7 +9,7 @@ export async function lockContractPlant(
   operationKey = owner,
   operationRevision?: number
 ) {
-  return db.collection("corporateSectors").findOneAndUpdate(
+  return corporateSectorsCollection<Document>(db).findOneAndUpdate(
     {
       _id: sectorId,
       $or: [
@@ -42,7 +44,7 @@ export async function releaseContractPlant(
   owner: string,
   operationKey = owner
 ) {
-  await db.collection("corporateSectors").updateOne(
+  await corporateSectorsCollection<Document>(db).updateOne(
     { _id: sectorId, contractMutationOwner: owner, contractMutationKey: operationKey },
     {
       $unset: {

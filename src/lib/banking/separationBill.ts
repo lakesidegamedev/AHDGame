@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { type BankingLawDoc, type BankingSeparationPolicy } from "@/lib/banking/separationLaw";
+import { bankingLawsCollection } from "@/lib/db/repositories/bankingLaws";
 
 /** Suffix on every reusable banking-separation legislation type id. */
 export const BANKING_SEPARATION_TYPE_SUFFIX = "_banking_separation";
@@ -45,7 +46,9 @@ export async function applySeparationBill(
     billId,
   };
 
-  await db
-    .collection<BankingLawDoc>("bankingLaws")
-    .updateOne({ _id: countryId }, { $set: doc }, { upsert: true });
+  await bankingLawsCollection<BankingLawDoc>(db).updateOne(
+    { _id: countryId },
+    { $set: doc },
+    { upsert: true }
+  );
 }

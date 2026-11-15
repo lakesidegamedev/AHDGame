@@ -5,8 +5,9 @@ import { lawChoiceEligibility } from "./rules/eligibility";
 
 describe("1991 regional service options", () => {
   it("authors five distinct local mechanisms per country without a Cabinet wallet", () => {
-    expect(regionalLawLevels).toHaveLength(1390);
-    for (const country of ["US", "UK", "JP", "IE", "SCO", "WAL"] as const) {
+    expect(regionalLawLevels.filter((row) => row.country !== "CA")).toHaveLength(1390);
+    expect(regionalLawLevels.filter((row) => row.country === "CA")).toHaveLength(230);
+    for (const country of ["US", "UK", "JP", "IE", "SCO", "WAL", "CA"] as const) {
       const rows = regionalLawLevels.filter(
         (row) => row.country === country && row.familyId === "L19"
       );
@@ -18,7 +19,12 @@ describe("1991 regional service options", () => {
       expect(
         rows.every(
           (row) =>
-            row.authorityKind === (country === "US" ? "state_statute" : "delegated_service_package")
+            row.authorityKind ===
+            (country === "CA"
+              ? "provincial_or_territorial_statute"
+              : country === "US"
+                ? "state_statute"
+                : "delegated_service_package")
         )
       ).toBe(true);
       const law = resetLawFamilyById("L19")!;
@@ -31,7 +37,7 @@ describe("1991 regional service options", () => {
   it("authors exactly five local routes for every country-eligible regional family", () => {
     expect(new Set(regionalLawLevels.map((row) => row.familyId)).size).toBe(48);
     for (const family of resetLawFamilies) {
-      for (const country of ["US", "UK", "JP", "IE", "SCO", "WAL"] as const) {
+      for (const country of ["US", "UK", "JP", "IE", "SCO", "WAL", "CA"] as const) {
         const rows = regionalLawLevels.filter(
           (row) => row.familyId === family.id && row.country === country
         );
@@ -50,7 +56,11 @@ describe("1991 regional service options", () => {
           rows.every(
             (row) =>
               row.authorityKind ===
-              (country === "US" ? "state_statute" : "delegated_service_package")
+              (country === "CA"
+                ? "provincial_or_territorial_statute"
+                : country === "US"
+                  ? "state_statute"
+                  : "delegated_service_package")
           )
         ).toBe(true);
       }

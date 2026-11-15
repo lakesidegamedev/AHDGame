@@ -6,28 +6,20 @@ import type { NormalAnchor } from "@/lib/era/metricCatalog";
 import type { WorldEntityRegion } from "@/lib/world/worldEntityManifest";
 
 /**
- * The small facts about where RU is.
+ * Geography facts for RU.
  *
- * ⚠ GENERATED FROM `__snapshots__/ru.pre-move.json`, NOT TRANSCRIBED.
- * Regenerate with:
+ * ⚠ GENERATED. Regenerate with:
  *
  *     npx tsx scripts/countries/gen-country-geography-facts.ts RU --force
  *
- * A hand-written draft of this file got six values wrong, including an
- * independent-bias of 0.06 where the registry says 2.33 and a threshold object
- * with the wrong KEYS. All six typechecked. Do not edit values here by hand.
+ * Do not edit values by hand; hand edits have produced typecheck-passing
+ * wrong values before.
  *
- * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. It is the light half of the pair;
- * `geography.ts` imports every era of census, metric and region data as values.
- * A registry that forwards to the heavy module for one string ships all of it to
- * the browser -- which shipped once already, when `countryContinents.ts` started
- * pulling 108 KB per bundle for a continent name.
+ * ⚠ KEEP THIS FILE FREE OF VALUE IMPORTS. `geography.ts` imports heavy
+ * era data; importing it here pulls it into the browser bundle.
  *
- * ⚠ THE ISO PAIR IS TWO REGISTRIES DESCRIBING ONE FACT.
- * `COUNTRY_TO_ISO_NUMERIC` maps RU to the code and
- * `ISO_NUMERIC_TO_COUNTRY` maps it back. The generator asserts they agree
- * before writing; if they ever disagree, a lookup by code and a lookup by
- * country would report different things.
+ * ⚠ `COUNTRY_TO_ISO_NUMERIC` and `ISO_NUMERIC_TO_COUNTRY` must agree;
+ * the generator asserts it.
  */
 
 export const RU_CONTINENT: Continent = "Europe";

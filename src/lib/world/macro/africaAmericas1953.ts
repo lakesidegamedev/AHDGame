@@ -1,17 +1,19 @@
 /**
- * African and American 1953 sphere-macro roster (#3721).
+ * African and American 1953 sphere-macro roster.
  *
  * GDP magnitudes use the same game units as Austria's oracle (AT = 7_500).
  * Populations: UN Demographic Yearbook / national censuses early-1950s.
- * GDP: Maddison-scale *relative* sizing vs Austria, lifted to a kernel floor
+ * GDP: Maddison-scale relative sizing vs Austria, lifted to a kernel floor
  * (~2_000+ annual game units) so commodity legs survive 0.01-unit rounding
- * after tradeExposure — strong defaults, not rails.
+ * after tradeExposure. Strong defaults, not rails.
+ *
  * All ten were sovereign market economies in 1953 (no COMECON members here).
- * Colonial dependencies (Gold Coast, Congo, Algeria, etc.) remain Tier 3 until
- * authored sovereignty transitions — do not seed here. Nigeria is Tier-1
- * full-autonomous (product decision 2026-07-25), not a macro entry.
- * Resource keys are EXTRACTABLE_RESOURCES only; copper/gold/nickel/bauxite use
- * iron or rare_earth proxies where noted.
+ * Colonial dependencies (Gold Coast, Congo, Algeria, etc.) remain Tier 3
+ * until sovereignty transitions are authored; do not seed here. Nigeria is
+ * Tier-1 full-autonomous, not a macro entry.
+ *
+ * Resource keys are EXTRACTABLE_RESOURCES only; copper/gold/nickel/bauxite
+ * use iron or rare_earth proxies where noted.
  */
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { WorldEntityId } from "@/lib/world/worldEntityManifest";

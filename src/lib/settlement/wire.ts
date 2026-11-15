@@ -1,33 +1,24 @@
 /**
  * The German Question's dispatches to World News.
  *
- * WHAT IS AND IS NOT NEWS. Every character in the world holds a personal play,
- * so posting per action would put thousands of "someone published an op-ed"
- * lines through the channel and bury everything else in it. The public appears
- * here only in aggregate — how many took a position, and which way the street
- * moved. What gets its own post is the handful of moments that change what the
- * question IS: it opened, it reached the brink, it went to war, it settled.
+ * Every character holds a personal play, so per-action posts would bury the
+ * channel; the public appears only in aggregate. Only moments that change what
+ * the question IS get their own post: it opened, reached the brink, went to
+ * war, settled.
  *
- * ONE EMITTER. Every post is made from the turn phase, never from the command
- * that caused it, and every one is stamped on the crisis document before it can
- * be made again. Emitting from `armLadder` or `declareWar` would put a network
- * call on a player's request path and would fire again on a retry; emitting
- * from the tick means a post reflects a board that has actually ticked, and the
- * stamp makes each moment post exactly once.
+ * ONE EMITTER: every post is made from the turn phase, never from the command
+ * that caused it, and each is stamped on the crisis document so it fires once.
+ * Emitting from `armLadder`/`declareWar` would put a network call on a player
+ * request path and refire on retry.
  *
- * Failure is non-fatal by construction — `sendNewsEvent` swallows its own
- * errors, and `postSettlementWire` catches around the news post as well. A
- * Discord outage must never stop a turn.
+ * Failure is non-fatal: `sendNewsEvent` swallows its own errors and
+ * `postSettlementWire` catches around the post, so a Discord outage never
+ * stops a turn.
  *
- * HOUSE STYLE. Modelled on the Vietnam Desk dispatches the bot already files:
- * a short narrative title, two sentences of prose that carry no digits, a few
- * terse labelled fields for the figures, and a NAMED DESK in the footer rather
- * than the product name. Bonn Desk is this crisis's byline.
- *
- * Copy rules this file follows (they are project-wide): no calendar years and
- * no "current rate" phrasing, because the same text has to read correctly in
- * every era; and no anchor-unit figures, because those are not a player-facing
- * currency. The briefings deal in index points only, so neither can arise.
+ * Copy rules: no calendar years, no "current rate" phrasing (text must read in
+ * every era), and no anchor-unit figures (index points only). House style: a
+ * short narrative title, two sentences of digit-free prose, terse labelled
+ * fields, and a named desk in the footer (Bonn Desk).
  */
 import type { Db, Filter } from "mongodb";
 import type { SettlementCrisisDoc } from "@/lib/db/types/settlementCrisis";

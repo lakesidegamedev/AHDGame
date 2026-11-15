@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
 import type { Db } from "mongodb";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 export type ContractIssuanceSettings = Pick<
   GameConfig,
@@ -15,12 +16,10 @@ export type ProspectingSettings = Pick<
 /** Read the prospecting gate and funded-cash switch from one config row. */
 export async function loadProspectingSettings(db?: Db): Promise<ProspectingSettings> {
   const database = db ?? (await getDb());
-  const config = await database
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { prospectingEnabled: 1, treasuryCashLedgerEnabled: 1 } }
-    );
+  const config = await gameConfigCollection(database).findOne(
+    { _id: "default" },
+    { projection: { prospectingEnabled: 1, treasuryCashLedgerEnabled: 1 } }
+  );
   return {
     prospectingEnabled: config?.prospectingEnabled === true,
     treasuryCashLedgerEnabled: config?.treasuryCashLedgerEnabled === true,
@@ -30,12 +29,10 @@ export async function loadProspectingSettings(db?: Db): Promise<ProspectingSetti
 /** Read the route gate and funded-cash switch together from one config row. */
 export async function loadContractIssuanceSettings(db?: Db): Promise<ContractIssuanceSettings> {
   const database = db ?? (await getDb());
-  const config = await database
-    .collection<GameConfig>("gameConfig")
-    .findOne(
-      { _id: "default" },
-      { projection: { contractIssuanceEnabled: 1, treasuryCashLedgerEnabled: 1 } }
-    );
+  const config = await gameConfigCollection(database).findOne(
+    { _id: "default" },
+    { projection: { contractIssuanceEnabled: 1, treasuryCashLedgerEnabled: 1 } }
+  );
   return {
     contractIssuanceEnabled: config?.contractIssuanceEnabled === true,
     treasuryCashLedgerEnabled: config?.treasuryCashLedgerEnabled === true,
@@ -58,9 +55,10 @@ export async function isProspectingEnabled(
 ): Promise<boolean> {
   if (preloadedConfig !== undefined) return preloadedConfig?.prospectingEnabled === true;
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { prospectingEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { prospectingEnabled: 1 } }
+  );
   return config?.prospectingEnabled === true;
 }
 
@@ -73,8 +71,9 @@ export async function isContractIssuanceEnabled(
 ): Promise<boolean> {
   if (preloadedConfig !== undefined) return preloadedConfig?.contractIssuanceEnabled === true;
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { contractIssuanceEnabled: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { contractIssuanceEnabled: 1 } }
+  );
   return config?.contractIssuanceEnabled === true;
 }

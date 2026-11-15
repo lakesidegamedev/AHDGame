@@ -19,6 +19,7 @@ import { CN_IDENTITY } from "@/lib/countries/cn/identity";
 import { IE_IDENTITY } from "@/lib/countries/ie/identity";
 import { NG_IDENTITY } from "@/lib/countries/ng/identity";
 import { BR_IDENTITY } from "@/lib/countries/br/identity";
+import { CA_IDENTITY } from "@/lib/countries/ca/identity";
 
 export interface EconomyIdentity {
   /** Watermark / chop glyph (经 / US / …). */
@@ -46,6 +47,7 @@ export const ECONOMY_TEXT: Partial<Record<CountryId, Omit<EconomyIdentity, "acce
   DE: DE_IDENTITY.economyText,
   JP: JP_IDENTITY.economyText,
   IE: IE_IDENTITY.economyText,
+  CA: CA_IDENTITY.economyText,
   BR: BR_IDENTITY.economyText,
   NG: NG_IDENTITY.economyText,
 };

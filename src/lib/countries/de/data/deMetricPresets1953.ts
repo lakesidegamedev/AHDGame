@@ -82,16 +82,7 @@ const NATIONAL_1953: Record<string, number> = {
   "population.demographicDecline": 10, // baby boom; expellee integration
   "mediaInformation.stateMediaControl": 30, // ARD public broadcasting dominant
 
-  // #income-gdp-scale-audit / birthRate-audit: this overlay previously had NO
-  // "population." category at all, so DE's modern deStateMetrics.ts values
-  // (medianAge ~44-48, no birthRate field) fed straight into
-  // applyEra1953Adjustments (seedDE.ts), whose shift-based pass-through pulls
-  // an unauthored birthRate toward ~49-51 — a 2019-replacement-level TFR
-  // silently imposed on a 1950s baby-boom country. Statistisches Bundesamt /
-  // UN Demographic Yearbook 1950-55: West Germany's real 1953 TFR ≈2.1 and
-  // median age ≈35 (war losses thinned the male mid-cohort but the
-  // population was not especially young). birthRateIndexToTFR(52, 2.06) =
-  // 2.06*(0.4+0.52*1.2) = 2.13.
+  // Without an authored birthRate, applyEra1953Adjustments pulls it toward ~49-51, silently imposing a 2019-replacement-level TFR on a 1950s baby-boom country. West Germany's real 1953 TFR ≈2.1, median age ≈35.
   "population.medianAge": 35,
   "population.birthRate": 52,
   "population.urbanizationRate": 70, // Destatis 1950 — West Germany already densely urban/industrial

@@ -11,12 +11,12 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_ANCHOR_COUNTRY } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { IndexFund } from "@/lib/db/types/indexFund";
 import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export type UnclaimedFundReason = "sponsor_missing" | "corporate_holder_missing" | "holder_missing";
 
@@ -56,12 +56,10 @@ export async function escheatUnclaimedFundCash(
   if (!(amountLocal > 0)) return null;
 
   const bankId = getBankId(countryId);
-  await db
-    .collection<CentralBank>("centralBanks")
-    .updateOne(
-      { _id: bankId },
-      { $inc: { reserveBalance: amountLocal }, $set: { updatedAt: now } }
-    );
+  await centralBanksCollection(db).updateOne(
+    { _id: bankId },
+    { $inc: { reserveBalance: amountLocal }, $set: { updatedAt: now } }
+  );
 
   await emitTx(db, {
     type: "corp_dissolution_distribution",

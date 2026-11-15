@@ -5,7 +5,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { partyDonateSchema } from "@/lib/api/schemas/settings";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
-import type { PoliticalParty, Character } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
@@ -25,6 +25,8 @@ import {
   runMoneyFlowSteps,
   type MoneyFlowLegOutcome,
 } from "@/lib/db/nonAtomicMoneyFlow";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -78,7 +80,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Check authorization: must be a member of this party
     const [character, forexEnabled] = await Promise.all([
-      db.collection<Character>("characters").findOne({ _id: authUser.character._id }),
+      charactersCollection(db).findOne({ _id: authUser.character._id }),
       isForexEnabled(),
     ]);
 
@@ -108,8 +110,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const flowKey = headerKey ?? randomUUID();
     const fingerprint = `${authUser.character._id.toHexString()}:${party._id.toHexString()}:${amount}:${campaignFundsField}`;
-    const characters = db.collection<Character>("characters");
-    const parties = db.collection<PoliticalParty>("politicalParties");
+    const characters = charactersCollection(db);
+    const parties = politicalPartiesCollection(db);
     const receipts = await getMoneyFlowReceiptsCollection(db);
     const previousReceipt = headerKey ? await receipts.findOne({ _id: flowKey }) : null;
     if (previousReceipt && previousReceipt.fingerprint !== fingerprint) {

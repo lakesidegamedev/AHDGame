@@ -4,6 +4,8 @@ import { getVietnamEscalation } from "@/lib/crises/vietnamEscalation";
 import type { Crisis, CrisisInteraction } from "@/lib/db/types/crisis";
 import { emptyConflictState } from "./engine";
 import { loadConflictState, saveConflictState } from "./driver";
+import { crisesCollection } from "@/lib/db/repositories/crises";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 
 /** Import an already-running legacy ladder before the 1.3 driver touches it. */
 export async function migrateLegacyVietnamState(db: Db): Promise<boolean> {
@@ -45,8 +47,7 @@ export async function livingVietnamAsLegacyState(db: Db): Promise<VietnamEscalat
  * legacy rung; the combat front itself remains and is driven by the new state.
  */
 export async function retireLegacyVietnamCrises(db: Db): Promise<number> {
-  const legacy = await db
-    .collection<Crisis>("crises")
+  const legacy = await crisesCollection(db)
     .find({
       status: "active",
       livingConflictEventId: { $exists: false },
@@ -60,13 +61,11 @@ export async function retireLegacyVietnamCrises(db: Db): Promise<number> {
   if (legacy.length === 0) return 0;
   const ids = legacy.map((row) => row._id);
   const now = new Date();
-  await db
-    .collection<Crisis>("crises")
-    .updateMany(
-      { _id: { $in: ids } },
-      { $set: { status: "resolved", resolvedAt: now, endTurn: null } }
-    );
-  await db.collection<CrisisInteraction>("crisisInteractions").updateMany(
+  await crisesCollection(db).updateMany(
+    { _id: { $in: ids } },
+    { $set: { status: "resolved", resolvedAt: now, endTurn: null } }
+  );
+  await crisisInteractionsCollection(db).updateMany(
     { crisisId: { $in: ids }, resolvedAt: null },
     {
       $set: {

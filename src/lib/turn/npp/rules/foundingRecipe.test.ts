@@ -146,3 +146,29 @@ describe("recipePeakShortageScore", () => {
     ).toBe(1);
   });
 });
+
+describe("chooseFoundingRecipe with a retired standard recipe", () => {
+  const energy = SECTOR_STRATEGIES.energy;
+  const retiredStandard = (r: { id: string }) => r.id !== "standard";
+
+  it("never builds the retired standard, even when nothing is short", () => {
+    const picked = chooseFoundingRecipe({
+      recipes: energy,
+      countryId: "US",
+      priceRatioOf: prices({}),
+      isAvailable: retiredStandard,
+    });
+    expect(picked).toBeDefined();
+    expect(picked).not.toBe("standard");
+  });
+
+  it("builds the best-scoring open recipe without the shortage bar", () => {
+    const picked = chooseFoundingRecipe({
+      recipes: energy,
+      countryId: "US",
+      priceRatioOf: prices({ electronics: 0.5, rare_earth: 0.5 }),
+      isAvailable: (r) => r.id === "renewables" || r.id === "nuclear",
+    });
+    expect(picked).toBe("renewables");
+  });
+});

@@ -84,9 +84,7 @@ export function countHu1991TerritorialList(
     remainder.set(row.partyId, BigInt(row.votes) * divisor - BigInt(count) * total);
   }
   if (unfilledSeats < 0) {
-    // Exact quota multiples can claim seats+1 simultaneous quota tickets.
-    // Bound the final tied ticket by list serial, as in the statute's serial
-    // tie rule. This explicit boundary convention cannot overfill a county.
+    // Exact quota multiples can claim seats+1 simultaneous quota tickets. Bound the final tied ticket by list serial, as in the statute's serial tie rule. This explicit boundary convention cannot overfill a county.
     const last = [...lists]
       .filter((row) => partySeats[row.partyId] > 0)
       .sort((a, b) => b.ballotOrder - a.ballotOrder)[0];

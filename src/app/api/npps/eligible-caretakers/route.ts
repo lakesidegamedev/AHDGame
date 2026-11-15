@@ -12,9 +12,12 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Corporation, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import type { UnifiedCabinetMember } from "@/lib/db/types/unifiedCabinetMember";
 import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { cabinetMembersCollection } from "@/lib/db/repositories/cabinetMembers";
 
 export async function GET(request: Request) {
   try {
@@ -36,13 +39,11 @@ export async function GET(request: Request) {
 
     // NPPs already committed elsewhere: cabinet seats + corp CEOs in this country.
     const [seated, ceoCorps] = await Promise.all([
-      db
-        .collection<UnifiedCabinetMember>("cabinetMembers")
+      cabinetMembersCollection<UnifiedCabinetMember>(db)
         .find({ isNPP: true })
         .project<{ nppId?: NPP["_id"] }>({ nppId: 1 })
         .toArray(),
-      db
-        .collection<Corporation>("corporations")
+      corporationsCollection(db)
         .find({ ceoType: "npp" })
         .project<{ ceoId?: NPP["_id"] }>({ ceoId: 1 })
         .toArray(),
@@ -52,8 +53,7 @@ export async function GET(request: Request) {
       ...ceoCorps.map((c) => c.ceoId?.toString()).filter((x): x is string => !!x),
     ]);
 
-    const npps = await db
-      .collection<NPP>("npps")
+    const npps = await nppsCollection(db)
       .find({ countryId, retiredAt: null })
       .project<{ _id: NPP["_id"]; name: string; party: string; politicalInfluence?: number }>({
         _id: 1,

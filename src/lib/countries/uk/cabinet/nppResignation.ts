@@ -1,23 +1,23 @@
 /**
- * NPP caretaker-minister resignation shell (epic #856, ticket #859).
+ * NPP caretaker-minister resignation shell.
  *
- * The decision is pure (`./rules/nppResignation.ts`); this module loads the
- * seat, vacates it, and records the flat `ministerResigned` confidence hit —
+ * Decision logic is pure in `./rules/nppResignation.ts`; this module loads the
+ * seat, vacates it, and records the flat `ministerResigned` confidence hit:
  * heavier for a Great Office of State, matching the player-resignation flow.
- * UK-only, like every other confidence-gauge writer: the gauge persists on
- * the `ukGovernment` singleton and has no meaning elsewhere.
+ * UK-only: the confidence gauge persists on the `ukGovernment` singleton.
  */
 
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GovernmentApproval } from "@/lib/db/types";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
-import { GREAT_OFFICE_POSITION_IDS } from "@/lib/uk/confidence/confidenceGauge";
-import { applyConfidenceEventToGov } from "@/lib/uk/confidence/confidenceGaugeStore";
+import { GREAT_OFFICE_POSITION_IDS } from "@/lib/countries/uk/confidence/confidenceGauge";
+import { applyConfidenceEventToGov } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
 import {
   shouldNppMinisterResign,
   type NppResignationInput,
-} from "@/lib/uk/cabinet/rules/nppResignation";
+} from "@/lib/countries/uk/cabinet/rules/nppResignation";
+import { governmentApprovalsCollection } from "@/lib/db/repositories/governmentApprovals";
 
 export interface NppCaretakerResignationArgs {
   countryId: CountryId;
@@ -64,8 +64,6 @@ export async function resignNppCaretakerMinister(
 
 /** Read the latest aggregate approval for the resignation rule (UK hook). */
 export async function readApprovalForResignation(db: Db, countryId: CountryId): Promise<number> {
-  const doc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ _id: countryId });
+  const doc = await governmentApprovalsCollection(db).findOne({ _id: countryId });
   return typeof doc?.approvalRating === "number" ? doc.approvalRating : 50;
 }

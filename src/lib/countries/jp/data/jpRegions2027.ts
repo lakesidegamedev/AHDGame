@@ -1,31 +1,15 @@
 /**
- * SEED INDEPENDENCE - DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's region data. All values are authored for 2027 directly.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
+ * Every era seed is self-contained and authored directly for its year.
  * Type-only imports are allowed.
  *
- * Japan regions for the 2027-default preset (post-2024 Shugiin, post-2025
- * Sangiin; LDP plurality, no lower-house majority).
+ * Japan regions for the 2027-default preset.
  *
- * Base: the 2023 bundle values, projected forward 2023 to 2027.
- * Projection assumptions (documented, not computed):
- * - National population follows the Statistics Bureau 2025 census
- *   preliminary: 123.05 million on Oct 1 2025, down 3.10 million (2.5 pct)
- *   from 2020, with only Tokyo and Okinawa growing. Rural game regions
- *   (Tohoku, Shikoku, Chugoku, Hokkaido) lose 3 to 5 pct; Kanto is held
- *   flat by Tokyo in-migration plus record foreign residents.
- *   Source: https://www.stat.go.jp/english/data/jinsui/
- *   Preliminary 2025 census via MIC release May 2026.
- * - Regional GDP is nominal JPY millions, roughly 6 pct above the 2023
- *   bundle (national nominal GDP growth 2023 to 2026). Rounded.
- * - Shugiin apportionment is the 465-seat distribution (289 SMD plus
- *   176 PR across 11 blocs) confirmed by the Dec 2022 reallocation and
- *   first applied at the Oct 27 2024 general election. Game-region seat
- *   counts are held at the 2023 bundle values; the reallocation kept the
- *   465 total and moved only a few SMDs between prefectures.
- *   Results portal: https://www.soumu.go.jp/senkyo/
- * - `stateSenateSeats` (prefectural-assembly seats) is structural and held
- *   constant.
+ * Population, GDP and seat counts are projected forward from the 2023 bundle
+ * using documented assumptions (national census trend, nominal GDP growth,
+ * 465-seat Shugiin apportionment). stateSenateSeats is structural and held
+ * constant. Per-region figures above reflect those assumptions, not computed
+ * outputs.
  */
 import type { State } from "@/lib/db/types";
 

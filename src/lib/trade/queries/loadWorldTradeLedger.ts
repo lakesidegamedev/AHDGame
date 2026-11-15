@@ -4,11 +4,11 @@ import { loadCountryPresentationOverrides } from "@/lib/country/countryIdentity"
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import { shapeWorldTradeLedger, type WorldTradeLedger } from "./worldTradeLedger";
+import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSnapshots";
 
 /** Load the latest trade-flow snapshot and shape it for the ledger surface. */
 export async function loadWorldTradeLedger(db: Db): Promise<WorldTradeLedger | null> {
-  const snap = await db
-    .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
+  const snap = await tradeFlowSnapshotsCollection(db)
     .find({}, { sort: { turn: -1 }, limit: 1 })
     .next();
   if (!snap) return null;

@@ -2,21 +2,10 @@ import type { StateMetrics } from "@/lib/db/types";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";
 
 /**
- * East Germany region initial metrics — 1953 (the nascent GDR).
- *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA. Authored for ~1953 directly,
- * NOT transformed from ddStateMetrics.ts (the 1979 file).
- *
- * Keyed to the same eastern-Laender codes as the 1979 bundle (BEO/MV/BB/ST/SN/TH)
- * — matching ddRegions1953.ts and ddRegionCensusData1953.ts.
- *
- * Context vs 1979: post-war reconstruction under the first Five-Year Plan, Soviet
- * reparations still draining industry, rationing (until 1958), the June 17 1953
- * workers' uprising (very low public trust), and peak Republikflucht (~330k left
- * for the West in 1953 → sharp population decline). Incomes roughly half the 1979
- * level, education reform (1952) brand-new, lower urbanisation, lignite pollution
- * present but below the 1979 industrial peak. `medianIncome` is annual household
- * income in Mark der DDR.
+ * East Germany region metrics, 1953 (nascent GDR).
+ * Authored directly for 1953, not derived from the 1979 file.
+ * Uses the same eastern-Laender codes as the 1953 regions and census data.
+ * `medianIncome` is annual household income in Mark der DDR.
  */
 function mv(value: number, trend?: number) {
   return trend !== undefined ? { value, trend } : { value };
@@ -105,35 +94,14 @@ const BASELINE: Omit<StateMetrics, "_id" | "lastUpdated"> = {
     coDeterminationQuality: mv(40),
   },
   population: {
-    // Republikflucht, averaged over the era rather than frozen at its 1953 peak.
-    //
-    // -1.8 is the correct PEAK (~330k left in 1953), but `migrationRate` and
-    // `populationGrowth` are static root metrics that no node decays — so a
-    // seeded peak runs unchanged for the life of the world. Over a 1000-turn
-    // 1953 world (which reaches 1973) that models two full decades of peak
-    // emigration, when the Berlin Wall in fact closed the border in August 1961.
-    //
-    // Left at -1.8 the effect is not cosmetic: it shrinks DD's labour force
-    // ~2.6%/yr, which drives the Solow labour term to -1.73pp and DD's potential
-    // growth to -1.21%/yr. DD was the only country in the world to CONTRACT over
-    // the run (-13.1%) purely because of this, while its sectors grew normally.
-    //
-    // -0.55 is roughly the 1953-1973 average: heavy outflow until 1961, then
-    // near-zero. Once a dated-event mechanism exists this should become
-    // -1.8 pre-1961 stepping to ~0 after, which is the honest shape.
+    // Republikflucht averaged over 1953-1973. migrationRate is a static
+    // root metric with no decay, so a seeded peak (-1.8, ~330k/yr in 1953)
+    // would run unchanged until 1973 and shrink DD's labour force ~2.6%/yr.
+    // -0.55 reflects heavy outflow until the 1961 border closure, then near-zero.
     populationGrowth: mv(-0.55),
     urbanizationRate: mv(64), // below the 1979 level
     medianAge: mv(35),
-    // 0-100 fertility INDEX (population.birthRate; metricDefinitions
-    // `unit: "index"`), NOT a crude per-1000 rate — see BIRTH_RATE_1953's doc
-    // comment in reference/stateMetrics1953.ts for the full mechanism. This
-    // field was previously ABSENT, so DD fell through seedCohortVectors'
-    // DEFAULT_BIRTH_RATE = 50 (2019-replacement-level TFR 2.06) in a 1953
-    // postwar-recovery country whose real TFR was ~2.4 (UN Demographic
-    // Yearbook, East Germany). birthRateIndexToTFR(64, 2.06) = 2.06*(0.4 +
-    // 0.64*1.2) = 2.44. Set below the bloc's ~2.5-2.6 average to reflect DD's
-    // war losses, Republikflucht outmigration of working-age adults, and the
-    // authored medianAge of 35 (older than the bloc baseline of 27).
+    // 0-100 fertility INDEX (metricDefinitions `unit: "index"`), NOT a crude per-1000 rate , see BIRTH_RATE_1953's doc comment in reference/stateMetrics1953.ts. Set below the bloc's ~2.5-2.6 average to reflect DD's war losses, Republikflucht outmigration of working-age adults, and the authored medianAge of 35 (older than the bloc baseline of 27).
     birthRate: mv(64),
     migrationRate: mv(-0.55),
   },

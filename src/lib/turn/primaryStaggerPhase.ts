@@ -1,36 +1,24 @@
 /**
- * Presidential primary stagger phase.
- *
- * During the final 6 turns of a presidential primary, states vote in waves
- * modeled on the real 2020 calendar (see `primaryCalendar.ts`). Each turn
- * inside the window unlocks one more wave, and missed turns catch up every
- * outstanding wave in-order on the next successful pass.
- *
- * For every party running in the primary, the wave's states accumulate
- * intra-party votes (filtered to that party's candidates), delegates are
- * allocated per the state party chair's choice (or family default), and
- * momentum fav bumps are applied to wave winners.
- *
- * Called from `primaryResolution.ts` before the existing primary-end check.
+ * Primary stagger phase: during the final 6 turns of a presidential primary,
+ * one wave of states unlocks per turn; missed turns catch up all outstanding
+ * waves in order on the next pass. Each party accumulates intra-party votes
+ * per wave, allocates delegates per the state chair, and applies momentum bumps
+ * to wave winners. Invoked from `primaryResolution.ts` before the primary-end
+ * check.
  */
 
 import { primaryWinMomentumFromTally } from "@/lib/elections/primaryRegional/rules";
 import { loadPrimaryFieldOffices } from "@/lib/elections/primaryRegional/fieldOffices";
-import { turnoutForElection, usesCampaignAds } from "@/lib/campaignTargeting/rules";
+import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
-import { loadDemographicCategories } from "@/lib/demographics/categoryCatalog";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type {
-  Character,
   CharacterStateOrg,
-  DemographicCategory,
   Election,
   ElectionCandidate,
   ElectionVoteTally,
-  NPP,
   PoliticalParty,
-  State,
   StateDemographics,
   StatePartyOrg,
   StateDemographicTurnout,
@@ -49,18 +37,17 @@ import {
   presidentialRulesetFor,
   type PresidentialRuleset,
 } from "@/lib/elections/presidentialRuleset";
-import { initPresidentVoteTally } from "@/lib/presidentialElectionEngine";
-import { fetchEnrichedCandidates } from "@/lib/electionEngine/candidateEnrichment";
+import { initPresidentVoteTally } from "@/lib/elections/presidential/presidentialElectionEngine";
+import { fetchEnrichedCandidates } from "@/lib/elections/engine/candidateEnrichment";
 import { loadLiveStateActions } from "@/lib/elections/primaryStateActions";
-import { distributeVotesByGroupLevelAllocation } from "@/lib/electionEngine/voteDistribution";
-import { supportMoodMultiplier } from "@/lib/electionEngine/electionFormulaFactors";
-import { resolveTurnout } from "@/lib/electionEngine/resolvedTurnout";
+import { distributeVotesByGroupLevelAllocation } from "@/lib/elections/engine/voteDistribution";
+import { supportMoodMultiplier } from "@/lib/elections/engine/electionFormulaFactors";
 import { buildGranularElectorateSubstrate } from "@/lib/demographics/granularElectorate";
 import { eraYearContextFromGameState } from "@/lib/era/context";
 import {
   applyPrimaryTurnoutRetention,
   computeTurnoutPoolFromRates,
-  shiftDemographicsForPrimary,
+  shiftElectorateForPrimary,
 } from "@/lib/campaigns/shiftPrimaryElectorate";
 import {
   PRIMARY_CAMPAIGN_STAGGER_TICK_RATE,
@@ -70,7 +57,7 @@ import {
   PRIMARY_MOMENTUM_WIN_BONUS,
   PRIMARY_MOMENTUM_UPSET_BONUS,
   NPP_STAGGER_EXTRA_MULTIPLIER,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 import type { CountryId } from "@/lib/constants/countries";
 
 /**
@@ -84,6 +71,22 @@ import { allocateDelegates, type AllocationMethod } from "@/lib/primaryDelegateA
 import { projectPrimaryByState } from "@/lib/primaryProjection";
 import { logger } from "../observability/logger";
 import { emitPrimaryTierWire } from "@/lib/elections/raceWireEmit";
+import { getPoliticalPartiesCollection } from "@/lib/db/collections/politicalParties";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getElectionsCollection } from "@/lib/db/collections/elections";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
+import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
+import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
+import { characterStateOrgCollection } from "@/lib/db/repositories/characterStateOrg";
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -119,20 +122,16 @@ function clampTo(value: number, lo: number, hi: number): number {
 }
 
 /**
- * Expectation-beating momentum, concept #2 (the vote-share carry).
+ * Vote-share momentum: a candidate that beats its projected national share in
+ * a wave accumulates decayed points that multiply its vote in LATER waves.
  *
- * Two distinct "momentum" ideas live in this file and must not be conflated:
- *   1. Favorability-bump momentum — the PRIMARY_MOMENTUM_WIN_BONUS /
- *      PRIMARY_MOMENTUM_UPSET_BONUS fav points applied to the wave winner's
- *      character/npp. Orthogonal, untouched by this subsystem.
- *   2. Vote-share momentum (this) — a candidate that beats its projected
- *      national share in a wave accumulates decayed points that multiply its
- *      vote in LATER waves.
+ * Distinct from favorability-bump momentum (PRIMARY_MOMENTUM_WIN_BONUS /
+ * PRIMARY_MOMENTUM_UPSET_BONUS), which applies fav points to the wave winner
+ * and is untouched by this subsystem. Do not conflate the two.
  *
- * `momentumMultiplier` maps a candidate's carried momentum points into a vote
- * multiplier for the current wave. At cap 0 (the ship value) it returns exactly
- * 1, so the vote path is byte-identical to the no-momentum engine until the cap
- * is calibrated at t384.
+ * `momentumMultiplier` maps carried momentum points into a vote multiplier for
+ * the current wave. At cap 0 it returns exactly 1, so the vote path is
+ * byte-identical to the no-momentum engine.
  */
 export function momentumMultiplier(priorPoints: number, cap: number): number {
   if (cap <= 0) return 1;
@@ -216,40 +215,29 @@ export async function runPrimaryStaggerWaveIfDue(
 
   // Active preset drives per-state delegate rescaling (delegates track each
   // state's EV weight, which is 1990-census in a 1991 game).
-  const gsForDelegates = await db
-    .collection<{
-      _id: string;
-      preset?: string;
-      currentYear?: number;
-      currentTurn?: number;
-      startingYear?: number;
-      eraSystemEnabled?: boolean;
-      granularElectorateEnabled?: boolean;
-    }>("gameState")
-    .findOne({ _id: "current" });
+  const gsForDelegates = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    currentYear?: number;
+    currentTurn?: number;
+    startingYear?: number;
+  }>(db).findOne({ _id: "current" });
   const delegatePreset = gsForDelegates?.preset;
-  // Live era clock (null while `eraSystemEnabled` is off — legacy behavior).
   const eraYear = eraYearContextFromGameState(gsForDelegates);
-  // Campaign rules require cells for paid ads. Older races retain the admin gate.
 
   // Bootstrapping the tally at stagger start is load-bearing: wave history,
   // per-state primary votes, and delegates all persist on electionVoteTallies.
   // Without this, primaries can enter the calendar window with no tally doc and
   // silently skip every state because the stagger phase has nowhere to record them.
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find({ electionId: election._id, status: "active" })
     .toArray();
   if (candidates.length === 0) return null;
 
-  let tally = await db
-    .collection<ElectionVoteTally>("electionVoteTallies")
-    .findOne({ electionId: election._id });
+  let tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
   if (!tally) {
     await initPresidentVoteTally(election._id, candidates, undefined, db);
-    tally = await db
-      .collection<ElectionVoteTally>("electionVoteTallies")
-      .findOne({ electionId: election._id });
+    tally = await electionVoteTalliesCollection(db).findOne({ electionId: election._id });
     if (!tally) return null;
   }
 
@@ -312,8 +300,9 @@ export async function runPrimaryStaggerWaveIfDue(
   const uniquePartyIds = [...new Set(candidates.map((c) => c.party))];
   // Candidates store `party` as the sequentialId stringified (per codebase convention).
   const partyNumericIds = uniquePartyIds.map((s) => Number(s)).filter((n) => !isNaN(n));
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await (
+    await getPoliticalPartiesCollection(db)
+  )
     .find({
       countryId: election.countryId,
       sequentialId: { $in: partyNumericIds },
@@ -325,22 +314,15 @@ export async function runPrimaryStaggerWaveIfDue(
   }
 
   const waveStates = wave.states;
-  const [categories, states, demographics, partyOrgs, turnoutDocs] = await Promise.all([
-    loadDemographicCategories(db),
-    db
-      .collection<State>("states")
+  const [states, demographics, partyOrgs, turnoutDocs] = await Promise.all([
+    (await getStatesCollection(db)).find({ _id: { $in: waveStates } }).toArray(),
+    stateDemographicsCollection(db)
       .find({ _id: { $in: waveStates } })
       .toArray(),
-    db
-      .collection<StateDemographics>("stateDemographics")
-      .find({ _id: { $in: waveStates } })
-      .toArray(),
-    db
-      .collection<StatePartyOrg>("statePartyOrg")
+    statePartyOrgCollection(db)
       .find({ stateId: { $in: waveStates } })
       .toArray(),
-    db
-      .collection<StateDemographicTurnout>("stateDemographicTurnout")
+    stateDemographicTurnoutCollection(db)
       .find({ _id: { $in: waveStates } })
       .toArray(),
   ]);
@@ -363,21 +345,14 @@ export async function runPrimaryStaggerWaveIfDue(
     includePartyPositions: true,
     countryId: (election.countryId ?? "US") as CountryId,
   });
-  const granularElectorateEnabled =
-    usesCampaignAds(election, enriched) || gsForDelegates?.granularElectorateEnabled === true;
-
   // Seeded snapshots for the granular substrate's legislation lean-drift fold.
-  // Only fetched when the flag is on so the legacy path pays no extra read.
-  const demographicDefaultsByState = granularElectorateEnabled
-    ? new Map(
-        (
-          await db
-            .collection<StateDemographics>("demographicDefaults")
-            .find({ _id: { $in: waveStates } })
-            .toArray()
-        ).map((d) => [d._id as string, d])
-      )
-    : undefined;
+  const demographicDefaultsByState = new Map(
+    (
+      await demographicDefaultsCollection(db)
+        .find({ _id: { $in: waveStates } })
+        .toArray()
+    ).map((d) => [d._id as string, d])
+  );
   const partyOrgByStateParty = new Map<string, StatePartyOrg>();
   for (const po of partyOrgs) {
     partyOrgByStateParty.set(`${po.stateId}_${po.partyId}`, po);
@@ -392,15 +367,13 @@ export async function runPrimaryStaggerWaveIfDue(
   // Pre-wave per-state candidate meta (home state, campaigning state, ticks) —
   // resolved from the raw candidate + character/npp docs for the projection call.
   const [characters, npps] = await Promise.all([
-    db
-      .collection<Character>("characters")
+    (await getCharactersCollection(db))
       .find({
         _id: { $in: candidates.filter((candidate) => !candidate.isNPP).map((c) => c.characterId) },
       })
       .project({ _id: 1, homeState: 1 })
       .toArray(),
-    db
-      .collection<NPP>("npps")
+    (await getNppsCollection(db))
       .find({
         _id: {
           $in: candidates
@@ -444,8 +417,7 @@ export async function runPrimaryStaggerWaveIfDue(
     .filter((c) => !c.isNPP && c.characterId)
     .map((c) => c.characterId);
   const stateOrgRows = characterIdsForStateOrg.length
-    ? await db
-        .collection<CharacterStateOrg>("characterStateOrg")
+    ? await characterStateOrgCollection(db)
         .find({
           characterId: { $in: characterIdsForStateOrg },
           stateId: { $in: waveStates },
@@ -520,16 +492,14 @@ export async function runPrimaryStaggerWaveIfDue(
       // night, and a momentum penalty for "missing" an expectation that never
       // accounted for the attack. One purchase, one effect.
       // Paid ad advantages belong in expectations too, so they are not upsets.
-      campaignContext: usesCampaignAds(election, enriched)
-        ? {
-            campaignRulesVersion: election.campaignRulesVersion ?? 0,
-            currentTurn,
-            preset: delegatePreset,
-            ...eraYear,
-            turnoutByState: turnoutMap,
-            defaultsByState: demographicDefaultsByState ?? new Map(),
-          }
-        : undefined,
+      campaignContext: {
+        campaignRulesVersion: election.campaignRulesVersion ?? 0,
+        currentTurn,
+        preset: delegatePreset,
+        ...eraYear,
+        turnoutByState: turnoutMap,
+        defaultsByState: demographicDefaultsByState ?? new Map(),
+      },
       stateActions: liveStateActions,
       currentTurn,
       candidates: partyCandidates,
@@ -537,7 +507,6 @@ export async function runPrimaryStaggerWaveIfDue(
       stateIds: waveStates,
       stateMap,
       demographicsMap,
-      categories,
       statePartyOrgs: orgMap,
       partyPosition: {
         economicPosition: party?.economicPosition ?? 0,
@@ -571,12 +540,10 @@ export async function runPrimaryStaggerWaveIfDue(
     Record<string, AllocationMethod>
   > = structuredCloneOr(tally.primaryAllocationByState ?? {});
 
-  // Vote-share momentum carried INTO this wave (accumulated from prior waves).
-  // Read-only here; the new accumulated value is computed after the wave votes.
+  // Vote-share momentum carried INTO this wave from prior waves.
+  // Read-only here; new accumulated value computed after the wave votes.
   // partyId -> candidateId -> points.
-  // Win momentum: states won in earlier waves boost a candidate's vote in this
-  // one (moderate, decayed, capped; see primaryRegional/rules.ts). Read from
-  // the tally before this wave's results are merged in.
+  // Win momentum from the tally before this wave's results merge in.
   const winMomentum = primaryWinMomentumFromTally(tally);
 
   const priorMomentum: Record<string, Record<string, number>> = momentumEnabled
@@ -638,74 +605,44 @@ export async function runPrimaryStaggerWaveIfDue(
       const rawDemographicsDoc = demographicsMap.get(stateId);
       if (!state || !rawDemographicsDoc) continue;
 
-      // Primary electorate: resolve GOTV/Layer-1 turnouts on the GENERAL
-      // demographics first, then apply the same directional-alignment retention
-      // `projectPrimaryByState` uses via `shiftDemographicsForPrimary`.
-      //
-      // Critical ordering: US `resolveTurnout` rebuilds archetype rates from
-      // Layer-1 census baselines and ignores any turnout already written onto
-      // demographics.groups. If we shift first and then pass those Layer-1
-      // liveTurnouts into distribution, the primary electorate is wiped and
-      // every state can flip vs projection (general-electorate winners vs
-      // primary-base winners). Retention must land on the live map itself.
-      const { byGroup: generalTurnouts } = resolveTurnout(
-        state.population,
-        rawDemographicsDoc,
-        categories,
-        turnoutForElection(turnoutMap.get(stateId), election),
-        { preset: delegatePreset, year: eraYear.year, startingYear: eraYear.startingYear }
-      );
-
-      // Granular-cell electorate substrate (granularElectorateEnabled) — swap
-      // the archetype substrate for Layer-1 cells BEFORE the primary
-      // retention/shift steps: those helpers are generic over group ids, so
-      // the directional-alignment retention applies to cells unchanged. Null
-      // substrate (no Layer-1 census) → legacy path. Flag OFF: eff* variables
-      // are the legacy values — byte-identical behavior.
-      let effBaseDemographics = rawDemographicsDoc;
-      let effCategories = categories;
-      let effGeneralTurnouts = generalTurnouts;
-      let effPartyCandidates = partyCandidates;
-      if (granularElectorateEnabled) {
-        const substrate = buildGranularElectorateSubstrate({
-          campaignRulesVersion: election.campaignRulesVersion,
-          currentTurn: currentTurn,
-          countryId: (election.countryId ?? "US") as CountryId,
-          stateId,
-          preset: delegatePreset,
-          year: eraYear.year,
-          startingYear: eraYear.startingYear,
-          turnoutDoc: turnoutForElection(turnoutMap.get(stateId), election),
-          statePopulation: state.population,
-          demographics: rawDemographicsDoc,
-          categories,
-          liveTurnouts: generalTurnouts,
-          enriched: partyCandidates,
-          demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
-        });
-        if (substrate) {
-          effBaseDemographics = substrate.demographics;
-          effCategories = substrate.categories;
-          effGeneralTurnouts = substrate.liveTurnouts;
-          effPartyCandidates = substrate.enriched;
-        }
+      // Primary electorate: the census cells carry the live turnouts. Retention
+      // must land on that live map itself: shifting the electorate first and
+      // then passing the cell turnouts into distribution would wipe the
+      // primary electorate and flip states against the projection.
+      const substrate = buildGranularElectorateSubstrate({
+        campaignRulesVersion: election.campaignRulesVersion,
+        currentTurn: currentTurn,
+        countryId: (election.countryId ?? "US") as CountryId,
+        stateId,
+        preset: delegatePreset,
+        year: eraYear.year,
+        startingYear: eraYear.startingYear,
+        turnoutDoc: turnoutForElection(turnoutMap.get(stateId), election),
+        statePopulation: state.population,
+        demographics: rawDemographicsDoc,
+        enriched: partyCandidates,
+        demographicDefaults: demographicDefaultsByState?.get(stateId) ?? null,
+      });
+      if (!substrate) {
+        throw new Error(`No census electorate for ${election.countryId ?? "US"} region ${stateId}`);
       }
+      const effBaseElectorate = substrate.electorate;
+      const effGeneralTurnouts = substrate.liveTurnouts;
+      const effPartyCandidates = substrate.enriched;
 
       const liveTurnouts = applyPrimaryTurnoutRetention(
         effGeneralTurnouts,
-        effBaseDemographics,
+        effBaseElectorate,
         partyPosition
       );
       const resolvedTotalPool = computeTurnoutPoolFromRates(
         state.population,
-        effBaseDemographics,
-        effCategories,
+        effBaseElectorate,
         liveTurnouts
       );
       // Ideology leans are unchanged by the primary shift — only turnout is.
-      // Keep a shifted demographics doc for any path that reads group.turnout
-      // directly (and for symmetry with projection / polls).
-      const demographicsDoc = shiftDemographicsForPrimary(effBaseDemographics, partyPosition);
+      // Shifted units keep the unit turnout consistent with projection / polls.
+      const primaryElectorate = shiftElectorateForPrimary(effBaseElectorate, partyPosition);
       // Each state votes once in its wave using a party-primary share of the
       // general-turnout pool. No time-based weighting — earlier waves and
       // later waves are equally weighted within their own state's population.
@@ -727,8 +664,7 @@ export async function runPrimaryStaggerWaveIfDue(
         turnPool,
         resolvedTotalPool,
         state.population,
-        demographicsDoc,
-        effCategories,
+        primaryElectorate,
         partyOrgForState,
         {
           // Intra-party primary: averaging the (shared) party position into
@@ -825,11 +761,9 @@ export async function runPrimaryStaggerWaveIfDue(
         );
       }
 
-      // Rally support now counts in the primary too. Previously only the
-      // general election read supportMoodMultiplier (voteDistribution.ts), so a
-      // whole primary season of rallies / rally-tour moved zero votes. Mirror
-      // the general's mood application here: support 50 → 1.0×, ranging
-      // 0.6×–1.4× at the extremes. Undefined support degrades to 1.0×.
+      // Rally support applies in primaries too: mirror the general election's
+      // mood multiplier (support 50 maps to 1.0x, 0.6x to 1.4x at extremes).
+      // Undefined support degrades to 1.0x.
       for (const ec of partyCandidates) {
         const rawCandidate = candidates.find((c) => c._id.toString() === ec.candidateId);
         const mood = supportMoodMultiplier(rawCandidate?.support);
@@ -977,7 +911,7 @@ export async function runPrimaryStaggerWaveIfDue(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("characters").bulkWrite(ops);
+    await charactersCollection(db).bulkWrite(ops);
   }
   if (nppMomentumMap.size > 0) {
     const ops = [...nppMomentumMap.entries()].map(([id, amount]) => ({
@@ -986,7 +920,7 @@ export async function runPrimaryStaggerWaveIfDue(
         update: buildClampedFavorabilityUpdate(amount),
       },
     }));
-    await db.collection("npps").bulkWrite(ops);
+    await nppsCollection<Document>(db).bulkWrite(ops);
   }
 
   // ── Vote-share momentum accumulation (stretched races only) ────────────────
@@ -1049,7 +983,7 @@ export async function runPrimaryStaggerWaveIfDue(
   // also double-pushing (and vice versa). Momentum ($set primaryMomentum +
   // $push primaryMomentumByWave) rides the same single write so the carry and
   // the wave counter can never diverge.
-  await db.collection<ElectionVoteTally>("electionVoteTallies").updateOne(
+  await electionVoteTalliesCollection(db).updateOne(
     { electionId: election._id },
     {
       $set: {
@@ -1121,8 +1055,9 @@ export async function processPrimaryStaggerWaves(
   // pre-filter on primaryEndTime would drift against the game clock across
   // pauses and could wrongly exclude an in-window primary — the in-memory
   // check in runPrimaryStaggerWaveIfDue is the source of truth.
-  const presElections = await db
-    .collection<Election>("elections")
+  const presElections = await (
+    await getElectionsCollection(db)
+  )
     .find({
       ...(onlyElectionIds ? { _id: { $in: onlyElectionIds } } : {}),
       status: "active",

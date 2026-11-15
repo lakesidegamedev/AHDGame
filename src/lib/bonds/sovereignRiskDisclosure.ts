@@ -3,9 +3,9 @@
  * issuer ratings, crisis state and last default in one projected budget query.
  */
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
 import { getNationalBudgetId } from "./sovereign";
 import type { CountryId } from "@/lib/constants/countries";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface SovereignRiskDisclosure {
   creditRating: string | null;
@@ -16,8 +16,7 @@ export interface SovereignRiskDisclosure {
 export async function loadSovereignRiskDisclosures(db: Db, countryIds: CountryId[]) {
   const ids = [...new Set(countryIds)];
   if (ids.length === 0) return new Map<string, SovereignRiskDisclosure>();
-  const budgets = await db
-    .collection<FederalBudget>("federalBudget")
+  const budgets = await federalBudgetCollection(db)
     .find(
       { _id: { $in: ids.map(getNationalBudgetId) } },
       { projection: { creditRating: 1, sovereignCrisisState: 1, lastDefaultTurn: 1 } }

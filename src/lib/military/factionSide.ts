@@ -31,18 +31,14 @@ const MIX_TO_TYPE: Record<
  * The token force a faction defends its own country with.
  *
  * A proxy war's sides are factions, not member countries, so they own no
- * `militaryUnits` rows — and a defending side with no units is a WALKOVER: the
- * offensive rolls forward unopposed, every turn, and the host is conquered by the
- * first bloc that bothers to declare. This mints the defence in memory so the live
- * `resolvePvpBattle` path has something to fight.
+ * `militaryUnits` rows; a defending side with no units is a walkover. This
+ * mints defence in memory so the live `resolvePvpBattle` path has something to
+ * fight. Deterministic: same conflict and `tokenStrength` always produce the
+ * same force, so battles are reproducible and forecasts match outcomes.
  *
- * Deterministic by construction — no RNG. The same conflict and the same
- * `tokenStrength` always produce the same force, so a battle is reproducible and a
- * forecast cannot disagree with the outcome it predicts.
- *
- * Nothing here is ever persisted: see `battleResolution`'s `persistSide` skip. The
- * faction has no country row to write casualties back to, and its losses are taken
- * off `tokenStrength` on the conflict instead.
+ * Never persisted (see `battleResolution`'s `persistSide` skip): the faction
+ * has no country row for casualties, so losses come off `tokenStrength` on the
+ * conflict.
  */
 export function buildFactionSide(
   conflict: Pick<ConflictDoc, "_id" | "sideA" | "sideB" | "enemyMix">,

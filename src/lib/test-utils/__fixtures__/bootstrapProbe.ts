@@ -22,7 +22,7 @@ import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
  * The database the current probe is writing to.
  *
  * Some seed-path code reaches for `getDb()` rather than taking the `db`
- * argument - `isLayer1PositionsEnabled` is one - so the caller's
+ * argument - `loadEraFullOverride` is one - so the caller's
  * `vi.mock("@/lib/mongodb")` factory reads this to hand back the same in-memory
  * instance. Without it those calls escape to whatever `MONGODB_URI` names.
  *
@@ -55,12 +55,20 @@ export interface BootstrapProbeResult {
  * swallowed failures would report a healthy world that never built.
  */
 export async function probeBootstrap(preset: string): Promise<BootstrapProbeResult> {
-  const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
+  const { bootstrapGameWorld, stampInitialGameClock } =
+    await import("@/lib/admin/bootstrapGameWorld");
 
   const memory = createInMemoryDb();
   const db = memory as unknown as Db;
   probeDb = db;
   const log: string[] = [];
+
+  // Match the fresh-world CLI contract: reference seeders read the clock before
+  // bootstrap's later idempotent initialization. A missing clock prices 2027
+  // laws and grants as an unspecified era.
+  const { initializeGameState } = await import("@/lib/turnSystem");
+  await initializeGameState();
+  await stampInitialGameClock(db, preset);
 
   const started = Date.now();
   await bootstrapGameWorld({ db, preset, log: (msg: string) => log.push(msg) });

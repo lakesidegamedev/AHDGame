@@ -1,7 +1,7 @@
 /**
  * Relocating a private corporation into a fully command economy is founding
  * private enterprise there by another route, so it is refused until the
- * country's marketization dial opens private enterprise (ticket 1378).
+ * country's marketization dial opens private enterprise.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  SURPRISE_CASE_HEARING_DELAY_TURNS,
   SURPRISE_CASE_SPAWN_PROBABILITY_PER_TURN,
   rollSurpriseCaseSpawn,
+  surpriseCaseHearingDelayTurns,
 } from "./surpriseCaseSpawn";
 
 describe("rollSurpriseCaseSpawn", () => {
@@ -30,5 +32,13 @@ describe("rollSurpriseCaseSpawn", () => {
   it("is deterministic for the same inputs", () => {
     const results = Array.from({ length: 10 }, () => rollSurpriseCaseSpawn(0.001));
     expect(new Set(results).size).toBe(1);
+  });
+
+  it("draws the hearing delay across the table and never outside it", () => {
+    const { min, max } = SURPRISE_CASE_HEARING_DELAY_TURNS;
+    expect(surpriseCaseHearingDelayTurns(0)).toBe(min);
+    expect(surpriseCaseHearingDelayTurns(0.9999999)).toBe(max);
+    expect(surpriseCaseHearingDelayTurns(1)).toBe(max);
+    expect(min).toBeGreaterThan(0);
   });
 });

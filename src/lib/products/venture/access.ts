@@ -7,12 +7,14 @@ import { getGameState } from "@/lib/gameState";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
-import type { Corporation, CorporateSector, GameConfig } from "@/lib/db/types";
-import { PRODUCT_VENTURES } from "./store";
+import type { Corporation } from "@/lib/db/types";
 import type { ProductVenture, VentureDomain } from "./types";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { productVenturesCollection } from "@/lib/db/repositories/productVentures";
 
 export async function ventureDomainsEnabled(db: Db): Promise<Record<VentureDomain, boolean>> {
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
+  const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     {
       projection: { marketSystemMode: 1, productLinesV2Enabled: 1, mediaProductSlatesEnabled: 1 },
@@ -27,12 +29,8 @@ export async function ventureDomainsEnabled(db: Db): Promise<Record<VentureDomai
 
 export async function loadVentureContext(db: Db, corporation: Corporation) {
   const [sectors, ventures, fxByCurrency, turn, gameState, enabled] = await Promise.all([
-    db
-      .collection<CorporateSector>("corporateSectors")
-      .find({ corporationId: corporation._id })
-      .toArray(),
-    db
-      .collection<ProductVenture>(PRODUCT_VENTURES)
+    corporateSectorsCollection(db).find({ corporationId: corporation._id }).toArray(),
+    productVenturesCollection<ProductVenture>(db)
       .find({ corporationId: corporation._id.toString() })
       .sort({ startedTurn: -1 })
       .limit(40)
@@ -44,7 +42,7 @@ export async function loadVentureContext(db: Db, corporation: Corporation) {
   ]);
   const eligibility = {
     currentYear: gameState?.currentYear,
-    techTreesEnabled: gameState?.sectorTechTreesEnabled === true,
+    techTreesEnabled: true,
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };

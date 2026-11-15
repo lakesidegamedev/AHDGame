@@ -14,7 +14,11 @@ import type {
 } from "@/lib/db/types";
 import { getUkCommonsSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
 
 interface RegionDiagnostic {
   region: string;
@@ -38,8 +42,7 @@ export async function GET() {
     const commonsSeats = getUkCommonsSeats(await getGameStatePreset(db));
 
     // Find most recent resolved commons elections per UK region
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: "commons",
         countryId: "UK",
@@ -65,8 +68,7 @@ export async function GET() {
     }
 
     // Get current electedOfficials for UK Commons
-    const currentOfficials = await db
-      .collection<ElectedOfficial>("electedOfficials")
+    const currentOfficials = await electedOfficialsCollection(db)
       .find({
         officeType: "commons",
         countryId: "UK",
@@ -141,8 +143,7 @@ export async function POST() {
     const now = new Date();
 
     // Find most recent resolved commons elections per UK region
-    const recentElections = await db
-      .collection<Election>("elections")
+    const recentElections = await electionsCollection(db)
       .find({
         electionType: "commons",
         countryId: "UK",
@@ -170,12 +171,10 @@ export async function POST() {
     const electionIds = Array.from(latestByRegion.values()).map((e) => e._id);
 
     const [tallies, candidates] = await Promise.all([
-      db
-        .collection<ElectionVoteTally>("electionVoteTallies")
+      electionVoteTalliesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
-      db
-        .collection<ElectionCandidate>("electionCandidates")
+      electionCandidatesCollection(db)
         .find({ electionId: { $in: electionIds } })
         .toArray(),
     ]);
@@ -190,7 +189,7 @@ export async function POST() {
     }
 
     // Delete all existing UK Commons electedOfficials
-    const deleteResult = await db.collection<ElectedOfficial>("electedOfficials").deleteMany({
+    const deleteResult = await electedOfficialsCollection(db).deleteMany({
       officeType: "commons",
       countryId: "UK",
     });
@@ -257,7 +256,7 @@ export async function POST() {
     }
 
     if (toInsert.length > 0) {
-      await db.collection<ElectedOfficial>("electedOfficials").insertMany(toInsert);
+      await electedOfficialsCollection(db).insertMany(toInsert);
     }
 
     return NextResponse.json({

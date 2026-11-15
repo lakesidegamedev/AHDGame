@@ -1,36 +1,33 @@
 // AHD-951: orphan `party:null seatsHeld>0` electedOfficials blocs.
 //
-// When a multi-seat winner (commons/bundestag/seanad) moved from a previous
-// office to a new seat, generalResolution vacated the OLD bloc by nulling the
-// holder identity (party/characterId/nppId) but left `seatsHeld` intact. The
-// seat tallies skip null-party rows, so those seats silently vanished from the
-// party — the Conservatives' 14 NEE UK-commons seats reported as "vacant".
+// When a multi-seat winner moved from a previous office to a new seat,
+// generalResolution vacated the OLD bloc by nulling the holder identity but
+// left `seatsHeld` intact. Seat tallies skip null-party rows, so those seats
+// silently vanished from the party.
 //
 // Half A (code): $unset seatsHeld on vacate, stopping new orphans.
-// Half B (this heal): delete the existing phantom blocs. Vacancy is represented
-// by row ABSENCE in this codebase — true vacancies delete rows rather than
-// leaving null placeholders — so deletion is the correct repair, and the next
+// Half B (this heal): delete the existing phantom blocs. Vacancy is row
+// ABSENCE in this codebase, so deletion is the correct repair and the next
 // election re-contests the seats.
 //
-// UK Commons is the exception. A mid-term Commons vacancy is a durable doc in
-// `ukCommonsVacancies` whose `officialId` points at the tombstoned bloc row it
-// was vacated from: the vacancy shell keeps that row as its anchor (holder
-// fields cleared, seatsHeld intact, because `seats`/`seatsHeld` size the
-// by-election) and `special_commons` seats its winners in new rows. Deleting an
-// anchored row strands a live by-election and drops the seats it contests, so
-// every row a vacancy points at is excluded here, whatever the vacancy's
-// status — a filled or subsumed vacancy still explains its anchor. The anchor
-// set is re-read inside apply(), so a row that gains a vacancy after planning
-// is never deleted.
+// UK Commons is an exception: a mid-term vacancy is a durable doc in
+// `ukCommonsVacancies` whose `officialId` anchors a tombstoned bloc row
+// (holder fields cleared, seatsHeld intact, because the row sizes the
+// by-election) and `special_commons` seats winners in new rows. Deleting an
+// anchored row strands a live by-election, so every row a vacancy points at
+// is excluded here, whatever its status. The anchor set is re-read inside
+// apply(), so a row that gains a vacancy after planning is never deleted.
 //
-// Ported from scripts/heal-orphan-null-party-seats.ts, which stays as the
-// standalone escape hatch. The office-type allowlist is deliberate: a
-// null-party row on any OTHER office type may be a legitimate non-party seat,
-// so those are reported and left alone rather than swept up.
+// The office-type allowlist is deliberate: a null-party row on any OTHER
+// office type may be a legitimate non-party seat, so those are reported and
+// left alone.
 
 import type { Db } from "mongodb";
 import { MULTI_SEAT_BLOC_OFFICE_TYPES } from "@/lib/elections/vacatedBlocSeats";
 import type { Defect, DetectResult, HealPlan, HealResult, VerifyResult } from "../types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { ukCommonsVacanciesCollection } from "@/lib/db/repositories/ukCommonsVacancies";
+import type { Document } from "mongodb";
 
 /** Office types where a null-party bloc can only be the vacate bug. */
 const HEALED_OFFICE_TYPES: string[] = [...MULTI_SEAT_BLOC_OFFICE_TYPES];
@@ -46,7 +43,6 @@ const ORPHAN_SHAPE = {
 const HEAL_FILTER = { ...ORPHAN_SHAPE, officeType: { $in: HEALED_OFFICE_TYPES } };
 
 const OFFICIALS = "electedOfficials";
-const VACANCIES = "ukCommonsVacancies";
 
 interface OrphanRow {
   _id: unknown;
@@ -69,16 +65,14 @@ interface OrphanScan {
  */
 async function findVacancyAnchoredIds(db: Db, ids: unknown[]): Promise<Set<string>> {
   if (ids.length === 0) return new Set();
-  const docs = await db
-    .collection<{ officialId?: unknown }>(VACANCIES)
+  const docs = await ukCommonsVacanciesCollection<{ officialId?: unknown }>(db)
     .find({ officialId: { $in: ids } }, { projection: { officialId: 1 } })
     .toArray();
   return new Set(docs.map((doc) => String(doc.officialId)));
 }
 
 async function scanOrphans(db: Db): Promise<OrphanScan> {
-  const candidates = await db
-    .collection<OrphanRow>(OFFICIALS)
+  const candidates = await electedOfficialsCollection<OrphanRow>(db)
     .find(HEAL_FILTER, { projection: { countryId: 1, officeType: 1, state: 1, seatsHeld: 1 } })
     .toArray();
   const anchoredIds = await findVacancyAnchoredIds(
@@ -90,9 +84,10 @@ async function scanOrphans(db: Db): Promise<OrphanScan> {
 }
 
 async function countFlagged(db: Db): Promise<number> {
-  return db
-    .collection(OFFICIALS)
-    .countDocuments({ ...ORPHAN_SHAPE, officeType: { $nin: HEALED_OFFICE_TYPES } });
+  return electedOfficialsCollection<Document>(db).countDocuments({
+    ...ORPHAN_SHAPE,
+    officeType: { $nin: HEALED_OFFICE_TYPES },
+  });
 }
 
 async function detect(db: Db): Promise<DetectResult> {
@@ -149,9 +144,10 @@ async function apply(db: Db, healPlan: HealPlan): Promise<HealResult> {
   const approved = new Set(ids);
   const toDelete = orphans.map((row) => row._id).filter((id) => approved.has(String(id)));
 
-  const res = await db
-    .collection(OFFICIALS)
-    .deleteMany({ ...HEAL_FILTER, _id: { $in: toDelete } } as Record<string, unknown>);
+  const res = await electedOfficialsCollection<Document>(db).deleteMany({
+    ...HEAL_FILTER,
+    _id: { $in: toDelete },
+  } as Record<string, unknown>);
 
   return {
     documentsScanned: orphans.length,
@@ -184,26 +180,18 @@ export const defect: Defect = {
   id: "AHD-951",
   title: "Orphan null-party electedOfficials blocs hold phantom seats",
   severity: "P1",
-  // b6e272979 "clear seatsHeld when vacating multi-seat blocs to stop
-  // party:null orphans" (PR #3135). generalResolution now $unsets seatsHeld on
-  // the vacated bloc instead of leaving the count behind. The gate refuses to
-  // heal any env whose deployed build predates it, because that build would
-  // recreate the orphans on the next resolution.
+  // The gate refuses to heal envs deployed before the seatsHeld-unset fix,
+  // because those builds recreate the party:null orphans on next resolution.
   codeFix: {
     issue: 951,
     pr: 3135,
     mergedTo: "master",
-    // The fix (b6e2729, 2026-07-12) predates this repository's public history,
-    // which begins at the "Initial public release" snapshot; the snapshot
-    // carries the fix in full, so it is the commit the code gate can find.
+    // The fix predates this repository's public history; the "Initial public
+    // release" snapshot carries it, so the gate pins the snapshot.
     requiredCommit: "8972afb65990046691e36f44f88f94b0a3c0a4cf",
   },
-  // Checked 2026-08-08. The roster seeder allocates seatsHeld proportionally
-  // across default parties, so every seeded row carries a party, and "vacant"
-  // is expressed by leaving the chamber empty rather than by writing a
-  // holder-less row (priors mode seeds no incumbents at all). A seed therefore
-  // cannot emit `party:null seatsHeld>0`; this shape only comes from the
-  // runtime vacate path.
+  // Seeders stamp every row with a party; vacancy is row absence, not a null-party row.
+  // `party:null seatsHeld>0` only comes from the runtime vacate path.
   seedFix: {
     status: "not-needed",
     files: ["src/lib/admin/seed/seedEconTierRosters.ts", "src/lib/admin/seed/seedUK.ts"],

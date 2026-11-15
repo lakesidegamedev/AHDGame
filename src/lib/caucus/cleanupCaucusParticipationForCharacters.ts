@@ -1,5 +1,11 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CaucusChairCandidate, CaucusMembership } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import type { Document } from "mongodb";
+import { caucusChairVotesCollection } from "@/lib/db/repositories/caucusChairVotes";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
+import { caucusChairCandidatesCollection } from "@/lib/db/repositories/caucusChairCandidates";
 
 interface CleanupOptions {
   caucusId?: ObjectId;
@@ -43,21 +49,19 @@ export async function cleanupCaucusParticipationForCharacters(
   const membershipStatus = options.membershipStatus ?? "removed";
   const scopedCaucusFilter = options.caucusId ? { caucusId: options.caucusId } : {};
 
-  const candidateRes = await db
-    .collection<CaucusChairCandidate>("caucusChairCandidates")
-    .updateMany(
-      {
-        characterId: { $in: characterIds },
-        status: "active",
-        ...scopedCaucusFilter,
+  const candidateRes = await caucusChairCandidatesCollection(db).updateMany(
+    {
+      characterId: { $in: characterIds },
+      status: "active",
+      ...scopedCaucusFilter,
+    },
+    {
+      $set: {
+        status: "withdrawn",
+        withdrawnAt: now,
       },
-      {
-        $set: {
-          status: "withdrawn",
-          withdrawnAt: now,
-        },
-      }
-    );
+    }
+  );
 
   const voteFilter = options.caucusId
     ? {
@@ -67,13 +71,12 @@ export async function cleanupCaucusParticipationForCharacters(
     : {
         $or: [{ voterId: { $in: characterIds } }, { candidateId: { $in: characterIds } }],
       };
-  const voteRes = await db.collection("caucusChairVotes").deleteMany(voteFilter);
+  const voteRes = await caucusChairVotesCollection<Document>(db).deleteMany(voteFilter);
 
   let membershipsClosed = 0;
   let factionIdsCleared = 0;
   if (options.removeMembership) {
-    const memberships = await db
-      .collection<CaucusMembership>("caucusMemberships")
+    const memberships = await caucusMembershipsCollection(db)
       .find({
         memberType: "character",
         memberId: { $in: characterIds },
@@ -90,7 +93,7 @@ export async function cleanupCaucusParticipationForCharacters(
         (id) => memberships.find((membership) => membership.caucusId.toString() === id)!.caucusId
       );
 
-      const membershipRes = await db.collection<CaucusMembership>("caucusMemberships").updateMany(
+      const membershipRes = await caucusMembershipsCollection(db).updateMany(
         { _id: { $in: membershipIds } },
         {
           $set: {
@@ -102,7 +105,7 @@ export async function cleanupCaucusParticipationForCharacters(
       );
       membershipsClosed = membershipRes.modifiedCount;
 
-      const factionRes = await db.collection("characters").updateMany(
+      const factionRes = await charactersCollection(db).updateMany(
         {
           _id: { $in: characterIds },
           factionId: { $in: caucusIds },
@@ -118,7 +121,7 @@ export async function cleanupCaucusParticipationForCharacters(
     }
   }
 
-  const chairRes = await db.collection("caucuses").updateMany(
+  const chairRes = await caucusesCollection<Document>(db).updateMany(
     { chairId: { $in: characterIds }, ...(options.caucusId ? { _id: options.caucusId } : {}) },
     {
       $set: {
@@ -127,7 +130,7 @@ export async function cleanupCaucusParticipationForCharacters(
       },
     }
   );
-  const viceChairRes = await db.collection("caucuses").updateMany(
+  const viceChairRes = await caucusesCollection<Document>(db).updateMany(
     { viceChairId: { $in: characterIds }, ...(options.caucusId ? { _id: options.caucusId } : {}) },
     {
       $set: {

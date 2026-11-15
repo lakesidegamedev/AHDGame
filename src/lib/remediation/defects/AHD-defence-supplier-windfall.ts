@@ -1,7 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { applyMoneyMove } from "@/lib/banking/moneyMove";
 import type { Corporation } from "@/lib/db/types";
-import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -11,6 +10,11 @@ import type {
   HealResult,
   VerifyResult,
 } from "../types";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 export const DEFECT_ID = "AHD-defence-supplier-windfall";
 
@@ -149,13 +153,12 @@ function contractEvidenceMatches(contracts: ContractEvidence[]): boolean {
 async function survey(db: Db): Promise<Survey> {
   const corporationId = new ObjectId(CORPORATION_ID);
   const [corporation, budget, contracts, gameState] = await Promise.all([
-    db.collection<CorporationEvidence>("corporations").findOne({ _id: corporationId }),
-    db.collection<BudgetEvidence>("federalBudget").findOne({ countryId: COUNTRY_ID }),
-    db
-      .collection<ContractEvidence>("defenceContracts")
+    corporationsCollection<CorporationEvidence>(db).findOne({ _id: corporationId }),
+    federalBudgetCollection<BudgetEvidence>(db).findOne({ countryId: COUNTRY_ID }),
+    defenceContractsCollection<ContractEvidence>(db)
       .find({ _id: { $in: SOURCE_CONTRACT_IDS.map((id) => new ObjectId(id)) } })
       .toArray(),
-    db.collection<{ currentTurn?: number }>("gameState").findOne({}),
+    gameStateCollection<{ currentTurn?: number }>(db).findOne({}),
   ]);
   return {
     corporation,
@@ -308,7 +311,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   let contractsMarked = 0;
   for (const contractId of SOURCE_CONTRACT_IDS) {
-    const result = await db.collection<ContractEvidence>("defenceContracts").updateOne(
+    const result = await defenceContractsCollection<ContractEvidence>(db).updateOne(
       { _id: new ObjectId(contractId), [`${MARKER_PATH}.runId`]: { $ne: ctx.runId ?? null } },
       {
         $set: {
@@ -367,8 +370,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
     thresholds
   );
   const inserted = ctx.runId
-    ? await db
-        .collection<FinancialTxLogEntry>("financialTxLog")
+    ? await financialTxLogCollection(db)
         .find({ type: "admin_transfer", "meta.runId": ctx.runId }, { projection: { _id: 1 } })
         .toArray()
     : [];

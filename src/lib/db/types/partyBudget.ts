@@ -40,7 +40,7 @@ interface PartyBudgetBase {
   orgBuildingPercent: number;
   /**
    * Percentage (0-25) of hourly revenue allocated to a voter-registration drive
-   * each turn (player suggestion #81). Mirrors `gotvBudgetPercent`; converts to a
+   * each turn. Mirrors `gotvBudgetPercent`; converts to a
    * small, bounded per-state `StatePartyOrg.registration` boost drawn from the
    * state's non-party pool. Optional so legacy rows treat undefined as 0.
    */

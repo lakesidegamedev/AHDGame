@@ -11,21 +11,18 @@
  * - researchTelemetry: country-turn and securities research rows, read by the
  *   research export only.
  * - gameHealthSnapshot: `gameHealthSnapshots`, read by admin health pages and
- *   sim metrics. Economic vital signs used to read its inflation block; it now
- *   reads the national budgets directly.
+ *   sim metrics.
  * - portfolioSnapshot, corpPortfolioSnapshot: portfolio history, read by
  *   portfolio pages, recaps and the post-turn suspect scan.
  * - investorRankingSnapshot: the investor ranking page only.
+ * - countryBriefs: `countryBriefs`, wire events and news posts, read by country
+ *   pages and the wire ticker; its own `briefMemory` on the macro document is
+ *   read by nothing else.
  *
- * Phases that look like reporting but stay inside the lock, because game logic
- * reads their output: approvalSnapshot (live approval, war exhaustion),
- * metricHistory (auto-crisis triggers and the vote model read the history),
- * interestRateSnapshot (forex, inflation and banking read the rate history),
- * primarySnapshots (accrues primary ballots), resetMetricRefresh (authoritative
- * v2 metrics), moneySupplySnapshot (next turn's inflation), the shadow ledger
- * pair (needs a world no player can write to), economicVitalSigns (the
- * financial crisis trigger), and stockExchangeSnapshot and wealthListSnapshot
- * (vital signs reads both for the same turn).
+ * Phases that look like reporting but stay inside the lock because game logic
+ * reads their output: approvalSnapshot, metricHistory, interestRateSnapshot,
+ * primarySnapshots, resetMetricRefresh, moneySupplySnapshot, the shadow ledger
+ * pair, economicVitalSigns, stockExchangeSnapshot and wealthListSnapshot.
  */
 import { resolveLongHorizonContext } from "@/lib/telemetry/longHorizon/telemetry";
 import { appendCountryTurnTelemetry } from "@/lib/telemetry/research/countryTurn";
@@ -37,6 +34,7 @@ import {
 } from "@/lib/turn/portfolioSnapshot";
 import { generateInvestorRankingSnapshot } from "@/lib/turn/stockExchangeSnapshot";
 import { processGameHealthSnapshot } from "@/lib/turn/gameHealthSnapshot";
+import { processCountryBriefs } from "@/lib/country/background/countryBriefs";
 import type { PostLockReportingStep } from "@/simulation/engine/postLockReporting";
 
 export const postLockReportingSteps: readonly PostLockReportingStep[] = [
@@ -100,6 +98,16 @@ export const postLockReportingSteps: readonly PostLockReportingStep[] = [
       context.phaseResults.portfolioSnapshot = {
         charactersSnapshotted: portfolioSnapshotResult ?? 0,
       };
+    },
+  },
+  {
+    key: "countryBriefs",
+    phases: ["countryBriefs"],
+    async execute(context, runtime) {
+      const result = await runtime.runPhase("countryBriefs", () =>
+        processCountryBriefs(context.db, context.newTurn)
+      );
+      if (result) context.phaseResults.countryBriefs = result;
     },
   },
 ];

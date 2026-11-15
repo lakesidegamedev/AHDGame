@@ -1,25 +1,23 @@
 import type { Db, ObjectId } from "mongodb";
 import type { ShareTradeHistory, ShareTradeParty } from "@/lib/db/types/shareTradeHistory";
+import { shareTradeHistoryCollection } from "@/lib/db/repositories/shareTradeHistory";
 
 /**
  * Wash-trade guard for the order-flow price signal.
  *
  * The 5-minute price cron turns windowed buy/sell notionals into a bounded
- * price multiplier (orderFlowEngine). A round trip — the same actor buying and
- * selling the same corp's shares within the window — carries no honest
- * order-flow information, but by timing the legs across cron resets an actor
- * could register a large one-sided notional in each window and hold the
- * multiplier pinned (2026-08-20 incident: a $10.6bn buy+sell round trip within
- * 10 seconds at identical price). The suspectScan analytics already flag these
- * (wash_trade / same_price_wash) but nothing enforced at accumulation time.
+ * price multiplier (orderFlowEngine). A round trip (same actor buying and
+ * selling the same corp's shares within the window) carries no honest
+ * order-flow information, and by timing legs across cron resets an actor could
+ * pin the multiplier.
  *
  * Enforcement: when the incoming trade's actor has an OPPOSITE-side trade on
  * the same corp inside the window, the incoming leg is excluded from its own
- * window and its notional is instead SUBTRACTED from the opposite window,
- * neutralizing the earlier leg regardless of leg order. Price is deliberately
- * not compared: a fast round trip is signal-free at any price, and a same-price
- * check invites trivial 1.01x evasion. Window values are floored at zero when
- * read (orderFlowEngine), so the subtraction can never punish third parties.
+ * window and its notional is SUBTRACTED from the opposite window, neutralizing
+ * the earlier leg regardless of order. Price is deliberately not compared: a
+ * fast round trip is signal-free at any price, and a same-price check invites
+ * trivial 1.01x evasion. Window values are floored at zero when read, so the
+ * subtraction can never punish third parties.
  */
 export const ORDER_FLOW_WASH_WINDOW_MS = 10 * 60 * 1000;
 
@@ -86,8 +84,7 @@ export async function isOrderFlowWashRoundTrip(
   now: Date = new Date()
 ): Promise<boolean> {
   try {
-    const recent = await db
-      .collection<ShareTradeHistory>("shareTradeHistory")
+    const recent = await shareTradeHistoryCollection(db)
       .find(
         {
           corporationId,

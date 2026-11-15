@@ -20,6 +20,9 @@ import {
   IMPEACHMENT_HOUSE_VOTING_TURNS,
   IMPEACHMENT_SENATE_VOTING_TURNS,
 } from "@/lib/constants/impeachment";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { impeachmentsCollection } from "@/lib/db/repositories/impeachments";
 
 export interface FileImpeachmentOpts {
   /** "president" = national two-chamber; "governor" = single state-legislature vote. */
@@ -57,7 +60,7 @@ export async function fileArticlesOfImpeachment(
   }
 
   const currentTurn = (await getGameState(db))?.currentTurn ?? 0;
-  const officials = db.collection<ElectedOfficial>("electedOfficials");
+  const officials = electedOfficialsCollection(db);
 
   const partyAccess = opts.proposeViaPartyNpp
     ? await resolvePartyImpeachmentSponsor(db, countryId, filer, opts.office, opts.state)
@@ -140,9 +143,10 @@ export async function fileArticlesOfImpeachment(
     initialStage = "house";
   }
 
-  const targetChar = await db
-    .collection<Character>("characters")
-    .findOne({ _id: targetCharacterId }, { projection: { _id: 1, name: 1, careerHistory: 1 } });
+  const targetChar = await charactersCollection(db).findOne(
+    { _id: targetCharacterId },
+    { projection: { _id: 1, name: 1, careerHistory: 1 } }
+  );
   if (!targetChar) throw badRequest("Target character not found.");
 
   const filingWindow = await loadImpeachmentFilingWindow(
@@ -160,16 +164,17 @@ export async function fileArticlesOfImpeachment(
   }
 
   // One active impeachment per target.
-  const active = await db
-    .collection<Impeachment>("impeachments")
-    .findOne({ countryId, targetCharacterId, stage: { $in: ["house", "senate"] } });
+  const active = await impeachmentsCollection(db).findOne({
+    countryId,
+    targetCharacterId,
+    stage: { $in: ["house", "senate"] },
+  });
   if (active) {
     throw badRequest("An impeachment against this official is already in progress.");
   }
 
   // Per-target cooldown against re-filing.
-  const lastAttempt = await db
-    .collection<Impeachment>("impeachments")
+  const lastAttempt = await impeachmentsCollection(db)
     .find({ countryId, targetCharacterId })
     .sort({ turnFiled: -1 })
     .limit(1)
@@ -220,7 +225,7 @@ export async function fileArticlesOfImpeachment(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<Impeachment>("impeachments").insertOne(doc);
+  await impeachmentsCollection(db).insertOne(doc);
 
   return { impeachmentId: doc._id.toString() };
 }

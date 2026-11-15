@@ -6,6 +6,7 @@ import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { MarketCapHistory } from "@/lib/db/types";
 import { EXCHANGE_API_KEYS, getCountryForExchange } from "@/lib/constants/exchangeRegistry";
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHistory";
 
 /**
  * GET /api/stock-exchange/market-cap-history?exchange=global|nyse|ftse|nikkei|...&sector=financial&limit=500
@@ -47,8 +48,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const history = await db
-      .collection<MarketCapHistory>("marketCapHistory")
+    const history = await marketCapHistoryCollection(db)
       .find({})
       .sort({ turn: -1 })
       .limit(limit)

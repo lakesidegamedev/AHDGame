@@ -3,6 +3,7 @@ import { COUNTRY_ORDER } from "@/lib/constants/countries";
 import { loadSeededStateMetrics } from "@/lib/states/conditions/seedMetricsLoader";
 import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import { evaluateModifiers } from "@/lib/utils/approvalModifiers";
+import { tierFor } from "@/lib/world/eraRoster";
 
 const PRESETS = ["2019-default", "1991-default"] as const;
 /** No single badge should blanket almost every region in a country. */
@@ -44,6 +45,8 @@ describe("approvalModifiers — all countries seed audit", () => {
     for (const preset of PRESETS) {
       if (countryId === "NG" && preset === "1991-default") continue;
       if (ERA_1979_ONLY.has(countryId)) continue;
+      // A country outside this era's roster has no seeded regions to audit.
+      if (tierFor(preset, countryId) === "absent") continue;
 
       it(`${countryId} ${preset}: no modifier fires on >${MAX_REGION_FIRE_RATE * 100}% of regions`, () => {
         const bundle = loadSeededStateMetrics(countryId, preset);

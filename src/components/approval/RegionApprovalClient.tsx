@@ -1,14 +1,16 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { type ActiveModifier } from "@/lib/utils/approvalModifiers";
+import type { ActiveModifier } from "@/lib/approval/activeModifier";
 import { regionUrl, regionApiSubUrl, approvalUrl } from "@/lib/urls";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryCode } from "@/lib/country/countryCodes";
 import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
+import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
 
 interface StateApprovalData {
   stateId: string;
@@ -71,11 +73,11 @@ export function RegionApprovalClient({
             {countryShortLabel} Approval &amp; active effects
           </Link>
           <span>/</span>
-          <span>{data?.stateName ?? stateId}</span>
+          <span>{displayCanadianRegionCode(data?.stateName ?? stateId)}</span>
         </div>
 
         <h1 className="text-2xl font-bold mb-1">
-          {data?.stateName ?? stateId} - Approval &amp; active effects
+          {displayCanadianRegionCode(data?.stateName ?? stateId)} - Approval &amp; active effects
         </h1>
         <p className="text-sm text-muted mb-8">{t("regionalIntro")}</p>
 
@@ -131,40 +133,11 @@ export function RegionApprovalClient({
               <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <h2 className="text-sm font-semibold text-muted">Active effects</h2>
                 {modifiers.length > 0 && (
-                  <div className="flex gap-4 text-right text-xs">
-                    <div>
-                      <div className="text-body-sm font-medium text-muted">Net approval</div>
-                      <div
-                        className={
-                          "mt-0.5 font-semibold tabular-nums " +
-                          (netApproval > 0
-                            ? "text-emerald-500"
-                            : netApproval < 0
-                              ? "text-rose-500"
-                              : "text-muted")
-                        }
-                      >
-                        {netApproval > 0 ? "+" : ""}
-                        {netApproval}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-body-sm font-medium text-muted">Net margin</div>
-                      <div
-                        className={
-                          "mt-0.5 font-semibold tabular-nums " +
-                          (netMargin > 0
-                            ? "text-emerald-500"
-                            : netMargin < 0
-                              ? "text-rose-500"
-                              : "text-muted")
-                        }
-                      >
-                        {netMargin > 0 ? "+" : ""}
-                        {netMargin}pp
-                      </div>
-                    </div>
-                  </div>
+                  <NetEffectTotals
+                    approvalLabel="Net approval"
+                    netApproval={netApproval}
+                    netMargin={netMargin}
+                  />
                 )}
               </div>
               <ModifierList modifiers={modifiers} emptyText="No active effects." />

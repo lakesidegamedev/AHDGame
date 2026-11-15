@@ -10,10 +10,11 @@ import {
 import type { OpeningMetricObservation } from "./rules/openingObservation";
 import { refreshResetMetricBoard } from "./rules/refresh";
 import { primaryMetrics } from "./catalog";
-import type { ResetMetricSnapshot } from "./rules/snapshot";
+import { normalizeNationalMetricBoard, type ResetMetricSnapshot } from "./rules/snapshot";
 import { appendMetricHistory, metricHistoryDue, RESET_METRIC_HISTORY_LIMIT } from "./rules/history";
 import type { HousingState } from "./rules/housing";
 import type { HouseholdProductionStatus } from "./rules/householdSources";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
 
 export interface MetricOwnerTurnReadings {
   updates: Readonly<Record<string, OpeningMetricObservation>>;
@@ -58,8 +59,8 @@ export async function refreshResetMetricSnapshotsTurn(input: {
     throw new Error("Reset metric turn lacks its verified opening turn");
   }
   const recordHistory = metricHistoryDue(sourceTurn!, turn);
-  const collection = db.collection<ResetMetricSnapshot>("resetMetricSnapshots");
-  const current = await collection
+  const collection = resetMetricSnapshotsCollection<ResetMetricSnapshot>(db);
+  const stored = await collection
     .find(
       { countryId: { $in: [...activeCountries] }, worldId: gameState.resetWorldId },
       {
@@ -74,6 +75,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           lastRefreshFromTurn: 1,
           observations: 1,
           openingValues: 1,
+          modeledOpening: 1,
           householdSource: 1,
           householdIncomeModel: 1,
           // Raw survey component columns are offline evidence, never turn inputs.
@@ -116,6 +118,9 @@ export async function refreshResetMetricSnapshotsTurn(input: {
       }
     )
     .toArray();
+  const current = stored.map(normalizeNationalMetricBoard);
+  const storedById = new Map(stored.map((board) => [board._id, board]));
+  const currentById = new Map(current.map((board) => [board._id, board]));
   const ids = current.map((board) => board._id);
   const idSet = new Set(ids);
   if (current.length === 0 || idSet.size !== current.length) {
@@ -169,7 +174,12 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           priorValues: board.priorValues,
           gameplayReferences: board.gameplayReferences,
         };
-        for (const id of changedIds) fields[`observations.${id}`] = board.observations[id];
+        const storedBoard = storedById.get(board._id)!;
+        const repairedIds = Object.keys(board.observations).filter(
+          (id) => storedBoard.observations[id] !== currentById.get(board._id)!.observations[id]
+        );
+        for (const id of new Set([...changedIds, ...repairedIds]))
+          fields[`observations.${id}`] = board.observations[id];
         if (board.housingState?.asOfTurn === turn) fields.housingState = board.housingState;
         if (board.householdProductionStatus?.evaluatedAtTurn === turn)
           fields.householdProductionStatus = board.householdProductionStatus;
@@ -208,6 +218,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
             },
             update: {
               $set: fields,
+              ...(board.scope === "national" ? { $unset: { regionId: "" } } : {}),
               ...(Object.keys(pushes).length ? { $push: pushes } : {}),
             },
           },

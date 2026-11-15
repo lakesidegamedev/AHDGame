@@ -35,7 +35,7 @@ import {
   corpPurchaseWouldCycle,
   OWNERSHIP_CYCLE_ERROR,
 } from "@/lib/corporations/subsidiaries/cycleGuard";
-import type { Character, Corporation, ShareOrder } from "@/lib/db/types";
+import type { ShareOrder } from "@/lib/db/types";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import {
   creditShares,
@@ -89,6 +89,9 @@ import {
 import { equityPoolDepthMessage, loadEquityQuote } from "@/lib/equities/marketPool";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -135,10 +138,9 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    // Private companies trade through Private sale only (#4461). A limit order
-    // on a private company leaves a resting bid that the only holders able to
-    // fill it cannot see, and the private-sale band cannot match an order-book
-    // price. Refuse at the source so the asymmetry cannot be created.
+    // Private companies trade through Private sale only. A limit order leaves a
+    // resting bid only private holders can see but cannot fill, and the private
+    // sale band cannot match an order-book price. Refuse at the source.
     if (corporation.isPrivate === true) {
       return errorResponse(
         400,
@@ -154,11 +156,10 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     );
 
     // Limit prices must sit inside the fundamental-anchored sanity band.
-    // Wildly off-fundamental limit orders were used as manipulation rails
-    // (2026-08-20 incident: limit fills ~10x fundamental inflated order-flow
-    // notionals and moved real money at fabricated prices). Honest orders
-    // near the market price are unaffected; the band only exists when the
-    // corp has a positive fundamentalSharePrice to anchor on.
+    // Off-fundamental orders were used for manipulation: fills far from
+    // fundamental inflated order-flow notionals at fabricated prices. Honest
+    // orders near market price are unaffected. The band only applies when the
+    // corp has a positive fundamentalSharePrice.
     if (!isWithinShareExecutionBand(corporation, pricePerShare)) {
       return errorResponse(
         400,
@@ -257,9 +258,10 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     }
 
     if (placeAsCorporation) {
-      const placerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+      const placerCorp = await corporationsCollection(db).findOne({
+        ceoId: character._id,
+        ceoVacant: { $ne: true },
+      });
       if (!placerCorp) {
         return errorResponse(
           403,
@@ -483,7 +485,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           return errorResponse(400, "Insufficient corporation funds for escrow");
         }
         try {
-          await db.collection<ShareOrder>("shareOrders").insertOne({
+          await shareOrdersCollection(db).insertOne({
             _id: new ObjectId(),
             corporationId: corporation._id,
             characterId: character._id,
@@ -565,8 +567,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           (sh) => sh.corporationId?.toString() === placerCorp._id.toString()
         );
         const ownedShares = shareholderEntry?.shares ?? 0;
-        const openSellOrders = await db
-          .collection<ShareOrder>("shareOrders")
+        const openSellOrders = await shareOrdersCollection(db)
           .find({
             corporationId: corporation._id,
             placerCorporationId: placerCorp._id,
@@ -621,12 +622,10 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           }
           let sellerCredited = false;
           try {
-            const sellerCredit = await db
-              .collection<Corporation>("corporations")
-              .updateOne(
-                { _id: placerCorp._id },
-                { $inc: { liquidCapital: proceedsInPlacerCapital }, $set: { updatedAt: now } }
-              );
+            const sellerCredit = await corporationsCollection(db).updateOne(
+              { _id: placerCorp._id },
+              { $inc: { liquidCapital: proceedsInPlacerCapital }, $set: { updatedAt: now } }
+            );
             if (sellerCredit.matchedCount === 0) {
               throw new Error("Seller corporation not found");
             }
@@ -662,7 +661,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
             });
           } catch (err) {
             if (sellerCredited) {
-              await db.collection<Corporation>("corporations").updateOne(
+              await corporationsCollection(db).updateOne(
                 { _id: placerCorp._id },
                 {
                   $inc: { liquidCapital: -proceedsInPlacerCapital },
@@ -728,7 +727,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           return errorResponse(409, "Shares were already sold or reserved by another action");
         }
         try {
-          await db.collection<ShareOrder>("shareOrders").insertOne({
+          await shareOrdersCollection(db).insertOne({
             _id: new ObjectId(),
             corporationId: corporation._id,
             characterId: character._id,
@@ -946,7 +945,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
         );
       }
       try {
-        await db.collection<ShareOrder>("shareOrders").insertOne({
+        await shareOrdersCollection(db).insertOne({
           _id: new ObjectId(),
           corporationId: corporation._id,
           characterId: character._id,
@@ -1008,8 +1007,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
       const ownedShares = shareholderEntry?.shares ?? 0;
 
       // Also check for already-reserved shares in open sell orders
-      const openSellOrders = await db
-        .collection<ShareOrder>("shareOrders")
+      const openSellOrders = await shareOrdersCollection(db)
         .find({
           corporationId: corporation._id,
           characterId: character._id,
@@ -1107,7 +1105,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           : undefined;
         let sellerCredited = false;
         try {
-          const sellerCredit = await db.collection<Character>("characters").updateOne(
+          const sellerCredit = await charactersCollection(db).updateOne(
             { _id: character._id },
             {
               $inc: buildPersonalBalanceInc(
@@ -1157,7 +1155,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
           });
         } catch (err) {
           if (sellerCredited) {
-            await db.collection<Character>("characters").updateOne(
+            await charactersCollection(db).updateOne(
               { _id: character._id },
               {
                 $inc: buildPersonalBalanceInc(
@@ -1235,7 +1233,7 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
         return errorResponse(409, "Shares were already sold or reserved by another action");
       }
       try {
-        await db.collection<ShareOrder>("shareOrders").insertOne({
+        await shareOrdersCollection(db).insertOne({
           _id: new ObjectId(),
           corporationId: corporation._id,
           characterId: character._id,

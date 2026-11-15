@@ -22,6 +22,7 @@ import {
   withTreasuryCashBatch,
 } from "@/lib/nationalization/treasuryLedger";
 import { applyCountryApprovalDelta } from "@/lib/events/substrate/applyEffects";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 
 export interface MobilisationResult {
   countriesLevied: number;
@@ -58,12 +59,10 @@ async function levySeats(
 
   for (const seat of SETTLEMENT_SEATS) {
     const countryId = seat.countryId as CountryId;
-    const budget = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { countryId: countryId as FederalBudget["countryId"] },
-        { projection: { treasuryBalance: 1 } }
-      );
+    const budget = await federalBudgetCollection(db).findOne(
+      { countryId: countryId as FederalBudget["countryId"] },
+      { projection: { treasuryBalance: 1 } }
+    );
     const balance = budget?.treasuryBalance ?? 0;
 
     // Approval is charged regardless — a mobilised country is unpopular whether

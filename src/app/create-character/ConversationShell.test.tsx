@@ -17,14 +17,13 @@ function Harness() {
 
   const steps = buildConversationSteps({
     regionNoun: "state",
-    rpgStatsEnabled: false,
     complete: {
       country: true,
       politician: answer.trim().length >= 2,
       region: true,
       compass: true,
       party: true,
-      stats: false,
+      stats: true,
       review: true,
     },
     summary: {
@@ -33,7 +32,7 @@ function Harness() {
       region: "California",
       compass: "Dead center",
       party: "Independent",
-      stats: null,
+      stats: "Allocated",
       review: null,
     },
   });
@@ -201,14 +200,13 @@ describe("ConversationShell toggle round-trip", () => {
 
     const steps = buildConversationSteps({
       regionNoun: "state",
-      rpgStatsEnabled: false,
       complete: {
         country: true,
         politician: answer.trim().length >= 2,
         region: true,
         compass: true,
         party: true,
-        stats: false,
+        stats: true,
         review: true,
       },
       summary: {
@@ -217,7 +215,7 @@ describe("ConversationShell toggle round-trip", () => {
         region: "California",
         compass: "Dead center",
         party: "Independent",
-        stats: null,
+        stats: "Allocated",
         review: null,
       },
     });

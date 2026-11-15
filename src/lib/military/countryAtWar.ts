@@ -1,21 +1,17 @@
-/**
+/*
  * Is this country at war, and where does a reader go to see it?
  *
- * For the wartime banner on the country pages. Deliberately NOT
- * `listConflictsForCountry`, which matches `hostCountry` alone: a conflict is
- * fought over `hostEntities`, so a war widened to cover a second country is
- * being fought on that country's soil and its pages should say so. West Germany
- * is exactly this case — the war for Germany carries both Germanies as hosts,
- * and only one of them is the map anchor.
+ * For the wartime banner on country pages. Deliberately NOT
+ * `listConflictsForCountry`, which matches `hostCountry` alone. A conflict is
+ * fought over `hostEntities`, so a war widened to a second country should show
+ * there too. West Germany is the case: both Germanies are hosts, only one is
+ * the map anchor.
  *
- * BELLIGERENCY OR GROUND, and both belong here. A country whose army is in the
- * field is at war; so is one whose territory is the theatre, even if it never
- * sent a soldier. Telling a reader on the second country's pages that nothing is
- * happening would be the plainer error of the two.
+ * BELLIGERENCY OR GROUND. A country whose army is in the field is at war; so is
+ * one whose territory is the theatre. Telling a reader on the second country's
+ * pages that nothing is happening would be the plainer error.
  *
- * Everything this reads is already public on the conflict record — who is
- * fighting, and where. Nothing about force composition, which is fogged, is
- * touched.
+ * Everything read here is already public on the conflict record.
  */
 import type { Db, Filter } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";

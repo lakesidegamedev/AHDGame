@@ -1,6 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Character } from "./types/character";
 import type { User } from "./types/user";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Minimal character info returned by bulk lookups. */
 export interface CharacterNameEntry {
@@ -29,8 +31,7 @@ export async function bulkFetchCharacterNames(
   const projection: Record<string, 1> = { _id: 1, name: 1, sequentialId: 1 };
   if (opts?.includeAvatar) projection.avatarUrl = 1;
 
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ _id: { $in: objectIds } }, { projection })
     .toArray();
 
@@ -56,11 +57,12 @@ export async function getCharacterByUserId(
   userId: string | ObjectId
 ): Promise<Character | null> {
   const uid = new ObjectId(userId.toString());
-  const user = await db
-    .collection<User>("users")
-    .findOne({ _id: uid }, { projection: { activeCharacterId: 1 } });
+  const user = await usersCollection(db).findOne(
+    { _id: uid },
+    { projection: { activeCharacterId: 1 } }
+  );
   const characterQuery = user?.activeCharacterId
     ? { _id: user.activeCharacterId, userId: uid }
     : { userId: uid };
-  return db.collection<Character>("characters").findOne(characterQuery);
+  return charactersCollection(db).findOne(characterQuery);
 }

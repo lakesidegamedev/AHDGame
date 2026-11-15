@@ -60,26 +60,17 @@ describe("seedCNBaselines — metric-preset overlay (decay targets)", () => {
   });
 });
 
-describe("CN metric presets reach the political board", () => {
-  it("carries the authored era values into era-distinct board values", async () => {
-    // The political half of each era's overlay is baked into the emitted board
-    // at codegen time rather than written to stateMetrics at seed time. If the
-    // overlay stopped being applied, every era's board would collapse to the
-    // same numbers — which is exactly the regression this guards.
-    const { NON_PLAYABLE_BOARDS } = await import("@/lib/politicalMetrics/seeds/nonPlayableBoards");
-    const boardFor = (preset: string) =>
-      NON_PLAYABLE_BOARDS[preset]?.CN?.["HD"] as Record<string, number> | undefined;
-    const eras = ["1953-default", "1979-default", "1991-default", "2019-default"].filter((p) =>
-      boardFor(p)
-    );
-    expect(eras.length).toBeGreaterThan(1);
+describe("CN political baselines follow the authored eras", () => {
+  it("resolves era-distinct national baselines for 1953, 1979 and 1991", async () => {
+    // CN seeds its political board from year anchors, not the non-playable
+    // board file. If an era's authored board stopped reaching the anchors,
+    // two eras would collapse to the same numbers.
+    const { baselineFor } = await import("@/lib/politicalMetrics/seeds/baselineAnchors");
+    const families = ["economy.fiscal", "health.outcomes", "education.attainment"] as const;
+    const years = [1953, 1979, 1991];
     const distinct = new Set(
-      eras.map((p) =>
-        ["economy.fiscal", "health.outcomes", "education.attainment"]
-          .map((f) => boardFor(p)![f])
-          .join("|")
-      )
+      years.map((year) => families.map((f) => baselineFor("CN", f, year)).join("|"))
     );
-    expect(distinct.size, "every era produced an identical board").toBe(eras.length);
+    expect(distinct.size, "two eras resolved an identical board").toBe(years.length);
   });
 });

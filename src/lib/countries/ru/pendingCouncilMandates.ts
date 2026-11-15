@@ -5,6 +5,7 @@
  */
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { RussianCouncilResultRecord } from "./councilElectionResult";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
 export async function loadPendingRussianCouncilOwners(input: {
   db: Db;
   cohortId?: ObjectId;
@@ -13,18 +14,18 @@ export async function loadPendingRussianCouncilOwners(input: {
 }) {
   const owners = new Set<string>();
   if (!input.cohortId) return owners;
-  const receipt = await input.db
-    .collection<RussianCouncilResultRecord>("russianCouncilElectionResults")
-    .findOne(
-      {
-        $or: [{ cohortId: input.cohortId }, { rootCohortId: input.cohortId }],
-        countryId: "RU",
-        preset: "1991-default",
-        mandateSinceTurn: input.mandateSinceTurn,
-        seatedOnTurn: { $exists: false },
-      },
-      { session: input.session, sort: { generation: -1 }, projection: { result: 1 } }
-    );
+  const receipt = await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(
+    input.db
+  ).findOne(
+    {
+      $or: [{ cohortId: input.cohortId }, { rootCohortId: input.cohortId }],
+      countryId: "RU",
+      preset: "1991-default",
+      mandateSinceTurn: input.mandateSinceTurn,
+      seatedOnTurn: { $exists: false },
+    },
+    { session: input.session, sort: { generation: -1 }, projection: { result: 1 } }
+  );
   for (const district of receipt?.result ?? [])
     for (const winner of district.winners)
       owners.add(`${winner.isNpc ? "npc" : "player"}:${winner.ownerId}`);

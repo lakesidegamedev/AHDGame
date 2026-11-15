@@ -4,37 +4,23 @@ import type { Referendum } from "@/lib/db/types/referendum";
 /**
  * NPP Bill Voting
  *
- * Handles deterministic cross-pressure voting for NPP elected officials in the
- * **federal** legislature (House/Senate chambers). As of Phase 4 of the
- * party-npp-rework, this path is RNG-free: every vote is the sum of four
- * signed forces (ideology, whip, district, donors) with verdict thresholds at
- * ±5. See `crossPressure.ts` for the full model.
+ * Deterministic cross-pressure voting for NPP elected officials in the
+ * federal legislature (House/Senate). Every vote is `verdictFromForces` over
+ * four signed forces (ideology, whip, district, donors), thresholds at ±5.
+ * The full force vector is persisted to `nppVotePredictions` for replay.
  *
- * KEY DESIGN DECISIONS:
+ * Whips: most specific applicable whip wins (state party, then national),
+ * gated by loyalty and stubbornness.
  *
- * 1. Cross-pressure verdict: each NPP's vote is `verdictFromForces(forces)` —
- *    deterministic given identical inputs. The full force vector is persisted
- *    to `nppVotePredictions` so the prediction surface (Phase 5) and bug
- *    investigations can replay the exact decision.
+ * Multi-seat NPPs contribute full seatsHeld weight to the tally.
  *
- * 2. Whip directive: party whips contribute to the `whip` force, gated by
- *    NPP loyalty + stubbornness. The whip resolution finds the most specific
- *    applicable whip (state party first, then national). Phase 3 stacks
- *    caucus whips on top via the same composer.
+ * Catch-up voting runs every turn so NPPs who gained seats after a bill
+ * opened still vote; already-voted NPPs are skipped.
  *
- * 3. Multi-seat weighting: NPPs holding multiple seats (e.g., 7 House seats
- *    from a multi-seat election) contribute full seatsHeld weight to the tally.
+ * Veto overrides disallow abstain; abstain defaults to against.
  *
- * 4. Catch-up voting: Runs every turn so NPPs who gained seats after a bill
- *    opened still vote before it closes. Already-voted NPPs are skipped.
- *
- * 5. Veto override special case: Override votes don't allow abstain — NPPs
- *    must vote for or against overriding. Defaults to "against" if cross-pressure
- *    would produce abstain.
- *
- * Note: This file only processes federal bills from the `bills` collection.
- * State/regional bills (`stateBills` collection) — including those voted on by
- * `stateSenate` and `regionalCouncil` NPPs — are not currently processed here.
+ * Only federal `bills` are processed here; `stateBills` and
+ * stateSenate/regionalCouncil NPPs are not.
  */
 
 import type { Bill, GovernorAddress, NPP, NPPVotePrediction } from "@/lib/db/types";
@@ -87,7 +73,15 @@ import {
 } from "@/lib/nppAutonomy/v6/rules/businessInterest";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionBattles";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { referendumsCollection } from "@/lib/db/repositories/referendums";
+import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
+import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
 export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const {
@@ -116,8 +110,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     )
     .map((b) => b._id);
   const legacyRefs = legacyConsentIds.length
-    ? await db
-        .collection<Referendum>("referendums")
+    ? await referendumsCollection(db)
         .find(
           {
             $or: [
@@ -167,7 +160,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
   // Standalone callers share the same one-read snapshot as the context loader.
   if (
     ctx.preset === "1991-default" &&
-    activeBills.some((bill) => bill.countryId === "RU") &&
+    activeBills.some((bill) => countryHasFeature("ruTurn", bill.countryId)) &&
     !runtimeCountryOffices.has("RU")
   ) {
     runtimeCountryOffices.set("RU", await loadRuntimeCountryOffices(db, "RU", ctx.preset));
@@ -189,8 +182,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
   const nationalStateIds = Object.values(NATIONAL_POLICY_STATE_IDS);
   const addressesByCountry = new Map<CountryId, { partyId: string; categories: Set<string> }[]>();
   if (activeBills.length > 0) {
-    const activeNationalAddresses = await db
-      .collection<GovernorAddress>("governorAddresses")
+    const activeNationalAddresses = await governorAddressesCollection(db)
       .find({
         stateId: { $in: nationalStateIds },
         "agendaEffect.expiresAtTurn": { $gt: currentTurn },
@@ -281,8 +273,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     const voterIds = ctx.nppOfficials
       .map((o) => o.nppId)
       .filter((id): id is NonNullable<typeof id> => !!id);
-    const corporations = await db
-      .collection<Corporation>("corporations")
+    const corporations = await corporationsCollection(db)
       .find(
         { $or: [{ ceoId: { $in: voterIds } }, { "shareholders.nppId": { $in: voterIds } }] },
         { projection: { ceoId: 1, totalShares: 1, shareholders: 1 } }
@@ -290,8 +281,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
       .toArray();
     const sectors =
       corporations.length > 0
-        ? await db
-            .collection<CorporateSector>("corporateSectors")
+        ? await corporateSectorsCollection(db)
             .find(
               { corporationId: { $in: corporations.map((c) => c._id) } },
               {
@@ -494,9 +484,8 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
       if (npp.isTechnocrat) continue;
 
       // Country guard: an NPP may only vote on its own country's bills.
-      // Root-cause fix for bug #0699 — foreign senators leaked into the US
-      // Senate tally and were mislabeled via cross-country party sequentialId
-      // collision. npp.countryId is authoritative (always set on NPP docs).
+      // Cross-country party sequentialId collisions previously leaked foreign
+      // NPPs into tallies. npp.countryId is authoritative.
       if ((npp.countryId ?? "US") !== billCountry) continue;
 
       // One-party-state guard: banned-party NPCs do not vote. Their seat
@@ -686,7 +675,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
       if (abstainKey) incFields[abstainKey] = b.abstainW;
     }
 
-    await db.collection<Bill>("bills").updateOne(
+    await billsCollection(db).updateOne(
       { _id: bill._id },
       {
         $set: setFields,
@@ -697,7 +686,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     // Persist cross-pressure predictions for the prediction surface (Phase 5)
     // and replayable vote audit. One upsert per NPP per bill, keyed by the pair.
     if (predictionOps.length > 0) {
-      const collection = db.collection<NPPVotePrediction>("nppVotePredictions");
+      const collection = nppVotePredictionsCollection(db);
       await collection.bulkWrite(
         predictionOps.map((op) => ({
           updateOne: {
@@ -727,7 +716,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
   // Engine 6.14 (v6): a small favorability cost, once per NPP per pass, never
   // below zero. One batched write.
   if (interestDecidedVotes.size > 0) {
-    await db.collection<NPP>("npps").bulkWrite(
+    await nppsCollection(db).bulkWrite(
       [...interestDecidedVotes].map((id) => ({
         updateOne: {
           filter: { _id: new ObjectId(id) },

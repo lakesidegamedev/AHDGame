@@ -4,7 +4,6 @@
  * then admits Duma slates before Council slates to keep their profiles disjoint.
  */
 import type { Db, ObjectId } from "mongodb";
-import type { CountryGameState } from "@/lib/db/types";
 import type { RussianConstitutionalCalendar } from "./constitutionalProposals";
 import { processRussianDumaConvocationCampaigns } from "./dumaConvocationCampaigns";
 import { calendarTurn } from "@/lib/utils/gameDate";
@@ -27,18 +26,13 @@ import { openRussianCouncilRepeat } from "./councilRepeatOpening";
 import { admitRussianDumaNpcNominees } from "./dumaNpcAdmission";
 import { admitRussianDumaRepeatNpcNominees } from "./dumaRepeatNpcAdmission";
 import { admitRussianCouncilNpcNominees } from "./councilNpcAdmission";
-import {
-  RUSSIAN_DUMA_RESULTS_COLLECTION,
-  type RussianDumaResultRecord,
-} from "./dumaElectionResult";
-import {
-  RUSSIAN_COUNCIL_RESULTS_COLLECTION,
-  type RussianCouncilResultRecord,
-} from "./councilElectionResult";
-import {
-  RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION,
-  type RussianAssemblySeatingRecord,
-} from "./assemblySeating";
+import { type RussianDumaResultRecord } from "./dumaElectionResult";
+import { type RussianCouncilResultRecord } from "./councilElectionResult";
+import { type RussianAssemblySeatingRecord } from "./assemblySeating";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
+import { russianCouncilElectionResultsCollection } from "@/lib/db/repositories/russianCouncilElectionResults";
+import { russianDumaElectionResultsCollection } from "@/lib/db/repositories/russianDumaElectionResults";
+import { russianAssemblySeatingsCollection } from "@/lib/db/repositories/russianAssemblySeatings";
 
 export async function processRussianAssemblyCampaigns(input: {
   db: Db;
@@ -63,7 +57,7 @@ export async function processRussianAssemblyCampaigns(input: {
     ) === "congress"
   )
     return result;
-  const country = await db.collection<CountryGameState>("countryGameStates").findOne(
+  const country = await countryGameStatesCollection(db).findOne(
     { _id: "RU" },
     {
       projection: {
@@ -95,22 +89,20 @@ export async function processRussianAssemblyCampaigns(input: {
     // Legacy alternate settlements have no native roots. Preserve their offices
     // rather than inventing a new first election behind the existing marker.
     if (!dumaRoot || !councilRoot) return result;
-    seating = await db
-      .collection<RussianAssemblySeatingRecord>(RUSSIAN_ASSEMBLY_SEATINGS_COLLECTION)
-      .findOne(
-        { _id: `${dumaRoot.toHexString()}:${councilRoot.toHexString()}` },
-        {
-          projection: {
-            countryId: 1,
-            preset: 1,
-            dumaRootCohortId: 1,
-            councilRootCohortId: 1,
-            seatedOnTurn: 1,
-            dumaTermEndTurn: 1,
-            councilTermEndTurn: 1,
-          },
-        }
-      );
+    seating = await russianAssemblySeatingsCollection<RussianAssemblySeatingRecord>(db).findOne(
+      { _id: `${dumaRoot.toHexString()}:${councilRoot.toHexString()}` },
+      {
+        projection: {
+          countryId: 1,
+          preset: 1,
+          dumaRootCohortId: 1,
+          councilRootCohortId: 1,
+          seatedOnTurn: 1,
+          dumaTermEndTurn: 1,
+          councilTermEndTurn: 1,
+        },
+      }
+    );
     if (
       !seating ||
       seating.countryId !== "RU" ||
@@ -169,9 +161,9 @@ export async function processRussianAssemblyCampaigns(input: {
     };
     const latest =
       chamber === "duma"
-        ? await db
-            .collection<RussianDumaResultRecord>(RUSSIAN_DUMA_RESULTS_COLLECTION)
-            .findOne(familyFilter, {
+        ? await russianDumaElectionResultsCollection<RussianDumaResultRecord>(db).findOne(
+            familyFilter,
+            {
               sort: { generation: -1 },
               projection: {
                 cohortId: 1,
@@ -180,10 +172,11 @@ export async function processRussianAssemblyCampaigns(input: {
                 "result.constituencyResults.decision.outcome": 1,
                 "result.listDecision.outcome": 1,
               },
-            })
-        : await db
-            .collection<RussianCouncilResultRecord>(RUSSIAN_COUNCIL_RESULTS_COLLECTION)
-            .findOne(familyFilter, {
+            }
+          )
+        : await russianCouncilElectionResultsCollection<RussianCouncilResultRecord>(db).findOne(
+            familyFilter,
+            {
               sort: { generation: -1 },
               projection: {
                 cohortId: 1,
@@ -191,7 +184,8 @@ export async function processRussianAssemblyCampaigns(input: {
                 resolvedOnTurn: 1,
                 "result.decision.outcome": 1,
               },
-            });
+            }
+          );
     const failedPolls = !latest
       ? 0
       : chamber === "duma"

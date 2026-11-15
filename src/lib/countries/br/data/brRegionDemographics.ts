@@ -1,24 +1,14 @@
-import type { StateDemographics } from "@/lib/db/types";
+import type { CensusGroupView } from "@/lib/db/types";
 
 /**
  * Brazil macro-region demographic composition using the 8 BR voter archetypes.
- *
- * Each region defines the population share of each archetype (summing to 100%)
- * plus baseline lean and turnout values. Regional character is expressed
- * through the population mix, not archetype-specific lean variation.
- *
- * `categoryWeights: { br_voterGroups: 100 }` references the profile defined
- * in brDemographicCategories.ts.
- *
- * Mix calibration is based on:
- * - 2022 TSE presidential election results by IBGE macro-region
- * - IBGE 2022 Census demographic profiles
- * - DataFolha and Ipespe regional polling
- *
- * Design principle: every archetype has a non-zero population in every region —
- * regional character comes from mix weight, not exclusion.
+ * Each region defines population share per archetype (summing to 100%) plus
+ * baseline lean and turnout. Regional character comes from mix weight, not
+ * archetype-specific lean variation or exclusion; every archetype has a
+ * non-zero population in every region. categoryWeights references the profile
+ * in the country Layer-1 model.
  */
-export const brRegionDemographics: StateDemographics[] = [
+export const brRegionDemographics: CensusGroupView[] = [
   // ── Norte ──────────────────────────────────────────────────────────────────
 
   // Norte: Amazon frontier; youngest region; high evangelical share and

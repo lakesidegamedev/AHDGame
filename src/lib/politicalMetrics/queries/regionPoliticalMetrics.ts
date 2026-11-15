@@ -33,10 +33,6 @@ import { getCatalog } from "@/lib/politicalLegislation/catalog";
 import { lawTargets, structuralResidual } from "@/lib/politicalLegislation/dynamics";
 import { getEnactedLevels } from "@/lib/politicalLegislation/enactedLevels";
 import {
-  loadPublicHealthDeliveryMultiplier,
-  US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-} from "@/lib/governmentFinance/deliveryMultiplier";
-import {
   loadDepartmentDeliveryMultipliersByCountry,
   loadRegionalDeliveryMultipliersByRegion,
 } from "@/lib/governmentFinance/deliveryMultipliers";
@@ -60,6 +56,11 @@ import {
   type MetricLegislationInfo,
   type MetricModifiersInfo,
 } from "./metricsAssembly";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { politicalMetricsRegionHistoryCollection } from "@/lib/db/repositories/politicalMetricsRegionHistory";
 
 /** First calendar year of the information era for indicator-list selection. */
 const MODERN_INDICATORS_FROM_YEAR = 1990;
@@ -166,12 +167,11 @@ export async function loadRegionPoliticalMetrics(
 ): Promise<RegionPoliticalMetricsResponse | null> {
   const db = dbOverride ?? (await getDb());
   const [docs, states, gameState, historyDoc, regionRows] = await Promise.all([
-    db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
-    db
-      .collection<State>("states")
+    politicalMetricsCollection(db).find({ countryId }).toArray(),
+    statesCollection(db)
       .find({ countryId }, { projection: { name: 1, population: 1, gdp: 1 } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -179,8 +179,6 @@ export async function loadRegionPoliticalMetrics(
           currentTurn: 1,
           startingYear: 1,
           preset: 1,
-          departmentProgramSliceEnabled: 1,
-          departmentFinanceEnabled: 1,
           // Read by loadDemocraticCompetition for the executive-continuity
           // line. Projecting it away would silently score every region's
           // governance card as if no executive had ever been re-elected.
@@ -188,11 +186,11 @@ export async function loadRegionPoliticalMetrics(
         },
       }
     ),
-    db
-      .collection<PoliticalMetricsRegionHistoryDoc>("politicalMetricsRegionHistory")
-      .findOne({ _id: regionId }, { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } }),
-    db
-      .collection<StatePolicy>("statePolicies")
+    politicalMetricsRegionHistoryCollection(db).findOne(
+      { _id: regionId },
+      { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } }
+    ),
+    statePoliciesCollection(db)
       .find(
         { scope: "state", stateId: regionId },
         { projection: { legislationTypeId: 1, policyOptionIndex: 1 } }
@@ -209,45 +207,25 @@ export async function loadRegionPoliticalMetrics(
 
   const nationalLevels = await getEnactedLevels(db, countryId);
   const regionalLevels = regionEnactedLevels(countryId, regionRows);
-  const generalizedFinanceEnabled = gameState?.departmentFinanceEnabled === true;
-  const nationalContributionMultipliers = generalizedFinanceEnabled
-    ? (
-        await loadDepartmentDeliveryMultipliersByCountry(db, gameState?.currentTurn ?? 1, true, [
-          countryId,
-        ])
-      ).get(countryId)
-    : countryId === COUNTRY_CONFIGS.US.id
-      ? new Map([
-          [
-            US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-            (
-              await loadPublicHealthDeliveryMultiplier(
-                db,
-                gameState?.currentTurn ?? 1,
-                gameState?.departmentProgramSliceEnabled === true
-              )
-            ).multiplier,
-          ],
-        ])
-      : undefined;
-  const regionalFinanceEnabled = gameState?.regionalLegislationFinanceEnabled === true;
-  const regionalContributionMultipliers = regionalFinanceEnabled
-    ? ((
-        await loadRegionalDeliveryMultipliersByRegion(db, gameState?.currentTurn ?? 1, true, [
-          regionId,
-        ])
-      ).get(regionId) ?? new Map<string, number>())
-    : undefined;
-  if (regionalContributionMultipliers) {
-    for (const law of getCatalog(countryId)) {
-      if (
-        law.kind !== "tax" &&
-        law.allowedScope !== "national" &&
-        (regionalLevels.get(law.id) ?? 0) > 0 &&
-        !regionalContributionMultipliers.has(law.id)
-      ) {
-        regionalContributionMultipliers.set(law.id, 0);
-      }
+  const nationalContributionMultipliers = (
+    await loadDepartmentDeliveryMultipliersByCountry(db, gameState?.currentTurn ?? 1, true, [
+      countryId,
+    ])
+  ).get(countryId);
+  const regionalContributionMultipliers =
+    (
+      await loadRegionalDeliveryMultipliersByRegion(db, gameState?.currentTurn ?? 1, true, [
+        regionId,
+      ])
+    ).get(regionId) ?? new Map<string, number>();
+  for (const law of getCatalog(countryId)) {
+    if (
+      law.kind !== "tax" &&
+      law.allowedScope !== "national" &&
+      (regionalLevels.get(law.id) ?? 0) > 0 &&
+      !regionalContributionMultipliers.has(law.id)
+    ) {
+      regionalContributionMultipliers.set(law.id, 0);
     }
   }
   const nationalPoints = lawTargets(countryId, nationalLevels, nationalContributionMultipliers);
@@ -293,10 +271,8 @@ export async function loadRegionPoliticalMetrics(
     const cabinet = cabinetContributionsFor(regionDoc, metricId);
     // Mirrors the turn phase's lazy self-heal: a doc without residuals derives
     // its structural gap from the composed law target, so the panel agrees with
-    // what the engine would compute on its next touch. Shared derivation, so
-    // that stays true — this used to omit the region's own supplement and read
-    // 0.5 x supplement high for the turn after a region changed country, which
-    // is exactly when a board has no residuals to show.
+    // what the engine would compute on its next touch. Shared derivation keeps
+    // this true; omitting the region's own supplement reads high.
     const residual =
       regionDoc.residuals?.[metricId] ??
       structuralResidual(

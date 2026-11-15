@@ -2,16 +2,14 @@
  * Registry for custom wiki markdown components.
  * Add new components here to keep MarkdownContent decoupled and scalable.
  *
- * Widgets may accept an optional `data` prop — the trimmed body of the code
- * fence. Parameterless widgets ignore it; parameterised widgets (e.g.
- * commodity-distribution) parse it to pick which commodity to render.
+ * Widgets may accept an optional `data` prop, the trimmed body of the code
+ * fence. Parameterless widgets ignore it; parameterised widgets parse it to
+ * pick what to render.
  *
- * The three data-heavy widgets load on demand. They are the only entries that
- * pull seed and constant tables (the starting-state dashboard alone reaches the
- * historical seat table, the commodity catalogue and the sector strategies;
- * the cabinet guide reaches every country's cabinet mechanics), and a page only
- * renders one when its own markdown asks for it. They used to be imported
- * eagerly, which put all of that in every wiki page's chunk.
+ * The three data-heavy widgets load on demand; each pulls large seed and
+ * constant tables, and a page only renders one when its markdown asks for
+ * it. Importing them eagerly would put all of that in every wiki page's
+ * chunk.
  */
 import { createElement, type ComponentType } from "react";
 import dynamic from "next/dynamic";

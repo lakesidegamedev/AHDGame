@@ -27,8 +27,8 @@ import {
   type HolderCreditTarget,
   type QueuedPayoutAuditContext,
 } from "./queuedPayoutSettlement";
-
-const QUEUE = "indexFundRedemptionQueue";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { indexFundRedemptionQueueCollection } from "@/lib/db/repositories/indexFundRedemptionQueue";
 
 /** Members per batch receipt. Bounds the journal record and its receipt writes. */
 export const QUEUED_PAYOUT_BATCH_MAX = 250;
@@ -249,7 +249,7 @@ function batchPlan(
 async function closeMembers(db: Db, key: string, members: MarkedEntry[]) {
   if (!members.length) return;
   const now = new Date();
-  await db.collection(QUEUE).bulkWrite(
+  await indexFundRedemptionQueueCollection<Document>(db).bulkWrite(
     members.map(({ _id, payoutBatch: m }) => ({
       updateOne: {
         filter: { _id, status: "processing", "payoutBatch.key": key },
@@ -272,7 +272,7 @@ async function closeMembers(db: Db, key: string, members: MarkedEntry[]) {
 /** Return members whose cash never moved to the queue, unchanged. */
 async function releaseMembers(db: Db, key: string, members: MarkedEntry[]) {
   if (!members.length) return;
-  await db.collection(QUEUE).bulkWrite(
+  await indexFundRedemptionQueueCollection<Document>(db).bulkWrite(
     members.map(({ _id, payoutBatch: m }) => ({
       updateOne: {
         filter: { _id, "payoutBatch.key": key },
@@ -292,9 +292,10 @@ async function releaseMembers(db: Db, key: string, members: MarkedEntry[]) {
 }
 
 async function rejectedWithoutCash(db: Db, key: string) {
-  const record = await db
-    .collection<BatchJournalRecord>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: key }, { projection: { status: 1, legs: 1 } });
+  const record = await bankMoneyMovesCollection<BatchJournalRecord>(db).findOne(
+    { _id: key },
+    { projection: { status: 1, legs: 1 } }
+  );
   return record?.status === "rejected" && record.legs.every((leg) => !leg.applied);
 }
 
@@ -438,9 +439,7 @@ async function conclude(
     await releaseMembers(db, key, members);
     return 0;
   }
-  const record = await db
-    .collection<BatchJournalRecord>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: key });
+  const record = await bankMoneyMovesCollection<BatchJournalRecord>(db).findOne({ _id: key });
   // Already compensated: replay the refund and the member updates.
   if (record?.compensationKey) return compensateRefusals(db, record, members, turn);
   if (record && (await undeliverableCredits(db, record)))
@@ -487,7 +486,9 @@ export async function settleQueuedPayoutBatch(
       priorStatus: m.entry.status,
     } satisfies PayoutBatchMarker,
   }));
-  const queue = db.collection<ClaimedRedemption & { payoutBatch?: PayoutBatchMarker }>(QUEUE);
+  const queue = indexFundRedemptionQueueCollection<
+    ClaimedRedemption & { payoutBatch?: PayoutBatchMarker }
+  >(db);
   const frozen = await queue.bulkWrite(
     markers.map(({ member, marker }) => ({
       updateOne: {
@@ -565,8 +566,7 @@ export async function recoverPayoutBatches(
   if (!byKey.size) return { changed, recovered };
   const written = new Set(
     (
-      await db
-        .collection<BatchJournalRecord>(MONEY_MOVE_COLLECTION)
+      await bankMoneyMovesCollection<BatchJournalRecord>(db)
         .find({ _id: { $in: [...byKey.keys()] } }, { projection: { _id: 1 } })
         .toArray()
     ).map((row) => row._id)

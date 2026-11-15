@@ -8,6 +8,7 @@
 
 import { getDb } from "@/lib/mongodb";
 import { normalizeIp } from "@/lib/utils/ipNormalize";
+import { ipGeoCacheCollection } from "@/lib/db/repositories/ipGeoCache";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ const MIN_INTERVAL_MS = 1_500;
 async function getCached(ip: string): Promise<IpDetails | null> {
   try {
     const db = await getDb();
-    const doc = await db.collection<IpGeoCacheDoc>("ipGeoCache").findOne({ _id: ip });
+    const doc = await ipGeoCacheCollection<IpGeoCacheDoc>(db).findOne({ _id: ip });
     return doc?.data ?? null;
   } catch {
     return null;
@@ -76,7 +77,7 @@ async function setCache(ip: string, data: IpDetails): Promise<void> {
   try {
     const db = await getDb();
     const now = new Date();
-    await db.collection<IpGeoCacheDoc>("ipGeoCache").updateOne(
+    await ipGeoCacheCollection<IpGeoCacheDoc>(db).updateOne(
       { _id: ip },
       {
         $set: {

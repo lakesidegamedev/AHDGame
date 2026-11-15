@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
-import type { Corporation, CorporateSector, Character, GameState } from "@/lib/db/types";
+import type { CorporateSector, GameState } from "@/lib/db/types";
 import {
   corpCapitalToAnchor,
   fxRateForCorpFromMap,
@@ -16,6 +16,10 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 export async function GET() {
   try {
@@ -24,15 +28,12 @@ export async function GET() {
 
     const db = await getDb();
     const [corps, sectors, characters, gameState, fxByCurrency] = await Promise.all([
-      db.collection<Corporation>("corporations").find({}).toArray(),
-      db.collection<CorporateSector>("corporateSectors").find({}).toArray(),
-      db
-        .collection<Character>("characters")
+      corporationsCollection(db).find({}).toArray(),
+      corporateSectorsCollection(db).find({}).toArray(),
+      charactersCollection(db)
         .find({}, { projection: { _id: 1, name: 1 } })
         .toArray(),
-      db
-        .collection<GameState>("gameState")
-        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
       loadValuationFxRates(db),
     ]);
     const currentTurn = gameState?.currentTurn ?? 0;

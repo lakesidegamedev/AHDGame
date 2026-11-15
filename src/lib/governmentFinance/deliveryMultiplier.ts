@@ -1,13 +1,14 @@
 import type { Db } from "mongodb";
-import type { EnactedLaw, FederalBudget, DepartmentProgramState } from "@/lib/db/types/budget";
+import type { EnactedLaw, DepartmentProgramState } from "@/lib/db/types/budget";
 import { nationalLawCountryQuery } from "@/lib/policy/nationalPolicyRecords";
 import { clampRatio } from "./rules/implementation";
 import { US_HEALTH_DEPARTMENT_ID, US_PUBLIC_HEALTH_PROGRAM_ID } from "./departments";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { enactedLawsCollection } from "@/lib/db/repositories/enactedLaws";
 
-export const US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID = "us_public_health";
-const US_PUBLIC_HEALTH_POLICY_OPTION_INDEX = 1;
-const US_PUBLIC_HEALTH_POLICY_OPTION_ID = "public_health_opt_1";
-export const US_PUBLIC_HEALTH_POLITICAL_LAW_ID = "us.health.prevention.primary";
+export const US_PUBLIC_HEALTH_LEGISLATION_TYPE_ID = "us.health.prevention.primary";
+const US_PUBLIC_HEALTH_POLICY_OPTION_INDEX = 4;
+const US_PUBLIC_HEALTH_POLICY_OPTION_ID = "l4";
 
 export type DeliveryMultiplierReason =
   | "feature_disabled"
@@ -80,7 +81,7 @@ export async function loadPublicHealthDeliveryMultiplier(
   }
 
   const [budget, activeLaw] = await Promise.all([
-    db.collection<FederalBudget>("federalBudget").findOne(
+    federalBudgetCollection(db).findOne(
       { countryId: "US" },
       {
         projection: {
@@ -88,7 +89,7 @@ export async function loadPublicHealthDeliveryMultiplier(
         },
       }
     ),
-    db.collection<EnactedLaw>("enactedLaws").findOne(
+    enactedLawsCollection(db).findOne(
       {
         scope: "national",
         ...nationalLawCountryQuery("US"),

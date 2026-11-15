@@ -7,13 +7,13 @@
  * renders. Optional auth — anyone can look, but only the seated (character-backed)
  * Justice can act (enforced by the existing `justice/action` route).
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth"; // Optional auth — intentionally uses getAuthUser()
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import {
   JUSTICE_ACTIONS,
@@ -24,6 +24,8 @@ import { getGameState } from "@/lib/gameState";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { divergentDeathChance } from "@/lib/scotus/tenure";
 import { getScotusUpcomingCases } from "@/lib/scotus/queries";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -32,7 +34,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     if (!COUNTRY_CONFIGS[countryId]) {
       return errorResponse(400, "Invalid country");
     }
-    if (countryId !== "US") {
+    if (!countryHasFeature("supremeCourtDocket", countryId)) {
       // SCOTUS is US-only per #3581 scope.
       return NextResponse.json({
         countryId,
@@ -51,14 +53,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const db = await getDb();
     const authUser = await getAuthUser().catch(() => null);
     const myCharacter = authUser
-      ? await db
-          .collection<Character>("characters")
-          .findOne({ userId: new ObjectId(authUser.userId) })
+      ? await charactersCollection(db).findOne({ userId: new ObjectId(authUser.userId) })
       : null;
 
     const [seat, gameState, upcomingCases] = await Promise.all([
       myCharacter
-        ? db.collection<SupremeCourtSeat>("supremeCourtSeats").findOne({
+        ? supremeCourtSeatsCollection(db).findOne({
             countryId,
             justiceCharacterId: myCharacter._id,
           })

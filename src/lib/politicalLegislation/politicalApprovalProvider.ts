@@ -24,23 +24,22 @@ import {
   weightingFor,
 } from "@/lib/utils/governmentApproval";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
-import { NON_PLAYABLE_BOARDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoards";
+import { NON_PLAYABLE_BOARD_COUNTRY_IDS } from "@/lib/politicalMetrics/seeds/nonPlayableBoardsSchema";
 import { approvalComponent, electorateLean } from "./politicalApproval";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /**
  * Every country whose political metrics come from the board: the four
- * anchor-seeded playables plus the 22 derived non-playables.
+ * anchor-seeded playables plus the 23 derived non-playables.
  *
- * Built from the board file rather than hand-listed so adding a country to the
- * derivation cannot leave its consumers reading a collection that no longer
- * carries it.
+ * Taken from the board schema, which the seed contract holds the board file to
+ * exactly, so this predicate never loads the board table itself.
  */
 const BOARD_COUNTRIES = new Set<string>([
   ...POLITICAL_METRIC_COUNTRY_IDS,
-  // NON_PLAYABLE_BOARDS is keyed by PRESET first, so flatten a level: the top
-  // keys are eras, not countries. Reading them directly would make every
-  // predicate answer "is this country called 1953-default?".
-  ...Object.values(NON_PLAYABLE_BOARDS).flatMap((byCountry) => Object.keys(byCountry)),
+  ...NON_PLAYABLE_BOARD_COUNTRY_IDS,
 ]);
 
 /**
@@ -88,7 +87,7 @@ export async function loadPoliticalApprovalBases(
   // non-playable's board sits at a different level per era, so the wrong
   // intercept would lurch its approval.
   const [gameState, states] = await Promise.all([
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -96,7 +95,6 @@ export async function loadPoliticalApprovalBases(
           currentTurn: 1,
           currentYear: 1,
           startingYear: 1,
-          eraSystemEnabled: 1,
           resetWorldId: 1,
           resetVersionSeeds: 1,
           metricsSystemVersion: 1,
@@ -107,8 +105,7 @@ export async function loadPoliticalApprovalBases(
         },
       }
     ),
-    db
-      .collection<State>("states")
+    statesCollection(db)
       .find(
         { countryId },
         { projection: { _id: 1, population: 1, cachedEconomicLean: 1, cachedSocialLean: 1 } }
@@ -124,7 +121,7 @@ export async function loadPoliticalApprovalBases(
   );
   if (resetInputs) {
     const averages = computeNationalAveragesFromMetrics(resetInputs.metrics);
-    const year = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
+    const year = gameState ? resolveGameYear(gameState) : null;
     const byRegion = new Map(
       resetInputs.metrics.map((metrics) => [
         String(metrics._id),
@@ -164,7 +161,7 @@ export async function loadPoliticalApprovalBases(
       loadElectorateGroups(db, { countryId }),
     ]);
     const averages = computeNationalAveragesFromMetrics(metrics);
-    const year = gameState?.eraSystemEnabled ? resolveGameYear(gameState) : null;
+    const year = gameState ? resolveGameYear(gameState) : null;
     const byRegion = new Map(
       metrics.map((metric) => [
         String(metric._id),
@@ -192,10 +189,7 @@ export async function loadPoliticalApprovalBases(
         : BASE_APPROVAL;
     return { byRegion, national };
   }
-  const docs = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
-    .find({ countryId })
-    .toArray();
+  const docs = await politicalMetricsCollection(db).find({ countryId }).toArray();
   if (docs.length === 0) return null;
 
   const stateById = new Map(states.map((s) => [s._id, s]));

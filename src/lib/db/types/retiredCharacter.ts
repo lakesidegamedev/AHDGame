@@ -31,14 +31,7 @@ export interface RetiredCharacterSnapshot {
     /** Savings balance in the character's home currency — used with cashOnHand for net worth. */
     savingsOnHand?: number;
     /**
-     * Total value of held corporation shares, bonds, and index-fund
-     * positions, each pre-converted to internal anchor units (₳) — captured
-     * right before `retireCharacter` releases those holdings back to their
-     * respective floats, since the release is irreversible and this is the
-     * only chance to record what they were worth. Absent/0 on snapshots
-     * taken before this field existed (net worth undercounts for those —
-     * the value was already released with no record by the time this field
-     * was added, unrecoverable).
+     * Total value of held shares, bonds, and index funds, pre-converted to anchor units (₳), captured just before `retireCharacter` irreversibly releases them. Absent/0 on older snapshots (net worth undercounts there).
      */
     /** Frozen retirement values avoid repricing historical balances with a later world's FX. */
     cashValueAnchor?: number;
@@ -55,12 +48,7 @@ export interface RetiredCharacterSnapshot {
   bio?: string;
   careerHistory?: CareerEvent[];
   /**
-   * Label only — computed by `deriveHighestOffice` at retirement time and
-   * frozen from then on. Don't trust this for scoring/ranking: a past bug in
-   * that function (ticket #991) credited losing candidates with offices they
-   * only ran for, and snapshots taken before the fix still carry the stale
-   * wrong label forever. Re-derive live from `careerHistory`/`currentOffice`
-   * (both present on this same snapshot) wherever correctness matters.
+   * Label only, frozen at retirement. Do not trust for scoring/ranking: may carry stale incorrect labels. Re-derive live from `careerHistory`/`currentOffice` where correctness matters.
    */
   highestOffice?: string;
   achievementCount: number;
@@ -76,7 +64,7 @@ export interface RetiredCharacter {
   snapshot: RetiredCharacterSnapshot;
   /** Season this life belonged to (outgoing iteration at retirement). */
   iteration?: GameIteration;
-  /** Frozen Season Recap ("Wrapped") payload — present when seasonRecapEnabled. */
+  /** Frozen Season Recap ("Wrapped") payload. */
   recap?: CharacterRecap;
   /**
    * One-time "seen" stamp for the post-reset recap gate. Absent = unviewed

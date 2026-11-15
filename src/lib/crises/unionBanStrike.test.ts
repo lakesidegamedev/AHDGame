@@ -1,3 +1,4 @@
+import { DOMAIN_BUCKET_AFFINITIES } from "@/lib/bucketAffinities";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ALL_CRISIS_TEMPLATES, UNION_BAN_GENERAL_STRIKE_TEMPLATE } from "./templates";
@@ -143,6 +144,22 @@ describe("underground crisis resistance", () => {
 });
 
 describe("segments and costs", () => {
+  it("authors segments only in each country's census bucket vocabulary", () => {
+    const vocab = (country: string) =>
+      new Set(Object.values(DOMAIN_BUCKET_AFFINITIES[country]).flatMap((d) => Object.keys(d)));
+    for (const country of ["US", "UK", "IE"]) {
+      const known = vocab(country);
+      const { labour, business } = UNION_BAN_SEGMENTS[country];
+      for (const key of [...labour, ...business]) expect(known.has(key)).toBe(true);
+      expect(labour.filter((k) => business.includes(k))).toEqual([]);
+    }
+    for (const country of ["UK", "IE", "DE", "JP", "CN"]) {
+      const known = vocab(country);
+      const { labour, business } = UNION_BAN_SEGMENTS.default;
+      for (const key of [...labour, ...business]) expect(known.has(key)).toBe(true);
+    }
+  });
+
   it("falls back to default segments for unconfigured countries", () => {
     expect(segmentsFor("FR")).toBe(UNION_BAN_SEGMENTS.default);
     expect(segmentsFor("US")).toBe(UNION_BAN_SEGMENTS.US);

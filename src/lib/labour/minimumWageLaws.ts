@@ -14,6 +14,7 @@ import {
   type MinimumWageBudget,
   type NationalMinimumWagePolicy,
 } from "@/lib/labour/rules/minimumWageLaw";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 
 /** Federal budget country id of a national policy row ("federal" is the US, "jp_national" is JP). */
 function nationalPolicyCountryId(row: Pick<StatePolicy, "stateId" | "countryId">): string | null {
@@ -28,8 +29,7 @@ function nationalPolicyCountryId(row: Pick<StatePolicy, "stateId" | "countryId">
 export async function loadNationalMinimumWagePolicies(
   db: Db
 ): Promise<NationalMinimumWagePolicy[]> {
-  const rows = await db
-    .collection<StatePolicy>("statePolicies")
+  const rows = await statePoliciesCollection(db)
     .find(
       { legislationTypeId: { $in: [...MINIMUM_WAGE_LAW_TYPE_IDS] }, scope: "national" },
       {

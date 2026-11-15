@@ -1,0 +1,107 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "regionalBillAssentTitle": "Cathaoirleach",
+    "legislature": {
+      "name": "Oireachtas",
+      "lowerChamber": {
+        "key": "dail",
+        "name": "Dáil Éireann",
+        "shortName": "Dáil",
+        "seats": 160,
+        "description": "160 TDs elected by proportional representation using the Single Transferable Vote across multi-seat constituencies."
+      },
+      "upperChamber": {
+        "key": "seanad",
+        "name": "Seanad Éireann",
+        "shortName": "Seanad",
+        "seats": 60,
+        "description": "60 senators - 43 elected from vocational panels, 11 nominated by the Taoiseach, 6 from universities."
+      }
+    },
+    "subNationalChamber": {
+      "key": "localCouncil",
+      "name": "Local Council",
+      "shortName": "Council",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "taoiseach",
+        "label": "Taoiseach",
+        "labelPlural": "Taoisigh",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "tanaiste",
+        "label": "Tánaiste",
+        "labelPlural": "Tánaistí",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "uachtaran",
+        "label": "Uachtarán",
+        "labelPlural": "Uachtaráin",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "dail",
+        "label": "Teachta Dála",
+        "labelPlural": "Teachtaí Dála",
+        "chamberKey": "dail",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Central Bank of Ireland",
+        "labelPlural": "Governors of the Central Bank of Ireland",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "localCouncil",
+        "label": "Councillor",
+        "labelPlural": "Councillors",
+        "chamberKey": "localCouncil",
+        "isExecutive": false,
+        "isSubNational": true
+      },
+      {
+        "key": "governor",
+        "label": "Cathaoirleach",
+        "labelPlural": "Cathaoirligh",
+        "isExecutive": false,
+        "isSubNational": true
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Oireachtas",
+        "lowerChamber": {
+          "key": "dail",
+          "name": "Dáil Éireann",
+          "shortName": "Dáil",
+          "seats": 147,
+          "description": "147 TDs elected by PR-STV across multi-seat constituencies (1948 redistribution)."
+        },
+        "upperChamber": {
+          "key": "seanad",
+          "name": "Seanad Éireann",
+          "shortName": "Seanad",
+          "seats": 60,
+          "description": "60 senators - 43 elected from vocational panels, 11 nominated by the Taoiseach, 6 from universities."
+        }
+      }
+    }
+  },
+  "regionalAssentOfficeKey": "governor"
+}

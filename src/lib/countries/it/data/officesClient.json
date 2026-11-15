@@ -1,0 +1,88 @@
+{
+  "config": {
+    "governmentType": "parliamentaryRepublic",
+    "regionLabel": "Region",
+    "legislature": {
+      "name": "Parliament",
+      "lowerChamber": {
+        "key": "cameraDeputati",
+        "name": "Chamber of Deputies",
+        "shortName": "Camera",
+        "seats": 630,
+        "description": "630 deputies elected by proportional representation for five-year terms."
+      },
+      "upperChamber": {
+        "key": "senato",
+        "name": "Senate of the Republic",
+        "shortName": "Senato",
+        "seats": 315,
+        "description": "315 elected senators (plus a few senators-for-life), elected on a regional basis for five-year terms.",
+        "elected": true
+      }
+    },
+    "officeTypes": [
+      {
+        "key": "primeMinister",
+        "label": "Prime Minister",
+        "labelPlural": "Prime Ministers",
+        "isExecutive": true,
+        "isSubNational": false
+      },
+      {
+        "key": "president",
+        "label": "President",
+        "labelPlural": "Presidents",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true
+      },
+      {
+        "key": "deputy",
+        "label": "Deputy",
+        "labelPlural": "Deputies",
+        "chamberKey": "cameraDeputati",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "senator",
+        "label": "Senator",
+        "labelPlural": "Senators",
+        "chamberKey": "senato",
+        "isExecutive": false,
+        "isSubNational": false
+      },
+      {
+        "key": "centralBankChair",
+        "label": "Governor of the Banca d'Italia",
+        "labelPlural": "Governors of the Banca d'Italia",
+        "isExecutive": false,
+        "isSubNational": false
+      }
+    ],
+    "lowerElectionSystem": { "snapElectionsAllowed": true },
+    "upperElectionSystem": { "snapElectionsAllowed": true }
+  },
+  "eraOverrides": {
+    "1953-default": {
+      "legislature": {
+        "name": "Parliament",
+        "lowerChamber": {
+          "key": "cameraDeputati",
+          "name": "Chamber of Deputies",
+          "shortName": "Camera",
+          "seats": 590,
+          "description": "590 deputies elected by proportional representation (Camera size in force 1948–1963)."
+        },
+        "upperChamber": {
+          "key": "senato",
+          "name": "Senate of the Republic",
+          "shortName": "Senato",
+          "seats": 280,
+          "description": "280 elected senators on a regional basis for five-year terms (1953 First Republic apportionment).",
+          "elected": true
+        }
+      }
+    }
+  }
+}

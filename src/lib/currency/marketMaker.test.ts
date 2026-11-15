@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   executeMarketMakerTrade,
   getCountryForCurrency,
@@ -11,6 +12,9 @@ import {
 } from "./marketMaker";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+
+/** A code no country issues, so no central bank can receive its spread. */
+const UNKNOWN_CURRENCY = "ZZZ" as CurrencyCode;
 
 describe("distributeConversionSpread", () => {
   let db: MockDb;
@@ -35,7 +39,7 @@ describe("distributeConversionSpread", () => {
   it("no-ops on a non-positive fee, same-currency, or unknown source currency", async () => {
     await distributeConversionSpread(db as unknown as Db, 0, "GBP", "USD");
     await distributeConversionSpread(db as unknown as Db, 100, "USD", "USD");
-    await distributeConversionSpread(db as unknown as Db, 100, "CAD", "USD"); // CAD has no CB
+    await distributeConversionSpread(db as unknown as Db, 100, UNKNOWN_CURRENCY, "USD");
     expect(db.collectionMocks.centralBanks.updateOne).not.toHaveBeenCalled();
   });
 });
@@ -92,7 +96,7 @@ describe("distributeConversionSpreadsBatch", () => {
     await distributeConversionSpreadsBatch(db as unknown as Db, [
       { fee: 0, fromCurrency: "GBP", toCurrency: "USD" },
       { fee: 10, fromCurrency: "USD", toCurrency: "USD" },
-      { fee: 10, fromCurrency: "CAD", toCurrency: "USD" },
+      { fee: 10, fromCurrency: UNKNOWN_CURRENCY, toCurrency: "USD" },
     ]);
     expect(bulkWrite).not.toHaveBeenCalled();
   });
@@ -109,10 +113,12 @@ describe("getCountryForCurrency", () => {
     expect(getCountryForCurrency("CNY")).toBe("CN");
   });
 
-  it("returns null for a currency no country uses (CAD), keeping the trade guard", () => {
-    // CAD only has a USD-parity fallback in the anchor map; no country's home
-    // currency is CAD, so a CAD trade must still be rejected as invalid.
-    expect(getCountryForCurrency("CAD")).toBeNull();
+  it("resolves CAD to Canada, its only home country", () => {
+    expect(getCountryForCurrency("CAD")).toBe("CA");
+  });
+
+  it("returns null for a currency no country uses, keeping the trade guard", () => {
+    expect(getCountryForCurrency(UNKNOWN_CURRENCY)).toBeNull();
   });
 });
 

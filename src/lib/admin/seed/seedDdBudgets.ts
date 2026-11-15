@@ -2,6 +2,8 @@ import type { Db } from "mongodb";
 import { seedCountryBudgets } from "./seedCountryBudgets";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { upsertCountryOwnedCorpEntries } from "./upsertCountryOwnedCorps";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Seeds East Germany's FY1979 national budget, default enacted laws (from the dd_*
@@ -24,17 +26,18 @@ export async function seedDdBudgets(
       // "2019-default" and commandEconomyEnabled false, which excludes DD from the
       // per-commanding-height SOE split by construction and prices its seed data
       // off the modern era table.
-      const ddGameConfig = await db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+      const ddGameConfig = await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { commandEconomyEnabled: 1 } }
+      );
       const countryOwnedSeedData = generateCountryOwnedSeedData(
         statesForBudgets,
         preset,
         ddGameConfig?.commandEconomyEnabled === true,
         log
       );
-      const ddCorpData = countryOwnedSeedData.filter(
-        (entry) => entry.corporation.countryOwnerId === "DD"
+      const ddCorpData = countryOwnedSeedData.filter((entry) =>
+        countryHasFeature("ddAdmin", entry.corporation.countryOwnerId)
       );
       const ddUpsert = await upsertCountryOwnedCorpEntries(db, "DD", ddCorpData);
       if (ddCorpData.length > 0) {

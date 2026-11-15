@@ -5,11 +5,10 @@ import type {
   ElectedOfficial,
   Character,
   StateDemographics,
-  DemographicCategory,
   OfficeType,
 } from "@/lib/db/types";
 import type { Layer1Config } from "@/lib/seeds/stateDemographics";
-import type { ArchetypeRegionCensus } from "@/lib/seeds/regionCensusData";
+import type { IntlRegionCensus } from "@/lib/seeds/regionCensusData";
 import type { CountryId } from "@/lib/constants/countries";
 
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
@@ -113,7 +112,7 @@ export interface SerializedGovernor {
   nppSequentialId?: number | null;
 }
 
-export type { Layer1Config, ArchetypeRegionCensus };
+export type { Layer1Config, IntlRegionCensus };
 
 export interface TurnoutResponse {
   stateId: string;
@@ -133,8 +132,7 @@ export interface StatePageTabsProps {
   players: SerializedPlayer[];
   npps: NPPDisplaySimple[];
   demographics: SerializedStateDemographics | null;
-  categories: DemographicCategory[];
-  censusData: Layer1Config | ArchetypeRegionCensus | null;
+  censusData: Layer1Config | IntlRegionCensus | null;
   calculatedLeans: { economicLean: number; socialLean: number } | null;
   partyOrg: PartyOrgDisplay[];
   turnoutData?: TurnoutResponse | null;
@@ -191,9 +189,3 @@ export interface StatePageTabsProps {
    */
   bucketProfile?: BucketProfileSection[] | null;
 }
-
-// PolicyRecordResponse used to live here as a narrower copy of the canonical
-// shape in @/lib/policy/types — it predated the statute book and lacked
-// metricEffects, the field the effect pills render from. The Laws tab now uses
-// the canonical type directly, so the copy is gone rather than left to rot as a
-// second definition someone could pick up by mistake.

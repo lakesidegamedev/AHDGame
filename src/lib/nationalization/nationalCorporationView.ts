@@ -8,15 +8,7 @@ import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQu
 import { corporationTypeOfLane } from "@/lib/constants/corporations";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db, ObjectId } from "mongodb";
-import type {
-  Bond,
-  Character,
-  Corporation,
-  CorporateSector,
-  GameState,
-  State,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, GameState, State, StateMetrics } from "@/lib/db/types";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import {
   computeFillRate,
@@ -69,6 +61,12 @@ import {
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { getDesignatedSectorTypes } from "./strategicSectors";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 /** Human-readable label for a `category.field` metric path (region-aware). */
 function mandateMetricLabel(path: string, stateId?: string): string {
@@ -116,7 +114,7 @@ export interface NatViewSector {
   /** Growth rate actually applied this turn (trends toward the target). */
   currentGrowthRate: number;
   /**
-   * Active production method (suggestion #91). The national CEO panel never
+   * Active production method. The national CEO panel never
    * exposed this, so a state-owned sector was stuck on whatever it was seeded
    * with — even though `setSectorStrategy` has always accepted the national
    * CEO (it only checks `requireCeo`, with no state-owned exclusion).
@@ -299,10 +297,7 @@ export async function buildNationalCorporationView(
     COUNTRY_CURRENCY_MAP[countryId] ??
     "USD") as CurrencyCode;
 
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
-    .find({ corporationId: corp._id })
-    .toArray();
+  const sectors = await corporateSectorsCollection(db).find({ corporationId: corp._id }).toArray();
 
   const stateIds = Array.from(new Set(sectors.map((s) => s.stateId)));
 
@@ -323,8 +318,7 @@ export async function buildNationalCorporationView(
       ? findMergedRegionMetricsManyForDisplay(db, { _id: { $in: stateIds } })
       : Promise.resolve([]),
     isPoliticalApprovalCountry(countryId) && stateIds.length > 0
-      ? db
-          .collection<PoliticalMetricsDoc>("politicalMetrics")
+      ? politicalMetricsCollection(db)
           .find({ _id: { $in: stateIds } })
           .toArray()
       : Promise.resolve([]),
@@ -338,8 +332,7 @@ export async function buildNationalCorporationView(
   // shows the proper name rather than the internal stateId abbreviation.
   const stateNameDocs =
     stateIds.length > 0
-      ? await db
-          .collection<State>("states")
+      ? await statesCollection(db)
           .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1 } })
           .toArray()
       : [];
@@ -349,8 +342,7 @@ export async function buildNationalCorporationView(
   // All regions of the country (alphabetical), for the IPO headquarters selector
   // in the privatize wizard. Distinct from the held-region names above, which
   // only cover regions this corp already operates in.
-  const countryRegionDocs = await db
-    .collection<State>("states")
+  const countryRegionDocs = await statesCollection(db)
     .find({ countryId }, { projection: { _id: 1, name: 1 } })
     .toArray();
   const countryRegions = countryRegionDocs
@@ -367,7 +359,7 @@ export async function buildNationalCorporationView(
   // summary, so the view model has to carry the physical figures. Read once.
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
   const currentTurnForBuilds = plantsMode
-    ? ((await db.collection<GameState>("gameState").findOne({ _id: "current" }))?.currentTurn ?? 0)
+    ? ((await gameStateCollection(db).findOne({ _id: "current" }))?.currentTurn ?? 0)
     : 0;
 
   const viewSectors: NatViewSector[] = sectors.map((s) => {
@@ -457,15 +449,10 @@ export async function buildNationalCorporationView(
       efficiency,
       vsPrivateMarginDelta: efficiency.total,
       // Operating profit is the engine's own answer, on the REALIZED basis and
-      // signed (ticket #1072). It used to be
-      // `revenue x max(0, effectiveProfitMargin) / 100`, which billed a cold
-      // plant's untouched nameplate at the margin it WOULD have earned if it
-      // had run, and floored every running loss at zero. Five mothballed East
-      // German plants therefore reported +4.78M per day against an
-      // engine-booked loss, and mothballing became the profit-maximizing move.
-      // `effectiveProfitMargin` already bakes in the SOE efficiency penalty, so
-      // `efficiency.total` is added only to the seeded-base fallback a sector
-      // that has never processed a turn falls back to.
+      // signed, so a cold or losing plant is not billed at a nameplate margin it
+      // never earned. effectiveProfitMargin already includes the SOE efficiency
+      // penalty; efficiency.total is added only for the seeded-base fallback used
+      // when a sector has never processed a turn.
       operatingProfit: Math.round(
         soeSectorOperatingProfit(s, plantsMode, s.profitMargin + efficiency.total)
       ),
@@ -523,8 +510,7 @@ export async function buildNationalCorporationView(
         ) / 10
       : 0;
 
-  const bonds = await db
-    .collection<Bond>("bonds")
+  const bonds = await bondsCollection(db)
     .find({ corporationId: corp._id, matured: false })
     .toArray();
   const assumedBonds = bonds.map((b) => ({
@@ -584,7 +570,7 @@ export async function buildNationalCorporationView(
   const grossRevenuePerTurn = Math.round(totalRevenue);
   const mandateSubsidyPerTurn = Math.round(
     viewSectors.reduce(
-      // Realized, not nameplate (ticket #1072): a cold plant sells nothing, so
+      // Realized, not nameplate: a cold plant sells nothing, so
       // price control forgoes nothing on it and the treasury is not paying for it.
       (acc, s) => acc + (s.priceControlled ? (s.realizedRevenue * -s.efficiency.mandate) / 100 : 0),
       0
@@ -646,7 +632,7 @@ export async function buildNationalCorporationView(
       sectorCount: foundingCount,
     });
 
-  const characters = db.collection<Character>("characters");
+  const characters = charactersCollection(db);
   let ceoName: string | null = null;
   let ceoSequentialId: number | null = null;
   if (!corp.ceoVacant && corp.ceoId) {

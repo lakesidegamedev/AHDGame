@@ -1,12 +1,14 @@
 import type { ObjectId, ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Bill } from "@/lib/db/types/legislation";
 import type { FederationPoliticalProposalRecord } from "./politicalProposal";
 import {
   evaluateSuccessionApproval,
   type SuccessionApprovalInput,
   type SuccessionConsent,
 } from "./rules/decision";
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
+import { federationRatificationsCollection } from "@/lib/db/repositories/federationRatifications";
 
 export const FEDERATION_RATIFICATIONS_COLLECTION = "federationRatifications";
 
@@ -43,9 +45,9 @@ export async function loadPersistedFederationApproval(input: {
     !approval.settlementId.trim()
   )
     throw new Error("Federation ratification has invalid settlement terms");
-  const proposal = await db
-    .collection<FederationPoliticalProposalRecord>("federationPoliticalProposals")
-    .findOne({ _id: `1991-default:${approval.settlementId}:${approval.revision}` }, { session });
+  const proposal = await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(
+    db
+  ).findOne({ _id: `1991-default:${approval.settlementId}:${approval.revision}` }, { session });
   if (
     !proposal ||
     proposal.status !== "open" ||
@@ -53,8 +55,7 @@ export async function loadPersistedFederationApproval(input: {
     proposal.termsHash !== termsHash
   )
     throw new Error("Federation vote has no matching open political proposal");
-  const bills = await db
-    .collection<Bill>("bills")
+  const bills = await billsCollection(db)
     .find(
       {
         countryId: sourceEntityId,
@@ -84,8 +85,7 @@ export async function loadPersistedFederationApproval(input: {
   )
     throw new Error("Federation parent mandate has no unique enacted bill");
   const billId = bills[0]._id.toString();
-  const ratifications = await db
-    .collection<FederationRatificationRecord>(FEDERATION_RATIFICATIONS_COLLECTION)
+  const ratifications = await federationRatificationsCollection<FederationRatificationRecord>(db)
     .find(
       {
         presetId: "1991-default",

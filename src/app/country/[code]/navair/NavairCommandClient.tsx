@@ -2,7 +2,10 @@
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { missionNeedsTarget } from "@/lib/navair/missions";
+import type { SupplyAdvice as Advice } from "@/lib/navair/rules/supply";
+import { SupplyAdvice } from "./SupplyAdvice";
 
 /** A problem with a formation that the commander can actually do something about. */
 export interface FormationWarning {
@@ -67,6 +70,20 @@ export interface StationOption {
   name: string;
   /** False for regions this formation cannot operate from, e.g. dry land for a fleet. */
   allowed: boolean;
+  port?: number;
+  /**
+   * Why a fleet cannot be stationed here. "land" is a region typed as dry land, which can
+   * still have a port rating; "no-port" is a region with no port at all.
+   */
+  blockedReason?: "land" | "no-port";
+}
+
+/** The suffix shown on a Station option a fleet cannot be ordered to. */
+export function stationBlockedLabel(s: StationOption): string {
+  if (s.allowed) return "";
+  return s.blockedReason === "no-port"
+    ? " (landlocked, no port)"
+    : " (land region, fleets cannot be stationed here)";
 }
 
 /**
@@ -82,7 +99,6 @@ export interface StationOption {
  * is not blockading, and close air support flown into a contested sky loses the wing.
  */
 export function NavairCommandClient({
-  conflictsEnabled,
   countryCode,
   positionId,
   formations,
@@ -90,8 +106,9 @@ export function NavairCommandClient({
   airMissions,
   stations,
   summary,
+  supplyPreviews = {},
 }: {
-  conflictsEnabled: boolean;
+  supplyPreviews?: Record<string, Record<string, Advice>>;
   countryCode: string;
   positionId: string;
   summary: ForceSummary;
@@ -100,6 +117,7 @@ export function NavairCommandClient({
   airMissions: MissionOption[];
   stations: StationOption[];
 }) {
+  const router = useRouter();
   const [rows, setRows] = useState(formations);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +163,7 @@ export function NavairCommandClient({
         )
       );
       setSaved(id);
+      router.refresh();
       return true;
     } catch {
       setError("Could not reach the ministry. The order was not sent.");
@@ -157,15 +176,6 @@ export function NavairCommandClient({
   if (!rows.length) {
     return (
       <div className="space-y-3">
-        {!conflictsEnabled && (
-          <p
-            role="status"
-            className="rounded border border-amber-900 bg-amber-950/30 p-3 text-sm text-amber-200"
-          >
-            Conflicts is disabled. Current naval and air state is visible, but mission and station
-            orders are unavailable.
-          </p>
-        )}
         <p className="text-sm text-neutral-400">
           This country has no naval or air formations to command.
         </p>
@@ -181,15 +191,6 @@ export function NavairCommandClient({
 
   return (
     <div className="space-y-6">
-      {!conflictsEnabled && (
-        <p
-          role="status"
-          className="rounded border border-amber-900 bg-amber-950/30 p-3 text-sm text-amber-200"
-        >
-          Conflicts is disabled. Current naval and air state is visible, but mission and station
-          orders are unavailable.
-        </p>
-      )}
       {error && (
         <p role="alert" className="rounded border border-red-800 bg-red-950/40 p-3 text-sm">
           {error}
@@ -240,8 +241,8 @@ export function NavairCommandClient({
           {summary.starving > 0 && (
             <li className="text-red-400">
               {summary.starving} formation{summary.starving === 1 ? " is" : "s are"} out of supply.
-              A fleet far from home in unfriendly waters cannot resupply, and an unsupplied
-              formation fights at a fraction of its strength. Move them closer to home.
+              Low supply reduces combat strength. Compare resupply locations below to find home or
+              agreed bases with enough capacity, or add Airlift support.
             </li>
           )}
         </ul>
@@ -309,7 +310,7 @@ export function NavairCommandClient({
                       <select
                         className="ml-2 rounded border border-neutral-700 bg-neutral-900 p-1 text-neutral-100"
                         value={selectedMission ?? ""}
-                        disabled={!conflictsEnabled || busy === f.id}
+                        disabled={busy === f.id}
                         onChange={(e) => {
                           const mission = e.target.value;
                           if (missionNeedsTarget(mission)) {
@@ -341,7 +342,7 @@ export function NavairCommandClient({
                         <select
                           className="ml-2 rounded border border-neutral-700 bg-neutral-900 p-1 text-neutral-100"
                           value={strikeDrafts[f.id] ? "" : (f.missionTarget ?? "")}
-                          disabled={!conflictsEnabled || busy === f.id}
+                          disabled={busy === f.id}
                           onChange={async (e) => {
                             const missionTarget = e.target.value;
                             if (!missionTarget) return;
@@ -373,7 +374,7 @@ export function NavairCommandClient({
                       <select
                         className="ml-2 rounded border border-neutral-700 bg-neutral-900 p-1 text-neutral-100"
                         value={f.station ?? ""}
-                        disabled={!conflictsEnabled || busy === f.id}
+                        disabled={busy === f.id}
                         onChange={(e) => send(f.id, { station: e.target.value })}
                       >
                         {stations.map((s) => (
@@ -385,12 +386,26 @@ export function NavairCommandClient({
                             disabled={f.domain === "naval" && !s.allowed}
                           >
                             {s.name}
-                            {f.domain === "naval" && !s.allowed ? " (no port)" : ""}
+                            {f.domain === "naval" ? stationBlockedLabel(s) : ""}
+                            {f.domain === "naval" && s.allowed && s.port !== undefined
+                              ? ` (port rating ${s.port})`
+                              : ""}
                           </option>
                         ))}
                       </select>
                     </label>
                   </div>
+
+                  <SupplyAdvice
+                    naval={f.domain === "naval"}
+                    advice={supplyPreviews[f.id]?.[f.station ?? ""]}
+                    options={stations.flatMap((s) => {
+                      const advice = supplyPreviews[f.id]?.[s.id];
+                      return advice
+                        ? [{ name: s.name, advice, allowed: f.domain === "air" || s.allowed }]
+                        : [];
+                    })}
+                  />
 
                   {current && <p className="mt-2 text-xs text-neutral-400">{current.desc}</p>}
                   {strikeDrafts[f.id] && (

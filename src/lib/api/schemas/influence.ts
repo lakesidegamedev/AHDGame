@@ -6,8 +6,6 @@ export const characterInfluenceActionSchema = z.object({
   action: z.enum(["raise", "lower", "barnstorm"]),
 });
 
-export type CharacterInfluenceActionBody = z.infer<typeof characterInfluenceActionSchema>;
-
 const influenceContextSchema = z
   .object({
     electionId: z.string().optional(),

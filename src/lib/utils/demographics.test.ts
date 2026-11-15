@@ -7,11 +7,11 @@ import {
   getLeanColor,
   formatLeanValue,
 } from "./demographics";
-import type { StateDemographics, DemographicCategory, CategoryWeights } from "@/lib/db/types";
+import type { CensusGroupView, DemographicCategory, CategoryWeights } from "@/lib/db/types";
 
 describe("calculateStateLean", () => {
   it("returns zeros for empty/invalid input", () => {
-    expect(calculateStateLean(null as unknown as StateDemographics, [])).toEqual({
+    expect(calculateStateLean(null as unknown as CensusGroupView, [])).toEqual({
       economicLean: 0,
       socialLean: 0,
     });
@@ -30,7 +30,7 @@ describe("calculateStateLean", () => {
   });
 
   it("computes lean from single category (turnout-weighted)", () => {
-    const demographics: StateDemographics = {
+    const demographics: CensusGroupView = {
       _id: "CA",
       countryId: "US",
       categoryWeights: { race: 100 },
@@ -72,7 +72,7 @@ describe("calculateStateLean", () => {
   });
 
   it("clamps result to -5..+5 range", () => {
-    const demographics: StateDemographics = {
+    const demographics: CensusGroupView = {
       _id: "X",
       countryId: "US",
       categoryWeights: { race: 100 },
@@ -101,7 +101,7 @@ describe("calculateStateLean", () => {
     // categoryWeights — e.g. another country's voter-group category) must NOT
     // contribute via its defaultWeight, or it would pollute the lean. Matches
     // computeMedianVoter, which only counts explicitly-weighted categories.
-    const demographics: StateDemographics = {
+    const demographics: CensusGroupView = {
       _id: "CA",
       countryId: "US",
       categoryWeights: { race: 100 },

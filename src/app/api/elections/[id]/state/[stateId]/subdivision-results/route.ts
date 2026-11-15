@@ -1,3 +1,13 @@
+import {
+  isCanadianCommons,
+  isCanada,
+  canadianRidingNotice,
+} from "@/lib/countries/ca/rules/localGeography";
+import { projectCanadianRidings } from "@/lib/countries/ca/rules/ridingResults";
+import {
+  SUBDIVISION_REGION_PATTERN,
+  subdivisionRegionMatchesCountry,
+} from "@/lib/maps/rules/region";
 import { hasPopulationSubdivisionReference } from "@/lib/counties/subdivisionReference";
 import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { NextRequest, NextResponse } from "next/server";
@@ -12,10 +22,13 @@ import {
   assignByLeanOrdering,
   type CandidateDistributionInfo,
 } from "@/lib/utils/subdivisionResults";
-import { allocateSeats } from "@/lib/turn/election/seatAllocation";
-import type { ElectionVoteTally, PoliticalParty } from "@/lib/db/types";
+import { allocateSeats } from "@/lib/elections/resolution/seatAllocation";
+import type { ElectionVoteTally } from "@/lib/db/types";
 import { getPartyHex } from "@/lib/utils/politics";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 
 // GET /api/elections/[id]/state/[stateId]/subdivision-results — sub-region
 // vote distribution + seat-consistent winners for a region in an election.
@@ -32,9 +45,11 @@ export async function GET(
     const { id, stateId } = await params;
     const regionId = stateId.toUpperCase();
     // regionId feeds a filesystem path — reject anything but region-code shapes.
-    if (!/^[A-Z]{2,3}$/.test(regionId)) {
+    if (!SUBDIVISION_REGION_PATTERN.test(regionId)) {
       return errorResponse(400, "Invalid region ID");
     }
+    const layer = req.nextUrl.searchParams.get("layer");
+    if (layer && layer !== "census-divisions") return errorResponse(400, "Invalid map layer");
     const turnParam = req.nextUrl.searchParams.get("turn");
     const atTurn = turnParam == null ? null : Number(turnParam);
     if (atTurn != null && (!Number.isInteger(atTurn) || atTurn < 0)) {
@@ -50,8 +65,101 @@ export async function GET(
       return errorResponse(404, "Election not found");
     }
     const election = resolved.election;
+    if (!subdivisionRegionMatchesCountry(election.countryId, regionId))
+      return errorResponse(400, "Region country mismatch");
 
-    const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType));
+    if (isCanada(election.countryId) && (await getGameStatePresetOrDefault(db)) !== "2027-default")
+      return errorResponse(404, "Canadian local maps are qualified only for the 2027 preset");
+
+    if (
+      isCanada(election.countryId) &&
+      isCanadianCommons(election.electionType) &&
+      ["resolved", "completed"].includes(election.status)
+    ) {
+      if (election.state !== regionId) return errorResponse(400, "Election state mismatch");
+      if (atTurn != null) return errorResponse(400, "Riding turn replay is unavailable");
+      if (layer)
+        return errorResponse(
+          404,
+          "Historical census-division projections were not recorded for this election"
+        );
+      const tally = await electionVoteTalliesCollection(db).findOne(
+        { electionId: election._id },
+        { projection: { canadianRidingResult: 1 } }
+      );
+      const result = tally?.canadianRidingResult;
+      if (
+        !result ||
+        result.version !== 1 ||
+        result.electionId !== String(election._id) ||
+        !isCanada(result.countryId) ||
+        result.stateId !== regionId
+      ) {
+        return NextResponse.json({
+          viewBox: "0 0 1 1",
+          mode: "seatConsistent",
+          resultStatus: "unsupported",
+          unitLabel: "Federal riding",
+          unitLabelPlural: "Federal ridings",
+          geometryAvailable: false,
+          notice:
+            "Riding results unavailable: no placement was recorded. Resolution may still be pending, or this election predates recorded Canadian riding results.",
+          subdivisions: [],
+          candidateNames: {},
+          candidateParties: {},
+          partyColors: {},
+        });
+      }
+      return NextResponse.json({
+        ...result,
+        mode: "seatConsistent",
+        resultStatus: "frozen",
+        geometryAvailable: true,
+        unitLabel: "Federal riding",
+        unitLabelPlural: "Federal ridings",
+      });
+    }
+
+    // Completed House races use only their frozen receipt, never today's holders or geometry.
+    if (
+      election.countryId === COUNTRY_CONFIGS.US.id &&
+      election.electionType === "house" &&
+      ["resolved", "completed"].includes(election.status)
+    ) {
+      if (election.state !== regionId) return errorResponse(400, "Election state mismatch");
+      if (atTurn != null)
+        return errorResponse(
+          400,
+          "Turn replay is only available for a concluded presidential race"
+        );
+      const tally = await electionVoteTalliesCollection<ElectionVoteTally>(db).findOne(
+        { electionId: election._id },
+        { projection: { houseDistrictResult: 1, candidateNames: 1, candidateParties: 1 } }
+      );
+      const result = tally?.houseDistrictResult;
+      const supported =
+        result?.version === 1 &&
+        result.electionId === election._id.toString() &&
+        result.countryId === election.countryId &&
+        result.stateId === regionId;
+      return NextResponse.json({
+        viewBox: supported ? result.viewBox : "0 0 1 1",
+        mode: "seatOrdered",
+        resultStatus: supported ? "frozen" : "unsupported",
+        geometryAvailable: supported && result.geometryAvailable,
+        notice: !supported
+          ? "District results unavailable: this election has no recorded district winners."
+          : !result.geometryAvailable
+            ? "District winners are recorded, but map geometry was unavailable for this election."
+            : undefined,
+        subdivisions: supported ? result.districts : [],
+        candidateNames: tally?.candidateNames ?? {},
+        candidateParties: tally?.candidateParties ?? {},
+        partyColors: supported ? result.partyColors : {},
+      });
+    }
+
+    const modeEntry = getSubdivisionMode(election.countryId, String(election.electionType), layer);
     if (!modeEntry) {
       return errorResponse(404, "Subdivision map data is not available for this election");
     }
@@ -65,7 +173,9 @@ export async function GET(
     // County leans follow the world's era (a 1991 world starts from 1984/1988).
     const data = await loadSubdivisionFile(modeEntry.config.dataDir, regionId, {
       preset: await getGameStatePresetOrDefault(db),
-      ...(modeEntry.config.populationCountryId && election.status === "active"
+      ...(modeEntry.config.populationCountryId &&
+      (election.status === "active" ||
+        (isCanada(election.countryId) && election.status === "upcoming"))
         ? {
             countyPopulations: await loadCountyPopulationMap(
               db,
@@ -83,7 +193,7 @@ export async function GET(
     // state and runs to megabytes; this route needs one state's slice. The map
     // requests a state at a time as the reader zooms, so the full read made
     // every county load crawl.
-    const tally = await db.collection<ElectionVoteTally>("electionVoteTallies").findOne(
+    const tally = await electionVoteTalliesCollection(db).findOne(
       { electionId: election._id },
       {
         projection: {
@@ -127,8 +237,7 @@ export async function GET(
     const uniquePartySeqIds = [...new Set(Object.values(tally.candidateParties ?? {}))]
       .map(Number)
       .filter(Boolean);
-    const partyDocs = await db
-      .collection<PoliticalParty>("politicalParties")
+    const partyDocs = await politicalPartiesCollection(db)
       .find({ sequentialId: { $in: uniquePartySeqIds }, countryId: election.countryId })
       .toArray();
     const partyBySeqId = new Map(partyDocs.map((p) => [String(p.sequentialId), p]));
@@ -154,6 +263,9 @@ export async function GET(
       return NextResponse.json({
         viewBox: data.viewBox,
         mode: modeEntry.mode,
+        resultStatus: "projection",
+        geometryAvailable: true,
+        notice: "Modeled district projection; not final district results.",
         unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
         unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",
         subdivisions: seatResults.map((r) => {
@@ -163,6 +275,11 @@ export async function GET(
             name: src?.name ?? r.id,
             path: src?.path ?? "",
             leanScalar: src?.leanScalar,
+            leanStatus: src?.leanStatus,
+            partyLabel:
+              partyBySeqId.get(r.party)?.abbreviation ??
+              (r.party === "independent" ? "IND" : "Unknown party"),
+            marginAvailable: false,
           };
         }),
         candidateNames: tally.candidateNames,
@@ -211,12 +328,26 @@ export async function GET(
           undefined
         ).seatsEstimate;
       }
-      results = assignSeatConsistentWinners(distributed, seatsByCandidate);
+      results = isCanada(election.countryId)
+        ? projectCanadianRidings({
+            subdivisions: data.subdivisions,
+            votes: regionVotes,
+            candidateParties: tally.candidateParties,
+            seats: seatsByCandidate,
+            partyAbbreviations: Object.fromEntries(
+              partyDocs.map((p) => [String(p.sequentialId), p.abbreviation])
+            ),
+            boosts: election.districtCampaignBoosts,
+          })
+        : assignSeatConsistentWinners(distributed, seatsByCandidate);
     }
 
     const subById = new Map(data.subdivisions.map((s) => [s.id, s]));
     return NextResponse.json({
       viewBox: data.viewBox,
+      notice: isCanada(election.countryId)
+        ? canadianRidingNotice(election.electionType, data.notice)
+        : data.notice,
       mode: modeEntry.mode,
       unitLabel: modeEntry.config.unitLabel ?? "Subdivision",
       unitLabelPlural: modeEntry.config.unitLabelPlural ?? "Subdivisions",

@@ -1,8 +1,10 @@
 import { conditionalJson } from "@/lib/api/conditionalJson";
+import { parsePreviewRows, topStocksForPreview } from "@/lib/market/overviewPreview";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { StockExchangeSnapshot } from "@/lib/db/types";
 import { EXCHANGE_API_KEYS, getExchangeLabel } from "@/lib/constants/exchangeRegistry";
+import { stockExchangeSnapshotsCollection } from "@/lib/db/repositories/stockExchangeSnapshots";
 
 /**
  * GET /api/stock-exchange?exchange=nyse|ftse|nikkei|tsx|dax|global
@@ -13,6 +15,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const exchange = searchParams.get("exchange")?.toLowerCase();
+    const previewRows = parsePreviewRows(searchParams.get("preview"));
 
     if (!exchange || !EXCHANGE_API_KEYS.has(exchange)) {
       return errorResponse(
@@ -24,9 +27,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Read from pre-computed snapshot (single document read)
-    const snapshot = await db
-      .collection<StockExchangeSnapshot>("stockExchangeSnapshots")
-      .findOne({ _id: exchange });
+    const snapshot = await stockExchangeSnapshotsCollection(db).findOne({ _id: exchange });
 
     if (!snapshot) {
       // Fallback: return empty listings if snapshot doesn't exist yet
@@ -44,7 +45,9 @@ export async function GET(request: Request) {
     return conditionalJson(request, {
       exchange: exchange.toUpperCase(),
       exchangeName: snapshot.exchangeName,
-      listings: snapshot.listings,
+      listings: previewRows
+        ? topStocksForPreview(snapshot.listings, previewRows)
+        : snapshot.listings,
       unlistedPrivateCount: snapshot.unlistedPrivateCount ?? 0,
       turn: snapshot.turn,
       asOf: snapshot.createdAt,

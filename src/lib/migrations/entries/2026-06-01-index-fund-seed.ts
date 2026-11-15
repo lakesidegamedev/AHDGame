@@ -7,6 +7,8 @@ import {
   INDEX_FUND_SEED_RESERVE_UNITS,
 } from "@/lib/indexFunds/unitAccounting";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 /**
  * Upsert all index-fund definition documents into the indexFunds collection.
@@ -26,8 +28,8 @@ async function seedFundDefinitions(db: Db, ctx: MigrationContext): Promise<Migra
   }
 
   let upserted = 0;
-  const coll = db.collection<IndexFund>("indexFunds");
-  const positions = db.collection<IndexFundPosition>("indexFundPositions");
+  const coll = indexFundsCollection(db);
+  const positions = indexFundPositionsCollection(db);
 
   for (const def of definitions) {
     const filter = { slug: def.slug };

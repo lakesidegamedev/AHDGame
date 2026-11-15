@@ -1,5 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Campaign, ElectionCandidate } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 export async function isCampaignNomineeUser(
   db: Db,
@@ -17,12 +19,10 @@ export async function isCampaignNomineeUser(
     }
   }
 
-  const ownedCandidate = await db
-    .collection("characters")
-    .findOne(
-      { _id: campaign.candidateId, userId: new ObjectId(userId) },
-      { projection: { _id: 1 } }
-    );
+  const ownedCandidate = await charactersCollection(db).findOne(
+    { _id: campaign.candidateId, userId: new ObjectId(userId) },
+    { projection: { _id: 1 } }
+  );
   return ownedCandidate?._id?.equals(campaign.candidateId) ?? false;
 }
 
@@ -31,11 +31,9 @@ export async function isCampaignNomineeUser(
  *
  * The running mate is stored as `runningMateId` on the ticket's active
  * ElectionCandidate row (the nominee's row); the mate has no candidate row of
- * their own. This resolves that row, reads the running mate character, and
- * compares ownership. NPP tickets never have a player running mate, so they
- * return false. Presence of an `activeCharacterId` matching the running mate is
- * a fast path (the authenticated character is the mate); the DB ownership match
- * is the authoritative fallback.
+ * their own. NPP tickets never have a player running mate, so return false.
+ * An `activeCharacterId` matching the running mate is a fast path; the DB
+ * ownership match is authoritative.
  */
 export async function isCampaignRunningMateUser(
   db: Db,
@@ -45,12 +43,10 @@ export async function isCampaignRunningMateUser(
 ): Promise<boolean> {
   if (campaign.candidateIsNPP) return false;
 
-  const candidateRow = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .findOne(
-      { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
-      { projection: { runningMateId: 1 } }
-    );
+  const candidateRow = await electionCandidatesCollection(db).findOne(
+    { electionId: campaign.electionId, characterId: campaign.candidateId, status: "active" },
+    { projection: { runningMateId: 1 } }
+  );
   const runningMateId = candidateRow?.runningMateId;
   if (!runningMateId) return false;
 
@@ -66,9 +62,10 @@ export async function isCampaignRunningMateUser(
   } catch {
     return false;
   }
-  const ownedMate = await db
-    .collection("characters")
-    .findOne({ _id: runningMateId, userId: userOid }, { projection: { _id: 1 } });
+  const ownedMate = await charactersCollection(db).findOne(
+    { _id: runningMateId, userId: userOid },
+    { projection: { _id: 1 } }
+  );
   return ownedMate != null;
 }
 

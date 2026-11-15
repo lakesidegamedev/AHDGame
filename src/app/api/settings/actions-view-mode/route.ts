@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { actionsViewModeSchema } from "@/lib/api/schemas/settings";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // PATCH /api/settings/actions-view-mode — Updates the authenticated user's actions panel view mode preference
 // Auth: requireBasicAuth
@@ -28,9 +29,10 @@ export async function PATCH(request: Request) {
 
     const db = await getDb();
 
-    await db
-      .collection<User>("users")
-      .updateOne({ _id: new ObjectId(user.userId) }, { $set: { actionsViewMode } });
+    await usersCollection(db).updateOne(
+      { _id: new ObjectId(user.userId) },
+      { $set: { actionsViewMode } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

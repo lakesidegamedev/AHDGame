@@ -1,6 +1,5 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { MILITARY_BRANCHES_BY_COUNTRY, isMilitaryEraActive } from "@/lib/constants/military";
@@ -10,6 +9,7 @@ import { buildCountryRoster } from "@/lib/admin/seed/seedMilitaryUnits";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { createSystemNewsPost } from "@/lib/news";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 export interface MilitaryBranchYearCrossingResult {
   ran: boolean;
@@ -29,35 +29,26 @@ export interface MilitaryBranchYearCrossingResult {
 const ROSTER_REGION_STUB = ["standup"];
 
 /**
- * Military branch year crossing: stand up a country's authored order of battle when a
- * service that did not exist at world start becomes era-active.
+ * Military branch year crossing: stand up a country's authored order of battle
+ * when a service that did not exist at world start becomes era-active.
  *
- * `seedMilitaryUnits` runs ONCE, at world bootstrap, and skips any country whose
- * branches are all gated in the future — `getBranches(countryId, startingYear)` returns
- * `[]` and the loop `continue`s before it reads a single region. In a 1953 world that
- * silently deletes the DDR's entire army: all three NVA branches carry
- * `establishedYear: 1956`, so the DDR defence portfolio is a permanently empty page even
- * though `ORDERS_OF_BATTLE` authors a full ten-unit roster for it. Nothing back-filled
- * when the year advanced, because nothing was watching. Same trap for Austria (1955) and
- * Nigeria (1964).
+ * `seedMilitaryUnits` runs once at bootstrap and skips countries whose branches
+ * are all gated in the future (`getBranches` returns `[]`), so their authored
+ * rosters are never seeded. This phase is the watcher that later raises them.
  *
- * This phase is that watcher. Guarded by `gameState.lastMilitaryBranchYearProcessed`:
+ * Guarded by `gameState.lastMilitaryBranchYearProcessed`:
+ *  - First run stands up every currently-active branch holding zero units,
+ *    silently, without news, so already-past worlds self-heal.
+ *  - Later runs act only on a genuine year advance, only for branches that
+ *    crossed inactive -> active, posting news per service raised.
  *
- *  - First run stands up every branch that is active NOW and holds zero units, silently.
- *    That is the self-heal for worlds already past a founding year with nothing seeded —
- *    it fixes the live world without bursting news for a founding the players never saw.
- *  - Later runs only act on a genuine year advance, and only for branches that crossed
- *    from inactive to active in that step, with a news post per service raised.
+ * Idempotent per branch: a branch that already holds units is never topped up,
+ * so a crossing cannot refund divisions lost in a war. The one blind spot is the
+ * first run, which cannot tell "never seeded" from "wiped out"; re-raising
+ * beats leaving a country permanently unarmed.
  *
- * Idempotent on the branch: a branch that already holds units is never topped up, so a
- * crossing cannot refund divisions a player lost in a war. The one blind spot is the
- * first run, which cannot tell "never seeded" from "wiped out" and would re-raise a
- * branch a player had lost entirely. It fires once per world, before any 1956-style
- * crossing, and re-raising beats leaving a country permanently unarmed.
- *
- * Dissolution is deliberately NOT handled here. A branch past its `dissolvedYear` keeps
- * its units rather than having them deleted out from under whoever commands them; that
- * retirement is a product decision, not a silent turn-phase side effect.
+ * Dissolution is deliberately NOT handled here: a branch past its
+ * `dissolvedYear` keeps its units rather than having them deleted.
  *
  * News copy carries no literal years (LARP convention).
  */
@@ -67,12 +58,12 @@ export async function runMilitaryBranchYearCrossing(
 ): Promise<MilitaryBranchYearCrossingResult> {
   const result: MilitaryBranchYearCrossingResult = { ran: false, raised: [], posted: [] };
 
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, lastMilitaryBranchYearProcessed: 1, eraSystemEnabled: 1 } }
-    );
+  const gameState = await (
+    await getGameStateCollection(db)
+  ).findOne(
+    { _id: "current" },
+    { projection: { currentYear: 1, lastMilitaryBranchYearProcessed: 1 } }
+  );
   if (!gameState) return result;
 
   // Prefer the turn context's authoritative year: the persisted
@@ -96,7 +87,7 @@ export async function runMilitaryBranchYearCrossing(
     )
   );
 
-  const postNews = !firstRun && !!gameState.eraSystemEnabled;
+  const postNews = !firstRun;
   const staged: MilitaryUnit[] = [];
 
   // Registered countries only: an era crossing that activates a branch must
@@ -148,9 +139,9 @@ export async function runMilitaryBranchYearCrossing(
 
   if (staged.length > 0) await units.insertMany(staged);
 
-  await db
-    .collection<GameState>("gameState")
-    .updateOne({ _id: "current" }, { $set: { lastMilitaryBranchYearProcessed: currentYear } });
+  await (
+    await getGameStateCollection(db)
+  ).updateOne({ _id: "current" }, { $set: { lastMilitaryBranchYearProcessed: currentYear } });
 
   return { ...result, ran: true, ...(firstRun ? { healed: true } : {}) };
 }

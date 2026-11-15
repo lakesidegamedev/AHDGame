@@ -54,7 +54,6 @@ describe("battle declare route", () => {
     // No theater commander designated by default — the defense holder retains authority.
     db.collectionMocks.militaryFormations.findOne.mockResolvedValue(null);
     db.collectionMocks.gameState.findOne.mockResolvedValue({
-      conflictsEnabled: true,
       currentTurn: 40,
     });
     db.collectionMocks.cabinetMembers.findOne.mockResolvedValue({
@@ -144,13 +143,6 @@ describe("battle declare route", () => {
     const { POST } = await import(ROUTE);
     const res = await POST(post({ theaterId: "afghan", targetCountry: "RU" }), call);
     expect(res.status).toBe(409);
-  });
-
-  it("404s when conflicts is disabled", async () => {
-    db.collectionMocks.gameState.findOne.mockResolvedValue({ conflictsEnabled: false });
-    const { POST } = await import(ROUTE);
-    const res = await POST(post({ theaterId: "afghan", targetCountry: "RU" }), call);
-    expect(res.status).toBe(404);
   });
 
   it("withdraws a pending declaration", async () => {

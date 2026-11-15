@@ -1,13 +1,15 @@
 import type { Db } from "mongodb";
-import type { UKPartyConference } from "@/lib/uk/conference/types";
-import type { UKPartyPlatform } from "@/lib/uk/conference/types";
+import type { UKPartyConference } from "@/lib/countries/uk/conference/types";
+import type { UKPartyPlatform } from "@/lib/countries/uk/conference/types";
+import { ukPartyConferencesCollection } from "@/lib/db/repositories/ukPartyConferences";
+import { ukPartyPlatformsCollection } from "@/lib/db/repositories/ukPartyPlatforms";
 
 /** Annual UK party-conference lifecycle rows (epic #856, ticket #862). */
 export function getUKPartyConferencesCollection(db: Db) {
-  return db.collection<UKPartyConference>("ukPartyConferences");
+  return ukPartyConferencesCollection<UKPartyConference>(db);
 }
 
 /** Ratified standing platforms, one row per UK party (ticket #862). */
 export function getUKPartyPlatformsCollection(db: Db) {
-  return db.collection<UKPartyPlatform>("ukPartyPlatforms");
+  return ukPartyPlatformsCollection<UKPartyPlatform>(db);
 }

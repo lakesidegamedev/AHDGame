@@ -7,6 +7,7 @@ import type {
   SphereSponsorIntent,
   SphereSponsorLedgerKind,
 } from "./types";
+import { sphereFlowLedgerCollection } from "@/lib/db/repositories/sphereFlowLedger";
 
 export const SPHERE_FLOW_LEDGER_COLLECTION = "sphereFlowLedger";
 
@@ -46,7 +47,7 @@ export async function recordSphereFlowLedger(
   }));
 
   try {
-    await db.collection<SphereFlowLedgerEntry>(SPHERE_FLOW_LEDGER_COLLECTION).insertMany(docs, {
+    await sphereFlowLedgerCollection<SphereFlowLedgerEntry>(db).insertMany(docs, {
       ordered: false,
     });
   } catch {
@@ -88,7 +89,7 @@ export async function recordSphereSponsorDecisions(
   }));
 
   try {
-    await db.collection<SphereFlowLedgerEntry>(SPHERE_FLOW_LEDGER_COLLECTION).insertMany(docs, {
+    await sphereFlowLedgerCollection<SphereFlowLedgerEntry>(db).insertMany(docs, {
       ordered: false,
     });
   } catch {
@@ -103,8 +104,7 @@ export async function listSphereFlowLedgerForEntity(
   memberId: string,
   limit = 50
 ): Promise<SphereFlowLedgerEntry[]> {
-  return db
-    .collection<SphereFlowLedgerEntry>(SPHERE_FLOW_LEDGER_COLLECTION)
+  return sphereFlowLedgerCollection<SphereFlowLedgerEntry>(db)
     .find({ memberId })
     .sort({ turn: -1, createdAt: -1 })
     .limit(limit)

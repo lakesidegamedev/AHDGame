@@ -7,26 +7,18 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 /**
  * Per-country, per-commodity REACHABLE market book, in commodity units.
  *
- * Ticket #1077. Every player-facing "is there room in this market" signal used
- * to read the GLOBAL aggregate (`globalDemand - globalSupply`). That number sums
- * three populations of supply that cannot substitute for one another:
+ * "Room in this market" signals must read this book, not the global aggregate.
+ * The global aggregate sums three populations that cannot substitute:
  *
  *   1. reachable  - normal trade partners
- *   2. blocked    - real output sitting behind an embargo wall
+ *   2. blocked    - real output behind an embargo wall
  *   3. untraded   - output from countries outside `COUNTRY_ORDER`, which the
- *                   clearing engine never sees, so it reaches NO market at all
- *
- * Measured on prod at turn 97: world oil read 0.82 demand/supply, so the build
- * gate reported "oversupplied, 0 room" everywhere, while the book a US seller
- * actually faces ran 1.82 - because the surplus was Soviet oil the US
- * embargoes. World steel supply was 41% Ukrainian, from a country that trades
- * with nobody.
+ *                   clearing engine never sees
  *
  * `supply` and `demand` are the numbers to do arithmetic with. `blockedSupply`
- * and `untradedSupply` are DISCLOSURE ONLY: they exist so the UI can name what
- * it excluded ("World supply 3,355,598. Reachable from the US: 1,246,505.
- * Embargoed: 696,494. Untraded: 1,412,598.") instead of showing a bare 0 that
- * reads as a dead market. Never add them back into a ratio.
+ * and `untradedSupply` are DISCLOSURE ONLY: they let the UI name what it
+ * excluded instead of showing a bare 0 that reads as a dead market. Never add
+ * them back into a ratio.
  */
 export interface ReachableBookEntry {
   /** What this country's own producers collectively made (S_H). */
@@ -52,16 +44,13 @@ export interface ReachableBookEntry {
   /** Disclosure: world supply from countries that trade with nobody. */
   untradedSupply: number;
   /**
-   * Foreign demand this country could win that NOBODY currently serves, in
-   * units — its gravity share of every other country's unserved deficit.
+   * Foreign demand this country could win that nobody currently serves, in
+   * units: its gravity share of every other country's unserved deficit.
    *
-   * Ticket #1162. Without this term `reachableDemandGap` is identically zero
-   * for every net exporter: `clearCommodity` scales the exporter row to exactly
+   * Without this term `reachableDemandGap` is identically zero for every net
+   * exporter: `clearCommodity` scales the exporter row to exactly
    * `surplus = supply - domesticDemand`, so `domesticDemand + exports - supply`
-   * cancels by construction. That is the same algebra-not-a-market-condition
-   * failure ticket #1077 fixed on the importer side and left standing on the
-   * exporter side, and it reported "room for 0" in 301 of 310 exporter books on
-   * prod at turn 319.
+   * cancels by construction.
    *
    * Optional so books persisted before this field heal to the old behaviour
    * rather than throwing; see {@link reachableDemandGap}.
@@ -162,13 +151,10 @@ export function buildReachableBooks(args: BuildReachableBooksArgs): ReachableBoo
       unmetByCountry.set(c, Math.max(0, -(result?.perCountry[c]?.uncleared ?? 0)));
     }
 
-    // Gravity mass per exporter: affinity (can it reach this buyer) times
-    // supply (can it actually serve at scale). Normalised per importer so the
-    // shares sum to 1 and the world never sees more room than there is unserved
-    // demand. Weighting by affinity alone let a small, well-connected country
-    // quote the same room as a large producer; adding the raw pool unweighted
-    // made every country's book identical, which is what ticket #1077 built
-    // per-country books to avoid.
+    // Gravity mass per exporter: affinity (can it reach this buyer) times supply
+    // (can it serve at scale), normalised per importer so shares sum to 1. Affinity
+    // alone let small well-connected countries quote the same room as large
+    // producers; the raw pool unweighted made every book identical.
     const shareOfImporter = new Map<CountryId, Map<CountryId, number>>();
     for (const importer of countries) {
       if ((unmetByCountry.get(importer) ?? 0) <= 0) continue;
@@ -240,44 +226,19 @@ export function serializeReachableBooks(books: ReachableBooks): ReachableBooksDo
 /**
  * Room for NEW capacity in a country, in units.
  *
- * Deliberately NOT `demand - supply` on the clearing book. `clearCommodity`
- * trades only the NET residual, so `imports` is set to exactly `D - S`, and the
- * clearing demand collapses to `max(0, D - imports) + exports = supply` for
- * every net importer. Measured on prod at turn 113, food, to every decimal
- * place: US 323,218.24676 / 323,218.24676, UK 161,664.3504 / 161,664.3504, JP
- * 370,004.72352 / 370,004.72352, IT and CN likewise. A gap taken off that is
- * identically zero for any commodity a country imports, forever — which is
- * algebra, not a market condition, and is why ticket #1077 reported "room for 0
- * farms" even after the market scope was fixed.
+ * Deliberately NOT `demand - supply` on the clearing book: `clearCommodity`
+ * nets imports to exactly `D - S`, so a gap off that book is identically zero
+ * for any net importer. What a build needs is what new DOMESTIC output could
+ * sell. Domestic production clears before imports, so extra domestic capacity
+ * displaces imports one-for-one. Room is:
  *
- * The quantity a build decision needs is what new DOMESTIC output could sell.
- * Domestic production clears before imports (the netting above happens first),
- * so extra domestic capacity displaces imports one-for-one and the deficit
- * shrinks to match. Room is therefore the deficit itself:
+ *     max(0, domesticDemand + exports - supply) + unmetForeignDemand
  *
- *     max(0, domesticDemand + exports - supply)
+ * The second term covers the same cancellation on the exporter side and is this
+ * country's gravity share of unserved foreign deficit; both buyers are real.
  *
- * For a net importer that equals its import volume (US food: 1,115,631/day of
- * displaceable Warsaw Pact grain). For a self-sufficient or exporting country
- * it is unchanged from the clearing-book figure, because `imports` is 0 there.
- *
- * `domesticDemand` is reconstructed for books persisted before this field
- * existed, so the first turn after deploy is not a cliff.
- *
- * That covers the IMPORTER side only. The SAME cancellation recurs on the other
- * side, and ticket #1077 left it standing: `clearCommodity` scales the exporter
- * row to exactly `surplus = supply - domesticDemand`, so
- * `domesticDemand + exports - supply` is identically zero for every net
- * exporter no matter how badly the world wants the goods. Measured on prod at
- * turn 319: 301 of 310 exporter books reported room for 0, against 0 of 308
- * importer books, which is why a US manufacturing corp was told every one of
- * its 51 home states was full (ticket #1162).
- *
- * `unmetForeignDemand` supplies the missing term — this country's gravity share
- * of deficit nobody is serving. It is added, not substituted: a net importer's
- * displaceable imports and its share of unserved foreign demand are different
- * buyers, so both are real room. Absent on books persisted before the field
- * existed, where it heals to 0 and the old value stands.
+ * `domesticDemand` and `unmetForeignDemand` heal to sensible values for books
+ * persisted before those fields existed.
  */
 export function reachableDemandGap(book: ReachableBookEntry | undefined): number {
   if (!book) return 0;

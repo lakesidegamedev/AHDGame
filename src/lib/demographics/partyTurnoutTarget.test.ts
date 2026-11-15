@@ -4,8 +4,14 @@ import {
   isValidPartyTurnoutTarget,
   resolvePartyTurnoutTargetLean,
 } from "./partyTurnoutTargetResolver";
-import { resolveCanvassGroup } from "./countryDemographics";
 import { getTurnoutTargetsForCountry } from "./turnoutTargets";
+
+const LEGACY_GROUP_TARGETS: Array<[string, string, string]> = [
+  ["UK", "uk_voterGroups", "urban_progressives"],
+  ["JP", "jp_voterGroups", "komeito_faithful"],
+  ["DE", "de_voterGroups", "workers"],
+  ["US", "ideology", "evangelicals"],
+];
 
 describe("party turnout targets", () => {
   it("resolves a census bucket from the same catalog as the region display", () => {
@@ -15,59 +21,49 @@ describe("party turnout targets", () => {
     expect(target?.socialLean).toEqual(expect.any(Number));
   });
 
-  it("keeps saved voter-archetype targets readable during migration", () => {
-    expect(
-      isValidPartyTurnoutTarget("UK", "uk_voterGroups", "urban_progressives", "1953-default")
-    ).toBe(true);
-  });
+  it.each(LEGACY_GROUP_TARGETS)(
+    "rejects the legacy voter group %s %s:%s",
+    (cc, category, group) => {
+      expect(isValidPartyTurnoutTarget(cc, category, group, "1953-default")).toBe(false);
+      expect(resolvePartyTurnoutTargetLean(cc, category, group, "1953-default")).toBeNull();
+    }
+  );
 
-  it("offers census buckets and existing voter groups together", () => {
+  it("offers only census buckets", () => {
     const catalog = buildPartyTurnoutTargetCatalog(
-      "UK",
       getTurnoutTargetsForCountry("UK", "1953-default")
     );
 
     expect(catalog.categories.map((category) => category.id)).toEqual(
       expect.arrayContaining(["ethnicity", "age", "education", "income", "urbanization"])
     );
+    expect(catalog.categories.map((category) => category.id)).not.toContain("uk_voterGroups");
     expect(catalog.targets).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ category: "education", group: "degree_plus" }),
-        expect.objectContaining({
-          category: "uk_voterGroups",
-          group: "urban_progressives",
-        }),
       ])
     );
+    expect(catalog.targets.some((target) => target.category === "uk_voterGroups")).toBe(false);
   });
 
-  it("uses established leans for overlapping targets in both the picker and turn resolver", () => {
-    const established = resolveCanvassGroup("US", "race", "white");
+  it("uses the same finite leans in the picker and the turn resolver", () => {
     const catalog = buildPartyTurnoutTargetCatalog(
-      "US",
       getTurnoutTargetsForCountry("US", "1953-default")
     );
     const pickerTarget = catalog.targets.find(
       (target) => target.category === "race" && target.group === "white"
     );
+    const resolved = resolvePartyTurnoutTargetLean("US", "race", "white", "1953-default");
 
-    expect(established).not.toBeNull();
-    expect(pickerTarget).toMatchObject({
-      economicLean: established!.economicLean,
-      socialLean: established!.socialLean,
+    expect(pickerTarget).toBeDefined();
+    expect(Number.isFinite(pickerTarget!.economicLean)).toBe(true);
+    expect(resolved).toMatchObject({
+      economicLean: pickerTarget!.economicLean,
+      socialLean: pickerTarget!.socialLean,
     });
-    expect(resolvePartyTurnoutTargetLean("US", "race", "white", "1953-default")).toEqual(
-      expect.objectContaining({
-        economicLean: established!.economicLean,
-        socialLean: established!.socialLean,
-      })
-    );
   });
 
-  it("preserves authored labels for saved voter-group targets", () => {
-    expect(partyTurnoutTargetLabel("UK", "uk_voterGroups", "public_sector")).toBe(
-      "Public Sector & NHS"
-    );
+  it("labels targets by census bucket", () => {
     expect(partyTurnoutTargetLabel("UK", "education", "degree_plus")).toBe("Degree or higher");
   });
 

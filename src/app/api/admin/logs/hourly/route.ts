@@ -2,6 +2,8 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import type { TurnLog } from "@/lib/db/types";
+import { turnLogsCollection } from "@/lib/db/repositories/turnLogs";
+import type { Document } from "mongodb";
 
 /**
  * GET /api/admin/logs/hourly
@@ -15,8 +17,7 @@ export const GET = withAdminRoute(async (_auth) => {
 
   // Ensure TTL index exists (24 hours = 86400 seconds)
   // This is idempotent - MongoDB will skip if index already exists
-  await db
-    .collection("turnLogs")
+  await turnLogsCollection<Document>(db)
     .createIndex({ createdAt: 1 }, { expireAfterSeconds: 86400 })
     .catch(() => {
       // Index may already exist with different options, ignore
@@ -24,8 +25,7 @@ export const GET = withAdminRoute(async (_auth) => {
 
   // Fetch last 24 hours of logs, sorted newest first
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const logs = await db
-    .collection<TurnLog>("turnLogs")
+  const logs = await turnLogsCollection(db)
     .find({ createdAt: { $gte: twentyFourHoursAgo } })
     .sort({ createdAt: -1 })
     .toArray();

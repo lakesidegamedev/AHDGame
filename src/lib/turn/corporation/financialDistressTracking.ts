@@ -1,21 +1,21 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Per-turn financial-distress clock for player corporations. Run AFTER this
  * turn's liquidCapital has settled. Stamps `financialDistressSinceTurn` when a
- * player corp first goes insolvent or holds a defaulted bond (and notifies the
+ * player corp first goes insolvent or holds a defaulted bond (notifying the
  * owner once), and clears it when the corp recovers. NPC/unowned corps are
- * skipped — they have no nationalization grace. Idempotent within a turn:
- * a corp already in distress is neither re-stamped nor re-notified.
+ * skipped: they have no nationalization grace. Idempotent within a turn.
  *
  * The grace window itself lives in eligibility (FINANCIAL_DISTRESS_GRACE_TURNS);
  * this only maintains the "since" timestamp the window is measured against.
  */
 export async function trackFinancialDistress(db: Db, turn: number): Promise<void> {
-  const corps = await db
-    .collection<Corporation>("corporations")
+  const corps = await corporationsCollection(db)
     .find(
       // Non-state-owned corps; player ownership (userId present) is checked per row
       // below — NPC/unowned corps have no nationalization grace and are skipped.
@@ -35,8 +35,7 @@ export async function trackFinancialDistress(db: Db, turn: number): Promise<void
   if (corps.length === 0) return;
 
   const corpIds = corps.map((c) => c._id);
-  const defaultedBonds = await db
-    .collection<Bond>("bonds")
+  const defaultedBonds = await bondsCollection(db)
     .find(
       { corporationId: { $in: corpIds }, defaulted: true, matured: false },
       { projection: { corporationId: 1 } }
@@ -83,7 +82,7 @@ export async function trackFinancialDistress(db: Db, turn: number): Promise<void
   }
 
   if (ops.length > 0) {
-    await db.collection<Corporation>("corporations").bulkWrite(ops);
+    await corporationsCollection(db).bulkWrite(ops);
   }
   await createNotifications(notifications);
 }

@@ -262,9 +262,14 @@ describe("grouped sovereign coupon accrual", () => {
     );
     const crash = withInjectedCrash(db, {
       collection: "characters",
-      op: "updateOne",
       onCall: 1,
       afterWrite: true,
+      matches: (args) => {
+        const updates = Array.isArray(args[0])
+          ? args[0].map((op) => op.updateOne?.update)
+          : [args[1]];
+        return updates.some((update) => typeof update?.$inc?.cashOnHand === "number");
+      },
     });
     await expect(settleFundedSovereignCoupons(crash.db, budgetOf(db), args)).rejects.toThrow(
       "crash"

@@ -38,7 +38,7 @@ let deals: Record<string, unknown>;
 const fetchMock = vi.fn();
 
 beforeEach(() => {
-  deals = { enabled: true, subsidiaryAvailable: true, incoming: [], outgoing: [] };
+  deals = { enabled: true, incoming: [], outgoing: [] };
   fetchMock.mockImplementation((url: string, init?: RequestInit) => {
     const json = (body: unknown) => Promise.resolve({ ok: true, json: async () => body });
     if (url.startsWith("/api/corporations/buyer-search"))

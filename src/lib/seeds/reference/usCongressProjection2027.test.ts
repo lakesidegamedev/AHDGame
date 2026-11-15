@@ -12,12 +12,12 @@ describe("US_CONGRESS_PROJECTION_2027", () => {
     expect(senate.democraticAligned + senate.republican).toBe(100);
   });
 
-  it("records Republican tie-break control of the projected 50-50 Senate", () => {
+  it("labels provisional majority control and source status", () => {
     expect(US_CONGRESS_PROJECTION_2027.senate).toMatchObject({
-      democraticAligned: 50,
-      republican: 50,
-      controllingParty: "republican",
-      controlBasis: "vice-presidential tie-break",
+      democraticAligned: 55,
+      republican: 45,
+      controllingParty: "democrat",
+      controlBasis: "provisional modeled majority",
     });
   });
 });

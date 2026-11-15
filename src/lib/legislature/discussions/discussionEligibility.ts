@@ -10,6 +10,7 @@ import { getSubNationalLegislatureKey } from "@/lib/constants/countries";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import type { Character, ElectedOfficial } from "@/lib/db/types";
 import type { BillDiscussionScope } from "./types";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 /**
  * True when `character` holds a seat in the legislature/chamber the bill belongs to.
@@ -32,7 +33,7 @@ export async function canPostBillDiscussion(
     const officeTypes = chamberKeys.map((key) =>
       getOfficeTypeForChamber(scope.countryId, key, undefined, config)
     );
-    const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+    const official = await electedOfficialsCollection(db).findOne({
       characterId: character._id,
       officeType: { $in: officeTypes },
       countryId: scope.countryId,
@@ -40,7 +41,7 @@ export async function canPostBillDiscussion(
     return Boolean(official);
   }
 
-  const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
+  const official = await electedOfficialsCollection(db).findOne({
     characterId: character._id,
     officeType: getSubNationalLegislatureKey(scope.countryId),
     state: scope.stateId.toUpperCase(),

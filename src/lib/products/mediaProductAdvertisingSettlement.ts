@@ -10,12 +10,11 @@
  * the table is far larger than those projections.
  */
 import { ObjectId, type Db } from "mongodb";
-import type { Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
+import type { MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProductAdvertisingDenominationWitness } from "@/lib/products/rules/productAdvertising";
 import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/boundary";
 import { oid } from "@/lib/banking/rules/boundary";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import {
@@ -38,6 +37,10 @@ import {
   type ProductAdvertisingPayable,
   type ProductAdvertisingPayableAllocation,
 } from "@/lib/products/productAdvertisingClearing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { productAdvertisingCashWitness } from "./productAdvertisingLedger";
+import { loadExchangeRatesMap } from "@/lib/lineOfCredit/netWorth";
 
 export type { ProductAdvertisingFamily } from "@/lib/products/productAdvertisingClearing";
 
@@ -213,7 +216,11 @@ function orderEvent(
 export function productAdvertisingTransition(
   corporationId: ObjectId,
   obligation: ProductAdvertisingObligation,
-  family: ProductAdvertisingFamily = "media"
+  family: ProductAdvertisingFamily = "media",
+  witness: { turn: number; rates: Readonly<Partial<Record<CurrencyCode, number>>> } = {
+    turn: obligation.turn,
+    rates: {},
+  }
 ): BankingTransition {
   const definition = ADVERTISING_FAMILY[family];
   const key = productAdvertisingSettlementKey(corporationId.toHexString(), obligation, family);
@@ -261,6 +268,12 @@ export function productAdvertisingTransition(
         note: "Record the order's frozen seller payables as owed",
       },
       receiptProjection(corporationId, obligation, family),
+      productAdvertisingCashWitness(
+        key,
+        witness.turn,
+        [buyerDebitLeg(corporationId, obligation)],
+        witness.rates
+      ),
     ],
     event: orderEvent(corporationId, obligation, family),
   };
@@ -305,7 +318,13 @@ export function legacyProductAdvertisingTransition(
     // terminal and is never replayed.
     retryCreditLegOnGuardFailure: true,
     legs: [buyerDebitLeg(corporationId, obligation), ...sellerLegs],
-    projections: [receiptProjection(corporationId, obligation, family)],
+    projections: [
+      productAdvertisingCashWitness(key, obligation.turn, [
+        buyerDebitLeg(corporationId, obligation),
+        ...sellerLegs,
+      ]),
+      receiptProjection(corporationId, obligation, family),
+    ],
     event: orderEvent(corporationId, obligation, family),
   };
 }
@@ -340,8 +359,7 @@ export async function settleProductAdvertisingObligations(
   const rows =
     corporationIds.length === 0
       ? []
-      : await db
-          .collection<Corporation>("corporations")
+      : await corporationsCollection(db)
           .find(
             {
               _id: { $in: [...corporationIds] },
@@ -359,7 +377,7 @@ export async function settleProductAdvertisingObligations(
             }
           )
           .toArray();
-  const journal = db.collection<{ _id: string }>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<{ _id: string }>(db);
   const pools = new Set<string>();
 
   const parsed = rows.map((row) => {
@@ -380,6 +398,7 @@ export async function settleProductAdvertisingObligations(
   // A key this call has already handed to the journal is read live again, so a
   // repeated legacy order sees exactly what the per-order read used to see.
   const candidateKeys = parsed.flatMap((entry) => entry.keys);
+  const witnessRates = candidateKeys.length > 0 ? await loadExchangeRatesMap(db) : {};
   const priorKeys = new Set(
     candidateKeys.length === 0
       ? []
@@ -414,7 +433,7 @@ export async function settleProductAdvertisingObligations(
     obligation: ProductAdvertisingObligation
   ): Promise<void> => {
     await Promise.all([
-      db.collection<Corporation>("corporations").updateOne(
+      corporationsCollection(db).updateOne(
         { _id: corporationId },
         {
           $pull: {
@@ -515,7 +534,13 @@ export async function settleProductAdvertisingObligations(
       attemptedKeys.add(key);
       const result = prior
         ? await resumeSettlement(db, key)
-        : await settleTransition(db, productAdvertisingTransition(row._id, obligation, family));
+        : await settleTransition(
+            db,
+            productAdvertisingTransition(row._id, obligation, family, {
+              turn: currentTurn,
+              rates: witnessRates,
+            })
+          );
       const moved =
         result.appliedLegs.length > 0 ||
         result.status === "applied" ||

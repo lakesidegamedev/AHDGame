@@ -1,30 +1,25 @@
 import type { Db, ObjectId } from "mongodb";
-import type { GovernorEndorsement, ElectedOfficial } from "@/lib/db/types";
+import type { GovernorEndorsement } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getRegionalExecutiveOfficeKey } from "@/lib/constants/countries";
 import { withdrawEndorsement } from "@/lib/governorOffice/endorsements/withdrawEndorsement";
 import { preloadEndorsementTargets } from "./endorsements/preloadEndorsementTargets";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { governorEndorsementsCollection } from "@/lib/db/repositories/governorEndorsements";
 
 /**
  * Turn phase: auto-withdraw governor endorsements whose conditions no longer hold.
- *   - election no longer active → election_ended
- *   - candidate no longer active → candidate_inactive
- *   - governor no longer in office → governor_left_office
+ *   - election no longer active -> election_ended
+ *   - candidate no longer active -> candidate_inactive
+ *   - governor no longer in office -> governor_left_office
  *
  * Must run BEFORE processCampaignTurn so withdrawals are observed by the
  * endorsement-count aggregation there.
- *
- * Reads are batched up front (#575): elections, candidates and the regional
- * executives holding office all resolve before the loop, so the phase costs a
- * fixed handful of queries instead of three per endorsement.
  */
 export async function processGovernorEndorsements(
   db: Db
 ): Promise<{ withdrawn: number; byReason: Record<string, number> }> {
-  const active = await db
-    .collection<GovernorEndorsement>("governorEndorsements")
-    .find({ isActive: true })
-    .toArray();
+  const active = await governorEndorsementsCollection(db).find({ isActive: true }).toArray();
   let withdrawn = 0;
   const byReason: Record<string, number> = {};
   function tally(reason: NonNullable<GovernorEndorsement["withdrawnReason"]>) {
@@ -94,8 +89,9 @@ async function loadSittingRegionalExecutives(
     state: { $in: [...states] },
   }));
 
-  const holders = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const holders = await (
+    await getElectedOfficialsCollection(db)
+  )
     .find({ $or: clauses }, { projection: { countryId: 1, state: 1, characterId: 1 } })
     .toArray();
 

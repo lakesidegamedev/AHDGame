@@ -27,10 +27,7 @@ export function TreasuryGotvControl({
   onSave,
   targetSections,
 }: TreasuryGotvControlProps) {
-  const { categories, targets: targetableDemos } = buildPartyTurnoutTargetCatalog(
-    countryId,
-    targetSections
-  );
+  const { categories, targets: targetableDemos } = buildPartyTurnoutTargetCatalog(targetSections);
 
   const gotvSpend = Math.floor(party.expectedHourlyIncome * (gotvForm.percent / 100));
   const selectedGotvDemo =

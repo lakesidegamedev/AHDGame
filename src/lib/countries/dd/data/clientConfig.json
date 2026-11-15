@@ -1,0 +1,125 @@
+{
+  "config": {
+    "id": "DD",
+    "name": "East Germany",
+    "code": "DD",
+    "status": "coming-soon",
+    "flagEmoji": "🇩🇩",
+    "regionLabel": "Region",
+    "regionLabelPlural": "Regions",
+    "executiveTitle": "General Secretary",
+    "executiveRealmPhrase": "the German Democratic Republic",
+    "executiveLabel": "Council of Ministers",
+    "executivePath": "/country/dd/executive",
+    "governmentType": "onePartyState",
+    "governmentTypeLabel": "One Party State",
+    "descriptor": "A one-party socialist republic where the SED General Secretary governs through the National Front and the Volkskammer; the economy is centrally planned until reform or reunification.",
+    "heroImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Flag_of_East_Germany.svg/500px-Flag_of_East_Germany.svg.png",
+    "overviewPath": "/country/dd",
+    "mapPath": "/country/dd/map",
+    "currencyCode": "DDM",
+    "centralGovernmentLabel": "Central Plan",
+    "exchangeName": "VVB",
+    "exchangeKind": "stateRegister",
+    "financeMinisterCabinetId": "minister_of_finance",
+    "rulingPartyId": 1,
+    "hasLeaderConfidenceModel": true,
+    "majorPartyIds": ["sed"],
+    "partyCreationNPPs": { "statesRequired": 1, "lockHomeState": true, "nppsPerState": 2 },
+    "partyRoleLabels": {
+      "chair": "General Secretary",
+      "viceChair": "Second Secretary",
+      "committee": "Politburo"
+    },
+    "legislature": {
+      "name": "Volkskammer",
+      "path": "/country/dd/legislature",
+      "bicameral": false,
+      "lowerChamber": {
+        "key": "volkskammer",
+        "name": "People's Chamber",
+        "shortName": "Volkskammer",
+        "seats": 500,
+        "description": "500 deputies of the Volkskammer elected on the single National Front list, led by the ruling SED."
+      },
+      "upperChamber": {
+        "key": "staatsrat",
+        "name": "Council of State",
+        "shortName": "Staatsrat",
+        "seats": 25,
+        "description": "The Staatsrat - a collective head of state exercising standing authority between Volkskammer sessions.",
+        "elected": false
+      }
+    },
+    "subNationalChamber": {
+      "key": "landAssembly",
+      "name": "Landtag",
+      "shortName": "Landtag",
+      "regionalModel": true
+    },
+    "officeTypes": [
+      {
+        "key": "generalSecretary",
+        "label": "General Secretary",
+        "isExecutive": true,
+        "isSubNational": false,
+        "labelPlural": "General Secretaries"
+      },
+      {
+        "key": "chairmanOfStateCouncil",
+        "label": "Chairman of the Council of State",
+        "isExecutive": true,
+        "isSubNational": false,
+        "isHeadOfState": true,
+        "labelPlural": "Chairmen of the Council of State"
+      },
+      {
+        "key": "volkskammerDeputy",
+        "label": "Deputy",
+        "chamberKey": "volkskammer",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Deputies"
+      },
+      {
+        "key": "landAssembly",
+        "label": "Landtag Deputy",
+        "chamberKey": "landAssembly",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Landtag Deputies"
+      },
+      {
+        "key": "governor",
+        "label": "Land First Secretary",
+        "isExecutive": false,
+        "isSubNational": true,
+        "labelPlural": "Land First Secretaries"
+      },
+      {
+        "key": "centralBankChair",
+        "label": "President of the Staatsbank",
+        "isExecutive": false,
+        "isSubNational": false,
+        "labelPlural": "Presidents of the Staatsbank"
+      }
+    ],
+    "electionSystems": {
+      "lowerChamber": "fptp",
+      "subNationalChamber": "pr_hareQuota",
+      "subNationalExecutive": "fptp",
+      "headOfGovernment": "parliamentary",
+      "headOfState": "ceremonial"
+    },
+    "lowerElectionSystem": { "snapElectionsAllowed": false },
+    "centralBank": {
+      "name": "Staatsbank der DDR",
+      "abbreviation": "SBD",
+      "heroImage": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Flag_of_East_Germany.svg/500px-Flag_of_East_Germany.svg.png",
+      "defaultPrimeRate": 5
+    },
+    "usdExchangeRate": 0.45
+  },
+  "eraOverrides": { "1953-default": { "usdExchangeRate": 0.23809523809523808 } },
+  "regionalAssentOfficeKey": "governor"
+}

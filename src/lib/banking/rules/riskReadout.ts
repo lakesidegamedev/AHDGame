@@ -1,24 +1,13 @@
 /**
- * What the bank console has to tell a CEO BEFORE the bank dies.
+ * What the bank console must tell a CEO before the bank fails: which number is
+ * dangerous, how close it is to the threshold, and which way it is moving.
  *
- * The console used to report state after the fact: a confidence number, a
- * coloured band, a reserves figure. None of it said which number was the
- * dangerous one, how close it was to the edge, or which way it was moving. A
- * simulated bank went from confidence 0.806 on turn 1 to failed on turn 8 with
- * nothing on screen naming the threshold it was walking into.
+ *  - Reserve cover against the failure line, so the gauge has a marked edge.
+ *  - Which confidence term is dragging, since a bare score is not actionable.
+ *  - Whether the band is about to turn, since red arms the run test and one turn
+ *    of notice separates a decision from a post-mortem.
  *
- * These are the three things a player actually needs, and all three are derived
- * from figures the engine already computes:
- *
- *  - **Reserve cover** against the line where a run kills you, so the gauge has
- *    a marked edge rather than being a bare ratio.
- *  - **Which confidence term is dragging**, because "0.39" is not actionable
- *    but "your reserve cover is contributing 0.02 of a possible 0.45" is.
- *  - **Whether the band is about to turn**, since red is what arms the run test
- *    and one turn of notice is the difference between a decision and a
- *    post-mortem.
- *
- * Pure. No database, no imports from the turn engine.
+ * Pure. No database, no turn-engine imports.
  */
 
 import {
@@ -94,9 +83,8 @@ export function buildRiskReadout(input: {
   const reserveCoverRatio = requiredReserves > 0 ? cash / requiredReserves : 1;
   const headroomToFailure = cash - runFailureThreshold;
 
-  // The SAME arithmetic computeConfidence scores with, not a second copy of it.
-  // This module used to re-derive the terms with its own literal penalty
-  // constants, so the console could explain a score the engine no longer gave.
+  // The SAME arithmetic computeConfidence scores with, not a second copy,
+  // so the console cannot explain a score the engine no longer gives.
   const covers = confidenceCovers({
     cashReserves: cash,
     cashBackedDeposits: deposits,

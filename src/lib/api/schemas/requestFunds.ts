@@ -11,5 +11,3 @@ export const requestFundsSchema = z.object({
   amount: z.coerce.number().int().min(1000, "Minimum request is $1,000"),
   note: z.string().trim().max(280).optional(),
 });
-
-export type RequestFundsBody = z.infer<typeof requestFundsSchema>;

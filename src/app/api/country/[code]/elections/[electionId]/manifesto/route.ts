@@ -1,21 +1,12 @@
 /**
- * UK manifesto authoring (epic #856, ticket #857).
- *
  * POST /api/country/[code]/elections/[electionId]/manifesto
- *   body { pledges: string[], action?: "save" | "lock" }
- *   → saves (or locks) the party leader's draft manifesto.
- *
- * Only the party CHAIR (leader) may author. UK only. The vote-share effect
- * stays gated by UK_MANIFESTO_VOTE_EFFECT regardless of this route.
- *
- * Write-only on purpose. This route used to serve GET too, and the elections
- * page mounted one manifesto bar per contested Commons race, each fetching its
- * own — 7,763 requests over 24 elections in 7 days on live, 19% of all logged
- * API traffic, for a payload whose catalog/party/leader half was identical
- * every time. Reads now come from `…/elections/manifestos`, which answers the
- * whole page at once. Saving and locking stay here: they really are
- * per-election.
+ * body { pledges: string[], action?: "save" | "lock" }
+ * Saves or locks the party leader's manifesto. Chair only, UK only. Vote-share
+ * effect gated by UK_MANIFESTO_VOTE_EFFECT. Write-only: reads come from
+ * …/elections/manifestos, which serves the whole page at once; per-race GETs
+ * were a traffic sink.
  */
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -27,13 +18,15 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { PoliticalParty } from "@/lib/db/types";
 import type { Election } from "@/lib/db/types/election";
-import { pledgeCatalogFor } from "@/lib/uk/manifesto/pledgeCatalog";
+import { pledgeCatalogFor } from "@/lib/countries/uk/manifesto/pledgeCatalog";
 import {
   upsertManifestoDraft,
   lockManifesto,
   validateManifestoPledges,
 } from "@/lib/db/collections/manifestos";
 import { MANIFESTO_PLEDGE_COUNT, type Pledge } from "@/lib/db/types/manifesto";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 const bodySchema = z.object({
   pledges: z.array(z.string().min(1)).max(MANIFESTO_PLEDGE_COUNT),
@@ -45,7 +38,7 @@ async function resolveContext(request: Request, code: string, electionId: string
   if (!COUNTRY_CONFIGS[countryId]) {
     return { error: errorResponse(400, "Invalid country") };
   }
-  if (countryId !== "UK") {
+  if (!countryHasFeature("ukDevolutionAndConference", countryId)) {
     return { error: errorResponse(400, "Manifestos are UK-only") };
   }
   if (!ObjectId.isValid(electionId)) {
@@ -55,16 +48,18 @@ async function resolveContext(request: Request, code: string, electionId: string
   if (!auth.ok) return { error: auth.response };
 
   const db = await getDb();
-  const election = await db
-    .collection<Election>("elections")
-    .findOne({ _id: new ObjectId(electionId), countryId });
+  const election = await electionsCollection(db).findOne({
+    _id: new ObjectId(electionId),
+    countryId,
+  });
   if (!election) {
     return { error: errorResponse(404, "Election not found") };
   }
   // The caller's chaired party (leaders author manifestos).
-  const party = await db
-    .collection<PoliticalParty>("politicalParties")
-    .findOne({ countryId, chairId: auth.user.character._id });
+  const party = await politicalPartiesCollection(db).findOne({
+    countryId,
+    chairId: auth.user.character._id,
+  });
 
   return {
     db,

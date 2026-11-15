@@ -129,10 +129,9 @@ export function SectorMarginDrilldown({
 
   // Physical basis (plants): the effective margin is DERIVED from what the
   // sector actually pays (inputs, wages, upkeep), not from the additive
-  // modifier stack (ticket 1072: a 40pt unexplained gap). The cost build is the
-  // headline and reconciles exactly; every modifier stays visible below it,
-  // reframed as the influences that steer those costs rather than percentage
-  // points that sum to the margin.
+  // modifier stack. The cost build is the headline and reconciles exactly;
+  // modifiers are shown below as influences on those costs, not as
+  // percentage points that sum to the margin.
   const physical = physicalBasis ? sector.physicalCosts! : null;
 
   const policyLevel = sector.productionPolicyLevel ?? 0;

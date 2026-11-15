@@ -13,6 +13,8 @@ import {
   psInvestmentRate,
 } from "@/lib/turn/politicalStrength/strengthConstants";
 import type { State, StatePartyOrg } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -106,7 +108,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
 
     let stageStartedAt = Date.now();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     timings.stateReadMs += Date.now() - stageStartedAt;
     if (!state) {
       return finish(errorResponse(404, "State not found"));
@@ -121,9 +123,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
     stageStartedAt = Date.now();
-    const stateParty = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .findOne({ _id: statePartyKey });
+    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
     timings.orgReadMs += Date.now() - stageStartedAt;
     if (!stateParty) {
       return finish(errorResponse(404, "Party has no presence in this state"));
@@ -146,12 +146,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const now = new Date();
     stageStartedAt = Date.now();
-    await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne(
-        { _id: statePartyKey },
-        { $set: { psInvestmentBudget: parsed.data.budget, updatedAt: now } }
-      );
+    await statePartyOrgCollection(db).updateOne(
+      { _id: statePartyKey },
+      { $set: { psInvestmentBudget: parsed.data.budget, updatedAt: now } }
+    );
     timings.updateMs += Date.now() - stageStartedAt;
 
     return finish(

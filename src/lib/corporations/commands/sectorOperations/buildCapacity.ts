@@ -22,7 +22,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type {
-  Character,
   Corporation,
   CorporateSector,
   GameState,
@@ -35,8 +34,7 @@ import type {
 import { unownedPoolCredit, unownedPoolDrawdown } from "@/lib/market/unownedPoolDraw";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import {
   anchorToCorpLiquidCapital,
@@ -93,6 +91,14 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /**
  * Sector capacity commands (plants tier, P3a of the buildable-sectors plan).
@@ -171,26 +177,12 @@ const buildCapacitySchema = z.discriminatedUnion("action", [
  */
 const MAX_OUTSTANDING_BUILD_ORDERS = 20;
 
-/**
+/*
  * Compare-and-swap guard for the inline `buildQueue`.
- *
  * This command writes the queue with a whole-array `$set` from a snapshot.
- * Without a precondition on the write, two lost updates are live: two
- * concurrent cancels of the same index both refund (money printed), and two
- * concurrent builds drop one order while charging for both. Matching the exact
- * array we read makes both of those writes fail instead of clobbering, and
- * `modifiedCount` tells us which happened.
- *
- * C4: a command racing the turn is guarded by comparing the exact queue it read.
- * The turn pulls delivered orders and is the only writer of stored CIP.
- *
- * The CAS is still exactly right for the command-vs-command races, and it is
- * also what makes a command that overlaps a landing turn fail SAFELY: the pull
- * changes the array, this filter matches nothing, and the caller gets a 409
- * with the money handed back rather than a silent loss.
- *
- * `mothball` / `reactivate` need no CAS: they touch a single scalar
- * (`mothballed`) that the turn only reads, never writes.
+ * Matching the exact array we read prevents lost updates (double refunds,
+ * dropped orders) and makes a command racing a landing turn fail safely
+ * with a 409 instead of clobbering.
  */
 function capacityMutationFilter(sector: CorporateSector): Record<string, unknown> {
   return {
@@ -270,7 +262,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     if (!ObjectId.isValid(sectorId)) {
       return errorResponse(400, "Invalid sector ID");
     }
-    const sector = await db.collection<CorporateSector>("corporateSectors").findOne({
+    const sector = await corporateSectorsCollection(db).findOne({
       _id: new ObjectId(sectorId),
       corporationId: corporation._id,
     });
@@ -336,7 +328,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
       ) {
         return errorResponse(400, "Sector already has these capacity settings.");
       }
-      const changed = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const changed = await corporateSectorsCollection(db).updateOne(
         { _id: sector._id, ...capacityMutationFilter(sector) },
         {
           $set: {
@@ -424,7 +416,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
       // CAS: the refund below is only paid if THIS request is the one that
       // actually removed the order. A replayed or concurrent cancel of the same
       // index matches nothing and refunds nothing.
-      const cancelWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+      const cancelWrite = await corporateSectorsCollection(db).updateOne(
         { _id: sector._id, ...queueCasFilter(sector) },
         {
           $set: {
@@ -437,23 +429,18 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
         return errorResponse(409, "That build queue changed while you were cancelling. Try again.");
       }
       if (refundInCorpCapital > 0) {
-        await db
-          .collection<Corporation>("corporations")
-          .updateOne(
-            { _id: corporation._id },
-            { $inc: { liquidCapital: refundInCorpCapital }, $set: { updatedAt: now } }
-          );
+        await corporationsCollection(db).updateOne(
+          { _id: corporation._id },
+          { $inc: { liquidCapital: refundInCorpCapital }, $set: { updatedAt: now } }
+        );
       }
 
-      // Return the cancelled units to the unowned pool (#1145). The order-time
-      // drawdown consumed the whole order; only the part that never became
-      // capacity comes back, because the delivered remainder is still owned and
-      // still counts against market share. Same best-effort discipline as the
-      // drawdown itself.
+      // Return cancelled units to the unowned pool. Only the part that never
+      // became capacity comes back, since the delivered remainder is still
+      // owned and counts toward market share. Best-effort like the drawdown.
       const poolCredit = unownedPoolCredit(poolBucket, cancelledUnits, now, eraUnitScale);
       if (poolCredit) {
-        await db
-          .collection<UnownedSector>("unownedSectors")
+        await unownedSectorsCollection(db)
           .updateOne(
             {
               stateId: sector.stateId,
@@ -555,28 +542,21 @@ async function loadCapacityContext(
   corporation: Corporation,
   sector: CorporateSector
 ): Promise<CapacityContext> {
-  const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
   const currentTurn = gameState?.currentTurn ?? 0;
   const currentYear =
     gameState?.currentYear ??
     STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
 
-  // `countryId` keys the unowned-capacity pool below, the prime rate the build
-  // is financed at and the country stamped on the action log, so it has to be
-  // the country the STATE is in, never the country the corporation is
-  // domiciled in. The old order fell through to `corporation.countryId` and
-  // then to a literal "US", which is how two `unownedSectors` docs came to sit
-  // on Ukrainian states under the United States: unreachable to Ukraine, and
-  // counted as US capacity by every reader (ticket #1271).
-  //
-  // The state is read UNCONDITIONALLY and preferred over the sector's stored
-  // value, which is the precedence `getSectorOperatingCountryId` sets for the
-  // rest of the codebase: a stored `countryId` left stale by a region changing
-  // hands is exactly the case that helper exists for, and taking it first
-  // would reintroduce the bug in its other form.
-  const sectorState = await db
-    .collection<State>("states")
-    .findOne({ _id: sector.stateId }, { projection: { countryId: 1 } });
+  // `countryId` keys the unowned-capacity pool, the build's prime rate and the
+  // action-log country, so it must be the country the STATE is in, never the
+  // corporation's domicile. The state is read UNCONDITIONALLY and preferred over
+  // the sector's stored value, matching `getSectorOperatingCountryId`: a stale
+  // stored `countryId` from a region changing hands is exactly that case.
+  const sectorState = await statesCollection(db).findOne(
+    { _id: sector.stateId },
+    { projection: { countryId: 1 } }
+  );
   // No guard on the result: `CorporateSector.countryId` and
   // `Corporation.countryId` are both required, so the chain always resolves,
   // and the sibling `setSectorGrowth` carries no guard either.
@@ -614,12 +594,11 @@ function capacityChangeBlock(
   sector: CorporateSector,
   financedBuild: boolean
 ): { status: number; error: string } | null {
-  // No blanket state-owned block here: the appointed CEO of a National
-  // Corporation legitimately builds, mothballs and manages its capacity
-  // (ticket #1072). `requireCeo` already proved the caller holds THIS corp's
-  // CEO seat, and the sector was fetched constrained to
-  // `corporationId: corporation._id`, so a sector nationalized AWAY from a
-  // former-private CEO no longer matches and cannot reach this handler.
+  // No state-owned block: the appointed CEO of a National Corporation
+  // legitimately manages its capacity. `requireCeo` already proved the caller
+  // holds THIS corp's CEO seat, and the sector was fetched constrained to
+  // `corporationId: corporation._id`, so a sector nationalized away from a
+  // former-private CEO cannot reach this handler.
   if (
     sector.constructionPropertyTransition ||
     ((sector.constructionFinancing?.status === "awaiting_approval" ||
@@ -699,17 +678,17 @@ export async function loadOperatingReserve(
   corporationId: ObjectId,
   currentTurn: number
 ): Promise<{ turns: number; billsPerTurnAnchor: number; revenuePerTurnAnchor: number }> {
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { capacityBuildReserveTurns: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { capacityBuildReserveTurns: 1 } }
+  );
   const configured = config?.capacityBuildReserveTurns;
   const turns =
     typeof configured === "number" && Number.isFinite(configured) && configured >= 0
       ? configured
       : OPERATING_RESERVE_TURNS;
   if (!(turns > 0)) return { turns: 0, billsPerTurnAnchor: 0, revenuePerTurnAnchor: 0 };
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId },
       {
@@ -783,7 +762,7 @@ export async function placeCapacityBuild(
   } = await loadCapacityContext(db, corporation, sector);
 
   if (sector.sectorType === "retail") {
-    const transition = await db.collection<GameConfig>("gameConfig").findOne(
+    const transition = await gameConfigCollection(db).findOne(
       { _id: "default" },
       {
         projection: {
@@ -844,17 +823,19 @@ export async function placeCapacityBuild(
   // here AND in the sector-detail quote from the same helper, so the price the
   // dialog shows is the price this command charges.
   const ceoChar = corporation.ceoId
-    ? await db
-        .collection<Character>("characters")
-        .findOne({ _id: corporation.ceoId }, { projection: { "stats.businessAcumen": 1 } })
+    ? await charactersCollection(db).findOne(
+        { _id: corporation.ceoId },
+        { projection: { "stats.businessAcumen": 1 } }
+      )
     : null;
   const ceoAcumen = ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT;
   // Host price level: the sector's OWN state's cost-of-living index, so where
   // you build changes what it costs. Absent metrics ⇒ neutral 1.0 (see
   // `hostBuildPriceIndex`).
-  const hostMetrics = await db
-    .collection<StateMetrics>("macroMetrics")
-    .findOne({ _id: sector.stateId }, { projection: { "economic.costOfLiving": 1 } });
+  const hostMetrics = await macroMetricsCollection(db).findOne(
+    { _id: sector.stateId },
+    { projection: { "economic.costOfLiving": 1 } }
+  );
   const hostCostOfLivingIndex = hostMetrics?.economic?.costOfLiving?.value ?? null;
   // Tech-tree growth-cost reduction, re-homed onto the build price (it bought
   // nothing under plants, where the growth slider is vestigial). Scoped to the
@@ -866,14 +847,12 @@ export async function placeCapacityBuild(
     unlockedTechNodeIds: corporation.unlockedTechNodeIds,
     techDecadeLane: corporation.techDecadeLane,
   };
-  const techBuildEffects = (await isSectorTechTreesEnabled())
-    ? getSectorTechEffects(
-        techView,
-        sector.sectorType,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      )
-    : null;
+  const techBuildEffects = getSectorTechEffects(
+    techView,
+    sector.sectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
   const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
   // Strength upkeep: from its shield stage the dominance shield counts only
   // current and previous decade techs and is capped at 50%.
@@ -905,9 +884,7 @@ export async function placeCapacityBuild(
     industryModel: sector.industryModel,
     mediaDiscriminator: sector.mediaDiscriminator,
     units,
-    // Capacity is priced at the product this sector actually makes. Ordering
-    // into a sector already running a high-RPU strategy used to be charged
-    // the sector-type default price, which is the 326.9x rare-earth subsidy.
+    // Price capacity at the product this sector actually makes, not the sector-type default, which would misapply the rare-earth subsidy.
     strategyId: sector.strategyId ?? null,
     year: currentYear,
     preset: resolvePresetIdFromGameState(gameState),
@@ -1152,7 +1129,7 @@ export async function placeCapacityBuild(
   // both pass, and both $inc down through zero. `$gte` makes the loser's
   // write match nothing.
   const costInCorpCapital = anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate);
-  const debit = await db.collection<Corporation>("corporations").updateOne(
+  const debit = await corporationsCollection(db).updateOne(
     {
       _id: corporation._id,
       liquidCapital: { $gte: costInCorpCapital },
@@ -1178,7 +1155,7 @@ export async function placeCapacityBuild(
   // queue since we read it, our $set would silently erase their work, so
   // fail instead, and hand the money back rather than charging for an order
   // that was never queued.
-  const queueWrite = await db.collection<CorporateSector>("corporateSectors").updateOne(
+  const queueWrite = await corporateSectorsCollection(db).updateOne(
     { _id: sector._id, ...queueCasFilter(sector) },
     {
       $set: {
@@ -1188,12 +1165,10 @@ export async function placeCapacityBuild(
     }
   );
   if (queueWrite.modifiedCount !== 1) {
-    await db
-      .collection<Corporation>("corporations")
-      .updateOne(
-        { _id: corporation._id },
-        { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: now } }
-      );
+    await corporationsCollection(db).updateOne(
+      { _id: corporation._id },
+      { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: now } }
+    );
     void observe("order", "concurrent_change");
     return fail(
       409,
@@ -1209,28 +1184,24 @@ export async function placeCapacityBuild(
   }
   void observe("order", "placed");
 
-  // ─── Draw the ordered capacity DOWN from the unowned pool (#1145) ────────
+  // ─── Draw ordered capacity DOWN from the unowned pool ────────
   //
   // Market share under plants is `owned / (owned + headroomUnits)`. Founding
-  // already consumed headroom (`expandSector`); building on an EXISTING plant
-  // did not, so every post-founding unit counted as owned while leaving the
-  // demand backing it in the pool. The pie therefore read "60% unowned" on a
-  // market the world had already built out, and the expand gate, which reads
-  // a real demand gap, refused to build into it.
+  // consumes headroom (`expandSector`); building on an EXISTING plant must too,
+  // otherwise every post-founding unit counts as owned while its demand
+  // backing stays in the pool, and the expand gate refuses to build into the
+  // apparent gap.
   //
-  // Drawn at ORDER time, not delivery: it is the CLAIM on the market that
-  // consumes headroom, and ordering-time is also what stops two concurrent
-  // builders from each buying the same slice. The cancel path returns the
-  // undelivered remainder, so the two are symmetric.
+  // Drawn at ORDER time, not delivery: that is the CLAIM on the market, and it
+  // stops two concurrent builders from buying the same slice. The cancel path
+  // returns the undelivered remainder, so the two are symmetric.
   //
-  // Post-commit and best-effort, exactly like the capex leg below: the money
-  // and the queue write have already landed, and a pool-write failure must
-  // not 500 the caller into retrying an order that already exists. Failing
-  // here leaves the pre-existing (leaky) behaviour, never a worse one.
+  // Post-commit and best-effort: the money and queue write have already landed,
+  // so a pool-write failure must not 500 the caller into retrying an order that
+  // already exists. Failing here leaves pre-existing behavior, never a worse one.
   const drawdown = unownedPoolDrawdown(poolBucket, units, now, eraUnitScale);
   if (drawdown) {
-    await db
-      .collection<UnownedSector>("unownedSectors")
+    await unownedSectorsCollection(db)
       .updateOne(
         {
           stateId: sector.stateId,

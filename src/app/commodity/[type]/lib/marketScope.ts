@@ -106,11 +106,10 @@ export function buildCommodityMarketScope(
   const stateCountryMap = data.stateCountryMap ?? {};
 
   if (activeState) {
-    // stateCountryMap comes from the server as Record<string, string>. If a
-    // state maps to a country code the client no longer has a label for
-    // (removed/renamed country, stale seed data), treating it as a trusted
-    // CountryId crashes every COUNTRY_DISPLAY_LABELS[stateCountry] lookup below and
-    // downstream (HeroPanel, drilldown view). Validate before trusting it.
+    // stateCountryMap arrives as Record<string, string> from the server. A
+    // stale code (removed/renamed country) would crash every
+    // COUNTRY_DISPLAY_LABELS lookup below and downstream (HeroPanel,
+    // drilldown), so validate before trusting it as a CountryId.
     const rawStateCountry = stateCountryMap[activeState];
     const stateCountry =
       (rawStateCountry && rawStateCountry in COUNTRY_DISPLAY_LABELS

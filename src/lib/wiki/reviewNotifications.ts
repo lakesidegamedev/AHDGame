@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import { createNotification } from "@/lib/notifications";
 import type { User } from "@/lib/db/types";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 /**
  * Fan out a `wiki_submission_pending` notification to every moderator and
@@ -13,8 +14,7 @@ export async function notifyModeratorsOfWikiSubmission(opts: {
   submitterName: string;
 }): Promise<void> {
   const db = await getDb();
-  const mods = await db
-    .collection<User>("users")
+  const mods = await usersCollection(db)
     .find({ $or: [{ role: "admin" }, { role: "moderator" }, { isAdmin: true }] })
     .project<{ _id: User["_id"] }>({ _id: 1 })
     .toArray();
@@ -26,7 +26,7 @@ export async function notifyModeratorsOfWikiSubmission(opts: {
         type: "wiki_submission_pending",
         title: "New wiki submission",
         message: `${opts.submitterName} submitted "${opts.title}" for review.`,
-        metadata: { slug: opts.slug, href: "/moderator?tab=content&sub=wiki-review" },
+        metadata: { slug: opts.slug, href: "/control/community/wiki-review" },
       })
     )
   );

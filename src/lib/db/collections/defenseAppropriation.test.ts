@@ -304,7 +304,7 @@ describe("encumbrance", () => {
 });
 
 /**
- * Defense-overdraft replay (refs #1975): the overdraft is a cash-only debit,
+ * Defense-overdraft replay: the overdraft is a cash-only debit,
  * never a bond issuance, so replaying the same turn must be a database-level
  * no-op that debits cash exactly once and leaves the bond-owned principal and
  * the ledger equal.

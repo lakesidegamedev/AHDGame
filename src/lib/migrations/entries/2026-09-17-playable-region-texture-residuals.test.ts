@@ -1,7 +1,7 @@
 import type { Db } from "mongodb";
 import { describe, expect, it } from "vitest";
 import { bulkOps, createMockDb } from "@/lib/test-utils/mockDb";
-import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { migration } from "./2026-09-17-playable-region-texture-residuals";
 
 const run = (db: Db, dryRun = false) => migration.execute(db, { dryRun });
@@ -32,7 +32,7 @@ describe(migration.id, () => {
     const db = createMockDb();
     game1953(db);
     const family = "economy.competition";
-    const delta = REGIONAL_TEXTURE_1953.US.AL?.[family];
+    const delta = getRegionalTexture1953().US.AL?.[family];
     expect(typeof delta).toBe("number");
     metrics(db, [
       {
@@ -59,7 +59,7 @@ describe(migration.id, () => {
     expect(residuals[family]).toBe(3 + delta!);
     // Siblings (including event-driven movement) survive the rewrite, with
     // their own texture delta folded in like every other family.
-    const safetyDelta = REGIONAL_TEXTURE_1953.US.AL?.["order.safety"] ?? 0;
+    const safetyDelta = getRegionalTexture1953().US.AL?.["order.safety"] ?? 0;
     expect(residuals["order.safety"]).toBe(1 + safetyDelta);
     expect(set.playableTexture1953MigrationId).toBe(migration.id);
   });

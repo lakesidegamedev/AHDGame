@@ -10,7 +10,8 @@
  */
 import type { Db } from "mongodb";
 import { economyResetPlanDigest } from "./digest";
-import { ECONOMY_RESET_PLANS_COLLECTION, type EconomyResetPlan } from "./types";
+import { type EconomyResetPlan } from "./types";
+import { economyResetPlansCollection } from "@/lib/db/repositories/economyResetPlans";
 
 /**
  * Characters per chunk. A UTF-8 character is at most 4 bytes, so a chunk is at
@@ -68,7 +69,7 @@ export async function storeEconomyResetPlan(
   createdAt: Date
 ): Promise<number> {
   const parts = splitPlanJson(JSON.stringify(plan));
-  const collection = db.collection<EconomyResetPlanChunk>(ECONOMY_RESET_PLANS_COLLECTION);
+  const collection = economyResetPlansCollection<EconomyResetPlanChunk>(db);
   // One chunk per write keeps every command far under the wire limit too.
   for (const [index, data] of parts.entries())
     await collection.updateOne(
@@ -82,8 +83,7 @@ export async function storeEconomyResetPlan(
 }
 
 export async function loadEconomyResetPlan(db: Db, digest: string): Promise<EconomyResetPlan> {
-  const chunks = await db
-    .collection<EconomyResetPlanChunk>(ECONOMY_RESET_PLANS_COLLECTION)
+  const chunks = await economyResetPlansCollection<EconomyResetPlanChunk>(db)
     .find({ digest })
     .sort({ index: 1 })
     .toArray();

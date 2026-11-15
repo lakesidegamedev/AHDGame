@@ -22,6 +22,9 @@ vi.mock("@/lib/admin/resetAndBootstrapGameWorld", () => ({
   resetAndBootstrapGameWorld: mocks.resetAndBootstrapGameWorld,
 }));
 
+const contract = vi.hoisted(() => ({ checkSeedContract: vi.fn(() => [] as unknown[]) }));
+vi.mock("@/lib/seeds/contract/checkSeedContract", () => contract);
+
 import { POST } from "./route";
 
 const request = (body: unknown) =>
@@ -38,6 +41,28 @@ describe("POST /api/singleplayer/setup", () => {
     mocks.getDb.mockResolvedValue({});
     mocks.resetAndBootstrapGameWorld.mockResolvedValue({ reset: { ok: true } });
     mocks.setSingleplayerConfig.mockResolvedValue({ mode: "worldsim" });
+    contract.checkSeedContract.mockReturnValue([]);
+  });
+
+  it("refuses an era whose seed data is not ready, in plain words, before any reset", async () => {
+    contract.checkSeedContract.mockReturnValue([
+      { dataset: "regions", detail: "SeedContractError internals" },
+    ]);
+    const response = await POST(request({ preset: "1953-default", mode: "normal" }));
+    expect(response.status).toBe(400);
+    const body = JSON.stringify(await response.json());
+    expect(body).toContain(
+      "The 1953 world is being rebuilt and cannot be started on this game version yet."
+    );
+    expect(body).not.toMatch(/SeedContractError|regions/);
+    expect(mocks.getDb).not.toHaveBeenCalled();
+    expect(mocks.resetAndBootstrapGameWorld).not.toHaveBeenCalled();
+  });
+
+  it("starts an era whose seed data is ready", async () => {
+    const response = await POST(request({ preset: "2027-default", mode: "normal" }));
+    expect(response.status).toBe(200);
+    expect(mocks.resetAndBootstrapGameWorld).toHaveBeenCalledTimes(1);
   });
 
   it("denies before reset and forwards worldsim setup", async () => {

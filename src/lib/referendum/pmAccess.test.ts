@@ -10,7 +10,7 @@ describe("referendum PM access", () => {
   it("does not let party leadership override a human PM", async () => {
     const db = createMockDb();
     vi.mocked(getHeadOfGovernmentCharacterId).mockResolvedValue(new ObjectId());
-    expect(await canDecideReferendum(db as unknown as Db, actor)).toBe(false);
+    expect(await canDecideReferendum(db as unknown as Db, "UK", actor)).toBe(false);
     expect(db.collection("politicalParties").findOne).not.toHaveBeenCalled();
   });
   it.each(["chairId", "viceChairId"])("allows the NPP PM's %s", async (role) => {
@@ -23,7 +23,7 @@ describe("referendum PM access", () => {
       pmCharacterId: null,
     });
     db.collection("politicalParties").findOne.mockResolvedValue({ [role]: actor });
-    expect(await canDecideReferendum(db as unknown as Db, actor)).toBe(true);
+    expect(await canDecideReferendum(db as unknown as Db, "UK", actor)).toBe(true);
     expect(db.collection("politicalParties").findOne).toHaveBeenCalledWith(
       { countryId: "UK", sequentialId: 2 },
       expect.anything()
@@ -37,6 +37,6 @@ describe("referendum PM access", () => {
       pmNppId: new ObjectId(),
       governingPartyId: "2",
     });
-    expect(await canDecideReferendum(db as unknown as Db, actor)).toBe(false);
+    expect(await canDecideReferendum(db as unknown as Db, "UK", actor)).toBe(false);
   });
 });

@@ -1,26 +1,26 @@
 /**
- * Sub-step timing inside a turn phase (#2689).
+ * Sub-step timing inside a turn phase.
  *
- * Phase intervals already cover the whole turn; what is missing is where the
- * time goes inside the heavy phases. A phase creates a marker and calls
- * `mark(name)` at the end of each sequential segment. Each mark records the
- * wall time since the previous mark and, when round-trip counting is on, the
- * phase's Mongo round trips issued in that segment. Marks with the same name
- * accumulate. `runPhase` takes the recorded steps when the phase completes and
- * persists them on the phase's status in `turnLogs`.
+ * A phase creates a marker and calls `mark(name)` at the end of each
+ * sequential segment; marks with the same name accumulate. Each mark records
+ * wall time since the previous mark and, when enabled, the phase's Mongo
+ * round trips for that segment. `runPhase` persists the steps on the phase
+ * status in `turnLogs`.
  *
- * Wall time includes interleaving with phases that run concurrently in the
- * same group; round trips do not, because they are attributed by the phase's
- * own trace id. Outside a phase the marker is a no-op.
+ * Wall time includes interleaving with concurrent phases in the same group;
+ * round trips do not (attributed by the phase's own trace id). Outside a
+ * phase the marker is a no-op.
  *
- * State lives on globalThis for the same reason as the round-trip profiler:
- * Next can instantiate a module twice across server chunks.
+ * State lives on globalThis because Next can instantiate a module twice
+ * across server chunks.
  */
 import {
   currentTurnPhase,
   phaseRoundTrips,
   roundTripCountsAvailable,
 } from "@/lib/observability/mongoRoundTrips";
+
+import { maybeInjectTurnFault } from "@/lib/turn/faultInjection";
 
 export type PhaseSubstep = { ms: number; roundTrips?: number; calls: number };
 export type PhaseSubsteps = Record<string, PhaseSubstep>;
@@ -45,6 +45,7 @@ export function substepMarker(now: () => number = () => performance.now()): Subs
   let lastRoundTrips = phaseRoundTrips(phase);
   return {
     mark(name: string) {
+      maybeInjectTurnFault(phase, name);
       const at = now();
       // Checked per mark: the monitor may observe its first command after the
       // marker was created, and counts before that are zero, not missing.
@@ -61,6 +62,22 @@ export function substepMarker(now: () => number = () => performance.now()): Subs
       lastRoundTrips = roundTrips;
     },
   };
+}
+
+/**
+ * Add an already measured duration to a named step of the current phase. For
+ * breakdowns of time that a surrounding `mark` also covers, so the pieces are
+ * named as parts of that step and not summed with it.
+ */
+export function recordPhaseSubstep(name: string, ms: number, calls = 1): void {
+  const phase = currentTurnPhase();
+  if (!phase || !Number.isFinite(ms) || ms < 0) return;
+  const steps = store().get(phase) ?? {};
+  const step = steps[name] ?? { ms: 0, calls: 0 };
+  step.ms += ms;
+  step.calls += calls;
+  steps[name] = step;
+  store().set(phase, steps);
 }
 
 /** Recorded steps for a phase, rounded for storage, without clearing them. */

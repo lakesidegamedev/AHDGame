@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
 import { clearMarketJsonCache } from "./useMarketJson";
 
-vi.mock("@/contexts/AuthDataContext", () => ({ useAuthMe: () => ({ navData: null }) }));
+vi.mock("@/contexts/AuthDataContext", () => ({
+  useAuthMe: () => ({ navData: null }),
+  useHasSession: () => true,
+}));
 vi.mock("@/hooks/useGameEvents", () => ({ useGameTurnStatus: () => null }));
 vi.mock("@/contexts/RegisteredCountriesContext", () => ({
   useEnabledCountries: () => ["US", "UK", "JP"],

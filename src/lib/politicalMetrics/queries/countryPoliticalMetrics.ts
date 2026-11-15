@@ -8,14 +8,9 @@ import type {
   PoliticalMetricsHistoryDoc,
 } from "@/lib/db/types/politicalMetrics";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { loadDemocraticCompetition } from "@/lib/governanceStyle/loadCompetition";
 import { scoreGovernanceStyle, type GovernanceStyleScore } from "@/lib/governanceStyle/score";
 import { getEnactedLevels } from "@/lib/politicalLegislation/enactedLevels";
-import {
-  loadPublicHealthDeliveryMultiplier,
-  US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-} from "@/lib/governmentFinance/deliveryMultiplier";
 import { loadDepartmentDeliveryMultipliersByCountry } from "@/lib/governmentFinance/deliveryMultipliers";
 import { loadProgramCostScale } from "@/lib/politicalLegislation/programCostScale";
 import { lawTargets } from "@/lib/politicalLegislation/dynamics";
@@ -44,6 +39,10 @@ import {
   type PoliticalMetricId,
   type PoliticalMetricsCountryId,
 } from "../types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
+import { politicalMetricsHistoryCollection } from "@/lib/db/repositories/politicalMetricsHistory";
 
 export interface CountryPoliticalMetricsResponse {
   /** Which registry this is; the views branch display on it. */
@@ -133,12 +132,11 @@ export async function loadCountryPoliticalMetrics(
 ): Promise<CountryPoliticalMetricsResponse | null> {
   const db = dbOverride ?? (await getDb());
   const [docs, states, gameState] = await Promise.all([
-    db.collection<PoliticalMetricsDoc>("politicalMetrics").find({ countryId }).toArray(),
-    db
-      .collection<State>("states")
+    politicalMetricsCollection(db).find({ countryId }).toArray(),
+    statesCollection(db)
       .find({ countryId }, { projection: { name: 1, population: 1, gdp: 1 } })
       .toArray(),
-    db.collection<GameState>("gameState").findOne(
+    gameStateCollection(db).findOne(
       { _id: "current" },
       {
         projection: {
@@ -146,8 +144,6 @@ export async function loadCountryPoliticalMetrics(
           currentTurn: 1,
           startingYear: 1,
           preset: 1,
-          departmentProgramSliceEnabled: 1,
-          departmentFinanceEnabled: 1,
           presidentialTenureByCountry: 1,
         },
       }
@@ -165,36 +161,21 @@ export async function loadCountryPoliticalMetrics(
     countryId,
     states
   );
-  const generalizedFinanceEnabled = gameState?.departmentFinanceEnabled === true;
-  const nationalContributionMultipliers = generalizedFinanceEnabled
-    ? (
-        await loadDepartmentDeliveryMultipliersByCountry(db, gameState?.currentTurn ?? 1, true, [
-          countryId,
-        ])
-      ).get(countryId)
-    : countryId === COUNTRY_CONFIGS.US.id
-      ? new Map([
-          [
-            US_PUBLIC_HEALTH_POLITICAL_LAW_ID,
-            (
-              await loadPublicHealthDeliveryMultiplier(
-                db,
-                gameState?.currentTurn ?? 1,
-                gameState?.departmentProgramSliceEnabled === true
-              )
-            ).multiplier,
-          ],
-        ])
-      : undefined;
+  const nationalContributionMultipliers = (
+    await loadDepartmentDeliveryMultipliersByCountry(db, gameState?.currentTurn ?? 1, true, [
+      countryId,
+    ])
+  ).get(countryId);
 
   // SP2 (§5/§6): trend history + the modifiers decomposition — the dynamics
   // engine's own arithmetic served read-time. The stored series caps at 365
   // entries; SERVE only the most recent 180 (≈6 real months) so the payload
   // stays bounded (63 metrics × entries — a full year would push ~1MB).
   const SERVED_HISTORY_ENTRIES = 180;
-  const historyDoc = await db
-    .collection<PoliticalMetricsHistoryDoc>("politicalMetricsHistory")
-    .findOne({ _id: countryId }, { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } });
+  const historyDoc = await politicalMetricsHistoryCollection(db).findOne(
+    { _id: countryId },
+    { projection: { entries: { $slice: -SERVED_HISTORY_ENTRIES } } }
+  );
   const nationalLawPoints = lawTargets(countryId, enactedLevels, nationalContributionMultipliers);
   const totalPopulation = states.reduce((sum, s) => sum + (s.population ?? 0), 0);
   const meanResidual = (metricId: PoliticalMetricId): number => {
@@ -209,19 +190,14 @@ export async function loadCountryPoliticalMetrics(
     return weighted / totalPopulation;
   };
   /**
-   * Population-weighted mean cabinet residual, plus the share of population for
-   * which every channel is effectively maxed. Ticket #1129: players reported
-   * built estates doing nothing, because a single global cap meant a saturated
-   * order book zeroed every other channel too.
+   * Population-weighted mean cabinet residual, plus the share of population
+   * for which every channel is effectively maxed.
    *
-   * The cap is now per channel, so "at cap" is only true when EVERY channel is
-   * within 0.01 of its asymptote (issue #703: channels never touch it, so this
-   * means effectively maxed, not exactly pinned). Anything less and there is
-   * still a channel a player can build in, which is exactly the case the old
-   * warning would have called hopeless.
-   * A doc with no per-source split yet (written before the change, or a region
-   * the ministerial step has not touched since) falls back to comparing its
-   * flat total against the full ceiling, which is the same question.
+   * The cap is per channel, so "at cap" is only true when EVERY channel is
+   * within 0.01 of its asymptote (channels never touch it, so this means
+   * effectively maxed). Anything less and there is still a channel a player
+   * can build in. A doc with no per-source split yet falls back to comparing
+   * its flat total against the full ceiling, which is the same question.
    */
   const meanCabinet = (
     metricId: PoliticalMetricId
@@ -229,7 +205,7 @@ export async function loadCountryPoliticalMetrics(
     if (totalPopulation <= 0) return { mean: 0, cappedShare: 0, bySource: [] };
     let weighted = 0;
     let cappedWeight = 0;
-    // Ticket #1142: a player saw a negative "Cabinet, orders and estates" line on a
+    // A player saw a negative "Cabinet, orders and estates" line on a
     // US infrastructure metric and asked which cabinet action could possibly be
     // doing that. The honest answer was none of them: it was the energy channel
     // alone, left saturated by a units bug that is now fixed. One aggregate label

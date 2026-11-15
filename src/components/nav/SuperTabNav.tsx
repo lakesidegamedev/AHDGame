@@ -7,14 +7,10 @@ import { Tooltip } from "@/components/Tooltip";
 /**
  * Shared two-level tab navigation (super-tabs + sub-tabs).
  *
- * Extracted from the state/region page rework so other dense hub pages (the
- * corporation page) can reuse the exact same grouping pattern instead of a
- * long horizontally-scrolling single tab row.
- *
- * Conventions kept from the region rework:
+ * Conventions:
  *  - state lives in the URL (`?tab=<super>&sub=<sub>`), never in useState, so
  *    back/forward and deep links stay correct;
- *  - both bars use flex-wrap (design system: no horizontal scroll);
+ *  - both bars use flex-wrap (no horizontal scroll);
  *  - a super-tab with 0 or 1 visible sub-tabs renders no sub-tab bar.
  *
  * Visibility gating is the caller's job: pass an already-filtered `tabs` list.

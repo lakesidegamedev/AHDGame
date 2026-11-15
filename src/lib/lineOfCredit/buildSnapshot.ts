@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { Character, Corporation, CentralBank } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { LoanFundingSource, LocPaymentMode } from "@/lib/db/types/character";
 import type { LocLedgerEntry } from "@/lib/db/types/locLedger";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -38,6 +38,10 @@ import {
   computeControlledEquityHaircutInternal,
   controlledEquityCollateralNote,
 } from "@/lib/lineOfCredit/controlledEquity";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { locLedgerCollection } from "@/lib/db/repositories/locLedger";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -170,13 +174,12 @@ export async function buildLocSnapshot(
   const homeBankId = getBankId(getCountryIdForCurrency(home));
 
   const [homeBank, poolBank, locAgg] = await Promise.all([
-    db.collection<CentralBank>("centralBanks").findOne({ _id: homeBankId }),
+    centralBanksCollection(db).findOne({ _id: homeBankId }),
     poolBankId === homeBankId
       ? Promise.resolve(null)
-      : db.collection<CentralBank>("centralBanks").findOne({ _id: poolBankId }),
+      : centralBanksCollection(db).findOne({ _id: poolBankId }),
     // Aggregate total outstanding LOC in the pool currency across all borrowers
-    db
-      .collection<Character>("characters")
+    charactersCollection(db)
       .aggregate<{ totalBalance: number; totalArrears: number }>([
         {
           $match: {
@@ -224,12 +227,10 @@ export async function buildLocSnapshot(
   // spread matches the one charged.
   const nwScore = netWorthScoreFromInternal(netOfLocInternal);
 
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { ceoId: character._id, countryId: character.countryId },
-      { projection: { creditCompositeSnapshot: 1 } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    { ceoId: character._id, countryId: character.countryId },
+    { projection: { creditCompositeSnapshot: 1 } }
+  );
 
   const composite = computeLocBorrowerComposite({
     corpComposite: corp?.creditCompositeSnapshot ?? null,
@@ -278,8 +279,7 @@ export async function buildLocSnapshot(
   // to it. Without this gate, historical ledger rows kept driving the banner
   // for paid-off loans (bug #0547).
   const recentGarnishments = loc?.drawFrozen
-    ? await db
-        .collection<LocLedgerEntry>("locLedger")
+    ? await locLedgerCollection(db)
         .find({ characterId: character._id, type: "garnishment" }, { projection: { meta: 1 } })
         .sort({ createdAt: -1 })
         .limit(5)

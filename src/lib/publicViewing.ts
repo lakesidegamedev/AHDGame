@@ -1,5 +1,7 @@
 import { getDb } from "@/lib/mongodb";
 import type { GameConfig } from "@/lib/db/types";
+import { runtimeConfig } from "@/lib/config/runtime";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * "Public viewing mode" — the master switch governing whether unauthenticated
@@ -74,7 +76,7 @@ export function invalidatePublicViewingCache(): void {
  * fresh/legacy config and any transient lookup gap both fail open (public).
  */
 export async function getCachedPublicViewingMode(): Promise<boolean> {
-  const envOverride = process.env.PUBLIC_VIEWING_MODE;
+  const envOverride = runtimeConfig.publicViewingMode();
   if (envOverride === "true") return true;
   if (envOverride === "false") return false;
 
@@ -84,9 +86,10 @@ export async function getCachedPublicViewingMode(): Promise<boolean> {
   }
 
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { publicViewingMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { publicViewingMode: 1 } }
+  );
 
   // Default ON: absent/undefined => enabled; only an explicit `false` locks reads.
   const value = config?.publicViewingMode !== false;

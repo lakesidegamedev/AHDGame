@@ -52,8 +52,12 @@ describe("electorate legislative priorities", () => {
     fireEvent.click(screen.getByRole("button", { name: new RegExp(senior.label) }));
     const panel = screen.getByRole("region", { name: "Legislative priorities" });
     expect(within(panel).getByText(senior.legislativePriorities!.primary.lawName)).toBeTruthy();
-    expect(within(panel).getByText("Desired level: Benefit Protection Act")).toBeTruthy();
-    expect(within(panel).queryByText("State Affordable Housing Act")).toBeNull();
+    expect(
+      within(panel).getByText(
+        `Desired level: ${senior.legislativePriorities!.primary.policyOptionName}`
+      )
+    ).toBeTruthy();
+    expect(within(panel).queryByText("Public Housing and Rent Act")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Income" }));
     expect(screen.getByRole("region", { name: "Legislative priorities" })).toBeTruthy();
   });

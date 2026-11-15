@@ -8,6 +8,7 @@ import {
   STATE_ROSTER_DEFAULT_PAGE_SIZE,
   type StateRosterResult,
 } from "@/lib/states/overview/getStateRoster";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export type { StateRosterResult, StateRosterRow } from "@/lib/states/overview/getStateRoster";
 
@@ -30,7 +31,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const stateId = id;
 
     const db = await getDb();
-    const state = await db.collection<State>("states").findOne({ _id: stateId, countryId });
+    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
     if (!state) {
       return errorResponse(404, "State not found");
     }

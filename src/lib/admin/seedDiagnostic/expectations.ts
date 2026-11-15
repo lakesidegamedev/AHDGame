@@ -6,7 +6,7 @@
 import { getOpeningPolicyRate } from "@/lib/centralBank/rules/openingPolicyRate";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS, DEFAULT_LEGACY_COUNTRY_ID } from "@/lib/constants/countries";
-import { FOREX_ACTIVE_COUNTRIES, getInitialRates } from "@/lib/constants/currencies";
+import { FOREX_ACTIVE_COUNTRIES, getRuntimeInitialRates } from "@/lib/constants/currencies";
 import { getStartingYearForPreset, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 // Re-exported so existing consumers keep their import path; the definition moved
 // to break the readiness/seed import cycle. See regionBundles.ts.
@@ -25,7 +25,7 @@ import {
   type ResetPresetId,
 } from "@/lib/seeds/presetSelector";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
-import { countriesByTier, SHIPPING_PRESETS } from "@/lib/world/eraRoster";
+import { countriesByTier, isBackgroundInPreset, SHIPPING_PRESETS } from "@/lib/world/eraRoster";
 import {
   getPresetEnablementCountries,
   getPresetEnablementTier,
@@ -116,6 +116,9 @@ export function readinessCountryIds(preset: string): CountryId[] {
     // No enablement map → treat as playable (modern presets).
     // NPP / coming-soon tiers skip readiness (pre-politics / colony).
     if (tier && tier.status === "coming-soon") continue;
+    // Background countries carry no NPP politicians or full-engine elections
+    // by design, so the political checks do not apply.
+    if (isBackgroundInPreset(preset, id)) continue;
     out.push(id);
   }
   // US runs off global GameState (never in enablement maps) but is always playable.
@@ -242,19 +245,9 @@ export function expectedPrimeRate(countryId: CountryId, startingYear?: number): 
 /**
  * Which countries each region-derived collection is SUPPOSED to cover.
  *
- * Resolved through the very config each seeder gates on — the same technique
- * `expectedRegionCount` uses — so the expectation cannot drift from the seeder
- * and cannot be era-blind. A hard-coded roster here would re-create the DE
- * RegionMetrics false positive (an expectation authored for one era, applied to
- * all of them).
- *
- * This exists because these six collections had NO diagnostic coverage at all,
- * and they are exactly the ones the two largest seed defects on record broke:
- * the region-derived seeders ran while only US states existed, leaving
- * `militaryUnits` at 13 documents across 1 country in a 226-region, 24-country
- * world, and the diagnostic reported a clean bill. Coverage — the country SET,
- * not the row count — is what makes that visible: 13/1 against an expected 20
- * is unmistakable, whereas "some rows exist" is not.
+ * Resolved through the same config each seeder gates on, so the expectation
+ * cannot drift from the seeder and cannot be era-blind. Coverage (the country
+ * set, not the row count) is what makes a broken region-derived seed visible.
  */
 export function expectedRegionDerivedCoverage(
   preset: string,
@@ -350,8 +343,8 @@ export function buildSeedExpectations(preset: string): SeedExpectations {
     seededCountryIds,
     forexRates:
       preset === "2027-default"
-        ? { ...getInitialRates(preset), BG: getInitialRates(preset).DE }
-        : getInitialRates(preset),
+        ? { ...getRuntimeInitialRates(preset), BG: getRuntimeInitialRates(preset).DE }
+        : getRuntimeInitialRates(preset),
     forexActiveCountries: monetaryScope.forexCountries,
     monetaryCoverage: {
       centralBankCountries: monetaryScope.centralBankCountries,

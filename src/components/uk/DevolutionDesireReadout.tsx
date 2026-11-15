@@ -14,10 +14,40 @@ export type DesireReadoutData = Pick<
 function formatDesireDrift(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(3)}`;
 }
+const QUEBEC_STANCE_KEYS = {
+  anti: "federalist",
+  pro: "autonomist",
+  independence: "sovereignty",
+} as const satisfies Record<DevolutionPolicy, string>;
 export function stanceMessageKey(stateId: string, policy: DevolutionPolicy) {
+  if (stateId === "CA_QC") return QUEBEC_STANCE_KEYS[policy];
   return policy === "independence" && stateId === "NIR" ? "reunification" : policy;
 }
-/** Shared by the UK Executive and each First Minister's office. */
+/** Message keys that name the two governments, by region. */
+function readoutKeys(stateId: string) {
+  if (stateId === "CA_QC")
+    return {
+      desire: "sovereigntyDesire",
+      nationalStance: "ottawaStance",
+      regionalStance: "premierStance",
+      regionalPolicy: "premierPolicy",
+      nationalPolicy: "ottawaPolicy",
+      nationalApproval: "ottawaApproval",
+      inflation: "canadaInflation",
+      policyHelp: "quebecPolicyHelp",
+    } as const;
+  return {
+    desire: stateId === "NIR" ? "reunificationDesire" : "independenceDesire",
+    nationalStance: "westminsterStance",
+    regionalStance: "fmStance",
+    regionalPolicy: "regionalPolicy",
+    nationalPolicy: "nationalPolicy",
+    nationalApproval: "nationalApproval",
+    inflation: "inflation",
+    policyHelp: "policyHelp",
+  } as const;
+}
+/** Shared by the UK Executive and each regional head of government's office. */
 export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
   const t = useTranslations("nav.devolution");
   const forecast = forecastIndependenceDesire({
@@ -26,26 +56,25 @@ export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
     westminsterPolicy: data.westminsterPolicy,
     ...data.inputs,
   });
+  const keys = readoutKeys(data.stateId);
   const rows = [
-    [t("regionalPolicy"), data.drivers.policy],
-    [t("nationalPolicy"), data.drivers.westminsterPolicy],
+    [t(keys.regionalPolicy), data.drivers.policy],
+    [t(keys.nationalPolicy), data.drivers.westminsterPolicy],
     [
       t("regionalApproval", { value: data.inputs.regionalApproval.toFixed(1) }),
       data.drivers.regionalApproval,
     ],
     [
-      t("nationalApproval", { value: data.inputs.nationalApproval.toFixed(1) }),
+      t(keys.nationalApproval, { value: data.inputs.nationalApproval.toFixed(1) }),
       data.drivers.nationalApproval,
     ],
-    [t("inflation", { value: data.inputs.inflationPercent.toFixed(1) }), data.drivers.inflation],
+    [t(keys.inflation, { value: data.inputs.inflationPercent.toFixed(1) }), data.drivers.inflation],
     [t("recovery", { value: MEAN_REVERSION_TARGET }), data.drivers.meanReversion],
   ] as const;
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-card-border bg-card p-6">
-        <h2 className="text-sm text-muted">
-          {t(data.stateId === "NIR" ? "reunificationDesire" : "independenceDesire")}
-        </h2>
+        <h2 className="text-sm text-muted">{t(keys.desire)}</h2>
         <div className="mt-2 text-5xl font-bold tabular-nums">{data.previous.toFixed(2)}</div>
         <p className="mt-2 text-sm tabular-nums text-muted">
           {t("lastTurn", { value: formatDesireDrift(data.trend) })}
@@ -76,8 +105,8 @@ export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
       <div className="grid gap-4 sm:grid-cols-2">
         {(
           [
-            ["westminsterStance", data.westminsterPolicy],
-            ["fmStance", data.policy],
+            [keys.nationalStance, data.westminsterPolicy],
+            [keys.regionalStance, data.policy],
           ] as const
         ).map(([label, policy]) => (
           <section key={label} className="rounded-xl border border-card-border bg-card p-4">
@@ -104,7 +133,7 @@ export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
           <span>{t("net")}</span>
           <span className="tabular-nums">{formatDesireDrift(data.delta)}</span>
         </div>
-        <p className="mt-3 text-xs text-muted">{t("policyHelp")}</p>
+        <p className="mt-3 text-xs text-muted">{t(keys.policyHelp)}</p>
       </section>
     </div>
   );

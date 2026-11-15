@@ -269,7 +269,6 @@ describe("takeSupplyListing", () => {
     db.collection("gameState").findOne.mockResolvedValue({
       currentTurn: 100,
       currentYear: 1990,
-      subsidiaryCorporationsEnabled: true,
     });
 
     const response = await takeRequest({ listingId: `${publisherId}:0`, volume: 10 }, parent);
@@ -299,7 +298,6 @@ describe("takeSupplyListing", () => {
     db.collection("gameState").findOne.mockResolvedValue({
       currentTurn: 100,
       currentYear: 1990,
-      subsidiaryCorporationsEnabled: true,
     });
 
     const response = await takeRequest({ listingId: `${publisherId}:0`, volume: 10 }, parent);
@@ -308,34 +306,6 @@ describe("takeSupplyListing", () => {
     expect(await response.json()).toMatchObject({
       error: expect.stringContaining("formalized group"),
     });
-  });
-
-  it("keeps group contracts disabled when the subsidiary feature is off", async () => {
-    const parent = taker({
-      ceoId: new ObjectId(),
-      ceoType: "character",
-      totalShares: 100,
-      superShareMultiplier: 1,
-      shareholders: [],
-    });
-    const subsidiary = publisher({
-      ceoId: new ObjectId(),
-      ceoType: "character",
-      totalShares: 100,
-      superShareMultiplier: 1,
-      shareholders: [{ corporationId: takerId, shares: 60 }],
-      subsidiaryFormalizedAtTurn: 100,
-    });
-    db.collection("corporations").findOne.mockResolvedValue(subsidiary);
-    db.collection("gameState").findOne.mockResolvedValue({
-      currentTurn: 100,
-      currentYear: 1990,
-      subsidiaryCorporationsEnabled: false,
-    });
-
-    const response = await takeRequest({ listingId: `${publisherId}:0`, volume: 10 }, parent);
-
-    expect(response.status).toBe(403);
   });
 
   it("allows a 4% holding", async () => {

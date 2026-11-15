@@ -6,10 +6,9 @@ import {
   PRIMARY_HOME_SURGE_COST_ACTIONS,
   PRIMARY_HOME_SURGE_COST_FUNDS,
   PRIMARY_HOME_SURGE_PCT,
-} from "@/lib/electionEngine/constants";
+} from "@/lib/elections/engine/constants";
 
-vi.mock("@/lib/electionEngine", () => ({ fetchEnrichedCandidates: vi.fn() }));
-vi.mock("@/lib/demographics/categoryCatalog", () => ({ loadDemographicCategories: vi.fn() }));
+vi.mock("@/lib/elections/engine", () => ({ fetchEnrichedCandidates: vi.fn() }));
 vi.mock("@/lib/primaryRegionalBonusLoader", () => ({ loadRegionalBonusMaps: vi.fn() }));
 vi.mock("@/lib/primaryProjection", () => ({ projectPrimaryByState: vi.fn() }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn() }));
@@ -110,11 +109,8 @@ function candidateRow(over: Record<string, unknown> = {}) {
 beforeEach(async () => {
   vi.clearAllMocks();
 
-  const { fetchEnrichedCandidates } = await import("@/lib/electionEngine");
+  const { fetchEnrichedCandidates } = await import("@/lib/elections/engine");
   vi.mocked(fetchEnrichedCandidates).mockResolvedValue([] as never);
-
-  const { loadDemographicCategories } = await import("@/lib/demographics/categoryCatalog");
-  vi.mocked(loadDemographicCategories).mockResolvedValue([] as never);
 
   const { loadRegionalBonusMaps } = await import("@/lib/primaryRegionalBonusLoader");
   vi.mocked(loadRegionalBonusMaps).mockResolvedValue({
@@ -417,26 +413,16 @@ describe("what the builder feeds the projection", () => {
     return vi.mocked(projectPrimaryByState).mock.calls[0][0];
   }
 
-  it("resolves turnout per state, so the board reads the channel the wave does", async () => {
+  it("projects from the census cells, so the board reads the channel the wave does", async () => {
     // Party GOTV, canvassing and turnout suppression all write
-    // stateDemographicTurnout. The stagger has always read it; the board did
-    // not, so all three moved the result and left the projection alone.
+    // stateDemographicTurnout. The projection builds the same census cells the
+    // wave counts, from a context that carries those modifiers.
     const input = await projectionInput({
       states: [{ _id: "IA", countryId: "US", name: "Iowa", population: 3_000_000 }],
-      stateDemographics: [
-        {
-          _id: "IA",
-          countryId: "US",
-          categoryWeights: { voterGroups: 100 },
-          groups: { all: { population: 3_000_000, economicLean: -1, socialLean: -1, turnout: 60 } },
-        },
-      ],
-      stateDemographicTurnout: [
-        { _id: "IA", countryId: "US", modifiers: { voterGroups: { all: -5 } } },
-      ],
+      stateDemographicTurnout: [{ _id: "IA", countryId: "US", modifiers: { race: { white: -5 } } }],
     });
-    expect(input.liveTurnouts).toBeDefined();
-    expect(input.liveTurnouts?.IA).toBeDefined();
+    expect(input.campaignContext).toBeDefined();
+    expect(input.campaignContext?.turnoutByState.get("IA")).toBeDefined();
   });
 
   it("passes the live attack rows and the turn they are measured against", async () => {

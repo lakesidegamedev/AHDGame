@@ -8,7 +8,7 @@ import {
   isCandidateEligibleForVacancy,
   roleSlotForPosition,
   type UkMinisterialRoleSlot,
-} from "@/lib/uk/dualMinistry/rules";
+} from "@/lib/countries/uk/dualMinistry/rules";
 import {
   getCabinetEligibleChamberKeys as resolveCabinetEligibleChamberKeys,
   getCountryConfig,
@@ -21,6 +21,10 @@ import type {
   ParliamentaryGovernment,
   PoliticalParty,
 } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { parliamentaryGovernmentsCollection } from "@/lib/db/repositories/parliamentaryGovernments";
 
 export interface CabinetEligibleCharacter {
   _id: string;
@@ -32,9 +36,6 @@ export interface CabinetEligibleCharacter {
   chamberName?: string;
   sequentialId?: number | null;
 }
-
-/** @deprecated Use CabinetEligibleCharacter instead */
-export type UKCabinetEligibleCharacter = CabinetEligibleCharacter;
 
 function normalizeCabinetChamberDisplayName(name: string): string {
   if (name === "ShÅ«giin") return "Shūgiin";
@@ -96,9 +97,9 @@ export async function requireCurrentPrimeMinister(
   const govFormation = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
   let pmCharId: ObjectId | null = govFormation ? (govFormation.pmCharacterId ?? null) : null;
   if (!govFormation) {
-    const legacy = await db
-      .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-      .findOne({ _id: countryId as string });
+    const legacy = await parliamentaryGovernmentsCollection(db).findOne({
+      _id: countryId as string,
+    });
     pmCharId = legacy?.pmCharacterId ?? null;
   }
 
@@ -110,7 +111,7 @@ export async function requireCurrentPrimeMinister(
     throw forbidden(errorMessage);
   }
 
-  const pmCharacter = await db.collection<Character>("characters").findOne({
+  const pmCharacter = await charactersCollection(db).findOne({
     userId: new ObjectId(authUserId),
   });
 
@@ -124,10 +125,10 @@ export async function requireCurrentPrimeMinister(
 /**
  * Get eligible cabinet candidates for any parliamentary country.
  * Returns lower-chamber player-character MPs who are not the PM and not already in cabinet.
- * With `vacancyPositionId` (UK dual-ministry rules, issue #2049), single-slot
+ * With `vacancyPositionId` (UK dual-ministry rules), single-slot
  * holders of the complementary slot stay eligible for the vacancy: a
  * department-only minister may take a central title and vice versa. Without
- * it, every cabinet holder is excluded, exactly as before.
+ * it, every cabinet holder is excluded.
  */
 export async function getEligibleCabinetCharacters(
   db: Db,
@@ -141,8 +142,7 @@ export async function getEligibleCabinetCharacters(
 
   // Eligible-chamber officials drive the non-OPS candidate set and supply
   // chamber/constituency display for legislators in both modes.
-  const eligibleOfficials = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const eligibleOfficials = await electedOfficialsCollection(db)
     .find({
       officeType: { $in: eligibleOfficeTypes },
       countryId,
@@ -172,8 +172,7 @@ export async function getEligibleCabinetCharacters(
   }
 
   // Party lookup: name for display + regimeStatus for OPS banned-party filtering.
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId })
     .project({ sequentialId: 1, name: 1, regimeStatus: 1 })
     .toArray();
@@ -184,8 +183,7 @@ export async function getEligibleCabinetCharacters(
   // eligible-chamber legislators. See 2026-06-05-ops-cabinet-any-player-design.md.
   let characters: Character[];
   if (isOps) {
-    characters = await db
-      .collection<Character>("characters")
+    characters = await charactersCollection(db)
       .find({ countryId, userId: { $exists: true } })
       .toArray();
   } else {
@@ -202,8 +200,7 @@ export async function getEligibleCabinetCharacters(
       return [];
     }
 
-    characters = await db
-      .collection<Character>("characters")
+    characters = await charactersCollection(db)
       .find({
         _id: { $in: characterIds },
         userId: { $exists: true },
@@ -220,9 +217,7 @@ export async function getEligibleCabinetCharacters(
         if (countryId !== "UK") return held == null;
         return isCandidateEligibleForVacancy(countryId, vacancySlot, held ?? []);
       })
-      // Party suspension (issue #859): a whip-withdrawn MP sits as an
-      // independent and is not offered for cabinet until restored. The appoint
-      // and reshuffle handlers enforce the same rule server-side.
+      // A whip-withdrawn MP sits as an independent and is not offered for cabinet until restored. Appoint and reshuffle handlers enforce this too.
       .filter(
         (character) => officialByCharacterId.get(character._id.toString())?.whipWithdrawn !== true
       )

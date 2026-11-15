@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Election, ElectionCandidate } from "@/lib/db/types";
+import type { Election, ElectionCandidate } from "@/lib/db/types";
 import { getDebateSessionsCollection } from "@/lib/db/collections/debateSessions";
 import { seededRoll, makeSeededRng } from "@/lib/events/substrate/rng";
 import { isInPrimaryPhase } from "@/lib/elections/electionDeadlineFilters";
@@ -10,6 +10,9 @@ import {
   createDebateChallenge,
   sweepExpiredDebates,
 } from "./debateSessionLifecycle";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
 
 const CHALLENGE_THRESHOLD = Math.round(DEBATE_CHALLENGE_CHANCE * 100);
 
@@ -43,10 +46,7 @@ export async function processDebateChallenges(
   }
 
   // 3. Active candidacies grouped by election.
-  const candidacies = await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .find({ status: "active" })
-    .toArray();
+  const candidacies = await electionCandidatesCollection(db).find({ status: "active" }).toArray();
   const byElection = new Map<string, ElectionCandidate[]>();
   for (const c of candidacies) {
     const key = c.electionId.toString();
@@ -61,8 +61,7 @@ export async function processDebateChallenges(
   const electionIds = [...byElection.keys()].map((id) => new ObjectId(id));
   const elections =
     electionIds.length > 0
-      ? await db
-          .collection<Election>("elections")
+      ? await electionsCollection(db)
           .find(
             { _id: { $in: electionIds } },
             { projection: { _id: 1, primaryEndTurn: 1, primaryEndTime: 1 } }
@@ -107,8 +106,7 @@ export async function processDebateChallenges(
     .map((c) => c.characterId!);
   const chars =
     playerCandIds.length > 0
-      ? await db
-          .collection<Character>("characters")
+      ? await charactersCollection(db)
           .find(
             { _id: { $in: playerCandIds } },
             {

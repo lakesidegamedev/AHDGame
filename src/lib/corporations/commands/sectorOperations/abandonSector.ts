@@ -11,7 +11,6 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import type { CorporateSector, GameState, SectorBuildOrder, State } from "@/lib/db/types";
-import type { Corporation } from "@/lib/db/types";
 import { queueUndeliveredCost, undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
 import {
@@ -31,6 +30,10 @@ import {
   unprotectedConstructionPropertyFilter,
 } from "@/lib/corporations/securedConstructionProperty";
 import { abandonBankImpact } from "@/lib/banking/capacityAllocation";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -67,15 +70,11 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid sector ID");
     }
 
-    // A financial sector feeds a deposit-taking bank's branch network. Abandoning
-    // one lowers the deposit ceiling (to zero with the last one), so the CEO sees
-    // the impact and confirms it first (ticket 1553).
-    const preview = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne(
-        { _id: new ObjectId(sectorId), corporationId: corporation._id },
-        { projection: { sectorType: 1 } }
-      );
+    // A financial sector feeds a deposit-taking bank's branch network; abandoning one lowers the deposit ceiling, so the CEO confirms the impact first.
+    const preview = await corporateSectorsCollection(db).findOne(
+      { _id: new ObjectId(sectorId), corporationId: corporation._id },
+      { projection: { sectorType: 1 } }
+    );
     if (preview) {
       const impact = await abandonBankImpact(db, corporation, preview);
       const body = (await request.json().catch(() => null)) as {
@@ -96,15 +95,10 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       }
     }
 
-    // Reserve the sector without deleting it. The property marker makes this
-    // the one abandon winner, excludes a concurrent construction claim, and
-    // lets the idempotent pool restore delete only after its credit is durable.
-    // The reservation is one atomic findOneAndUpdate; only the refusal path
-    // pays for a read to say WHY instead of claiming the sector is missing
-    // (#4190).
+    // Reserve the sector without deleting it: the property marker makes this the sole abandon winner, excludes concurrent construction claims, and lets the idempotent pool restore delete only after its credit is durable. One atomic findOneAndUpdate; only refusal path pays a read to explain why.
     const sectorIdHex = new ObjectId(sectorId).toHexString();
     const transitionKey = `restore:${sectorIdHex}`;
-    const sectors = db.collection<CorporateSector>("corporateSectors");
+    const sectors = corporateSectorsCollection(db);
     const sectorIdFilter = { _id: new ObjectId(sectorId), corporationId: corporation._id };
 
     let sector = await sectors.findOneAndUpdate(
@@ -170,9 +164,10 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       OPERATING_SECTOR_TYPE_LABELS[
         sector.sectorType as keyof typeof OPERATING_SECTOR_TYPE_LABELS
       ] ?? sector.sectorType;
-    const state = await db
-      .collection<State>("states")
-      .findOne({ _id: sector.stateId }, { projection: { name: 1 } });
+    const state = await statesCollection(db).findOne(
+      { _id: sector.stateId },
+      { projection: { name: 1 } }
+    );
     const stateName = state?.name ?? sector.stateId;
     const now = new Date();
 
@@ -198,7 +193,7 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       if (!refundDone) {
         const queue: SectorBuildOrder[] = Array.isArray(sector.buildQueue) ? sector.buildQueue : [];
         if (queue.length > 0) {
-          const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+          const gameState = await gameStateCollection(db).findOne({ _id: "current" });
           const currentTurn = gameState?.currentTurn ?? 0;
           const refundableAnchor =
             queueUndeliveredCost(queue, currentTurn) * CAPACITY_BUILD_CANCEL_REFUND;
@@ -208,12 +203,10 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
               anchorToCorpLiquidCapital(refundableAnchor, corporation, corpFxRate)
             );
             if (refundLocal > 0) {
-              await db
-                .collection<Corporation>("corporations")
-                .updateOne(
-                  { _id: corporation._id },
-                  { $inc: { liquidCapital: refundLocal }, $set: { updatedAt: now } }
-                );
+              await corporationsCollection(db).updateOne(
+                { _id: corporation._id },
+                { $inc: { liquidCapital: refundLocal }, $set: { updatedAt: now } }
+              );
             }
             // Best-effort ledger leg, same discipline as the cancel command: the
             // cash has moved, so a log failure must not 500 the caller into a retry

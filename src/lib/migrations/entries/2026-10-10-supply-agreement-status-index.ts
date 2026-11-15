@@ -1,5 +1,7 @@
 import type { Db } from "mongodb";
 import type { Migration } from "../types";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
+import type { Document } from "mongodb";
 
 export const migration: Migration = {
   id: "2026-10-10-supply-agreement-status-index",
@@ -8,12 +10,10 @@ export const migration: Migration = {
   idempotent: true,
   async execute(db: Db, ctx) {
     if (!ctx.dryRun) {
-      await db
-        .collection("supplyAgreements")
-        .createIndex(
-          { status: 1, expiresAtTurn: 1 },
-          { name: "supplyAgreements_status_expiresAtTurn", background: true }
-        );
+      await supplyAgreementsCollection<Document>(db).createIndex(
+        { status: 1, expiresAtTurn: 1 },
+        { name: "supplyAgreements_status_expiresAtTurn", background: true }
+      );
     }
     return {
       documentsScanned: 0,

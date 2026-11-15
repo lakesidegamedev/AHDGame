@@ -6,8 +6,6 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 import { handleRouteError, badRequest, notFound, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { Character } from "@/lib/db/types";
 import { CENTRAL_BANK_LOBBY_MIN_AMOUNT } from "@/lib/constants/centralBankLobby";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -19,6 +17,8 @@ import { getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { autoConvertForPurchase } from "@/lib/currency/autoConvert";
 import { getGameState } from "@/lib/gameState";
 import { getCentralBankScope } from "@/lib/centralBank/helpers";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -61,8 +61,8 @@ export async function POST(request: Request, context: RouteContext) {
         status: 400,
       });
 
-    const centralBanks = db.collection<CentralBank>("centralBanks");
-    const characters = db.collection<Character>("characters");
+    const centralBanks = centralBanksCollection(db);
+    const characters = charactersCollection(db);
 
     const bank = await centralBanks.findOne({ _id: bankId });
     if (!bank)

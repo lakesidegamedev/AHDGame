@@ -9,11 +9,11 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, badRequest, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { Character } from "@/lib/db/types";
 import { ZOD_ACTIVE_CURRENCY_ENUM, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { insertLocLedgerEntry } from "@/lib/lineOfCredit/ledger";
 import { getGameState } from "@/lib/gameState";
+import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const bodySchema = z.object({
   characterId: z.string().min(1),
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     const db = await getDb();
     const charObjectId = new ObjectId(characterId);
-    const character = await db.collection<Character>("characters").findOne({ _id: charObjectId });
+    const character = await charactersCollection(db).findOne({ _id: charObjectId });
     if (!character?.lineOfCredit) {
       return NextResponse.json(badRequest("Character or LOC account not found").toJson(), {
         status: 404,
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       };
       if (clearFreeze) set["lineOfCredit.drawFrozen"] = false;
 
-      await db.collection<Character>("characters").updateOne({ _id: charObjectId }, { $set: set });
+      await charactersCollection(db).updateOne({ _id: charObjectId }, { $set: set });
 
       await insertLocLedgerEntry(db, {
         characterId: charObjectId,
@@ -115,12 +115,10 @@ export async function POST(request: Request) {
       );
     }
 
-    await db
-      .collection<Character>("characters")
-      .updateOne(
-        { _id: charObjectId },
-        { $set: { "lineOfCredit.drawFrozen": false, updatedAt: new Date() } }
-      );
+    await charactersCollection(db).updateOne(
+      { _id: charObjectId },
+      { $set: { "lineOfCredit.drawFrozen": false, updatedAt: new Date() } }
+    );
 
     await insertLocLedgerEntry(db, {
       characterId: charObjectId,

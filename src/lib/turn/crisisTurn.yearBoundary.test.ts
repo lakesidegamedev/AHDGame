@@ -98,9 +98,6 @@ function seedStaleGameState(db: MockDb, persistedYear: number): void {
     _id: "current",
     currentYear: persistedYear,
     livingConflictsEnabled: true,
-    conflictsEnabled: false,
-    crisisInteractionEnabled: true,
-    crisisAidBillsEnabled: false,
   });
 }
 

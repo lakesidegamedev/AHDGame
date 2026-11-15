@@ -7,15 +7,18 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { Character, ElectionCandidate } from "@/lib/db/types";
-import { removeWithdrawnCandidateFromTally } from "@/lib/electionEngine/tallyCleaner";
+import type { ElectionCandidate } from "@/lib/db/types";
+import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { campaignsCollection } from "@/lib/db/repositories/campaigns";
+import type { Document } from "mongodb";
 
 export async function withdrawAllCandidatesForUser(db: Db, userId: ObjectId): Promise<number> {
-  const character = await db.collection<Character>("characters").findOne({ userId });
+  const character = await charactersCollection(db).findOne({ userId });
   if (!character) return 0;
 
-  const activeCandidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const activeCandidates = await electionCandidatesCollection(db)
     .find({ characterId: character._id, status: "active" })
     .toArray();
 
@@ -25,12 +28,10 @@ export async function withdrawAllCandidatesForUser(db: Db, userId: ObjectId): Pr
   const candidateIds = activeCandidates.map((c) => c._id);
 
   // Bulk-withdraw all active candidates
-  await db
-    .collection<ElectionCandidate>("electionCandidates")
-    .updateMany(
-      { _id: { $in: candidateIds } },
-      { $set: { status: "withdrawn", withdrawnAt: now } }
-    );
+  await electionCandidatesCollection(db).updateMany(
+    { _id: { $in: candidateIds } },
+    { $set: { status: "withdrawn", withdrawnAt: now } }
+  );
 
   // Clean up tallies concurrently (atomic per-election updates) and archive
   // all campaigns in one updateMany instead of a serial per-candidate walk.
@@ -39,7 +40,7 @@ export async function withdrawAllCandidatesForUser(db: Db, userId: ObjectId): Pr
       removeWithdrawnCandidateFromTally(db, candidate.electionId, candidate._id.toString())
     ),
     activeCandidates.length > 0
-      ? db.collection("campaigns").updateMany(
+      ? campaignsCollection<Document>(db).updateMany(
           {
             $or: activeCandidates.map((candidate) => ({
               electionId: candidate.electionId,

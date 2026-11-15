@@ -4,7 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminResourcesGrantSchema } from "@/lib/api/schemas/admin";
-import type { Character, ExchangeRate } from "@/lib/db/types";
+import type { ExchangeRate } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
@@ -20,6 +20,12 @@ import {
 import { ENERGY_MAX_ACTION_CAP } from "@/lib/stats/statsConstants";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { POSITION_UPDATE_VOUCHER_GRANT_AMOUNT } from "@/lib/positionUpdateVouchers/rules";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
+import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
+import { resourceGrantInputs } from "@/lib/audit/grants/rules";
+import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
+import type { Document } from "mongodb";
 
 export const POST = withAdminRoute(async (auth, request: Request) => {
   const { admin } = auth;
@@ -58,7 +64,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   if (funds !== undefined && funds !== 0) {
     if (forexEnabled) {
       setStage.funds = { $add: [{ $ifNull: ["$funds", 0] }, funds] };
-      const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+      const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
       const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
       setStage["currencyBalances.campaign"] = buildCampaignFundsGrantExpression(
         funds,
@@ -77,12 +83,11 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
           $add: [{ $ifNull: [`$currencyBalances.personal.${currency}`, 0] }, cashOnHand],
         };
       } else {
-        // Route to each character's home currency, converting ₳ → home currency at the
-        // live FX rate so every country receives equal real value. `cashOnHand` is
-        // interpreted as internal units (USD-equivalent, rate = 1.0). Built per-currency
-        // so currencies shared by two countries (EUR: DE + IE) accumulate into one bucket
-        // at one rate instead of clobbering each other (which previously zeroed out DE).
-        const rateDocs = await db.collection<ExchangeRate>("exchangeRates").find({}).toArray();
+        // Route to each character's home currency, converting ₳ → home currency at
+        // the live FX rate so every country receives equal real value. `cashOnHand`
+        // is internal units (USD-equivalent, rate = 1.0). Bucket per currency so
+        // currencies shared by two countries (EUR: DE + IE) accumulate together.
+        const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
         const rateByCountry = new Map<string, number>(
           rateDocs.map((r) => [r._id as string, r.rate])
         );
@@ -96,23 +101,6 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     setStage.positionUpdateVouchers = {
       $add: [{ $ifNull: ["$positionUpdateVouchers", 0] }, POSITION_UPDATE_VOUCHER_GRANT_AMOUNT],
     };
-  }
-
-  let affectedCount = 0;
-
-  if (allPlayers) {
-    const result = await db
-      .collection<Character>("characters")
-      .updateMany({}, [{ $set: setStage }]);
-    affectedCount = result.modifiedCount;
-  } else {
-    const ids = characterIds ?? [];
-    const objectIds = ids.map((id: string) => new ObjectId(id));
-
-    const result = await db
-      .collection<Character>("characters")
-      .updateMany({ _id: { $in: objectIds } }, [{ $set: setStage }]);
-    affectedCount = result.modifiedCount;
   }
 
   // Build description for log
@@ -138,9 +126,29 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   }
   const resourceDesc = resourceParts.join(", ");
 
+  let affectedCount = 0;
+  await withAuditedGrant(
+    db,
+    resourceGrantInputs(parsed.data, admin.userId, `Control panel grant: ${resourceDesc}`),
+    async () => {
+      if (allPlayers) {
+        const result = await charactersCollection(db).updateMany({}, [{ $set: setStage }]);
+        affectedCount = result.modifiedCount;
+      } else {
+        const ids = characterIds ?? [];
+        const objectIds = ids.map((id: string) => new ObjectId(id));
+
+        const result = await charactersCollection(db).updateMany({ _id: { $in: objectIds } }, [
+          { $set: setStage },
+        ]);
+        affectedCount = result.modifiedCount;
+      }
+    }
+  );
+
   // Log the action
   const logNow = new Date();
-  await db.collection("adminLogs").insertOne({
+  await adminLogsCollection<Document>(db).insertOne({
     category: "system",
     action: "resources_granted",
     username: "SYSTEM",
@@ -158,14 +166,11 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     ((funds !== undefined && funds !== 0) || (cashOnHand !== undefined && cashOnHand !== 0))
   ) {
     const objectIds = characterIds.map((id: string) => new ObjectId(id));
-    const affectedChars = await db
-      .collection<Character>("characters")
+    const affectedChars = await charactersCollection(db)
       .find({ _id: { $in: objectIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
       .toArray();
     const transferThresholds = await loadTxThresholds(db);
-    const rateDocs = forexEnabled
-      ? await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()
-      : [];
+    const rateDocs = forexEnabled ? await exchangeRatesCollection(db).find({}).toArray() : [];
     const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
     const transferEntries = affectedChars.flatMap((char) => {
       const homeCurrency = (COUNTRY_CURRENCY_MAP[

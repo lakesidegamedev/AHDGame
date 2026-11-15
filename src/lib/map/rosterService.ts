@@ -27,10 +27,10 @@ export interface RosterStateInput {
 }
 
 /**
- * Build a nation map's region roster from the country's live owned `states`. The
- * roster — not a static seed bundle — drives which regions the map lists, their
- * names, and seat counts, so a region transferred between countries carries its
- * own metadata onto the new owner's map. Sorted by name for stable display.
+ * Build a nation map's region roster from the country's live owned `states`.
+ * The roster (not a static seed) drives listed regions, names, and seat
+ * counts, so a transferred region carries its metadata onto the new owner's
+ * map. Sorted by name for stable display.
  */
 export function buildRegionRoster(states: RosterStateInput[]): MapRegionRosterEntry[] {
   return states

@@ -1,4 +1,5 @@
 import { connectDb, closeDb } from "../utils/db";
+import { assertSeedContractForReset } from "@/lib/admin/resetPreflight";
 import {
   bootstrapGameWorld,
   stampInitialGameClock,
@@ -31,6 +32,8 @@ export async function runBootstrap(
     log?: (msg: string) => void;
   } = {}
 ) {
+  // A preset with missing, copied or out-of-scale seed data never starts.
+  assertSeedContractForReset(options.preset ?? DEFAULT_SEED_PRESET);
   const externalDb = options.db;
   const db = externalDb ?? (await connectDb());
 

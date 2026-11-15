@@ -1,21 +1,14 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * China macro-regions as State-compatible documents.
+ * China macro-regions as State documents. The 7 geographic macro-regions are
+ * the playable sub-national units.
  *
- * The 7 geographic macro-regions are the playable sub-national units. Each
- * region represents a major geographic and economic zone of China, contributing
- * a share of the 2980 National People's Congress (NPC) seats used as the
- * direct-mandate pool for seat allocation.
- *
- * - `population` — 2023 demographic estimates (people).
- * - `gdp` — regional GDP in millions of CNY.
- * - `houseDistricts` — NPC seats allocated to the region
- *     (must sum to 2980 across all 7 regions).
- * - `stateSenateSeats` — CPPCC seats allocated to the region
- *     (must sum to 2169 across all 7 regions).
- * - `region` — geographic macro-region name.
- * - `votingSystem` — FPTP placeholder (nominal; NPC uses indirect election).
+ * - `population` , 2023 estimate, people.
+ * - `gdp` , regional GDP in millions of CNY.
+ * - `houseDistricts` , NPC seats (must sum to 2980 across all regions).
+ * - `stateSenateSeats` , CPPCC seats (must sum to 2169 across all regions).
+ * - `votingSystem` , FPTP placeholder; NPC uses indirect election.
  */
 export const cnRegions: State[] = [
   // ── Dongbei (Northeast) ────────────────────────────────────────────────────

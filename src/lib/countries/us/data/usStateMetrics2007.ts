@@ -1,23 +1,17 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Each era seed is self-contained. This file MUST NOT import and transform
- * another era's seed data (e.g. the 2019 `stateMetrics` array). All values are
- * authored for 2007 directly. Changing the 2019/2023 (or any other) seed must
- * never alter 2007. Type-only imports and same-era constants are allowed.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
+ * This file is self-contained and MUST NOT import or transform another era's
+ * seed data. Values are authored for 2007 directly. Type-only imports and
+ * same-era constants are allowed.
  *
- * SCALE NOTE (read before wiring into scoring): 2007 is a *pre-recession,
- * pre-ACA, pre-smartphone-saturation* world and its real values sit on a very
- * different scale from 2019/2023. The big era anchors:
- *   - median household income national ≈ $50,233 (≈62% of the 2023 ≈$80,610)
- *   - home broadband ≈ 50% of households (vs ≈83% in 2023)
- *   - uninsured rate ≈ 15.3% (vs ≈9.2% in 2023 — no ACA yet)
- *   - renewable electricity ≈ 8.4% (vs ≈22% in 2023 — mostly hydro)
- *   - carbon emissions ≈ 19.5 t/capita (vs ≈14 in 2023)
- *   - HS grad rate (AFGR) ≈ 74% (vs ≈87% in 2023)
+ * SCALE: 2007 real values sit on a very different scale than 2019/2023.
+ * Key anchors: median household income ~$50k (vs ~$81k in 2023), home
+ * broadband ~50% (vs ~83%), uninsured ~15.3% (vs ~9.2%), renewable
+ * electricity ~8.4% (vs ~22%), carbon ~19.5 t/capita (vs ~14), HS grad
+ * rate ~74% (vs ~87%).
  * `metricScoring.THRESHOLDS` / `medianIncomeThreshold` are still 2019-nominal
  * and only era-scale for the "1991" prefix, so these era-true values will
- * MIS-SCORE until a 2007 era band is added (tracked as a deferred scoring-
- * rebalance flag, NOT fixed here — seeds first).
+ * MIS-SCORE until a 2007 era band is added (deferred scoring rebalance).
  */
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { withUniformMetricSet } from "@/lib/seeds/shared/uniformStateMetrics";

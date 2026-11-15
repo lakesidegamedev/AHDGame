@@ -28,11 +28,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     const db = await getDb();
     const gs = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, currentTurn: 1 } });
-    if (!gs?.conflictsEnabled) {
-      return errorResponse(404, "Conflicts subsystem disabled");
-    }
-    const currentTurn = gs.currentTurn ?? 0;
+    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    const currentTurn = gs?.currentTurn ?? 0;
 
     // The alliance roll is a second bar on the same picker, returned alongside the
     // truces so the panel resolves both in one round trip. `alliance` is null and

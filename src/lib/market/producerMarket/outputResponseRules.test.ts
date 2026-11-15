@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   demandPlanRunShare,
+  FLOOR_RECOVERY_BAND,
+  FLOOR_RECOVERY_STEP,
   GLUT_TURNS_TO_FLOOR,
   glutTurnsThrough,
   liveLineReceipt,
@@ -555,5 +557,70 @@ describe("plan recovery (producerRunPlanStage, ticket 1765)", () => {
       Math.max((25 * 1.1 - 25) / 100, 0.25),
       10
     );
+  });
+});
+
+describe("floor recovery in a slightly oversupplied market", () => {
+  const floorPlant = (over: Partial<PriorReceipt> = {}) =>
+    receipt({
+      activeUnits: 100,
+      producedUnits: 1,
+      offeredUnits: 1,
+      soldUnits: 0.92,
+      revenue: 9.2,
+      inputsConsumed: 2,
+      plannedRunShare: LOW_USE_RUN_FLOOR,
+      ...over,
+    });
+  const demand = (r: PriorReceipt) => demandPlanRunShare(r, LOW_USE_RUN_FLOOR);
+  const recovery = (r: PriorReceipt) =>
+    planRecoveryRunShare(r, { floor: LOW_USE_RUN_FLOOR, demandPlan: true });
+
+  it("a floor plant at 92% sell-through steps up a small share, not to full", () => {
+    for (const run of [demand, recovery]) {
+      expect(run(floorPlant())).toBeCloseTo(LOW_USE_RUN_FLOOR + FLOOR_RECOVERY_STEP, 12);
+    }
+  });
+
+  it("never steps past the band", () => {
+    const r = floorPlant({
+      producedUnits: 4.9,
+      offeredUnits: 4.9,
+      soldUnits: 4.5,
+      plannedRunShare: 0.049,
+    });
+    expect(demand(r)).toBeLessThanOrEqual(FLOOR_RECOVERY_BAND);
+  });
+
+  it("a plant above the band is untouched", () => {
+    const r = floorPlant({
+      producedUnits: 20,
+      offeredUnits: 20,
+      soldUnits: 18.4,
+      plannedRunShare: 0.2,
+    });
+    expect(demand(r)).toBeLessThan(0.2);
+  });
+
+  it("low sell-through gets no step", () => {
+    expect(demand(floorPlant({ soldUnits: 0.6 }))).toBe(LOW_USE_RUN_FLOOR);
+  });
+
+  it("losing money per unit gets no step", () => {
+    expect(demand(floorPlant({ revenue: 0.5, inputsConsumed: 5 }))).toBe(LOW_USE_RUN_FLOOR);
+  });
+
+  it("stock piling up gets no step", () => {
+    expect(
+      demand(
+        floorPlant({
+          activeUnits: 1000,
+          offeredUnits: 6,
+          producedUnits: 0.2,
+          soldUnits: 5.4,
+          revenue: 54,
+        })
+      )
+    ).toBe(LOW_USE_RUN_FLOOR);
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Primary-type switch tech migration (ticket #1040).
+ * Primary-type switch tech migration.
  *
  * Sector-lane node ids are prefixed by primary type. Product rule: switching
  * primary type does NOT carry sector research into the new tree — those unlocks

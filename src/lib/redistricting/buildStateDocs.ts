@@ -16,6 +16,10 @@ import {
 } from "./pools";
 import { buildDistrictDocs } from "./buildDistrictDocs";
 import { loadCookPvi } from "./loadCookPvi";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import { stateRegistrationPoolCollection } from "@/lib/db/repositories/stateRegistrationPool";
 
 /**
  * Build CongressionalDistrict docs for every state of `countryId` (or just
@@ -26,24 +30,21 @@ export async function buildDistrictDocsForStates(
   db: Db,
   countryId: CountryId,
   now: Date,
-  stateIds?: string[]
+  stateIds?: string[],
+  preset?: string
 ): Promise<CongressionalDistrict[]> {
   const stateFilter =
     stateIds && stateIds.length > 0 ? { countryId, _id: { $in: stateIds } } : { countryId };
-  const states = (await db
-    .collection<State>("states")
+  const states = (await statesCollection(db)
     .find(stateFilter as Partial<State>)
     .toArray()) as State[];
-  const parties = (await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = (await politicalPartiesCollection(db)
     .find({ countryId } as Partial<PoliticalParty>)
     .toArray()) as PoliticalParty[];
-  const orgRows = (await db
-    .collection<StatePartyOrg>("statePartyOrg")
+  const orgRows = (await statePartyOrgCollection(db)
     .find({ countryId } as Partial<StatePartyOrg>)
     .toArray()) as StatePartyOrg[];
-  const poolDocs = (await db
-    .collection<StateRegistrationPool>("stateRegistrationPool")
+  const poolDocs = (await stateRegistrationPoolCollection(db)
     .find({ countryId } as Partial<StateRegistrationPool>)
     .toArray()) as StateRegistrationPool[];
 
@@ -75,7 +76,7 @@ export async function buildDistrictDocsForStates(
     const rows = orgRows
       .filter((r) => r.stateId === stateId)
       .map((r) => ({ partyId: r.partyId, registration: r.registration ?? r.organization }));
-    const pvis = loadCookPvi(stateId, n);
+    const pvis = loadCookPvi(stateId, n, preset);
     let poolPercents = aggregatePoolPercents(rows, poolOf, poolDocByState.get(stateId) ?? null);
     // No real two-party registration signal (e.g. 1991 seeds with no party-org
     // rows) ⇒ derive from PVI/neutral so the budget isn't shipped all-grey.

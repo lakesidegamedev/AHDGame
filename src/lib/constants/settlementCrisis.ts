@@ -131,22 +131,17 @@ export const SEAT_CAPITAL_CAP = 60;
 
 /**
  * Capital points charged per authored magnitude point when a delegation pays
- * for a play with political capital instead of its national treasury.
+ * for a play with political capital instead of treasury.
  *
- * Bounded ABOVE by measurement (`scripts/debug/gq-capital-route-sweep.ts`): a
- * play bought with capital must not be better value per capital point than the
- * play that seat already buys with capital alone, or that play is obsolete and
- * the catalogue has lost an option rather than gained one. k=2.5 makes `rhine`
- * beat the UK's own `fourpower`; k=3 and above break nothing.
+ * Bounded ABOVE by measurement: a capital-bought play must not be better
+ * value per capital point than the capital-only play that seat already buys.
+ * k>=3 avoids that; k=2.5 breaks it.
  *
- * Fixed FROM BELOW by the capital income raise. A play's price in TURNS OF
- * SAVING is `points x k / capitalPerTurn`, so k and the income have to move
- * together or the route's real price silently changes: at (k=3, income 3) and
- * at (k=4, income 4) a zero-capital play costs the same `points` turns either
- * way, and DD lands identically because 6 to 8 and 3 to 4 are the same 4/3.
+ * Fixed FROM BELOW by capital income: a play's price in turns of saving is
+ * `points x k / capitalPerTurn`, so k and capitalPerTurn must move together
+ * or the route's real price silently changes.
  *
- * ⚠️ THIS TRACKS THE SECONDARY SEATS' `capitalPerTurn`. Move one, move the
- * other, or a speed change becomes an unmeasured balance change.
+ * ⚠️ THIS TRACKS THE SECONDARY SEATS' `capitalPerTurn`.
  */
 export const SETTLEMENT_CAPITAL_K = 4;
 
@@ -175,31 +170,17 @@ export const LOCK_THRESHOLD = 15 * HUNDREDTHS;
  * anchor. 75 = 0.75%. Basis points rather than percent because the tempo
  * divisor leaves no resolution in a whole percent.
  *
- * TUNED AGAINST MEASUREMENT, NOT INTUITION. The authored 0.06 was chosen so
- * that maximum Eastern effort would plateau above the carry threshold. It does
- * not: `scripts/debug/gq-balance-sim.ts`, driving these same modules, plateaus
- * the best sustainable Eastern case at 73.5 against a threshold of 85, so
- * reunification is unreachable by play and the West wins every game it bothers
- * to contest. The brake, not the catalogue, is the cause — repricing the plays
- * and doubling secondary AP were both measured and both failed, because
- * reversion scales with the distance already travelled and swallows any
- * constant push at 0.06.
+ * DERIVED from `SETTLEMENT_TEMPO` because the two must move together or the
+ * equilibrium moves with them: the numerator is the BALANCE dial (where the
+ * index settles) and the tempo is the SPEED dial (how long the board takes to
+ * get there). A tempo change alone is balance-neutral. Repricing plays or
+ * boosting AP does not fix a stall here, because reversion scales with the
+ * distance already travelled and swallows any constant push.
  *
- * DERIVED from `SETTLEMENT_TEMPO` rather than written out, because the two must
- * move together or the equilibrium moves with them: slowing the plays alone
- * would put both thresholds out of reach, and this whole file's magnitudes are
- * tempo-scaled. The numerator is therefore the BALANCE dial (it fixes where the
- * index settles) and the tempo is the SPEED dial (it fixes how long the board
- * takes to get there). A tempo change alone is provably balance-neutral.
- *
- * 200, down from the 300 that was measured at tempo 1, because the two
- * unopposed bounds are asymmetric by the board's own geometry: the opening
- * index of 38.2 is 23.2 points from the lock and 46.8 from the carry, so an
- * unopposed East always takes about twice as long as an unopposed West. At 300
- * the far bound stretched to seven in-game years for a question nobody was
- * contesting, while the near one barely moved. Slackening the brake pulls the
- * far bound in hard and leaves the CONTESTED stall alone — it measured 57.3 at
- * 300 and 57.5 at 200, still unresolved after 480 turns either way. See
+ * The two unopposed bounds are asymmetric by the board's own geometry: the
+ * opening index is far closer to the lock than to the carry, so an unopposed
+ * East takes roughly twice as long as an unopposed West. Slackening the brake
+ * pulls the far bound in hard while leaving the CONTESTED stall alone. See
  * `ahd-german-question-balance-findings` for the measured sweep.
  */
 export const DRIFT_K_BPS = Math.round(200 / SETTLEMENT_TEMPO);
@@ -254,20 +235,11 @@ export const PERSONAL_CAP_REFERENCE_TURNOUT = 8;
 export const PERSONAL_PLAY_USES_PER_TURN = 1;
 
 /**
- * The pool that `participants` distinct characters share on one institution,
- * in hundredths.
- *
- * SQUARE ROOT, so a mass turnout is genuinely louder but with diminishing
- * returns. The two failure modes this sits between:
- *
- *   - a FLAT cap meant the first six aligned characters consumed everything and
- *     the seventh onward moved the board by nothing, which reads to a player as
- *     a dead button rather than as a crowd;
- *   - LINEAR growth would let the street overrun all four delegations as the
- *     playerbase grew, which is the outcome a cap exists to prevent at all.
- *
- * Counted per institution: forty people on the street must not raise the
- * Bundestag's ceiling.
+ * Personal net contribution cap shared by `participants` distinct
+ * characters on one institution, in hundredths. Square root, so mass
+ * turnout is louder with diminishing returns: flat would make extra
+ * characters invisible, linear would let the street overrun every
+ * delegation. Counted per institution.
  */
 export function personalNetCapFor(participants: number): number {
   if (participants <= 0) return 0;
@@ -280,25 +252,16 @@ export function personalNetCapFor(participants: number): number {
 export const MAX_COERCIVE_RUNG = 4;
 
 /**
- * How long the four-power channel runs before the brink is available at all.
+ * Turns the four-power channel runs before the brink is available: two
+ * in-game years at 48 turns per year. Without this gate, `declareSettlementWar`
+ * lets one authority seat end an admin-opened set piece within a few turns,
+ * long before the other delegations participate.
  *
- * Two in-game years at 48 turns to the year. MEASURED, NOT GUESSED: without
- * this, `scripts/debug/gq-war-path-sim.ts` has Moscow standing at the coercive
- * cap on turn 3, arming on turn 4 and declaring on turn 4 — of a settlement
- * game tuned to run 149 to 257 turns. Nothing in `declareSettlementWar` gates
- * on the index or on the age of the question, so the whole political board was
- * optional: one authority seat could end an admin-opened set piece within four
- * hours, before the other three delegations had logged in.
+ * The design intent is that the STALL drives a bloc to the ladder; war is
+ * the tiebreak when politics deadlock. A plain age gate rather than a
+ * deadlock test, because "the channel runs until turn X" reads at a glance.
  *
- * The design's own logic is that the STALL is what sends a bloc to the ladder —
- * war is the tiebreak when politics deadlocks. This makes that literal. A plain
- * age gate rather than a cleverer deadlock test, because the player has to
- * understand why the button is greyed out, and "the four-power channel runs
- * until turn X" reads at a glance where "the index has been inside a band for
- * N turns" does not.
- *
- * Heat still ACCUMULATES from turn one — the ladder climbs, the DEFCON display
- * lives, the tension is legible. Only the press is held back.
+ * Heat still ACCUMULATES from turn one; only the press is held back.
  */
 export const LADDER_UNLOCK_TURNS = 96;
 
@@ -347,15 +310,12 @@ export const MOBILISATION_APPROVAL_HIT = 1;
  * The turn from which a settled question is considered fair to ask again.
  *
  * It GATES NOTHING. Opening is admin-started and unconditional on timing, so
- * this is advice written onto the resolved document and shown in the admin
- * history, not a lock. The field it lands in carries the load: a resolved
+ * this is advice written onto the resolved document, not a lock. A resolved
  * crisis with a null `cooldownUntilTurn` is one the actuation sweep has not
  * enacted yet, and that IS a refusal to reopen.
  *
  * Three in-game years at 48 turns to the year, matching the shortest a question
- * takes to answer: the old 96 dated from a tempo at which the whole crisis ran
- * in under one, and advising "fair to ask again in two years" about something
- * that takes three to settle reads as a mistake.
+ * takes to answer.
  */
 export const SETTLEMENT_REOPEN_COOLDOWN_TURNS = 144;
 
@@ -711,19 +671,10 @@ export const SETTLEMENT_PLAYS: readonly SettlementPlayDef[] = [
      */
     magnitude: mag(2.5),
     /*
-     * 1 AP and 8 capital, down from 2 and 16, for the same reason `station`
-     * was repriced and measured the same way: AN AUTHORITY SEAT MUST BE ABLE
-     * TO FEED THE LADDER IT CAN ARM. Moscow earns 1 AP and 3 capital a turn, so
-     * at the authored price this landed once every 5.3 turns — and it is the
-     * East's only coercive play that costs no money. East Berlin's is `border`
-     * at ℳ12M against a ℳ310M treasury, which runs dry around turn 60, so past
-     * that point the whole Eastern ladder rested on this one play at 19%
-     * density against a rung that decays every quiet turn. Measured, the East
-     * could not climb back to the coercive cap at all once the opening capital
-     * banks were spent.
-     *
-     * Still dearer than `station`: this is a weight-3 institution at a larger
-     * magnitude, so Moscow pays more per press than Washington does.
+     * 1 AP and 8 capital: AN AUTHORITY SEAT MUST BE ABLE TO FEED THE LADDER IT
+     * CAN ARM. Moscow earns 1 AP and 3 capital a turn, and this is the East's only
+     * coercive play that costs no money. At the prior price the East could not
+     * climb back to the coercive cap once opening capital was spent.
      */
     capitalCost: 8,
     fundsUnit: "local",
@@ -787,19 +738,10 @@ export const SETTLEMENT_PLAYS: readonly SettlementPlayDef[] = [
     /* Halved with the cost, for the reason given on `pressure`. */
     magnitude: mag(2),
     /*
-     * 1 AP and 6 capital, down from 2 and 14, because this is the WEST'S ONLY
-     * COERCIVE PLAY and at the authored price the West could not reach the
-     * escalation ladder at all. Washington earns 1 AP and 3 capital a turn, so
-     * a 2 AP / 14 capital play lands once every 4.7 turns against a ladder that
-     * decays every quiet turn: measured, Western heat oscillates between 0 and
-     * 1 forever, and London has no coercive play whatsoever. Washington holds
-     * authority to arm and could never satisfy the precondition — an arming
-     * control that is permanently inert, and no way to answer an Eastern
-     * escalation or to deter one.
-     *
-     * At this price it lands every other turn, inside LADDER_DECAY_TURNS,
-     * so NATO can both reach the brink and hold it. Still the cheapest thing on
-     * the board by index — it buys escalation, not settlement.
+     * 1 AP and 6 capital: this is the WEST'S ONLY COERCIVE PLAY, and at the prior
+     * price Washington could never satisfy the arming precondition, leaving the
+     * ladder inert. At this price it lands inside LADDER_DECAY_TURNS so NATO can
+     * reach the brink and hold it. Buys escalation, not settlement.
      */
     capitalCost: 6,
     fundsUnit: "local",

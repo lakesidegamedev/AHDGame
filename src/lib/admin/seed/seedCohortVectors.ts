@@ -1,30 +1,38 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { StateMetrics } from "@/lib/db/types";
+import type { GameState, State, StateMetrics } from "@/lib/db/types";
 import type { RegionDemographics } from "@/lib/db/types/regionDemographics";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { cohortAgeShares1991 } from "@/lib/seeds/rules/cohortAgeShares1991";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
+import { presetUsesDemographicPaths } from "@/lib/demographics/rules/demographicPaths";
 import { synthesizeAgeSexVector } from "@/lib/demographics/seedSynthesis";
-import { sexRatioFromVector, dependencyRatio } from "@/lib/demographics/cohortVector";
+import { wholePopulation } from "@/lib/demographics/rules/wholePopulation";
+import {
+  sexRatioFromVector,
+  dependencyRatio,
+  workingAgePopulation,
+  votingAgePopulation,
+} from "@/lib/demographics/cohortVector";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
+import { regionDemographicsCollection } from "@/lib/db/repositories/regionDemographics";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resolveVotingAgeEligible } from "@/lib/constants/votingAge";
+import { resolveWorkingAgeEligible, resolveRetirementAgeEligible } from "@/lib/constants/laborAge";
 
 /**
- * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`) —
- * the SSOT population stock the demographic turn phase evolves — for a freshly seeded/reset
- * world, and stamp the seed-time derived population metrics (`sexRatio`, `dependencyRatio`,
- * `realizedMigrationRate`) onto `stateMetrics.population` so the Live Population panel is
- * populated at turn 0 instead of waiting for the first turn.
+ * Stand up the per-region single-year age×sex cohort vector (`regionDemographics.ages`)
+ * for a freshly seeded or reset world, and stamp seed-time population metrics onto
+ * `stateMetrics.population` so the Live Population panel is populated at turn 0.
  *
- * Era-aware: synthesizes from each region's preset-appropriate census age-shares
- * (`getRegionCensusData`) + its seeded `population.medianAge` / `birthRate`. Uses the same
- * SSOT synthesis (`synthesizeAgeSexVector`) and derived-view helpers as the turn engine, so
- * the seeded stock is byte-identical to what the unit-tested engine produces.
+ * Synthesizes from each region's preset-appropriate census age-shares plus seeded
+ * `medianAge`/`birthRate`, using the same SSOT helpers as the turn engine so the
+ * seeded stock matches engine output.
  *
- * This is the shared core called both by `bootstrapGameWorld` (every reset) and the
- * standalone `2026-06-10-seed-cohort-vectors` migration (live worlds). `apply: false`
- * computes coverage stats without writing (the migration's dry-run). `replace: true` (the
- * reset path) also deletes every stock this run did not rebuild, so no prior-world stock can
- * survive a reset and overwrite the seeded population on the first demographic turn.
+ * `apply: false` computes coverage stats without writing. `replace: true` (reset path)
+ * also deletes every stock this run did not rebuild, so no prior-world stock survives
+ * a reset and overwrites the seeded population.
  */
 
 const DEFAULT_MEDIAN_AGE = 38;
@@ -70,13 +78,11 @@ export async function seedCohortVectors(
     throw new Error("onlyMissing cannot be combined with replace");
   }
 
-  const [states, metricsDocs] = await Promise.all([
-    db
-      .collection<StateDoc>("states")
+  const [states, metricsDocs, world] = await Promise.all([
+    statesCollection<StateDoc>(db)
       .find({}, { projection: { _id: 1, countryId: 1, population: 1 } })
       .toArray(),
-    db
-      .collection<MetricsDoc>("macroMetrics")
+    macroMetricsCollection<MetricsDoc>(db)
       .find(
         {},
         {
@@ -89,15 +95,32 @@ export async function seedCohortVectors(
         }
       )
       .toArray(),
+    gameStateCollection<
+      GameState & { workingAgeEligible?: number; retirementAgeEligible?: number }
+    >(db).findOne(
+      { _id: "current" },
+      {
+        projection: {
+          preset: 1,
+          votingAgeEligible: 1,
+          votingAgeEligibleByCountry: 1,
+          workingAgeEligible: 1,
+          retirementAgeEligible: 1,
+        },
+      }
+    ),
   ]);
+  const eligibility = world?.preset === preset ? world : undefined;
+  const workingAge = resolveWorkingAgeEligible(eligibility);
+  const retirementAge = resolveRetirementAgeEligible(eligibility);
+  const openingYear = Number(preset.slice(0, 4));
 
   const metricsById = new Map(metricsDocs.map((m) => [String(m._id), m]));
   const realStates = states.filter((s) => !NATIONAL_SCOPE_IDS.has(String(s._id)));
   const existingDemographicIds = onlyMissing
     ? new Set(
         (
-          await db
-            .collection<Pick<RegionDemographics, "_id">>("regionDemographics")
+          await regionDemographicsCollection<Pick<RegionDemographics, "_id">>(db)
             .find(
               { _id: { $in: realStates.map((state) => String(state._id)) } },
               { projection: { _id: 1 } }
@@ -118,6 +141,7 @@ export async function seedCohortVectors(
   const demoOps: AnyBulkWriteOperation<RegionDemographics>[] = [];
   const coveredIds: string[] = [];
   const metricOps: AnyBulkWriteOperation<StateMetrics>[] = [];
+  const stateOps: AnyBulkWriteOperation<State>[] = [];
 
   for (const state of realStates) {
     const id = String(state._id);
@@ -154,13 +178,11 @@ export async function seedCohortVectors(
       medianAge,
       birthRate,
       population,
+      survivalSeniorTail: presetUsesDemographicPaths(preset),
     });
 
-    // People are whole; round each cell. Deterministic → idempotent on a fresh world.
-    const ages = {
-      male: vector.male.map((c) => Math.round(c)),
-      female: vector.female.map((c) => Math.round(c)),
-    };
+    // Allocate rounding remainders once across the entire population stock.
+    const ages = wholePopulation(vector, population);
     const summed = ages.male.reduce((a, b) => a + b, 0) + ages.female.reduce((a, b) => a + b, 0);
 
     stats.covered++;
@@ -184,6 +206,25 @@ export async function seedCohortVectors(
       // Dotted paths, deliberately: this must touch only these three metric
       // leaves and leave the rest of the `population` subtree alone.
       if (!onlyMissing) {
+        stateOps.push({
+          updateOne: {
+            filter: { _id: id, countryId: state.countryId },
+            update: {
+              $set: {
+                workingAgePopulation: Math.round(
+                  workingAgePopulation(ages, workingAge, retirementAge)
+                ),
+                votingEligiblePopulation: Math.round(
+                  votingAgePopulation(
+                    ages,
+                    resolveVotingAgeEligible(eligibility, openingYear, state.countryId)
+                  )
+                ),
+                militaryServicePopulation: 0,
+              },
+            },
+          },
+        });
         metricOps.push({
           updateOne: {
             filter: { _id: id },
@@ -221,19 +262,18 @@ export async function seedCohortVectors(
   }
 
   if (apply && opts.replace) {
-    const stale = await db
-      .collection<RegionDemographics>("regionDemographics")
-      .deleteMany({ _id: { $nin: coveredIds } });
+    const stale = await regionDemographicsCollection(db).deleteMany({ _id: { $nin: coveredIds } });
     if (stale.deletedCount > 0) log(`Removed ${stale.deletedCount} stale region cohort vectors`);
   }
 
   if (demoOps.length > 0) {
-    await db
-      .collection<RegionDemographics>("regionDemographics")
-      .bulkWrite(demoOps, { ordered: true });
+    await regionDemographicsCollection(db).bulkWrite(demoOps, { ordered: true });
   }
   if (metricOps.length > 0) {
-    await db.collection<StateMetrics>("macroMetrics").bulkWrite(metricOps, { ordered: true });
+    await macroMetricsCollection(db).bulkWrite(metricOps, { ordered: true });
+  }
+  if (stateOps.length > 0) {
+    await statesCollection(db).bulkWrite(stateOps, { ordered: true });
   }
 
   log(

@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { isDuplicateKeyError } from "@/lib/api/errors";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 /**
  * Insert a corporation, regenerating the ticker on a duplicate-key collision.
@@ -18,7 +19,7 @@ export async function insertCorporationWithTickerRetry(
 ): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     try {
-      await db.collection<Corporation>("corporations").insertOne(corpDoc);
+      await corporationsCollection(db).insertOne(corpDoc);
       return;
     } catch (err) {
       const isTickerCollision =
@@ -43,7 +44,7 @@ export async function generateTickerSymbol(
 
   for (let i = 0; i < maxAttempts; i++) {
     const candidate = i === 0 ? base : `${base.slice(0, 4)}${i}`;
-    const exists = await db.collection("corporations").findOne({ tickerSymbol: candidate });
+    const exists = await corporationsCollection(db).findOne({ tickerSymbol: candidate });
     if (!exists) return candidate;
   }
 
@@ -55,7 +56,7 @@ export async function generateTickerSymbol(
       candidate += letters[Math.floor(Math.random() * letters.length)];
     }
     candidate += Math.floor(Math.random() * 10);
-    const exists = await db.collection("corporations").findOne({ tickerSymbol: candidate });
+    const exists = await corporationsCollection(db).findOne({ tickerSymbol: candidate });
     if (!exists) return candidate;
   }
 

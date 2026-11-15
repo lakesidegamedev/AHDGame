@@ -1,20 +1,10 @@
 /**
- * The merger-review gate: does this deal need clearance, does it already have
- * it, and if it needs one, open the referral.
- *
- * Two call sites use this, and they use it the same way:
- *  - `executeAgreedAcquisition`, the moment an agreed deal would commit
- *  - the hostile-takeover route, the moment a squeeze-out would commit
- *
- * Both are the instant two corporations become one. Reviewing at share-purchase
- * time would be earlier and wronger: until the absorption the two firms still
- * hold their market positions separately, and the engine measures them
- * separately.
- *
- * A CLEARED review is durable for that (acquirer, target) pair, which is what
- * lets a referred hostile takeover simply be retried once the authority signs
- * off, instead of needing the whole 780-line squeeze-out re-entered from a
- * decision handler.
+ * Merger-review gate: whether a deal needs clearance, whether it has it, and
+ * opening the referral if needed. Runs at the moment two corporations merge,
+ * not at share-purchase time, because the engine still measures the firms
+ * separately until absorption. A CLEARED review is durable for the
+ * (acquirer, target) pair, so a referred hostile takeover can simply be
+ * retried after sign-off.
  */
 
 import { mechanicalLawId } from "@/lib/mechanicalLaws/registry";
@@ -35,6 +25,7 @@ import { createNotification } from "@/lib/notifications";
 import { computeMergerConcentration } from "./concentration";
 import { resolveMergerAuthority } from "./authority";
 import { ANTITRUST_LAW_BY_COUNTRY, MERGER_REVIEW_TURNS, thresholdForLevel } from "./constants";
+import { mergerReviewsCollection } from "@/lib/db/repositories/mergerReviews";
 
 export const MERGER_REVIEWS = "mergerReviews";
 
@@ -107,7 +98,7 @@ export async function assertMergerClearance(
   trigger: MergerReviewTrigger,
   currentTurn: number
 ): Promise<MergerClearance> {
-  const reviews = db.collection<MergerReview>(MERGER_REVIEWS);
+  const reviews = mergerReviewsCollection<MergerReview>(db);
 
   const existing = await reviews.findOne({
     acquirerCorporationId: acquirer._id,
@@ -140,25 +131,18 @@ export async function assertMergerClearance(
   // abroad is referred even below the concentration threshold.
   const screening = await foreignScreeningApplies(db, acquirer, target);
 
-  // A table miss is not always "no statute": a country merge hands the survivor
-  // the absorbed state's competition primary (post-reunification Germany owns
-  // the GDR's), and the winner's law governs the unified state. Costs one
-  // indexed lookup only on the miss path; still fails open when neither a
-  // native nor a carried statute exists.
-  // New-generation competition primaries first; then the country's own
-  // Competition Act (mechanicalLaws); then a statute carried by a country merge.
-  const nativeLawId = ANTITRUST_LAW_BY_COUNTRY[target.countryId as CountryId];
-  const mechanicalId = nativeLawId
-    ? null
-    : mechanicalLawId(target.countryId as CountryId, "competition");
+  // The country's own competition law (its law book's, else its Competition
+  // Act), read through the mechanical levels so a world seeded before the book
+  // keeps its act. Otherwise a statute carried by a country merge (unified
+  // Germany holds the GDR's); with neither, review fails open.
+  const ownLawId = mechanicalLawId(target.countryId as CountryId, "competition");
   const lawId =
-    nativeLawId ??
-    mechanicalId ??
+    ownLawId ??
     (await carriedLawIdFor(db, target.countryId, Object.values(ANTITRUST_LAW_BY_COUNTRY)));
   if (!lawId && !screening) return { ok: true };
   const level = !lawId
     ? 0
-    : mechanicalId != null
+    : ownLawId != null
       ? await getMechanicalLawLevel(db, target.countryId as CountryId, "competition")
       : await getEnactedLevel(db, target.countryId as LawCountryId, lawId);
   const threshold = thresholdForLevel(level);

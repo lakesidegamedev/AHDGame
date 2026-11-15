@@ -5,6 +5,7 @@
  */
 export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   marketSystemMode: 1,
+  turnResilienceStage: 1,
   nppDividendAfterTaxStage: 1,
   marketGovernorGlideStartTurn: 1,
   marketGovernorGlideTurns: 1,
@@ -53,6 +54,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   fundedValuationOwnSiteCreditStage: 1,
   producerJointRunStage: 1,
   producerRunPlanStage: 1,
+  producerTariffStage: 1,
   producerSalesAdvancePriceStage: 1,
   producerZombieRestartStage: 1,
   producerHouseholdIncomeSpendStage: 1,

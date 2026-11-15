@@ -2,24 +2,15 @@ import { describe, expect, it } from "vitest";
 import { advanceCohort, type CohortInputs } from "./cohortFlows";
 import { synthesizeAgeSexVector } from "./seedSynthesis";
 import { totalPopulation, dependencyRatio } from "./cohortVector";
-import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 
 /**
- * Legislative metric simulation — POPULATION category, 240 turns.
- *
- * Population metrics come from the DEMOGRAPHIC cohort engine (not the metric-engine
- * coexistence harness), so this is its own sim: it drives a real immigration law
- * ("Border Security and Immigration Enforcement Act", us_border_security_enforcement)
- * through `advanceCohort`. The Open Borders option (+1) raises net international
- * migration; the restrictive options cut it. Migrants enter at working ages, so over
- * 240 turns (5 game-years) the high-migration enactment should grow the population AND
- * lower the dependency ratio vs a low-migration control.
+ * Population response to an open immigration policy over 240 turns, driven through
+ * the cohort engine (`advanceCohort`). Migrants enter at working ages, so a
+ * high-migration run should grow the population AND lower the dependency ratio
+ * against a low-migration control.
  */
 const TPY = 48;
 const TURNS = 240;
-
-const law = legislationTypes.find((l) => l._id === "us_border_security_enforcement");
-const openBorders = law?.policyOptions?.find((o) => /open borders/i.test(o.name));
 
 function seed() {
   return synthesizeAgeSexVector({
@@ -43,19 +34,14 @@ function run(netInternationalMigrants: number) {
   return { pop: totalPopulation(v), dependency: dependencyRatio(v) };
 }
 
-describe("legislation sim — population (Border Security & Immigration Act, 240 turns)", () => {
-  it("the seed immigration law and its Open Borders option exist", () => {
-    expect(law, "us_border_security_enforcement present").toBeTruthy();
-    expect(openBorders, "an Open Borders (+1) option exists").toBeTruthy();
-  });
-
+describe("population sim: open immigration, 240 turns", () => {
   // Control: restrictive baseline (~low net migration). Law: Open Borders (high migration).
   const control = run(100);
   const enacted = run(1500);
 
   it("prints the 240-turn result", () => {
     console.log(
-      `\n══ Population — Border Security & Immigration Act (240-turn) ══\n` +
+      `\n══ Population: open immigration (240-turn) ══\n` +
         `totalPopulation   control ${control.pop.toFixed(0)} → law ${enacted.pop.toFixed(0)}  (Δ ${(enacted.pop - control.pop).toFixed(0)}) ▲\n` +
         `dependencyRatio   control ${control.dependency.toFixed(4)} → law ${enacted.dependency.toFixed(4)}  (Δ ${(enacted.dependency - control.dependency).toFixed(4)}) ▼`
     );

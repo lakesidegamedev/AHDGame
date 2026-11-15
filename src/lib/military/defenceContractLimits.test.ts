@@ -37,7 +37,7 @@ describe("defence contract limits", () => {
     expect(defenceContractLotCaps(100, 0).supplierLots).toBe(0);
   });
 
-  // Ticket #1134: a command economy's only defence SOE must be able to take the whole
+  // A command economy's only defence SOE must be able to take the whole
   // national window. The one-third cap is an anti-dumping rule for private industry.
   it("gives state industry the full window and keeps private suppliers at one third", () => {
     expect(defenceSupplierCapShare(false)).toBe(DEFENCE_CONTRACT_SUPPLIER_SHARE);

@@ -5,9 +5,12 @@ import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
-import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
-import type { Character, State, GameState } from "@/lib/db/types";
+import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
+import type { State, GameState } from "@/lib/db/types";
 import { filterCountryResults } from "./countryResults";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/discord-bot/autocomplete — Returns name/ID matches for Discord slash command option prefills. Supports type=characters, type=states, and type=countries.
 // Auth: requireAdminOrApiKey
@@ -47,7 +50,7 @@ export async function GET(request: Request) {
     if (type === "countries") {
       const [enabled, gameState] = await Promise.all([
         getEnabledCountryIdsFromDb(db),
-        db.collection<GameState>("gameState").findOne({ _id: "current" }),
+        gameStateCollection(db).findOne({ _id: "current" }),
       ]);
       const preset = resolvePresetIdFromGameState(gameState);
       return NextResponse.json({ results: filterCountryResults(enabled, query, preset, limit) });
@@ -58,8 +61,7 @@ export async function GET(request: Request) {
     }
 
     if (type === "states") {
-      const states = await db
-        .collection<State>("states")
+      const states = await statesCollection(db)
         .find(
           {
             $or: [
@@ -80,8 +82,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const characters = await db
-      .collection<Character>("characters")
+    const characters = await charactersCollection(db)
       .find(
         { name: { $regex: escapeRegex(query), $options: "i" } },
         { projection: { _id: 1, name: 1 } }

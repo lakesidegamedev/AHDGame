@@ -4,28 +4,25 @@ import type { StatePolicy } from "@/lib/db/types/statePolicy";
 import type { CongressionalDistrict } from "@/lib/db/types";
 import { REDISTRICT_AUTHORITY_LAW } from "@/lib/redistricting/caps";
 import { legislativeAuthorityPolicy } from "@/lib/redistricting/seedRedistrictingAuthority";
+import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
+import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
 /**
  * Backfill the redistricting-authority law to "Legislature-drawn" for every US
  * state that has congressional districts.
  *
- * The feature has been live (redistrictingEnabled) with no state ever able to
- * redraw: `us_state_redistricting_authority` was authored against the old
- * legislation catalog and never ported to the v2 typed catalog, so it is not a
- * proposable bill and no statePolicies row is ever written for it. Every state
- * therefore falls to the code default (index 1, bipartisan commission,
- * canDraw:false). That default is also historically wrong for the 1953/1960
- * eras, where legislatures drew the maps.
+ * The authority was authored against the old legislation catalog and never
+ * ported, so no statePolicies row is ever written and every state falls to the
+ * code default (bipartisan commission, canDraw:false). That default is also
+ * wrong for the 1953/1960 eras, where legislatures drew the maps.
  *
  * Insert-only via `$setOnInsert`: a state that already carries an authority row
- * (a future player/SCOTUS change) is left untouched.
+ * is left untouched.
  */
 async function backfillRedistrictingAuthority(db: Db, dryRun: boolean): Promise<MigrationResult> {
   const notes: string[] = [];
 
-  const stateIds = (await db
-    .collection<CongressionalDistrict>("congressionalDistricts")
-    .distinct("stateId")) as string[];
+  const stateIds = (await congressionalDistrictsCollection(db).distinct("stateId")) as string[];
   notes.push(`${stateIds.length} state(s) with congressional districts`);
 
   if (stateIds.length === 0) {
@@ -33,8 +30,7 @@ async function backfillRedistrictingAuthority(db: Db, dryRun: boolean): Promise<
     return { documentsScanned: 0, notes };
   }
 
-  const existing = await db
-    .collection<StatePolicy>("statePolicies")
+  const existing = await statePoliciesCollection(db)
     .find({ legislationTypeId: REDISTRICT_AUTHORITY_LAW, stateId: { $in: stateIds } })
     .project<{ stateId: string }>({ stateId: 1 })
     .toArray();
@@ -48,7 +44,7 @@ async function backfillRedistrictingAuthority(db: Db, dryRun: boolean): Promise<
   }
 
   const now = new Date();
-  const result = await db.collection<StatePolicy>("statePolicies").bulkWrite(
+  const result = await statePoliciesCollection(db).bulkWrite(
     missing.map((stateId) => ({
       updateOne: {
         filter: { stateId, legislationTypeId: REDISTRICT_AUTHORITY_LAW },

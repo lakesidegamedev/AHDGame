@@ -1,8 +1,11 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, NPP, PoliticalParty } from "@/lib/db/types";
+import type { NPP, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getPartyHex } from "@/lib/utils/politics";
 import { buildCharacterHref, buildNppHref } from "@/lib/utils/profileUrls";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { nppsCollection } from "@/lib/db/repositories/npps";
 
 /** Display-ready person on a nomination card: portrait, profile link, party. */
 export interface NominationPerson {
@@ -44,8 +47,7 @@ export async function loadNominationPeople(
 
   const [chars, npps, parties] = await Promise.all([
     charIds.size > 0
-      ? db
-          .collection<Character>("characters")
+      ? charactersCollection(db)
           .find(
             { _id: { $in: [...charIds].map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, sequentialId: 1, avatarUrl: 1, party: 1 } }
@@ -53,15 +55,14 @@ export async function loadNominationPeople(
           .toArray()
       : [],
     nppIds.size > 0
-      ? db
-          .collection<NPP>("npps")
+      ? nppsCollection(db)
           .find(
             { _id: { $in: [...nppIds].map((id) => new ObjectId(id)) } },
             { projection: { _id: 1, sequentialId: 1, avatarUrl: 1, party: 1 } }
           )
           .toArray()
       : [],
-    db.collection<PoliticalParty>("politicalParties").find({ countryId }).toArray(),
+    politicalPartiesCollection(db).find({ countryId }).toArray(),
   ]);
   const charMap = new Map(chars.map((c) => [c._id.toString(), c]));
   const nppMap = new Map(npps.map((p) => [p._id.toString(), p]));

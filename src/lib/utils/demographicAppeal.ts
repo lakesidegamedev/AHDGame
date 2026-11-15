@@ -24,73 +24,38 @@ export const MAX_APPEAL = 50;
 export const APPEAL_POSITION_FLOOR = 0.5;
 
 /**
- * Position-score exponent γ ("soften-appeal"). Single tuning knob for how
- * steeply positional alignment converts into appeal:
+ * Position-score exponent γ ("soften-appeal"): single knob for how steeply
+ * positional alignment converts into appeal.
  *
  *   positionScore = (γ === 2 ? positionRaw²/100 : 25·(positionRaw/50)^γ) + floor
  *
- * γ=2 was the legacy squared curve. It gave the position term a ~50-110×
- * dynamic range across realistic candidate-group distances, which made every
- * non-ideology lever numerically irrelevant: favorability is at most a ~3×
- * scalar, Org ~2×, and persuasion drivers ~1.4× — all rounding errors next to
- * a 50×+ ideology term. γ<2 compresses that range so campaigning actually
- * moves outcomes.
+ * γ=2 is the legacy squared curve and gives the position term a ~50-110×
+ * dynamic range, dwarfing every non-ideology lever (favorability ~3×, Org ~2×,
+ * persuasion ~1.4×). γ<2 compresses that range so campaigning matters.
  *
- * The expression is endpoint-matched: for any γ, positionRaw=0 → 0 and
- * positionRaw=50 → 25, so the overall appeal scale (MAX_APPEAL=50) is
- * unchanged and MAX_APPEAL-normalized consumers (voteCalculations.ts
- * rawPotential, pollCalculations.ts) are unaffected in scale. Setting this
- * back to 2 reproduces legacy behavior byte-identically (the γ===2 branch is
- * the exact legacy expression).
+ * Endpoint-matched: positionRaw=0 → 0 and positionRaw=50 → 25 for any γ, so
+ * the MAX_APPEAL=50 scale and its normalized consumers are unchanged. γ=2
+ * reproduces legacy behavior byte-identically.
  *
- * Validation: A/B harness sweeps 2026-07-09 over 52 resolved US races. The
- * initial sweep showed every γ ∈ {1, 1.25, 1.5, 1.75} kept the 94.2%
- * winner-match rate with exactly 1 flip vs legacy. The final calibration
- * sweep picked γ=1.5 PAIRED with DIRECTION_BONUS_PER_AXIS reduced 15 → 5
- * (see that constant's doc): competitive (≤10pt) races 40.4% → 46.2%,
- * winner-match 86.5% vs 84.6% baseline. Change either constant here only,
- * and treat the pair as one calibration.
+ * Calibrated as a pair with DIRECTION_BONUS_PER_AXIS; change the pair together.
  */
 export const APPEAL_POSITION_EXPONENT: number = 1.5;
 
 /**
- * N1 — tribal-voter directional bonus per axis. Added to `positionScore`
- * for each axis (EP, SP) where the candidate's sign matches the group's
- * lean direction. Captures the tribal-voter intuition that right-leaning
- * voters prefer a right-leaning candidate over a centrist, even when the
- * centrist is closer in absolute distance.
+ * Tribal-voter directional bonus per axis. Added to `positionScore` for each
+ * axis (EP, SP) where the candidate's sign matches the group's lean direction:
+ * right-leaning voters prefer a right-leaning candidate over a centrist even
+ * when the centrist is closer in absolute distance.
  *
- * History: originally calibrated to 15 per axis (max +30 when both axes
- * align) via the N2 sim calibration sweep against the legacy γ=2 (squared)
- * position curve — at 15 the centrist-vs-extremist scenario (Scenario 6)
- * landed at +38pt, in the 30-40pt target range; lower values (7.5, 10)
- * didn't bring the blowout down far enough. See
- * `2026-05-22-nominal-share-appeal-tribal-recalibration.md`.
- *
- * Recalibrated 2026-07-09 alongside APPEAL_POSITION_EXPONENT = 1.5
- * ("soften-appeal"): with the position term's dynamic range compressed, the
- * old flat +15/axis bonus came to dominate positioning, and the A/B sweep
- * showed 15/axis erased the competitiveness gain the softer exponent was
- * meant to buy. 5 per axis (bonus scale 0.33) was the only combination in
- * the sweep that moved competitive share (races within 10pt: 40.4% → 46.2%)
- * while keeping winner-match ABOVE baseline (86.5% vs 84.6%; 52-race
- * resolved gov+senate corpus, turn 979). The two constants are a paired
- * calibration: restoring legacy behavior means BOTH γ=2 AND bonus=15.
- *
- * Effect: in a right-leaning group (EP=+1, SP=+1), a right-leaning
- * candidate at (+3, +3) now gets +2×bonus positionScore that a centrist
- * at (0, 0) doesn't, partially offsetting the centrist's squared-distance
- * advantage. The centrist still wins ideologically neutral groups
- * (no directional alignment available there).
+ * Paired with APPEAL_POSITION_EXPONENT = 1.5: the position term's dynamic range
+ * is compressed, so this flat per-axis bonus must stay small or it dominates
+ * positioning. Restoring legacy behavior means BOTH the legacy exponent AND
+ * this bonus are restored together.
  *
  * Edge cases:
- *   - Group at exactly 0 on an axis: no directional preference; no bonus
- *     applies for any candidate on that axis. Reduces to current behavior
- *     in politically neutral groups (correct — they're effectively all
- *     swing voters).
- *   - Candidate at exactly 0 on an axis: pure centrist on that axis;
- *     gets no bonus but also no penalty. Their cross-appeal is intact
- *     via the absolute-distance term.
+ *   - Group exactly 0 on an axis: no directional preference, no bonus.
+ *   - Candidate exactly 0 on an axis: no bonus, no penalty; cross-appeal stays
+ *     intact via the absolute-distance term.
  */
 export const DIRECTION_BONUS_PER_AXIS = 5;
 
@@ -103,14 +68,11 @@ export const DIRECTION_BONUS_PER_AXIS = 5;
 export const DIRECTION_RAMP = 0.5;
 
 /**
- * Directional-bonus fraction a *dead-center* candidate (axis at exactly 0) earns
- * in a leaning group: "acceptable to all, champion of none." The per-axis factor
- * ramps linearly from `CENTER_FRACTION` at center → 1.0 (full) when aligned at
- * the ramp threshold → 0 when opposed past it. Removes the old binary zero-cliff
- * where a candidate at exactly 0 forfeited the bonus in every group. Chosen as
- * 1/3 ("mid-pack") so centrists are no longer punished while genuine partisans
- * keep their stronghold edge. See
- * `docs/superpowers/specs/2026-06-05-centrist-appeal-cliff-design.md`.
+ * Bonus fraction a dead-center candidate (axis at exactly 0) earns in a leaning
+ * group: acceptable to all, champion of none. The per-axis factor ramps linearly
+ * from `CENTER_FRACTION` at center to 1.0 at the ramp threshold to 0 when opposed
+ * past it. 1/3 is mid-pack, so centrists are not punished while partisans keep
+ * their stronghold edge.
  */
 export const CENTER_FRACTION = 1 / 3;
 
@@ -150,19 +112,14 @@ export function calcAppeal(
     (APPEAL_POSITION_EXPONENT === 2
       ? Math.pow(positionRaw, 2) / 100
       : 25 * Math.pow(positionRaw / 50, APPEAL_POSITION_EXPONENT)) + APPEAL_POSITION_FLOOR;
-  // N1/L3 — tribal-voter directional bonus, continuous through center.
-  // Per axis the bonus scales by a factor that ramps from CENTER_FRACTION at a
-  // dead-center position → 1.0 once the candidate leans `>= DIRECTION_RAMP` the
-  // group's way → 0 when leaning past the threshold the opposite way. This
-  // removes the legacy binary zero-cliff (a candidate at exactly 0 used to
-  // forfeit the bonus in every group). A neutral group (lean 0) still grants no
-  // bonus to anyone.
+  // Tribal-voter directional bonus, continuous through center: scales from
+  // CENTER_FRACTION at dead-center to 1.0 when leaning >= DIRECTION_RAMP the
+  // group's way, and 0 past the opposite threshold. A neutral group (lean 0)
+  // grants no bonus.
   //
-  // L2 party gate: when `partyEP`/`partySP` are provided and a *leaning*
-  // candidate disagrees in sign with their party on that axis, the party machine
-  // won't amplify them — the directional bonus is suppressed to 0 on that axis.
-  // A centrist (charAxis 0) has no sign conflict, so it keeps its center credit.
-  // Omitting the party args preserves the legacy group-only behavior.
+  // Party gate: when party args are provided and a leaning candidate disagrees
+  // in sign with their party on an axis, the bonus is suppressed to 0 there.
+  // Centrists have no sign conflict and keep center credit.
   const directionFactor = (demoAxis: number, charAxis: number, partyAxis?: number): number => {
     if (demoAxis === 0) return 0;
     if (
@@ -184,38 +141,26 @@ export function calcAppeal(
     (directionFactor(demoEP, charEP, partyEP) + directionFactor(demoSP, charSP, partySP));
   // normalizeNPI caps at 2.0, so scaling by 12.5 keeps the influence
   // contribution within the 0-25 range promised by the docstring (and the
-  // MAX_APPEAL=50 combined ceiling). Previously scaled by 25, which silently
-  // allowed appeal to reach 75 for high-influence candidates.
+  // MAX_APPEAL=50 combined ceiling).
   const influenceScore = includeInfluenceInAppeal ? normalizeNPI(politicalInfluence) * 12.5 : 0;
   return positionScore + directionBonus + influenceScore;
 }
 
 /**
- * Softening exponent on the approval scalar ("marginally less decisive
- * favorability"). `scalar = (fav/100)^γ`, γ < 1, so the curve is pulled up
- * toward 1 in the middle while both endpoints are preserved exactly:
- * 0 → 0 and 100 → 1.
+ * Softening exponent on the approval scalar: `scalar = (fav/100)^γ` with
+ * γ < 1 pulls the curve toward 1 in the middle while preserving both
+ * endpoints (0 → 0, 100 → 1).
  *
- * Why a power curve rather than a floor (`a + (1-a)·fav/100`): the floor shape
- * breaks the documented rule that 0% favorability means 0 votes
- * (`voteDistribution.test.ts` "zero favorability candidate gets effectively no
- * votes", and the wiki's demographics page). A power curve compresses the
- * spread while leaving that endpoint intact.
- *
- * Effect on the measured live case (1956 US president, 100 vs 38.4):
- * the multiplier spread falls from **2.60x to 2.15x**, a ~17% reduction —
- * deliberately marginal. Favorability stays the strongest single lever; it
- * just stops being decisive enough that a coordinated reputation strike
- * substitutes for campaigning. Paired with a raised cost on the ±1 influence
- * actions and a per-turn aggregate backstop, plus strengthened political
- * operations, so the weight lost here moves to levers that cost money and
- * planning rather than clicks.
+ * A power curve rather than a floor (`a + (1-a)·fav/100`): the floor breaks the
+ * documented rule that 0% favorability means 0 votes (see
+ * `voteDistribution.test.ts` "zero favorability candidate gets effectively no
+ * votes" and the wiki demographics page). A power curve compresses the spread
+ * while leaving that endpoint intact.
  *
  * Calibration guard: `voteDistribution.test.ts` "balance: favorability impacts
- * vote share" requires an 80-vs-20 matchup to stay above a 2.5x ratio. At
- * γ = 0.8 that lands at **3.03x** (was 4.0x), so the calibrated relationship
- * survives. γ below ~0.62 breaks it. Treat 0.8 as the floor for this knob,
- * not a midpoint.
+ * vote share" requires an 80-vs-20 matchup to stay above a 2.5x ratio, which
+ * holds at γ = 0.8 (3.03x). γ below ~0.62 breaks it; treat 0.8 as the floor
+ * for this knob, not a midpoint.
  */
 export const APPROVAL_SCALAR_EXPONENT = 0.8;
 
@@ -231,10 +176,9 @@ export function approvalScalar(favorability: number): number {
   return Math.pow(normalized, APPROVAL_SCALAR_EXPONENT);
 }
 
-// Retired 2026-06-18 (D3): `partyOrgScalar` (1.0–1.6×) and
+// Retired: `partyOrgScalar` (1.0-1.6×) and
 // `partyOrgScalarPresidential` (1.0–2.5×) soft Org multipliers. General
 // elections and polls now use `normalizedOrgShare` (party's normalized state
 // Org share, `[0, 1]`); primaries use a uniform neutral `1×` (intra-party Org
 // cancels). The election engines' former "no Org data" fallback that returned
-// these scalars at 1.0× is now an explicit neutral `1×`. See
-// docs/superpowers/specs/2026-06-18-party-org-reg-balancing-design.md.
+// these scalars at 1.0× is now an explicit neutral `1×`.

@@ -20,6 +20,8 @@ import { resolveFillEligibility, FILL_REASON_TEXT } from "@/lib/military/defence
 import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { defenceContractsCollection } from "@/lib/db/repositories/defenceContracts";
 
 const bodySchema = z.object({ action: z.enum(["accept", "decline"]) });
 
@@ -58,9 +60,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Scoped to THIS corporation, not just the contract id: without it, any CEO could accept
     // or decline another corporation's offer by pasting its id.
-    const contract = await db
-      .collection<DefenceContract>("defenceContracts")
-      .findOne({ _id: contractObjectId, corporationId: corp._id });
+    const contract = await defenceContractsCollection(db).findOne({
+      _id: contractObjectId,
+      corporationId: corp._id,
+    });
     if (!contract) {
       return errorResponse(404, "No such contract");
     }
@@ -74,9 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // the sweep will refuse forever: accepting it would hold the country's appropriation
     // encumbered against materiel that can never arrive.
     if (accept) {
-      const sector = await db
-        .collection<CorporateSector>("corporateSectors")
-        .findOne({ _id: contract.sectorId });
+      const sector = await corporateSectorsCollection(db).findOne({ _id: contract.sectorId });
       if (!sector) {
         return errorResponse(409, "This contract's plant no longer exists.");
       }
@@ -99,9 +100,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // clear their board while procurement is paused.
     if (accept) {
       // Barred by the world kill switch, or by a peace settlement that named the
-      // BUYING country. The buyer is the contract's country, not the corporation's
-      // owner: a settlement bars a government from ordering, not a firm from
-      // trading.
+      // BUYING country: a settlement bars a government from ordering, not a firm
+      // from trading.
       const gateState = await getGameState();
       const gate = await isProcurementBlocked(db, contract.countryId, gateState?.currentTurn ?? 0);
       if (gate.blocked) {

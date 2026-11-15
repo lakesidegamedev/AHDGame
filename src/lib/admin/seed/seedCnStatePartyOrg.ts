@@ -1,54 +1,47 @@
 import type { Db } from "mongodb";
-import type { StatePartyOrg } from "@/lib/db/types";
+import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import { getCnRegionOrg, getCnPartyTreasury } from "@/lib/seeds/cn/cnStatePartyOrgCalculations";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
+import type { Document } from "mongodb";
 
 /**
  * China state party organization seeder.
  *
  * China operates under a one-party dominant system. The Chinese Communist Party
  * (CCP) is the governing party with deep organizational presence across all
- * macro-regions. Minor parties (CDL, CNDCA) hold advisory roles within the
- * CPPCC framework and do NOT create a normal government alternation path.
+ * macro-regions. Minor parties (CDL, CNDCA) hold advisory roles within the CPPCC
+ * framework and do NOT create a normal government alternation path.
  *
- * Party sequentialIds (based on seedOrder in cnParties.ts):
- *   CCP:   "1"  — Chinese Communist Party (governing)
- *   CDL:   "2"  — China Democratic League (advisory)
- *   CNDCA: "3"  — China National Democratic Construction Association (advisory)
+ * Resolve party identities from the current CN roster. Recreating parties after
+ * a partyless opening can allocate different sequential IDs.
  *
- * Per-region Reg / Org values (T3 calibration, 2026-05-23):
- *   - CCP is overwhelmingly dominant — Org and Reg both sit near 95 in every
- *     region. Capital and politically central regions slightly higher.
- *   - CDL (academic / educator base): strongest in HB (Beijing), HD
- *     (Shanghai / Jiangsu / Zhejiang universities), HZ (Hubei / Hunan
- *     universities), XN (Sichuan tradition).
- *   - CNDCA (industrialist / commercial base): strongest in HD (Shanghai
- *     is the founding home), HB (Beijing / Tianjin), HN (Guangdong
- *     commerce), DB (heavy industry heritage).
+ * Per-region Reg / Org values: CCP is overwhelmingly dominant, both near 95 in
+ * every region, slightly higher in capital and politically central regions.
+ * CDL (academic base) is strongest in HB, HD, HZ, XN. CNDCA (industrialist base)
+ * is strongest in HD, HB, HN, DB.
  *
- * `registration` mirrors `organization` per row — the swing-flow engine's
- * `regByParty` map is what gates §7.3.2 defense. Without seeded registration,
- * CCP would be 20%-peelable (newcomer baseline) under `transferableShare` /
- * `persuasionResistance`. The shared `seedRegistrationLanes` pipeline only
- * covers US / UK / JP / DE, so CN sets `registration` inline here.
+ * `registration` mirrors `organization` per row: the swing-flow engine's
+ * `regByParty` map is what gates defense. Without seeded registration, CCP would
+ * be 20%-peelable (newcomer baseline) under `transferableShare` /
+ * `persuasionResistance`. The shared `seedRegistrationLanes` pipeline only covers
+ * US / UK / JP / DE, so CN sets `registration` inline here.
  *
- * Era-specific org tables are in cnStatePartyOrgCalculations.ts. The 2019
- * table matches the previous hardcoded values verbatim. The 1991 table
- * reflects peak party-state dominance (CCP +2–3 per region, minor parties −1–2).
+ * Era-specific org tables are in cnStatePartyOrgCalculations.ts. The 1991 table
+ * reflects peak party-state dominance (CCP +2-3 per region, minor parties -1-2).
  */
 
 const CN_REGION_IDS = ["DB", "HB", "HD", "HZ", "HN", "XN", "XB"];
 
 interface CNPartyConfig {
-  seqId: string;
   slug: "ccp" | "cdl" | "cndca";
   stateTaxRate: number;
 }
 
 const CN_PARTY_CONFIGS: CNPartyConfig[] = [
-  { seqId: "1", slug: "ccp", stateTaxRate: 5 },
-  { seqId: "2", slug: "cdl", stateTaxRate: 2 },
-  { seqId: "3", slug: "cndca", stateTaxRate: 2 },
+  { slug: "ccp", stateTaxRate: 5 },
+  { slug: "cdl", stateTaxRate: 2 },
+  { slug: "cndca", stateTaxRate: 2 },
 ];
 
 export async function seedCnStatePartyOrg(
@@ -58,9 +51,13 @@ export async function seedCnStatePartyOrg(
   preset?: string
 ): Promise<void> {
   const activePreset = preset ?? (await getGameStatePresetOrDefault(db));
+  const parties = await politicalPartiesCollection<PoliticalParty>(db)
+    .find({ countryId: "CN" }, { projection: { sequentialId: 1, abbreviation: 1 } })
+    .toArray();
+  const ids = new Map(parties.map((p) => [p.abbreviation, String(p.sequentialId)]));
 
   if (reset) {
-    await db.collection("statePartyOrg").deleteMany({ countryId: "CN" });
+    await statePartyOrgCollection<Document>(db).deleteMany({ countryId: "CN" });
   }
 
   const regionOrg = getCnRegionOrg(activePreset);
@@ -75,14 +72,16 @@ export async function seedCnStatePartyOrg(
     }
 
     for (const party of CN_PARTY_CONFIGS) {
+      const partyId = ids.get(party.slug.toUpperCase());
+      if (!partyId) throw new Error(`CN seed: missing party ${party.slug}`);
       const orgValue =
         party.slug === "ccp" ? orgRow.ccp : party.slug === "cdl" ? orgRow.cdl : orgRow.cndca;
       const partyTreasury = treasury[party.slug];
       orgs.push({
-        _id: `${regionId}_${party.seqId}`,
+        _id: `${regionId}_${partyId}`,
         countryId: "CN",
         stateId: regionId,
-        partyId: party.seqId,
+        partyId,
         organization: orgValue,
         registration: orgValue,
         chairId: null,
@@ -100,13 +99,11 @@ export async function seedCnStatePartyOrg(
   let upserted = 0;
   for (const org of orgs) {
     const { _id, ...orgData } = org;
-    const result = await db
-      .collection<StatePartyOrg>("statePartyOrg")
-      .updateOne(
-        { _id },
-        { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
+    const result = await statePartyOrgCollection(db).updateOne(
+      { _id },
+      { $set: { ...orgData, updatedAt: now }, $setOnInsert: { createdAt: now } },
+      { upsert: true }
+    );
     if (result.upsertedCount > 0) upserted++;
   }
 
@@ -114,3 +111,5 @@ export async function seedCnStatePartyOrg(
     `Seeded ${orgs.length} CN state party org entries (${upserted} new, ${orgs.length - upserted} updated) [preset: ${activePreset}]`
   );
 }
+
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";

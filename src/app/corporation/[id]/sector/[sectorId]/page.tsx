@@ -532,12 +532,10 @@ export default function SectorDetailPage() {
       const result = await res.json();
       if (res.ok) {
         dispatch({ type: "SET_ATTACK_MSG", value: result.message });
-        // Toast as well as the inline banner. A successful split can drop the
-        // defender below the two-plant minimum, which makes the target no longer
-        // splittable, so AttackPanel unmounts on the refresh below and takes the
-        // inline banner with it. The player was left with no confirmation of what
-        // happened at all (ticket #1239 follow-up). A failed roll still costs the
-        // committed cash and MS, so say which outcome it was.
+        // Toast as well as the inline banner: a successful split can drop the
+        // defender below the two-plant minimum, making the target unsplittable, so
+        // AttackPanel unmounts on refresh and takes the banner with it. Also
+        // distinguish a failed roll, which still costs the committed cash and MS.
         showToast(result.message, result.splitSucceeded === false ? "error" : "success");
         fetchData();
         return true;

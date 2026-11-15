@@ -1,8 +1,7 @@
 /**
  * 2020 US Presidential Election Results (Biden vs Trump)
  * Margin = Biden % - Trump % (positive = Biden won, negative = Trump won)
- * Source: Dave Leip's Atlas of U.S. Presidential Elections, Wikipedia
- * Used to calibrate demographic-derived state leans so they align with actual 2020 outcomes.
+ * Used to calibrate demographic-derived state leans against actual 2020 outcomes.
  */
 export const ELECTION_2020_MARGIN: Record<string, number> = {
   AL: -25.4, // Trump 62.0, Biden 36.6

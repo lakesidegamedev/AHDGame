@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, User } from "@/lib/db/types";
+import type { User } from "@/lib/db/types";
 import {
   cleanupShareMarketActivityForCharacters,
   cleanupShareMarketActivityForCorporations,
@@ -7,6 +7,9 @@ import {
 import { releaseCharacterHeldSharesToFloat } from "@/lib/corporations/releaseCharacterHeldSharesToFloat";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { closeCeoTenure } from "@/lib/corporations/ceoHistory";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 const BANNED_SHARE_RELEASE_GRACE_MS = 48 * 60 * 60 * 1000;
 
@@ -36,8 +39,7 @@ export async function processExpiredBannedShareholders(
   const { now, currentTurn, forexEnabled } = options;
   const cutoff = new Date(now.getTime() - BANNED_SHARE_RELEASE_GRACE_MS);
 
-  const expiredBannedUsers = await db
-    .collection<User>("users")
+  const expiredBannedUsers = await usersCollection(db)
     .find(
       {
         isBanned: true,
@@ -64,8 +66,7 @@ export async function processExpiredBannedShareholders(
   }
 
   const userIds = expiredBannedUsers.map((user) => user._id);
-  const characters = await db
-    .collection<Character>("characters")
+  const characters = await charactersCollection(db)
     .find({ userId: { $in: userIds } }, { projection: { _id: 1, userId: 1 } })
     .toArray();
 
@@ -95,8 +96,7 @@ export async function processExpiredBannedShareholders(
     charactersProcessed += characterIds.length;
 
     const ceoCorps = characterIds.length
-      ? await db
-          .collection<Corporation>("corporations")
+      ? await corporationsCollection(db)
           .find({ ceoId: { $in: characterIds } }, { projection: { _id: 1, ceoId: 1 } })
           .toArray()
       : [];
@@ -148,7 +148,7 @@ export async function processExpiredBannedShareholders(
     }
 
     if (characterIds.length > 0) {
-      const ceoVacateRes = await db.collection<Corporation>("corporations").updateMany(
+      const ceoVacateRes = await corporationsCollection(db).updateMany(
         { ceoId: { $in: characterIds }, ceoVacant: { $ne: true } },
         {
           $set: {
@@ -167,16 +167,14 @@ export async function processExpiredBannedShareholders(
         }
       }
 
-      const pendingRes = await db
-        .collection<Corporation>("corporations")
-        .updateMany(
-          { pendingCeoCharacterId: { $in: characterIds } },
-          { $unset: { pendingCeoCharacterId: "" }, $set: { updatedAt: now } }
-        );
+      const pendingRes = await corporationsCollection(db).updateMany(
+        { pendingCeoCharacterId: { $in: characterIds } },
+        { $unset: { pendingCeoCharacterId: "" }, $set: { updatedAt: now } }
+      );
       pendingCeoOffersCleared += pendingRes.modifiedCount ?? 0;
     }
 
-    await db.collection<User>("users").updateOne(
+    await usersCollection(db).updateOne(
       { _id: user._id, isBanned: true },
       {
         $set: { bannedShareReleaseProcessedAt: now, updatedAt: now },

@@ -1,32 +1,31 @@
 /**
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA.
  * Each era seed is self-contained. This file MUST NOT import and transform
  * another era's seed data. All values are authored for 1979 directly.
  * Type-only imports and same-era imports (states1979) are allowed.
  *
- * SCALE NOTE: 1979 is a *stagflation, energy-crisis, peak-industrial,
- * pre-Reagan* world. Era anchors that sit far from 2019/2023:
- *   - median household income national ≈ $16,461 (≈20% of the 2023 ≈$80,610)
- *   - home broadband 0% (the PC, let alone the internet, has not shipped)
- *   - federal budget in DEFICIT (FY1979 ≈ −1.6% of GDP) but gross federal debt
- *     only ≈ 33% of GDP — far below every later era (the pre-Reagan-deficits low)
- *   - incarceration ≈ 138/100k — the pre-mass-incarceration low (vs ~470 in 1999)
- *   - income inequality LOW (Gini ≈ 0.40) — before the post-1980 divergence
- *   - violent crime ≈ 549/100k and property crime near its all-time peak
- *   - renewable electricity ≈ 12% (essentially all hydro); carbon ≈ 21 t/capita
- *   - per-pupil school spending ≈ $2,200 nominal; HS-grad ≈ 71%
- *   - institutional trust LOW (the post-Watergate / "malaise" trough), but media
- *     polarization LOW (the three-network era)
- *   - manufacturing at its modern PEAK share; labor-force participation ≈ 63.7%
- * `metricScoring.THRESHOLDS`/`medianIncomeThreshold` are 2019-nominal and only
+ * SCALE NOTE: 1979 is a stagflation, peak-industrial, pre-Reagan world.
+ * Era anchors that sit far from 2019/2023:
+ *   - median household income national ~$16,461 (about 20% of 2023's ~$80,610)
+ *   - home broadband 0%
+ *   - federal budget in DEFICIT (FY1979 ~ -1.6% of GDP) but gross federal
+ *     debt only ~33% of GDP, far below every later era
+ *   - incarceration ~138/100k, the pre-mass-incarceration low
+ *   - income inequality LOW (Gini ~0.40)
+ *   - violent crime ~549/100k and property crime near its all-time peak
+ *   - renewable electricity ~12% (essentially all hydro); carbon ~21 t/capita
+ *   - per-pupil school spending ~$2,200 nominal; HS-grad ~71%
+ *   - institutional trust LOW but media polarization LOW (three-network era)
+ *   - manufacturing at its modern PEAK share; labor-force participation ~63.7%
+ * metricScoring.THRESHOLDS/medianIncomeThreshold are 2019-nominal and only
  * era-scale for the "1991" prefix, so these era-true values MIS-SCORE until a
- * 1979 band is added (deferred scoring-rebalance flag — seeds first).
+ * 1979 band is added (deferred scoring-rebalance flag: seeds first).
  *
  * Per-state series are anchored to the 1979 national aggregates and the
- * (highly persistent) real relative state structure, with documented late-1970s
- * corrections: the energy-boom states (TX/OK/WY/AK/LA/WV/ND/MT) ride high, the
- * industrial Midwest (MI/OH/IN/IL) is still prosperous pre-deindustrialization,
- * and the Sun Belt (FL/AZ/GA/SC/NC) sits poorer relative to its later position.
+ * persistent real relative state structure: energy-boom states (TX/OK/WY/AK/
+ * LA/WV/ND/MT) ride high, the industrial Midwest (MI/OH/IN/IL) is still
+ * prosperous pre-deindustrialization, and the Sun Belt (FL/AZ/GA/SC/NC) sits
+ * poorer relative to its later position.
  */
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { states1979 } from "./usStates1979";

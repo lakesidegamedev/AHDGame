@@ -4,9 +4,9 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
-vi.mock("@/lib/statePartyElections", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/statePartyElections")>(
-    "@/lib/statePartyElections"
+vi.mock("@/lib/elections/party/statePartyElections", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/elections/party/statePartyElections")>(
+    "@/lib/elections/party/statePartyElections"
   );
   return {
     ...actual,

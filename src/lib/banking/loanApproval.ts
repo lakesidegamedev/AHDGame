@@ -6,8 +6,6 @@
 import type { Db, ObjectId } from "mongodb";
 import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { Corporation } from "@/lib/db/types/corporation";
-import type { Character } from "@/lib/db/types/character";
 import { loadBorrowerSnapshot } from "@/lib/banking/lending";
 import { loadBankingSnapshot } from "@/lib/banking/snapshot";
 import { decideBankCommand } from "@/lib/banking/rules/decide";
@@ -19,7 +17,10 @@ import { sendSystemMail } from "@/lib/mail/systemMail";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { approveConstructionFinance, rejectConstructionFinance } from "./constructionFinance";
 import { loadBankingPolicy } from "./policy";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 export type LoanDecisionResult = { ok: true; loan: BankLoan } | { ok: false; error: string };
 
@@ -33,12 +34,10 @@ export async function setLoanApprovalRequired(
   bankCorporationId: ObjectId,
   requireApproval: boolean
 ): Promise<{ ok: true; requireApproval: boolean } | { ok: false; error: string }> {
-  const res = await db
-    .collection<Corporation>("corporations")
-    .updateOne(
-      { _id: bankCorporationId, "bankCharter.status": "active" },
-      { $set: { "bankCharter.requireApproval": requireApproval, updatedAt: new Date() } }
-    );
+  const res = await corporationsCollection(db).updateOne(
+    { _id: bankCorporationId, "bankCharter.status": "active" },
+    { $set: { "bankCharter.requireApproval": requireApproval, updatedAt: new Date() } }
+  );
   if (res.matchedCount !== 1) return { ok: false, error: "No active bank charter" };
   return { ok: true, requireApproval };
 }
@@ -60,7 +59,7 @@ async function resolveBorrowerMailTarget(
   if (!loan.borrowerId) return null;
   const proj = { projection: { _id: 1, userId: 1, name: 1, sequentialId: 1 } } as const;
   if (loan.borrowerType === "character") {
-    const c = await db.collection<Character>("characters").findOne({ _id: loan.borrowerId }, proj);
+    const c = await charactersCollection(db).findOne({ _id: loan.borrowerId }, proj);
     if (!c?.userId) return null;
     return {
       toCharacterId: c._id,
@@ -69,11 +68,12 @@ async function resolveBorrowerMailTarget(
       toUserId: c.userId,
     };
   }
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { userId: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: loan.borrowerId },
+    { projection: { userId: 1 } }
+  );
   if (!corp?.userId) return null;
-  const owner = await db.collection<Character>("characters").findOne({ userId: corp.userId }, proj);
+  const owner = await charactersCollection(db).findOne({ userId: corp.userId }, proj);
   if (!owner?.userId) return null;
   return {
     toCharacterId: owner._id,
@@ -131,7 +131,7 @@ async function acceptLoanInner(
   bankCorporationId: ObjectId,
   loanId: ObjectId
 ): Promise<LoanDecisionResult> {
-  const loan = await db.collection<BankLoan>("bankLoans").findOne({
+  const loan = await bankLoansCollection(db).findOne({
     _id: loanId,
     bankCorporationId,
   });
@@ -141,19 +141,15 @@ async function acceptLoanInner(
     if (!policy.constructionFinance && loan.status === "pending") {
       // Disable new disbursements while allowing the original claimed cash
       // operation to recover. A noncash request alone authorizes no payment.
-      const funding = await db
-        .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-        .findOne(
-          { _id: `named_loan_disbursement:${bankCorporationId}:${loanId}` },
-          { projection: { _id: 1 } }
-        );
+      const funding = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+        { _id: `named_loan_disbursement:${bankCorporationId}:${loanId}` },
+        { projection: { _id: 1 } }
+      );
       if (!funding) return { ok: false, error: "New construction funding is disabled" };
     }
     const result = await approveConstructionFinance(db, bankCorporationId, loanId, true);
     if (!result.ok) return result;
-    const delivered = await db
-      .collection<BankLoan>("bankLoans")
-      .findOne({ _id: loanId, bankCorporationId });
+    const delivered = await bankLoansCollection(db).findOne({ _id: loanId, bankCorporationId });
     return delivered
       ? { ok: true, loan: delivered }
       : { ok: false, error: "Construction loan disappeared" };
@@ -220,14 +216,16 @@ async function acceptLoanInner(
   const borrowerName =
     loan.borrowerType === "character"
       ? ((
-          await db
-            .collection<Character>("characters")
-            .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } })
+          await charactersCollection(db).findOne(
+            { _id: loan.borrowerId },
+            { projection: { name: 1 } }
+          )
         )?.name ?? "Borrower")
       : ((
-          await db
-            .collection<Corporation>("corporations")
-            .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } })
+          await corporationsCollection(db).findOne(
+            { _id: loan.borrowerId },
+            { projection: { name: 1 } }
+          )
         )?.name ?? "Borrower");
 
   await emitTx(db, {
@@ -309,7 +307,7 @@ async function rejectLoanInner(
   loanId: ObjectId,
   reason?: string
 ): Promise<LoanDecisionResult> {
-  const loan = await db.collection<BankLoan>("bankLoans").findOne({
+  const loan = await bankLoansCollection(db).findOne({
     _id: loanId,
     bankCorporationId,
   });
@@ -317,9 +315,7 @@ async function rejectLoanInner(
   if (loan.constructionCollateral) {
     const result = await rejectConstructionFinance(db, bankCorporationId, loanId, true, reason);
     if (!result.ok) return result;
-    const declined = await db
-      .collection<BankLoan>("bankLoans")
-      .findOne({ _id: loanId, bankCorporationId });
+    const declined = await bankLoansCollection(db).findOne({ _id: loanId, bankCorporationId });
     return declined
       ? { ok: true, loan: declined }
       : { ok: false, error: "Construction loan disappeared" };

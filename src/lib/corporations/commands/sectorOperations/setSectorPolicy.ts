@@ -9,6 +9,7 @@ import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import type { CorporateSector } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { setSectorPolicySchema as setPolicySchema } from "@/lib/api/schemas/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -54,9 +55,10 @@ export async function setSectorPolicy(request: Request, { params }: RouteParams)
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const sector = await db
-      .collection<CorporateSector>("corporateSectors")
-      .findOne({ _id: new ObjectId(sectorId), corporationId: corporation._id });
+    const sector = await corporateSectorsCollection(db).findOne({
+      _id: new ObjectId(sectorId),
+      corporationId: corporation._id,
+    });
 
     if (!sector) {
       return errorResponse(404, "Sector not found");
@@ -64,12 +66,10 @@ export async function setSectorPolicy(request: Request, { params }: RouteParams)
 
     const clamped = clampProductionPolicy(productionPolicy);
 
-    await db
-      .collection<CorporateSector>("corporateSectors")
-      .updateOne(
-        { _id: sector._id },
-        { $set: { productionPolicy: clamped, updatedAt: new Date() } }
-      );
+    await corporateSectorsCollection(db).updateOne(
+      { _id: sector._id },
+      { $set: { productionPolicy: clamped, updatedAt: new Date() } }
+    );
 
     return NextResponse.json({ success: true, productionPolicy: clamped });
   } catch (error) {

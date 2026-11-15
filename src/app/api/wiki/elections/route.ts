@@ -7,6 +7,9 @@ import { cycleAnchorContextFromGameState } from "@/lib/elections/cycleAnchorCont
 import type { GameState } from "@/lib/db/types/gameState";
 import { resolveElectionYear } from "@/lib/utils/formatters";
 import type { Election, State } from "@/lib/db/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 export interface WikiElectionSummary {
   id: string;
@@ -79,9 +82,9 @@ export async function GET(request: Request) {
     }
 
     const [elections, states, gameState] = await Promise.all([
-      db.collection<Election>("elections").find(filter).sort({ endTime: -1 }).limit(500).toArray(),
-      db.collection<State>("states").find({}).project({ _id: 1, name: 1 }).toArray(),
-      db.collection<GameState>("gameState").findOne(
+      electionsCollection(db).find(filter).sort({ endTime: -1 }).limit(500).toArray(),
+      statesCollection(db).find({}).project({ _id: 1, name: 1 }).toArray(),
+      gameStateCollection(db).findOne(
         { _id: "current" },
         {
           projection: {

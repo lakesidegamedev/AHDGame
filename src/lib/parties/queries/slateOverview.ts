@@ -3,6 +3,8 @@ import { listPartySlates, listSlateCandidatesByIds } from "@/lib/db/recruitmentS
 import type { Election } from "@/lib/db/types";
 import type { PartySlateOverviewResponse } from "@/lib/parties/dto/partyView";
 import type { Db } from "mongodb";
+import { getSlateElectionSortWeight } from "@/lib/parties/slateElectionSortWeight";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 function countByStatus(rows: { status: string }[]) {
   const counts = { invited: 0, considering: 0, accepted: 0, declined: 0, withdrawn: 0, filed: 0 };
@@ -10,43 +12,6 @@ function countByStatus(rows: { status: string }[]) {
     if (row.status in counts) counts[row.status as keyof typeof counts] += 1;
   }
   return counts;
-}
-
-function getSlateElectionSortWeight(electionType: string): number {
-  switch (electionType) {
-    case "senate":
-    case "sangiin":
-    case "lords":
-    case "seanad":
-    case "bundesrat":
-      return 10;
-    case "house":
-    case "commons":
-    case "bundestag":
-    case "shugiin":
-    case "dail":
-    case "chamber":
-    case "npc":
-    case "npcDelegate":
-    case "supremeSovietDeputy":
-    case "nationalitiesDeputy":
-      return 20;
-    case "governor":
-    case "ministerPresident":
-    case "premier":
-      return 30;
-    case "stateSenate":
-    case "regionalCouncil":
-    case "holyrood":
-    case "senedd":
-    case "landtag":
-    case "peoplesCongress":
-    case "republicSupremeSoviet":
-    case "localCouncil":
-      return 40;
-    default:
-      return 50;
-  }
 }
 
 export async function getPartySlateOverview(
@@ -61,8 +26,7 @@ export async function getPartySlateOverview(
     includeArchived: boolean;
   }
 ): Promise<PartySlateOverviewResponse> {
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find({
       countryId,
       status: includeArchived

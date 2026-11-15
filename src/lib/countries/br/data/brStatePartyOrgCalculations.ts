@@ -1,30 +1,14 @@
 import type { Db } from "mongodb";
 import type { StatePartyOrg, PoliticalParty } from "@/lib/db/types";
+import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { organizationFromVoteShare } from "@/lib/parties/rules/voteShareOrganization";
 
-/**
+/*
  * Calculate BR state party organization levels from estimated regional vote shares.
- *
- * Three preset rosters:
- *   - `2019-default` — PT / PL / MDB / UNIÃO / PSD
- *   - `1991-default` — PMDB / PFL / PDT / PDS / PTB / PRN / PSB / PCdoB + PT / PSD
- *   - `1953-default` — PSD (Vargas-era) / UDN / PTB
- *
- * Before the 1953 table existed, `1953-default` fell through to the 2019 table,
- * whose slugs (pt / pl / mdb / uniao / psd-modern) resolve to NO party under the
- * 1953 roster — so BR seeded ZERO statePartyOrg rows and its 1954 Câmara races
- * had no party presence to field candidates through (`canPartyFieldInState`).
- *
- * Organizations scale from vote share:
- * - 0% vote → 5 org (minimal presence)
- * - 50% vote → 70 org (dominant party)
- *
- * Slug → sequentialId is resolved at runtime against the live
- * `politicalParties` collection so preset-filtered seeds are picked up
- * correctly without hardcoded ordering assumptions.
+ * Organizations scale from vote share: 0% -> 5 org, 50% -> 70 org.
+ * Slug to sequentialId resolved at runtime against live `politicalParties`,
+ * so preset-filtered seeds pick up live IDs without hardcoded ordering.
  */
-
-const MIN_ORG = 5;
-const MAX_ORG = 70;
 
 // BR party slug → DB name. Used by `buildBRPartySlugToSeqId` to look up
 // live sequentialIds. Slugs match the polling tables below.
@@ -104,19 +88,13 @@ export const BR_REGION_VOTE_SHARES_1953: Record<string, Record<string, number>> 
   SUL: { psd1945: 22, udn: 16, ptb: 32 },
 };
 
-function calculateBRPartyOrg(voteShare: number): number {
-  const scaled = MIN_ORG + (voteShare / 50) * (MAX_ORG - MIN_ORG);
-  return Math.min(Math.max(Math.round(scaled), MIN_ORG), MAX_ORG);
-}
-
 /**
  * Resolve each BR party slug to the matching `sequentialId` in the DB.
  * Robust to preset filtering — only returns mappings for parties that
  * actually exist under the active preset.
  */
 export async function buildBRPartySlugToSeqId(db: Db): Promise<Record<string, string>> {
-  const parties = await db
-    .collection<PoliticalParty>("politicalParties")
+  const parties = await politicalPartiesCollection(db)
     .find({ countryId: "BR" })
     .project<{ name: string; sequentialId: number }>({ name: 1, sequentialId: 1 })
     .toArray();
@@ -153,7 +131,7 @@ export async function calculateBRStatePartyOrgs(
     for (const [partySlug, voteShare] of Object.entries(partyVotes)) {
       const partySeqId = slugToSeqId[partySlug];
       if (!partySeqId) continue; // party not in DB under this preset
-      const org = calculateBRPartyOrg(voteShare);
+      const org = organizationFromVoteShare(voteShare);
 
       orgs.push({
         _id: `${regionId}_${partySeqId}`,

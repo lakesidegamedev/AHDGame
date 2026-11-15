@@ -29,6 +29,10 @@ import {
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
 import type { CurrencyOrder, Character, TradeHistoryEntry, PlayerMail } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
+import { playerMailCollection } from "@/lib/db/repositories/playerMail";
+import { tradeHistoryCollection } from "@/lib/db/repositories/tradeHistory";
 
 interface RouteParams {
   params: Promise<{ requestId: string }>;
@@ -58,9 +62,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const db = await getDb();
     const character = auth.user.character;
 
-    const order = await db
-      .collection<CurrencyOrder>("currencyOrders")
-      .findOne({ _id: new ObjectId(requestId) });
+    const order = await currencyOrdersCollection(db).findOne({ _id: new ObjectId(requestId) });
 
     if (!order) throw notFound("Trade request not found");
     if (order.type !== "direct") throw badRequest("Not a direct trade request");
@@ -77,43 +79,37 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (action === "decline") {
       const refundInc = buildPersonalBalanceInc(order.amount, order.fromCurrency, true);
-      const sender = await db
-        .collection<Character>("characters")
-        .findOne({ _id: order.characterId });
+      const sender = await charactersCollection(db).findOne({ _id: order.characterId });
 
       await runWithOptionalTransaction(
         async (session) => {
-          const claimedOrder = await db
-            .collection<CurrencyOrder>("currencyOrders")
-            .findOneAndUpdate(
-              { _id: order._id, status: "open" },
-              { $set: { status: "processing", updatedAt: now } },
-              { returnDocument: "before", session }
-            );
+          const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+            { _id: order._id, status: "open" },
+            { $set: { status: "processing", updatedAt: now } },
+            { returnDocument: "before", session }
+          );
           if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
-          await db
-            .collection("characters")
-            .updateOne({ _id: order.characterId }, { $inc: refundInc }, { session });
-          const cancelResult = await db
-            .collection<CurrencyOrder>("currencyOrders")
-            .updateOne(
-              { _id: order._id, status: "processing" },
-              { $set: { status: "cancelled", updatedAt: now } },
-              { session }
-            );
+          await charactersCollection(db).updateOne(
+            { _id: order.characterId },
+            { $inc: refundInc },
+            { session }
+          );
+          const cancelResult = await currencyOrdersCollection(db).updateOne(
+            { _id: order._id, status: "processing" },
+            { $set: { status: "cancelled", updatedAt: now } },
+            { session }
+          );
           if (cancelResult.matchedCount === 0) {
             throw badRequest("Trade request is no longer open");
           }
         },
         async () => {
-          const claimedOrder = await db
-            .collection<CurrencyOrder>("currencyOrders")
-            .findOneAndUpdate(
-              { _id: order._id, status: "open" },
-              { $set: { status: "processing", updatedAt: now } },
-              { returnDocument: "before" }
-            );
+          const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+            { _id: order._id, status: "open" },
+            { $set: { status: "processing", updatedAt: now } },
+            { returnDocument: "before" }
+          );
           if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
           // The refund carries a settled-key stamp on the character doc so a
@@ -124,12 +120,13 @@ export async function POST(request: Request, { params }: RouteParams) {
           // unrefunded order safely can.
           const refundStamp = `direct-decline:${order._id.toString()}`;
           try {
-            const refundResult = await db
-              .collection<Character>("characters")
-              .updateOne({ _id: order.characterId, [SETTLED_KEYS_FIELD]: { $ne: refundStamp } }, {
+            const refundResult = await charactersCollection(db).updateOne(
+              { _id: order.characterId, [SETTLED_KEYS_FIELD]: { $ne: refundStamp } },
+              {
                 $inc: refundInc,
                 $push: settledKeyPush(refundStamp),
-              } as unknown as UpdateFilter<Character>);
+              } as unknown as UpdateFilter<Character>
+            );
             if (
               refundResult.matchedCount === 0 &&
               !(await documentHasStamp(db, "characters", { _id: order.characterId }, refundStamp))
@@ -137,12 +134,10 @@ export async function POST(request: Request, { params }: RouteParams) {
               throw new Error("Escrow refund did not apply");
             }
 
-            const cancelResult = await db
-              .collection<CurrencyOrder>("currencyOrders")
-              .updateOne(
-                { _id: order._id, status: "processing" },
-                { $set: { status: "cancelled", updatedAt: now } }
-              );
+            const cancelResult = await currencyOrdersCollection(db).updateOne(
+              { _id: order._id, status: "processing" },
+              { $set: { status: "cancelled", updatedAt: now } }
+            );
             if (cancelResult.matchedCount === 0) {
               throw badRequest("Trade request is no longer open");
             }
@@ -153,7 +148,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               { _id: order.characterId },
               refundStamp
             );
-            await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+            await currencyOrdersCollection(db).updateOne(
               { _id: order._id, status: "processing" },
               {
                 $set: {
@@ -183,7 +178,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           deletedBySender: false,
           createdAt: now,
         };
-        await db.collection<PlayerMail>("playerMail").insertOne(mail as PlayerMail);
+        await playerMailCollection(db).insertOne(mail as PlayerMail);
       }
 
       return NextResponse.json({ success: true, action: "declined" });
@@ -323,7 +318,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (value === undefined) removedFields[field] = "";
         else restoredFields[field] = value;
       }
-      const filledResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+      const filledResult = await currencyOrdersCollection(db).updateOne(
         { _id: order._id, status: "filled" },
         {
           $set: restoredFields,
@@ -332,12 +327,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
       if (filledResult.matchedCount > 0) return;
 
-      const processingResult = await db
-        .collection<CurrencyOrder>("currencyOrders")
-        .updateOne(
-          { _id: order._id, status: "processing" },
-          { $set: { status: "open", updatedAt: new Date() } }
-        );
+      const processingResult = await currencyOrdersCollection(db).updateOne(
+        { _id: order._id, status: "processing" },
+        { $set: { status: "open", updatedAt: new Date() } }
+      );
       if (processingResult.matchedCount === 0) {
         throw new Error("Direct forex request status could not be restored after a failed trade");
       }
@@ -345,16 +338,14 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     await runWithOptionalTransaction(
       async (session) => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .findOneAndUpdate(
-            { _id: order._id, status: "open" },
-            { $set: { status: "processing", updatedAt: now } },
-            { returnDocument: "before", session }
-          );
+        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+          { _id: order._id, status: "open" },
+          { $set: { status: "processing", updatedAt: now } },
+          { returnDocument: "before", session }
+        );
         if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
-        const targetUpdate = await db.collection("characters").updateOne(
+        const targetUpdate = await charactersCollection(db).updateOne(
           {
             _id: character._id,
             [`currencyBalances.personal.${order.toCurrency}`]: { $gte: targetCost },
@@ -368,13 +359,15 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
         }
 
-        await db
-          .collection("characters")
-          .updateOne({ _id: order.characterId }, { $inc: senderCreditInc }, { session });
+        await charactersCollection(db).updateOne(
+          { _id: order.characterId },
+          { $inc: senderCreditInc },
+          { session }
+        );
 
         await distributeSpreadFees(session);
 
-        const fillResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+        const fillResult = await currencyOrdersCollection(db).updateOne(
           { _id: order._id, status: "processing" },
           {
             $set: {
@@ -390,18 +383,16 @@ export async function POST(request: Request, { params }: RouteParams) {
         if (fillResult.matchedCount === 0) {
           throw badRequest("Trade request is no longer open");
         }
-        await db.collection<TradeHistoryEntry>("tradeHistory").insertOne(tradeHistoryEntry, {
+        await tradeHistoryCollection(db).insertOne(tradeHistoryEntry, {
           session,
         });
       },
       async () => {
-        const claimedOrder = await db
-          .collection<CurrencyOrder>("currencyOrders")
-          .findOneAndUpdate(
-            { _id: order._id, status: "open" },
-            { $set: { status: "processing", updatedAt: now } },
-            { returnDocument: "before" }
-          );
+        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
+          { _id: order._id, status: "open" },
+          { $set: { status: "processing", updatedAt: now } },
+          { returnDocument: "before" }
+        );
         if (!claimedOrder) throw badRequest("Trade request is no longer open");
 
         let targetDebited = false;
@@ -409,7 +400,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         let spreadFeesApplied = 0;
 
         try {
-          const targetUpdate = await db.collection("characters").updateOne(
+          const targetUpdate = await charactersCollection(db).updateOne(
             {
               _id: character._id,
               [`currencyBalances.personal.${order.toCurrency}`]: { $gte: targetCost },
@@ -417,26 +408,25 @@ export async function POST(request: Request, { params }: RouteParams) {
             { $inc: targetDebitAndCreditInc }
           );
           if (targetUpdate.modifiedCount === 0) {
-            await db
-              .collection<CurrencyOrder>("currencyOrders")
-              .updateOne(
-                { _id: order._id, status: "processing" },
-                { $set: { status: "open", updatedAt: new Date() } }
-              );
+            await currencyOrdersCollection(db).updateOne(
+              { _id: order._id, status: "processing" },
+              { $set: { status: "open", updatedAt: new Date() } }
+            );
             throw badRequest(
               `Insufficient ${order.toCurrency}. Need ~${Math.ceil(targetCost).toLocaleString()}, have ${Math.floor(targetBalance).toLocaleString()}.`
             );
           }
           targetDebited = true;
 
-          await db
-            .collection("characters")
-            .updateOne({ _id: order.characterId }, { $inc: senderCreditInc });
+          await charactersCollection(db).updateOne(
+            { _id: order.characterId },
+            { $inc: senderCreditInc }
+          );
           senderCredited = true;
 
           spreadFeesApplied = await distributeSpreadFees();
 
-          const fillResult = await db.collection<CurrencyOrder>("currencyOrders").updateOne(
+          const fillResult = await currencyOrdersCollection(db).updateOne(
             { _id: order._id, status: "processing" },
             {
               $set: {
@@ -451,23 +441,25 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (fillResult.matchedCount === 0) {
             throw badRequest("Trade request is no longer open");
           }
-          await db.collection<TradeHistoryEntry>("tradeHistory").insertOne(tradeHistoryEntry);
+          await tradeHistoryCollection(db).insertOne(tradeHistoryEntry);
         } catch (error) {
           const compensationErrors = await reverseAppliedSpreadFees(spreadFeesApplied);
           if (senderCredited) {
             try {
-              await db
-                .collection("characters")
-                .updateOne({ _id: order.characterId }, { $inc: senderRollbackInc });
+              await charactersCollection(db).updateOne(
+                { _id: order.characterId },
+                { $inc: senderRollbackInc }
+              );
             } catch (compensationError) {
               compensationErrors.push(compensationError);
             }
           }
           if (targetDebited) {
             try {
-              await db
-                .collection("characters")
-                .updateOne({ _id: character._id }, { $inc: targetRollbackInc });
+              await charactersCollection(db).updateOne(
+                { _id: character._id },
+                { $inc: targetRollbackInc }
+              );
             } catch (compensationError) {
               compensationErrors.push(compensationError);
             }
@@ -488,7 +480,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     );
 
-    const sender = await db.collection<Character>("characters").findOne({ _id: order.characterId });
+    const sender = await charactersCollection(db).findOne({ _id: order.characterId });
     if (sender) {
       const mail: Omit<PlayerMail, "_id"> = {
         fromCharacterId: character._id,
@@ -505,7 +497,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         deletedBySender: false,
         createdAt: now,
       };
-      await db.collection<PlayerMail>("playerMail").insertOne(mail as PlayerMail);
+      await playerMailCollection(db).insertOne(mail as PlayerMail);
     }
 
     return NextResponse.json({

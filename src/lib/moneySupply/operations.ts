@@ -1,9 +1,10 @@
 import { ObjectId, type Db } from "mongodb";
-import type { CentralBank, MonetaryOperationRecord, MonetaryOperationType } from "@/lib/db/types";
+import type { MonetaryOperationRecord, MonetaryOperationType } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { executeLiquidityAdvance } from "./liquidityAdvance";
 import { executeJournaledMonetaryOperation } from "./monetaryOperationJournal";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 
 export const MONETARY_OPERATION_COOLDOWN_TURNS = 6;
 export const DIRECT_ADVANCE_GDP_CAP = 0.01;
@@ -28,7 +29,7 @@ export async function executeMonetaryOperation(
   input: ExecuteMonetaryOperationInput
 ): Promise<MonetaryOperationRecord> {
   const bankId = getBankId(input.countryId);
-  const bank = await db.collection<CentralBank>("centralBanks").findOne({ _id: bankId });
+  const bank = await centralBanksCollection(db).findOne({ _id: bankId });
   if (!bank) throw new Error("Central bank not found");
   if (input.type !== "liquidity_injection") {
     return executeJournaledMonetaryOperation(

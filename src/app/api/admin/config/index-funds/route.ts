@@ -9,6 +9,7 @@ import { MIGRATIONS } from "@/lib/migrations/registry";
 import { runMigrations } from "@/lib/migrations/runner";
 import type { GameConfig } from "@/lib/db/types";
 import type { IndexFundsMode } from "@/lib/indexFunds/featureFlag";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 const patchSchema = z.object({
   mode: z.enum(["off", "partial", "full"]),
@@ -31,9 +32,10 @@ const INDEX_FUND_BOOTSTRAP_MIGRATIONS = [
 // Errors: 403
 export const GET = withAdminRoute(async (_auth) => {
   const db = await getDb();
-  const config = await db
-    .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { indexFundsMode: 1 } });
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { indexFundsMode: 1 } }
+  );
 
   const mode: IndexFundsMode =
     config?.indexFundsMode === "partial" || config?.indexFundsMode === "full"
@@ -55,7 +57,7 @@ export const PATCH = withAdminRoute(async (auth, request: Request) => {
   const { mode } = parsed.data;
 
   const db = await getDb();
-  const gameConfig = db.collection<GameConfig>("gameConfig");
+  const gameConfig = gameConfigCollection(db);
 
   // Read the prior value so we know whether this is a fresh enable (and
   // therefore whether the bootstrap migrations need to run).

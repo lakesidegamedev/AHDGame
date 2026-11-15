@@ -6,20 +6,6 @@ import type { DemographicTurnoutRates } from "@/lib/seeds/demographicCategories"
  * The United States' regional political archetypes and per-state position
  * overrides.
  *
- * \u26a0\ufe0f THIS WAS 514 LINES OF ONE COUNTRY'S DATA INSIDE A SHARED MODULE.
- * `seeds/demographicCategories.ts` defines the turnout rates, labels, category
- * list and era compositions that EVERY country reads -- `countryDemographics.ts`,
- * the poll panels, the seed runner, the seed diagnostics. Sitting in the middle
- * of it were ten United States regional archetypes (Deep South, Border,
- * Mid-Atlantic, Great Lakes, Plains, Mountain, Pacific, Yankee, Islands,
- * Capital) and a per-state override table keyed AL, MS, SC, TX.
- *
- * Nothing separated the two. A reader looking for shared machinery found
- * Alabama; a reader looking for Alabama found shared machinery. That is the
- * mixing country folders exist to end, and it is why the whole file could not
- * simply be relocated: moving it would have dragged every country's demographic
- * machinery into `us/`.
- *
  * `US_STATE_POSITION_OVERRIDES` is the only export read from outside; the ten
  * archetypes are private to it, because a state's table is either its region's
  * or a `shiftRegion` of it.
@@ -262,20 +248,12 @@ export const US_STATE_POSITION_OVERRIDES: Partial<
   // 1953 (2026-08 regional recalibration). Every state takes its region's table
   // from the block above, with single-state exceptions expressed as a shift.
   //
-  // What changed and why:
-  //  • The old table read the 1952 RESULT back into ideology: the Solid South's
-  //    Democratic vote was encoded as economically left whites plus Democratic
-  //    evangelical/patriot/gunowner buckets. That is party, not ideology. The
-  //    Deep South here is economically populist-but-not-left (-0.5: TVA, farm
-  //    parity, rural electrification) and sits at the caste order's traditional
-  //    ceiling (+4.1), which is what the 1953 electorate actually was.
-  //  • The party-proxy ideology overrides are gone. Regional character now runs
-  //    through every bucket the era's archetypes weight, led by `race.white`,
-  //    which carries archetype weight in this era's composition as it does from
-  //    1999 on (before that it reached the granular cells but not the archetype
-  //    leans, so no amount of white authoring moved a state's lean).
-  //  • Margins were used only as an advisory rank-order check on geography, with
-  //    the org-dominated Solid South excluded from the check.
+  // Ideology, not party: the old table encoded the Solid South's Democratic
+  // vote as left economics, which is party, not ideology. The Deep South here is
+  // economically populist-but-not-left (TVA, farm parity, rural electrification)
+  // and sits at the caste order's traditional ceiling (+4.1). Regional character
+  // runs through every bucket the era's archetypes weight, led by `race.white`.
+  // Margins were only an advisory rank-order check, with the Solid South excluded.
   "1953": {
     // DeepSouth
     AL: DEEP_SOUTH_1953,
@@ -402,19 +380,13 @@ export const US_STATE_POSITION_OVERRIDES: Partial<
     GA: [["race", "white", 0.5, 3.2]], // override: Carter home state effect
   },
   // 1992 presidential anchor (Clinton 43.0 / Bush 37.4 / Perot 18.9).
+  // Without an anchor here, eraPositionsForYear carries the 1980 regional
+  // character forward unchanged rather than decaying it.
   //
-  // Authored because the table previously stopped at 1979, and with the era
-  // clock live an absent anchor is not neutral — every state's regional
-  // character would be carried forward from 1980 unchanged for forty years.
-  // (`eraPositionsForYear.ts` carries it forward rather than letting it decay,
-  // which is safe, but real anchors are better than a frozen one.)
-  //
-  // The story of this map versus 1979: the Deep South keeps moving right while
-  // APPALACHIA HAS NOT YET FLIPPED. Clinton carried West Virginia by 13 and
-  // Kentucky by 3 — the New Deal coalition still held there on economics even
-  // as it collapsed further south. WV is authored economically LEFT of the
-  // national white baseline here and reverses hard by 2019, which is the
-  // single largest regional swing in the series and should be visible as such.
+  // The Deep South keeps moving right, but APPALACHIA HAS NOT YET FLIPPED:
+  // the New Deal coalition still holds WV (Clinton +13) and KY (Clinton +3)
+  // on economics. WV is authored economically LEFT of the national white
+  // baseline here and reverses hard by 2019, the largest regional swing.
   "1991": {
     // Deep South — white defection continues past the Reagan realignment.
     MS: [["race", "white", 3, 3.2]],

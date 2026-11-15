@@ -1,14 +1,13 @@
 /**
- * Growth/regulatory cost legs and the P3.5 physical cost decomposition (#588).
+ * Growth/regulatory cost legs and the physical cost decomposition.
  *
  * Pure computation split out of processSector. Growth cost is charged on
- * REALIZED revenue (scaling by the realization ratio), not the nominal book.
+ * REALIZED revenue (scaled by the realization ratio), not the nominal book.
  * The dominance regulatory burden is the revenue-side twin of the dominance
  * margin penalty and fades out on the plants ramp for the same reason.
  * Under plants the margin-formula maintenance is rebuilt out of physical
- * lines (inputs, labour, upkeep, compliance, other opex, financial legs)
- * calibrated to reproduce maintenance exactly on the first producing turn,
- * with the policy stack riding a single revenue-proportional credit line.
+ * lines calibrated to reproduce maintenance exactly on the first producing
+ * turn, with the policy stack on a single revenue-proportional credit line.
  * No reads or writes here, only the turn inputs.
  */
 import {
@@ -87,22 +86,12 @@ export function computeGrowthAndRegulatory(input: GrowthRegulatoryInput): Growth
     plantsRampLambda,
   } = input;
 
-  // Growth cost must be charged on the revenue the sector ACTUALLY realises, not
-  // on its nominal book revenue.
-  //
-  // `newGrowthCost` is derived from raw `newRevenue`, while `hourlyRevenue` is
-  // that same figure after seven realisation factors (capacity haircut, price
-  // realisation, clearing, throughput, capital utilisation, strike throttle,
-  // embargo). Measured on the completed 1000-turn run, realisation averaged
-  // 0.417 while growth cost ran at 0.246 of nominal revenue — so expansion
-  // consumed 59% of the income it was paid from, and NO firm could stay solvent
-  // regardless of margin. It is the single largest driver of the corporate
-  // collapse (432 firms to 88, 89% loss-making).
-  //
-  // Scaling by the realisation ratio keeps the economics honest in both
-  // directions: a firm that cannot sell its output also is not billed as though
-  // it had, but a badly-run firm still fails, because its realised revenue is
-  // genuinely low.
+  // Charge growth cost on realised revenue, not nominal revenue. `newGrowthCost`
+  // derives from raw `newRevenue`, but `hourlyRevenue` applies seven realisation
+  // factors; billing on nominal revenue makes expansion consume most of the income
+  // that funds it, rendering firms insolvent. Scale by the realisation ratio so an
+  // underperforming firm is not billed as though it had sold out, but still fails
+  // on genuinely low revenue.
   const nominalHourlyRevenue = preFlipNameplateRevenue / TURNS_PER_DAY;
   const realizationRatio =
     nominalHourlyRevenue > 0 ? Math.max(0, Math.min(1, hourlyRevenue / nominalHourlyRevenue)) : 1;
@@ -255,43 +244,34 @@ export function decomposePhysicalCosts(input: PhysicalCostsInput): PhysicalCosts
   // ─── P3.5: physical cost decomposition (plants only) ──────────────────────
   //
   // `maintenance` above is the margin formula: revenue × (1 − margin/100). It
-  // says nothing about what the plant buys, so a sector's cost cannot move with
-  // the price of its inputs. Under plants the cost stack is rebuilt out of
-  // physical lines instead — see `@/lib/corporations/physicalPnl` for the full
-  // rationale and the calibration identity.
+  // says nothing about what the plant buys, so cost cannot move with input
+  // prices. Under plants the cost stack is rebuilt from physical lines; see
+  // `@/lib/corporations/physicalPnl` for the rationale and calibration identity.
   //
-  // DISPOSITION of the old margin-modifier stack under plants:
-  //  • commodity INPUT modifier  → DELETED, replaced by `inputsCost` (the real
-  //    bill). Keeping both would double-count the same condition.
-  //  • commodity SURPLUS modifier → DELETED outright. Clearing and price
-  //    realization already price a glut on the REVENUE side; the modifier was
-  //    the original double-count this wave exists to remove.
-  //  • disaster margin penalty  → financial leg, ₳ passthrough (a flood does
-  //    not change the price of steel; it imposes a loss). Consumed here as an
-  //    input; the disaster files themselves are another wave's territory.
-  //  • tech `inputCost` effects → already scale `effectiveDemand`, so they now
-  //    reduce UNITS BOUGHT rather than granting margin.
-  //  • tech `laborCostReduction` → already the labor wage multiplier.
-  //  • tech `growthCostReduction` → already its own line.
-  //  • tech `marginBonus` (+ strategy-transition penalty, subsidies, tariffs,
-  //    macro, state metrics, home location, sprawl, SOE efficiency, …) → these
-  //    are not claims about physical consumption, so they ride ONE named
-  //    channel: `policyCredit`, a revenue-proportional P&L line
-  //    (`hourlyRevenue × pp/100`, soft-capped with the same discipline as the
-  //    legacy margin). They previously rode the drift factor on the calibrated
-  //    residual, which INVERTED whenever the residual anchor was negative (a
-  //    bonus shrank the credit and raised cost — live on 82% of prod sectors
-  //    when found). A revenue leg is monotone in the modifier by construction.
-  //    The residual anchor is now held at its policy-NEUTRAL basis and no
-  //    longer responds to the modifier stack; legacy anchors, solved with the
-  //    calibration-time stack inside them, have that stack charged back as an
-  //    amount (see `legacyAnchorPolicyCharge`).
+  // Under plants, the old margin-modifier stack splits as follows:
+  //  • commodity INPUT modifier → replaced by `inputsCost` (the real bill).
+  //    Keeping both would double-count.
+  //  • commodity SURPLUS modifier → deleted. Clearing and price realization
+  //    already price a glut on the REVENUE side.
+  //  • disaster margin penalty → financial leg, cash passthrough.
+  //  • tech `inputCost` → already scales `effectiveDemand`, so it reduces UNITS
+  //    BOUGHT rather than granting margin.
+  //  • tech `laborCostReduction` / `growthCostReduction` → already their own
+  //    lines (labor wage multiplier, growth line).
+  //  • everything else (tech marginBonus, strategy-transition penalty, subsidies,
+  //    tariffs, macro, state metrics, home location, sprawl, SOE efficiency) is
+  //    not a claim about physical consumption and rides ONE channel:
+  //    `policyCredit`, a revenue-proportional P&L line (hourlyRevenue × pp/100,
+  //    soft-capped like the legacy margin). A revenue leg is monotone in the
+  //    modifier; the old drift-factor path inverted when the residual anchor was
+  //    negative. The residual anchor is held at its policy-neutral basis;
+  //    legacy anchors charge their embedded stack back via
+  //    `legacyAnchorPolicyCharge`.
   //  • dominance → already consolidated to the build price in P3a.
   //
-  // KNOWN RESIDUALS (deliberate, documented, not silently dropped): the labor
-  // carve-out's clamp basis and the P3a idle-upkeep unit price still read the
-  // full margin-formula margin. Both are prior waves' lines and both are
-  // second-order; moving them is a follow-up, not a flip-day change.
+  // Known residuals (deliberate): the labor carve-out's clamp basis and the P3a
+  // idle-upkeep unit price still read the full margin-formula margin. Both are
+  // second-order and belong to prior waves.
   const plantsPhysicalEnabled = plantsEnabled && !embargoLegacyMothball;
   // The margin stack MINUS the modifiers the physical model now owns
   // (commodity input → `inputsCost`, surplus → deleted, disaster → financial

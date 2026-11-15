@@ -35,7 +35,7 @@ export const MOZAMBIQUE_ENTITY_ID = "MZ";
 export const PORTUGUESE_MOZAMBIQUE_TO_MOZAMBIQUE_RULE_ID = "portuguese-mozambique-to-mozambique";
 
 /**
- * Gold Coast → Ghana sovereignty rule (#3726 tracer).
+ * Gold Coast → Ghana sovereignty rule (tracer).
  *
  * Historical defaults (not rails): independence 6 Mar 1957; UN admission 8 Mar 1957.
  * Earliest plausible self-government acceleration ~1954 (CPP electoral mandate);
@@ -57,7 +57,7 @@ export const GOLD_COAST_TO_GHANA_RULE: TransitionRule = Object.freeze({
 });
 
 /**
- * Italian Trust Territory of Somaliland + British Somaliland → Somalia (#3727).
+ * Italian Trust Territory of Somaliland + British Somaliland -> Somalia.
  * Independence / union 1 Jul 1960; UN admission 20 Sep 1960.
  */
 export const SOMALIA_TRUST_TO_SOMALIA_RULE: TransitionRule = Object.freeze({
@@ -191,7 +191,7 @@ const RULES: Readonly<Record<string, TransitionRule>> = Object.freeze({
   [PORTUGUESE_MOZAMBIQUE_TO_MOZAMBIQUE_RULE_ID]: PORTUGUESE_MOZAMBIQUE_TO_MOZAMBIQUE_RULE,
 });
 
-/** Approved decolonization roster rule ids (#3727), excluding the #3726 Ghana tracer. */
+/** Approved decolonization roster rule ids, excluding the Ghana tracer. */
 export const DECOLONIZATION_ROSTER_RULE_IDS = Object.freeze([
   SOMALIA_TRUST_TO_SOMALIA_RULE_ID,
   BELGIAN_CONGO_TO_CONGO_RULE_ID,

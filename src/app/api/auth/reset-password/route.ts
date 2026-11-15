@@ -1,3 +1,4 @@
+import { accountFieldsRefusal } from "@/lib/auth/accountFields/mode";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { authRevocationSnapshotFilter } from "@/lib/auth/sessionIssue";
@@ -13,12 +14,24 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { consumePasswordReset } from "@/lib/passwordReset";
 import { invalidateCachedUser } from "@/lib/auth/userDocCache";
+import {
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  centralRestoreAccount,
+  centralWriteFirst,
+  newPasswordTooLongForCentral,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
+import { usersCollection } from "@/lib/db/repositories/users";
 
 // POST /api/auth/reset-password - Sets a new password using a single-use reset token from forgot-password.
 // Auth: public (token-bearing)
 // Errors: 400, 429
 export async function POST(request: Request) {
   try {
+    const accountFieldsBlock = accountFieldsRefusal("reset");
+    if (accountFieldsBlock) return accountFieldsBlock;
+
     const clientIp = await getClientIp();
     const limit = await durableRateLimit(clientIp, AUTH_LIMITS.maxRequests, AUTH_LIMITS.windowMs);
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);
@@ -28,6 +41,10 @@ export async function POST(request: Request) {
       return errorResponse(parsed.status, parsed.error);
     }
     const { token, password } = parsed.data;
+    // Checked before the token is consumed so the link stays usable.
+    if (newPasswordTooLongForCentral(password)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
 
     const reset = await consumePasswordReset(token);
     if (!reset) {
@@ -46,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const user = await db.collection<User>("users").findOne({ _id: reset.userId });
+    const user = await usersCollection(db).findOne({ _id: reset.userId });
     // Fenced accounts never consume a reset token via legacy reset. Same
     // generic 400 body as an expired token so fenced is not an oracle.
     if (user && isAuthMigrationFenced(user)) {
@@ -71,25 +88,47 @@ export async function POST(request: Request) {
         { headers: { "Cache-Control": "private, no-store" } }
       );
     }
+    const passwordWrite = {
+      op: "password-set",
+      ahdUserId: reset.userId.toString(),
+      password,
+    } as const;
+    if (!(await centralWriteFirst(passwordWrite))) {
+      return errorResponse(
+        503,
+        `${CENTRAL_WRITE_UNAVAILABLE_MESSAGE} You may need to request a new reset link.`,
+        {
+          headers: { "Cache-Control": "private, no-store" },
+        }
+      );
+    }
+
     const hashedPassword = await bcrypt.hash(password, 12);
     const changedAt = new Date();
     // Update password in database and invalidate all existing sessions
-    const updated = await db.collection<User>("users").updateOne(
-      {
-        _id: reset.userId,
-        password: user.password ?? null,
-        ...authRevocationSnapshotFilter(user.authRevokedAt),
-        ...authMigrationFenceAbsentFilter(),
-      },
-      {
-        $set: {
-          password: hashedPassword,
+    let updated;
+    try {
+      updated = await usersCollection(db).updateOne(
+        {
+          _id: reset.userId,
+          password: user.password ?? null,
+          ...authRevocationSnapshotFilter(user.authRevokedAt),
+          ...authMigrationFenceAbsentFilter(),
         },
-        $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
-      }
-    );
+        {
+          $set: {
+            password: hashedPassword,
+          },
+          $max: { passwordChangedAt: changedAt, authRevokedAt: changedAt },
+        }
+      );
+    } catch (error) {
+      await centralRestoreAccount(user, { password: true });
+      throw error;
+    }
 
     if (updated.matchedCount !== 1) {
+      await centralRestoreAccount(user, { password: true });
       return errorResponse(
         409,
         "Your account changed during this request. Please sign in and try again.",
@@ -99,6 +138,7 @@ export async function POST(request: Request) {
 
     // Token revocation must bite immediately, not after the userDocCache TTL.
     invalidateCachedUser(reset.userId.toString());
+    shadowMirrorWrite(passwordWrite);
 
     recordAudit({
       source: "api",

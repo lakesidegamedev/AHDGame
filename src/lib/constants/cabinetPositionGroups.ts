@@ -15,6 +15,7 @@ import { CN_CABINET_GROUPS } from "@/lib/countries/cn/institutionsFacts";
 import { IE_CABINET_GROUPS } from "@/lib/countries/ie/institutionsFacts";
 import { RU_CABINET_GROUPS } from "@/lib/countries/ru/institutionsFacts";
 import { NG_CABINET_GROUPS } from "@/lib/countries/ng/institutionsFacts";
+import { CA_CABINET_GROUPS } from "@/lib/countries/ca/institutionsFacts";
 
 export const GROUPS: Record<string, Record<string, CabinetGroup>> = {
   US: US_CABINET_GROUPS,
@@ -28,6 +29,7 @@ export const GROUPS: Record<string, Record<string, CabinetGroup>> = {
    */
   JP: JP_INSTITUTIONS.cabinet.groups ?? {},
   IE: IE_CABINET_GROUPS,
+  CA: CA_CABINET_GROUPS,
   DE: DE_CABINET_GROUPS,
   CN: CN_CABINET_GROUPS,
   RU: RU_CABINET_GROUPS,

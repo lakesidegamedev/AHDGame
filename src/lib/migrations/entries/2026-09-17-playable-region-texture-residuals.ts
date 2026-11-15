@@ -2,8 +2,10 @@ import type { Db } from "mongodb";
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Migration, MigrationResult } from "../types";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
-import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { POLITICAL_METRIC_COUNTRY_IDS, type PoliticalMetricId } from "@/lib/politicalMetrics/types";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { politicalMetricsCollection } from "@/lib/db/repositories/politicalMetrics";
 
 const PRESET = "1953-default";
 const STARTING_YEAR = 1953;
@@ -11,40 +13,30 @@ const STARTING_YEAR = 1953;
 const MIGRATION_ID = "2026-09-17-playable-region-texture-residuals";
 
 /**
- * Backfill the issue-#704 playable-region texture into live 1953 worlds.
+ * Backfill the playable-region texture into live 1953 worlds via `residuals`,
+ * not `values`: the dynamics phase drifts values to equilibrium, so a residual
+ * delta lets regions glide over turns instead of lurching mid-campaign.
  *
- * New seeds write baseline + texture + modifier into `values`, but a running
- * world must NOT have its values rewritten: the dynamics phase drifts values
- * toward composeTarget(national + supplement + residual), so the backfill
- * writes to `residuals` instead and each region glides to its new equilibrium
- * over ~20 turns instead of lurching mid-campaign.
- *
- * residual_new = residual_old + texture: the law book (and therefore the
- * day-one target the old residual was measured against) is unchanged, so the
- * permanent character gap is exactly the texture deviation. Residuals are
- * fixed at reset and moved by nothing in the turn phase, which is what makes
- * a delta-add the honest operation here.
+ * residual_new = residual_old + texture because the law book (and the old
+ * residual's baseline) is unchanged, so the gap is exactly the texture delta;
+ * residuals are fixed at reset, making delta-add correct.
  *
  * Safety rules, all enforced below and covered by the sibling test:
- * - strict world/preset guards: runs only when gameState says 1953-default
- *   with startingYear 1953; every other world is skipped with a note.
- * - US/UK/RU/DD regions present in the texture table only; non-playables and
- *   drifted rosters are untouched.
- * - docs WITHOUT a residuals map are skipped, never invented: the dynamics
- *   phase's lazy self-heal owns those, and fabricating equilibrium here would
- *   fork its derivation.
- * - updates $set the WHOLE residuals map, never a dotted per-family path and
- *   never $unset. Board maps are keyed by literal dotted strings
- *   ("economy.stability"), so "residuals.<family>" would nest instead of
- *   landing (local/no-dotted-board-path). Siblings are preserved by spreading
- *   the read doc, so event-driven movement in other families survives.
- * - idempotent via the playableTexture1953MigrationId stamp: a re-run skips
- *   stamped docs instead of adding the delta twice. Dry runs read only.
+ * - strict preset/startingYear guards; other worlds skipped with a note.
+ * - only US/UK/RU/DD regions present in the texture table.
+ * - docs without a residuals map are skipped, never invented (lazy self-heal
+ *   owns those; fabricating would fork its derivation).
+ * - $set the WHOLE residuals map, never a dotted per-family path: board maps
+ *   key literal dotted strings, so "residuals.<family>" would nest. Spread the
+ *   read doc to preserve sibling families.
+ * - idempotent via the stamp field; dry runs read only.
  */
 async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const gameState = await db
-    .collection<{ _id: string; preset?: string; startingYear?: number }>("gameState")
-    .findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } });
+  const gameState = await gameStateCollection<{
+    _id: string;
+    preset?: string;
+    startingYear?: number;
+  }>(db).findOne({ _id: "current" }, { projection: { preset: 1, startingYear: 1 } });
   if (gameState?.preset !== PRESET) {
     return { notes: [`skipped: active preset is ${String(gameState?.preset ?? "unknown")}`] };
   }
@@ -54,8 +46,7 @@ async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promis
     };
   }
 
-  const docs = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
+  const docs = await politicalMetricsCollection(db)
     .find({ countryId: { $in: [...POLITICAL_METRIC_COUNTRY_IDS] } })
     .toArray();
 
@@ -72,7 +63,9 @@ async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promis
     const regionId = String(doc._id);
     const countryId = String(doc.countryId);
     const texture =
-      REGIONAL_TEXTURE_1953[countryId as keyof typeof REGIONAL_TEXTURE_1953]?.[regionId];
+      getRegionalTexture1953()[countryId as keyof ReturnType<typeof getRegionalTexture1953>]?.[
+        regionId
+      ];
     if (!texture || Object.keys(texture).length === 0) {
       noTexture++;
       continue;
@@ -138,9 +131,7 @@ async function backfillPlayableTextureResiduals(db: Db, dryRun: boolean): Promis
     return { documentsScanned: scanned, documentsUpdated: 0, notes };
   }
 
-  const result = await db
-    .collection<PoliticalMetricsDoc>("politicalMetrics")
-    .bulkWrite(ops, { ordered: false });
+  const result = await politicalMetricsCollection(db).bulkWrite(ops, { ordered: false });
   const documentsUpdated = result.modifiedCount ?? 0;
   if (documentsUpdated !== ops.length) {
     notes.push(

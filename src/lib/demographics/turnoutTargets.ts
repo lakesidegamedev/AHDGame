@@ -5,6 +5,7 @@ import { getEraPositions } from "@/lib/seeds/demographicCategories";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { GRANULAR_DIMENSIONS } from "./granularCells";
 import { BUCKET_LABELS, bucketLabel, dimensionLabelFor } from "./bucketLabels";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 /**
  * The Layer-1 buckets a player can aim a turnout action at, for one country.
@@ -47,7 +48,7 @@ export function getTurnoutTargetsForCountry(
   preset?: string | null
 ): TurnoutTargetSection[] {
   const era = eraForPreset(preset ?? DEFAULT_SEED_PRESET);
-  if (countryId.toUpperCase() === "US") {
+  if (countryHasFeature("usLib", countryId.toUpperCase())) {
     const positions = getEraPositions(era);
     return GRANULAR_DIMENSIONS.map((dim) => ({
       dim,

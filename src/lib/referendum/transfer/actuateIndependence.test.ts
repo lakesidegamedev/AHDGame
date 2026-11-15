@@ -17,15 +17,15 @@ import type { Referendum } from "@/lib/db/types/referendum";
 
 // String ids: the in-memory store deep-clones via structuredClone, which would
 // break ObjectId reference-equality between bill._id and ref.westminsterBillId.
-function seed(billStatus: string) {
+function seed(billStatus: string, countryId = "UK", regionId = "SCO") {
   const store = makeInMemoryStore({
     bills: [{ _id: "bill1", status: billStatus }],
     referendums: [
       {
         _id: "ref1",
         kind: "independence",
-        countryId: "UK",
-        regionId: "SCO",
+        countryId,
+        regionId,
         targetCountryId: null,
         westminsterBillId: "bill1",
         status: "actuating",
@@ -56,6 +56,21 @@ describe("runReferendumActuation — independence", () => {
       currentTurn: 300,
     });
     expect(cols.referendums[0].status).toBe("completed");
+  });
+
+  it.each([
+    ["UK", "SCO", "Scotland"],
+    ["UK", "WAL", "Wales"],
+    ["CA", "CA_QC", "Quebec"],
+  ])("names the new country in the wire when %s's %s secedes", async (country, region, name) => {
+    const { db, cols, ref } = seed("signed", country, region);
+    await runReferendumActuation(db, ref, 300);
+    expect(cols.referendumWire).toEqual([
+      expect.objectContaining({
+        kind: "seceded",
+        summary: `${name} became an independent country.`,
+      }),
+    ]);
   });
 
   it("returns the secedeRegion failure when the region can't stand up", async () => {

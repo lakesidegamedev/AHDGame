@@ -1,19 +1,12 @@
 /**
- * United Kingdom Region Census Profiles — 2007 era.
+ * United Kingdom Region Census Profiles , 2007 era.
  *
  * 2007-default companion to {@link ukRegionCensusData} (the 2019 profiles).
  * Anchored to ONS mid-year estimates and the Annual Population Survey
  * (mid-2000s), interpolating between Census 2001 and Census 2011.
  *
- * Era anchors (pre-crash Brown handover): EU-accession (A8) migration wave
- * underway since 2004, lifting "other" and Eastern-European shares in the
- * East of England, East Midlands and London; financialized London / South
- * East at the peak of the credit boom; New Labour university expansion
- * pushing degree attainment into the 20s–30s; minority populations growing
- * fastest in London and the West Midlands.
- *
  * All values independently authored from historical knowledge of each region
- * in 2007 — NOT scaled or derived from any other era's data. Income uses
+ * in 2007, NOT scaled or derived from any other era's data. Income uses
  * era-neutral relative tiers (no £ thresholds).
  */
 

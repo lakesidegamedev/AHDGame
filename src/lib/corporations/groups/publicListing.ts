@@ -3,7 +3,7 @@
  * loadPublicSubsidiaryGroups converts public cash, revenue and equity into anchor currency.
  */
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector, GameState } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import { getControllingCorporateParent } from "../corporateOwnership";
 import { shouldRedactCorporation } from "../redaction";
 import {
@@ -23,15 +23,11 @@ import {
   publicGroupStructure,
   type PublicGroupMember,
 } from "./rules/publicListing";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 export async function loadPublicSubsidiaryGroups(db: Db, corporationId?: string) {
-  const world = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { subsidiaryCorporationsEnabled: 1 } });
-  // Feature discovery follows the toggle; existing group bookmarks remain readable.
-  if (!world?.subsidiaryCorporationsEnabled && !corporationId) return [];
   const [corps, reserved, fx] = await Promise.all([
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find(
         {},
         {
@@ -92,8 +88,7 @@ export async function loadPublicSubsidiaryGroups(db: Db, corporationId?: string)
   );
   const groupedCorps = corps.filter((corp) => groupedIds.has(corp._id.toString()));
   if (!groupedCorps.length) return [];
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: { $in: groupedCorps.map((c) => c._id) } },
       { projection: { corporationId: 1, sectorType: 1, countryId: 1, stateId: 1, revenue: 1 } }

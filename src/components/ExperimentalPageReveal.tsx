@@ -23,20 +23,13 @@ const MAX_WAIT_MS = 8000;
 const MIN_TEXT_LENGTH = 10;
 
 /**
- * Experimental (Settings, Experimental features): decode each page into place
- * through an ASCII character grid.
+ * Experimental: decode page content into place through an ASCII character
+ * grid. Mounted from `app/template.tsx` so navbar and status bar stay put.
  *
- * Mounted from `app/template.tsx`, so it covers page content only (the navbar
- * and status bar stay put). `enabled` comes from the server, which reads the
- * opt-in cookie mirrored from the user record, so a page load decodes too and
- * a signed-out visitor never carries the effect.
- *
- * The reveal is driven from here rather than by `revealOnMount`. A root
- * template only remounts when the first URL segment changes, so the wrapper is
- * keyed on the pathname to replay inside one section (two corporations, two
- * bills, two profiles), and `revealOnMount` adds an attribute the server HTML
- * cannot have, which React reports as a hydration mismatch and does not patch
- * up.
+ * The wrapper is keyed on pathname because a root template only remounts
+ * when the first URL segment changes. Reveal is driven here rather than via
+ * `revealOnMount`, whose server-side attribute would cause a hydration
+ * mismatch React does not patch up.
  */
 export function ExperimentalPageReveal({
   enabled,

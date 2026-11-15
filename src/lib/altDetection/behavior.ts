@@ -1,34 +1,23 @@
 /**
- * Behavioral profiling primitives (forensics-v2 Wave 3, "behavior tracking").
+ * Behavioral profiling primitives: derive WHEN a human is active from
+ * timestamps alone, defeating identity-token signals a careful operator can
+ * rotate (fingerprint, cookie, IP, OAuth id, email). Backs `activity_rhythm`
+ * and `session_handoff`.
  *
- * Every other signal in `signals.ts` correlates an IDENTITY TOKEN — a
- * fingerprint, a cookie, an IP, an OAuth id, an email. All of them are
- * defeatable by an operator who is willing to be careful: fresh browser
- * profile, fresh device, a VPN, a distinct inbox. What is much harder to
- * fake is WHEN a human is at the keyboard. This module derives that shape
- * from timestamps alone, so the two signals it backs (`activity_rhythm` and
- * `session_handoff`) keep working against an otherwise clean operator.
- *
- * Everything here is PURE — no DB, no clock reads beyond what the caller
+ * Everything here is PURE: no DB, no clock reads beyond what the caller
  * passes in. `run.ts` assembles the timestamp arrays; `signals.ts` consumes
  * the comparison functions.
  *
- * ## False positives are the whole design problem
- * Two unrelated players in the same timezone with the same day job have
- * genuinely similar activity histograms. A naive cosine similarity over
- * hour-of-day fires on half the playerbase. Both signals therefore carry
- * explicit guards, and both are weighted as corroborating evidence rather
- * than proof:
+ * False positives are the design problem. Two unrelated players in the same
+ * timezone with the same day job have similar hour-of-day histograms, so both
+ * signals are corroborating evidence, not proof:
  *
  *  - `activity_rhythm` requires BOTH profiles to be CONCENTRATED (low
- *    normalized entropy) before it will compare them. A player active in a
- *    narrow 3-hour window every day carries real information; a player
- *    scattered evenly across all 24 hours matches everyone and is excluded.
- *  - `session_handoff` requires near-zero CONCURRENT activity. Two accounts
- *    that are frequently online at the same time cannot be one person at
- *    one keyboard, no matter how neatly their sessions interleave — that
- *    check is what separates "one operator alternating accounts" from
- *    "two friends who play together".
+ *    normalized entropy) before comparing. A player scattered across all 24
+ *    hours matches everyone and is excluded.
+ *  - `session_handoff` requires near-zero CONCURRENT activity: two accounts
+ *    online at the same time cannot be one person, no matter how their
+ *    sessions interleave.
  */
 
 // ─── Activity rhythm: hour-of-day + day-of-week histograms ────────────────

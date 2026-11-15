@@ -1,11 +1,9 @@
 /**
- * NPP corporate treasury (ticket 1060).
+ * NPP corporate treasury.
  *
- * Player CEOs park idle liquid capital in high-coupon bonds. NPP caretakers
- * never did, so a corp like Meyer Logistics sat on ~$1.4M against ~$25k/day
- * of revenue while the CEO "ran" the place. Same primitives as the player
- * corp buy path: home-currency paper only, skip own issues, atomic debit
- * then reserve, refund on a missed float.
+ * Player CEOs park idle liquid capital in high-coupon bonds; NPP caretakers
+ * should too. Same primitives as the player corp buy path: home-currency paper
+ * only, skip own issues, atomic debit then reserve, refund on a missed float.
  *
  * Loss-making corps keep the cash as runway. Surplus is cash above one
  * financial day of revenue; a quarter of that surplus is committed per turn
@@ -35,6 +33,10 @@ import { reserveBondUnitsForHolder } from "@/lib/bonds/bondHolderOps";
 import { bondPoolCurrency, creditBondPool } from "@/lib/bonds/marketPool";
 import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { emitTx } from "@/lib/financialTxLog/emit";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 /** Keep this many days of revenue as operating cash. Revenue is already daily. */
 export const NPP_TREASURY_REVENUE_DAYS = 1;
@@ -145,8 +147,7 @@ export async function processNppCorpTreasury(db: Db, turn: number, now: Date): P
 }
 
 async function runNppCorpTreasury(db: Db, turn: number, now: Date): Promise<number> {
-  const nppCorps = await db
-    .collection<Corporation>("corporations")
+  const nppCorps = await corporationsCollection(db)
     .find(
       { ceoType: "npp", suspended: { $ne: true } },
       {
@@ -166,8 +167,7 @@ async function runNppCorpTreasury(db: Db, turn: number, now: Date): Promise<numb
   if (nppCorps.length === 0) return 0;
 
   const corpIds = nppCorps.map((c) => c._id);
-  const sectors = await db
-    .collection<CorporateSector>("corporateSectors")
+  const sectors = await corporateSectorsCollection(db)
     .find(
       { corporationId: { $in: corpIds } },
       { projection: { corporationId: 1, countryId: 1, stateId: 1, revenue: 1, realizedRevenue: 1 } }
@@ -182,14 +182,13 @@ async function runNppCorpTreasury(db: Db, turn: number, now: Date): Promise<numb
   }
 
   const fxByCurrency = new Map<string, number>();
-  for (const rate of await db.collection<ExchangeRate>("exchangeRates").find({}).toArray()) {
+  for (const rate of await exchangeRatesCollection(db).find({}).toArray()) {
     if (rate.currencyCode && typeof rate.rate === "number" && rate.rate > 0) {
       fxByCurrency.set(rate.currencyCode, rate.rate);
     }
   }
 
-  const liveBonds = await db
-    .collection<Bond>("bonds")
+  const liveBonds = await bondsCollection(db)
     .find({
       matured: { $ne: true },
       defaulted: { $ne: true },

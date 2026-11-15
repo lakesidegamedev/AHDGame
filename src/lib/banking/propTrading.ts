@@ -41,6 +41,9 @@ import {
   computePropEquityBase,
   sumPositionMarks,
 } from "@/lib/banking/rules/propLeverage";
+import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export { PROP_LEVERAGE_MULTIPLE, computePropEquityBase, sumPositionMarks };
 
@@ -72,9 +75,10 @@ export async function quoteForexPosition(
     return { ok: false as const, error: "Forex fee quoting is not enabled" };
   if (!Number.isFinite(input.units) || input.units <= 0)
     return { ok: false as const, error: "Units must be positive" };
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: corporationId }, { projection: { bankCharter: 1, bankPropForexVolume: 1 } });
+  const corp = await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    { projection: { bankCharter: 1, bankPropForexVolume: 1 } }
+  );
   if (!corp || !isPropCharter(corp.bankCharter))
     return { ok: false as const, error: "No active investment charter" };
   const currencyCode = corp.bankCharter.currency as CurrencyCode;
@@ -170,7 +174,7 @@ async function resolvePositionRef(
         : { ok: false, error: "Bond positions require a valid id" };
     }
     if (ObjectId.isValid(ref)) return { ok: true, ref: new ObjectId(ref).toString() };
-    const fund = await db.collection<IndexFund>("indexFunds").findOne(
+    const fund = await indexFundsCollection(db).findOne(
       {
         $or: [
           { slug: ref.toLowerCase() },
@@ -184,7 +188,7 @@ async function resolvePositionRef(
       : { ok: false, error: "Index fund not found" };
   }
 
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   let corporation: Pick<Corporation, "_id"> | null = null;
   if (ObjectId.isValid(ref)) {
     corporation = await corporations.findOne(
@@ -250,8 +254,7 @@ async function loadMarkInputs(
 
   const [corps, funds, bonds] = await Promise.all([
     equityIds.length > 0
-      ? db
-          .collection<Corporation>("corporations")
+      ? corporationsCollection(db)
           .find(
             { _id: { $in: equityIds } },
             { projection: { sharePrice: 1, liquidCurrencyCode: 1, countryId: 1 } }
@@ -259,14 +262,12 @@ async function loadMarkInputs(
           .toArray()
       : Promise.resolve([] as Corporation[]),
     fundIds.length > 0
-      ? db
-          .collection<IndexFund>("indexFunds")
+      ? indexFundsCollection(db)
           .find({ _id: { $in: fundIds } }, { projection: { quotedNav: 1 } })
           .toArray()
       : Promise.resolve([] as IndexFund[]),
     bondIds.length > 0
-      ? db
-          .collection<Bond>("bonds")
+      ? bondsCollection(db)
           .find(
             { _id: { $in: bondIds } },
             { projection: { marketPrice: 1, faceValue: 1, countryId: 1, corporationId: 1 } }
@@ -284,8 +285,7 @@ async function loadMarkInputs(
     ).values(),
   ];
   if (issuerIds.length > 0) {
-    const issuers = await db
-      .collection<Corporation>("corporations")
+    const issuers = await corporationsCollection(db)
       .find({ _id: { $in: issuerIds } }, { projection: { liquidCurrencyCode: 1, countryId: 1 } })
       .toArray();
     for (const issuer of issuers) corporations.set(issuer._id.toString(), issuer);
@@ -421,9 +421,10 @@ export async function openPosition(
   if (!input.ref || typeof input.ref !== "string")
     return { ok: false, error: "Position ref is required" };
   if (policy.advancedCharters && input.asset === "equity") {
-    const owner = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: corporationId }, { projection: { ceoType: 1 } });
+    const owner = await corporationsCollection(db).findOne(
+      { _id: corporationId },
+      { projection: { ceoType: 1 } }
+    );
     if (!owner) return { ok: false, error: "Corporation not found" };
     if (!allowedPropOpeningAssets(true, owner.ceoType).includes(input.asset))
       return {
@@ -437,12 +438,10 @@ export async function openPosition(
 
   if (policy.propForexFees && !(await settlePendingPropForexFee(db, corporationId)))
     return { ok: false, error: "A previous forex fee is still settling" };
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { _id: corporationId },
-      policy.propForexFees ? {} : { projection: { bankPropForexFee: 0, bankPropForexVolume: 0 } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    policy.propForexFees ? {} : { projection: { bankPropForexFee: 0, bankPropForexVolume: 0 } }
+  );
   if (!corp) return { ok: false, error: "Corporation not found" };
   if (!allowedPropOpeningAssets(policy.advancedCharters, corp.ceoType).includes(input.asset))
     return {
@@ -610,12 +609,10 @@ export async function closePosition(
 
   if (policy.propForexFees && !(await settlePendingPropForexFee(db, corporationId)))
     return { ok: false, error: "A previous forex fee is still settling" };
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne(
-      { _id: corporationId },
-      policy.propForexFees ? {} : { projection: { bankPropForexFee: 0, bankPropForexVolume: 0 } }
-    );
+  const corp = await corporationsCollection(db).findOne(
+    { _id: corporationId },
+    policy.propForexFees ? {} : { projection: { bankPropForexFee: 0, bankPropForexVolume: 0 } }
+  );
   if (!corp) return { ok: false, error: "Corporation not found" };
   const charter = corp.bankCharter;
   if (!isPropCharter(charter)) {

@@ -16,7 +16,6 @@ describe("UK regional hero legislature navigation", () => {
     nation: null,
     state: null,
     demographics: null,
-    categories: [],
     censusData: null,
     partyOrg: [],
     calculatedLeans: null,

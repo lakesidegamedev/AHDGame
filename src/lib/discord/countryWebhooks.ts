@@ -8,6 +8,7 @@ import {
 } from "@/lib/legislature/broadcastElectionTypes";
 import type { GameConfig } from "@/lib/db/types";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /**
  * Everything the admin Integrations UI and the Discord test routes need to
@@ -45,7 +46,7 @@ export async function getCountryWebhookDescriptors(
   preset?: string
 ): Promise<CountryWebhookDescriptor[]> {
   const enabled = new Set(await getEnabledCountryIdsFromDb(db));
-  const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+  const config = await gameConfigCollection(db).findOne({ _id: "default" });
   const urls = config?.discordCountryGameWebhookUrls ?? {};
 
   let activePreset = preset;

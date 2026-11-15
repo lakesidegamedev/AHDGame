@@ -4,16 +4,12 @@ export type LatentShortageFields = {
 };
 
 /**
- * Truncated demand and the latent shortage multiple for one commodity (#1460).
+ * Truncated demand and latent shortage multiple for one commodity.
  *
- * `demandTruncatedUnits` is what the two 1.5x caps removed this turn (ledger
- * legs plus household). `latentShortageMultiple` is the demand the world would
- * have recorded without the caps, over supply: 1.5 for a commodity sitting on
- * the cap with nothing truncated, higher when the cap is hiding more. Both are
- * written to the price doc and its history; neither feeds prices or the
- * scarcity integrator, but the truncated units DO feed the read-only build
- * signals (NPP shortage scores and the expansion advisor gap, see
- * `market/latentShortageSignal.ts`). Omitted when nothing was truncated.
+ * `demandTruncatedUnits` is what the 1.5x caps removed this turn. The multiple
+ * is uncapped demand over supply. Both are written to the price doc and
+ * history; neither feeds prices, but the truncated units feed read-only build
+ * signals. Omitted when nothing was truncated.
  */
 export function latentShortageFields(
   bal: { supply: number; demand: number },

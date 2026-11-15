@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { ScotusNomination } from "@/lib/db/types/scotus";
 import { getSiteUrl } from "@/lib/siteMetadata";
+import { scotusNominationsCollection } from "@/lib/db/repositories/scotusNominations";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,12 +20,10 @@ export async function generateMetadata({
   if (!ObjectId.isValid(id)) return {};
 
   const db = await getDb();
-  const nomination = await db
-    .collection<ScotusNomination>("scotusNominations")
-    .findOne(
-      { _id: new ObjectId(id) },
-      { projection: { seatNumber: 1, nomineeName: 1, nomineeParty: 1, status: 1 } }
-    );
+  const nomination = await scotusNominationsCollection(db).findOne(
+    { _id: new ObjectId(id) },
+    { projection: { seatNumber: 1, nomineeName: 1, nomineeParty: 1, status: 1 } }
+  );
   if (!nomination) return {};
 
   const positionName = `Supreme Court Seat #${nomination.seatNumber}`;

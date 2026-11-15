@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { CANONICAL_REAL_ELECTION_YEARS_BY_PRESET, getCycleAnchors } from "./cycleAnchorContext";
 import { RESET_PRESETS } from "@/lib/constants/historicalSeats";
-import { getStartingYearForPreset } from "@/lib/constants/turnTime";
+import { SEED_PRESET_IDS, getStartingYearForPreset } from "@/lib/constants/turnTime";
 
 describe("ngGeneral anchor", () => {
   it("1991-default anchors NG general to end of 1993 (turn 144)", () => {
@@ -285,4 +285,24 @@ describe("every RESET_PRESET has reachable, non-fallthrough cycle-1 anchors", ()
       });
     }
   }
+});
+
+describe("every shipping preset has election anchors (#5696)", () => {
+  // 2019-default is the fallback table itself. 1999 and 2007 ship in
+  // SEED_PRESET_IDS but have no entry yet, so they silently use 2019 years.
+  // TODO(#5696): author real anchors for them, then empty this set.
+  const KNOWN_GAPS = new Set(["1999-default", "2007-default"]);
+
+  for (const id of SEED_PRESET_IDS) {
+    if (KNOWN_GAPS.has(id)) continue;
+    it(`${id}: has a CANONICAL_REAL_ELECTION_YEARS_BY_PRESET entry`, () => {
+      expect(CANONICAL_REAL_ELECTION_YEARS_BY_PRESET[id]).toBeDefined();
+    });
+  }
+
+  it("known gaps are still gaps (remove from KNOWN_GAPS once authored)", () => {
+    for (const id of KNOWN_GAPS) {
+      expect(CANONICAL_REAL_ELECTION_YEARS_BY_PRESET[id], id).toBeUndefined();
+    }
+  });
 });

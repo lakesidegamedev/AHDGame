@@ -24,34 +24,12 @@ export function calculateSplitMsCost(splitEscalation: number | null | undefined)
   return Math.pow(2, Math.max(0, splitEscalation ?? 0));
 }
 
-export type SplitSize = "small" | "normal" | "large";
-
-export const SPLIT_SIZE_MULTIPLIERS: Record<SplitSize, number> = {
-  small: 0.5,
-  normal: 1.0,
-  large: 2.0,
-};
-
 export type SplitStrength = "full" | "half";
 
 export const SPLIT_STRENGTH_MULTIPLIERS: Record<SplitStrength, number> = {
   full: 1.0,
   half: 0.5,
 };
-
-/**
- * MS cost adjusted for split size.
- * Small splits cost half MS (min 1); large splits cost 2×; normal is unchanged.
- */
-export function calculateSplitMsCostForSize(
-  splitEscalation: number | null | undefined,
-  size: SplitSize
-): number {
-  const base = calculateSplitMsCost(splitEscalation);
-  if (size === "small") return Math.max(1, Math.floor(base * 0.5));
-  if (size === "large") return base * 2;
-  return base;
-}
 
 /**
  * MS cost adjusted for split strength.

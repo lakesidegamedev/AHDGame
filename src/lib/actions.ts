@@ -90,13 +90,11 @@ export {
   DEBATE_PREP_ACTION_COST,
   DEBATE_PREP_SUCCESS_CHANCE,
   DEBATE_PREP_DEBATE_GAIN,
-  DEBATE_PREP_DISABLED_ERROR,
   DEBATE_PREP_UNALLOCATED_ERROR,
   quoteDebatePrepAction,
   describeDebatePrepAction,
   describeDebatePrepEffect,
   type DebatePrepQuoteActor,
-  type DebatePrepQuoteOptions,
   type DebatePrepQuote,
 } from "./actions/rules";
 
@@ -124,6 +122,8 @@ export interface ActionEffectContext {
   preset?: string;
   /** Resolved between-era campaign price level; 1 preserves current behavior. */
   priceLevel?: number;
+  /** Live national GDP per capita for the cost baseline; absent = era table. */
+  nationalGdpPerCapita?: number;
 }
 
 /**
@@ -226,44 +226,25 @@ export function getDonorActionCost(
 }
 
 /**
- * Diminishing-returns shape for a turn's TOTAL passive campaign favorability
- * (media spending + travel presence + the primary in-state bonus), applied once
- * to the summed positive gain.
+ * Diminishing-returns shape for a turn's total passive campaign favorability
+ * (media spending + travel presence + primary in-state bonus), applied once to
+ * the summed positive gain.
  *
- * Third member of the "curves must intersect" family, alongside
- * {@link advertiseFavorabilityGain} and {@link campaignInfluenceGain}. Both of
- * those were given a favorability/influence-dependent penalty precisely so a
- * self-reinforcing stat has a stable equilibrium below the cap. The passive
- * campaign channel was missed by both fixes and stayed flat.
+ * Without it, passive gain does not vary with favorability while decay is
+ * bounded at (100 - 60) * 0.05 = 2.0/turn. A maxed media tree pays 3.0/turn,
+ * doubled to 6.0 in the final-four-turn window, plus 1.0/turn for travel, so
+ * gain exceeds decay and candidates pin at 100 permanently.
  *
- * Root cause this closes: passive gain did not vary with favorability at all,
- * while decay is bounded — `calculateFavorabilityAboveThresholdPenalty` maxes
- * out at (100−60)×0.05 = 2.0/turn. A maxed media tree pays
- * 0.5 (starter) + 1.5 (Broadcast t3) + 1.0 (Digital Ads t3) = 3.0/turn, doubled
- * to 6.0 inside the final-four-turn season window, plus 1.0/turn for travel.
- * Gain 3.0+ against a hard ceiling of 2.0 means the curves never intersect and
- * the candidate pins at 100 permanently. The engine already knew: see
- * `isTargetMediaSustainedAtCap` in simpleInfluence.ts, which detects exactly
- * this state (mediaLevel >= 4) to explain a disabled Support button, rather
- * than preventing it.
+ * Curve: base - (favorability - 80) * 0.15, floored at 0.5. The floor sits under
+ * the 2.0 decay ceiling, so no passive stack can re-pin at the cap.
  *
- * Curve: base − (favorability − 80) × 0.15, floored at 0.5. The 0.5 floor sits
- * well under the 2.0 decay ceiling, so no combination of passives can re-pin at
- * the cap.
+ * Threshold 80 keeps the penalty out of the range a serious campaign lives in
+ * and leaves a fully-invested media + travel stack equilibrated near 95. Lowering
+ * weakens campaigns; raising past ~85 restores the pin.
  *
- * Threshold set at 80, not 70, deliberately: political operations are meant to
- * be the STRONG way to build standing, so the penalty should not start biting
- * in the range a serious campaign lives in. A fully-invested media + travel
- * stack (4.0/turn raw) reaches an equilibrium near 95 — high, clearly rewarding
- * the investment, and still short of the permanent 100 pin that made
- * reputation unassailable. Lowering this threshold weakens campaigns; raising
- * it past ~85 restores the pin. This is the paired opposite of the softened
- * `APPROVAL_SCALAR_EXPONENT`: favorability matters marginally less per point,
- * and operations are the intended way to earn the points that remain.
- *
- * Apply AFTER the season multiplier: the final-four-turn 2x doubles the raw
- * gain, and curving the pre-doubled value would let the doubled result clear
- * decay again in exactly the turns that cast 30% of the vote.
+ * Apply AFTER the season multiplier: the final-four-turn 2x doubles raw gain, and
+ * curving the pre-doubled value would let the doubled result clear decay in the
+ * turns that cast 30% of the vote.
  */
 const PASSIVE_FAV_DIMINISH_THRESHOLD = 80;
 const PASSIVE_FAV_DIMINISH_RATE = 0.15;
@@ -343,6 +324,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
               population: state.population,
               countryId: character.countryId,
               preset: ctx?.preset,
+              nationalGdpPerCapita: ctx?.nationalGdpPerCapita,
             }
           : undefined,
         ctx?.priceLevel
@@ -378,6 +360,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
               population: state.population,
               countryId: character.countryId,
               preset: ctx?.preset,
+              nationalGdpPerCapita: ctx?.nationalGdpPerCapita,
             }
           : undefined,
         ctx?.priceLevel
@@ -415,6 +398,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
               population: state.population,
               countryId: character.countryId,
               preset: ctx?.preset,
+              nationalGdpPerCapita: ctx?.nationalGdpPerCapita,
             }
           : undefined,
         ctx?.priceLevel
@@ -540,8 +524,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
     type: "debatePrep",
     name: "Debate Prep",
     // Single source of truth: the card effect label quotes this same chance
-    // constant, so the advertised odds can never drift from the resolved roll
-    // (the text previously advertised 10% while the roll resolved 15%).
+    // constant, so advertised odds can never drift from the resolved roll.
     description: describeDebatePrepAction(),
     baseCost: DEBATE_PREP_ACTION_COST,
     requiresState: false,
@@ -577,12 +560,8 @@ export type CanPerformActionOptions = {
   preset?: string;
   /** Resolved between-era campaign price level; 1 preserves current behavior. */
   priceLevel?: number;
-  /**
-   * Resolved RPG-stats feature flag for Debate Prep validation. The execute
-   * shell always passes the resolved value; callers that cannot know it omit
-   * the field and skip the flag leg only (the stat-block leg still applies).
-   */
-  rpgStatsEnabled?: boolean;
+  /** Live national GDP per capita for the cost baseline; absent = era table. */
+  nationalGdpPerCapita?: number;
 };
 
 /**
@@ -619,6 +598,7 @@ export function canPerformAction(
             population: state.population,
             countryId: character.countryId,
             preset: options?.preset,
+            nationalGdpPerCapita: options?.nationalGdpPerCapita,
           }
         : undefined,
       options?.priceLevel
@@ -645,6 +625,7 @@ export function canPerformAction(
             population: state.population,
             countryId: character.countryId,
             preset: options?.preset,
+            nationalGdpPerCapita: options?.nationalGdpPerCapita,
           }
         : undefined,
       options?.priceLevel
@@ -707,18 +688,14 @@ export function canPerformAction(
   }
 
   // Debate Prep validates through the same rules quote the execute gate
-  // uses: flat AP cost, the fixed success chance and the flag + stat-block
-  // eligibility. A missing stat block rejects here with the quote reason
-  // instead of charging for a roll that cannot land. The flag leg applies
-  // only when the caller passes the resolved value (the execute shell does).
+  // uses: flat AP cost, the fixed success chance and stat-block eligibility.
+  // A missing stat block rejects here with the quote reason instead of
+  // charging for a roll that cannot land.
   if (actionType === "debatePrep") {
-    const quote = quoteDebatePrepAction(
-      {
-        debate: character.stats?.debate,
-        hasStats: !!character.stats,
-      },
-      { rpgStatsEnabled: options?.rpgStatsEnabled }
-    );
+    const quote = quoteDebatePrepAction({
+      debate: character.stats?.debate,
+      hasStats: !!character.stats,
+    });
     if (!quote.ok) {
       return { canPerform: false, reason: quote.error };
     }
@@ -740,6 +717,7 @@ export function canPerformAction(
             population: state.population,
             countryId: character.countryId,
             preset: options?.preset,
+            nationalGdpPerCapita: options?.nationalGdpPerCapita,
           }
         : undefined,
       options?.priceLevel
@@ -772,11 +750,12 @@ export function canPerformAction(
   // funds live in local and the UI must never surface anchor (₳) to the player.
   // The effect must price with the same era price level the quote and the
   // debit use; omitting it re-prices historical worlds at the modern level
-  // and rejects players who can afford the quoted cost (ticket 1392).
+  // and rejects players who can afford the quoted cost.
   const effect = action.effect(character, state, {
     formatFunds: plainFunds,
     preset: options?.preset,
     priceLevel: options?.priceLevel,
+    nationalGdpPerCapita: options?.nationalGdpPerCapita,
   });
   if (effect.fundsChange && effect.fundsChange < 0) {
     const costAnchor = Math.abs(effect.fundsChange);
@@ -817,7 +796,7 @@ function applyEffectToCharacter(
   state: ActionStateEconomics | undefined,
   forexEnabled = false,
   homeFxRate?: number,
-  pricing: Pick<ActionEffectContext, "preset" | "priceLevel"> = {}
+  pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita"> = {}
 ): Character {
   const effect = ACTIONS[actionType].effect(character, state, {
     formatFunds: plainFunds,
@@ -885,7 +864,7 @@ export function simulateActionBatch(
   count: number,
   forexEnabled = false,
   homeFxRate?: number,
-  pricing: Pick<ActionEffectContext, "preset" | "priceLevel"> = {}
+  pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita"> = {}
 ): SimulateActionBatchResult {
   let c: Character = { ...character };
   let totalActionPoints = 0;
@@ -940,7 +919,7 @@ export function getBatchAffordability(
   count: number,
   forexEnabled = false,
   homeFxRate?: number,
-  pricing: Pick<ActionEffectContext, "preset" | "priceLevel"> = {}
+  pricing: Pick<ActionEffectContext, "preset" | "priceLevel" | "nationalGdpPerCapita"> = {}
 ): BatchAffordability {
   const full = simulateActionBatch(
     character,

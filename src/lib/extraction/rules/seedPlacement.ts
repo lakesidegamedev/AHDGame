@@ -1,6 +1,7 @@
 /** Seed miners choose a region and recipe supported by actual deposits. */
 import { COMMODITY_BASE_PRICES, type ExtractableResource } from "@/lib/constants/commodities";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { isUngatedStrategy } from "@/lib/constants/techTree/strategyAvailability";
 
 export function chooseSeedExtractionSite(
   regions: readonly {
@@ -11,6 +12,7 @@ export function chooseSeedExtractionSite(
   let best: { stateId: string; strategyId: string; supportedDailyRevenue: number } | null = null;
   for (const region of regions) {
     for (const strategy of SECTOR_STRATEGIES.extraction) {
+      if (!isUngatedStrategy(strategy)) continue;
       const ceilings = Object.entries(strategy.supply)
         .filter(([, rate]) => rate > 0)
         .map(([key, rate]) => {

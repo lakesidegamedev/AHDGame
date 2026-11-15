@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { CORPORATION_TYPES } from "../corporations";
 import { getSectorStrategies } from "../sectorStrategies";
 import { TECH_DECADES } from "./decades";
-import { TECH_TREE } from "./nodes";
+import { DECADE_COST, TECH_TREE } from "./nodes";
 
 describe("tech tree content (v2)", () => {
   it("every sector has 9 corporate + 9 sector nodes per decade for all eras", () => {
@@ -19,6 +19,23 @@ describe("tech tree content (v2)", () => {
         expect(sector, `${type} sector ${decade.id}`).toHaveLength(15);
         expect(corp.map((n) => n.slot).sort((a, b) => a - b)).toEqual(allSlots);
         expect(sector.map((n) => n.slot).sort((a, b) => a - b)).toEqual(allSlots);
+      }
+    }
+  });
+
+  it("every tier has a cost and corporate and sector content for every sector type", () => {
+    for (const decade of TECH_DECADES) {
+      expect(DECADE_COST[decade.id], `DECADE_COST ${decade.id}`).toBeGreaterThan(0);
+      for (const type of CORPORATION_TYPES) {
+        const nodes = TECH_TREE[type].filter((n) => n.decadeId === decade.id);
+        expect(
+          nodes.some((n) => n.lane === "generic"),
+          `${type} ${decade.id} corporate content`
+        ).toBe(true);
+        expect(
+          nodes.some((n) => n.lane === "sector"),
+          `${type} ${decade.id} sector content`
+        ).toBe(true);
       }
     }
   });

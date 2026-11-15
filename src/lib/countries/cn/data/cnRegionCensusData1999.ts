@@ -1,19 +1,8 @@
 /**
- * China Region Census Profiles — 1999 (SOE reform / coastal export takeoff).
- *
- * 1999-default companion to {@link cnRegionCensusData} (the 2019 profiles).
- *
- * Era anchor: 2000 National Population Census (NBS), read backward to 1999.
- * Every value below is independently authored from historical knowledge of
- * each macro-region in that year — NOT derived by scaling any other era's file.
- *
- * Era character: ~35% urban nationally; Zhu Rongji's SOE restructuring is
- * shedding tens of millions of xiagang workers in the Northeast and North;
- * the coastal export economy (Pearl/Yangtze deltas) is absorbing the first
- * great migrant waves ahead of WTO accession (2001); nine-year compulsory
- * schooling has pushed most adults to junior-secondary, but university
- * massification (1999 enrollment expansion) hasn't yet reached the adult
- * stock. Income uses era-neutral relative tiers (no RMB thresholds).
+ * China region census profiles, 1999 (SOE reform, coastal export takeoff).
+ * Anchored to the 2000 National Population Census read back to 1999.
+ * Independently authored, not scaled from another era's file.
+ * Income uses era-neutral relative tiers, not RMB.
  */
 
 import type { CNRegionLayer1 } from "@/lib/seeds/cn/cnRegionCensusData";

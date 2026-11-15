@@ -1,12 +1,10 @@
 /**
- * Approval cost of a Market Adjustment event (owner decision 2026-10-21).
+ * Approval cost of a Market Adjustment event.
  *
- * Approval already averages dozens of metrics, each capped at +/-2, so a big
- * unemployment spike barely moves it. This is an explicit, visible driver on
- * top, shaped like the bank failure chip: it is computed from what the economy
- * actually did and nothing else. There is deliberately no credit for pressing a
- * response button; a response helps only by moving the measured losses and
- * unemployment.
+ * Approval averages dozens of metrics capped at +/-2, so an unemployment spike
+ * barely moves it. This is an explicit driver on top, computed from what the
+ * economy actually did: no credit for pressing a response button, since a
+ * response only helps by moving measured losses and unemployment.
  *
  * Pure: plain numbers in, plain numbers out.
  */

@@ -19,7 +19,6 @@ import type {
   OrganizationLeadershipElection,
   OrganizationMembershipProposal,
   PendingOrganizationWithdrawalMeasure,
-  ProposalVote,
 } from "@/lib/db/types/internationalOrganization";
 
 /** Public summary returned by GET /api/world/international-organizations. */
@@ -63,12 +62,11 @@ export interface OrgSummary {
      */
     hasVote: boolean;
     /**
-     * Whether this member casts a ballot on EVERY OTHER instrument — a leadership
-     * election, sanctions, aid, dues, a directive, a posture, an agency fund, and
-     * a free-trade agreement, which is voted only by its own named parties.
-     * Wider than `hasVote` (see the field's doc on the server summary): render
-     * the one that matches the ballot, or the tally will disagree with the
-     * resolver, which is ticket #1257.
+     * Whether this member casts a ballot on EVERY OTHER instrument (leadership,
+     * sanctions, aid, dues, directives, posture, agency funds, and free-trade
+     * agreements, which only its own named parties vote on). Wider than
+     * `hasVote`: render the one matching the ballot or the tally will
+     * disagree with the resolver.
      */
     hasPolicyVote: boolean;
     /** Whether the game models it as a country with a treasury to pay into. */
@@ -106,10 +104,9 @@ export interface OrgSummary {
     currencyCountryId: CountryId;
     /**
      * ₳ (≈ era USD) per one unit of the fund's currency, resolved SERVER-SIDE
-     * for the active era (refs #3778). The client must not re-derive this from
-     * `COUNTRY_CONFIGS`: those values are modern/1979 and would misprice USD
-     * agency-catalog costs in a 1953 world. Optional so older cached payloads
-     * and test fixtures degrade to the 1.0 anchor passthrough.
+     * for the active era. Do not re-derive from `COUNTRY_CONFIGS`: those are
+     * modern/1979 and would misprice USD costs in a 1953 world. Optional so
+     * older cached payloads and fixtures degrade to the 1.0 anchor passthrough.
      */
     usdToFundRate?: number;
   };
@@ -132,14 +129,12 @@ export interface OrgWorldResponse {
   organizations: OrgSummary[];
   currentTurn: number;
   proposalVotingWindowTurns: number;
-  /** Whether bloc alignment is switched on; gates the per-org Influence tab. */
-  intOrgAlignmentEnabled?: boolean;
 }
 
 /**
  * The country the viewer may act for in organisations. Every action route
  * requires the foreign-affairs seat itself, so a head of government without
- * it sees organisations read-only (#5115).
+ * it sees organisations read-only.
  */
 export function actingCountryOf(viewer: OrgViewerInfo | null): CountryId | null {
   return viewer?.foreignMinisterOf ?? null;
@@ -196,9 +191,3 @@ export function orgProposingCountry(
     null
   );
 }
-
-export const VOTE_LABELS: Record<ProposalVote, string> = {
-  yes: "Yes",
-  no: "No",
-  abstain: "Abstain",
-};

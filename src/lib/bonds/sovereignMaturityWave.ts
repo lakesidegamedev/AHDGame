@@ -19,6 +19,9 @@ import {
   type SovereignMaturityRetirementFigures,
 } from "@/lib/bonds/sovereignMaturityRetirement";
 import type { SovereignMaturityCashLeg } from "@/lib/bonds/sovereignMaturityPayoutTargets";
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { treasuryPaymentWitness } from "@/lib/budget/treasuryPaymentWitness";
 
 /** Everything one sovereign maturity settles, built before any money moves. */
 export interface SovereignMaturityPlan {
@@ -53,11 +56,9 @@ export interface SovereignMaturityWaveReceipt {
 }
 
 /**
- * One projected budget read answers both questions the settlement used to ask
- * once per bond: does this Treasury already hold bank claims, and how much
- * spendable cash did it have when the phase reached this point. One read on the
- * status/kind index finds the maturities a crash left half-applied; partial
- * receipts are rare.
+ * One projected budget read answers both questions the settlement needs per
+ * bond: whether the Treasury holds bank claims, and its spendable cash at this
+ * phase. Partial receipts from a crash are rare.
  */
 export async function loadSovereignMaturityWave(
   db: Db,
@@ -79,19 +80,17 @@ export async function loadSovereignMaturityWave(
     ),
   ];
   const [budgetRows, partialReceipts] = await Promise.all([
-    db
-      .collection<{
-        _id: string;
-        treasuryCashLocal?: number | null;
-        bankSovereignClaims?: Array<{ id?: string }>;
-      }>("federalBudget")
+    federalBudgetCollection<{
+      _id: string;
+      treasuryCashLocal?: number | null;
+      bankSovereignClaims?: Array<{ id?: string }>;
+    }>(db)
       .find(
         { _id: { $in: dueBudgetIds } },
         { projection: { _id: 1, treasuryCashLocal: 1, "bankSovereignClaims.id": 1 } }
       )
       .toArray(),
-    db
-      .collection<{ _id: string }>("bankMoneyMoves")
+    bankMoneyMovesCollection<{ _id: string }>(db)
       .find(
         {
           status: "partial",
@@ -130,16 +129,15 @@ export function sovereignMaturityWaveKey(
  * at all.
  */
 async function loadPartialWaveReceipts(db: Db, wave: SovereignMaturityWave): Promise<void> {
-  const rows = await db
-    .collection<{
-      _id: string;
-      legs?: Array<{
-        kind?: string;
-        collection?: string;
-        path?: string;
-        filter?: { _id?: unknown };
-      }>;
-    }>("bankMoneyMoves")
+  const rows = await bankMoneyMovesCollection<{
+    _id: string;
+    legs?: Array<{
+      kind?: string;
+      collection?: string;
+      path?: string;
+      filter?: { _id?: unknown };
+    }>;
+  }>(db)
     .find(
       { _id: { $regex: "^sovereign-maturity-wave:" }, status: "partial" },
       {
@@ -477,6 +475,17 @@ export function sovereignMaturityWaveFundingTransition(input: {
         update: { $inc: { treasuryBalance: -totalLocal } },
         note: "Record funded sovereign principal payment in signed fiscal position",
       },
+      ...treasuryPaymentWitness({
+        key: sovereignMaturityWaveKey(wave.countryId, turn, "fund"),
+        country: wave.countryId,
+        currency: wave.currencyCode,
+        amount: totalLocal,
+        rate: wave.localPerAnchor,
+        turn,
+        signedPositionOwned: true,
+        txType: "gov_bond_maturity_payment",
+        now: input.now,
+      }),
     ],
     event: {
       kind: "monetary.executed",

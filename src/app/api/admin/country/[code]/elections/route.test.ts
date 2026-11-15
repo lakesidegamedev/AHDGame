@@ -5,7 +5,7 @@ import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({ requireAdmin: vi.fn() }));
-vi.mock("@/lib/turn/perpetualElections", () => ({ DEFAULT_DURATIONS }));
+vi.mock("@/lib/elections/scheduling", () => ({ DEFAULT_DURATIONS }));
 
 describe("country election timer PATCH", () => {
   const now = new Date("2026-10-29T12:00:00Z");

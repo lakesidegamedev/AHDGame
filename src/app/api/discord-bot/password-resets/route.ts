@@ -6,7 +6,8 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_READ_LIMITS } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
-import { PASSWORD_RESETS_COLLECTION, type PasswordResetDoc } from "@/lib/passwordReset";
+import { type PasswordResetDoc } from "@/lib/passwordReset";
+import { passwordResetsCollection } from "@/lib/db/repositories/passwordResets";
 
 // GET /api/discord-bot/password-resets - Returns queued, undelivered, still-valid password reset links for the bot to DM.
 // Auth: requireBotToken (private key only)
@@ -26,8 +27,7 @@ export async function GET(request: Request) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();
-    const docs = await db
-      .collection<PasswordResetDoc>(PASSWORD_RESETS_COLLECTION)
+    const docs = await passwordResetsCollection<PasswordResetDoc>(db)
       .find({
         "discordDelivery.queuedAt": { $ne: null },
         "discordDelivery.deliveredAt": null,
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const result = await db.collection<PasswordResetDoc>(PASSWORD_RESETS_COLLECTION).updateMany(
+    const result = await passwordResetsCollection<PasswordResetDoc>(db).updateMany(
       {
         _id: { $in: parsed.data.ids.map((id) => new ObjectId(id)) },
         "discordDelivery.deliveredAt": null,

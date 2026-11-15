@@ -2,16 +2,18 @@ import { describe, expect, it } from "vitest";
 import { getScotusPresetSeed } from ".";
 import { SCOTUS_2027_DEFAULT_SEED } from "./2027";
 
+// Fictional bench: seat order, leans and counts follow the reviewed roster,
+// names do not.
 const EXPECTED_JUSTICES = [
-  "John Roberts",
-  "Clarence Thomas",
-  "Amy Coney Barrett",
-  "Ketanji Brown Jackson",
-  "Samuel Alito",
-  "Sonia Sotomayor",
-  "Elena Kagan",
-  "Neil Gorsuch",
-  "Brett Kavanaugh",
+  "Jonathan Rowe",
+  "Calvin Thornton",
+  "Margaret Ellison Cole",
+  "Kendra Brooks Jamison",
+  "Salvatore Amato",
+  "Sofia Valdemoro",
+  "Elise Kaminski",
+  "Nathan Gorham",
+  "Bradley Keegan",
 ];
 
 describe("SCOTUS_2027_DEFAULT_SEED", () => {

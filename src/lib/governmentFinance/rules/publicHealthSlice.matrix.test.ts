@@ -6,8 +6,8 @@ import type { ProgramAccountInput } from "./types";
 function fixture(overrides: Partial<ProgramAccountInput> = {}): ProgramAccountInput {
   return {
     programId: "us_public_health_workforce",
-    legislationTypeId: "us_public_health",
-    policyOptionId: "public_health_opt_1",
+    legislationTypeId: "us.health.prevention.primary",
+    policyOptionId: "l4",
     status: "authorized",
     priority: 6,
     openingBalance: 0,

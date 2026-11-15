@@ -12,9 +12,9 @@
 
 import type { Db, ObjectId as MongoObjectId } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, Landesliste } from "@/lib/db/types";
-
-const COLLECTION = "landeslisten";
+import type { Landesliste } from "@/lib/db/types";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { landeslistenCollection } from "@/lib/db/repositories/landeslisten";
 
 /**
  * Auto-generate a Landesliste for a party + Land by ranking party members
@@ -36,7 +36,7 @@ export async function autoGenerateLandesliste(
 ): Promise<Landesliste> {
   const { partyId, landId, cycle, preserveExisting = false } = params;
 
-  const existing = await db.collection<Landesliste>(COLLECTION).findOne({
+  const existing = await landeslistenCollection<Landesliste>(db).findOne({
     countryId: "DE",
     partyId,
     landId,
@@ -48,8 +48,7 @@ export async function autoGenerateLandesliste(
 
   // Rank party members in this Land by NPI descending; tie-break by ObjectId
   // (stable-ish ordering across runs).
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find(
       { countryId: "DE", party: partyId, homeState: landId },
       { projection: { _id: 1, nationalInfluence: 1 } }
@@ -68,7 +67,7 @@ export async function autoGenerateLandesliste(
 
   const now = new Date();
   if (existing) {
-    await db.collection<Landesliste>(COLLECTION).updateOne(
+    await landeslistenCollection<Landesliste>(db).updateOne(
       { _id: existing._id },
       {
         $set: {
@@ -90,7 +89,7 @@ export async function autoGenerateLandesliste(
     createdAt: now,
     updatedAt: now,
   };
-  await db.collection<Landesliste>(COLLECTION).insertOne(doc);
+  await landeslistenCollection<Landesliste>(db).insertOne(doc);
   return doc;
 }
 
@@ -113,7 +112,7 @@ export async function reorderLandesliste(
 ): Promise<Landesliste> {
   const { partyId, landId, cycle, candidates, authoredBy } = params;
 
-  const existing = await db.collection<Landesliste>(COLLECTION).findOne({
+  const existing = await landeslistenCollection<Landesliste>(db).findOne({
     countryId: "DE",
     partyId,
     landId,
@@ -135,8 +134,7 @@ export async function reorderLandesliste(
     throw new Error("Landesliste cannot contain duplicate candidates");
   }
 
-  const validMembers = await db
-    .collection<Character>("characters")
+  const validMembers = await charactersCollection(db)
     .find(
       { countryId: "DE", party: partyId, homeState: landId, _id: { $in: dedup } },
       { projection: { _id: 1 } }
@@ -150,7 +148,7 @@ export async function reorderLandesliste(
   }
 
   const now = new Date();
-  await db.collection<Landesliste>(COLLECTION).updateOne(
+  await landeslistenCollection<Landesliste>(db).updateOne(
     { _id: existing._id },
     {
       $set: {
@@ -177,9 +175,10 @@ export async function lockLandesliste(
   params: { partyId: string; landId: string; cycle: number }
 ): Promise<void> {
   const { partyId, landId, cycle } = params;
-  await db
-    .collection<Landesliste>(COLLECTION)
-    .updateOne({ countryId: "DE", partyId, landId, cycle }, { $set: { lockedAt: new Date() } });
+  await landeslistenCollection<Landesliste>(db).updateOne(
+    { countryId: "DE", partyId, landId, cycle },
+    { $set: { lockedAt: new Date() } }
+  );
 }
 
 /**
@@ -189,8 +188,7 @@ export async function lockLandesliste(
  * before the list is consumed by the AMS resolver.
  */
 export async function generateLandeslistenForCycle(db: Db, cycle: number): Promise<void> {
-  const members = await db
-    .collection<Character>("characters")
+  const members = await charactersCollection(db)
     .find({ countryId: "DE" }, { projection: { _id: 1, party: 1, homeState: 1 } })
     .toArray();
 
@@ -220,7 +218,7 @@ export async function getLandesliste(
   params: { partyId: string; landId: string; cycle: number }
 ): Promise<Landesliste | null> {
   const { partyId, landId, cycle } = params;
-  return db.collection<Landesliste>(COLLECTION).findOne({
+  return landeslistenCollection<Landesliste>(db).findOne({
     countryId: "DE",
     partyId,
     landId,

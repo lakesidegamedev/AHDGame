@@ -7,21 +7,18 @@ import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { ObjectId, type Db, type Document } from "mongodb";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { deriveLedgerEntries } from "@/lib/ledger/deriveFromTx";
 import { finalizeLedgerEntry } from "@/lib/ledger/emit";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { buildTxDocs, loadAnchorRateMap, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import type { TxInput } from "@/lib/financialTxLog/emit";
-import {
-  claimMoneyMove,
-  MONEY_MOVE_COLLECTION,
-  SETTLED_KEYS_CAP,
-  SETTLED_KEYS_FIELD,
-  legStamp,
-} from "./moneyMove";
+import { claimMoneyMove, SETTLED_KEYS_CAP, SETTLED_KEYS_FIELD, legStamp } from "./moneyMove";
 import type { SettlementResult } from "./settlementJournal";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 interface Credit {
   characterId: ObjectId;
@@ -74,7 +71,7 @@ export async function settleLegacyDepositInterest(
     shortfall?: number;
   }
 ): Promise<LegacyInterestResult> {
-  const journal = db.collection<InterestRecord>(MONEY_MOVE_COLLECTION);
+  const journal = bankMoneyMovesCollection<InterestRecord>(db);
   let original = await journal.findOne({ _id: input.key });
   if (!original && input.credits.length) {
     const paid = input.credits.reduce((sum, credit) => sum + credit.amount, 0);
@@ -107,9 +104,7 @@ export async function settleLegacyDepositInterest(
       loadTxThresholds(db),
       loadTurnLengthMinutes(db),
       loadAnchorRateMap(db, entries),
-      db
-        .collection<GameConfig>("gameConfig")
-        .findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } }),
+      gameConfigCollection(db).findOne({ _id: "default" }, { projection: { ledgerShadow: 1 } }),
     ]);
     const receipts = buildTxDocs(entries, thresholds, cadence, rates).map((entry, i) => {
       entry._id = new ObjectId(
@@ -206,8 +201,7 @@ async function deliverLegacyDepositInterest(
     newlyCredited: new Map(),
   };
   if (record.status === "applied") return result;
-  const recipients = await db
-    .collection<InterestBalanceDocument>("characters")
+  const recipients = await charactersCollection<InterestBalanceDocument>(db)
     .find(
       { _id: { $in: plan.credits.map((credit) => credit.characterId) } },
       { projection: { [SETTLED_KEYS_FIELD]: 1 } }
@@ -217,7 +211,7 @@ async function deliverLegacyDepositInterest(
   if (before.size !== plan.credits.length)
     throw new Error("Legacy interest recipient missing; original allocation retained for recovery");
   const bankStamp = legStamp(record._id, 0);
-  const bank = db.collection<InterestBalanceDocument>("corporations");
+  const bank = corporationsCollection<InterestBalanceDocument>(db);
   const debited = await bank.updateOne(
     {
       ...plan.bankGuard,
@@ -261,7 +255,7 @@ async function deliverLegacyDepositInterest(
     for (const credit of incomeCredits)
       netCreditsByCharacter.set(credit.characterId.toHexString(), credit.net);
   } else {
-    await db.collection<InterestBalanceDocument>("characters").bulkWrite(
+    await charactersCollection<InterestBalanceDocument>(db).bulkWrite(
       plan.credits.map((credit, i) => ({
         updateOne: {
           filter: {
@@ -286,8 +280,7 @@ async function deliverLegacyDepositInterest(
       { ordered: false }
     );
   }
-  const after = await db
-    .collection<InterestBalanceDocument>("characters")
+  const after = await charactersCollection<InterestBalanceDocument>(db)
     .find(
       { _id: { $in: plan.credits.map((credit) => credit.characterId) } },
       { projection: { [SETTLED_KEYS_FIELD]: 1 } }
@@ -306,7 +299,7 @@ async function deliverLegacyDepositInterest(
   }
   await persistReceipts(db, "financialTxLog", plan.receipts);
   await persistReceipts(db, "ledgerEntries", plan.ledgerReceipts);
-  await db.collection<InterestRecord>(MONEY_MOVE_COLLECTION).updateOne(
+  await bankMoneyMovesCollection<InterestRecord>(db).updateOne(
     { _id: record._id },
     {
       $set: {
@@ -345,7 +338,7 @@ async function persistReceipts(db: Db, collection: string, receipts: Document[])
 
 /** The journal worker uses this path, never a per-leg reinterpretation of the batch. */
 export async function resumeLegacyDepositInterest(db: Db, key: string): Promise<SettlementResult> {
-  const record = await db.collection<InterestRecord>(MONEY_MOVE_COLLECTION).findOne({ _id: key });
+  const record = await bankMoneyMovesCollection<InterestRecord>(db).findOne({ _id: key });
   const empty: SettlementResult = {
     key,
     status: "partial",

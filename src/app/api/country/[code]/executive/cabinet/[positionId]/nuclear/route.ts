@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: NuclearRouteParams) {
     const year = resolveGameYear(gs ?? {});
     const [program, eligibility] = await Promise.all([
       getNuclearProgram(db, countryId),
-      resolveEligibility(db, countryId, gs?.coldWarEnabled === true),
+      resolveEligibility(db, countryId),
     ]);
 
     return NextResponse.json({

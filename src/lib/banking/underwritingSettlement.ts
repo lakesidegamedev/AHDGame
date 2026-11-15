@@ -7,9 +7,10 @@ import {
   type PrimaryUnderwritingOffer,
 } from "./underwritingTypes";
 import { quotePrimaryUnderwritingFee } from "./rules/underwriting";
-import { MONEY_MOVE_COLLECTION } from "./moneyMove";
 import { resumeSettlement, settleTransition, type SettlementResult } from "./settlementJournal";
 import { oid, type BankingTransition, type TransitionProjection } from "./rules/boundary";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 function recipientCurrencySnapshotFilter(
   snapshot: PrimaryUnderwritingCurrencySnapshot
@@ -44,7 +45,7 @@ async function acquireIssuerUnderwritingReceiptLease(
   turn: number,
   now: Date
 ): Promise<boolean> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const acquired = await corporations.updateOne(
     {
       _id: issuerId,
@@ -103,7 +104,7 @@ export async function resumeFoundingUnderwritingPlans(
   db: Db,
   now = new Date()
 ): Promise<{ completed: number; pending: number; aborted: number }> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const issuers = await corporations
     .find({ "foundingIpoUnderwritingPending.offer.instrumentId": { $exists: true } })
     .sort({ foundedAtTurn: 1 })
@@ -157,9 +158,10 @@ export async function resumeFoundingUnderwritingPlans(
     if (!pending) continue;
     const { offer, instrumentProjection } = pending;
     const key = primaryUnderwritingSettlementKey("equity", offer.instrumentId, pending.turn);
-    const existingJournal = await db
-      .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-      .findOne({ _id: key }, { projection: { _id: 1 } });
+    const existingJournal = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+      { _id: key },
+      { projection: { _id: 1 } }
+    );
     if (existingJournal) {
       const resumed = await resumeSettlement(db, key);
       if (resumed.status === "applied" || resumed.status === "replayed") result.completed++;
@@ -221,7 +223,7 @@ export async function resumePrimaryUnderwritingLeases(
   db: Db,
   turn: number
 ): Promise<Array<{ key: string; error?: string }>> {
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const banks = await corporations
     .find({ "bankUnderwritingFunding.turn": { $lt: turn } })
     .sort({ "bankUnderwritingFunding.turn": 1 })
@@ -317,9 +319,10 @@ export async function settlePrimaryUnderwritingFill(
 ): Promise<SettlementResult> {
   const { bank, issuer, offer, instrumentId, turn, now } = input;
   const key = primaryUnderwritingSettlementKey(offer.instrumentType, instrumentId, turn);
-  const priorClaim = await db
-    .collection<{ _id: string }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: key }, { projection: { _id: 1 } });
+  const priorClaim = await bankMoneyMovesCollection<{ _id: string }>(db).findOne(
+    { _id: key },
+    { projection: { _id: 1 } }
+  );
   if (priorClaim) return resumeSettlement(db, key);
 
   const quote = quotePrimaryUnderwritingFee({
@@ -372,7 +375,7 @@ export async function settlePrimaryUnderwritingFill(
     poolCollection: input.poolCollection,
     instrumentProjection: input.instrumentProjection,
   } as const;
-  const corporations = db.collection<Corporation>("corporations");
+  const corporations = corporationsCollection(db);
   const acquired = await corporations.updateOne(
     {
       _id: bank._id,

@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+import { validateCatalog } from "@/lib/politicalLegislation/validate";
+import { DE_LAWS } from "./deLaws";
+
+describe("DE law book", () => {
+  it("passes the full catalog validator", () => {
+    expect(validateCatalog(DE_LAWS, "DE")).toEqual([]);
+  });
+
+  it("carries 63 primaries, 41 secondaries and 6 tax laws", () => {
+    expect(DE_LAWS.filter((l) => l.kind === "primary")).toHaveLength(63);
+    expect(DE_LAWS.filter((l) => l.kind === "secondary")).toHaveLength(41);
+    expect(DE_LAWS.filter((l) => l.kind === "tax")).toHaveLength(6);
+  });
+
+  it("uses no em or en dashes in player copy", () => {
+    const copy = DE_LAWS.flatMap((l) => [
+      l.title,
+      l.description,
+      ...(l.levels ?? []).flatMap((lv) => [lv.name, lv.description]),
+      ...(l.taxPolicy?.waypoints ?? []).map((w) => w.label),
+    ]);
+    expect(copy.filter((s) => /[–—]/.test(s))).toEqual([]);
+  });
+
+  it("opens every price level above the previous one", () => {
+    for (const law of DE_LAWS.filter((l) => l.levels)) {
+      const cost = (i: number) =>
+        (law.levels![i].gdpCostFraction ?? 0) + (law.levels![i].incomeCostFraction ?? 0);
+      for (let i = 2; i < 5; i++) expect(cost(i), law.id).toBeGreaterThanOrEqual(cost(i - 1));
+    }
+  });
+});

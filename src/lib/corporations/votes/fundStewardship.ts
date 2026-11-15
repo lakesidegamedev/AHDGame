@@ -1,37 +1,27 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, IndexFund, IndexFundPosition, Shareholder } from "@/lib/db/types";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
+import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
 /**
  * Index-fund stewardship: how a fund votes the shares it holds.
  *
- * Funds hold real stakes and those stakes already count in `totalVotingPower`,
- * which is the denominator every pass threshold is measured against. But the
- * vote path only ever accepted `character` and `corporation` voters, so a fund's
- * shares could never be cast. The effect was that funds DILUTED every corporate
- * vote and decided none: the more of a company an index fund absorbed, the
- * harder it became for its actual owners to pass anything, and the closer the
- * corporation drifted toward permanent deadlock.
+ * Fund shares already count in `totalVotingPower`, the denominator every pass
+ * threshold is measured against, but the vote path only accepted `character`
+ * and `corporation` voters. Uncast, fund shares diluted every corporate vote
+ * toward permanent deadlock. A fund has no opinion, so its ballot is:
  *
- * A fund is not a person and has no opinion, so its ballot has to come from
- * somewhere principled:
- *
- *  1. **Directed** - a unit holder large enough to control the fund's mandate
- *     (>= `STEWARDSHIP_DIRECTION_THRESHOLD` of units) has their instruction
- *     followed. This is the route by which buying fund units becomes a route to
- *     corporate influence, which is the point of the feature. Instructions are
- *     written per vote by the fund-direction route and read back through
- *     `fundDirectionsFrom`; directorship is re-verified HERE at resolve time,
- *     so an instruction from someone who has since sold down does not bind and
- *     does not transfer to whoever bought control after it was given.
- *  2. **Mirror** — otherwise the fund votes with the majority of the votes
- *     actually cast by everyone else. A passive fund follows the owners rather
- *     than overriding them, so it stops being a blocking stake without becoming
- *     a kingmaker.
- *  3. **Abstain** — if nobody else voted, there is no majority to mirror and no
- *     director, so the fund's shares sit out AND come out of the denominator
- *     (see `stewardshipBallot`). Leaving them in would recreate the deadlock
- *     this fixes.
+ *  1. **Directed** - a holder with >= `STEWARDSHIP_DIRECTION_THRESHOLD` of
+ *     units directs the vote via `fundDirectionsFrom`. Directorship is
+ *     re-verified here at resolve time, so a stale instruction does not bind
+ *     and does not transfer to a new controller.
+ *  2. **Mirror** - otherwise the fund votes with the majority of other votes
+ *     actually cast, so it stops being a blocking stake without becoming a
+ *     kingmaker.
+ *  3. **Abstain** - if nobody else voted there is no majority to mirror and no
+ *     director, so the fund's shares sit out and leave the denominator (see
+ *     `stewardshipBallot`); leaving them in would recreate the deadlock.
  */
 
 /** Share of a fund's units that lets a holder direct its stewardship vote. */
@@ -104,8 +94,7 @@ export async function loadFundDirector(
   db: Db,
   fundId: ObjectId
 ): Promise<{ holderId: ObjectId; unitShare: number } | null> {
-  const positions = await db
-    .collection<IndexFundPosition>("indexFundPositions")
+  const positions = await indexFundPositionsCollection(db)
     .find(
       { fundId, units: { $gt: 0 } },
       { projection: { holderKind: 1, characterId: 1, units: 1 } }
@@ -217,8 +206,7 @@ export async function directableFundsFor(
   }
   if (directable.length === 0) return [];
 
-  const funds = await db
-    .collection<IndexFund>("indexFunds")
+  const funds = await indexFundsCollection(db)
     .find(
       { _id: { $in: directable.map((d) => d.stake.fundId) } },
       { projection: { name: 1, tickerSymbol: 1 } }

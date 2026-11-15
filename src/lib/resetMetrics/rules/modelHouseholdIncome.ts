@@ -18,6 +18,7 @@ import type {
   HouseholdFiscalControls,
   HouseholdIncomeModel,
 } from "./householdSources";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface HouseholdModelActivity {
   regionId: string;
@@ -138,7 +139,7 @@ export function modelHouseholdIncome(input: {
     )
       return fail("unmodeled-current-property-levy");
     if (
-      input.countryId === "UK" &&
+      countryHasFeature("ukSeeds", input.countryId) &&
       now?.regionalTaxes &&
       [
         now.regionalTaxes.incomeTax,
@@ -171,17 +172,21 @@ export function modelHouseholdIncome(input: {
       (!ref.calibration || !Number.isFinite(now.annualHouseholdLevy) || now.annualHouseholdLevy < 0)
     )
       return fail("invalid-current-regional-household-levy");
-    if (input.countryId !== "UK" && !now.regionalTaxes && now.annualHouseholdLevy === undefined)
+    if (
+      !countryHasFeature("ukSeeds", input.countryId) &&
+      !now.regionalTaxes &&
+      now.annualHouseholdLevy === undefined
+    )
       return fail("missing-regional-income-tax-rates");
     if (
-      input.countryId === "JP" &&
+      countryHasFeature("jpSeeds", input.countryId) &&
       now.annualHouseholdLevy === undefined &&
       !Number.isFinite(now.regionalTaxes?.residentTax)
     )
       return fail("missing-regional-resident-tax");
-    if (input.countryId === "US" && !completeRates(now.regionalTaxes))
+    if (countryHasFeature("usSeeds", input.countryId) && !completeRates(now.regionalTaxes))
       return fail("missing-regional-income-tax-rates");
-    if (input.countryId === "US") {
+    if (countryHasFeature("usSeeds", input.countryId)) {
       try {
         for (const tier of INCOME_TIERS) incomeTaxRate(now.regionalTaxes!, tier);
       } catch {
@@ -275,9 +280,10 @@ export function modelHouseholdIncome(input: {
       const tier = earnedIncomeTier(c.marketIncome / Math.max(1, c.adults), median);
       const regional = activity.get(c.regionId)!.regionalTaxes;
       const regionalRate =
-        input.countryId === "UK" || activity.get(c.regionId)!.annualHouseholdLevy !== undefined
+        countryHasFeature("ukSeeds", input.countryId) ||
+        activity.get(c.regionId)!.annualHouseholdLevy !== undefined
           ? 0
-          : input.countryId === "JP"
+          : countryHasFeature("jpSeeds", input.countryId)
             ? regional!.residentTax!
             : incomeTaxRate(regional!, tier);
       if (!Number.isFinite(regionalRate) || regionalRate < 0 || regionalRate > 100)

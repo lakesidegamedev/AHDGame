@@ -1,4 +1,5 @@
 "use client";
+import { displayCanadianRegionCode } from "@/lib/countries/ca/regionCodes";
 
 import { useBlendGround } from "@/components/blend/useBlendGround";
 import { useEffect, useMemo, useState } from "react";
@@ -31,6 +32,7 @@ import {
   PRESIDENTIAL_EV_NEEDED,
   resolvePresidentialWinnerCandidateId,
 } from "@/lib/elections/presidentialResolutionDisplay";
+import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 
 export interface ResultsBlendViewProps {
   data: ElectionResultsResponse;
@@ -176,7 +178,7 @@ function TileBoard({ vm, columns }: { vm: ResultsBlendVM; columns: number }) {
           }}
         >
           <span style={{ fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 700 }}>
-            {t.stateId}
+            {displayCanadianRegionCode(t.stateId)}
           </span>
           <span style={{ fontFamily: FONT.mono, fontSize: 9, opacity: 0.75 }}>{t.ev}</span>
         </div>
@@ -303,7 +305,7 @@ export function ResultsBlendView({
   // Race replay: the concluded race week by week, from the payload's per-state
   // snapshots. Null while showing the final result.
   const replayTurnList = useMemo(() => (election ? replayTurns(election) : []), [election]);
-  const canReplay = data.election.countryId === "US" && replayTurnList.length > 1;
+  const canReplay = countryHasFeature("usUi", data.election.countryId) && replayTurnList.length > 1;
   const [replay, setReplay] = useState<{
     index: number;
     playing: boolean;
@@ -379,7 +381,7 @@ export function ResultsBlendView({
         }}
       >
         <button type="button" onClick={() => sort("state")} style={headStyle(sortBy === "state")}>
-          {vm.sortLabels.state}
+          {displayCanadianRegionCode(vm.sortLabels.state)}
         </button>
         <button type="button" onClick={() => sort("ev")} style={headStyle(sortBy === "ev", true)}>
           {vm.sortLabels.ev}
@@ -555,7 +557,7 @@ export function ResultsBlendView({
             />
           }
           strip={
-            data.election.countryId === "US" ? (
+            countryHasFeature("usUi", data.election.countryId) ? (
               <>
                 {replay && frame ? (
                   <ReplayControls

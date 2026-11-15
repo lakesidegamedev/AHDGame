@@ -8,6 +8,16 @@ import {
   type TallyRecord,
   type SnapshotRecord,
 } from "./rules/electionTurnoverRecords";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import type { Document } from "mongodb";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { seedDiagnosticsCollection } from "@/lib/db/repositories/seedDiagnostics";
+import { parliamentSeatsHistoryCollection } from "@/lib/db/repositories/parliamentSeatsHistory";
+import { simRunsCollection } from "@/lib/db/repositories/simRuns";
+import { electionResultSnapshotsCollection } from "@/lib/db/repositories/electionResultSnapshots";
 type ElectionRow = Omit<ElectionRecord, "_id"> & { _id: ObjectId; status: string };
 type CandidateRow = Omit<CandidateRecord, "_id" | "electionId" | "characterId" | "nppId"> & {
   _id: ObjectId;
@@ -24,8 +34,7 @@ export interface ElectionTurnoverWindow {
   electionFamily?: string;
 }
 export async function collectElectionTurnoverReport(db: Db, window: ElectionTurnoverWindow = {}) {
-  const elections = await db
-    .collection<ElectionRow>("elections")
+  const elections = await electionsCollection<ElectionRow>(db)
     .find(
       {
         status: "resolved",
@@ -66,8 +75,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
   const ids = elections.map((election) => election._id);
   const [tallies, candidates, snapshots, history, gameState, config, runs, seedDiagnostics] =
     await Promise.all([
-      db
-        .collection<TallyRow>("electionVoteTallies")
+      electionVoteTalliesCollection<TallyRow>(db)
         .find(
           { electionId: { $in: ids } },
           {
@@ -85,15 +93,13 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           }
         )
         .toArray(),
-      db
-        .collection<CandidateRow>("electionCandidates")
+      electionCandidatesCollection<CandidateRow>(db)
         .find(
           { electionId: { $in: ids } },
           { projection: { electionId: 1, party: 1, isNPP: 1, characterId: 1, nppId: 1 } }
         )
         .toArray(),
-      db
-        .collection<SnapshotRow>("electionResultSnapshots")
+      electionResultSnapshotsCollection<SnapshotRow>(db)
         .find(
           { electionId: { $in: ids } },
           {
@@ -107,8 +113,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           }
         )
         .toArray(),
-      db
-        .collection("parliamentSeatsHistory")
+      parliamentSeatsHistoryCollection<Document>(db)
         .aggregate([
           { $match: { officeType: { $nin: ["president", "vicePresident"] } } },
           {
@@ -125,7 +130,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           { $sort: { "_id.countryId": 1, "_id.officeType": 1 } },
         ])
         .toArray(),
-      db.collection("gameState").findOne(
+      gameStateCollection<Document>(db).findOne(
         { _id: "current" as never },
         {
           projection: {
@@ -138,14 +143,11 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
           },
         }
       ),
-      db
-        .collection("gameConfig")
-        .findOne(
-          { _id: "default" as never },
-          { projection: { preset: 1, redistrictingEnabled: 1 } }
-        ),
-      db
-        .collection("simRuns")
+      gameConfigCollection<Document>(db).findOne(
+        { _id: "default" as never },
+        { projection: { preset: 1, redistrictingEnabled: 1 } }
+      ),
+      simRunsCollection<Document>(db)
         .find(
           {},
           {
@@ -164,8 +166,7 @@ export async function collectElectionTurnoverReport(db: Db, window: ElectionTurn
         .sort({ startedAt: -1 })
         .limit(1)
         .toArray(),
-      db
-        .collection("seedDiagnostics")
+      seedDiagnosticsCollection<Document>(db)
         .find(
           { mode: "conformance", trigger: "worldsim-post-bootstrap" },
           { projection: { _id: 0, featureManifest: 1 } }

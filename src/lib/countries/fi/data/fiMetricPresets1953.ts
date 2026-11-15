@@ -1,22 +1,15 @@
 /**
- * Finland 1953 metric overlays — postwar republic / war-reparations industrialisation.
+ * Finland 1953 metric overlays , postwar republic / war-reparations industrialisation.
  *
- * Base `fiStateMetrics` is authored on ~1979 (late Kekkonen) values. Without this
- * overlay a 1953-default world keeps 1979 life expectancy (~72.9) and urban welfare
- * metrics, flattening the fact that 1953 Finland was still majority-rural with life
- * expectancy near 67 (Statistics Finland / UN Demographic Yearbook 1950-55) and a
- * young baby-boom pyramid. Region ids match `fiRegionCensusData1953`.
+ * Base `fiStateMetrics` is authored on ~1979 values; without this overlay a
+ * 1953-default world keeps 1979 life expectancy (~72.9) and urban welfare
+ * metrics. 1953 Finland was majority-rural with life expectancy near 67.
+ * Region ids match `fiRegionCensusData1953`.
  *
- * `medianIncome` is annual household OLD markka (pre-1963 100:1 redenomination,
- * matching the budget's own huge nominal scale — mk 790B / 4.15M = mk 190,361
- * per capita), re-derived (#income-gdp-scale-audit) against that GDP/capita
- * rather than Maddison-scaled off the 1979 nominal figure — the old method
- * (the same mistake diagnosed and fixed for FR/ES/TR) measured out at ratio
- * 0.108x GDP/capita (medianIncomeGdpScale1953.test.ts band is [0.8, 2.6]),
- * badly UNDER-scaled by roughly the redenomination factor. Re-authored ~14x
- * higher (ratio ~1.5). Broadband/internet did not exist.
- * `population.birthRate` is the 0–100 fertility INDEX (metricDefinitions) —
- * Finland's mid-1950s TFR ≈2.9–3.0 maps to the high-50s/low-60s of that index.
+ * `medianIncome` is annual household OLD markka (pre-1963 100:1 redenomination),
+ * derived from the budget's own GDP/capita rather than Maddison-scaled off the
+ * 1979 nominal figure (see medianIncomeGdpScale1953.test.ts band [0.8, 2.6]).
+ * `population.birthRate` is the 0,100 fertility INDEX (metricDefinitions).
  */
 import type { MetricPresetBundle } from "@/lib/seeds/ie/ieMetricPresets";
 

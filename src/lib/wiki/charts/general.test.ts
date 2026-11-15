@@ -8,7 +8,7 @@ import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
 import { calculateNationalInfluenceGain } from "@shared/constants/formulas";
 import { JP_SHUGIIN_SEATS, JP_SANGIIN_SEATS } from "@/lib/countries/jp/data/jpSeats";
-import { BUNDESTAG_VOTE_THRESHOLD } from "@/lib/turn/election/sainteLagueAllocation";
+import { BUNDESTAG_VOTE_THRESHOLD } from "@/lib/elections/resolution/sainteLagueAllocation";
 import { INITIAL_CONFIDENCE, MAX_CONFIDENCE } from "@/lib/onePartyState/rulingPartyConfidence";
 import { DD_VOLKSKAMMER_1953 } from "@/lib/constants/historicalSeats";
 import { statRollAdjustment } from "@/lib/events/substrate/rollAdjustment";

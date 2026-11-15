@@ -11,6 +11,7 @@ import {
   buildStatePartyOrgAnalytics,
 } from "@/lib/partyAnalytics";
 import { regionPartyUrl } from "@/lib/urls";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 // GET /api/country/[code]/region/[id]/party/[partyId]/analytics — Scoped state-party analytics for org, discipline, and slate
 // Auth: requireAuth (party members in-state, national party leadership, or admin only)
@@ -31,7 +32,7 @@ export async function GET(
 
     const db = await getDb();
     const [state, party] = await Promise.all([
-      db.collection<State>("states").findOne({ _id: id, countryId }),
+      statesCollection(db).findOne({ _id: id, countryId }),
       findPartyBySequentialId(db, partyId, countryId),
     ]);
 

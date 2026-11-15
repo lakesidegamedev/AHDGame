@@ -10,6 +10,10 @@ import {
   transferResetV2LawToIreland,
   transferResetV2MetricToIreland,
 } from "./rules/resetV2Transfer";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { resetMetricSnapshotsCollection } from "@/lib/db/repositories/resetMetricSnapshots";
+import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawOpeningBoards";
+import { resetRegionalOpeningBoardsCollection } from "@/lib/db/repositories/resetRegionalOpeningBoards";
 
 /** Move Northern Ireland's world-bound v2 regional boards into Ireland. */
 export async function transferResetV2RegionToIreland(
@@ -18,10 +22,11 @@ export async function transferResetV2RegionToIreland(
   scale = 1
 ): Promise<void> {
   if (regionId !== "NIR") return;
-  const gameState = await db.collection<GameState>("gameState").findOne(
+  const gameState = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
+        preset: 1,
         resetWorldId: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
@@ -41,9 +46,9 @@ export async function transferResetV2RegionToIreland(
   const worldId = gameState.resetWorldId;
   const sourceId = `UK:${regionId}`;
   const targetId = `IE:${regionId}`;
-  const metrics = db.collection<ResetMetricSnapshot>("resetMetricSnapshots");
-  const laws = db.collection<ResetLawOpeningBoard>("resetLawOpeningBoards");
-  const regionalFinance = db.collection<ResetRegionalOpeningBoard>("resetRegionalOpeningBoards");
+  const metrics = resetMetricSnapshotsCollection<ResetMetricSnapshot>(db);
+  const laws = resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db);
+  const regionalFinance = resetRegionalOpeningBoardsCollection<ResetRegionalOpeningBoard>(db);
   const legislationReady = ukVersions.legislation === "v2" && ieVersions.legislation === "v2";
   const [sourceMetric, sourceLaw, sourceFiscal, targetMetric, targetLaw, targetFiscal] =
     await Promise.all([

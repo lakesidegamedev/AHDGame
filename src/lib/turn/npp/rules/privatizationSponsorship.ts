@@ -1,17 +1,13 @@
 /**
- * NPP privatization sponsorship: when and what an AI-governed planned (or
- * formerly planned) economy proposes to carve out of its National Corporations.
+ * NPP privatization sponsorship: what an AI-governed planned (or formerly
+ * planned) economy proposes to carve out of its National Corporations.
  *
- * The marketization dial decides it, never the `commandEconomyEnabled` flag,
- * matching the private-enterprise gate: below COMMAND_CEILING there is no
- * private sector to sell into, dual-track sells small slices occasionally, and
- * the market band sells larger slices more often. Only countries carrying a
- * MARKETIZATION_SCHEDULE entry qualify, so a market economy that happens to own
- * a National Corporation never starts selling it off on its own.
+ * The marketization dial decides it, never `commandEconomyEnabled`, matching
+ * the private-enterprise gate. Only countries with a MARKETIZATION_SCHEDULE
+ * entry qualify, so a market economy owning a National Corporation never sells
+ * it off on its own.
  *
- * Pure: plain rows in, plain plan out. The shell (`proposeNppPrivatizationBill`)
- * loads the rows, writes the bill, and lets the enactment-time anti-monopoly
- * clamp have the final say on each carve fraction.
+ * Pure: plain rows in, plain plan out.
  */
 import { COMMAND_CEILING, DUAL_TRACK_CEILING } from "@/lib/constants/commandEconomy";
 import type { CorporationType } from "@/lib/constants/corporations";

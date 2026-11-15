@@ -24,7 +24,6 @@ import { charterMay } from "@/lib/banking/rules/capabilities";
 import { borrowingsFromCharter, totalBorrowings } from "@/lib/banking/rules/balanceSheet";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import {
@@ -38,6 +37,10 @@ import {
   type SavingsMigrationPlan,
 } from "@/lib/savings/rules/migration";
 import { SAVINGS_ACCOUNTS_COLLECTION, loadLegacySavingsRows } from "@/lib/savings/shadow";
+import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 
 function finite(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -46,18 +49,15 @@ function finite(value: unknown): number {
 export async function loadSavingsMigrationInput(db: Db): Promise<MigrationInput> {
   const [rows, corps, banks, existing] = await Promise.all([
     loadLegacySavingsRows(db),
-    db
-      .collection<Corporation>("corporations")
+    corporationsCollection(db)
       .find({ "bankCharter.status": { $in: ["active", "revoked", "failed"] } })
       .project<Pick<Corporation, "_id" | "bankCharter">>({ bankCharter: 1 })
       .toArray(),
-    db
-      .collection<CentralBank>("centralBanks")
+    centralBanksCollection(db)
       .find({})
       .project<Pick<CentralBank, "_id" | "externalBroadMoney">>({ externalBroadMoney: 1 })
       .toArray(),
-    db
-      .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
+    savingsAccountsCollection<SavingsAccount>(db)
       .find({ ownerType: "character" })
       .project<Pick<SavingsAccount, "ownerId" | "currency">>({ ownerId: 1, currency: 1 })
       .toArray(),
@@ -66,12 +66,11 @@ export async function loadSavingsMigrationInput(db: Db): Promise<MigrationInput>
   const expectedMigrations = new Map(
     rows.map((row) => [savingsMigrationKey(row.ownerId, row.currency), row])
   );
-  const migrationRecords = await db
-    .collection<{
-      _id: string;
-      status: string;
-      projectionsCompletedAt?: Date;
-    }>(MONEY_MOVE_COLLECTION)
+  const migrationRecords = await bankMoneyMovesCollection<{
+    _id: string;
+    status: string;
+    projectionsCompletedAt?: Date;
+  }>(db)
     .find({ _id: { $in: [...expectedMigrations.keys()] }, kind: "savings_migration" })
     .project<{ _id: string; status: string; projectionsCompletedAt?: Date }>({
       status: 1,
@@ -285,7 +284,7 @@ async function applySavingsMigrationForCurrency(
       !charter.acceptsDeposits
         ? CENTRAL_BANK_HOLDER
         : holder;
-    const existing = await db.collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION).findOne({
+    const existing = await savingsAccountsCollection<SavingsAccount>(db).findOne({
       ownerType: "character",
       ownerId: new ObjectId(row.ownerId),
       currency: currency as SavingsAccount["currency"],
@@ -316,8 +315,7 @@ async function applySavingsMigrationForCurrency(
   }
 
   // Reconcile the batch before anyone may read it.
-  const accounts = await db
-    .collection<SavingsAccount>(SAVINGS_ACCOUNTS_COLLECTION)
+  const accounts = await savingsAccountsCollection<SavingsAccount>(db)
     .find({ ownerType: "character", currency: currency as SavingsAccount["currency"] })
     .toArray();
   const rows = (await loadLegacySavingsRows(db)).filter((r) => r.currency === currency);

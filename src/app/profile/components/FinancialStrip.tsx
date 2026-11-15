@@ -396,14 +396,11 @@ export function FinancialStrip({
 
   const toggle = (p: Panel) => setPanel((prev) => (prev === p ? null : p));
 
-  // The `cashOnHand` prop is computed server-side via getTotalPersonalLiquidWealth,
-  // which divides each per-currency balance by the SERVER-fetched FX rate to
-  // yield ₳. The client then re-multiplies by the CLIENT-fetched FX rate for
-  // display. When rates move between those two fetches (e.g. across a turn
-  // boundary) the round-trip overshoots a same-currency value — Rashi #156's
-  // $76M USD wallet reading as $84M in the header. When raw forex balances
-  // are available we recompute the anchor here using client-side rates so the
-  // header agrees with the wallet panel's "Total" line below it.
+  // `cashOnHand` is computed server-side using the SERVER FX rate; the client
+  // re-multiplies by the CLIENT FX rate to display. When rates move between the
+  // fetches, the round-trip overshoots a same-currency value. When raw forex
+  // balances are available, recompute the anchor with client rates so the
+  // header agrees with the wallet panel's Total line.
   const personalCashAnchor =
     personalIncome?.forexBalances?.personal !== undefined
       ? Object.entries(personalIncome.forexBalances.personal).reduce(

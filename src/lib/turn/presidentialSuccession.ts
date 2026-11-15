@@ -1,13 +1,6 @@
 import type { Db } from "mongodb";
-import type {
-  ElectedOfficial,
-  Character,
-  NPP,
-  CareerEvent,
-  GameState,
-  OfficeType,
-} from "@/lib/db/types";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import type { Character, CareerEvent, OfficeType } from "@/lib/db/types";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { createNotifications } from "@/lib/notifications";
@@ -17,17 +10,29 @@ import {
   incrementExecutiveTermsServedUpdate,
 } from "@/lib/elections/executiveTermLimits";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
+import { getElectedOfficialsCollection } from "@/lib/db/collections/electedOfficials";
+import { getCharactersCollection } from "@/lib/db/collections/characters";
+import { getNppsCollection } from "@/lib/db/collections/npps";
+import { getGameStateCollection } from "@/lib/db/collections/gameState";
 
 /**
- * Checks if the US president office is vacant and a VP exists.
+ * Checks if a president office is vacant and a VP exists (US by default; other
+ * countries whose succession rule is a permanent deputy).
  * If so, auto-promotes the VP to President and clears the VP office.
  * Runs each turn after election resolution (Group 11.5).
  */
-export async function processPresidentialSuccession(db: Db): Promise<boolean> {
-  const usCountryId = COUNTRY_CONFIGS.US.id;
-  const presidentRecord = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(getExecutiveOfficialFilter(usCountryId, "president"));
+export async function processPresidentialSuccession(
+  db: Db,
+  countryId: CountryId = COUNTRY_CONFIGS.US.id
+): Promise<boolean> {
+  const usCountryId = countryId;
+  const officeName =
+    countryId === COUNTRY_CONFIGS.US.id
+      ? "President of the United States"
+      : `President of ${COUNTRY_CONFIGS[countryId].name}`;
+  const presidentRecord = await (
+    await getElectedOfficialsCollection(db)
+  ).findOne(getExecutiveOfficialFilter(usCountryId, "president"));
 
   // No record at all means no election has ever happened; nothing to do.
   if (!presidentRecord) return false;
@@ -36,9 +41,9 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
   const presidentVacant = presidentRecord.characterId === null && !presidentRecord.nppId;
   if (!presidentVacant) return false;
 
-  const vpRecord = await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .findOne(getExecutiveOfficialFilter(usCountryId, "vicePresident"));
+  const vpRecord = await (
+    await getElectedOfficialsCollection(db)
+  ).findOne(getExecutiveOfficialFilter(usCountryId, "vicePresident"));
 
   const vpFilled = vpRecord && (vpRecord.characterId !== null || vpRecord.nppId);
   if (!vpFilled || !vpRecord) return false;
@@ -50,7 +55,9 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
   > | null = null;
 
   if (vpRecord.characterId) {
-    vpCharacter = await db.collection<Character>("characters").findOne(
+    vpCharacter = await (
+      await getCharactersCollection(db)
+    ).findOne(
       { _id: vpRecord.characterId },
       {
         projection: {
@@ -66,14 +73,16 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
     if (!vpCharacter) return false;
     if (hasReachedExecutiveTermLimit(vpCharacter, usCountryId)) {
       console.warn(
-        `[Turn] Presidential succession blocked: VP ${vpRecord.characterId.toString()} has already reached the US presidential term limit`
+        `[Turn] Presidential succession blocked: VP ${vpRecord.characterId.toString()} has already reached the presidential term limit in ${countryId}`
       );
       return false;
     }
   }
 
   // Promote VP to President in electedOfficials only after confirming the move is legal.
-  await db.collection<ElectedOfficial>("electedOfficials").updateOne(
+  await (
+    await getElectedOfficialsCollection(db)
+  ).updateOne(
     getExecutiveOfficialFilter(usCountryId, "president"),
     {
       $set: {
@@ -101,7 +110,9 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
       successionCareer.party = vpCharacter.party;
       successionCareer.partyCountryId = usCountryId;
     }
-    await db.collection<Character>("characters").updateOne(
+    await (
+      await getCharactersCollection(db)
+    ).updateOne(
       { _id: vpRecord.characterId },
       {
         $set: {
@@ -124,31 +135,32 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
       {
         userId: vpCharacter.userId,
         type: "general_win",
-        title: "Succession — President of the United States",
+        title: `Succession — ${officeName}`,
         message: `${vpCharacter.name} has succeeded to the presidency following a vacancy in the office.`,
         metadata: {},
       },
     ]);
   } else if (vpRecord.nppId) {
-    await db
-      .collection<NPP>("npps")
-      .updateOne(
-        { _id: vpRecord.nppId },
-        { $set: { currentOffice: { type: "president" }, updatedAt: now } }
-      );
+    await (
+      await getNppsCollection(db)
+    ).updateOne(
+      { _id: vpRecord.nppId },
+      { $set: { currentOffice: { type: "president" }, updatedAt: now } }
+    );
   }
 
   // Clear VP office; characterId stays null (type allows it), optional fields are unset.
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .updateOne(getExecutiveOfficialFilter(usCountryId, "vicePresident"), {
-      $set: { characterId: null, countryId: usCountryId, isNPP: false, updatedAt: now },
-      $unset: { characterName: "", party: "", nppId: "" },
-    });
+  await (
+    await getElectedOfficialsCollection(db)
+  ).updateOne(getExecutiveOfficialFilter(usCountryId, "vicePresident"), {
+    $set: { characterId: null, countryId: usCountryId, isNPP: false, updatedAt: now },
+    $unset: { characterName: "", party: "", nppId: "" },
+  });
 
   if (vpRecord.characterId && vpCharacter) {
-    const gameState = await db
-      .collection<GameState>("gameState")
+    const gameState = await (
+      await getGameStateCollection(db)
+    )
       .findOne({ _id: "current" }, { projection: { currentTurn: 1, iteration: 1 } })
       .catch(() => null);
     await Promise.all([

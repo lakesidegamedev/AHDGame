@@ -1,71 +1,19 @@
 import type { ScotusPresetSeed, ScotusPresetSeatSeed, ScotusPresetDocketCaseSeed } from "./types";
 
 /**
- * 1991 preset SCOTUS content (#3601, spec #3581). Seeds the Rehnquist Court
- * at the 1991 preset's start year, plus the real landmark Docket from 1991
- * through present (2026).
+ * 1991 preset SCOTUS content: Rehnquist Court at the 1991 start year, plus
+ * the real landmark Docket from 1991 to 2026.
  *
- * ============================================================================
- * SIGN CONVENTION (read before editing)
- * ============================================================================
- * `economicLean`/`socialLean` on every occupant, and `historicalMajorityDirection`
- * on every Docket case, share ONE consistent sign:
+ * Sign convention: `economicLean`/`socialLean` and `historicalMajorityDirection`
+ * treat POSITIVE as conservative and NEGATIVE as liberal, matching
+ * PoliticalParty positions. `DocketCaseEffect.effectDirection` uses the
+ * OPPOSITE convention (left +1, right -1); copy it from the policy option,
+ * never derive it from lean here. `party` is the nominating president's party
+ * (Democratic = "1", Republican = "2").
  *
- *   POSITIVE (> 0) = conservative / right-leaning
- *   NEGATIVE (< 0) = liberal / progressive-leaning
- *   ZERO           = genuinely centrist (counts toward neither side of a headcount)
- *
- * This matches the existing `PoliticalParty.economicPosition`/`socialPosition`
- * convention already in the codebase (see `src/lib/seeds/reference/politicalParties.ts`:
- * US Republican Party = economicPosition +2/socialPosition +2 "Center-right";
- * US Democratic Party = economicPosition -2/socialPosition -2 "Center-left").
- * `decideCaseOutcome` (src/lib/scotus/divergence.ts) headcounts positive vs
- * negative on the case's tagged axis — it never reads sign meaning itself, so
- * this file is the single source of truth for what the sign means.
- *
- * NOTE: `DocketCaseEffect.effectDirection` (and the underlying
- * `LegislationPolicyOption.effectDirection` it's copied from) is a SEPARATE,
- * pre-existing, OPPOSITE-signed convention baked into every legislationType
- * option set (see `src/lib/seeds/reference/policyOptionHelpers.ts`):
- *   left/expansionary option  → effectDirection +1
- *   right/restrictive option  → effectDirection -1
- * Every `effect` below copies its `effectDirection` straight from the chosen
- * `policyOptionId`'s own authored value in `src/lib/seeds/reference/legislationTypes.ts`
- * — do not derive it from this file's economicLean/socialLean convention.
- *
- * PARTY FIELD
- * ============================================================================
- * `party` follows the documented `HistoricalJusticeOccupant.party` convention
- * ("opaque identifier, same convention as Character.party/NPP.party" — a
- * stringified `PoliticalParty.sequentialId`). Real justices don't hold formal
- * party membership, so — matching how the rest of the codebase labels
- * real-world, non-elected historical figures with no game-native party record
- * (see `src/lib/npp/seedHistorical.ts` SLUG_TO_NAME → resolvePartyId) — this
- * uses the party of the president who nominated them, the standard convention
- * for describing a justice's political origin. US party sequentialIds are
- * assigned in `politicalParties.ts` seedOrder: Democratic Party = "1",
- * Republican Party = "2".
- *
- * ROSTER START POINT
- * ============================================================================
- * The 1991 preset's turn 1 is January 1, 1991 (`getStartingYearForPreset`).
- * On that date Thurgood Marshall was still sitting; he announced retirement
- * June 27, 1991 and Clarence Thomas was confirmed October 15, 1991 — both
- * events land inside the preset's first calendar year. Seat 3 therefore
- * carries Marshall as `historicalOccupants[0]` (seatedYear 1991, matching
- * "first entry per seat = the preset's start year" per the schema doc
- * comment) with a same-year departure, immediately followed by Thomas —
- * rather than starting the roster directly on Thomas and silently dropping
- * Marshall from history.
- *
- * SUCCESSION CHAINS
- * ============================================================================
- * Each seat's chain is carried all the way to whoever is really sitting as of
- * 2026 (today): every seat below currently ends on a still-serving justice
- * (departureYear: null) except none — all nine 1991 seats have had at least
- * one real-world succession since 1991, and the resulting nine sitting
- * justices (Roberts, Barrett, Thomas, Jackson, Kagan, Alito, Gorsuch,
- * Kavanaugh, Sotomayor) match the real Court as of this writing.
+ * Seat 3 starts on Marshall (seated 1991, same-year departure) because he
+ * retired mid-1991; the chain continues to Thomas. Every seat runs to a
+ * still-serving justice as of 2026.
  */
 
 const US_DEM = "1";
@@ -77,8 +25,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 1,
     historicalOccupants: [
       {
-        key: "rehnquist-1991",
-        name: "William Rehnquist",
+        key: "renwick-1991",
+        name: "William H. Renwick",
         party: US_REP, // elevated to Chief by Reagan, 1986
         economicLean: 4,
         socialLean: 4,
@@ -87,8 +35,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "death",
       },
       {
-        key: "roberts-2005",
-        name: "John Roberts",
+        key: "rowe-2005",
+        name: "Jonathan Rowe",
         party: US_REP, // nominated by George W. Bush
         economicLean: 3,
         socialLean: 3,
@@ -103,8 +51,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 2,
     historicalOccupants: [
       {
-        key: "white-1991",
-        name: "Byron White",
+        key: "whitcomb-1991",
+        name: "Raymond T. Whitcomb",
         party: US_DEM, // nominated by JFK, but frequently voted with the Court's conservative bloc (dissented in Roe and Casey)
         economicLean: 1,
         socialLean: 2,
@@ -113,8 +61,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "ginsburg-1993",
-        name: "Ruth Bader Ginsburg",
+        key: "sterling-1993",
+        name: "Miriam Gold Sterling",
         party: US_DEM, // nominated by Clinton
         economicLean: -4,
         socialLean: -4,
@@ -123,8 +71,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "death",
       },
       {
-        key: "barrett-2020",
-        name: "Amy Coney Barrett",
+        key: "cole-2020",
+        name: "Margaret Ellison Cole",
         party: US_REP, // nominated by Trump
         economicLean: 4,
         socialLean: 4,
@@ -139,8 +87,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 3,
     historicalOccupants: [
       {
-        key: "marshall-1991",
-        name: "Thurgood Marshall",
+        key: "marlow-1991",
+        name: "Thaddeus Marlow",
         party: US_DEM, // nominated by LBJ
         economicLean: -4,
         socialLean: -5,
@@ -149,8 +97,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "thomas-1991",
-        name: "Clarence Thomas",
+        key: "thornton-1991",
+        name: "Calvin Thornton",
         party: US_REP, // nominated by George H.W. Bush
         economicLean: 5,
         socialLean: 5,
@@ -165,8 +113,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 4,
     historicalOccupants: [
       {
-        key: "blackmun-1991",
-        name: "Harry Blackmun",
+        key: "blaylock-1991",
+        name: "Henry A. Blaylock",
         party: US_REP, // nominated by Nixon, but authored Roe and became one of the Court's most liberal members
         economicLean: -2,
         socialLean: -4,
@@ -175,8 +123,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "breyer-1994",
-        name: "Stephen Breyer",
+        key: "brewster-1994",
+        name: "Simon Brewster",
         party: US_DEM, // nominated by Clinton
         economicLean: -3,
         socialLean: -3,
@@ -185,8 +133,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "jackson-2022",
-        name: "Ketanji Brown Jackson",
+        key: "jamison-2022",
+        name: "Kendra Brooks Jamison",
         party: US_DEM, // nominated by Biden
         economicLean: -3,
         socialLean: -3,
@@ -201,8 +149,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 5,
     historicalOccupants: [
       {
-        key: "stevens-1991",
-        name: "John Paul Stevens",
+        key: "stetson-1991",
+        name: "Paul Stetson",
         party: US_REP, // nominated by Ford, but became a leading liberal voice by the end of his tenure
         economicLean: -2,
         socialLean: -3,
@@ -211,8 +159,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "kagan-2010",
-        name: "Elena Kagan",
+        key: "kaminski-2010",
+        name: "Elise Kaminski",
         party: US_DEM, // nominated by Obama
         economicLean: -3,
         socialLean: -3,
@@ -227,8 +175,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 6,
     historicalOccupants: [
       {
-        key: "oconnor-1991",
-        name: "Sandra Day O'Connor",
+        key: "ostrander-1991",
+        name: "Susan Ostrander",
         party: US_REP, // nominated by Reagan; the Court's pivotal swing vote for most of her tenure
         economicLean: 1,
         socialLean: -1,
@@ -237,8 +185,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "alito-2006",
-        name: "Samuel Alito",
+        key: "amato-2006",
+        name: "Salvatore Amato",
         party: US_REP, // nominated by George W. Bush
         economicLean: 4,
         socialLean: 4,
@@ -255,8 +203,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 7,
     historicalOccupants: [
       {
-        key: "scalia-1991",
-        name: "Antonin Scalia",
+        key: "varela-1991",
+        name: "Anthony Varela",
         party: US_REP, // nominated by Reagan
         economicLean: 4,
         socialLean: 5,
@@ -265,8 +213,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "death",
       },
       {
-        key: "gorsuch-2017",
-        name: "Neil Gorsuch",
+        key: "gorham-2017",
+        name: "Nathan Gorham",
         party: US_REP, // nominated by Trump
         economicLean: 3,
         socialLean: 3,
@@ -281,8 +229,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 8,
     historicalOccupants: [
       {
-        key: "kennedy-1991",
-        name: "Anthony Kennedy",
+        key: "kessler-1991",
+        name: "Arthur M. Kessler",
         party: US_REP, // nominated by Reagan; the Roberts Court's swing vote — authored Romer, Lawrence, and Obergefell
         economicLean: 2,
         socialLean: -1,
@@ -291,8 +239,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "kavanaugh-2018",
-        name: "Brett Kavanaugh",
+        key: "keegan-2018",
+        name: "Bradley Keegan",
         party: US_REP, // nominated by Trump
         economicLean: 3,
         socialLean: 3,
@@ -307,8 +255,8 @@ const seats: ScotusPresetSeatSeed[] = [
     seatNumber: 9,
     historicalOccupants: [
       {
-        key: "souter-1991",
-        name: "David Souter",
+        key: "seaver-1991",
+        name: "Douglas H. Seaver",
         party: US_REP, // nominated by George H.W. Bush, but became a reliably liberal vote
         economicLean: -2,
         socialLean: -3,
@@ -317,8 +265,8 @@ const seats: ScotusPresetSeatSeed[] = [
         departureReason: "retirement",
       },
       {
-        key: "sotomayor-2009",
-        name: "Sonia Sotomayor",
+        key: "valdemoro-2009",
+        name: "Sofia Valdemoro",
         party: US_DEM, // nominated by Obama
         economicLean: -4,
         socialLean: -4,
@@ -348,9 +296,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (conservative majority) path: an early, sharper rollback of
       // abortion access than history actually produced at this point.
-      legislationTypeId: "us_reproductive_rights",
-      policyOptionId: "reproductive_rights_opt_5",
-      effectDirection: -1,
+      legislationTypeId: "us.society.demography.primary",
+      policyOptionId: "l4",
+      effectDirection: 1,
     },
   },
   {
@@ -363,8 +311,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
       // Divergent (liberal majority upholds broad federal Commerce Clause
       // reach) closest real-world artifact: the federal gun regulation Lopez
       // itself struck down.
-      legislationTypeId: "us_gun_control",
-      policyOptionId: "gun_control_opt_2",
+      legislationTypeId: "us.order.safety.primary",
+      policyOptionId: "l3",
       effectDirection: 1,
     },
   },
@@ -401,8 +349,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     decisionYear: 2008,
     effect: {
       // Divergent (liberal majority) path: DC's handgun ban stands.
-      legislationTypeId: "us_gun_control",
-      policyOptionId: "gun_control_opt_0",
+      legislationTypeId: "us.order.safety.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -416,8 +364,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
       // Divergent (liberal majority) path: campaign-finance/lobbying
       // restrictions survive — closest existing analog is the ethics/
       // transparency legislationType.
-      legislationTypeId: "us_government_ethics",
-      policyOptionId: "government_ethics_opt_0",
+      legislationTypeId: "us.governance.integrity.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -430,8 +378,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (conservative majority) path: the ACA (and its Medicaid
       // expansion) is struck down rather than upheld.
-      legislationTypeId: "us_medicaid_expansion",
-      policyOptionId: "medicaid_expansion_opt_6",
+      legislationTypeId: "us.health.universalCare.primary",
+      policyOptionId: "l0",
       effectDirection: -1,
     },
   },
@@ -444,8 +392,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: full Voting Rights Act
       // preclearance enforcement survives.
-      legislationTypeId: "us_civics_voting_rights",
-      policyOptionId: "civics_voting_rights_opt_1",
+      legislationTypeId: "us.governance.participation.primary",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -458,9 +406,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: no religious exemption, full
       // contraceptive-coverage mandate stands.
-      legislationTypeId: "us_reproductive_rights",
-      policyOptionId: "reproductive_rights_opt_2",
-      effectDirection: 1,
+      legislationTypeId: "us.society.demography.primary",
+      policyOptionId: "l1",
+      effectDirection: -1,
     },
   },
   {
@@ -480,8 +428,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: mandatory agency fees (and
       // union bargaining power) stand.
-      legislationTypeId: "us_state_labor",
-      policyOptionId: "state_labor_opt_0",
+      legislationTypeId: "us.sec.laborManagementRelations",
+      policyOptionId: "l4",
       effectDirection: 1,
     },
   },
@@ -493,9 +441,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     decisionYear: 2018,
     effect: {
       // Divergent (liberal majority) path: the travel ban is struck down.
-      legislationTypeId: "us_border_security_enforcement",
-      policyOptionId: "border_security_enforcement_opt_2",
-      effectDirection: 1,
+      legislationTypeId: "us.sec.immigrationNationality",
+      policyOptionId: "l1",
+      effectDirection: -1,
     },
   },
   {
@@ -515,9 +463,9 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: Roe/Casey's federal abortion
       // right is preserved rather than overturned.
-      legislationTypeId: "us_reproductive_rights",
-      policyOptionId: "reproductive_rights_opt_1",
-      effectDirection: 1,
+      legislationTypeId: "us.society.demography.primary",
+      policyOptionId: "l0",
+      effectDirection: -1,
     },
   },
   {
@@ -529,8 +477,8 @@ const docket: ScotusPresetDocketCaseSeed[] = [
     effect: {
       // Divergent (liberal majority) path: broad EPA regulatory authority
       // over emissions is upheld.
-      legislationTypeId: "us_clean_energy",
-      policyOptionId: "clean_energy_opt_2",
+      legislationTypeId: "us.environment.conservation.primary",
+      policyOptionId: "l3",
       effectDirection: 1,
     },
   },

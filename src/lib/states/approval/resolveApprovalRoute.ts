@@ -2,6 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import type { State } from "@/lib/db/types";
+import { statesCollection } from "@/lib/db/repositories/states";
 
 export interface ResolvedApprovalRoute {
   countryId: CountryId;
@@ -29,8 +30,7 @@ export async function resolveApprovalRoute(
     return { countryId: "UK", stateId: upper };
   }
 
-  const matches = await db
-    .collection<State>("states")
+  const matches = await statesCollection(db)
     .find({ _id: upper })
     .project<{ _id: string; countryId: CountryId }>({ countryId: 1 })
     .toArray();

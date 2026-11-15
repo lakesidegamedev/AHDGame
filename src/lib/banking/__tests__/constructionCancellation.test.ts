@@ -112,6 +112,51 @@ function world(outstanding = 75_000, epoch = 2, defaults = false) {
 }
 
 describe("principal-first financed build cancellation", () => {
+  it("keeps whole-plant credit and parking consistent while refunding secured construction", async () => {
+    const w = world();
+    await w.db.collection("corporateSectors").updateOne(
+      { _id: w.sectorId },
+      {
+        $set: {
+          sectorType: "energy",
+          capitalStock: 250,
+          plantCount: 1,
+          plantUnitRemainder: 50,
+          plantWearUnits: 2,
+          activeCapacityPercent: 50,
+          buildDeliverySettledTurn: 12,
+          operatingCapacityTurn: 13,
+          capacityBookAnchor: 250000,
+        },
+      }
+    );
+    expect(
+      await cancelFinancedConstruction({
+        ...w.input,
+        turn: 13,
+        fullRefund: true,
+        wholePlants: true,
+      })
+    ).toMatchObject({
+      ok: true,
+      refunded: 100000,
+      principalRepaid: 75000,
+      ownerRefund: 25000,
+    });
+    expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).toMatchObject({
+      capitalStock: 250,
+      plantCount: 1,
+      plantUnitRemainder: 0,
+      plantWearUnits: 2,
+      operatingCapacityUnits: 125,
+      capacityBookAnchor: 200000,
+      buildQueue: [],
+    });
+    await cancelFinancedConstruction({ ...w.input, turn: 14, fullRefund: true, wholePlants: true });
+    expect(await w.db.collection("corporations").findOne({ _id: w.borrowerId })).toMatchObject({
+      liquidCapital: 75000,
+    });
+  });
   it("tops up an interrupted partial cancellation to the full original cost on conversion", async () => {
     const w = world();
     await w.db.collection("corporateSectors").updateOne(

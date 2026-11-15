@@ -1,4 +1,5 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
+import { isBackgroundInPreset } from "@/lib/world/eraRoster";
 import type { State } from "@/lib/db/types/state";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import type { Union } from "@/lib/db/types";
@@ -11,6 +12,13 @@ import type { CountryId } from "@/lib/constants/countries";
 import { getUnionName } from "@/lib/unions/unionNames";
 import { BASE_APPROVAL } from "@/lib/unions/unionDues";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { unionsCollection } from "@/lib/db/repositories/unions";
+import type { Document } from "mongodb";
+import { unionLeaderVotesCollection } from "@/lib/db/repositories/unionLeaderVotes";
+import { unionOrganizersCollection } from "@/lib/db/repositories/unionOrganizers";
+import { unionEndorsementsCollection } from "@/lib/db/repositories/unionEndorsements";
 
 /**
  * Starting annual dues charged per member on a freshly seeded union. 0, not a
@@ -49,16 +57,17 @@ export async function seedUnions(
 ): Promise<number> {
   if (reset) {
     await Promise.all([
-      db.collection("unions").deleteMany({}),
-      db.collection("unionEndorsements").deleteMany({}),
-      db.collection("unionLeaderVotes").deleteMany({}),
-      db.collection("unionOrganizers").deleteMany({}),
+      unionsCollection<Document>(db).deleteMany({}),
+      unionEndorsementsCollection<Document>(db).deleteMany({}),
+      unionLeaderVotesCollection<Document>(db).deleteMany({}),
+      unionOrganizersCollection<Document>(db).deleteMany({}),
     ]);
   }
 
-  const countryIds = await db
-    .collection<State>("states")
-    .distinct("countryId", { _id: { $not: /^NATIONAL_/ } });
+  // Background countries (#5702) run no sectors, so they get no unions.
+  const countryIds = (
+    await statesCollection(db).distinct("countryId", { _id: { $not: /^NATIONAL_/ } })
+  ).filter((countryId) => !isBackgroundInPreset(preset, countryId));
 
   const now = new Date();
   let upserted = 0;
@@ -126,7 +135,7 @@ export async function seedUnions(
   }
 
   if (unionOps.length > 0) {
-    const result = await db.collection<Union>("unions").bulkWrite(unionOps, { ordered: true });
+    const result = await unionsCollection(db).bulkWrite(unionOps, { ordered: true });
     upserted = result.upsertedCount;
   }
 
@@ -138,8 +147,7 @@ export async function seedUnions(
   // raid or a corp-seeding order this function doesn't control.
   let sectorsAssigned = 0;
   if (pairs.length > 0) {
-    const worldUnions = await db
-      .collection<Union>("unions")
+    const worldUnions = await unionsCollection(db)
       .find(
         { foundedByCharacterId: null },
         {
@@ -179,9 +187,9 @@ export async function seedUnions(
       });
     }
     if (sectorOps.length > 0) {
-      const sectorResult = await db
-        .collection<CorporateSector>("corporateSectors")
-        .bulkWrite(sectorOps, { ordered: false });
+      const sectorResult = await corporateSectorsCollection(db).bulkWrite(sectorOps, {
+        ordered: false,
+      });
       sectorsAssigned = sectorResult.modifiedCount;
     }
   }

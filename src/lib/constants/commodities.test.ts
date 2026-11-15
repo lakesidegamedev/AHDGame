@@ -422,7 +422,7 @@ describe("aggregate commodity caps (Phase 1)", () => {
 });
 
 describe("computeRawSupplyDemand — state-owned (NatCorp) sectors", () => {
-  // Bug #0775: nationalizing a commodity producer collapsed national supply because
+  // Nationalizing a commodity producer collapsed national supply because
   // NatCorp sectors were scaled to 0.25% of their commodity flow. A nationalized
   // energy company must supply (and consume) like any private producer.
   it("a NatCorp producer contributes the same commodity supply as an identical private one", () => {

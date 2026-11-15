@@ -1,3 +1,4 @@
+import { normalizeConvertedMetricBoard } from "./convertedBoard";
 import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import { openingMetricHistory, validateMetricHistory, type ResetMetricHistory } from "./history";
@@ -26,6 +27,15 @@ export interface ResetMetricSnapshot {
   history?: ResetMetricHistory;
   /** Immutable policy baseline, independent of the bounded history window. */
   openingValues?: Record<string, number>;
+  /** Frozen game-seed calibration for non-1991 openings; wiped with the board. */
+  modeledOpening?: {
+    preset: string;
+    year: number;
+    sourceFiscalYear?: number;
+    birthRateIndex?: number;
+    migrationRate?: number;
+    life?: { openingYears: number; modeledYears: number };
+  };
   /** First compatible gameplay baseline after a unit change; wiped on world reset. */
   gameplayReferences?: Record<string, { value: number; unit?: string; definitionVersion: 2 }>;
   /** Compact preceding owner values make lagged turn retries deterministic. */
@@ -43,6 +53,15 @@ export interface ResetMetricSnapshot {
   housingSource?: HousingPublicationSource;
   /** Country source inputs and regional stock state are wiped with this world-bound collection. */
   housingState?: HousingState;
+}
+
+/** Normalize known conversion defects and BSON-null national region identities. */
+export function normalizeNationalMetricBoard(board: ResetMetricSnapshot): ResetMetricSnapshot {
+  board = normalizeConvertedMetricBoard(board);
+  if (board.scope !== "national" || board.regionId != null) return board;
+  const normalized = { ...board };
+  delete normalized.regionId;
+  return normalized;
 }
 
 /** Validate an entire scoped opening board before any v2 writer can consume it. */
@@ -135,6 +154,7 @@ export function resetMetricSnapshotPayload(rows: readonly ResetMetricSnapshot[])
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([id, series]) => [id, series.map((point) => [point.turn, point.value])]),
         Object.entries(row.openingValues ?? {}).sort(([a], [b]) => a.localeCompare(b)),
+        row.modeledOpening ?? null,
       ])
   );
 }

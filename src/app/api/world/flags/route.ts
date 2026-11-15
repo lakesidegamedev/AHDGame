@@ -1,3 +1,4 @@
+import { loadNationalGdpPerCapitaIndex } from "@/lib/campaigns/nationalGdpBasis";
 import { loadEuropeanTreatyContext } from "@/lib/internationalOrganizations/europeanIntegration/service";
 import { canRatifyMaastricht } from "@/lib/internationalOrganizations/europeanIntegration/rules";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
@@ -19,6 +20,7 @@ import {
   resetSystemVersionsFrom,
 } from "@/lib/resetVersions/rules";
 import { FOUNDING_GENERAL_HOURS, FOUNDING_PRIMARY_HOURS } from "@/lib/elections/canonicalCycle";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 /**
  * Turns the founding round's races close on, while it runs. Every founding race
@@ -34,7 +36,7 @@ function foundingRound(gs: Pick<GameState, "preIteration"> | null) {
 
 export async function GET() {
   const db = await getDb();
-  const gs = await db.collection<GameState>("gameState").findOne(
+  const gs = await gameStateCollection(db).findOne(
     { _id: "current" },
     {
       projection: {
@@ -43,13 +45,11 @@ export async function GET() {
         euroAdoptedCountries: 1,
         euroMonetaryUnion: 1,
         currentTurn: 1,
-        eraSystemEnabled: 1,
         currentYear: 1,
         currentEraId: 1,
         startingYear: 1,
         incomeBandIndexByCountry: 1,
         incomeStartVintages: 1,
-        liveElectionResultsEnabled: 1,
         metricsSystemVersion: 1,
         legislationSystemVersion: 1,
         cabinetSystemVersion: 1,
@@ -76,7 +76,6 @@ export async function GET() {
         union: gs?.euroMonetaryUnion,
       })
   );
-  const eraOn = gs?.eraSystemEnabled ?? false;
   const resetSystemVersions = resetSystemVersionsFrom(gs, RESET_V2_READY);
   const resetV2Countries = RESET_V2_COUNTRIES.filter(
     (countryId) => resetSystemVersionsForCountry(gs, RESET_V2_READY, countryId).metrics === "v2"
@@ -85,20 +84,18 @@ export async function GET() {
     {
       preset: gs?.preset ?? DEFAULT_SEED_PRESET,
       campaignPriceLevel: await loadCampaignPriceLevel(db),
+      nationalGdpPerCapita: Object.fromEntries(await loadNationalGdpPerCapitaIndex(db)),
       eurozoneEnabled: euroState.eurozoneEnabled,
       euroMemberCurrencies: euroMemberCurrencies(euroState),
       euroMonetaryUnion: gs?.euroMonetaryUnion,
       euroAdoptionEligibleCountries,
       maastrichtEligibleCountries,
-      eraSystemEnabled: eraOn,
       currentYear: gs?.currentYear ?? null,
       currentEraId: gs?.currentEraId ?? null,
-      // Era income-band inputs (metric era catalog); null while the flag is off
-      // so client scoring falls back to the full legacy band.
-      startingYear: eraOn ? (gs?.startingYear ?? null) : null,
-      incomeBandIndexByCountry: eraOn ? (gs?.incomeBandIndexByCountry ?? null) : null,
-      incomeStartVintages: eraOn ? (gs?.incomeStartVintages ?? null) : null,
-      liveElectionResultsEnabled: gs?.liveElectionResultsEnabled === true,
+      // Era income-band inputs (metric era catalog).
+      startingYear: gs?.startingYear ?? null,
+      incomeBandIndexByCountry: gs?.incomeBandIndexByCountry ?? null,
+      incomeStartVintages: gs?.incomeStartVintages ?? null,
       resetV2Countries,
       resetSystemVersions,
       startingPartiesMode: gs?.startingPartiesMode ?? "default",

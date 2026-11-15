@@ -3,6 +3,7 @@ import type { Db } from "@/lib/mongodb";
 import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { JUSTICE_ACTION_ACCRUAL_TURNS, JUSTICE_ACTION_CAP } from "@/lib/constants/justiceActions";
 import { isOfficePoolAccrualTurn } from "@/lib/actions/officePoolAccrual";
+import { supremeCourtSeatsCollection } from "@/lib/db/repositories/supremeCourtSeats";
 
 /**
  * Accrue every seated Justice's self-serve action pool: +1 every
@@ -19,7 +20,7 @@ export async function resetJusticeActions(
   if (!isOfficePoolAccrualTurn(currentTurn, JUSTICE_ACTION_ACCRUAL_TURNS)) {
     return { justiceActionsRegenerated: 0 };
   }
-  const result = await db.collection<SupremeCourtSeat>("supremeCourtSeats").updateMany(
+  const result = await supremeCourtSeatsCollection(db).updateMany(
     {
       justiceCharacterId: { $ne: null },
       justiceActionsRemaining: { $lt: JUSTICE_ACTION_CAP },

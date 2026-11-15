@@ -3,9 +3,9 @@
  *
  * The map shows freight *capacity* (CommodityPrice.stateSupply.freight, what
  * logistics sectors clear against) alongside origin-state interstate *haul load*
- * from `sourcingNetworkLoad`. Since ticket #1039 haul TEU is booked as real
- * freight demand in the market turn (state legs + global), so haul moves freight
- * prices and sold %. Money wiring (plan step 5, who pays shipping) is still off.
+ * from `sourcingNetworkLoad`. Haul TEU is booked as real freight demand in the
+ * market turn (state legs + global), so haul moves freight prices and sold %.
+ * Money wiring (who pays shipping) is still off.
  */
 
 export type FreightHaulLoadEntry = {

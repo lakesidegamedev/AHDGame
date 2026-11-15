@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui";
 import { useAuthMe } from "@/contexts/AuthDataContext";
-import { FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
+import { FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencyCodes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import {

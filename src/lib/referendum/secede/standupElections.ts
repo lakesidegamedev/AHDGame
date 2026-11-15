@@ -3,6 +3,10 @@ import { ObjectId, type Db } from "mongodb";
 import type { Election, State, Seat, GameState } from "@/lib/db/types";
 import { buildStandupElections } from "./rules/standupElections";
 import type { SecedingCountryId } from "./subRegions";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { seatsCollection } from "@/lib/db/repositories/seats";
 
 export async function standupElections(
   db: Db,
@@ -10,10 +14,11 @@ export async function standupElections(
   currentTurn: number,
   now: Date
 ): Promise<void> {
-  const gameState = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { projection: { startingYear: 1, preset: 1 } });
-  const regions = await db.collection<State>("states").find({ countryId }).toArray();
+  const gameState = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { startingYear: 1, preset: 1 } }
+  );
+  const regions = await statesCollection(db).find({ countryId }).toArray();
   const { rows, councils } = buildStandupElections({
     countryId,
     regions,
@@ -23,10 +28,10 @@ export async function standupElections(
     preset: gameState?.preset,
     id: () => new ObjectId().toHexString(),
   });
-  await db
-    .collection<Election>("elections")
-    .insertMany(rows.map((row) => ({ ...row, _id: new ObjectId(row._id) })));
-  await db.collection<State>("states").bulkWrite(
+  await electionsCollection(db).insertMany(
+    rows.map((row) => ({ ...row, _id: new ObjectId(row._id) }))
+  );
+  await statesCollection(db).bulkWrite(
     regions.map((region) => ({
       updateOne: {
         filter: { _id: region._id },
@@ -34,7 +39,7 @@ export async function standupElections(
       },
     }))
   );
-  await db.collection<Seat>("seats").bulkWrite(
+  await seatsCollection(db).bulkWrite(
     rows.map((row) => ({
       updateOne: {
         filter: { _id: row.seatId! },

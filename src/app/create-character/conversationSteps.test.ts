@@ -16,20 +16,12 @@ const summary = Object.fromEntries(
 
 describe("visibleConversationStepIds", () => {
   it("keeps the canonical order and closes with review", () => {
-    expect(visibleConversationStepIds(false)).toEqual([
-      "country",
-      "politician",
-      "region",
-      "compass",
-      "party",
-      "review",
-    ]);
-    expect(visibleConversationStepIds(true)).toEqual([...CONVERSATION_STEP_IDS]);
+    expect(visibleConversationStepIds()).toEqual([...CONVERSATION_STEP_IDS]);
   });
 
-  it("includes Stats only when the RPG-stats flag is on", () => {
-    expect(visibleConversationStepIds(false)).not.toContain("stats");
-    expect(visibleConversationStepIds(true)).toContain("stats");
+  it("drops Party only when the selector is hidden", () => {
+    expect(visibleConversationStepIds(false)).not.toContain("party");
+    expect(visibleConversationStepIds(false)).toContain("stats");
   });
 });
 
@@ -37,7 +29,6 @@ describe("buildConversationSteps", () => {
   it("maps parent-owned completion and summaries without inventing values", () => {
     const steps = buildConversationSteps({
       regionNoun: "state",
-      rpgStatsEnabled: false,
       complete: { ...complete, party: false },
       summary: { ...summary, party: null },
     });
@@ -47,6 +38,7 @@ describe("buildConversationSteps", () => {
       "region",
       "compass",
       "party",
+      "stats",
       "review",
     ]);
     expect(steps.find((s) => s.id === "party")).toMatchObject({
@@ -60,7 +52,6 @@ describe("buildConversationSteps", () => {
   it("uses the region noun for UK/JP wording", () => {
     const steps = buildConversationSteps({
       regionNoun: "region",
-      rpgStatsEnabled: false,
       complete,
       summary,
     });
@@ -72,7 +63,6 @@ describe("buildConversationSteps", () => {
     for (const regionNoun of ["state", "region"]) {
       const steps = buildConversationSteps({
         regionNoun,
-        rpgStatsEnabled: true,
         complete,
         summary,
       });

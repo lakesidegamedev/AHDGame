@@ -8,8 +8,17 @@ import { yearOfTurn } from "@/lib/utils/gameDate";
 import {
   SCO_REGIONAL_COUNCIL_SEATS,
   WAL_REGIONAL_COUNCIL_SEATS,
-} from "@/lib/turn/perpetualElections/shared";
+} from "@/lib/elections/scheduling/shared";
 import type { SecedingCountryId } from "../subRegions";
+import { QC_REGIONAL_COUNCIL_SEATS } from "@/lib/countries/qc/data/qcRegions";
+
+/** Regional-council seats per successor sub-region, sized at standup. */
+const SUCCESSOR_COUNCIL_SEATS: Record<SecedingCountryId, Record<string, number>> = {
+  SCO: SCO_REGIONAL_COUNCIL_SEATS,
+  WAL: WAL_REGIONAL_COUNCIL_SEATS,
+  QC: QC_REGIONAL_COUNCIL_SEATS,
+};
+
 export function buildStandupElections(input: {
   countryId: SecedingCountryId;
   regions: State[];
@@ -21,7 +30,7 @@ export function buildStandupElections(input: {
 }) {
   const { countryId, regions, currentTurn, now, startingYear, preset, id } = input;
   const chamber = getCountryConfig(countryId).legislature.lowerChamber.key;
-  const councils = countryId === "SCO" ? SCO_REGIONAL_COUNCIL_SEATS : WAL_REGIONAL_COUNCIL_SEATS;
+  const councils = SUCCESSOR_COUNCIL_SEATS[countryId];
   for (const region of regions) {
     if (
       !Number.isSafeInteger(region.houseDistricts) ||

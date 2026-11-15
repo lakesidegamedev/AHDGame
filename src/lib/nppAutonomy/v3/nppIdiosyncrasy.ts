@@ -1,31 +1,23 @@
 /**
  * PER-NPP IDIOSYNCRASY (V3/V4)
  *
- * Archetypes explain why a reformer campaigns harder than a steward. They do not
- * explain why *this particular* reformer is the one who never stops fundraising
- * — and without that, every NPP sharing an archetype is behaviourally the same
- * politician wearing a different name.
- *
- * This module gives each NPP a small, stable, private set of quirks layered on
- * top of their archetype: a multiplicative jitter per career modifier, plus a
+ * Archetypes explain why a reformer campaigns harder than a steward, but
+ * not why this particular reformer never stops fundraising. This module
+ * gives each NPP a small, stable, private set of quirks on top of their
+ * archetype: a multiplicative jitter per career modifier, plus a
  * decisiveness (temperature) offset.
  *
- * Two properties make this worth doing the way it's done here:
+ * Quirks are DERIVED, not stored: a hash of the NPP's stable `sequentialId`.
+ * No collection, no migration, no per-cycle write amplification, and
+ * identical on every read.
  *
- * 1. **Persistence without persistence.** The quirks are derived from a hash of
- *    the NPP's stable `sequentialId`, not stored. There is no new collection, no
- *    migration, and — importantly — no write amplification across every NPP each
- *    cycle. An NPP's quirks are identical on every read, forever, for free.
+ * The hash folds in a slowly-advancing phase counter, so quirks drift every
+ * few hundred turns. This reads as a career arc rather than noise, since it
+ * changes once over a long span instead of re-rolling each cycle.
  *
- * 2. **Career phases.** The hash folds in a slowly-advancing phase counter, so
- *    an NPP's quirks drift every few hundred turns. A politician who spent their
- *    early career fundraising can become one who campaigns — the kind of change
- *    that reads as a career arc rather than as noise, because it happens once
- *    over a long span instead of re-rolling every cycle.
- *
- * Fully deterministic and replay-safe: same inputs, same quirks, no RNG stream
- * consumed (this reads a hash directly rather than drawing from a sequence, so
- * it cannot desynchronise any caller's `rng()` call count).
+ * Deterministic and replay-safe: same inputs, same quirks. Reads a hash
+ * directly rather than drawing from an RNG sequence, so it cannot disturb
+ * any caller's rng() call count.
  */
 
 import { hashToUint32 } from "@/lib/events/substrate/rng";

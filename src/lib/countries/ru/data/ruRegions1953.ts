@@ -1,36 +1,28 @@
 import type { State } from "@/lib/db/types";
 
 /**
- * USSR regions as State-compatible documents — 1953 (Stalin's death year).
+ * USSR regions as State-compatible documents, 1953 (Stalin's death year).
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Values are authored for ~1953 directly (1939/1950 Soviet census data,
- * 1953 economic output estimates). NOT imported or transformed from ruRegions.ts.
+ * SEED INDEPENDENCE: DO NOT DERIVE FROM ANOTHER ERA. Values are authored for
+ * ~1953 directly (1939/1950 census, 1953 output estimates), not imported or
+ * transformed from ruRegions.ts.
  *
  * Population: 148,500,000 across 14 regions. Ukraine, Byelorussia and the
- * Baltics used to sit here as RU regions (UKR/BEL/BLT). They are now their own
- * playable Eastern Bloc countries (UKR/BLR/BAL) with their own region shards,
- * so RU keeps the ten RSFSR macro-regions plus Kazakhstan, Transcaucasia,
- * Central Asia and Moldova. The remainder still models the Union rather than
- * the RSFSR alone: those four were constituent union republics, NOT sovereign
- * satellite states like PL/RO/HU/DD/CS/BG.
- * Stalin died March 5, 1953. Korean War armistice July 1953.
- * Economy was substantially more agrarian than 1979 — collectivization complete
- * but industrialization still in progress.
+ * Baltics are now their own playable Eastern Bloc countries (UKR/BLR/BAL) with
+ * their own region shards, so RU keeps the ten RSFSR macro-regions plus
+ * Kazakhstan, Transcaucasia, Central Asia and Moldova. Those four remain union
+ * republics, not sovereign satellites like PL/RO/HU/DD/CS/BG.
  *
- * GDP BASIS (political-legislation spec §4.1 re-scale ruling): regional GDPs are
- * ×4.417 re-scaled off the original 1953 output-share authoring, so that one GDP
- * truth serves the budget page, the metrics system and the law cost engine. The
- * rollup is now ₽1,029,166M rather than the original ₽1.4T, because the three
- * departed republics took ₽370,834M with them (UKR 291,667 + BEL 50,000 +
- * BLT 29,167). The FY-1953 budget seed's national GDP is reduced to match
- * (see src/lib/seeds/reference/budgets.ts and reconcileStateGdp.ts).
+ * GDP BASIS: regional GDPs are x4.417 re-scaled off the original 1953 output-
+ * share authoring, so one GDP truth serves the budget page, the metrics system
+ * and the law cost engine. Rollup is 1,029,166M; the FY-1953 budget seed's
+ * national GDP is reduced to match (see seeds/reference/budgets.ts and
+ * reconcileStateGdp.ts).
  *
- * houseDistricts = Soviet of the Union seats (sum = 526). The real 1954
- * convocation seated 708, but 182 of those seats belonged to the constituencies
- * now owned by UKR (145), BLR (27) and BAL (10), which elect their own chambers.
- * Apportionment within RU is pop-proportional by largest remainder, unchanged.
- * stateSenateSeats = regional Supreme Soviet seats.
+ * houseDistricts = Soviet of the Union seats (sum = 526); 182 seats belonging
+ * to UKR/BLR/BAL elect their own chambers. Apportionment within RU is
+ * pop-proportional by largest remainder. stateSenateSeats = regional Supreme
+ * Soviet seats.
  */
 export const ruRegions1953: State[] = [
   // ── RSFSR (Russia) economic macro-regions ──────────────────────────────────

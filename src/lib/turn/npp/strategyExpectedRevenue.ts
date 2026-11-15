@@ -1,26 +1,21 @@
 // src/lib/turn/npp/strategyExpectedRevenue.ts
 /**
- * Expected-realized-revenue scoring for NPP extraction strategy choice
- * (market-structural week 1, t899 misallocation remediation).
+ * Expected-realized-revenue scoring for NPP extraction strategy choice.
  *
- * The prior brain picked strategies from global scarcity alone, so NPP miners
- * strategized into resources their state physically cannot extract (e.g. iron
- * desired 15.3M in a state with capacity 1,222) while huge deposits sat idle.
- * This scorer prices in BOTH the market signal and what the state can support:
+ * Prices in both the market signal and what the state can physically support:
  *
  *   score = Σ_outputs( rate × laggedPriceRatio(commodity) × capacityHeadroom(resource) )
  *
- * where laggedPriceRatio is the host country's reachable book over basePrice
- * (national, then global fallback; last turn's prices) and
- * capacityHeadroom ∈ [0, 1] is the state's remaining idle fraction of the
- * resource's capacity (1 for uncapped/legacy states and non-extractable
- * outputs). A strategy whose primary resource has no local headroom scores ~0
- * regardless of how scarce the commodity is globally — which is exactly the
- * misallocation bug.
+ * `laggedPriceRatio` is the host country's reachable book over basePrice
+ * (national, then global fallback; last turn's prices). `capacityHeadroom`
+ * in [0, 1] is the state's remaining idle fraction of the resource's
+ * capacity (1 for uncapped/legacy states and non-extractable outputs). A
+ * strategy whose primary resource has no local headroom scores ~0 regardless
+ * of global scarcity, preventing strategizing into resources the state
+ * cannot extract.
  *
- * Pure functions only; the DB wiring lives in
- * `src/lib/turn/extractionAutoStrategy.ts` (NPP re-strategize pass) and rides
- * behind the same `gameState.extractionAutoStrategyEnabled` flag.
+ * Pure functions only; DB wiring lives in
+ * `src/lib/turn/extractionAutoStrategy.ts`.
  */
 
 import {
@@ -128,17 +123,16 @@ export function primaryExtractionResource(strategy: ScorableStrategy): Extractab
  * Rules:
  * - Every strategy is scored: Σ rate × laggedPriceRatio × capacityHeadroom.
  * - A candidate whose PRIMARY resource has ~zero local headroom is never
- *   switched into (the t899 misallocation bug).
+ *   switched into.
  * - The best candidate must beat the current score by
- *   STRATEGY_SWITCH_MIN_IMPROVEMENT (relaxed to LOW_FILL_SWITCH_MIN_IMPROVEMENT
- *   under chronic low fill) — except when the current strategy scores ~0
- *   (dead deposit), where any positive candidate wins.
- *
+ *   STRATEGY_SWITCH_MIN_IMPROVEMENT (LOW_FILL_SWITCH_MIN_IMPROVEMENT under
+ *   chronic low fill), except when the current strategy scores ~0, where any
+ *   positive candidate wins.
  * - When the current recipe is on a dead deposit (`currentZeroYield`: the state
  *   holds none of the resources it extracts), the best viable candidate wins
- *   even when every candidate forecasts a loss. A dead-deposit mine produces
- *   nothing and still buys its inputs, so any recipe with output is strictly
- *   better. Null then means no recipe can produce here at all.
+ *   even if it forecasts a loss: a dead-deposit mine produces nothing and still
+ *   buys inputs, so any recipe with output is better. Null then means no recipe
+ *   can produce here at all.
  *
  * Cooldown/transition eligibility is the caller's responsibility (it lives on
  * the sector document, not in this pure helper).

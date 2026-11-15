@@ -3,8 +3,9 @@
  * Logs method, path, status, and duration. Disabled in production by default
  * unless LOG_REQUESTS=1 is set.
  */
+import { runtimeConfig } from "@/lib/config/runtime";
 
-const ENABLED = process.env.NODE_ENV !== "production" || process.env.LOG_REQUESTS === "1";
+const ENABLED = process.env.NODE_ENV !== "production" || runtimeConfig.logRequests();
 
 export function logRequest(method: string, path: string, status: number, durationMs: number): void {
   if (!ENABLED) return;

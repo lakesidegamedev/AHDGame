@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError } from "@/lib/api/errors";
+import { gameHealthSnapshotsCollection } from "@/lib/db/repositories/gameHealthSnapshots";
+import type { Document } from "mongodb";
 
 /**
  * List game health snapshots with optional turn range filter.
@@ -28,8 +30,7 @@ export async function GET(request: Request) {
       if (to !== undefined) (filter.turn as Record<string, number>).$lte = to;
     }
 
-    const snapshots = await db
-      .collection("gameHealthSnapshots")
+    const snapshots = await gameHealthSnapshotsCollection<Document>(db)
       .find(filter)
       .sort({ turn: -1 })
       .limit(limit)

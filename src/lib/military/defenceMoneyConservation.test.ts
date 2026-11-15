@@ -170,7 +170,7 @@ function stubDb(l: Ledger): Db {
 // A realistic struck price: comfortably above what a lot costs to build, the way the award
 // band guarantees at signing. A price below cost is now a real (and separately tested) outcome
 // rather than the default, since live input prices can overtake a contract after it is signed.
-// Cost is a share of price now (ticket #1134), so the anchor leads and cost follows. Kept in
+// Cost is a share of price now, so the anchor leads and cost follows. Kept in
 // the same order of magnitude the struck price always had here: this file tests MONEY
 // CONSERVATION, and a ten-lot order large enough to trip the per-turn payout cap would deliver
 // eight lots and fail on the wrong subject.

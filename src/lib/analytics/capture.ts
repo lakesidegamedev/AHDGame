@@ -7,7 +7,6 @@ import {
   setAnalyticsAccount,
 } from "./accountContext";
 import { getStoredConsent } from "@/components/CookieConsent";
-import { captureAmplitudeEvent, stopAmplitudeCapture } from "./amplitudeClient";
 import { capturePostHogEvent, stopPostHogCapture } from "./posthogClient";
 import {
   ACCOUNT_CREATED_KEY,
@@ -85,21 +84,9 @@ async function getProductEventContext(): Promise<ProductEventContext> {
 /**
  * The single analytics choke point.
  *
- * Every product event goes through here and fans out to both destinations, so
- * instrumentation is written once and no call site knows or cares which tools
- * are live:
- *
- * - **PostHog** — breadth. Session replay, feature flags, experiments, surveys,
- *   error tracking. The daily driver.
- * - **Amplitude** — depth. Retention curves, behavioural cohorts and funnel
- *   decomposition. Opened when there is a hard retention question.
- *
- * Both are consent-gated and neither loads without its own key configured, so
- * this is safe to ship while a destination is still being provisioned. A
- * destination that is not configured resolves to a no-op rather than throwing.
- *
- * Adding a third destination means adding one branch here, not touching the
- * call sites.
+ * Every product event goes through here, so instrumentation is written once and
+ * no call site knows which tool is live. PostHog is the only destination: it is
+ * consent-gated and resolves to a no-op when its key is not configured.
  */
 export async function captureProductEvent(
   event: string,
@@ -139,18 +126,14 @@ export async function captureProductEvent(
             : {}),
       }
     : eventProperties;
-  // allSettled, not all: one destination being down or misconfigured must never
-  // suppress the other, and analytics must never reject into a caller's flow.
-  await Promise.allSettled([
-    capturePostHogEvent(event, enrichedProperties),
-    captureAmplitudeEvent(event, enrichedProperties),
-  ]);
+  // allSettled: analytics must never reject into a caller's flow.
+  await Promise.allSettled([capturePostHogEvent(event, enrichedProperties)]);
 }
 
-/** Withdrawing consent stops every destination, not just the daily driver. */
+/** Withdrawing consent stops capture. */
 export async function stopAnalyticsCapture(): Promise<void> {
   setAnalyticsAccount(null);
-  await Promise.allSettled([stopPostHogCapture(), stopAmplitudeCapture()]);
+  await Promise.allSettled([stopPostHogCapture()]);
 }
 
 let accountCaptureInFlight = false;

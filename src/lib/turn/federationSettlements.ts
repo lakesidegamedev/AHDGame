@@ -2,23 +2,17 @@
  * obligations together. Residents and private firms await their owners' choices. */
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { State } from "@/lib/db/types/state";
 import { getAllCountryAccess } from "@/lib/countryAccess";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
-import {
-  FEDERATION_POLITICAL_PROPOSALS_COLLECTION,
-  type FederationPoliticalProposalRecord,
-} from "@/lib/world/succession/politicalProposal";
-import {
-  FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION,
-  type FederationSettlementApplicationRecord,
-} from "@/lib/world/succession/runtimeEntities";
-import {
-  FEDERATION_RATIFICATIONS_COLLECTION,
-  type FederationRatificationRecord,
-} from "@/lib/world/succession/ratificationStore";
+import { type FederationPoliticalProposalRecord } from "@/lib/world/succession/politicalProposal";
+import { type FederationSettlementApplicationRecord } from "@/lib/world/succession/runtimeEntities";
+import { type FederationRatificationRecord } from "@/lib/world/succession/ratificationStore";
 import { buildSourceRegionHierarchy } from "@/lib/world/succession/sourceRegionHierarchy";
+import { getStatesCollection } from "@/lib/db/collections/states";
+import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
+import { federationRatificationsCollection } from "@/lib/db/repositories/federationRatifications";
+import { federationPoliticalProposalsCollection } from "@/lib/db/repositories/federationPoliticalProposals";
 
 /** Called under the turn lock after ratification. Staging, preparation and all
  * effective writes share one transaction, so a failed phase can retry on a
@@ -38,20 +32,17 @@ export async function processRatifiedFederationSettlements(
     !Number.isFinite(now.getTime())
   )
     throw new Error("Federation settlement needs a valid turn, year and time");
-  const proposals = await db
-    .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
+  const proposals = await federationPoliticalProposalsCollection<FederationPoliticalProposalRecord>(
+    db
+  )
     .find({ presetId: "1991-default", status: "open" })
     .toArray();
   if (proposals.length === 0) return 0;
   const [applications, votes] = await Promise.all([
-    db
-      .collection<FederationSettlementApplicationRecord>(
-        FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-      )
+    federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(db)
       .find({ presetId: "1991-default", status: "applied" }, { projection: { sourceEntityId: 1 } })
       .toArray(),
-    db
-      .collection<FederationRatificationRecord>(FEDERATION_RATIFICATIONS_COLLECTION)
+    federationRatificationsCollection<FederationRatificationRecord>(db)
       .find({
         presetId: "1991-default",
         settlementId: { $in: proposals.map((proposal) => proposal.settlementId) },
@@ -96,11 +87,10 @@ export async function processRatifiedFederationSettlements(
   for (const proposal of candidates) {
     const didApply = await runRequiredTransaction(
       async (session) => {
-        const existing = await db
-          .collection<FederationSettlementApplicationRecord>(
-            FEDERATION_SETTLEMENT_APPLICATIONS_COLLECTION
-          )
-          .findOne(
+        const existing =
+          await federationSettlementApplicationsCollection<FederationSettlementApplicationRecord>(
+            db
+          ).findOne(
             {
               presetId: "1991-default",
               sourceEntityId: proposal.sourceEntityId,
@@ -119,8 +109,9 @@ export async function processRatifiedFederationSettlements(
           now,
           session,
         });
-        const states = await db
-          .collection<State>("states")
+        const states = await (
+          await getStatesCollection(db)
+        )
           .find(
             { countryId: { $in: [...new Set([...playableCountries, proposal.sourceEntityId])] } },
             {

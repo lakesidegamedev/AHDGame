@@ -1,19 +1,16 @@
 /**
  * Corporate brand colour: one hue per corporation, and a ramp of shades off it.
  *
- * Two jobs live here so charts and corp creation cannot drift apart:
+ * Both live here so charts and corp creation cannot drift apart:
  *
- *  1. `randomBrandColor()`: every new corp is stamped with a colour at
- *     creation, so a corp is recognisable from the day it exists rather than
- *     falling back to whatever a chart happened to pick.
- *  2. `brandShades()`: breakdown charts of a SINGLE corp (its shareholders,
- *     its cap table) tint every slice off that corp's own colour instead of
- *     running through an unrelated rainbow. The chart then reads as "this
- *     company", and the slices still separate because the ramp moves lightness,
- *     hue and saturation together.
+ *  1. `randomBrandColor()`: stamped at creation, so a corp is recognisable from
+ *     the start rather than falling back to whatever a chart picked.
+ *  2. `brandShades()`: breakdown charts of a SINGLE corp tint every slice off
+ *     that corp's own colour. The ramp moves lightness, hue and saturation so
+ *     the slices stay distinguishable.
  *
- * Charts that compare DIFFERENT corps (sector market share, state ownership)
- * deliberately do not use the ramp. There each corp wears its own colour.
+ * Charts comparing DIFFERENT corps (sector market share, state ownership)
+ * deliberately do not use the ramp; each corp wears its own colour.
  */
 
 const BRAND_HEX = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;

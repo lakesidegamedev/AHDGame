@@ -77,7 +77,7 @@ describe("SideTray", () => {
     fireEvent.click(screen.getByRole("button", { name: w.tray.openTray }));
     expect(props.onSaveOpen).toHaveBeenCalledWith(true);
     const wiki = await screen.findByRole("link", { name: new RegExp(w.staffQueues.wikiReview) });
-    expect(wiki.getAttribute("href")).toBe("/admin?tab=content&sub=wiki-review");
+    expect(wiki.getAttribute("href")).toBe("/control/community/wiki-review");
     // The open tray sits over the page; the nav and content stay where they are.
     expect(document.documentElement.style.getPropertyValue("--side-tray-push")).toBe("");
     expect(document.documentElement.dataset.sideTray).toBeUndefined();

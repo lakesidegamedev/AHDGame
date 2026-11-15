@@ -87,16 +87,13 @@ export function computeDrift(input: DriftInput): AlignmentShares {
 /**
  * Passive pull toward a bloc, per turn, per channel org a nation belongs to.
  *
- * Roughly one share point every 24 turns — half a game year — before the
- * channel's own weight. Membership used to pull 2 points a TURN, which carried a
- * member from the join gate to locked inside half a game year and made simply
- * belonging worth more than any amount of spending: the current outran the
- * rudder it was meant to be steered against. A single play at
- * {@link PER_NATION_TURN_CAP} is now worth more than two game YEARS of drift.
+ * Roughly one share point every 24 turns (half a game year) before the
+ * channel weight. Kept small so drift cannot outpace active spending: a
+ * single play at {@link PER_NATION_TURN_CAP} outweighs two game years of it.
  *
- * Expressible only because shares store to a hundredth. On the old tenth grid
- * this rounds to zero every turn, and the tide would have been inert while
- * looking implemented.
+ * Expressible only because shares store to a hundredth. On a tenth grid it
+ * rounds to zero every turn and the tide would be inert while looking
+ * implemented.
  */
 export const MEMBERSHIP_PULL_PER_TURN = 0.04;
 

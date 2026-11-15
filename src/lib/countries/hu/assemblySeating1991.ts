@@ -5,23 +5,25 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
-import type {
-  Character,
-  ElectedOfficial,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  GameState,
-  NPP,
-  State,
-} from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+import type { ElectedOfficial } from "@/lib/db/types";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { MS_PER_TURN } from "@/lib/constants/turnTime";
-import { HU_1991_COUNTS_COLLECTION, type Hu1991AssemblyRecord } from "./assemblyCount1991";
+import { type Hu1991AssemblyRecord } from "./assemblyCount1991";
 import { settleHu1991Mandates } from "./rules/mandates1991";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { statesCollection } from "@/lib/db/repositories/states";
+import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import { electionsCollection } from "@/lib/db/repositories/elections";
+import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
+import { electionVoteTalliesCollection } from "@/lib/db/repositories/electionVoteTallies";
+import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
+import { notificationsCollection } from "@/lib/db/repositories/notifications";
+import type { Document } from "mongodb";
+import { hu1991AssemblyOfficeArchivesCollection } from "@/lib/db/repositories/hu1991AssemblyOfficeArchives";
+import { hu1991AssemblyCountsCollection } from "@/lib/db/repositories/hu1991AssemblyCounts";
 
-const HU_1991_OFFICE_ARCHIVES_COLLECTION = "hu1991AssemblyOfficeArchives";
 interface Hu1991AssemblyArchive {
   _id: string;
   countryId: "HU";
@@ -50,18 +52,18 @@ async function materializeHu1991AssemblySeating(input: {
     !Number.isFinite(now.getTime())
   )
     throw new Error("Hungarian handover needs an active transaction, cycle, turn and time");
-  const journal = db.collection<Hu1991AssemblyRecord>(HU_1991_COUNTS_COLLECTION);
+  const journal = hu1991AssemblyCountsCollection<Hu1991AssemblyRecord>(db);
   const receipt = await journal.findOne({ _id: `HU:mixed1989:${cycle}` }, { session });
   if (!receipt || receipt.seatedAtTurn != null || receipt.count.kind !== "counted") return false;
-  const game = await db
-    .collection<GameState>("gameState")
-    .findOne({ _id: "current" }, { session, projection: { preset: 1 } });
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { session, projection: { preset: 1 } }
+  );
   if (game?.preset !== "1991-default") throw new Error("No native Hungarian mandate in this world");
   const ids = [...receipt.electionIds, ...(receipt.runoffElectionIds ?? [])].map(
     (id) => new ObjectId(id)
   );
-  const elections = await db
-    .collection<Election>("elections")
+  const elections = await electionsCollection(db)
     .find(
       {
         _id: { $in: ids },
@@ -82,8 +84,7 @@ async function materializeHu1991AssemblySeating(input: {
     ).size !== 6
   )
     throw new Error("Hungarian certified cohort is incomplete or changed");
-  const candidates = await db
-    .collection<ElectionCandidate>("electionCandidates")
+  const candidates = await electionCandidatesCollection(db)
     .find(
       { electionId: { $in: ids } },
       {
@@ -113,8 +114,7 @@ async function materializeHu1991AssemblySeating(input: {
     .filter((row) => !row.isNpc)
     .map((row) => new ObjectId(row.ownerId));
   const npcs = npcIds.length
-    ? await db
-        .collection<NPP>("npps")
+    ? await nppsCollection(db)
         .find(
           { _id: { $in: npcIds }, countryId: "HU", retiredAt: null, isTechnocrat: { $ne: true } },
           {
@@ -125,8 +125,7 @@ async function materializeHu1991AssemblySeating(input: {
         .toArray()
     : [];
   const players = playerIds.length
-    ? await db
-        .collection<Character>("characters")
+    ? await charactersCollection(db)
         .find(
           {
             _id: { $in: playerIds },
@@ -192,15 +191,14 @@ async function materializeHu1991AssemblySeating(input: {
       rootCandidateId: row.candidateId,
     },
   }));
-  const incumbents = await db
-    .collection<ElectedOfficial>("electedOfficials")
+  const incumbents = await electedOfficialsCollection(db)
     .find(
       { countryId: "HU", officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] } },
       { session }
     )
     .toArray();
   if (incumbents.length)
-    await db.collection<Hu1991AssemblyArchive>(HU_1991_OFFICE_ARCHIVES_COLLECTION).insertMany(
+    await hu1991AssemblyOfficeArchivesCollection<Hu1991AssemblyArchive>(db).insertMany(
       incumbents.map((official) => ({
         _id: `${receipt._id}:${official._id.toHexString()}`,
         countryId: "HU" as const,
@@ -211,7 +209,7 @@ async function materializeHu1991AssemblySeating(input: {
       { session }
     );
   for (const isNpc of [false, true]) {
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.updateMany(
       { countryId: "HU", "currentOffice.type": { $in: ["assemblyDelegate", "assemblyDeputy"] } },
       {
@@ -221,14 +219,11 @@ async function materializeHu1991AssemblySeating(input: {
       { session }
     );
   }
-  await db
-    .collection<ElectedOfficial>("electedOfficials")
-    .deleteMany(
-      { countryId: "HU", officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] } },
-      { session }
-    );
-  if (officials.length)
-    await db.collection<ElectedOfficial>("electedOfficials").insertMany(officials, { session });
+  await electedOfficialsCollection(db).deleteMany(
+    { countryId: "HU", officeType: { $in: ["assemblyDelegate", "assemblyDeputy"] } },
+    { session }
+  );
+  if (officials.length) await electedOfficialsCollection(db).insertMany(officials, { session });
   const owners = new Map<
     string,
     { ownerId: string; isNpc: boolean; state: string; party: string; seats: number }
@@ -247,7 +242,7 @@ async function materializeHu1991AssemblySeating(input: {
   for (const isNpc of [false, true]) {
     const selected = [...owners.values()].filter((row) => row.isNpc === isNpc);
     if (!selected.length) continue;
-    const collection = isNpc ? db.collection<NPP>("npps") : db.collection<Character>("characters");
+    const collection = isNpc ? nppsCollection(db) : charactersCollection(db);
     await collection.bulkWrite(
       selected.map((row) => {
         const originalOffice = (isNpc ? npcMap : playerMap).get(row.ownerId)?.currentOffice;
@@ -291,7 +286,7 @@ async function materializeHu1991AssemblySeating(input: {
       { session }
     );
   }
-  const finalizedTallies = await db.collection<ElectionVoteTally>("electionVoteTallies").bulkWrite(
+  const finalizedTallies = await electionVoteTalliesCollection(db).bulkWrite(
     elections.map((election) => ({
       updateOne: {
         filter: {
@@ -339,14 +334,14 @@ async function materializeHu1991AssemblySeating(input: {
   );
   if (finalizedTallies.matchedCount !== ids.length)
     throw new Error("Hungarian handover lost tally custody");
-  await db.collection<ElectionCandidate>("electionCandidates").updateMany(
+  await electionCandidatesCollection(db).updateMany(
     { electionId: { $in: ids }, status: "active" },
     {
       $set: { status: "withdrawn", withdrawnAt: now },
     },
     { session }
   );
-  const finalizedElections = await db.collection<Election>("elections").bulkWrite(
+  const finalizedElections = await electionsCollection(db).bulkWrite(
     elections.map((row) => ({
       updateOne: {
         filter: { _id: row._id, status: { $in: ["completed", "resolved"] } },
@@ -364,7 +359,7 @@ async function materializeHu1991AssemblySeating(input: {
   );
   if (finalizedElections.matchedCount !== ids.length)
     throw new Error("Hungarian handover lost election custody");
-  const resized = await db.collection<State>("states").bulkWrite(
+  const resized = await statesCollection(db).bulkWrite(
     Object.entries(settled.regionCapacity).map(([id, seats]) => ({
       updateOne: {
         filter: { _id: id, countryId: "HU" },
@@ -374,7 +369,7 @@ async function materializeHu1991AssemblySeating(input: {
     { session }
   );
   if (resized.matchedCount !== 6) throw new Error("Hungarian handover requires all six regions");
-  const formation = await db.collection<GovernmentFormation>("governmentFormations").updateOne(
+  const formation = await governmentFormationsCollection(db).updateOne(
     { _id: "HU" },
     {
       $set: { totalSeats: 386, majorityThreshold: 194, updatedAt: now },
@@ -385,7 +380,7 @@ async function materializeHu1991AssemblySeating(input: {
   if (formation.matchedCount !== 1) throw new Error("Hungarian government formation is missing");
   const notices = players.filter((player) => owners.has(`player:${player._id.toHexString()}`));
   if (notices.length)
-    await db.collection("notifications").insertMany(
+    await notificationsCollection<Document>(db).insertMany(
       notices.map((player) => ({
         _id: stableId(`${receipt._id}:notice:${player._id.toHexString()}`),
         userId: player.userId,

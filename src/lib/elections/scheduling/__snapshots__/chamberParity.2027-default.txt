@@ -1,0 +1,304 @@
+## fresh-t1 ie.dail
+IE/dail/COR c1 y2028 active seats=20 turns=1/72/96 dur=48/24 seat=IE-dail-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/DON c1 y2028 active seats=16 turns=1/72/96 dur=48/24 seat=IE-dail-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/DUB c1 y2028 active seats=49 turns=1/72/96 dur=48/24 seat=IE-dail-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/GAL c1 y2028 active seats=15 turns=1/72/96 dur=48/24 seat=IE-dail-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/KIL c1 y2028 active seats=21 turns=1/72/96 dur=48/24 seat=IE-dail-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/LIM c1 y2028 active seats=15 turns=1/72/96 dur=48/24 seat=IE-dail-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/MID c1 y2028 active seats=11 turns=1/72/96 dur=48/24 seat=IE-dail-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/NIR c1 y2028 active seats=1 turns=1/72/96 dur=48/24 seat=IE-dail-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+IE/dail/WEX c1 y2028 active seats=13 turns=1/72/96 dur=48/24 seat=IE-dail-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T11:00:00.000Z|2026-11-12T11:00:00.000Z
+## fresh-t1 ie.uachtaran
+IE/uachtaran/IE c1 y2032 active seats=1 turns=1/264/288 dur=48/24 seat=IE-uachtaran-IE shift=- t=2026-11-08T12:00:00.000Z|2026-11-19T11:00:00.000Z|2026-11-20T11:00:00.000Z
+## fresh-t1 ie.localCouncil
+IE/localCouncil/COR c1 y2029 active seats=25 turns=1/120/144 dur=48/24 seat=IE-localCouncil-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/DON c1 y2029 active seats=21 turns=1/120/144 dur=48/24 seat=IE-localCouncil-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/DUB c1 y2029 active seats=62 turns=1/120/144 dur=48/24 seat=IE-localCouncil-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/GAL c1 y2029 active seats=19 turns=1/120/144 dur=48/24 seat=IE-localCouncil-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/KIL c1 y2029 active seats=26 turns=1/120/144 dur=48/24 seat=IE-localCouncil-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/LIM c1 y2029 active seats=18 turns=1/120/144 dur=48/24 seat=IE-localCouncil-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/MID c1 y2029 active seats=12 turns=1/120/144 dur=48/24 seat=IE-localCouncil-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/NIR c1 y2029 active seats=95 turns=1/120/144 dur=48/24 seat=IE-localCouncil-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+IE/localCouncil/WEX c1 y2029 active seats=17 turns=1/120/144 dur=48/24 seat=IE-localCouncil-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T11:00:00.000Z|2026-11-14T11:00:00.000Z
+## fresh-t1 ng.house
+NG/house/NORTH_CENTRAL c1 y2031 active seats=53 turns=1/216/240 dur=96/72 seat=NG-house-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/house/NORTH_EAST c1 y2031 active seats=50 turns=1/216/240 dur=96/72 seat=NG-house-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/house/NORTH_WEST c1 y2031 active seats=95 turns=1/216/240 dur=96/72 seat=NG-house-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/house/SOUTH_EAST c1 y2031 active seats=43 turns=1/216/240 dur=96/72 seat=NG-house-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/house/SOUTH_SOUTH c1 y2031 active seats=47 turns=1/216/240 dur=96/72 seat=NG-house-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/house/SOUTH_WEST c1 y2031 active seats=72 turns=1/216/240 dur=96/72 seat=NG-house-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+## fresh-t1 ng.senate
+NG/senate/NORTH_CENTRAL c1 y2031 active seats=20 turns=1/216/240 dur=288/264 seat=NG-senate-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/senate/NORTH_EAST c1 y2031 active seats=19 turns=1/216/240 dur=288/264 seat=NG-senate-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/senate/NORTH_WEST c1 y2031 active seats=18 turns=1/216/240 dur=288/264 seat=NG-senate-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/senate/SOUTH_EAST c1 y2031 active seats=19 turns=1/216/240 dur=288/264 seat=NG-senate-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/senate/SOUTH_SOUTH c1 y2031 active seats=18 turns=1/216/240 dur=288/264 seat=NG-senate-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/senate/SOUTH_WEST c1 y2031 active seats=21 turns=1/216/240 dur=288/264 seat=NG-senate-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+## fresh-t1 ng.governor
+NG/governor/NORTH_CENTRAL c1 y2031 active seats=1 turns=1/216/240 dur=192/168 seat=NG-governor-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/governor/NORTH_EAST c1 y2031 active seats=1 turns=1/216/240 dur=192/168 seat=NG-governor-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/governor/NORTH_WEST c1 y2031 active seats=1 turns=1/216/240 dur=192/168 seat=NG-governor-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/governor/SOUTH_EAST c1 y2031 active seats=1 turns=1/216/240 dur=192/168 seat=NG-governor-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/governor/SOUTH_SOUTH c1 y2031 active seats=1 turns=1/216/240 dur=192/168 seat=NG-governor-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/governor/SOUTH_WEST c1 y2031 active seats=1 turns=1/216/240 dur=192/168 seat=NG-governor-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+## fresh-t1 ng.regionalCouncil
+NG/regionalCouncil/NORTH_CENTRAL c1 y2029 active seats=146 turns=1/216/240 dur=48/24 seat=NG-regionalCouncil-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/regionalCouncil/NORTH_EAST c1 y2029 active seats=137 turns=1/216/240 dur=48/24 seat=NG-regionalCouncil-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/regionalCouncil/NORTH_WEST c1 y2029 active seats=259 turns=1/216/240 dur=48/24 seat=NG-regionalCouncil-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/regionalCouncil/SOUTH_EAST c1 y2029 active seats=117 turns=1/216/240 dur=48/24 seat=NG-regionalCouncil-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/regionalCouncil/SOUTH_SOUTH c1 y2029 active seats=134 turns=1/216/240 dur=48/24 seat=NG-regionalCouncil-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+NG/regionalCouncil/SOUTH_WEST c1 y2029 active seats=197 turns=1/216/240 dur=48/24 seat=NG-regionalCouncil-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+## fresh-t1 ng.president
+NG/president/NG c1 y2031 active seats=1 turns=1/216/240 dur=192/168 seat=NG-president shift=- t=2026-11-08T12:00:00.000Z|2026-11-17T11:00:00.000Z|2026-11-18T11:00:00.000Z
+## fresh-t300 ie.dail
+IE/dail/COR c3 y2036 active seats=20 turns=300/456/480 dur=48/24 seat=IE-dail-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/DON c3 y2036 active seats=16 turns=300/456/480 dur=48/24 seat=IE-dail-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/DUB c3 y2036 active seats=49 turns=300/456/480 dur=48/24 seat=IE-dail-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/GAL c3 y2036 active seats=15 turns=300/456/480 dur=48/24 seat=IE-dail-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/KIL c3 y2036 active seats=21 turns=300/456/480 dur=48/24 seat=IE-dail-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/LIM c3 y2036 active seats=15 turns=300/456/480 dur=48/24 seat=IE-dail-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/MID c3 y2036 active seats=11 turns=300/456/480 dur=48/24 seat=IE-dail-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/NIR c3 y2036 active seats=1 turns=300/456/480 dur=48/24 seat=IE-dail-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/WEX c3 y2036 active seats=13 turns=300/456/480 dur=48/24 seat=IE-dail-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+## fresh-t300 ie.uachtaran
+IE/uachtaran/IE c2 y2039 active seats=1 turns=300/600/624 dur=48/24 seat=IE-uachtaran-IE shift=- t=2026-11-08T12:00:00.000Z|2026-11-21T00:00:00.000Z|2026-11-22T00:00:00.000Z
+## fresh-t300 ie.localCouncil
+IE/localCouncil/COR c2 y2034 active seats=25 turns=300/360/384 dur=48/24 seat=IE-localCouncil-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/DON c2 y2034 active seats=21 turns=300/360/384 dur=48/24 seat=IE-localCouncil-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/DUB c2 y2034 active seats=62 turns=300/360/384 dur=48/24 seat=IE-localCouncil-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/GAL c2 y2034 active seats=19 turns=300/360/384 dur=48/24 seat=IE-localCouncil-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/KIL c2 y2034 active seats=26 turns=300/360/384 dur=48/24 seat=IE-localCouncil-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/LIM c2 y2034 active seats=18 turns=300/360/384 dur=48/24 seat=IE-localCouncil-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/MID c2 y2034 active seats=12 turns=300/360/384 dur=48/24 seat=IE-localCouncil-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/NIR c2 y2034 active seats=95 turns=300/360/384 dur=48/24 seat=IE-localCouncil-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/WEX c2 y2034 active seats=17 turns=300/360/384 dur=48/24 seat=IE-localCouncil-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## fresh-t300 ng.house
+NG/house/NORTH_CENTRAL c2 y2035 active seats=53 turns=300/408/432 dur=96/72 seat=NG-house-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/house/NORTH_EAST c2 y2035 active seats=50 turns=300/408/432 dur=96/72 seat=NG-house-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/house/NORTH_WEST c2 y2035 active seats=95 turns=300/408/432 dur=96/72 seat=NG-house-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/house/SOUTH_EAST c2 y2035 active seats=43 turns=300/408/432 dur=96/72 seat=NG-house-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/house/SOUTH_SOUTH c2 y2035 active seats=47 turns=300/408/432 dur=96/72 seat=NG-house-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/house/SOUTH_WEST c2 y2035 active seats=72 turns=300/408/432 dur=96/72 seat=NG-house-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+## fresh-t300 ng.senate
+NG/senate/NORTH_CENTRAL c2 y2035 active seats=20 turns=300/408/432 dur=288/264 seat=NG-senate-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/senate/NORTH_EAST c2 y2035 active seats=19 turns=300/408/432 dur=288/264 seat=NG-senate-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/senate/NORTH_WEST c2 y2035 active seats=18 turns=300/408/432 dur=288/264 seat=NG-senate-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/senate/SOUTH_EAST c2 y2035 active seats=19 turns=300/408/432 dur=288/264 seat=NG-senate-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/senate/SOUTH_SOUTH c2 y2035 active seats=18 turns=300/408/432 dur=288/264 seat=NG-senate-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/senate/SOUTH_WEST c2 y2035 active seats=21 turns=300/408/432 dur=288/264 seat=NG-senate-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+## fresh-t300 ng.governor
+NG/governor/NORTH_CENTRAL c2 y2035 active seats=1 turns=300/408/432 dur=192/168 seat=NG-governor-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/governor/NORTH_EAST c2 y2035 active seats=1 turns=300/408/432 dur=192/168 seat=NG-governor-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/governor/NORTH_WEST c2 y2035 active seats=1 turns=300/408/432 dur=192/168 seat=NG-governor-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/governor/SOUTH_EAST c2 y2035 active seats=1 turns=300/408/432 dur=192/168 seat=NG-governor-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/governor/SOUTH_SOUTH c2 y2035 active seats=1 turns=300/408/432 dur=192/168 seat=NG-governor-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/governor/SOUTH_WEST c2 y2035 active seats=1 turns=300/408/432 dur=192/168 seat=NG-governor-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+## fresh-t300 ng.regionalCouncil
+NG/regionalCouncil/NORTH_CENTRAL c2 y2034 active seats=146 turns=300/408/432 dur=48/24 seat=NG-regionalCouncil-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/regionalCouncil/NORTH_EAST c2 y2034 active seats=137 turns=300/408/432 dur=48/24 seat=NG-regionalCouncil-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/regionalCouncil/NORTH_WEST c2 y2034 active seats=259 turns=300/408/432 dur=48/24 seat=NG-regionalCouncil-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/regionalCouncil/SOUTH_EAST c2 y2034 active seats=117 turns=300/408/432 dur=48/24 seat=NG-regionalCouncil-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/regionalCouncil/SOUTH_SOUTH c2 y2034 active seats=134 turns=300/408/432 dur=48/24 seat=NG-regionalCouncil-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+NG/regionalCouncil/SOUTH_WEST c2 y2034 active seats=197 turns=300/408/432 dur=48/24 seat=NG-regionalCouncil-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+## fresh-t300 ng.president
+NG/president/NG c2 y2035 active seats=1 turns=300/408/432 dur=192/168 seat=NG-president shift=- t=2026-11-08T12:00:00.000Z|2026-11-13T00:00:00.000Z|2026-11-14T00:00:00.000Z
+## after-cycle1-t120 ie.dail
+IE/dail/COR c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/DON c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/DUB c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/GAL c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/KIL c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/LIM c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/MID c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/NIR c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+IE/dail/WEX c2 y2032 active seats=3 turns=120/264/288 dur=48/24 seat=IE-dail-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T12:00:00.000Z|2026-11-15T12:00:00.000Z
+## after-cycle1-t120 ie.uachtaran
+IE/uachtaran/IE c2 y2039 active seats=3 turns=120/600/624 dur=48/24 seat=IE-uachtaran-IE shift=- t=2026-11-08T12:00:00.000Z|2026-11-28T12:00:00.000Z|2026-11-29T12:00:00.000Z
+## after-cycle1-t120 ie.localCouncil
+IE/localCouncil/COR c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/DON c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/DUB c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/GAL c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/KIL c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/LIM c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/MID c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/NIR c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+IE/localCouncil/WEX c2 y2034 active seats=3 turns=120/360/384 dur=48/24 seat=IE-localCouncil-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-18T12:00:00.000Z|2026-11-19T12:00:00.000Z
+## after-cycle1-t120 ng.house
+NG/house/NORTH_CENTRAL c2 y2035 active seats=53 turns=120/408/432 dur=96/72 seat=NG-house-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/house/NORTH_EAST c2 y2035 active seats=50 turns=120/408/432 dur=96/72 seat=NG-house-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/house/NORTH_WEST c2 y2035 active seats=95 turns=120/408/432 dur=96/72 seat=NG-house-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/house/SOUTH_EAST c2 y2035 active seats=43 turns=120/408/432 dur=96/72 seat=NG-house-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/house/SOUTH_SOUTH c2 y2035 active seats=47 turns=120/408/432 dur=96/72 seat=NG-house-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/house/SOUTH_WEST c2 y2035 active seats=72 turns=120/408/432 dur=96/72 seat=NG-house-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+## after-cycle1-t120 ng.senate
+NG/senate/NORTH_CENTRAL c2 y2035 active seats=20 turns=120/408/432 dur=288/264 seat=NG-senate-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/senate/NORTH_EAST c2 y2035 active seats=19 turns=120/408/432 dur=288/264 seat=NG-senate-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/senate/NORTH_WEST c2 y2035 active seats=18 turns=120/408/432 dur=288/264 seat=NG-senate-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/senate/SOUTH_EAST c2 y2035 active seats=19 turns=120/408/432 dur=288/264 seat=NG-senate-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/senate/SOUTH_SOUTH c2 y2035 active seats=18 turns=120/408/432 dur=288/264 seat=NG-senate-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/senate/SOUTH_WEST c2 y2035 active seats=21 turns=120/408/432 dur=288/264 seat=NG-senate-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+## after-cycle1-t120 ng.governor
+NG/governor/NORTH_CENTRAL c2 y2035 active seats=3 turns=120/408/432 dur=192/168 seat=NG-governor-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/governor/NORTH_EAST c2 y2035 active seats=3 turns=120/408/432 dur=192/168 seat=NG-governor-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/governor/NORTH_WEST c2 y2035 active seats=3 turns=120/408/432 dur=192/168 seat=NG-governor-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/governor/SOUTH_EAST c2 y2035 active seats=3 turns=120/408/432 dur=192/168 seat=NG-governor-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/governor/SOUTH_SOUTH c2 y2035 active seats=3 turns=120/408/432 dur=192/168 seat=NG-governor-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/governor/SOUTH_WEST c2 y2035 active seats=3 turns=120/408/432 dur=192/168 seat=NG-governor-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+## after-cycle1-t120 ng.regionalCouncil
+NG/regionalCouncil/NORTH_CENTRAL c2 y2034 active seats=3 turns=120/408/432 dur=48/24 seat=NG-regionalCouncil-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/regionalCouncil/NORTH_EAST c2 y2034 active seats=3 turns=120/408/432 dur=48/24 seat=NG-regionalCouncil-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/regionalCouncil/NORTH_WEST c2 y2034 active seats=3 turns=120/408/432 dur=48/24 seat=NG-regionalCouncil-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/regionalCouncil/SOUTH_EAST c2 y2034 active seats=3 turns=120/408/432 dur=48/24 seat=NG-regionalCouncil-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/regionalCouncil/SOUTH_SOUTH c2 y2034 active seats=3 turns=120/408/432 dur=48/24 seat=NG-regionalCouncil-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+NG/regionalCouncil/SOUTH_WEST c2 y2034 active seats=3 turns=120/408/432 dur=48/24 seat=NG-regionalCouncil-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+## after-cycle1-t120 ng.president
+NG/president/NG c2 y2035 active seats=3 turns=120/408/432 dur=192/168 seat=NG-president shift=- t=2026-11-08T12:00:00.000Z|2026-11-20T12:00:00.000Z|2026-11-21T12:00:00.000Z
+## after-cycle1-t700 ie.dail
+IE/dail/COR c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/DON c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/DUB c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/GAL c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/KIL c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/LIM c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/MID c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/NIR c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/dail/WEX c5 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-dail-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+## after-cycle1-t700 ie.uachtaran
+IE/uachtaran/IE c4 y2053 active seats=3 turns=700/1272/1296 dur=48/24 seat=IE-uachtaran-IE shift=- t=2026-11-08T12:00:00.000Z|2026-12-02T08:00:00.000Z|2026-12-03T08:00:00.000Z
+## after-cycle1-t700 ie.localCouncil
+IE/localCouncil/COR c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/DON c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/DUB c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/GAL c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/KIL c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/LIM c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/MID c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/NIR c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+IE/localCouncil/WEX c4 y2044 active seats=3 turns=700/840/864 dur=48/24 seat=IE-localCouncil-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T08:00:00.000Z|2026-11-15T08:00:00.000Z
+## after-cycle1-t700 ng.house
+NG/house/NORTH_CENTRAL c4 y2043 active seats=53 turns=700/792/816 dur=96/72 seat=NG-house-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/house/NORTH_EAST c4 y2043 active seats=50 turns=700/792/816 dur=96/72 seat=NG-house-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/house/NORTH_WEST c4 y2043 active seats=95 turns=700/792/816 dur=96/72 seat=NG-house-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/house/SOUTH_EAST c4 y2043 active seats=43 turns=700/792/816 dur=96/72 seat=NG-house-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/house/SOUTH_SOUTH c4 y2043 active seats=47 turns=700/792/816 dur=96/72 seat=NG-house-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/house/SOUTH_WEST c4 y2043 active seats=72 turns=700/792/816 dur=96/72 seat=NG-house-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## after-cycle1-t700 ng.senate
+NG/senate/NORTH_CENTRAL c4 y2043 active seats=20 turns=700/792/816 dur=288/264 seat=NG-senate-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/senate/NORTH_EAST c4 y2043 active seats=19 turns=700/792/816 dur=288/264 seat=NG-senate-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/senate/NORTH_WEST c4 y2043 active seats=18 turns=700/792/816 dur=288/264 seat=NG-senate-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/senate/SOUTH_EAST c4 y2043 active seats=19 turns=700/792/816 dur=288/264 seat=NG-senate-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/senate/SOUTH_SOUTH c4 y2043 active seats=18 turns=700/792/816 dur=288/264 seat=NG-senate-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/senate/SOUTH_WEST c4 y2043 active seats=21 turns=700/792/816 dur=288/264 seat=NG-senate-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## after-cycle1-t700 ng.governor
+NG/governor/NORTH_CENTRAL c4 y2043 active seats=3 turns=700/792/816 dur=192/168 seat=NG-governor-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/governor/NORTH_EAST c4 y2043 active seats=3 turns=700/792/816 dur=192/168 seat=NG-governor-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/governor/NORTH_WEST c4 y2043 active seats=3 turns=700/792/816 dur=192/168 seat=NG-governor-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/governor/SOUTH_EAST c4 y2043 active seats=3 turns=700/792/816 dur=192/168 seat=NG-governor-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/governor/SOUTH_SOUTH c4 y2043 active seats=3 turns=700/792/816 dur=192/168 seat=NG-governor-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/governor/SOUTH_WEST c4 y2043 active seats=3 turns=700/792/816 dur=192/168 seat=NG-governor-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## after-cycle1-t700 ng.regionalCouncil
+NG/regionalCouncil/NORTH_CENTRAL c4 y2044 active seats=3 turns=700/792/816 dur=48/24 seat=NG-regionalCouncil-NORTH_CENTRAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/regionalCouncil/NORTH_EAST c4 y2044 active seats=3 turns=700/792/816 dur=48/24 seat=NG-regionalCouncil-NORTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/regionalCouncil/NORTH_WEST c4 y2044 active seats=3 turns=700/792/816 dur=48/24 seat=NG-regionalCouncil-NORTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/regionalCouncil/SOUTH_EAST c4 y2044 active seats=3 turns=700/792/816 dur=48/24 seat=NG-regionalCouncil-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/regionalCouncil/SOUTH_SOUTH c4 y2044 active seats=3 turns=700/792/816 dur=48/24 seat=NG-regionalCouncil-SOUTH_SOUTH shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+NG/regionalCouncil/SOUTH_WEST c4 y2044 active seats=3 turns=700/792/816 dur=48/24 seat=NG-regionalCouncil-SOUTH_WEST shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## after-cycle1-t700 ng.president
+NG/president/NG c4 y2043 active seats=3 turns=700/792/816 dur=192/168 seat=NG-president shift=- t=2026-11-08T12:00:00.000Z|2026-11-12T08:00:00.000Z|2026-11-13T08:00:00.000Z
+## all-live ie.dail
+(none)
+## all-live ie.uachtaran
+(none)
+## all-live ie.localCouncil
+(none)
+## all-live ng.house
+(none)
+## all-live ng.senate
+(none)
+## all-live ng.governor
+(none)
+## all-live ng.regionalCouncil
+(none)
+## all-live ng.president
+(none)
+## late-joiner ie.dail
+IE/dail/NIR c2 yundefined active seats=1 turns=400/430/460 dur=60/30 seat=IE-dail-NIR shift=- t=2026-10-01T00:00:00.000Z|2026-12-01T00:00:00.000Z|2027-01-01T00:00:00.000Z
+## late-joiner ie.uachtaran
+IE/uachtaran/IE c2 y2039 active seats=1 turns=450/600/624 dur=48/24 seat=IE-uachtaran-IE shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner ie.localCouncil
+IE/localCouncil/NIR c2 yundefined active seats=95 turns=400/430/460 dur=60/30 seat=IE-localCouncil-NIR shift=- t=2026-10-01T00:00:00.000Z|2026-12-01T00:00:00.000Z|2027-01-01T00:00:00.000Z
+## late-joiner ng.house
+NG/house/SOUTH_EAST c3 y2039 active seats=43 turns=450/600/624 dur=96/72 seat=NG-house-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner ng.senate
+NG/senate/SOUTH_EAST c3 y2039 active seats=19 turns=450/600/624 dur=288/264 seat=NG-senate-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner ng.governor
+NG/governor/SOUTH_EAST c3 y2039 active seats=1 turns=450/600/624 dur=192/168 seat=NG-governor-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner ng.regionalCouncil
+NG/regionalCouncil/SOUTH_EAST c3 y2039 active seats=117 turns=450/600/624 dur=48/24 seat=NG-regionalCouncil-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner ng.president
+NG/president/NG c3 y2039 active seats=1 turns=450/600/624 dur=192/168 seat=NG-president shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner-with-history ie.dail
+IE/dail/NIR c4 y2040 active seats=3 turns=450/648/672 dur=48/24 seat=IE-dail-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-16T18:00:00.000Z|2026-11-17T18:00:00.000Z
+## late-joiner-with-history ie.uachtaran
+IE/uachtaran/IE c2 y2039 active seats=3 turns=450/600/624 dur=48/24 seat=IE-uachtaran-IE shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner-with-history ie.localCouncil
+IE/localCouncil/NIR c3 y2039 active seats=3 turns=450/600/624 dur=48/24 seat=IE-localCouncil-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner-with-history ng.house
+NG/house/SOUTH_EAST c3 y2039 active seats=43 turns=450/600/624 dur=96/72 seat=NG-house-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner-with-history ng.senate
+NG/senate/SOUTH_EAST c3 y2039 active seats=19 turns=450/600/624 dur=288/264 seat=NG-senate-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner-with-history ng.governor
+NG/governor/SOUTH_EAST c3 y2039 active seats=3 turns=450/600/624 dur=192/168 seat=NG-governor-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner-with-history ng.regionalCouncil
+NG/regionalCouncil/SOUTH_EAST c3 y2039 active seats=3 turns=450/600/624 dur=48/24 seat=NG-regionalCouncil-SOUTH_EAST shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## late-joiner-with-history ng.president
+NG/president/NG c3 y2039 active seats=3 turns=450/600/624 dur=192/168 seat=NG-president shift=- t=2026-11-08T12:00:00.000Z|2026-11-14T18:00:00.000Z|2026-11-15T18:00:00.000Z
+## resolved-this-turn ie.dail
+(none)
+## resolved-this-turn ie.uachtaran
+(none)
+## resolved-this-turn ie.localCouncil
+(none)
+## resolved-this-turn ng.house
+(none)
+## resolved-this-turn ng.senate
+(none)
+## resolved-this-turn ng.governor
+(none)
+## resolved-this-turn ng.regionalCouncil
+(none)
+## resolved-this-turn ng.president
+(none)
+## gate-closed ie.dail
+IE/dail/COR c3 y2036 active seats=20 turns=300/456/480 dur=48/24 seat=IE-dail-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/DON c3 y2036 active seats=16 turns=300/456/480 dur=48/24 seat=IE-dail-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/DUB c3 y2036 active seats=49 turns=300/456/480 dur=48/24 seat=IE-dail-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/GAL c3 y2036 active seats=15 turns=300/456/480 dur=48/24 seat=IE-dail-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/KIL c3 y2036 active seats=21 turns=300/456/480 dur=48/24 seat=IE-dail-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/LIM c3 y2036 active seats=15 turns=300/456/480 dur=48/24 seat=IE-dail-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/MID c3 y2036 active seats=11 turns=300/456/480 dur=48/24 seat=IE-dail-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/NIR c3 y2036 active seats=1 turns=300/456/480 dur=48/24 seat=IE-dail-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+IE/dail/WEX c3 y2036 active seats=13 turns=300/456/480 dur=48/24 seat=IE-dail-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-15T00:00:00.000Z|2026-11-16T00:00:00.000Z
+## gate-closed ie.uachtaran
+IE/uachtaran/IE c2 y2039 active seats=1 turns=300/600/624 dur=48/24 seat=IE-uachtaran-IE shift=- t=2026-11-08T12:00:00.000Z|2026-11-21T00:00:00.000Z|2026-11-22T00:00:00.000Z
+## gate-closed ie.localCouncil
+IE/localCouncil/COR c2 y2034 active seats=25 turns=300/360/384 dur=48/24 seat=IE-localCouncil-COR shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/DON c2 y2034 active seats=21 turns=300/360/384 dur=48/24 seat=IE-localCouncil-DON shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/DUB c2 y2034 active seats=62 turns=300/360/384 dur=48/24 seat=IE-localCouncil-DUB shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/GAL c2 y2034 active seats=19 turns=300/360/384 dur=48/24 seat=IE-localCouncil-GAL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/KIL c2 y2034 active seats=26 turns=300/360/384 dur=48/24 seat=IE-localCouncil-KIL shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/LIM c2 y2034 active seats=18 turns=300/360/384 dur=48/24 seat=IE-localCouncil-LIM shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/MID c2 y2034 active seats=12 turns=300/360/384 dur=48/24 seat=IE-localCouncil-MID shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/NIR c2 y2034 active seats=95 turns=300/360/384 dur=48/24 seat=IE-localCouncil-NIR shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+IE/localCouncil/WEX c2 y2034 active seats=17 turns=300/360/384 dur=48/24 seat=IE-localCouncil-WEX shift=- t=2026-11-08T12:00:00.000Z|2026-11-11T00:00:00.000Z|2026-11-12T00:00:00.000Z
+## gate-closed ng.house
+(none)
+## gate-closed ng.senate
+(none)
+## gate-closed ng.governor
+(none)
+## gate-closed ng.regionalCouncil
+(none)
+## gate-closed ng.president
+(none)

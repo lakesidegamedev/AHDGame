@@ -35,6 +35,19 @@ import { shouldGrantOwnerAdminOnRegister } from "@/lib/singleplayerOwnerAdmin";
 import { lakesideAccountFields } from "@/lib/auth/lakesideAccount";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import type { ActionAuditNet } from "@/lib/db/types/actionAuditLog";
+import { authConfig } from "@/lib/config/auth";
+import { usersCollection } from "@/lib/db/repositories/users";
+import type { Document } from "mongodb";
+import {
+  CENTRAL_WRITE_UNAVAILABLE_MESSAGE,
+  CENTRAL_PASSWORD_TOO_LONG_MESSAGE,
+  bridgeAccountFromUser,
+  centralRollbackCreate,
+  centralWriteFirst,
+  newPasswordTooLongForCentral,
+  shadowMirrorWrite,
+} from "@/lib/auth/centralLogin";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
 /** Partially redact an IP for display in forensic surfaces — never store the
  * raw address in `actionAuditLog.net` (plan §3.1 "net" doc-comment). */
@@ -64,7 +77,7 @@ export async function POST(request: Request) {
     const clientIp = await getClientIp();
 
     // Block registration during maintenance mode (both "partial" and "full").
-    const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    const config = await gameConfigCollection(db).findOne({ _id: "default" });
     if (normalizeMaintenanceMode(config?.maintenanceMode) !== "off") {
       return errorResponse(
         503,
@@ -93,6 +106,9 @@ export async function POST(request: Request) {
       termsAccepted,
       turnstileToken,
     } = parsed.data;
+    if (newPasswordTooLongForCentral(password)) {
+      return errorResponse(400, CENTRAL_PASSWORD_TOO_LONG_MESSAGE);
+    }
 
     // Read (not minted) here so every rejection/acceptance path below shares
     // one masked/hashed `net` snapshot — mirrors the login route.
@@ -169,7 +185,7 @@ export async function POST(request: Request) {
 
     // Block registration when test mode is enabled and no valid test secret is provided
     if (config?.testMode) {
-      const expectedSecret = process.env.TEST_SECRET;
+      const expectedSecret = authConfig.testSecret();
       if (!expectedSecret || !timingSafeCompare(testSecret ?? "", expectedSecret)) {
         recordAudit({
           source: "api",
@@ -187,10 +203,10 @@ export async function POST(request: Request) {
       }
     }
 
-    const usersCollection = db.collection("users");
+    const usersCollectionHandle = usersCollection<Document>(db);
 
     // Check if user already exists
-    const existingUser = await usersCollection.findOne({
+    const existingUser = await usersCollectionHandle.findOne({
       $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }],
     });
 
@@ -223,7 +239,9 @@ export async function POST(request: Request) {
         });
         return errorResponse(400, "Invalid referral code");
       }
-      const referrer = await usersCollection.findOne({ _id: new ObjectId(normalizedReferralCode) });
+      const referrer = await usersCollectionHandle.findOne({
+        _id: new ObjectId(normalizedReferralCode),
+      });
       if (!referrer) {
         recordAudit({
           source: "api",
@@ -248,7 +266,7 @@ export async function POST(request: Request) {
     if (
       shouldGrantOwnerAdminOnRegister({
         singleplayer: isSingleplayer(),
-        existingUserCount: await usersCollection.countDocuments(),
+        existingUserCount: await usersCollectionHandle.countDocuments(),
       })
     ) {
       // First account of a singleplayer world owns the machine: full admin
@@ -280,7 +298,7 @@ export async function POST(request: Request) {
         });
         return errorResponse(403, "Admin registration is currently disabled.");
       }
-      const adminRegKey = process.env.ADMIN_REGISTRATION_KEY;
+      const adminRegKey = authConfig.adminRegistrationKey();
       if (adminRegKey && timingSafeCompare(adminKey ?? "", adminRegKey)) {
         isAdmin = true;
       } else {
@@ -314,45 +332,62 @@ export async function POST(request: Request) {
 
     // Create player user
     const acquisition = parseAcquisition(cookieStore.get(ACQUISITION_COOKIE)?.value);
-    const result = await usersCollection.insertOne({
-      ...(acquisition ? { acquisition } : {}),
-      email: email.toLowerCase(),
-      username: username.toLowerCase(),
-      displayName: username,
-      password: hashedPassword,
-      role: "player",
-      isAdmin: isAdmin, // Flag to indicate admin privileges
-      hasCompletedSetup: false, // Character creation not done yet
-      // Store normalized form so the IP-collision check (which normalizes on
-      // read via registrationGate) can match consistently across header
-      // variants (IPv4-mapped IPv6 vs bare IPv4, casing, whitespace).
-      registrationIp: normalizeIp(clientIp) ?? clientIp,
-      lastKnownIp: clientIp,
-      lastKnownIpAt: observedAt,
-      registrationFingerprint: fingerprint || null,
-      lastFingerprint: fingerprint || null,
-      // Stamped only when a fingerprint was actually supplied — an absent one
-      // must not read as "observed at signup".
-      ...(fingerprint
-        ? { registrationFingerprintAt: observedAt, lastFingerprintAt: observedAt }
-        : {}),
-      fingerprintHistory: fingerprint ? [fingerprint] : [],
-      registrationFingerprintComponents: fingerprintComponents ?? null,
-      lastFingerprintComponents: fingerprintComponents ?? null,
-      ...(isEmptyCfFingerprint(cf) ? {} : { registrationCf: cf, lastCf: cf }),
-      trackingId,
-      trackingIdAt: observedAt,
-      deviceKey: deviceKey || null,
-      ...(deviceKey ? { deviceKeyAt: observedAt } : {}),
-      lastDevice: device,
-      ...(referredByObjectId ? { referredBy: referredByObjectId } : {}),
-      referralCount: 0,
-      activeCharacterId: null,
-      activeCharacterCount: 0,
-      ...lakesideAccountFields("ahd"),
-      createdAt: observedAt,
-      updatedAt: observedAt,
-    });
+    const newUserId = new ObjectId();
+    const newAccount = bridgeAccountFromUser(
+      { _id: newUserId, username: username.toLowerCase(), email: email.toLowerCase() },
+      { passwordHash: hashedPassword, emailVerified: false }
+    );
+    // Central mode creates the central account first; refuse if it is unreachable.
+    if (!(await centralWriteFirst({ op: "account-upsert", account: newAccount }))) {
+      return errorResponse(503, CENTRAL_WRITE_UNAVAILABLE_MESSAGE);
+    }
+    const result = await usersCollectionHandle
+      .insertOne({
+        _id: newUserId,
+        ...(acquisition ? { acquisition } : {}),
+        email: email.toLowerCase(),
+        username: username.toLowerCase(),
+        displayName: username,
+        password: hashedPassword,
+        role: "player",
+        isAdmin: isAdmin, // Flag to indicate admin privileges
+        hasCompletedSetup: false, // Character creation not done yet
+        // Store normalized form so the IP-collision check (which normalizes on
+        // read via registrationGate) can match consistently across header
+        // variants (IPv4-mapped IPv6 vs bare IPv4, casing, whitespace).
+        registrationIp: normalizeIp(clientIp) ?? clientIp,
+        lastKnownIp: clientIp,
+        lastKnownIpAt: observedAt,
+        registrationFingerprint: fingerprint || null,
+        lastFingerprint: fingerprint || null,
+        // Stamped only when a fingerprint was actually supplied — an absent one
+        // must not read as "observed at signup".
+        ...(fingerprint
+          ? { registrationFingerprintAt: observedAt, lastFingerprintAt: observedAt }
+          : {}),
+        fingerprintHistory: fingerprint ? [fingerprint] : [],
+        registrationFingerprintComponents: fingerprintComponents ?? null,
+        lastFingerprintComponents: fingerprintComponents ?? null,
+        ...(isEmptyCfFingerprint(cf) ? {} : { registrationCf: cf, lastCf: cf }),
+        trackingId,
+        trackingIdAt: observedAt,
+        deviceKey: deviceKey || null,
+        ...(deviceKey ? { deviceKeyAt: observedAt } : {}),
+        lastDevice: device,
+        ...(referredByObjectId ? { referredBy: referredByObjectId } : {}),
+        referralCount: 0,
+        activeCharacterId: null,
+        activeCharacterCount: 0,
+        ...lakesideAccountFields("ahd"),
+        createdAt: observedAt,
+        updatedAt: observedAt,
+      })
+      .catch(async (error: unknown) => {
+        await centralRollbackCreate(newUserId.toHexString());
+        throw error;
+      });
+
+    shadowMirrorWrite({ op: "account-upsert", account: newAccount });
 
     // Log account creation
     await createAdminLog({
@@ -399,7 +434,7 @@ export async function POST(request: Request) {
     if (config?.ipDetectionEnabled) {
       checkIpFireAndForget(clientIp).then((ipDetails) => {
         if (ipDetails) {
-          usersCollection
+          usersCollectionHandle
             .updateOne({ _id: result.insertedId }, { $set: { ipDetails } })
             .catch(() => {});
         }

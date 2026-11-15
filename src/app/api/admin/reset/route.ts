@@ -1,3 +1,4 @@
+import { supportsNoStartingParties } from "@/lib/admin/startingPartiesPresets";
 import { NextResponse } from "next/server";
 import { clearAuthCookie } from "@/lib/auth";
 import { z } from "zod";
@@ -14,7 +15,7 @@ import { RESET_DATE_MAX_YEAR, RESET_DATE_MIN_YEAR } from "@/lib/admin/resetStart
 const resetSchema = z.object({
   bootstrap: z.boolean().optional(),
   mode: z.enum(["vacant", "historical"]).optional(),
-  startingParties: z.enum(["default", "none"]).optional(),
+  startingParties: z.enum(["default", "none", "no-npps"]).optional(),
   skipRegionalCouncil: z.boolean().optional(),
   /**
    * Start the world in a live pre-iteration "founding" phase (chambers vacant +
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
     if (!isKnownPreset(preset)) {
       return errorResponse(
         400,
-        `Unknown preset "${preset}". Valid presets: 1953-default, 1979-default, 1991-default, 1999-default, 2007-default, 2019-default, 2023-default, empty, 2019-no-parties`
+        `Unknown preset "${preset}". Valid presets: 1953-default, 1979-default, 1991-default, 1999-default, 2007-default, 2019-default, 2023-default, 2027-default, empty, 2019-no-parties`
       );
     }
 
@@ -89,9 +90,11 @@ export async function POST(request: Request) {
       return errorResponse(parsed.status, parsed.error);
     }
     const body = parsed.data;
-    if (body.startingParties === "none" && preset !== "1991-default") {
-      return errorResponse(400, "No starting parties is available for the 1991 preset");
+    if (body.startingParties === "none" && !supportsNoStartingParties(preset)) {
+      return errorResponse(400, "No starting parties is not available for this preset");
     }
+    if (body.startingParties === "no-npps" && preset !== "2027-default")
+      return errorResponse(400, "No NPPs is available for the 2027 preset");
     const bootstrap = body.bootstrap === true || bootstrapFromQuery;
     const mode: BootstrapMode = body.mode === "vacant" ? "vacant" : "historical";
     const skipRegionalCouncil = body.skipRegionalCouncil === true;
@@ -177,13 +180,15 @@ async function handleStreamingReset(
     );
   }
 
-  if (body.startingParties === "none" && preset !== "1991-default") {
+  if (body.startingParties === "none" && !supportsNoStartingParties(preset)) {
     return new Response(
-      `data: ${JSON.stringify({ type: "error", message: "No starting parties is available for the 1991 preset" })}\n\n`,
+      `data: ${JSON.stringify({ type: "error", message: "No starting parties is not available for this preset" })}\n\n`,
       { status: 400, headers: { "Content-Type": "text/event-stream" } }
     );
   }
 
+  if (body.startingParties === "no-npps" && preset !== "2027-default")
+    return errorResponse(400, "No NPPs is available for the 2027 preset");
   const { admin } = auth;
 
   const stream = new ReadableStream({
@@ -191,7 +196,9 @@ async function handleStreamingReset(
       const send = (event: object) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-        } catch {}
+        } catch {
+          // Client disconnected mid-stream; the reset itself keeps running.
+        }
       };
 
       try {

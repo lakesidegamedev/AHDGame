@@ -1,19 +1,15 @@
 import type { State } from "@/lib/db/types";
 
-/**
- * France regions — 1953-era values (Fourth Republic).
+/*
+ * France regions, 1953 (Fourth Republic).
  *
- * SEED INDEPENDENCE — DO NOT DERIVE FROM ANOTHER ERA.
- * Values authored for 1953 directly. France 1953: pop ≈ 42.8M (1954 census);
- * GDP ≈ 13,500B FRF nominal. France was fighting in Indochina, under
- * President Auriol, and the Fourth Republic's proportional Assembly had 627
- * seats after the June 1951 election (era config / Nohlen & Stöver).
+ * SEED INDEPENDENCE: values authored for 1953 directly, do not derive from another era.
  *
- * - `population` — 1954 census estimates.
- * - `gdp` — regional GDP in millions of French francs (FRF).
- * - `houseDistricts` — National Assembly seats (Fourth Republic; sum = 627).
- * - `stateSenateSeats` — Council of the Republic seats (Second Chamber).
- * - `votingSystem` — rcv (two-round runoff).
+ * - `population`: 1954 census estimates.
+ * - `gdp`: regional GDP in millions of French francs (FRF).
+ * - `houseDistricts`: National Assembly seats (sum = 627).
+ * - `stateSenateSeats`: Council of the Republic seats.
+ * - `votingSystem`: rcv (two-round runoff).
  */
 export const frRegions1953: State[] = [
   {

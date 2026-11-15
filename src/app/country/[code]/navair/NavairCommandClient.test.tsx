@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { render, screen, cleanup } from "@testing-library/react";
 import { NavairCommandClient, type CommandFormation } from "./NavairCommandClient";
 
@@ -33,7 +34,6 @@ const formation = (over: Partial<CommandFormation> = {}): CommandFormation => ({
 });
 
 const props = {
-  conflictsEnabled: true,
   countryCode: "uk",
   positionId: "defence_secretary",
   summary: {
@@ -105,14 +105,34 @@ describe("NavairCommandClient repair", () => {
     render(<NavairCommandClient {...props} formations={[formation()]} />);
     expect(screen.getByText(/no naval or air materiel in store/i)).toBeDefined();
   });
+});
 
-  it("shows formations as read-only while conflicts is disabled", () => {
-    render(<NavairCommandClient {...props} conflictsEnabled={false} formations={[formation()]} />);
+describe("NavairCommandClient station labels", () => {
+  const stations = [
+    { id: "weu", name: "Western Europe", allowed: true },
+    { id: "nam", name: "North America", allowed: false, blockedReason: "land" as const },
+    { id: "cas", name: "Central Asia", allowed: false, blockedReason: "no-port" as const },
+  ];
 
-    expect(screen.getByRole("status").textContent).toMatch(/Conflicts is disabled/);
-    expect(screen.getByText("1st Test Squadron")).toBeDefined();
-    const controls = screen.getAllByRole("combobox") as HTMLSelectElement[];
-    expect(controls.length).toBeGreaterThan(0);
-    expect(controls.every((control) => control.disabled)).toBe(true);
+  it("does not call a land region with a port rating 'no port'", () => {
+    render(<NavairCommandClient {...props} stations={stations} formations={[formation()]} />);
+    const nam = screen
+      .getAllByRole("option")
+      .find((o) => /North America/.test(o.textContent ?? ""));
+    expect(nam?.textContent).not.toMatch(/no port/);
+    expect(nam?.textContent).toMatch(/land region/);
+    expect((nam as HTMLOptionElement).disabled).toBe(true);
+  });
+
+  it("still says landlocked for a region with no port", () => {
+    render(<NavairCommandClient {...props} stations={stations} formations={[formation()]} />);
+    const cas = screen.getAllByRole("option").find((o) => /Central Asia/.test(o.textContent ?? ""));
+    expect(cas?.textContent).toMatch(/landlocked, no port/);
+  });
+
+  it("adds no suffix to an allowed region", () => {
+    render(<NavairCommandClient {...props} stations={stations} formations={[formation()]} />);
+    const weu = screen.getAllByRole("option").find((o) => o.textContent === "Western Europe");
+    expect(weu).toBeDefined();
   });
 });

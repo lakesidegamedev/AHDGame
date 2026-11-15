@@ -3,11 +3,12 @@ import type { Db } from "mongodb";
 import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { NATIONAL_BASELINES_1953 } from "@/lib/politicalMetrics/seeds/nationalBaselines1953";
 import { REGIONAL_MODIFIERS_1953 } from "@/lib/politicalMetrics/seeds/regionalModifiers1953";
-import { REGIONAL_TEXTURE_1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
+import { getRegionalTexture1953 } from "@/lib/politicalMetrics/seeds/regionalTexture1953";
 import { NATIONAL_BASELINES_1979 } from "@/lib/politicalMetrics/seeds/nationalBaselines1979";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { PoliticalMetricId, PoliticalMetricsCountryId } from "@/lib/politicalMetrics/types";
 import { seedPoliticalMetrics } from "./seedPoliticalMetrics";
+import modeledOpening2027 from "@/lib/politicalMetrics/seeds/modeledOpening2027.json";
 
 /**
  * Issue #704 contract: seeded value = clamp(baseline + modifier ?? texture).
@@ -24,7 +25,9 @@ function expectedPlayable(
   const modifier = REGIONAL_MODIFIERS_1953[countryId][regionId]?.[metricId];
   if (modifier !== undefined) return Math.max(0, Math.min(100, base + modifier));
   const texture =
-    preset === "1953-default" ? (REGIONAL_TEXTURE_1953[countryId]?.[regionId]?.[metricId] ?? 0) : 0;
+    preset === "1953-default"
+      ? (getRegionalTexture1953()[countryId]?.[regionId]?.[metricId] ?? 0)
+      : 0;
   return Math.max(0, Math.min(100, base + texture));
 }
 
@@ -40,6 +43,30 @@ describe("seedPoliticalMetrics", () => {
   beforeEach(() => {
     db = createMockDb();
     db.collection("states").find().toArray.mockResolvedValue(STATES);
+  });
+
+  it("restores complete modeled country boards on a 2027 reset", async () => {
+    const regions = Object.entries(modeledOpening2027.boards).flatMap(([countryId, boards]) =>
+      Object.keys(boards).map((_id) => ({ _id, countryId }))
+    );
+    db.collection("states").find().toArray.mockResolvedValue(regions);
+    const result = await seedPoliticalMetrics(
+      db as unknown as Db,
+      false,
+      () => {},
+      2027,
+      "2027-default"
+    );
+    expect(result.regionsSeeded).toBe(regions.length);
+    const ops = bulkOps(db.collectionMocks.politicalMetrics!.bulkWrite);
+    for (const [, update] of ops) {
+      const doc = (update as { $set: PoliticalMetricsDoc }).$set;
+      expect(Object.keys(doc.values)).toHaveLength(63);
+      const boards = modeledOpening2027.boards[
+        doc.countryId as keyof typeof modeledOpening2027.boards
+      ] as Record<string, unknown>;
+      expect(doc.values).toEqual(boards[String(doc._id)]);
+    }
   });
 
   it("upserts one doc per US/UK/RU/DD region with base+modifier values", async () => {
@@ -143,7 +170,7 @@ describe("seedPoliticalMetrics", () => {
       .find()
       .toArray.mockResolvedValue([
         ...STATES,
-        { _id: "BY", countryId: "DE", name: "Bavaria", population: 9_000_000 },
+        { _id: "FR_IDF", countryId: "FR", name: "Ile-de-France", population: 7_000_000 },
       ]);
     const { regionsSeeded } = await seedPoliticalMetrics(
       db as unknown as Db,
@@ -154,9 +181,9 @@ describe("seedPoliticalMetrics", () => {
     );
     expect(regionsSeeded).toBe(5);
     const calls = bulkOps(db.collectionMocks["politicalMetrics"]!.bulkWrite);
-    const by = calls.find((c) => (c[0] as { _id: string })._id === "BY")!;
+    const by = calls.find((c) => (c[0] as { _id: string })._id === "FR_IDF")!;
     const doc = (by[1] as { $set: PoliticalMetricsDoc }).$set;
-    expect(doc.countryId).toBe("DE");
+    expect(doc.countryId).toBe("FR");
     // A full board, including the hand-authored defense block.
     expect(Object.keys(doc.values)).toHaveLength(63);
     expect(doc.values["defense.armedForces"]).toBeGreaterThanOrEqual(0);
@@ -167,22 +194,22 @@ describe("seedPoliticalMetrics", () => {
 
   it("gives each non-playable region its own board, not a national copy", async () => {
     // The Phase 0 property. The legacy seeds vary per region across most of the
-    // political half (DE differs on 35 of 63 families), and replicating one
+    // political half (FR differs on 15 of 63 families), and replicating one
     // national board would flatten regional approval, corp margins, crises and
     // demographics for every non-playable country.
     db.collection("states")
       .find()
       .toArray.mockResolvedValue([
-        { _id: "BY", countryId: "DE", name: "Bavaria", population: 9_000_000 },
-        { _id: "NW", countryId: "DE", name: "North Rhine-Westphalia", population: 17_000_000 },
+        { _id: "FR_IDF", countryId: "FR", name: "Ile-de-France", population: 7_000_000 },
+        { _id: "FR_MED", countryId: "FR", name: "Mediterranean", population: 4_000_000 },
       ]);
     await seedPoliticalMetrics(db as unknown as Db, false, () => {}, 1953, "1953-default");
     const calls = bulkOps(db.collectionMocks["politicalMetrics"]!.bulkWrite);
     const get = (id: string) =>
       (calls.find((c) => (c[0] as { _id: string })._id === id)![1] as { $set: PoliticalMetricsDoc })
         .$set.values;
-    const by = get("BY");
-    const nw = get("NW");
+    const by = get("FR_IDF");
+    const nw = get("FR_MED");
     expect(by).not.toEqual(nw);
     // But the defense block is national by nature, so it must NOT vary.
     expect(by["defense.armedForces"]).toBe(nw["defense.armedForces"]);
@@ -196,8 +223,8 @@ describe("seedPoliticalMetrics", () => {
     db.collection("states")
       .find()
       .toArray.mockResolvedValue([
-        { _id: "BY", countryId: "DE", name: "Bavaria", population: 9_000_000 },
-        { _id: "NOWHERE", countryId: "DE", name: "Nowhere", population: 1 },
+        { _id: "FR_IDF", countryId: "FR", name: "Ile-de-France", population: 7_000_000 },
+        { _id: "NOWHERE", countryId: "FR", name: "Nowhere", population: 1 },
       ]);
     const { regionsSeeded } = await seedPoliticalMetrics(
       db as unknown as Db,

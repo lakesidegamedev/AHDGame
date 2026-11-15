@@ -2,7 +2,7 @@ import type { Corporation } from "@/lib/db/types";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
 
 /**
- * Brand loyalty disclosure for the corporation detail view (#587).
+ * Brand loyalty disclosure for the corporation detail view.
  *
  * The raw 0–100 number and the corp's price-identity norm are owner-only
  * intel; everyone else gets the hidden 5-label scale and never the number.

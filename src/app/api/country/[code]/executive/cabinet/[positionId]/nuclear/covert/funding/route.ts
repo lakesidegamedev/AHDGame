@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: NuclearRouteParams) {
     const { db, countryId } = guard;
 
     const gs = await loadGameStateSlice(db);
-    if (!COVERT_CAPABLE.includes(countryId) || gs?.coldWarEnabled !== true) {
+    if (!COVERT_CAPABLE.includes(countryId)) {
       return statusResponse(404, { eligible: false });
     }
 
@@ -42,7 +42,7 @@ export async function POST(request: Request, { params }: NuclearRouteParams) {
 
     const funding = parsed.data.funding;
     const startedTurn =
-      program.startedTurn ?? (funding !== "none" ? (gs.currentTurn ?? 0) : undefined);
+      program.startedTurn ?? (funding !== "none" ? (gs?.currentTurn ?? 0) : undefined);
     await putCovertNuclearProgram(db, { ...program, funding, startedTurn });
 
     return NextResponse.json({ funding, startedTurn: startedTurn ?? null });

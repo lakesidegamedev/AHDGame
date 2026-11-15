@@ -17,6 +17,11 @@ import { buildPartyCaucusHealthSnapshot } from "@/lib/caucus/caucusHealth";
 import type { Caucus, CaucusMembership } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types";
 import { normalizeDiscordInviteUrl } from "@/lib/discord/invite";
+import { charactersCollection } from "@/lib/db/repositories/characters";
+import { nppsCollection } from "@/lib/db/repositories/npps";
+import type { Document } from "mongodb";
+import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 // GET /api/country/[code]/parties/[id]/caucuses/[slug] — Detail view of a single caucus including policy positions
 // Auth: requireAuth
@@ -66,8 +71,7 @@ export async function GET(
       countCaucusMembers(db, caucus._id),
       buildPartyCaucusHealthSnapshot(db, countryId, partyId),
       chairIds.length > 0
-        ? db
-            .collection<Character>("characters")
+        ? charactersCollection(db)
             .find({ _id: { $in: chairIds } }, { projection: { _id: 1, name: 1 } })
             .toArray()
         : Promise.resolve([] as Character[]),
@@ -206,7 +210,7 @@ export async function PATCH(
       }
       if (newSlug !== caucus.slug) {
         // Active-slug collision check.
-        const collision = await db.collection<Caucus>("caucuses").findOne({
+        const collision = await caucusesCollection(db).findOne({
           countryId,
           partyId,
           slug: newSlug,
@@ -220,7 +224,7 @@ export async function PATCH(
           );
         }
         // Push the old slug onto previousSlugs and adopt the new one.
-        await db.collection<Caucus>("caucuses").updateOne(
+        await caucusesCollection(db).updateOne(
           { _id: caucus._id },
           {
             $addToSet: { previousSlugs: caucus.slug },
@@ -232,12 +236,10 @@ export async function PATCH(
       }
     }
 
-    await db
-      .collection<Caucus>("caucuses")
-      .updateOne(
-        { _id: caucus._id },
-        { $set: { ...updates, ...renameOps } as Record<string, unknown> }
-      );
+    await caucusesCollection(db).updateOne(
+      { _id: caucus._id },
+      { $set: { ...updates, ...renameOps } as Record<string, unknown> }
+    );
 
     return NextResponse.json({
       success: true,
@@ -285,41 +287,35 @@ export async function DELETE(
     const now = new Date();
     // Soft-delete the caucus. The slug becomes immediately reclaimable —
     // findCaucusBySlug only matches docs where disbandedAt is null.
-    await db
-      .collection<Caucus>("caucuses")
-      .updateOne({ _id: caucus._id }, { $set: { disbandedAt: now, updatedAt: now } });
+    await caucusesCollection(db).updateOne(
+      { _id: caucus._id },
+      { $set: { disbandedAt: now, updatedAt: now } }
+    );
 
     // Mark all active memberships as removed and clear factionId on player members.
-    const activeMemberships = await db
-      .collection<CaucusMembership>("caucusMemberships")
+    const activeMemberships = await caucusMembershipsCollection(db)
       .find({ caucusId: caucus._id, status: "active" })
       .toArray();
     if (activeMemberships.length > 0) {
-      await db
-        .collection<CaucusMembership>("caucusMemberships")
-        .updateMany(
-          { caucusId: caucus._id, status: "active" },
-          { $set: { status: "removed", leftAt: now, updatedAt: now } }
-        );
+      await caucusMembershipsCollection(db).updateMany(
+        { caucusId: caucus._id, status: "active" },
+        { $set: { status: "removed", leftAt: now, updatedAt: now } }
+      );
       const characterIds = activeMemberships
         .filter((m) => m.memberType === "character")
         .map((m) => m.memberId);
       const nppIds = activeMemberships.filter((m) => m.memberType === "npp").map((m) => m.memberId);
       if (characterIds.length > 0) {
-        await db
-          .collection("characters")
-          .updateMany(
-            { _id: { $in: characterIds }, factionId: caucus._id },
-            { $set: { factionId: null, updatedAt: now } }
-          );
+        await charactersCollection(db).updateMany(
+          { _id: { $in: characterIds }, factionId: caucus._id },
+          { $set: { factionId: null, updatedAt: now } }
+        );
       }
       if (nppIds.length > 0) {
-        await db
-          .collection("npps")
-          .updateMany(
-            { _id: { $in: nppIds }, factionId: caucus._id },
-            { $set: { factionId: null, updatedAt: now } }
-          );
+        await nppsCollection<Document>(db).updateMany(
+          { _id: { $in: nppIds }, factionId: caucus._id },
+          { $set: { factionId: null, updatedAt: now } }
+        );
       }
     }
 

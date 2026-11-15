@@ -12,8 +12,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Election } from "@/lib/db/types";
-import { DEFAULT_DURATIONS } from "@/lib/turn/perpetualElections";
+import { DEFAULT_DURATIONS } from "@/lib/elections/scheduling";
 import { getGameTime } from "@/lib/time/gameTime";
+import { electionsCollection } from "@/lib/db/repositories/elections";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -39,7 +40,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const election = await db.collection<Election>("elections").findOne({
+    const election = await electionsCollection(db).findOne({
       _id: electionObjectId,
     });
 
@@ -67,7 +68,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const safeCampaignHours = Math.max(campaignHours, DEFAULT_GENERAL_HOURS);
     const endTime = new Date(primaryEndTime.getTime() + safeCampaignHours * 3_600_000);
 
-    await db.collection<Election>("elections").updateOne(
+    await electionsCollection(db).updateOne(
       { _id: electionObjectId },
       {
         // Turn bounds drive the turn-first resolver (1 turn = 1 hour); the

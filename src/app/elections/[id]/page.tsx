@@ -16,13 +16,12 @@ interface PageProps {
 }
 
 /**
- * Server shell. It loads the election once so the first paint is real content
- * rather than the skeleton — the page used to be client-only, so every visit
- * showed a loading state while the browser made its own round trip. The client
- * takes over for polling, entering, and withdrawing.
+ * Server shell. Loads the election once so the first paint is real content
+ * rather than a skeleton. The client takes over for polling, entering, and
+ * withdrawing.
  *
- * A failure here is not fatal: `initialElection` goes null and the client falls
- * back to its own fetch, which is exactly the old behaviour.
+ * A failure here is not fatal: `initialElection` goes null and the client
+ * falls back to its own fetch.
  */
 export default async function ElectionDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;

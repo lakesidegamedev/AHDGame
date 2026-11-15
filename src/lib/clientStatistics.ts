@@ -3,29 +3,27 @@ import { z } from "zod";
 import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import { NPP_AUTONOMY_LEVELS } from "@/lib/nppAutonomy/levels";
+import { SEED_ERA_IDS } from "@/lib/seeds/presetSelector";
 
 /**
  * Anonymous aggregate telemetry ingress validation.
  *
- * This module accepts ONLY the allowlisted aggregate shape the desktop
- * reporter builds (see AHDClient
- * `apps/desktop/src/simulationStatistics.ts`). It never reads auth, account
- * ids, names, or cookies, and it never retains IPs: callers must not pass
- * request metadata in here, only the parsed body.
+ * Accepts only the allowlisted aggregate shape the desktop reporter builds. Never
+ * reads auth, account ids, names, or cookies, and never retains IPs: callers must
+ * pass only the parsed body, no request metadata.
  *
  * Privacy properties enforced here:
- * - Strict objects everywhere: unknown keys (identifiers, names, free text,
- *   nested extras) fail validation instead of being copied through.
- * - Bounded numerics matching the client ranges; non-finite rejected.
+ * - Strict objects: unknown keys (identifiers, names, free text) fail validation
+ *   rather than being copied through.
+ * - Bounded numerics matching client ranges; non-finite rejected.
  * - createdAt is normalized to a coarse UTC day before storage; the client's
  *   precise timestamp is discarded. No persistent device id is stored.
- * - Stored documents expire 30 days after receipt (see `RETENTION_MS`). The
- *   TTL index itself (`{ expiresAt: 1 }`, `expireAfterSeconds: 0`) is created
- *   by the registered `2026-09-06-client-statistics-ttl-index` migration,
+ * - Stored documents expire 30 days after receipt (see `RETENTION_MS`). The TTL
+ *   index (`{ expiresAt: 1 }`, `expireAfterSeconds: 0`) is created by a migration,
  *   never per request.
  *
- * Receiving-proxy and access-log IP retention is deployment config, not
- * something this module can enforce; do not claim otherwise.
+ * Receiving-proxy and access-log IP retention is deployment config, not something
+ * this module can enforce.
  */
 
 /** Schema version stamped on every accepted report. Matches the client. */
@@ -54,7 +52,7 @@ const MAX_SECTOR_ENTRIES = 32;
 export const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Era allowlist: every seed era the game can actually bootstrap. */
-const ALLOWED_ERAS = ["1953", "1979", "1991", "1999", "2007", "2019", "2023"] as const;
+const ALLOWED_ERAS = SEED_ERA_IDS;
 
 /** Setup mode allowlist. Mirrors SingleplayerMode. */
 const ALLOWED_MODES = ["normal", "head-of-state", "worldsim"] as const;
@@ -77,12 +75,18 @@ const ALLOWED_AUTONOMY = NPP_AUTONOMY_LEVELS;
 export const ALLOWED_FEATURE_FLAGS = Object.entries(DEFAULT_GAME_STATE_FLAGS)
   .filter(([key, value]) => typeof value === "boolean" && key !== "nppAutonomyEnabled")
   .map(([key]) => key);
-const featureFlagsSchema = z.record(z.string(), z.boolean()).superRefine((flags, context) => {
-  for (const key of Object.keys(flags)) {
-    if (!ALLOWED_FEATURE_FLAGS.includes(key))
-      context.addIssue({ code: "custom", message: "Unknown feature flag" });
-  }
-});
+/** Upper bound on submitted flag keys, so an unknown-key payload stays small. */
+const MAX_FEATURE_FLAG_KEYS = 200;
+/**
+ * Unknown keys are dropped rather than rejected: older clients still report
+ * flags that have since been retired, and only allowlisted flags are recorded.
+ */
+const featureFlagsSchema = z
+  .record(z.string().max(80), z.boolean())
+  .refine((flags) => Object.keys(flags).length <= MAX_FEATURE_FLAG_KEYS)
+  .transform((flags) =>
+    Object.fromEntries(Object.entries(flags).filter(([key]) => ALLOWED_FEATURE_FLAGS.includes(key)))
+  );
 
 const setupSchema = z.strictObject({
   era: z.enum(ALLOWED_ERAS),

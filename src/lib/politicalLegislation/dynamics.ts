@@ -1,6 +1,5 @@
 /**
- * SP2 dynamics — pure target/drift math (spec §2/§2.1/§6 of
- * 2026-07-20-political-metrics-dynamics-design.md). Targets compose from the
+ * SP2 dynamics, pure target/drift math. Targets compose from the
  * TYPED catalog (the SSOT for targets/weights), never the projected
  * legislationTypes docs. The turn phase applies driftStep to REGIONAL values
  * only; the national display stays the SP1 read-time aggregate.
@@ -18,13 +17,9 @@ const SECONDARY_POINTS_PER_LEVEL = 5;
 /** §2 ruling: regional enactments supplement at half strength. */
 export const REGIONAL_SUPPLEMENT_FACTOR = 0.5;
 /**
- * Fraction of the remaining gap a metric closes each turn.
- *
- * The §2.1 ruling set this to 0.005, a 138 turn half-life. Ticket #1129: at
- * that pace an 8 point push moved the displayed value 0.04 points on the turn
- * it was bought, so players correctly concluded that building did nothing. 0.02
- * is a ~34 turn half-life, which is still a slow structural channel (laws do
- * not take effect overnight) but is movement a player can see inside a session.
+ * Fraction of the remaining gap a metric closes each turn. 0.02 is a ~34
+ * turn half-life: slow enough to stay structural, fast enough that a player
+ * sees the change inside a session.
  */
 export const DRIFT_RATE_PER_TURN = 0.02;
 /** §2.1 ruling: minimum per-turn movement while a gap exists. */
@@ -60,20 +55,17 @@ export function lawTargets(
 }
 
 /**
- * §4: the structural gap — the part of a region's score its law book does not
- * explain. The exact inverse of `composeTarget` before the clamp, so a board
- * given this residual composes back to the value it was measured from.
+ * The part of a region's score its law book does not explain: the exact
+ * inverse of `composeTarget` before the clamp, so a board built from this
+ * residual composes back to the value it was measured from.
  *
- * ONE definition because it had three, and two of them dropped the supplement
- * term. That is not a rounding difference: a residual derived without the
- * supplement composes to `value + 0.5 × supplement`, so the target sits above
- * the value every turn and the board creeps upward for as long as the region
- * holds any regional law. Deriving it here keeps the inverse honest.
+ * Must be the single definition: deriving a residual without the supplement
+ * term composes to `value + 0.5 x supplement`, so the target sits above the
+ * value every turn and the board creeps upward while the region holds any
+ * regional law.
  *
- * The NATIONAL scope is the deliberate exception and does not call this: it
- * reports one population-weighted residual across regions whose supplements
- * differ, and folds the supplement into that number rather than double-counting
- * it — see `countryPoliticalMetrics`.
+ * NATIONAL scope deliberately does not call this; it folds the supplement into
+ * one population-weighted residual, see `countryPoliticalMetrics`.
  */
 export function structuralResidual(
   value: number,
