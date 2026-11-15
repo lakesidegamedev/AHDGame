@@ -36,8 +36,7 @@ describe("computeSectorNationalizationPreview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of ["centralBanks", "corporateSectors", "corporations"])
-      db.collection(n);
+    for (const n of ["centralBanks", "corporateSectors", "corporations"]) db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     // Corps for the sector pool are fetched in ONE batched `$in` query; this
     // was a findOne per corp (perf audit 2026-08-03). The mock answers from the
@@ -133,8 +132,7 @@ describe("computeNationalizationProvisionDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of ["centralBanks", "corporateSectors", "corporations"])
-      db.collection(n);
+    for (const n of ["centralBanks", "corporateSectors", "corporations"]) db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporateSectors.find.mockReturnValue(cursor([]));
   });

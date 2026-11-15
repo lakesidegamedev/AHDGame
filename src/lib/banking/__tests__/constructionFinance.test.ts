@@ -146,7 +146,7 @@ function preloadedContext(
 
 beforeEach(() => vi.clearAllMocks());
 describe("construction request lifecycle", () => {
-  it("consumes only the canonical entertainment headroom bucket", async () => {
+  it("freezes fees only: no market pool is claimed or created", async () => {
     const { request, memory } = world();
     request.sector.sectorType = "media";
     request.sector.mediaDiscriminator = "entertainment";
@@ -156,50 +156,20 @@ describe("construction request lifecycle", () => {
         { _id: sectorId },
         { $set: { sectorType: "media", mediaDiscriminator: "entertainment" } }
       );
-    const genericId = new ObjectId(),
-      entertainmentId = new ObjectId();
-    memory.seed("unownedSectors", [
-      {
-        _id: genericId,
-        stateId: "US-CA",
-        countryId: "US",
-        sectorType: "media",
-        headroomUnits: 250,
-        revenue: 250_000,
-      },
-      {
-        _id: entertainmentId,
-        stateId: "US-CA",
-        countryId: "US",
-        sectorType: "media",
-        mediaDiscriminator: "entertainment",
-        headroomUnits: 250,
-        revenue: 250_000,
-      },
-    ]);
     const result = await requestConstructionFinance({
       ...request,
-      buildContext: {
-        destinationCurrency: "USD",
-        bucket: {
-          stateId: "US-CA",
-          countryId: "US",
-          sectorType: "media",
-          mediaDiscriminator: "entertainment",
-        },
-        eraUnitScale: 1,
-        growthUnits: 35,
-      },
+      buildContext: { destinationCurrency: "USD" },
     });
     expect(result).toMatchObject({ ok: true, pending: false });
-    expect(memory.collection("unownedSectors").docs).toMatchObject([
-      { _id: genericId, headroomUnits: 250 },
-      { _id: entertainmentId, headroomUnits: 215 },
-    ]);
+    expect(memory.collection("unownedSectors").docs).toHaveLength(0);
+    const financing = (await request.db.collection("corporateSectors").findOne({ _id: sectorId }))
+      ?.constructionFinancing;
+    expect(financing.effects.pool).toBeUndefined();
     expect(
-      (await request.db.collection("corporateSectors").findOne({ _id: sectorId }))
-        ?.constructionFinancing.effects.pool.units
-    ).toBe(35);
+      financing.effects.transition.projections.some(
+        (p: { collection: string }) => p.collection === "unownedSectors"
+      )
+    ).toBe(false);
   });
   it("cannot install a claim over a concurrently reserved property row", async () => {
     const { request, memory } = world();
@@ -557,53 +527,28 @@ describe("construction request lifecycle", () => {
     }
   });
 
-  it.each([
-    ...["none", "fee", "pool", "queue"].map((point) => ({ point, growthUnits: 100 })),
-    ...["none", "fee", "queue"].map((point) => ({ point, growthUnits: 0 })),
-  ])(
-    "settles native FX recipients and $growthUnits market units after a $point interruption",
-    async ({ point, growthUnits }) => {
+  it.each(["none", "fee", "queue"])(
+    "settles native FX recipients after a %s interruption",
+    async (point) => {
       const { request, memory } = world();
       request.sector.stateId = "GB_TEST";
       request.sector.countryId = "UK";
       await request.db
         .collection("corporateSectors")
         .updateOne({ _id: sectorId }, { $set: { stateId: "GB_TEST", countryId: "UK" } });
-      const poolId = new ObjectId();
       memory.seed("centralBanks", [
         { _id: "US", forexRevenue: 0 },
         { _id: "UK", spreadFeeReserveBalances: { USD: 0 } },
-      ]);
-      memory.seed("unownedSectors", [
-        {
-          _id: poolId,
-          stateId: "GB_TEST",
-          countryId: "UK",
-          sectorType: "manufacturing",
-          industryModel: null,
-          headroomUnits: 250,
-          revenue: 250_000,
-        },
       ]);
       const financed = {
         ...request,
         constructionCostLocal: 100_500,
         maximumCostLocal: 100_500,
-        buildContext: {
-          destinationCurrency: "GBP" as const,
-          bucket: { stateId: "GB_TEST", countryId: "UK", sectorType: "manufacturing" as const },
-          eraUnitScale: 1,
-          growthUnits,
-        },
+        buildContext: { destinationCurrency: "GBP" as const },
       };
       if (point !== "none") {
         const fault = withInjectedCrash(memory, {
-          collection:
-            point === "fee"
-              ? "centralBanks"
-              : point === "pool"
-                ? "unownedSectors"
-                : "corporateSectors",
+          collection: point === "fee" ? "centralBanks" : "corporateSectors",
           onCall: 1,
           afterWrite: true,
           matches: (args) => {
@@ -615,9 +560,7 @@ describe("construction request lifecycle", () => {
             };
             return point === "fee"
               ? update.$inc?.forexRevenue === 125
-              : point === "pool"
-                ? Array.isArray(args[1])
-                : Array.isArray(update.$set?.buildQueue);
+              : Array.isArray(update.$set?.buildQueue);
           },
         });
         await requestConstructionFinance({ ...financed, db: fault.db }).catch((error) => {
@@ -636,7 +579,7 @@ describe("construction request lifecycle", () => {
         { forexRevenue: 125 },
         { spreadFeeReserveBalances: { USD: 250 } },
       ]);
-      expect(memory.collection("unownedSectors").docs[0].headroomUnits).toBe(250 - growthUnits);
+      expect(memory.collection("unownedSectors").docs).toHaveLength(0);
       const sector = memory.collection("corporateSectors").docs[0];
       expect(sector.buildQueue).toHaveLength(1);
       expect(sector.constructionFinancing).toMatchObject({
@@ -654,7 +597,6 @@ describe("construction request lifecycle", () => {
         turn: 12,
       });
       expect(cancelled).toMatchObject({ ok: true, principalRepaid: 75_000, ownerRefund: 0 });
-      expect(memory.collection("unownedSectors").docs[0].headroomUnits).toBe(250);
       expect(
         (
           await cancelFinancedConstruction({
@@ -666,7 +608,6 @@ describe("construction request lifecycle", () => {
           })
         ).ok
       ).toBe(true);
-      expect(memory.collection("unownedSectors").docs[0].headroomUnits).toBe(250);
       expect(memory.collection("centralBanks").docs).toMatchObject([
         { forexRevenue: 125 },
         { spreadFeeReserveBalances: { USD: 250 } },

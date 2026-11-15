@@ -232,7 +232,7 @@ describe("principal-first financed build cancellation", () => {
       bankCharter: { totalLoans: 0, cashReserves: 1075000 },
     });
   });
-  it("returns only the growth portion of a financed mixed replacement build", async () => {
+  it("cancels a claim that still carries a legacy pool leg without touching any pool", async () => {
     const w = world();
     const poolId = new ObjectId();
     w.memory.seed("unownedSectors", [
@@ -256,11 +256,7 @@ describe("principal-first financed build cancellation", () => {
             feeLocal: 0,
             pool: {
               id: poolId.toHexString(),
-              bucket: {
-                stateId: "CA",
-                countryId: "US",
-                sectorType: "manufacturing",
-              },
+              bucket: { stateId: "CA", countryId: "US", sectorType: "manufacturing" },
               eraUnitScale: 1,
               units: 35,
             },
@@ -272,7 +268,7 @@ describe("principal-first financed build cancellation", () => {
 
     expect(await cancelFinancedConstruction(w.input)).toMatchObject({ ok: true });
     expect(await w.db.collection("unownedSectors").findOne({ _id: poolId })).toMatchObject({
-      headroomUnits: 185,
+      headroomUnits: 150,
     });
   });
 

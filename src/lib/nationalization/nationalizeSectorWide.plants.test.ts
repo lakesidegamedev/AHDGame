@@ -112,12 +112,7 @@ describe("nationalizeSectorWide — plants capacity conservation", () => {
     vi.clearAllMocks();
     marketMode.value = "capital";
     db = createMockDb();
-    for (const n of [
-      "corporateSectors",
-      "corporations",
-      "centralBanks",
-      "states",
-    ])
+    for (const n of ["corporateSectors", "corporations", "centralBanks", "states"])
       db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     db.collectionMocks.states.find.mockReturnValue(cursor([]));
@@ -292,7 +287,8 @@ describe("nationalizeSectorWide — plants never mint capacity", () => {
     vi.clearAllMocks();
     marketMode.value = "plants";
     db = createMockDb();
-    for (const n of ["corporateSectors", "corporations", "centralBanks", "states"]) db.collection(n);
+    for (const n of ["corporateSectors", "corporations", "centralBanks", "states"])
+      db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporateSectors.findOne.mockResolvedValue(null);
     db.collectionMocks.corporateSectors.find.mockReturnValue(

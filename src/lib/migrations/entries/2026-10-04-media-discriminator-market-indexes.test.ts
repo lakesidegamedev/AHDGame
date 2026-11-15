@@ -19,24 +19,21 @@ describe("media-discriminator market indexes", () => {
 
     const result = await migration.execute(db, { dryRun: false });
 
-    expect(calls.slice(0, 3)).toEqual([
+    expect(calls.slice(0, 2)).toEqual([
       "create:corporateSectors:corporationId,stateId,sectorType,industryModel,mediaDiscriminator",
-      "create:unownedSectors:stateId,sectorType,industryModel,mediaDiscriminator",
       "create:unions:countryId,sectorType,industryModel,mediaDiscriminator",
     ]);
-    expect(calls.slice(3)).toEqual([
+    expect(calls.slice(2)).toEqual([
       "drop:corporateSectors_corporationId_stateId_sectorType_industryModel",
       "drop:corporateSectors_corporationId_stateId_sectorType",
-      "drop:unowned_state_type_model_unique",
-      "drop:stateId_1_sectorType_1",
       "drop:unions_country_type_model_seeded_unique",
       "drop:unions_country_sectorType_seeded_unique",
       "drop:unions_country_sectorType_unique",
     ]);
-    expect(calls.findIndex((call) => call.startsWith("drop:"))).toBe(3);
+    expect(calls.findIndex((call) => call.startsWith("drop:"))).toBe(2);
     expect(result.documentsScanned).toBe(0);
     expect(result.documentsUpdated).toBe(0);
-    expect(result.notes?.[0]).toBe("index plans processed: 3");
+    expect(result.notes?.[0]).toBe("index plans processed: 2");
   });
 
   it("defaults to a no-write dry run", async () => {

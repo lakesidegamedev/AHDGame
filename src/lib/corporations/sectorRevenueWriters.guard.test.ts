@@ -336,11 +336,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "One-off historical heal, outside the deploy chain. Pre-dates plants and is not " +
       "re-runnable against a plants world; retained for the audit trail only.",
   },
-  "scripts/migrations/heal-dropped-sector-unowned-loss.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason: "One-off historical heal, outside the deploy chain. Pre-dates plants.",
-  },
   "scripts/migrations/heal-sector-revenue-anchor-bug.ts": {
     writeSites: 1,
     status: "plants-gated",

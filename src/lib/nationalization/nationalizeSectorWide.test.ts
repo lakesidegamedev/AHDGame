@@ -83,12 +83,7 @@ describe("nationalizeSectorWide", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of [
-      "corporateSectors",
-      "corporations",
-      "centralBanks",
-      "bankMoneyMoves",
-    ])
+    for (const n of ["corporateSectors", "corporations", "centralBanks", "bankMoneyMoves"])
       db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporations.findOne.mockImplementation((q: { _id: ObjectId }) => {

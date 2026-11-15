@@ -117,7 +117,6 @@ export {
   settleFundedWholeCorpShareholderPool,
 } from "./fundedOwnershipSettlement";
 
-
 /**
  * Politics inputs the caller supplies; the money fields (valuation, compensation,
  * foreign-owner) are computed by the transition itself and merged in.

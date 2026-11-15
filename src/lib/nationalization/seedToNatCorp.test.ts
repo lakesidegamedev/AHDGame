@@ -8,10 +8,7 @@ vi.mock("./nationalCorporation", () => ({
 }));
 
 import { resolveNationalCorporationForSector } from "./nationalCorporation";
-import {
-  absorbOwnedSectorIntoNatCorp,
-  incrementNatCorpSectorRevenue,
-} from "./seedToNatCorp";
+import { absorbOwnedSectorIntoNatCorp, incrementNatCorpSectorRevenue } from "./seedToNatCorp";
 
 const NAT_ID = new ObjectId();
 

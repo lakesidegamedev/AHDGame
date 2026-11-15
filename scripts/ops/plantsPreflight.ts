@@ -27,9 +27,7 @@
  *     credited free build orders for capacity they already paid for. That is a
  *     SECOND supply wave, landing ~24 turns later, and it is invisible on the
  *     flip turn itself.
- *  4. **Whether the groundwork is done** — unowned sectors need `headroomUnits`
- *     (the plants leading field) or the unowned pool silently reads as empty.
- *  5. **Whether any sector's data would break the flip identity** — a nameplate
+ *  4. **Whether any sector's data would break the flip identity** — a nameplate
  *     that is negative or non-finite, an output mix that prices to nothing, a
  *     sector already migrated but with no capacity left.
  *
@@ -76,15 +74,11 @@ import {
   argNumber,
   argValue,
   countCrisisEffectPhysicality,
-  migrationHasRun,
   readCommodityPrices,
   readCurrentTurn,
   readCurrentYear,
-  readUnownedHeadroomStatus,
   streamAnchoredSectors,
 } from "./plantsDbReaders";
-
-const HEADROOM_BACKFILL_MARKER = "2026-08-01-backfill-unowned-headroom-units";
 
 function money(v: number): string {
   const abs = Math.abs(v);
@@ -181,12 +175,6 @@ export function formatPreflightReport(report: PlantsPreflightReport, limit: numb
   L.push(`  capital committed   ₳${money(report.cip.totalAnchor)}`);
 
   L.push("");
-  L.push("UNOWNED POOL");
-  L.push(`  docs                ${report.unowned.total}`);
-  L.push(`  missing headroomUnits ${report.unowned.missingHeadroomUnits}`);
-  L.push(`  backfill marker     ${report.unowned.backfillMigrationRan ? "present" : "ABSENT"}`);
-
-  L.push("");
   L.push("ACTIVE CRISIS EFFECTS");
   L.push(`  financial (explicit) ${report.crises.financialOnly}`);
   L.push(`  legacy (unflagged → treated as financial) ${report.crises.legacyUnflagged}`);
@@ -270,8 +258,6 @@ export async function runPlantsPreflight(
     );
   });
 
-  const unowned = await readUnownedHeadroomStatus(db);
-  const backfillMigrationRan = await migrationHasRun(db, HEADROOM_BACKFILL_MARKER);
   const crises = await countCrisisEffectPhysicality(db);
 
   return buildPlantsPreflightReport({
@@ -279,7 +265,6 @@ export async function runPlantsPreflight(
     currentTurn,
     currentYear,
     assessments,
-    unowned: { ...unowned, backfillMigrationRan },
     crises: { financialOnly: crises.financialOnly, legacyUnflagged: crises.legacyUnflagged },
     governor: { cap, rampTurns },
     acceptSupplyStepPct: opts.acceptSupplyStepPct,
