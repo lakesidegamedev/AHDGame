@@ -18,31 +18,17 @@ import type {
   Corporation,
   FederalBudget,
   StateBudget,
-  Tariff,
 } from "@/lib/db/types";
 import type { Crisis } from "@/lib/db/types/crisis";
 import {
   buildDisasterEffectsByState,
   computeDisasterMarginPenalty,
 } from "@/lib/crises/disasterMarginPenalty";
-import { getEffectiveTariffRate, getSplitCaptureMultiplier } from "@/lib/tariffs/tariffEffects";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import {
-  SPLIT_BASE_CAPTURE_FRACTION,
-  UNOWNED_CAPTURE_BONUS_MULTIPLIER,
-  MS_CAPTURE_DIVISOR,
-  DOMINANCE_MARKET_SHARE_THRESHOLD,
-} from "@/lib/constants/corporations";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
-import {
-  calculateAttackCostFromLocalRevenue,
-  calculateSplitCostAnchor,
-  calculateSplitMsCostForStrength,
-  SPLIT_STRENGTH_MULTIPLIERS,
-  type SplitStrength,
-} from "@/lib/corporations/marketActionCosts";
+import { calculateAttackCostFromLocalRevenue } from "@/lib/corporations/marketActionCosts";
 import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
@@ -232,19 +218,9 @@ export function buildSectorAttackInfo(args: {
   sectorHostFxRate: number;
   sectorHostLiquidCode: CurrencyCode | undefined;
   sector: CorporateSector;
-  sectorType: OperatingSectorType;
   sectorCountryId: CountryId;
-  allTariffs: Tariff[];
-  activeFtaPairs: Set<string>;
-  unownedRevenue: number;
-  effectiveMarket: number;
   mods: { effective: number };
-  siblingsSectors: CorporateSector[];
-  siblingRevenueAnchorById: Map<string, number>;
-  /**
-   * Under plants, unowned splits are gone — only rival plant takeovers remain.
-   * Split quote fields are forced to 0 so no client can render a Split CTA.
-   */
+  /** Rival plant takeover quotes apply only under plants. Market splits no longer exist. */
   plantsMode?: boolean;
 }) {
   const {
@@ -254,82 +230,10 @@ export function buildSectorAttackInfo(args: {
     sectorHostFxRate,
     sectorHostLiquidCode,
     sector,
-    sectorType,
     sectorCountryId,
-    allTariffs,
-    activeFtaPairs,
-    unownedRevenue,
-    effectiveMarket,
     mods,
-    siblingsSectors,
-    siblingRevenueAnchorById,
     plantsMode = false,
   } = args;
-  const viewerCountryId = viewerCorporation.headquartersState
-    ? viewerCorporation.countryId
-    : sectorCountryId;
-  const tariffEffectiveRate = getEffectiveTariffRate(
-    allTariffs,
-    sectorCountryId,
-    sectorType,
-    viewerCountryId,
-    undefined,
-    activeFtaPairs
-  );
-  const isDomesticSplitting = sectorCountryId === viewerCountryId;
-  const tariffMultiplier = getSplitCaptureMultiplier(tariffEffectiveRate, isDomesticSplitting);
-  const captureMultiplier =
-    (1 + (viewerCorporation.marketingStrength ?? 0) / MS_CAPTURE_DIVISOR) * tariffMultiplier;
-  // Raw capture for normal (1×) size — other sizes are scaled from this
-  const rawCaptureNormal =
-    unownedRevenue *
-    SPLIT_BASE_CAPTURE_FRACTION *
-    captureMultiplier *
-    UNOWNED_CAPTURE_BONUS_MULTIPLIER;
-  const baseSplitCost = calculateSplitCostAnchor(unownedRevenue);
-
-  // Viewer's current revenue in this market (for projected share calc)
-  const viewerSib = siblingsSectors.find(
-    (s) => s.corporationId.toString() === viewerCorporation._id.toString()
-  );
-  const viewerCurrentRevAnchor = viewerSib
-    ? (siblingRevenueAnchorById.get(viewerSib._id.toString()) ?? 0)
-    : 0;
-
-  const buildStrengthInfo = (strength: SplitStrength) => {
-    const mult = SPLIT_STRENGTH_MULTIPLIERS[strength];
-    const strengthSplitCost = Math.round(baseSplitCost * mult);
-    const strengthMsCost = calculateSplitMsCostForStrength(
-      viewerCorporation.splitEscalation,
-      strength
-    );
-    const strengthCapture = Math.min(
-      Math.round(rawCaptureNormal * mult),
-      Math.round(unownedRevenue)
-    );
-    const projectedRevAnchor = viewerCurrentRevAnchor + strengthCapture;
-    const projectedMarketShare =
-      effectiveMarket > 0 ? Math.round((projectedRevAnchor / effectiveMarket) * 10000) / 100 : 0;
-    const estimatedNetIncome = Math.round((strengthCapture * mods.effective) / 100);
-    return {
-      splitCost: strengthSplitCost,
-      splitMsCost: strengthMsCost,
-      splitEstimatedCapture: strengthCapture,
-      splitEstimatedNetIncome: estimatedNetIncome,
-      projectedMarketShare,
-      exceedsDominanceThreshold: projectedMarketShare > DOMINANCE_MARKET_SHARE_THRESHOLD,
-    };
-  };
-
-  const fullStrengthInfo = buildStrengthInfo("full");
-  const zeroSplit = {
-    splitCost: 0,
-    splitMsCost: 0,
-    splitEstimatedCapture: 0,
-    splitEstimatedNetIncome: 0,
-    projectedMarketShare: 0,
-    exceedsDominanceThreshold: false,
-  };
   const userLiquidCapitalAnchor = Math.round(
     corpLiquidCapitalToAnchor(
       viewerCorporation.liquidCapital ?? 0,
@@ -359,11 +263,6 @@ export function buildSectorAttackInfo(args: {
       sectorHostLiquidCode,
       sectorHostFxRate
     ),
-    // Flat full-strength fields kept for backwards compat. Plants: always 0 —
-    // unowned splits are retired; attackCost above is the only market action.
-    splitCost: plantsMode ? 0 : fullStrengthInfo.splitCost,
-    splitEstimatedCapture: plantsMode ? 0 : fullStrengthInfo.splitEstimatedCapture,
-    splitMsCost: plantsMode ? 0 : fullStrengthInfo.splitMsCost,
     userMarketingStrength: roundMarketingStrength(viewerCorporation.marketingStrength ?? 0),
     userLiquidCapital: userLiquidCapitalAnchor,
     userLiquidCurrencyCode: resolveCorpLiquidCurrencyCode(viewerCorporation),
@@ -371,12 +270,6 @@ export function buildSectorAttackInfo(args: {
     countryId: sectorCountryId,
     ...(plantsMode && hasPersistedPlantLedger ? { plantCount: sector.plantCount } : {}),
     ...(plantSplitQuote ? { plantSplitQuote } : {}),
-    splitStrengths: plantsMode
-      ? { full: zeroSplit, half: zeroSplit }
-      : {
-          full: fullStrengthInfo,
-          half: buildStrengthInfo("half"),
-        },
     sectorEffectiveMargin: mods.effective,
   };
 }

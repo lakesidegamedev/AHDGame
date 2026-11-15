@@ -64,8 +64,6 @@ function makeMarket(competitors: Market["competitors"]): Market {
     totalMarket: 104_000 * 24,
     marketShare: 5.7,
     competitors,
-    unownedRevenue: 0,
-    unownedPercent: 0,
   } as Market;
 }
 
@@ -88,7 +86,7 @@ describe("MarketPositionPanel NPP grouping", () => {
         sector={sector}
         corporation={corporation}
         financials={null}
-        room={{ headroomUnits: 9000, demandGapUnits: 8000, measuredDemandGapUnits: 123 }}
+        room={{ demandGapUnits: 8000, measuredDemandGapUnits: 123 }}
       />
     );
     expect(screen.getByText("Estimated room to build")).toBeTruthy();
@@ -105,7 +103,7 @@ describe("MarketPositionPanel NPP grouping", () => {
         sector={sector}
         corporation={corporation}
         financials={null}
-        room={{ headroomUnits: 9000, demandGapUnits: 8000, measuredDemandGapUnits: null }}
+        room={{ demandGapUnits: 8000, measuredDemandGapUnits: null }}
       />
     );
     expect(screen.getByText("Estimate unavailable")).toBeTruthy();

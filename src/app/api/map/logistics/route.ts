@@ -14,7 +14,6 @@ import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import type { FreightDemandEntry, FreightDemandResponse } from "@/lib/logistics/types";
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import { statesCollection } from "@/lib/db/repositories/states";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 import { sourcingNetworkLoadCollection } from "@/lib/db/repositories/sourcingNetworkLoad";
 
@@ -33,7 +32,7 @@ export async function GET(request: Request) {
     const db = await getDb();
 
     // Latest ledger turn, country's state ids, and freight capacity by state.
-    const [latest, countryStates, freightPrice, openLogistics] = await Promise.all([
+    const [latest, countryStates, freightPrice] = await Promise.all([
       sourcingNetworkLoadCollection<SourcingNetworkDoc>(db)
         .find({})
         .sort({ turn: -1 })
@@ -43,25 +42,15 @@ export async function GET(request: Request) {
         .find({ countryId }, { projection: { _id: 1 } })
         .toArray(),
       commodityPricesCollection(db).findOne({ commodity: "freight" }),
-      unownedSectorsCollection<{ stateId: string; revenue: number }>(db)
-        .aggregate<{ _id: string; revenue: number }>([
-          { $match: { countryId, sectorType: "logistics" } },
-          { $group: { _id: "$stateId", revenue: { $sum: "$revenue" } } },
-        ])
-        .toArray(),
     ]);
 
     const networkDoc = latest[0];
     const stateIds = new Set(countryStates.map((s) => s._id));
     const stateSupply = freightPrice?.stateSupply ?? {};
-    const openMarketByState = new Map(
-      openLogistics.map((row) => [row._id, Number(row.revenue) || 0])
-    );
 
     const states: Record<string, FreightDemandEntry> = {};
 
-    // Show every state.  A dark/amber state has open logistics market but no
-    // operating capacity; unowned market is opportunity, never fake supply.
+    // Show every state. `openMarket` stays 0: no stored market exists to report.
     for (const stateId of stateIds) {
       const capacity = Number(stateSupply[stateId] ?? 0);
       states[stateId] = {
@@ -69,7 +58,7 @@ export async function GET(request: Request) {
         special: 0,
         total: 0,
         capacity,
-        openMarket: openMarketByState.get(stateId) ?? 0,
+        openMarket: 0,
       };
     }
 
@@ -85,7 +74,7 @@ export async function GET(request: Request) {
           special,
           total: bulk + special,
           capacity: prev?.capacity ?? capacity,
-          openMarket: prev?.openMarket ?? openMarketByState.get(stateId) ?? 0,
+          openMarket: prev?.openMarket ?? 0,
         };
       }
     }

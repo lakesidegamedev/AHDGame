@@ -1,9 +1,8 @@
 /**
  * Per-sector market share helpers.
  *
- * Market share = sector_revenue ÷ effective_market × 100, where
- * effective_market is the larger of the GDP-derived market floor and the
- * (owned + persisted unowned) sum. All inputs are anchor-denominated (₳); the
+ * Market share = sector_revenue ÷ owned_market_revenue × 100, where the market
+ * is the revenue every producer in the bucket actually earns. All inputs are anchor-denominated (₳); the
  * caller is responsible for converting per-corp local revenue to ₳ before
  * passing it in. See sectorCalculations.ts and economy routes for the same
  * normalization pattern.
@@ -18,26 +17,14 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import {
-  getGdpAnchorRate,
-  isKnownGdpAnchorCountry,
-  loadWorldPreset,
-} from "@/lib/currency/gdpAnchorRate";
+import { getGdpAnchorRate, isKnownGdpAnchorCountry } from "@/lib/currency/gdpAnchorRate";
 import { type CountryId } from "@/lib/constants/countries";
 import { SECTOR_MARKET_GDP_FRACTION, SECTOR_TYPE_COUNT } from "@/lib/constants/corporations";
-import type {
-  CorporationType,
-  OperatingSectorType,
-  MediaDiscriminator,
-} from "@/lib/constants/corporations";
+import type { OperatingSectorType, MediaDiscriminator } from "@/lib/constants/corporations";
 
-import {
-  computeSectorImpliedUnits,
-  computeUnownedHeadroomUnits,
-} from "@/lib/market/unownedHeadroom";
+import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 type MarketIdentity = {
   sectorType: CorporateSector["sectorType"];
@@ -82,16 +69,6 @@ function marketIdentityConditions(identity: MarketIdentity): Filter<CorporateSec
       industryModel: identity.industryModel,
       mediaDiscriminator: identity.mediaDiscriminator,
     } as Filter<CorporateSector>,
-  ];
-}
-
-function unownedMarketIdentityConditions(identity: MarketIdentity): Filter<UnownedSector>[] {
-  return [
-    {
-      sectorType: identity.sectorType,
-      industryModel: identity.industryModel,
-      mediaDiscriminator: identity.mediaDiscriminator,
-    } as Filter<UnownedSector>,
   ];
 }
 
@@ -208,8 +185,10 @@ export function buildCorporationNationalRevenueShareByMarket(
 }
 
 /**
+ * @deprecated Limits nothing; kept only for nationalization callers until the
+ * GDP market constants are deleted.
+ *
  * GDP-derived baseline market size for one (state, sectorType) bucket, in ₳.
- * Mirrors the formula used by attack/economy/sector-detail routes.
  *
  * `preset` selects the era's GDP→₳ normalization (see
  * {@link getGdpAnchorRate}). Omitting it resolves the base config, which is
@@ -235,106 +214,10 @@ export function gdpDerivedMarketAnchor(
 }
 
 /**
- * Effective market size for a (state, sectorType): if a persisted unowned doc
- * exists, the market = ownedRevenue + persistedUnowned. Otherwise fall back to
- * the GDP-derived baseline. Matches the attack route + sector-detail routes.
+ * @deprecated Retained only for turn-phase callers until the stored-cell types
+ * are deleted. Unowned headroom in units: persisted `headroomUnits`, else
+ * computed from revenue.
  */
-export function effectiveMarketAnchor(
-  ownedRevenueAnchor: number,
-  persistedUnownedRevenueAnchor: number | undefined,
-  gdpFallback: number
-): number {
-  if (persistedUnownedRevenueAnchor !== undefined) {
-    return Math.max(0, Math.round(ownedRevenueAnchor + persistedUnownedRevenueAnchor));
-  }
-  // No persisted unowned doc: fall back to the GDP-derived baseline, but never
-  // below the revenue already owned in this bucket — a sector cannot hold more
-  // than 100% of its market. Without this floor, a nationalization that consumed
-  // the unowned pool left a tiny GDP baseline against a large consolidated
-  // revenue, yielding market shares well over 100%.
-  return Math.max(gdpFallback, Math.round(Math.max(0, ownedRevenueAnchor)));
-}
-
-/* ------------------------------------------------------------------ *
- * Plants tier (marketSystemMode >= "plants")
- *
- * Under plants a sector IS its plants: owned CAPACITY (units/turn) is the
- * authoritative production base. Market share is a capacity ratio:
- *
- *     share = ownedCapacityUnits / (Σ ownedCapacityUnits + headroomUnits)
- *
- * Everything is unit-denominated via `impliedOutputUnits`.
- *
- * WHICH MIX depends on what the quantity represents:
- *
- *   - An OWNED sector's units use its OWN `strategyId` mix. A flipped
- *     sector's `capitalStock` was seeded from its own strategy, so converting
- *     an unflipped sibling through the default mix compares different unit
- *     bases (can understate specialists by orders of magnitude).
- *
- *   - The GDP FLOOR and UNOWNED HEADROOM use the default "standard" mix.
- *     Neither is a specific operator (UnownedSector has no strategyId), so a
- *     specialism would make the denominator depend on who is asking.
- *
- * Fallbacks per (state, sectorType) market:
- *   (a) no `capitalStock` (not yet flipped): revenue-implied units;
- *   (b) unowned doc with no `headroomUnits` (backfill not run): headroom
- *       computed on the fly from ₳ revenue;
- *   (c) no usable unit denominator: bucket falls back to the legacy
- *       revenue-based path.
- * ------------------------------------------------------------------ */
-
-/**
- * Convert an ₳ amount into market units on the shared (default-strategy)
- * unit basis. Used for unflipped sectors, missing unowned headroom, and the
- * GDP floor, so all three are comparable with `capitalStock`.
- */
-export function marketUnitsFromAnchor(
-  sectorType: CorporationType,
-  anchorAmount: number,
-  unitScale: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
-): number {
-  return computeUnownedHeadroomUnits(
-    sectorType,
-    anchorAmount,
-    unitScale,
-    industryModel,
-    mediaDiscriminator
-  );
-}
-
-/**
- * A sector's owned capacity in units: `capitalStock` when present
- * (authoritative under plants), else fallback (a) — units implied by revenue
- * ON THE SECTOR'S OWN STRATEGY MIX, matching the basis `capitalStock` itself
- * was seeded on (seedCapitalStock uses the sector's strategy rates). Omitting
- * `strategyId` falls back to the default mix.
- */
-export function sectorCapacityUnits(
-  sectorType: OperatingSectorType,
-  capitalStock: number | null | undefined,
-  revenueAnchor: number,
-  strategyId: string | null | undefined,
-  unitScale: number,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
-): number {
-  if (typeof capitalStock === "number" && Number.isFinite(capitalStock) && capitalStock > 0) {
-    return capitalStock;
-  }
-  return computeSectorImpliedUnits(
-    sectorType,
-    revenueAnchor,
-    strategyId,
-    unitScale,
-    industryModel,
-    mediaDiscriminator
-  );
-}
-
-/** Unowned headroom in units: persisted `headroomUnits`, else fallback (b). */
 export function unownedHeadroomUnitsOf(
   sectorType: OperatingSectorType,
   headroomUnits: number | null | undefined,
@@ -366,19 +249,16 @@ interface BuildSectorMarketShareInputs {
   corpById?: ReadonlyMap<string, CorpCapitalCurrencyInfo>;
   /** stateId → state document (gdp + countryId). */
   stateById: ReadonlyMap<string, Pick<State, "_id" | "gdp" | "countryId">>;
-  /** Persisted unowned sector pool, ₳-denominated by convention (Task 9). */
-  unownedSectors: UnownedSector[];
+  /** @deprecated Ignored. Market share is owned revenue only; removed with the pool types. */
+  unownedSectors?: UnownedSector[];
   /** FX rates so per-corp local revenue normalizes to ₳. */
   exchangeRatesByCurrency: ReadonlyMap<CurrencyCode, number>;
   /**
-   * Active world preset, for the era-correct GDP→₳ normalization of the
-   * GDP-derived market fallback. `loadWorldPreset(db)` at the caller. Omitting
-   * it keeps the modern base config (a no-op outside a 1953 world).
+   * @deprecated Ignored. Kept so callers compile until the field is removed.
    */
   preset?: string;
   /**
-   * Plants tier: switch the share basis from revenue to owned capacity units.
-   * Defaults to false — omitting it reproduces the legacy revenue path exactly.
+   * @deprecated Ignored. Share is revenue-basis in every tier.
    */
   plantsEnabled?: boolean;
 }
@@ -480,8 +360,8 @@ export function buildMarketShareBySectorId(
  * feeds a parallel toll so the turn engine charges on `max(local, national)`.
  *
  * Revenue-basis on purpose: share is a ratio so era units cancel, and
- * antitrust cares about economic weight. Denominator is sum of each state's
- * {@link effectiveMarketAnchor}, matching the local market definition.
+ * antitrust cares about economic weight. Denominator is the sum of each state's
+ * owned revenue, matching the local market definition.
  *
  * SOE exemption is applied by the caller.
  */
@@ -808,8 +688,8 @@ export async function fetchMarketSharePercentForSectors(
     > &
       Partial<Pick<CorporateSector, "mediaDiscriminator">>
   >,
-  /** Plants tier: capacity-unit share basis. Omit for legacy revenue behavior. */
-  plantsEnabled: boolean = false
+  /** @deprecated Ignored. Share is revenue-basis in every tier. */
+  _plantsEnabled: boolean = false
 ): Promise<Map<string, number>> {
   if (targetSectors.length === 0) return new Map();
   const { loadFxRatesByCurrency } = await import("@/lib/currency/corporationCapital");
@@ -820,15 +700,10 @@ export async function fetchMarketSharePercentForSectors(
       marketIdentity(s.sectorType, s.industryModel, s.mediaDiscriminator)
     ).map((condition) => ({ stateId: s.stateId, ...condition }))
   );
-  const unownedBucketFilters = targetSectors.flatMap((s) =>
-    unownedMarketIdentityConditions(
-      marketIdentity(s.sectorType, s.industryModel, s.mediaDiscriminator)
-    ).map((condition) => ({ stateId: s.stateId, ...condition }))
-  );
 
   // Sibling sectors across the spanned buckets (a superset; buildMarketShareBySectorId
   // buckets precisely by (state, sectorType), so non-target buckets don't pollute).
-  const [siblingSectors, unownedDocs, states, fxByCurrency, preset] = await Promise.all([
+  const [siblingSectors, states, fxByCurrency] = await Promise.all([
     corporateSectorsCollection(db)
       .find(
         { $or: bucketFilters },
@@ -845,21 +720,16 @@ export async function fetchMarketSharePercentForSectors(
         }
       )
       .toArray(),
-    unownedSectorsCollection(db).find({ $or: unownedBucketFilters }).toArray(),
     statesCollection(db)
       .find({ _id: { $in: stateIds } }, { projection: { _id: 1, gdp: 1, countryId: 1 } })
       .toArray(),
     loadFxRatesByCurrency(db),
-    loadWorldPreset(db),
   ]);
 
   const shareByAll = buildMarketShareBySectorId({
     sectors: siblingSectors,
     stateById: new Map(states.map((s) => [s._id, s])),
-    unownedSectors: unownedDocs,
     exchangeRatesByCurrency: fxByCurrency,
-    preset,
-    plantsEnabled,
   });
 
   const result = new Map<string, number>();

@@ -14,7 +14,6 @@ beforeEach(async () => {
   [
     "states",
     "corporateSectors",
-    "unownedSectors",
     "corporations",
     "exchangeRates",
     "commodityPrices",
@@ -33,73 +32,48 @@ function mockFind(collection: string, docs: unknown[]) {
 }
 
 describe("aggregateCountrySectorMix", () => {
-  it("aggregates owned + unowned per sector across states and finds the largest state", async () => {
+  it("aggregates built capacity per sector across states and finds the largest state", async () => {
     const corpId = new ObjectId();
-    // gdp 0 → GDP-derived fallback 0, so effective market = owned + persisted unowned.
     mockFind("states", [
       { _id: "CA", countryId: "US", name: "California", gdp: 0, population: 30 },
       { _id: "TX", countryId: "US", name: "Texas", gdp: 0, population: 10 },
     ]);
-    mockFind("corporateSectors", [
-      {
-        _id: new ObjectId(),
-        corporationId: corpId,
-        countryId: "US",
-        stateId: "CA",
-        sectorType: "energy",
-        revenue: 600,
-        currentGrowthRate: 3,
-        targetGrowthRate: 99,
-      },
-      {
-        _id: new ObjectId(),
-        corporationId: corpId,
-        countryId: "US",
-        stateId: "TX",
-        sectorType: "energy",
-        revenue: 100,
-        currentGrowthRate: 1,
-        targetGrowthRate: 99,
-      },
-    ]);
-    mockFind("unownedSectors", [
-      { stateId: "CA", countryId: "US", sectorType: "energy", revenue: 400 },
-      { stateId: "TX", countryId: "US", sectorType: "energy", revenue: 100 },
-      { stateId: "TX", countryId: "US", sectorType: "financial", revenue: 500 },
-    ]);
+    const sector = (stateId: string, revenue: number, units: number) => ({
+      _id: new ObjectId(),
+      corporationId: corpId,
+      countryId: "US",
+      stateId,
+      sectorType: "energy",
+      revenue,
+      realizedRevenue: 0,
+      capitalStock: units,
+      operatingCapacityUnits: units,
+      strategyId: "standard",
+      mothballed: false,
+    });
+    mockFind("corporateSectors", [sector("CA", 600, 6), sector("TX", 100, 1)]);
+    mockFind("commodityPrices", []);
     mockFind("corporations", [{ _id: corpId, liquidCurrencyCode: "USD", countryId: "US" }]);
     mockFind("exchangeRates", [{ _id: "US", currencyCode: "USD", rate: 1 }]);
 
     const mix = await aggregateCountrySectorMix(db as unknown as Db, "US");
 
-    const energy = mix.find((s) => s.type === "energy");
-    expect(energy).toBeDefined();
-    // CA market 600+400=1000, TX market 100+100=200 → national 1200, owned 700
-    expect(energy!.totalMarketAnchor).toBe(1200);
-    expect(energy!.ownedPercent).toBeCloseTo(58.3, 1);
-    expect(energy!.largestState).toEqual({ stateId: "CA", stateName: "California" });
-    // mean of the two energy corps' CURRENT growth (3, 1) = 2 — current wins over target (99)
-    expect(energy!.avgGrowth).toBe(2);
+    const energy = mix.find((s) => s.type === "energy")!;
+    expect(energy.totalMarketAnchor).toBeGreaterThan(0);
+    // With no latent demand every unit of market is built capacity.
+    expect(energy.ownedPercent).toBe(100);
+    expect(energy.largestState).toEqual({ stateId: "CA", stateName: "California" });
+    expect(energy.avgGrowth).toBeNull();
 
-    const financial = mix.find((s) => s.type === "financial");
-    expect(financial!.totalMarketAnchor).toBe(500);
-    expect(financial!.ownedPercent).toBe(0);
-    expect(financial!.largestState).toEqual({ stateId: "TX", stateName: "Texas" });
-    // only unowned market — no corps to average → null
-    expect(financial!.avgGrowth).toBeNull();
-
-    // Sectors with no activity still appear, zeroed, so boards stay complete.
-    const retail = mix.find((s) => s.type === "retail");
-    expect(retail).toBeDefined();
-    expect(retail!.totalMarketAnchor).toBe(0);
-    expect(retail!.largestState).toBeNull();
-    expect(retail!.avgGrowth).toBeNull();
+    // A sector nobody operates still appears, zeroed, so boards stay complete.
+    const financial = mix.find((s) => s.type === "financial")!;
+    expect(financial.totalMarketAnchor).toBe(0);
+    expect(financial.largestState).toBeNull();
   });
 
   it("returns a complete zeroed board when the country has no market data", async () => {
     mockFind("states", []);
     mockFind("corporateSectors", []);
-    mockFind("unownedSectors", []);
     mockFind("corporations", []);
     mockFind("exchangeRates", []);
 
@@ -130,17 +104,6 @@ describe("aggregateCountrySectorMix", () => {
         currentGrowthRate: 0,
       },
     ]);
-    mockFind("unownedSectors", [
-      {
-        stateId: "CA",
-        countryId: "US",
-        sectorType: "manufacturing_vehicles",
-        // This authored row is intentionally stale and must not set the plants
-        // market denominator.
-        revenue: 999_999,
-        headroomUnits: 20,
-      },
-    ]);
     mockFind("commodityPrices", [
       {
         commodity: "vehicles",
@@ -167,11 +130,9 @@ describe("aggregateCountrySectorMix", () => {
     // The vehicle ledger has another 40 visible units plus 10 units that were
     // capped out of the price pass. On the automobile capacity basis, those
     // 50 units are $2.5M of latent demand.
-    // The stale authored unowned row must not affect this result.
     expect(automobiles.totalMarketAnchor).toBe(2_600_000);
     expect(automobiles.ownedPercent).toBeCloseTo(3.8, 1);
 
-    expect(db.collectionMocks.unownedSectors!.find).not.toHaveBeenCalled();
     // Plants has no persisted target-growth signal; exposing 0.00% here would
     // claim a measured contraction/expansion that did not occur.
     expect(automobiles.avgGrowth).toBeNull();
@@ -195,7 +156,6 @@ describe("aggregateCountrySectorMix", () => {
         currentGrowthRate: 0,
       },
     ]);
-    mockFind("unownedSectors", []);
     // Globally capped (60 units truncated) but locally clearing: true uncapped
     // demand is 10 + 60 = 70 against 100 supply, so the market has no latent
     // leg. Restoring the truncated share outside the max(0, demand - supply)
@@ -227,7 +187,7 @@ describe("aggregateCountrySectorMix", () => {
     expect(automobiles.ownedPercent).toBe(100);
   });
 
-  it("keeps latent physical buckets for a model with no local owned or unowned row", async () => {
+  it("keeps latent physical buckets for a model with no local owned row", async () => {
     mockFind("states", [
       { _id: "CA", countryId: "US", name: "California", gdp: 0 },
       { _id: "TX", countryId: "US", name: "Texas", gdp: 0 },
@@ -247,7 +207,6 @@ describe("aggregateCountrySectorMix", () => {
         mothballed: false,
       },
     ]);
-    mockFind("unownedSectors", []);
     mockFind("commodityPrices", [
       {
         commodity: "vehicles",

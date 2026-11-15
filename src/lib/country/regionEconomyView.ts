@@ -9,19 +9,14 @@ import { getDb } from "@/lib/mongodb";
 import type { getAuthUser } from "@/lib/auth";
 import { errorResponse } from "@/lib/api/errors";
 import type { CountryId } from "@/lib/constants/countries";
-import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import type {
   State,
   Corporation,
   CorporateSector,
   StateMetrics,
-  Tariff,
-  UnownedSector,
   ImperialCharacter,
   User,
 } from "@/lib/db/types";
-import { getEffectiveTariffRate, getSplitCaptureMultiplier } from "@/lib/tariffs/tariffEffects";
-import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import {
   corpLiquidCapitalToAnchor,
   fxRateForSectorHostFromMap,
@@ -35,12 +30,7 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   operatingSectorIdentity,
   type OperatingSectorType,
-  SECTOR_MARKET_GDP_FRACTION,
-  SECTOR_TYPE_COUNT,
-  SPLIT_BASE_CAPTURE_FRACTION,
-  UNOWNED_CAPTURE_BONUS_MULTIPLIER,
   ATTACK_OWNED_CONTESTED_FRACTION,
-  MS_CAPTURE_DIVISOR,
   calculateWorkers,
   getDominanceAttackEaseMultiplier,
   getUnderdogAttackAmplifier,
@@ -48,7 +38,6 @@ import {
 import { roundMarketingStrength } from "@/lib/utils/formatters";
 import {
   calculateAttackCostAnchor,
-  calculateSplitCostAnchor,
   calculateSplitMsCost,
 } from "@/lib/corporations/marketActionCosts";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
@@ -60,7 +49,6 @@ import {
   supplyMixSharesCountryDemand,
 } from "@/lib/corporations/buildRoom";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
-import { effectiveMarketAnchor } from "@/lib/corporations/marketShare";
 import { aggregateCountrySectorMix } from "@/lib/economy/sectorMix";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -75,9 +63,7 @@ import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import type { Document } from "mongodb";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
-import { tariffsCollection } from "@/lib/db/repositories/tariffs";
 
 type AuthedViewer = Awaited<ReturnType<typeof getAuthUser>>;
 
@@ -103,7 +89,6 @@ export async function buildRegionEconomyResponse({
   let userMarketingStrength = 0;
   let userLiquidCapitalAnchor = 0;
   let userSplitEscalation = 0;
-  let userCorpCountryId: string | null = null;
 
   // Private corps hide marketingStrength/revenue/workers unless viewer is owner, admin, or moderator with ?modView=1.
   const viewerUserId = user?.userId;
@@ -166,23 +151,20 @@ export async function buildRegionEconomyResponse({
         await getCorpFxRate(db, corp)
       );
       userSplitEscalation = corp.splitEscalation ?? 0;
-      userCorpCountryId = corp.countryId ?? null;
     }
   }
 
-  const [state, stateMetricsDoc, stateTariffs, stateCapDoc, activeFtaPairs] = await Promise.all([
+  const [state, stateMetricsDoc, stateCapDoc] = await Promise.all([
     statesCollection(db).findOne({ _id: stateId, countryId }),
     // SP5: workforce skill spans both pipelines: shared loader.
     loadWorkforceSkillByState(db, [stateId]).then((m) => {
       const value = m.get(stateId);
       return value == null ? null : ({ education: { workforceSkill: { value } } } as StateMetrics);
     }),
-    tariffsCollection(db).find({ countryId }).toArray(),
     stateResourceCapacityCollection<Document>(db).findOne(
       { stateId },
       { projection: { stateId: 1, resources: 1 } }
     ),
-    loadActiveFtaPairs(db),
   ]);
   if (!state) {
     return errorResponse(404, "State not found");
@@ -219,27 +201,13 @@ export async function buildRegionEconomyResponse({
     growthGameState?.currentYear
   );
 
-  // GDP→₳ rate is era-scoped: each world normalizes with its own era's rates.
-  const economyPreset = await loadWorldPreset(db);
-  const usdExchangeRate = getGdpAnchorRate(countryId, economyPreset);
-  const totalMarketPerSector = Math.round(
-    (state.gdp * usdExchangeRate * SECTOR_MARKET_GDP_FRACTION) / SECTOR_TYPE_COUNT
-  );
-
   // Get all corporate sectors in this state
   const sectors = await corporateSectorsCollection(db).find({ stateId }).toArray();
 
-  // Get unowned sectors for this state from DB
-  const unownedDocs = await unownedSectorsCollection(db).find({ stateId }).toArray();
   // Keyed by operating lane: the vehicles and entertainment markets are their own rows.
   const laneOf = (
-    row: Pick<UnownedSector, "sectorType" | "industryModel" | "mediaDiscriminator">
+    row: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">
   ) => getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator);
-  const unownedByType = new Map(unownedDocs.map((u) => [laneOf(u), u.revenue]));
-  // Plants tier: the state board reframes the unowned pool as UNMET DEMAND in
-  // output units, the quantity a player can build against rather than a pool
-  // they can no longer buy into. Headroom is self-healed from revenue for
-  // rows predating the backfill; a bare 0 would report a busy market as no demand.
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
   // Get corporation details for each sector
@@ -326,7 +294,7 @@ export async function buildRegionEconomyResponse({
   // as "Unknown" defenders in the UI and any Attack Sector click against them
   // dies at the defender lookup in /attack-sector. Filtering here removes them
   // from the owners list so they no longer surface as attackable rows; the
-  // unowned-market fallback naturally absorbs the empty slot. A separate
+  // empty slot simply drops out. A separate
   // migration sweeps the stale rows out of `corporateSectors`.
   const liveSectors = sectors.filter((s) => corpMap.has(s.corporationId.toString()));
 
@@ -359,17 +327,8 @@ export async function buildRegionEconomyResponse({
       (sum, s) => sum + (sectorRevenueAnchorById.get(s._id.toString()) ?? 0),
       0
     );
-    // Use the persisted unowned pool when present so admin-spawned market is
-    // preserved; fall back to the GDP-derived gap, but never below owned revenue
-    // in this (state, sectorType): a sector can't hold >100% of its market.
-    // unownedSectors.revenue is native units so it sums with the anchor total.
-    // Under plants, market share is revenue over the cell's total real revenue:
-    // no unowned pool, splits retired (unowned is 0).
-    const persistedUnownedRevenue = unownedByType.get(sectorType);
-    const effectiveTotalMarket = plantsMode
-      ? Math.max(0, ownedRevenue)
-      : effectiveMarketAnchor(ownedRevenue, persistedUnownedRevenue, totalMarketPerSector);
-    const unownedRevenue = plantsMode ? 0 : Math.max(0, effectiveTotalMarket - ownedRevenue);
+    // A bucket's market is the revenue its producers actually earn.
+    const effectiveTotalMarket = Math.max(0, ownedRevenue);
 
     // Attacker's share of this (state, sectorType) cell: used by the
     // underdog amplifier so the preview's capture estimate matches what the
@@ -511,43 +470,8 @@ export async function buildRegionEconomyResponse({
       };
     });
 
-    // Unowned SPLITS are retired under plants: capacity is built, rivals are
-    // attacked. Still compute split quotes off-plants so legacy worlds work.
-    const sectorCountry = countryId;
-    const tariffEffectiveRate =
-      userCorpCountryId !== null
-        ? getEffectiveTariffRate(
-            stateTariffs,
-            sectorCountry,
-            sectorType,
-            userCorpCountryId as CountryId,
-            undefined,
-            activeFtaPairs
-          )
-        : 0;
-    const isDomesticSplitting = userCorpCountryId !== null && sectorCountry === userCorpCountryId;
-    const tariffMultiplier = getSplitCaptureMultiplier(tariffEffectiveRate, isDomesticSplitting);
-    const captureMultiplier = (1 + userMarketingStrength / MS_CAPTURE_DIVISOR) * tariffMultiplier;
-    const estimatedCapture = plantsMode
-      ? 0
-      : Math.min(
-          Math.round(
-            unownedRevenue *
-              SPLIT_BASE_CAPTURE_FRACTION *
-              captureMultiplier *
-              UNOWNED_CAPTURE_BONUS_MULTIPLIER
-          ),
-          Math.round(unownedRevenue)
-        );
-
-    const estimatedCapturePercent =
-      !plantsMode && effectiveTotalMarket > 0
-        ? Math.round((estimatedCapture / effectiveTotalMarket) * 10000) / 100
-        : 0;
-
     // Plants-tier room to build in output units/day: buyers not being served,
-    // less capacity already under construction. Not the legacy unowned pool
-    // (a market can be short with an empty pool).
+    // less capacity already under construction.
     let room: { units: number; scope: "state" | "country" } | null = null;
     if (buildRoom) {
       const identity = operatingSectorIdentity(sectorType);
@@ -578,23 +502,12 @@ export async function buildRegionEconomyResponse({
       label: OPERATING_SECTOR_TYPE_LABELS[sectorType],
       totalMarket: effectiveTotalMarket,
       ownedRevenue: Math.round(ownedRevenue),
-      unownedRevenue: Math.round(unownedRevenue),
-      unownedPercent:
-        effectiveTotalMarket > 0
-          ? Math.round((unownedRevenue / effectiveTotalMarket) * 10000) / 100
-          : 0,
-      splitCost: plantsMode ? 0 : calculateSplitCostAnchor(unownedRevenue),
-      estimatedCapture,
-      estimatedCapturePercent,
-      // Plants-tier: unmet demand in output units/day. Null elsewhere.
       // Room to build: buyers here not being served, less capacity already
       // under construction. Not the legacy unowned pool (a market can be
       // short with an empty pool).
       headroomUnits: room?.units ?? null,
       // "country" when the figure above is shared by every state in the country.
       headroomScope: room?.scope ?? null,
-      tariffEffectiveRate,
-      tariffMultiplier,
       owners: redactedOwners,
     };
   });
@@ -635,18 +548,12 @@ export async function buildRegionEconomyResponse({
           secondaryBonus: 5,
         }
       : null,
-    totalMarketPerSector,
     sectors: economySectors,
     userCorporationId,
     userCorporationSectorType,
     userMarketingStrength: roundMarketingStrength(userMarketingStrength),
     userLiquidCapitalAnchor: Math.round(userLiquidCapitalAnchor),
-    // Rival attacks retain the escalation cost under plants even though
-    // unowned-market splits are retired there.
     attackMsCost: calculateSplitMsCost(userSplitEscalation),
-    // MS escalation only mattered for unowned splits; zero under plants so no
-    // client can invent a Split CTA from a leftover quote.
-    splitMsCost: plantsMode ? 0 : Math.pow(2, userSplitEscalation),
     stateResources: stateCapDoc?.resources ?? null,
   });
 }

@@ -47,14 +47,10 @@ const marketResponse = {
       stateId: "CA",
       stateName: "California",
       countryId: "US",
-      unownedRevenue: 0,
-      splitCost: 0,
-      estimatedRevenueCapture: 0,
       canAfford: true,
       ownedSectorId: null,
       competitors: [],
       totalCompetitorRevenue: 0,
-      headroomUnits: 543_000,
       starterBuildCostAnchor: 1_100,
       foundingTotalAnchor: 1_600,
       entry: { canEnter: true, reason: null, message: null },
@@ -183,9 +179,7 @@ describe("ExpandMarketModal plants market finder", () => {
           ok: true,
           json: async () => ({
             ...marketResponse,
-            suggestions: [
-              { ...marketResponse.suggestions[0], headroomUnits: 0, roomToBuildUnits: 0 },
-            ],
+            suggestions: [{ ...marketResponse.suggestions[0], roomToBuildUnits: 0 }],
           }),
         } as Response)
       )
@@ -250,14 +244,14 @@ describe("ExpandMarketModal plants market finder", () => {
         json: async () => ({
           ...marketResponse,
           countrySharedDemand: true,
-          countryDemandEstimates: [{ countryId: "US", headroomUnits: 543_000 }],
+          countryDemandEstimates: [{ countryId: "US", roomToBuildUnits: 543_000 }],
           suggestions: [
-            { ...marketResponse.suggestions[0], headroomUnits: undefined, roomScope: "country" },
+            { ...marketResponse.suggestions[0], roomToBuildUnits: undefined, roomScope: "country" },
             {
               ...marketResponse.suggestions[0],
               stateId: "NY",
               stateName: "New York",
-              headroomUnits: undefined,
+              roomToBuildUnits: undefined,
               roomScope: "country",
               foundingTotalAnchor: 1_800,
             },
@@ -418,7 +412,7 @@ describe("ExpandMarketModal plants market finder", () => {
     }
   );
 
-  it("names a leftover pool as unclaimed legacy revenue, apart from room to build", async () => {
+  it("shows room to build and no unowned revenue figure", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -426,9 +420,7 @@ describe("ExpandMarketModal plants market finder", () => {
           ok: true,
           json: async () => ({
             ...marketResponse,
-            suggestions: [
-              { ...marketResponse.suggestions[0], unownedRevenue: 2_400, roomToBuildUnits: 0 },
-            ],
+            suggestions: [{ ...marketResponse.suggestions[0], roomToBuildUnits: 0 }],
           }),
         } as Response)
       )
@@ -447,6 +439,7 @@ describe("ExpandMarketModal plants market finder", () => {
     await screen.findByText("Best fit");
     expect(screen.getByText(/Room to build: none right now/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
-    expect(await screen.findByText(/Unclaimed legacy revenue here: \$2,400\/day/)).toBeTruthy();
+    await screen.findByText(/Review California/);
+    expect(screen.queryByText(/legacy revenue/i)).toBeNull();
   });
 });

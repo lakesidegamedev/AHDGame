@@ -192,8 +192,7 @@ export default function BuildCapacityDialog({
     const transferFee = construction * (q.fxSpreadRate ?? 0);
     const total = construction + transferFee;
     const workersNeeded = plants.laborIntensity * safeUnits;
-    const overHeadroom =
-      safeUnits > Math.max(0, Math.min(plants.headroomUnits, plants.measuredDemandGapUnits ?? 0));
+    const overHeadroom = safeUnits > Math.max(0, plants.measuredDemandGapUnits ?? 0);
     return {
       safeCount,
       safeUnits,
@@ -223,14 +222,14 @@ export default function BuildCapacityDialog({
     0,
     plants.buildDemand
       ? (fullMixBuildRoom(plants.buildDemand) ?? 0)
-      : Math.min(plants.headroomUnits, plants.measuredDemandGapUnits ?? 0)
+      : (plants.measuredDemandGapUnits ?? 0)
   );
   // A profitable observed extraction pace cannot be scaled beyond finite deposits.
   const resourceSizingUnavailable = sectorType === "extraction";
   const sizing = recommendSectorExpansion({
     unitsPerFacility,
     measuredDemandUnits: plants.measuredDemandGapUnits ?? null,
-    shareHeadroomUnits: plants.buildDemand ? buyersRoomUnits : plants.headroomUnits,
+    shareHeadroomUnits: buyersRoomUnits,
     // The measured quote already reserves every known build in this market.
     queuedUnits: 0,
     cashAnchor: q.corpCapitalAnchor,
@@ -248,10 +247,6 @@ export default function BuildCapacityDialog({
   });
   const automaticSizingBlocked = financingChoice !== null || !!q.financing?.pendingRequest;
   const headroomFacilities = Math.floor(buyersRoomUnits / unitsPerFacility);
-  // Which constraint actually bound, when there is no room at all. A market
-  // whose SHARE is fully claimed is a different situation from one where
-  // buyers have no unmet demand, and the player can act on the difference.
-  const noShareLeft = !plants.buildDemand && plants.headroomUnits < 1;
   const blockedByMothball = plants.mothballed;
   const affordable = financingChoice ? financingChoice.affordable : preview.affordable;
   // Next turn's run once this build has taken its cash. A financed build only
@@ -505,21 +500,11 @@ export default function BuildCapacityDialog({
                   // The plant is held below capacity by its own sales, so the
                   // market gap is not room for new capacity yet (ticket 1370).
                   <>{t("ownIdleCapacity")}</>
-                ) : noShareLeft ? (
-                  // Two very different reasons the room is zero, and saying
-                  // "oversupplied" for both is what made a fully-claimed market
-                  // read as a broken one (ticket #1162).
-                  <>
-                    Every unit of this market is already owned, here and by rivals. There is nothing
-                    left to claim, so growth has to come from taking share on price rather than from
-                    building.
-                  </>
                 ) : (
                   <>
                     The market for what this sector makes is oversupplied: buyers are already taking
-                    all they need. Unclaimed share can still read above zero, because that counts
-                    market nobody has built into rather than buyers waiting. Expect extra output to
-                    go unsold unless you win share from a rival on price.
+                    all they need. Expect extra output to go unsold unless you win share from a
+                    rival on price.
                   </>
                 )
               ) : (
