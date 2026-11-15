@@ -5,7 +5,7 @@ import { rejectWhileTurnProcessing } from "./turnGuard";
  * Every sector goes through `placeCapacityBuild`, the exact single-sector build
  * path behind POST /api/corporations/[id]/sectors/[sectorId]/build, one sector
  * at a time. Prices, dominance tolls, transfer fees, the cash debit, the
- * unowned-pool drawdown, the capex ledger leg and the economic action log are
+ * capex ledger leg and the economic action log are
  * therefore identical to a CEO clicking Build on each sector in turn. This file
  * only chooses the sectors, sizes each order and stops spending when the cash
  * runs out.

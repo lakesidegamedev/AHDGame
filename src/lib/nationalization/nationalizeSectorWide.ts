@@ -138,7 +138,7 @@ export async function nationalizeSectorWide(
   const destRate = fxByCurrency.get(destCurrency) ?? 1;
 
   // All-zero plant fold for a taking whose donor carries no capital state
-  // (unowned pool, or a legacy corp row predating the plants migration).
+  // (a legacy corp row predating the plants migration).
   // `capitalStock` is filled in by the caller.
   //
   // `survivor` is the NatCorp row being folded into, or null on create. It

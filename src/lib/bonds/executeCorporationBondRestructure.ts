@@ -256,7 +256,7 @@ export async function executeCorporationBondRestructure(
 
   // 2. Liquidate the selected sectors (idempotent, not transaction-safe, must
   //    run outside any transaction). NPP operators take over most of each
-  //    plant's capacity; the rest returns to the unowned market.
+  //    plant's capacity; the rest stops producing.
   if (sectorsToLiquidate.length > 0) {
     await disposeLeavingSectors(db, refreshed, sectorsToLiquidate, now);
   }

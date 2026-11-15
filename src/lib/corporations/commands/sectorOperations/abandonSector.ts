@@ -1,7 +1,7 @@
 import { rejectWhileTurnProcessing } from "./turnGuard";
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/abandon
- * Abandon a sector. Deletes the sector; revenue returns to the unowned pool.
+ * Abandon a sector. Deletes the sector; NPP operators may take over its plants.
  * CEO only.
  */
 import { NextResponse } from "next/server";
