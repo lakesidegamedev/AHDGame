@@ -116,7 +116,7 @@ const eslintConfig = defineConfig([
       // Custom rule to prevent hardcoded country literals
       "local/no-country-literals": "error",
       // Surface error-swallowing .catch() handlers that hide fetch failures from
-      // the UI and GlitchTip. Warn (not error) because there is a large existing
+      // the UI and the error tracker. Warn (not error) because there is a large existing
       // backlog to migrate to fetchJson incrementally; the warnings are the backlog.
       "local/no-silent-fetch-catch": "warn",
       // Every user-facing timestamp must render in the VIEWER's local timezone, not

@@ -119,7 +119,7 @@ export async function GET(req: Request) {
     });
     // handleRouteError already captures the exception to Sentry (see
     // src/lib/api/errors.ts) — do NOT also logger.error() here or the turn
-    // failure double-captures into two separately-grouped GlitchTip issues.
+    // failure double-captures into two separately-grouped error issues.
     return handleRouteError(error);
   }
 }

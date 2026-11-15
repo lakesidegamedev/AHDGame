@@ -53,8 +53,8 @@ export function isNextRenderStreamDisconnect(event: StreamErrorEvent): boolean {
 
 /**
  * Detects the classic "value-less non-Error promise rejection" noise
- * (GlitchTip AHD-89): a promise rejected with no reason — `undefined`, `null`,
- * or empty — so the SDK synthesises a placeholder event with no stack and no
+ * where a promise is rejected with no reason (`undefined`, `null`,
+ * or empty), so the SDK synthesises a placeholder event with no stack and no
  * actionable payload. In production these are WebKit (Safari / iOS) rejecting
  * in-flight router-prefetch and fetch promises during navigation teardown.
  *

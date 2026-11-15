@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * Nigeria geo-political zone demographics using the 8 NG voter archetypes.
+ * Nigeria geo-political zone demographics using the 8 NG voter groups.
  *
  * Each region sets the population share of each archetype (summing to 100%)
  * plus baseline lean and turnout values. `categoryWeights: { ng_voterGroups: 100 }`

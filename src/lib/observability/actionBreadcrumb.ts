@@ -6,7 +6,7 @@ import { addClientBreadcrumb } from "@/lib/observability/sentryClientLazy";
  * Record a player-initiated game action as a Sentry breadcrumb.
  *
  * Call this immediately before the fetch that executes the action. The
- * breadcrumb trail in any subsequent GlitchTip error will show the last
+ * breadcrumb trail in any subsequent error report will show the last
  * N actions the player took, giving full context without reading server logs.
  *
  * @param label   Short human-readable action name, e.g. "bond.buy", "org.build"

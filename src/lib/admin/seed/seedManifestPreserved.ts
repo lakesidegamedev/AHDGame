@@ -258,17 +258,6 @@ export const PRESERVED: CollectionEntry[] = [
       "Random-event templates and their admin approval status. Bootstrap does not reseed them, and seedPreeEventDefinitions never overwrites status, so wiping them emptied /wiki/random-events and stopped random events until an admin reseeded and re-approved. Cooldowns and fired instances are world state and live in eventCooldownLedger and eventInstances.",
   },
   {
-    name: "siteTrafficPageviews",
-    category: "preserved",
-    notes:
-      "First-party site analytics keyed by the visitor cookie, not by world. Self-limiting via its own ~180-day TTL.",
-  },
-  {
-    name: "codeQualitySnapshots",
-    category: "preserved",
-    notes: "Build-time code quality history for the admin dashboard. Not world state.",
-  },
-  {
     name: "officeHistoryArchive",
     category: "preserved",
     notes:

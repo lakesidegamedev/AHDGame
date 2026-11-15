@@ -31,8 +31,8 @@ export interface FeedbackContext {
 
 export type FeedbackStatus = "open" | "in_progress" | "resolved" | "wont_fix";
 
-/** GlitchTip/Sentry event ID associated with this feedback, if any. Links the
- * player's bug report directly to the captured exception in GlitchTip for
+/** Sentry event ID associated with this feedback, if any. Links the
+ * player's bug report directly to the captured exception in the error tracker for
  * instant stack-trace lookup. */
 export interface Feedback {
   _id: ObjectId;
@@ -50,7 +50,7 @@ export interface Feedback {
   /** Where the reporter was playing, detected from the request user agent. */
   platform?: TicketPlatform;
   metadata?: Record<string, unknown>;
-  /** Sentry/GlitchTip event UUID — links this feedback to a captured exception. */
+  /** Sentry event UUID, links this feedback to a captured exception. */
   sentryEventId?: string;
   status: FeedbackStatus;
   adminNotes?: string;

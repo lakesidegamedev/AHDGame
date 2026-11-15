@@ -1,6 +1,5 @@
 import type { EraId } from "./presetSelector";
 import { US_STATE_POSITION_OVERRIDES as STATE_POSITION_OVERRIDES } from "@/lib/countries/us/data/usDemographicPositions";
-import { demographicCategories } from "./voterArchetypeCategories";
 
 export interface VoterGroupCompositionEntry {
   weights: Array<{ dim: keyof typeof DEMOGRAPHIC_TURNOUT_RATES; key: string; w: number }>;
@@ -304,13 +303,7 @@ export const VOTER_GROUP_COMPOSITION: Record<
   },
 };
 
-/**
- * Re-exported from the import-free `voterArchetypeCategories` module so the
- * canvassing panel can list the archetypes without the era tables below.
- */
-export { demographicCategories };
-
-/** The 12 voter archetypes — stable across all eras (their composition/leans/turnouts shift). */
+/** The 12 voter groups, stable across all eras (their composition/leans/turnouts shift). */
 const ERA_GROUP_IDS = [
   "young_renters",
   "evangelicals",
@@ -1728,5 +1721,3 @@ export function getEraComposition(era: EraId): EraComposition {
   }
   return comp;
 }
-
-export default demographicCategories;

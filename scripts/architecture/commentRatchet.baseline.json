@@ -601,10 +601,6 @@
       "longBlocks": 0,
       "narrativeLines": 1
     },
-    "scripts/postbuild-quality.ts": {
-      "longBlocks": 1,
-      "narrativeLines": 1
-    },
     "scripts/remediation/cli.ts": {
       "longBlocks": 1,
       "narrativeLines": 0
@@ -1495,7 +1491,7 @@
     },
     "src/app/api/country/[code]/executive/route.test.ts": {
       "longBlocks": 0,
-      "narrativeLines": 2
+      "narrativeLines": 1
     },
     "src/app/api/country/[code]/fomc/route.governance.test.ts": {
       "longBlocks": 0,

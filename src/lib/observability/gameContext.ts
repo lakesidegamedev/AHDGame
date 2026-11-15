@@ -44,7 +44,7 @@ export function setGameContext(turn: number, office?: OfficeType | null): void {
  *
  * Returns a compact string like `"senate:CA"`, `"president"`, `"commons:OH"`,
  * `"chancellor"`, or `"house:TX"` — short enough for a tag value, unique enough
- * to filter GlitchTip issues by office type.
+ * to filter the error tracker issues by office type.
  */
 export function officeLabel(office: OfficeType): string {
   const props = office as unknown as Record<string, unknown>;

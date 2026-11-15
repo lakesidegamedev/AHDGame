@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { COUNTRY_ORDER } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { AutoCooldownRow, AutoTemplate } from "./crisisAdminTypes";
@@ -25,6 +25,51 @@ export function AutoCrisisPanel({
   const [forceCountry, setForceCountry] = useState<string>(COUNTRY_ORDER[0]);
   const [forcingKey, setForcingKey] = useState<string | null>(null);
   const [startingVietnam, setStartingVietnam] = useState(false);
+  const [germanQuestion, setGermanQuestion] = useState<{
+    live: boolean;
+    warning: string | null;
+  } | null>(null);
+  const [germanBusy, setGermanBusy] = useState(false);
+
+  const loadGermanQuestion = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/settlement");
+      if (!res.ok) return;
+      const data = await res.json();
+      setGermanQuestion({ live: data.live != null, warning: data.openWarning ?? null });
+    } catch {
+      setGermanQuestion(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showAuto) void loadGermanQuestion();
+  }, [showAuto, loadGermanQuestion]);
+
+  const handleGermanQuestion = async (action: "open" | "close") => {
+    setGermanBusy(true);
+    try {
+      const res = await fetch("/api/admin/settlement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(apiErrorText(data, "The German Question could not be changed"));
+      } else {
+        const done =
+          action === "open" ? "The German Question is open." : "The German Question is closed.";
+        setMessage([done, data.warning, data.note].filter(Boolean).join(" "));
+        onRefresh();
+      }
+      await loadGermanQuestion();
+    } catch {
+      setMessage("The German Question could not be changed");
+    } finally {
+      setGermanBusy(false);
+    }
+  };
 
   const handleStartVietnam = async () => {
     setStartingVietnam(true);
@@ -101,6 +146,33 @@ export function AutoCrisisPanel({
                 className="shrink-0 rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent disabled:opacity-50"
               >
                 {startingVietnam ? "Starting..." : "Start Vietnam chain"}
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded border border-border bg-accent/20 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">The German Question</p>
+                <p className="text-xs text-muted">
+                  Asks the German Question now. The turn loop never starts it. It only opens in a
+                  world where West and East Germany are still separate countries, and only one
+                  question can be live at a time. Calling it off changes nothing in the world.
+                </p>
+                {germanQuestion?.warning && !germanQuestion.live && (
+                  <p className="mt-1 text-xs text-amber-500">{germanQuestion.warning}</p>
+                )}
+              </div>
+              <button
+                onClick={() => handleGermanQuestion(germanQuestion?.live ? "close" : "open")}
+                disabled={germanBusy || germanQuestion === null}
+                className="shrink-0 rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent disabled:opacity-50"
+              >
+                {germanBusy
+                  ? "Working..."
+                  : germanQuestion?.live
+                    ? "Close the German Question"
+                    : "Open the German Question"}
               </button>
             </div>
           </div>

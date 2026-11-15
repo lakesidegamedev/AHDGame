@@ -53,7 +53,7 @@ export function DeliverAddressModal({
 }: Props) {
   const isNational = scope === "national";
   const cid = countryId.toUpperCase() as CountryId;
-  // Targets are Layer-1 buckets, not voter archetypes, and the bucket set is
+  // Targets are Layer-1 buckets, not voter groups, and the bucket set is
   // country- and era-specific (US has race/wealth, everyone else has
   // ethnicity/income/urbanization, with different keys inside each). So the list
   // is served rather than hardcoded — a fixed list would offer buckets a country

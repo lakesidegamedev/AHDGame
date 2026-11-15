@@ -14,7 +14,7 @@
  */
 import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import { ObjectId } from "mongodb";
-import { demographicCategories } from "@/lib/seeds/demographicCategories";
+import { demographicCategories } from "@/lib/seeds/calibration/groupModelCategories";
 import { stateDemographics } from "@/lib/seeds/stateDemographics";
 import { ELECTORAL_VOTE_UNITS } from "@/lib/constants/states";
 import { MONETARY_BASELINES } from "@/lib/constants/currencies";

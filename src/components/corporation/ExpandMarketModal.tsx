@@ -544,7 +544,7 @@ export default function ExpandMarketModal({
                       : "bg-card-elevated/40 text-muted hover:text-foreground"
                   }`}
                 >
-                  {plantsMode ? "Untapped markets" : "Unowned markets"}
+                  Untapped markets
                 </button>
                 <button
                   type="button"

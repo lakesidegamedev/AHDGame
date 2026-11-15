@@ -161,6 +161,6 @@ async function handleGet(request: Request) {
 }
 
 // RED metrics: duration span + api.route tag + SLO availability signal, and any
-// non-2xx is captured to GlitchTip grouped by (route, status). See
+// non-2xx is captured to the error tracker grouped by (route, status). See
 // src/lib/observability/apiMetrics.ts.
 export const GET = withApiMetrics("elections.GET", handleGet);

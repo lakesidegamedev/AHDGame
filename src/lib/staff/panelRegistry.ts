@@ -415,7 +415,7 @@ export const TOOLS: readonly ToolDef[] = [
 export const REMOVED_TOOL_REDIRECTS: Readonly<Record<string, string>> = {
   traffic: "/control/overview/dashboard",
   feedback: "/control/support/suggestions",
-  "german-question": "/control/world/countries",
+  "german-question": "/control/world/crises",
   "code-quality": "/control/diagnostics/game-health",
 };
 

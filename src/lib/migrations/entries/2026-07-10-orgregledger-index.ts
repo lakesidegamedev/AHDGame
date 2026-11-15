@@ -7,7 +7,7 @@ const INDEXES: IndexPlan[] = [
     // getStateRegLedger.ts's headline sparkline query —
     //   find({ countryId, stateId, partyId, metric: "reg" }).sort({ turn: -1 }).limit(24)
     // — runs on every /country/*/region/* page load and was a full collection
-    // scan + in-memory sort (GlitchTip slow-query evidence: 4.5s finds).
+    // scan + in-memory sort (slow-query evidence: 4.5s finds).
     // Equality fields first, sort key last; the (countryId, stateId) prefix
     // also covers the region-scoped deletes in evacuateRegionPolitics.ts /
     // splitParties.ts.

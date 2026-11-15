@@ -69,7 +69,6 @@ const EXCLUDED_COLLECTIONS = new Set([
   "primarySnapshots",
   "qa_memory",
   "shareTradeHistory",
-  "siteTrafficPageviews",
   "statePartyElections",
   "tradeHistory",
   "treasuryTransactions",

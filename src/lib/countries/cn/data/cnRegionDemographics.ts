@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * China macro-region demographic composition using the 7 CN voter archetypes.
+ * China macro-region demographic composition using the 7 CN voter groups.
  *
  * Each region defines population shares (summing to 100%) plus baseline lean
  * and turnout. Regional character comes from the population mix, not archetype-

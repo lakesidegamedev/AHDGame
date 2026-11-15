@@ -1129,8 +1129,8 @@ export function StatusBar({
                   </div>
                 )}
                 <p className="text-[11px] text-muted leading-relaxed mt-1">
-                  Boosts the share of unowned market you capture on each sector split (+MS/100 on
-                  top of the 2% baseline). Grows from daily marketing spend.
+                  Sets how many plants and what odds you get when you split a rival&apos;s sector,
+                  against their MS. Grows from daily marketing spend.
                 </p>
                 <TooltipLink href={`/corporation/${stats.corp.sequentialId}`}>
                   View corporation

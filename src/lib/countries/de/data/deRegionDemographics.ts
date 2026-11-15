@@ -1,7 +1,7 @@
 import type { CensusGroupView } from "@/lib/db/types";
 
 /**
- * German Bundesländer demographics using the 12 DE voter archetypes.
+ * German Bundesländer demographics using the 12 DE voter groups.
  * Each Land sets archetype population shares (summing to 100%), plus baseline lean and turnout.
  * Regional character comes from the population mix, not per-Land archetype lean variation.
  * categoryWeights references the profile in the country Layer-1 model.
