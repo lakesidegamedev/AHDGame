@@ -1062,6 +1062,13 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       );
     }
 
+    // A sector that cleared against no prior-turn book measured nothing; tag it
+    // so the telemetry writer leaves its fill unrecorded (see marketTelemetry).
+    for (const clearing of market.clearingBySectorId?.values() ?? []) {
+      if (!clearingFillMeasured(clearing, lookups.initializedLaggedBooks))
+        Object.assign(clearing, { fillMeasured: false });
+    }
+
     // Brand loyalty (A2): roll up per-corp posture/fill/contest from the clearing
     // results and advance each corp's loyalty. Shadow-safe, the resulting
     // brandLoyalty/brandPostureNorm are persisted, but nothing READS them until

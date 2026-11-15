@@ -61,21 +61,21 @@ export function legacyRevenueShadowTelemetry(input: {
 
 export function marketTelemetry(input: {
   clearingEnabled: boolean;
-  clearing?: SectorClearingResult;
+  /**
+   * `fillMeasured: false` (tagged by the clearing pre-pass) means none of the
+   * sector's outputs had a prior-turn demand book to clear against: the first
+   * producing turn of a fresh world. Clearing then sells nothing by
+   * construction, which says nothing about the market, so the fill telemetry
+   * is left unwritten instead of recorded as zero. Pricing, low-fill counts
+   * and NPP strategy all read it next turn.
+   */
+  clearing?: SectorClearingResult & { fillMeasured?: boolean };
   clearingFactor: number;
   currentTurn?: number;
   clearingStartTurn?: number | null;
   mothballed: boolean;
   sector: Pick<CorporateSector, "lowFillTurns">;
   inventoryTurn?: InventoryTurnResult;
-  /**
-   * False when none of the sector's outputs had a prior-turn demand book to
-   * clear against: the first producing turn of a fresh world. Clearing then
-   * sells nothing by construction, which says nothing about the market, so
-   * the fill telemetry is left unwritten instead of recorded as zero. Pricing,
-   * loyalty and NPP strategy all read it next turn.
-   */
-  fillMeasured?: boolean;
 }): Record<string, unknown> {
   const {
     clearingEnabled,
@@ -86,8 +86,8 @@ export function marketTelemetry(input: {
     mothballed,
     sector,
     inventoryTurn,
-    fillMeasured = true,
   } = input;
+  const fillMeasured = clearing?.fillMeasured !== false;
   const update: Record<string, unknown> = {};
 
   if (clearingEnabled && clearing) {

@@ -57,13 +57,12 @@ describe("first producing turn after a reset", () => {
   it("does not record a zero fill that had no demand book to clear against", () => {
     const telemetry = marketTelemetry({
       clearingEnabled: true,
-      clearing: zeroFill,
+      clearing: { ...zeroFill, fillMeasured: false },
       clearingFactor: 1,
       currentTurn: 2,
       clearingStartTurn: 2,
       mothballed: false,
       sector: { lowFillTurns: 0 },
-      fillMeasured: false,
     });
     expect(telemetry).not.toHaveProperty("soldFraction");
     expect(telemetry).not.toHaveProperty("lowFillTurns");
