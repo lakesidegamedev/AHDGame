@@ -206,12 +206,11 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     writeSites: 1,
     status: "plants-gated",
     reason:
-      "Founding build; creates capacity under plants. The single remaining write is the " +
-      "new sector's own doc (legacy nameplate, restated from capacity next tick) — the " +
-      "pool drawdown's revenue leg is now the shared `unownedPoolTrailingSet` stage.",
+      "Founding build; creates capacity under plants. The single write is the " +
+      "new sector's own doc (nameplate, restated from capacity next tick).",
   },
   "src/lib/admin/spawnNppCorporation.ts": {
-    writeSites: 2,
+    writeSites: 1,
     status: "plants-gated",
     reason: "NPP corp spawn; plants-aware sector creation.",
   },
@@ -293,14 +292,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "revenue is restated by the turn processor in the sector's host currency, so " +
       "rescaling it here would be overwritten anyway. Gated at the write.",
   },
-  // NOTE — `src/lib/turn/nppCorporationBehavior.ts` was registered here while its
-  // founding drawdown wrote `unownedSectors.revenue` from a literal `$set`. That
-  // write is gone: the drawdown now moves `headroomUnits` and lets the shared
-  // `unownedPoolTrailingSet` stage restate revenue, so the detector no longer
-  // sees a revenue write in the file and a registry entry would be STALE. The
-  // sector docs it builds are still covered — they are inserted by
-  // `src/lib/turn/corporation/corporationTurnPayouts.ts`, registered below.
-
   // ─── Found only once the detector learned about indirect inserts ─────────
   "src/lib/turn/corporation/corporationTurnPayouts.ts": {
     writeSites: 1,

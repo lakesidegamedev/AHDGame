@@ -55,11 +55,6 @@ function candidate(
     fill: 0.9,
     buildContext: {
       destinationCurrency: "USD",
-      bucket: {
-        stateId: "US-CA",
-        countryId: "US",
-        sectorType: "manufacturing",
-      },
       eraUnitScale: 1,
       growthUnits: 40,
     },

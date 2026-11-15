@@ -4,7 +4,7 @@ import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationLookups } from "./types";
-import { VACANT_CEO_SECTOR_SHED_RATE, shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
+import { VACANT_CEO_SECTOR_SHED_RATE, shedVacantCeoSectors } from "./vacantCeoSectorShed";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -82,7 +82,7 @@ function makeMinimalLookups(
   };
 }
 
-describe("shedVacantCeoSectorsToUnowned", () => {
+describe("shedVacantCeoSectors", () => {
   let db: MockDb;
   const now = new Date("2026-01-01T00:00:00Z");
 
@@ -112,7 +112,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(0);
     expect(r.totalRevenueShed).toBe(0);
@@ -138,7 +138,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(1);
     expect(r.totalRevenueShed).toBe(Math.round(10_000 * VACANT_CEO_SECTOR_SHED_RATE));
@@ -176,7 +176,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now, true);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now, true);
 
     const expectedUnits = 500 * VACANT_CEO_SECTOR_SHED_RATE;
     expect(r.totalRevenueShed).toBe(0);
@@ -222,7 +222,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now, true);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now, true);
 
     // No capacity left the corp.
     expect(r.totalCapacityUnitsShed).toBe(0);
@@ -262,7 +262,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(0);
     expect(db.collectionMocks["corporateSectors"]!.bulkWrite).not.toHaveBeenCalled();
@@ -295,7 +295,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([natCorp, privCorp], [natSector, privSector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(1);
     expect(natSector.revenue).toBe(5_000_000);
@@ -320,7 +320,7 @@ describe("shedVacantCeoSectorsToUnowned", () => {
     } as unknown as CorporateSector;
 
     const lookups = makeMinimalLookups([corp], [sector]);
-    const r = await shedVacantCeoSectorsToUnowned(db as unknown as Db, lookups, now);
+    const r = await shedVacantCeoSectors(db as unknown as Db, lookups, now);
 
     expect(r.corporateSectorsUpdated).toBe(0);
     expect(db.collectionMocks["corporateSectors"]!.bulkWrite).not.toHaveBeenCalled();

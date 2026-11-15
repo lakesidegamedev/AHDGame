@@ -29,7 +29,7 @@ function shouldShedSectors(
   return corp.ceoId == null || corp.ceoVacant === true;
 }
 
-export async function shedVacantCeoSectorsToUnowned(
+export async function shedVacantCeoSectors(
   db: Db,
   lookups: CorporationLookups,
   now: Date,

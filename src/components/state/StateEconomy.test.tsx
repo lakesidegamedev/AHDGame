@@ -158,7 +158,7 @@ describe("StateEconomy", () => {
           userMarketingStrength: 40,
           sectors: payload.sectors.map((s) => ({
             ...s,
-            headroomUnits: 50_000,
+            roomToBuildUnits: 50_000,
           })),
         }),
       })
@@ -184,8 +184,8 @@ describe("StateEconomy", () => {
           userCorporationId: "corp-me",
           sectors: payload.sectors.map((s) => ({
             ...s,
-            headroomUnits: 1_200,
-            headroomScope: "country",
+            roomToBuildUnits: 1_200,
+            roomToBuildScope: "country",
           })),
         }),
       })
@@ -204,7 +204,7 @@ describe("StateEconomy", () => {
       userCorporationId: "corp-me",
       sectors: payload.sectors.map((sector) => ({
         ...sector,
-        headroomUnits: 0,
+        roomToBuildUnits: 0,
       })),
     };
     vi.stubGlobal(
@@ -280,7 +280,7 @@ describe("StateEconomy market control under plants (ticket #1162)", () => {
   const plantsPayload = {
     ...payload,
     plantsMode: true,
-    sectors: payload.sectors.map((s) => ({ ...s, headroomUnits: 1000 })),
+    sectors: payload.sectors.map((s) => ({ ...s, roomToBuildUnits: 1000 })),
   };
 
   const stubPlants = (overrides: Record<string, unknown> = {}) =>

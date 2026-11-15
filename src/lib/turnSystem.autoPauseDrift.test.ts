@@ -72,9 +72,6 @@ vi.mock("@/lib/mongodb", () => ({
           updateOne: async () => ({ acknowledged: true }) as unknown,
         };
       }
-      if (name === "unownedSectors") {
-        return { countDocuments: async () => 100 as unknown };
-      }
       return {
         findOne: async () => null as unknown,
         findOneAndUpdate: async () => null as unknown,

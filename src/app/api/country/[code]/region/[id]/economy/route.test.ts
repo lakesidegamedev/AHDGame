@@ -75,7 +75,6 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
       ],
     });
 
-
     // Only the live corp comes back from `corporations.find({_id: {$in: [...]}})`.
     db.collectionMocks.corporations.find.mockReturnValue({
       project: vi.fn().mockReturnValue({
@@ -441,16 +440,20 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
         await GET(new Request("http://localhost/api/country/US/region/CA/economy"), ctx())
       ).json();
       return new Map(
-        (data.sectors as Array<{ type: string; headroomUnits: number; headroomScope: string }>).map(
-          (s) => [s.type, s]
-        )
+        (
+          data.sectors as Array<{
+            type: string;
+            roomToBuildUnits: number;
+            roomToBuildScope: string;
+          }>
+        ).map((s) => [s.type, s])
       );
     };
 
     const before = await read();
-    expect(before.get("energy")?.headroomScope).toBe("country");
-    expect(before.get("real_estate")?.headroomScope).toBe("state");
-    expect(before.get("energy")?.headroomUnits).toBeGreaterThan(1);
+    expect(before.get("energy")?.roomToBuildScope).toBe("country");
+    expect(before.get("real_estate")?.roomToBuildScope).toBe("state");
+    expect(before.get("energy")?.roomToBuildUnits).toBeGreaterThan(1);
 
     nevadaQueue = [
       {
@@ -460,7 +463,9 @@ describe("GET /api/country/[code]/region/[id]/economy", () => {
       },
     ];
     const after = await read();
-    expect(after.get("energy")?.headroomUnits).toBe((before.get("energy")?.headroomUnits ?? 0) - 1);
+    expect(after.get("energy")?.roomToBuildUnits).toBe(
+      (before.get("energy")?.roomToBuildUnits ?? 0) - 1
+    );
   });
 
   it("exposes the sector's production level on each owner row", async () => {

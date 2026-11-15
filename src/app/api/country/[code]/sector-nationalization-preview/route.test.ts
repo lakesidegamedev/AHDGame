@@ -42,8 +42,7 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of ["centralBanks", "corporateSectors", "corporations", "unownedSectors"])
-      db.collection(n);
+    for (const n of ["centralBanks", "corporateSectors", "corporations"]) db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     // Corps for the sector pool arrive in ONE batched `$in` query (perf audit
     // 2026-08-03); this was a findOne per corp.

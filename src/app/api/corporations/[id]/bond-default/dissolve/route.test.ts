@@ -47,7 +47,6 @@ beforeEach(() => {
   db.collection("corporations");
   db.collection("bondHistory");
   db.collection("shareOrders");
-  db.collection("unownedSectors");
 });
 
 async function setup() {
@@ -322,7 +321,6 @@ describe("POST /api/corporations/[id]/bond-default/dissolve", () => {
     db.collectionMocks.shareOrders.deleteMany = vi.fn().mockResolvedValue({});
     db.collectionMocks.shareOrders.find = vi.fn().mockReturnValue({ toArray: async () => [] });
     db.collectionMocks.shareOrders.updateMany = vi.fn().mockResolvedValue({});
-    db.collectionMocks.unownedSectors.findOneAndUpdate = vi.fn().mockResolvedValue(null);
     db.collectionMocks.corporateSectors.deleteMany = vi.fn().mockResolvedValue({ deletedCount: 1 });
     db.collectionMocks.corporations.deleteOne = vi.fn().mockResolvedValue({ deletedCount: 1 });
 
@@ -354,7 +352,7 @@ describe("POST /api/corporations/[id]/bond-default/dissolve", () => {
     expect(vi.mocked(retireDissolvedCorporationCash).mock.invocationCallOrder[0]).toBeLessThan(
       db.collectionMocks.corporations.deleteOne.mock.invocationCallOrder[0]
     );
-    expect(db.collectionMocks.unownedSectors.findOneAndUpdate).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
     const sectorDeleteFilter = db.collectionMocks.corporateSectors.deleteMany.mock.calls[0][0];
     expect(sectorDeleteFilter._id.$in).toHaveLength(1);
     expect(sectorDeleteFilter["constructionPropertyTransition.kind"]).toBe("restore");

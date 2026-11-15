@@ -27,7 +27,6 @@ describe("runMetricEngine — SP5 store separation", () => {
     setup("corporateSectors", [
       { _id: "secA", stateId: "s1", revenue: 1000, currentGrowthRate: 3, corporationId: undefined },
     ]);
-    setup("unownedSectors", []);
     setup("stateMetrics", []);
     setup("macroMetrics", [
       { _id: "s1", economic: { gdpGrowth: { value: 2.5 }, unemploymentRate: { value: 5 } } },
