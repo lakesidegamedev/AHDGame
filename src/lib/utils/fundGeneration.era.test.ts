@@ -44,7 +44,7 @@ describe("getIncomeGdpScalar era parameter (issue #798)", () => {
 
   it("throws for countries without an explicit baseline", () => {
     expect(() => getIncomeGdpScalar(100_000, 1_000_000, "XX")).toThrow(/no GDP baseline/);
-    expect(() => getIncomeGdpScalar(100_000, 1_000_000, "CA", "2019-default")).toThrow(
+    expect(() => getIncomeGdpScalar(100_000, 1_000_000, "FR", "2019-default")).toThrow(
       /no GDP baseline/
     );
   });
@@ -232,5 +232,15 @@ describe("era price level scales income (issue #2119)", () => {
     const variance = scalars.reduce((a, b) => a + (b - mean) ** 2, 0) / scalars.length;
     expect(variance).toBeGreaterThan(0);
     expect(Math.max(...scalars) - Math.min(...scalars)).toBeGreaterThan(0);
+  });
+});
+
+describe("Canada 2027 campaign scalar", () => {
+  it("prices an average Canadian region at the neutral scalar", () => {
+    const pop = 1_000_000;
+    expect(getIncomeGdpScalar((82_558 * pop) / 1_000_000, pop, "CA", "2027-default")).toBeCloseTo(
+      1.0,
+      2
+    );
   });
 });
