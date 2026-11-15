@@ -23,6 +23,7 @@ import { getEraNominalScale } from "@/lib/constants/sectorSeedEra";
 import { eraPriceLevelFor } from "@/lib/campaigns/rules/priceLevel";
 import { shouldReconcileStateGdpForPreset } from "@/lib/admin/seed/reconcileStateGdp";
 import { getNationalBudgetSeedConfigsForPreset } from "@/lib/seeds/reference/budgets";
+import { GDP_DENOMINATION_1953 } from "@/lib/seeds/reference/gdpDenomination";
 import { dataPresetFor } from "@/lib/seeds/presetSelector";
 import { PRESET_DATASETS, simulatesRegions, type PresetDataset } from "./registry";
 import { REGION_TABLES, type CountryRegionTable } from "./regionTables";
@@ -132,8 +133,13 @@ function scaleGaps(preset: SeedPresetId): SeedContractGap[] {
         .filter((row) => row.annualRevenuePerCapitaByOptionIndex)
         .map((row) => [row.legislationTypeId, row.annualRevenuePerCapitaByOptionIndex ?? []])
     ),
-    // Euro members trade at the euro anchor's row, not their legacy one.
-    lcuPerUsd: rates?.[getCountryIdForCurrency(config.currencyCode as CurrencyCode)],
+    // Euro members trade at the euro anchor's row, not their legacy one. A 1953
+    // country whose GDP is stored in USD (GDP_DENOMINATION_1953) is already in
+    // dollars, so dividing it by its local rate would misread it.
+    lcuPerUsd:
+      startingYear === 1953 && GDP_DENOMINATION_1953[config.countryId] === "usd"
+        ? 1
+        : rates?.[getCountryIdForCurrency(config.currencyCode as CurrencyCode)],
   }));
   for (const input of inputs) {
     for (const finding of checkBudgetScale(input)) gaps.push(scaleGap("budget", finding));

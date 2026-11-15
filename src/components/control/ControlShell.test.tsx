@@ -56,6 +56,37 @@ describe("ControlShell navigation", () => {
   });
 });
 
+describe("View as", () => {
+  const withReal = (role: "admin" | "moderator" | "junior_dev", real: typeof role) =>
+    render(
+      <ControlShell role={role} realRole={real} username="tester">
+        <p>body</p>
+      </ControlShell>
+    );
+
+  it("shows the switch to admins only", () => {
+    withReal("admin", "admin");
+    expect(screen.getByLabelText("View as")).toBeTruthy();
+    cleanup();
+    withReal("moderator", "moderator");
+    expect(screen.queryByLabelText("View as")).toBeNull();
+  });
+
+  it("shows the banner and a way back while an admin previews", () => {
+    withReal("moderator", "admin");
+    expect(
+      screen.getByText("Viewing as Moderator. Your own admin access is unchanged.")
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Back to admin" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Seed database" })).toBeNull();
+  });
+
+  it("shows no banner when not previewing", () => {
+    withReal("admin", "admin");
+    expect(screen.queryByText(/Viewing as/)).toBeNull();
+  });
+});
+
 describe("ReadOnlyGuard", () => {
   it("blocks writes to the API in the browser and lets reads through", async () => {
     const original = vi.fn(async () => new Response("ok"));

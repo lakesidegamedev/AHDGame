@@ -500,6 +500,8 @@ interface Scope {
 
 function BulkBar({
   scopes,
+  sectors,
+  homeCountry,
   plantsMode,
   labourEnabled,
   pricingEnabled,
@@ -509,6 +511,8 @@ function BulkBar({
   fmtSigned,
 }: {
   scopes: Scope[];
+  sectors: SectorDetail[];
+  homeCountry: string;
   plantsMode: boolean;
   /** Opens the build-across-sectors dialog (plants tier only). */
   onOpenBulkBuild?: () => void;
@@ -536,6 +540,15 @@ function BulkBar({
     action: "mothball" | "reactivate";
     eligible: number;
     locked: number;
+  } | null>(null);
+  const [pricingPreview, setPricingPreview] = useState<{
+    value: number | null;
+    rows: Array<{
+      id: string;
+      label: string;
+      oldPosture: number | null;
+      newPosture: number | null;
+    }>;
   } | null>(null);
 
   if (!scope) return null;
@@ -667,7 +680,10 @@ function BulkBar({
               id="bulk-pricing"
               aria-label="Bulk pricing"
               value={posture}
-              onChange={(e) => setPosture(e.target.value)}
+              onChange={(e) => {
+                setPosture(e.target.value);
+                setPricingPreview(null);
+              }}
               className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none"
             >
               <option value="auto">Auto</option>
@@ -681,10 +697,22 @@ function BulkBar({
               disabled={busy}
               onClick={() => {
                 const value = posture === "auto" ? null : Number(posture);
-                void apply(
-                  { pricingPosture: value },
-                  (n) => `Pricing ${postureLabel(value)} on ${n} sectors`
+                const matching = sectors.filter(
+                  (s) =>
+                    s.pricingPosture !== undefined &&
+                    (s.countryId ?? homeCountry) === scope.country &&
+                    (scope.sectorType === null || s.sectorType === scope.sectorType)
                 );
+                setMessage(null);
+                setPricingPreview({
+                  value,
+                  rows: matching.map((s) => ({
+                    id: s._id,
+                    label: `${s.sectorLabel} · ${s.stateName}`,
+                    oldPosture: s.pricingPosture ?? null,
+                    newPosture: value,
+                  })),
+                });
               }}
             >
               Set pricing
@@ -801,6 +829,51 @@ function BulkBar({
           <SmallButton disabled={busy} onClick={() => setCapacityPreview(null)}>
             Cancel
           </SmallButton>
+        </div>
+      )}
+      {pricingPreview && (
+        <div
+          className="space-y-2 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border/70 bg-background/60 p-2 text-xs"
+          role="status"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-medium text-foreground">
+              Pricing {postureLabel(pricingPreview.value)} on {pricingPreview.rows.length}{" "}
+              {pricingPreview.rows.length === 1 ? "sector" : "sectors"}:
+            </span>
+            <div className="flex items-center gap-2">
+              <SmallButton
+                tone="primary"
+                disabled={busy}
+                onClick={async () => {
+                  const value = pricingPreview.value;
+                  setPricingPreview(null);
+                  await apply(
+                    { pricingPosture: value },
+                    (n) => `Pricing ${postureLabel(value)} on ${n} sectors`
+                  );
+                }}
+              >
+                Confirm
+              </SmallButton>
+              <SmallButton disabled={busy} onClick={() => setPricingPreview(null)}>
+                Cancel
+              </SmallButton>
+            </div>
+          </div>
+          <div className="grid max-h-36 gap-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+            {pricingPreview.rows.map((row) => (
+              <div
+                key={row.id}
+                className="flex items-center justify-between gap-2 rounded border border-card-border/40 px-2 py-1"
+              >
+                <span className="truncate text-muted">{row.label}</span>
+                <span className="shrink-0 font-mono text-foreground">
+                  {postureLabel(row.oldPosture)} → {postureLabel(row.newPosture)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       <InlineStatus message={message?.text} tone={message?.tone ?? "muted"} />
@@ -944,6 +1017,8 @@ export default function CeoOperationsTable({
         <>
           <BulkBar
             scopes={scopes}
+            sectors={sectors}
+            homeCountry={homeCountry}
             plantsMode={plantsMode}
             labourEnabled={wagesEnabled}
             pricingEnabled={pricingEnabled}

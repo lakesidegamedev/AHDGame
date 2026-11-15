@@ -145,6 +145,8 @@ export interface IndexFundPosition {
    * never over-pays); new positions are created with legacyUnits: 0.
    */
   legacyUnits?: number;
+  /** Turn a pension scheme's subscription last landed on this position; a rerun skips it. */
+  lastSubscriptionTurn?: number;
   createdAt: Date;
   updatedAt: Date;
 }

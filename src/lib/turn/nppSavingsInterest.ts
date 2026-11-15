@@ -31,7 +31,8 @@ export async function processNppSavingsInterest(
   resolvePrime: (currency: CurrencyCode) => number,
   resolveInflation: (currency: CurrencyCode) => number = () => 0,
   resolvePoolTotal: (currency: CurrencyCode) => number = () => 0,
-  depositBonusPercent = 0
+  depositBonusPercent = 0,
+  rerunSafe = false
 ): Promise<{ nppsAccrued: number; totalInterest: number }> {
   // Phase 1: accrue this turn's interest into the pending bucket for any NPP
   // holding savings in an active currency.
@@ -68,7 +69,18 @@ export async function processNppSavingsInterest(
       perNppInc[`currencyBalances.pendingSavingsInterest.${currency}`] = interest;
     }
     if (Object.keys(perNppInc).length > 0) {
-      accrualOps.push({ updateOne: { filter: { _id: npp._id }, update: { $inc: perNppInc } } });
+      // Stamp in the same update: a rerun of this turn's accrual skips an NPP already accrued.
+      accrualOps.push({
+        updateOne: {
+          filter: {
+            _id: npp._id,
+            ...(rerunSafe ? { savingsAccrualTurn: { $ne: turn } } : {}),
+          },
+          update: rerunSafe
+            ? { $inc: perNppInc, $set: { savingsAccrualTurn: turn } }
+            : { $inc: perNppInc },
+        },
+      });
     }
   }
   if (accrualOps.length > 0) {

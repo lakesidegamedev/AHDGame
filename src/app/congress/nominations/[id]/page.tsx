@@ -9,6 +9,10 @@ import { NominationDetailSkeleton } from "./components/NominationDetailSkeleton"
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
 import { NominationVotingDeadline } from "./components/NominationVotingDeadline";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
+import { VoteTallyTable } from "@/app/congress/bills/[id]/components/VoteTallyTable";
+import { VoteListTable } from "@/app/congress/bills/[id]/components/VoteListTable";
+import type { VoteByParty } from "@/app/congress/bills/[id]/types";
+import type { CabinetNominationVoter } from "@/lib/congress/governmentVoteBreakdown";
 
 import type { CountryId } from "@/lib/constants/countriesCore";
 
@@ -25,6 +29,8 @@ interface NominationDetail {
   votesFor: number;
   votesAgainst: number;
   votesAbstain: number;
+  voteByParty?: VoteByParty[];
+  voters?: CabinetNominationVoter[];
   votingEndsAt: string | null;
   votingEndsOnTurn?: number | null;
   proposedAt: string;
@@ -279,6 +285,20 @@ function NominationDetailContent() {
             </p>
           )}
         </div>
+
+        {((nom.voteByParty?.length ?? 0) > 0 || (nom.voters?.length ?? 0) > 0) && (
+          <div className="rounded-xl border border-card-border bg-card shadow-panel p-5 space-y-5">
+            <h3 className="text-sm font-semibold">Vote breakdown</h3>
+            {nom.voteByParty && nom.voteByParty.length > 0 && (
+              <VoteTallyTable voteByParty={nom.voteByParty} chamberLabel="Senate" />
+            )}
+            {nom.voters && nom.voters.length > 0 && (
+              <div className="pt-2 border-t border-card-border/40">
+                <VoteListTable showSeats={false} initialVoters={nom.voters} />
+              </div>
+            )}
+          </div>
+        )}
 
         <Link
           href={`/country/${nom.countryId.toLowerCase()}/executive/cabinet`}
