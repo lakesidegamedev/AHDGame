@@ -503,6 +503,40 @@ export async function buildCorporationLookups(
     latestTradeSnapshot,
   });
 
+  // GameConfig knobs read by the per-state loop below (labour staffing slack)
+  // and the overhead derivations further down. One read, before either use.
+  const overheadCfg = await gameConfigCollection<{
+    _id: string;
+    managementOverheadPpPerDoubling?: number;
+    strengthUpkeepStage?: number;
+    groupSizeCostsStage?: number;
+    soeSizeCostScale?: number;
+    dominanceRunningCostScale?: number;
+    honestBalanceSheetsStage?: number;
+    fundedOverheadStage?: number;
+    fundedHeadcountStage?: number;
+    fundedValuationStage?: number;
+    producerTariffStage?: number;
+    labourStaffingSlackStage?: number;
+  }>(db).findOne(
+    { _id: "default" },
+    {
+      projection: {
+        managementOverheadPpPerDoubling: 1,
+        strengthUpkeepStage: 1,
+        groupSizeCostsStage: 1,
+        soeSizeCostScale: 1,
+        dominanceRunningCostScale: 1,
+        honestBalanceSheetsStage: 1,
+        fundedOverheadStage: 1,
+        fundedHeadcountStage: 1,
+        fundedValuationStage: 1,
+        producerTariffStage: 1,
+        labourStaffingSlackStage: 1,
+      },
+    }
+  );
+
   // Build per-state margin modifier lookups
   const unemploymentByState = new Map<string, number>();
   const gridReliabilityByState = new Map<string, number>();
@@ -538,12 +572,21 @@ export async function buildCorporationLookups(
     if (typeof corrVal === "number") {
       corruptionByState.set(stateId, getCorruptionMarginModifier(corrVal));
     }
-    const allocatedTightness = employmentStaffingTightness(sm.labourEmployment);
+    const staffingSlackOn = (overheadCfg?.labourStaffingSlackStage ?? 0) >= 1;
+    const allocatedTightness = employmentStaffingTightness(
+      sm.labourEmployment,
+      staffingSlackOn ? { countUnemployed: true } : undefined
+    );
     const coverageTightness = sm.economic?.labourTightness?.value;
     const tightnessVal =
       allocatedTightness === undefined
         ? coverageTightness
-        : Math.max(Number.isFinite(coverageTightness) ? coverageTightness! : 0, allocatedTightness);
+        : staffingSlackOn
+          ? allocatedTightness
+          : Math.max(
+              Number.isFinite(coverageTightness) ? coverageTightness! : 0,
+              allocatedTightness
+            );
     if (typeof tightnessVal === "number" && Number.isFinite(tightnessVal)) {
       labourTightnessByState.set(stateId, tightnessVal);
     }
@@ -589,36 +632,7 @@ export async function buildCorporationLookups(
 
   // Management overhead: a margin charge on every sector of a corporation that
   // grows with its total whole-plant count (snowball brake). Off unless the
-  // gameConfig knob is set.
-  const overheadCfg = await gameConfigCollection<{
-    _id: string;
-    managementOverheadPpPerDoubling?: number;
-    strengthUpkeepStage?: number;
-    groupSizeCostsStage?: number;
-    soeSizeCostScale?: number;
-    dominanceRunningCostScale?: number;
-    honestBalanceSheetsStage?: number;
-    fundedOverheadStage?: number;
-    fundedHeadcountStage?: number;
-    fundedValuationStage?: number;
-    producerTariffStage?: number;
-  }>(db).findOne(
-    { _id: "default" },
-    {
-      projection: {
-        managementOverheadPpPerDoubling: 1,
-        strengthUpkeepStage: 1,
-        groupSizeCostsStage: 1,
-        soeSizeCostScale: 1,
-        dominanceRunningCostScale: 1,
-        honestBalanceSheetsStage: 1,
-        fundedOverheadStage: 1,
-        fundedHeadcountStage: 1,
-        fundedValuationStage: 1,
-        producerTariffStage: 1,
-      },
-    }
-  );
+  // gameConfig knob is set (read once above, before the per-state loop).
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
   const fundedTariffsOn = (overheadCfg?.producerTariffStage ?? 0) >= 1;
   const strengthUpkeepStage =

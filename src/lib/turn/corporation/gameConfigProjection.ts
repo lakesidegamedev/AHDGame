@@ -79,6 +79,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerLabourWageFloorShare: 1,
   producerLabourWageStep: 1,
   minimumWageLawStage: 1,
+  labourStaffingSlackStage: 1,
   decommissionGrantShare: 1,
   producerLowUseCostStage: 1,
   supplyAgreementsEnabled: 1,
