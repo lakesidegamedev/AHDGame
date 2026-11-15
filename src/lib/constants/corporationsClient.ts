@@ -123,6 +123,25 @@ export const OPERATING_SECTOR_TYPE_LABELS: Record<OperatingSectorType, string> =
   media_entertainment: "Entertainment",
 };
 
+const LANE_PARENT: Record<SpecializedOperatingLane, CorporationType> = {
+  manufacturing_vehicles: "manufacturing",
+  media_entertainment: "media",
+};
+
+/**
+ * Sector choices for founding and CEO settings forms. A specialized lane sits
+ * directly after its parent type and is labelled as part of it, so the list
+ * never presents Automobiles or Entertainment as separate corporation types.
+ */
+export const OPERATING_SECTOR_CHOICES: ReadonlyArray<{ key: OperatingSectorType; label: string }> =
+  CORPORATION_TYPES.flatMap((type) => [
+    { key: type as OperatingSectorType, label: CORPORATION_TYPE_LABELS[type] },
+    ...SPECIALIZED_OPERATING_LANES.filter((lane) => LANE_PARENT[lane] === type).map((lane) => ({
+      key: lane as OperatingSectorType,
+      label: `${CORPORATION_TYPE_LABELS[type]}: ${OPERATING_SECTOR_TYPE_LABELS[lane]}`,
+    })),
+  ]);
+
 /** The persisted identity of an operating lane. */
 export interface OperatingSectorIdentity {
   sectorType: CorporationType;

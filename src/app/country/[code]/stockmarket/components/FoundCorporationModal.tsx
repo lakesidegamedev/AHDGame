@@ -4,7 +4,6 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useMemo, useState } from "react";
 import { getEraFoundingBounds, getEraFounderShares } from "@/lib/constants/sectorSeedEra";
 import {
-  OPERATING_SECTOR_TYPE_LABELS,
   CORPORATION_FOUNDING_COST,
   CORPORATION_STARTING_CAPITAL,
   MIN_CORPORATION_STARTING_CAPITAL,
@@ -13,7 +12,10 @@ import {
   IPO_MIN_FLOAT_PCT,
   IPO_MAX_FLOAT_PCT,
 } from "@/lib/constants/corporations";
-import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
+import {
+  OPERATING_SECTOR_CHOICES,
+  type OperatingSectorType,
+} from "@/lib/constants/corporationsClient";
 import { computeIpoIssuance } from "@/lib/corporations/ipoIssuance";
 import {
   SUPERSHARE_MIN_MULTIPLIER,
@@ -422,7 +424,7 @@ export function FoundCorporationModal({
                   <option value="" disabled>
                     Select sector…
                   </option>
-                  {Object.entries(OPERATING_SECTOR_TYPE_LABELS).map(([key, label]) => (
+                  {OPERATING_SECTOR_CHOICES.map(({ key, label }) => (
                     <option key={key} value={key}>
                       {label}
                     </option>
@@ -460,13 +462,13 @@ export function FoundCorporationModal({
                   className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none cursor-pointer appearance-none"
                 >
                   <option value="">None</option>
-                  {Object.entries(OPERATING_SECTOR_TYPE_LABELS)
-                    .filter(([key]) => key !== foundType)
-                    .map(([key, label]) => (
+                  {OPERATING_SECTOR_CHOICES.filter(({ key }) => key !== foundType).map(
+                    ({ key, label }) => (
                       <option key={key} value={key}>
                         {label}
                       </option>
-                    ))}
+                    )
+                  )}
                 </select>
                 <div className="absolute right-3 top-2.5 pointer-events-none text-muted">
                   <svg

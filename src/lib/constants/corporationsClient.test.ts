@@ -31,3 +31,16 @@ describe("corporationsClient", () => {
     }
   });
 });
+
+describe("OPERATING_SECTOR_CHOICES", () => {
+  it("lists every operating lane once, with specialized lanes under their parent type", async () => {
+    const { OPERATING_SECTOR_CHOICES, OPERATING_SECTOR_TYPES } = await import("./corporationsClient");
+    const keys = OPERATING_SECTOR_CHOICES.map((c) => c.key);
+    expect([...keys].sort()).toEqual([...OPERATING_SECTOR_TYPES].sort());
+    expect(keys.indexOf("manufacturing_vehicles")).toBe(keys.indexOf("manufacturing") + 1);
+    expect(keys.indexOf("media_entertainment")).toBe(keys.indexOf("media") + 1);
+    const label = (k: string) => OPERATING_SECTOR_CHOICES.find((c) => c.key === k)?.label;
+    expect(label("manufacturing_vehicles")).toBe("Manufacturing: Automobiles");
+    expect(label("media_entertainment")).toBe("Media: Entertainment");
+  });
+});
