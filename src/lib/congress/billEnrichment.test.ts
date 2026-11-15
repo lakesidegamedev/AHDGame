@@ -374,7 +374,6 @@ describe("resolveBillProvisions", () => {
       sector: {
         affectedCount: 1,
         totalCompensationLocal: 2000,
-        unownedSliceRevenuePerTurn: 500,
       },
     } as never);
 
@@ -395,10 +394,10 @@ describe("resolveBillProvisions", () => {
 
     expect(result.provisionsResolved[0]).toMatchObject({
       legislationTypeName: "Nationalization",
-      proposed: { name: "Sector takeover — Technology · 100% · All holders + unowned market" },
+      proposed: { name: "Sector takeover — Technology · 100% · All holders" },
       nationalizationDetail: {
         kind: "sector",
-        sector: { affectedCount: 1, totalCompensationLocal: 2000, unownedSliceRevenuePerTurn: 500 },
+        sector: { affectedCount: 1, totalCompensationLocal: 2000 },
       },
     });
   });
@@ -455,7 +454,7 @@ describe("resolveBillProvisions", () => {
     const { resolveActualPayoutLocal } = await import("@/lib/nationalization/ledger");
     vi.mocked(computeNationalizationProvisionDetail).mockResolvedValueOnce({
       kind: "sector",
-      sector: { affectedCount: 1, totalCompensationLocal: 2000, unownedSliceRevenuePerTurn: 500 },
+      sector: { affectedCount: 1, totalCompensationLocal: 2000 },
     } as never);
     vi.mocked(resolveActualPayoutLocal).mockResolvedValueOnce(1134);
 
@@ -486,7 +485,7 @@ describe("resolveBillProvisions", () => {
       await import("@/lib/nationalization/billTargetPreview");
     const frozen = {
       kind: "sector" as const,
-      sector: { affectedCount: 3, totalCompensationLocal: 999, unownedSliceRevenuePerTurn: 12 },
+      sector: { affectedCount: 3, totalCompensationLocal: 999 },
     };
 
     const bill = {

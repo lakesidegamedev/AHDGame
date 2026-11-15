@@ -206,7 +206,6 @@ function world(over: Partial<PlantsPreflightWorldInput> = {}): PlantsPreflightWo
     currentTurn: 1000,
     currentYear: 2019,
     assessments: [],
-    unowned: { total: 10, missingHeadroomUnits: 0, backfillMigrationRan: true },
     crises: { financialOnly: 0, legacyUnflagged: 0 },
     governor: { cap: 0.15, rampTurns: 240 },
     ...over,
@@ -303,29 +302,6 @@ describe("buildPlantsPreflightReport — GO/NO-GO", () => {
     const r = buildPlantsPreflightReport(world({ assessments }));
     expect(r.verdict).toBe("GO");
     expect(r.cautions.join(" ")).toContain("comfort line");
-  });
-
-  it("says NO-GO when unowned sectors are missing headroomUnits", () => {
-    const r = buildPlantsPreflightReport(
-      world({
-        assessments: [flat()],
-        unowned: { total: 10, missingHeadroomUnits: 4, backfillMigrationRan: false },
-      })
-    );
-    expect(r.verdict).toBe("NO-GO");
-    expect(r.reasons.join(" ")).toContain("headroomUnits");
-    expect(r.reasons.join(" ")).toContain("has not run");
-  });
-
-  it("flags the nastier case where the backfill ran and STILL left docs behind", () => {
-    const r = buildPlantsPreflightReport(
-      world({
-        assessments: [flat()],
-        unowned: { total: 10, missingHeadroomUnits: 4, backfillMigrationRan: true },
-      })
-    );
-    expect(r.verdict).toBe("NO-GO");
-    expect(r.reasons.join(" ")).toContain("marker EXISTS");
   });
 
   it("says NO-GO when the world is already at plants — there is nothing to preflight", () => {

@@ -2,8 +2,6 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
-import { unownedHeadroomUnitsPerAnchor } from "@/lib/market/unownedHeadroom";
 
 vi.mock("@/lib/currency/corporationCapital", () => ({
   getCorpFxRate: vi.fn().mockResolvedValue(1),
@@ -682,19 +680,29 @@ describe("nationalizeWholeCorp", () => {
     expect(led.shareholdersSettled).toBe(2);
   });
 
-  it("releases the corp's FOREIGN sectors to the unowned market instead of absorbing them", async () => {
+  async function foreignSectorTaking(opts: { hostEnterpriseId: ObjectId | null }) {
     const primaryId = new ObjectId();
     const targetId = new ObjectId();
     const domesticSectorId = new ObjectId();
     const foreignSectorId = new ObjectId();
     await setupTarget({ primaryId, targetId });
+    const target = await db.collectionMocks.corporations.findOne({});
+    // Host-country enterprise lookups carry a countryOwnerId; everything else is the target.
+    db.collectionMocks.corporations.findOne.mockImplementation(
+      async (q: { countryOwnerId?: string }) =>
+        q?.countryOwnerId === "JP"
+          ? opts.hostEnterpriseId
+            ? { _id: opts.hostEnterpriseId, countryOwnerId: "JP" }
+            : null
+          : target
+    );
 
     db.collectionMocks.corporateSectors.find.mockReturnValue(
       findCursor([
         {
           _id: domesticSectorId,
           corporationId: targetId,
-          countryId: "CN", // home country — absorbed
+          countryId: "CN",
           stateId: "CN-HD",
           sectorType: "energy",
           revenue: 6_000_000,
@@ -704,7 +712,7 @@ describe("nationalizeWholeCorp", () => {
         {
           _id: foreignSectorId,
           corporationId: targetId,
-          countryId: "JP", // foreign — released to unowned, not absorbed
+          countryId: "JP",
           stateId: "JP-13",
           sectorType: "technology",
           revenue: 2_000_000,
@@ -717,12 +725,6 @@ describe("nationalizeWholeCorp", () => {
     const { resolveNationalCorporationForSector } = await import("./nationalCorporation");
     vi.mocked(resolveNationalCorporationForSector).mockResolvedValue({ _id: primaryId } as never);
 
-    // The released sector's region has changed hands: its stored country still
-    // says JP, the state says PL.
-    db.collection("states");
-    db.collection("unownedSectors");
-    db.collectionMocks.states.findOne.mockResolvedValue({ _id: "JP-13", countryId: "PL" });
-    db.collectionMocks.unownedSectors.findOneAndUpdate.mockResolvedValue({ _id: new ObjectId() });
     const { nationalizeWholeCorp } = await import("./ownershipTransition");
     const result = await nationalizeWholeCorp(db as unknown as Db, {
       countryId: "CN",
@@ -730,50 +732,33 @@ describe("nationalizeWholeCorp", () => {
       tier: "fair",
       consequence: CONSEQ,
     });
+    return { result, domesticSectorId, foreignSectorId, targetId };
+  }
 
-    // Domestic sector re-parented into the NatCorp.
-    const sectorUpdate = db.collectionMocks.corporateSectors.updateOne.mock.calls.find(
+  it("hands the corp's FOREIGN sectors to the host country's state enterprise", async () => {
+    const hostEnterpriseId = new ObjectId();
+    const { result, domesticSectorId, foreignSectorId } = await foreignSectorTaking({
+      hostEnterpriseId,
+    });
+
+    const reparents = db.collectionMocks.corporateSectors.updateOne.mock.calls.filter(
       (c) => c[1]?.$set?.corporationId != null
     );
-    expect(sectorUpdate![0]).toMatchObject({
-      _id: domesticSectorId,
+    const domestic = reparents.find((c) => String(c[0]._id) === String(domesticSectorId));
+    const foreign = reparents.find((c) => String(c[0]._id) === String(foreignSectorId));
+    expect(domestic).toBeDefined();
+    expect(foreign![1].$set.corporationId).toEqual(hostEnterpriseId);
+    expect(foreign![0]).toMatchObject({
       "constructionPropertyTransition.key": expect.stringContaining("nationalize:"),
     });
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
+    expect(result.sectorsAbsorbed).toBe(1);
+    expect(db.collectionMocks.corporations.deleteOne).toHaveBeenCalled();
+  });
 
-    // Foreign sector merged into the unowned market (₳-converted, by state+type)
-    // and removed. This is an AGGREGATION PIPELINE update, not $inc +
-    // $setOnInsert: the derived `headroomUnits` must be recomputed from the
-    // POST-increment revenue in the same write, and $inc on a doc predating the
-    // headroom backfill would start the field from 0 and understate the pool
-    // permanently. $setOnInsert is unavailable inside a pipeline, hence the
-    // $ifNull identity seeding.
-    const unownedUpsert = db.collectionMocks.unownedSectors.findOneAndUpdate.mock.calls[0];
-    expect(unownedUpsert[0]).toEqual({
-      stateId: "JP-13",
-      sectorType: "technology",
-      mediaDiscriminator: null,
-    });
-    expect(unownedUpsert[2]).toEqual({ upsert: true, returnDocument: "before" });
+  it("dissolves a FOREIGN sector when the host country has no state enterprise", async () => {
+    const { result, foreignSectorId } = await foreignSectorTaking({ hostEnterpriseId: null });
 
-    const pipeline = unownedUpsert[1] as Array<{ $set: Record<string, unknown> }>;
-    expect(Array.isArray(pipeline)).toBe(true);
-    // Stage 1 records an idempotency receipt with the revenue delta. A retry
-    // recognizes the pending token and leaves the pool's current value alone.
-    expect(JSON.stringify(pipeline[0].$set.revenue)).toContain("2000000");
-    expect(JSON.stringify(pipeline[0].$set.recentCorporateSectorRestores)).toContain(
-      "pendingSourceDelete"
-    );
-    expect(pipeline[0].$set.stateId).toEqual({ $ifNull: ["$stateId", "JP-13"] });
-    // Ticket #1271: the pool row's country comes from the STATE, not from
-    // whatever the released sector last stored. The state below says the region
-    // is Polish while the sector still says JP, so this fails on the old code,
-    // which read `sector.countryId` directly.
-    expect(pipeline[0].$set.countryId).toEqual({ $ifNull: ["$countryId", "PL"] });
-    // Stage 2 derives headroomUnits from the revenue stage 1 settled on, so a
-    // pool with a missing/stale value heals rather than drifting further.
-    const headroom = pipeline[1].$set.headroomUnits as { $multiply: [string, number] };
-    expect(headroom.$multiply[0]).toBe("$revenue");
-    expect(headroom.$multiply[1]).toBeCloseTo(unownedHeadroomUnitsPerAnchor("technology", 1), 10);
     const foreignDelete = db.collectionMocks.corporateSectors.deleteOne.mock.calls.find(
       ([query]) => query?._id === foreignSectorId
     );
@@ -781,12 +766,13 @@ describe("nationalizeWholeCorp", () => {
       _id: foreignSectorId,
       "constructionPropertyTransition.key": expect.stringContaining("nationalize:"),
     });
-    expect(db.collectionMocks.unownedSectors.findOneAndUpdate).toHaveBeenCalledTimes(2);
-
-    // Only the domestic sector counts as absorbed; the foreign one was divested.
+    expect(
+      db.collectionMocks.corporateSectors.updateOne.mock.calls.some(
+        (c) => String(c[0]._id) === String(foreignSectorId) && c[1]?.$set?.corporationId != null
+      )
+    ).toBe(false);
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
     expect(result.sectorsAbsorbed).toBe(1);
-    // Shell still dissolved.
-    expect(db.collectionMocks.corporations.deleteOne).toHaveBeenCalledWith({ _id: targetId });
   });
 
   it("fans sectors of different types into different NatCorps", async () => {
@@ -1109,96 +1095,5 @@ describe("nationalizeWholeCorp", () => {
       (c) => c[1]?.$inc?.liquidCapital != null && (c[0]?._id as ObjectId)?.equals(nationalCorpId)
     );
     expect(creditCall).toBeUndefined();
-  });
-});
-
-describe("foreign sector release retry receipts", () => {
-  it("retains an owned pool receipt past seven days across another pool write and does not double-credit", async () => {
-    const memory = createInMemoryDb();
-    const now = new Date("2026-10-04T12:00:00.000Z");
-    const sectorId = new ObjectId();
-    const transitionKey = "nationalize:foreign-release:stable-operation";
-    const poolId = new ObjectId();
-    const sector = {
-      _id: sectorId,
-      corporationId: new ObjectId(),
-      countryId: "JP",
-      stateId: "JP-13",
-      sectorType: "technology",
-      revenue: 5,
-      constructionPropertyTransition: { key: transitionKey, kind: "nationalization" },
-    };
-    await memory.collection("states").insertOne({
-      _id: "JP-13",
-      countryId: "PL",
-    });
-    await memory.collection("corporateSectors").insertOne(sector);
-    await memory.collection("unownedSectors").insertOne({
-      _id: poolId,
-      stateId: "JP-13",
-      countryId: "PL",
-      sectorType: "technology",
-      revenue: 100,
-      headroomUnits: 100,
-      recentCorporateSectorRestores: [],
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    const corporateSectors = memory.collection("corporateSectors");
-    const deleteOne = vi
-      .spyOn(corporateSectors, "deleteOne")
-      .mockRejectedValueOnce(new Error("simulated interruption after pool credit"));
-    const { releaseForeignSectorToUnowned } = await import("./ownershipTransition");
-
-    await expect(
-      releaseForeignSectorToUnowned(
-        memory as unknown as Db,
-        sector as never,
-        "USD",
-        1,
-        now,
-        false,
-        1,
-        transitionKey
-      )
-    ).rejects.toThrow("simulated interruption");
-    const pool = memory.collection("unownedSectors");
-    const afterFirstAttempt = await pool.findOne({ _id: poolId });
-    expect(afterFirstAttempt?.revenue).toBe(105);
-    expect(afterFirstAttempt?.recentCorporateSectorRestores).toMatchObject([
-      {
-        sectorId: sectorId.toHexString(),
-        operationKey: transitionKey,
-        pendingSourceDelete: true,
-      },
-    ]);
-
-    // A separate market writer changes the same pool before this operation is
-    // retried after the regular receipt window has elapsed.
-    await pool.updateOne({ _id: poolId }, { $inc: { revenue: 17 } });
-    const retryAt = new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000);
-    await releaseForeignSectorToUnowned(
-      memory as unknown as Db,
-      sector as never,
-      "USD",
-      1,
-      retryAt,
-      false,
-      1,
-      transitionKey
-    );
-
-    const afterRetry = await pool.findOne({ _id: poolId });
-    expect(afterRetry?.revenue).toBe(122);
-    expect(afterRetry?.recentCorporateSectorRestores).toMatchObject([
-      {
-        sectorId: sectorId.toHexString(),
-        operationKey: transitionKey,
-        pendingSourceDelete: false,
-      },
-    ]);
-    expect(await corporateSectors.findOne({ _id: sectorId })).toBeNull();
-    expect(deleteOne).toHaveBeenCalledTimes(2);
   });
 });

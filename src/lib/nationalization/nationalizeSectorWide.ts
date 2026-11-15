@@ -1,7 +1,6 @@
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, State } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporationType } from "@/lib/constants/corporations";
 import {
@@ -11,8 +10,6 @@ import {
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
-import { gdpDerivedMarketAnchor } from "@/lib/corporations/marketShare";
-import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { applyBrandFacilityLoss } from "@/lib/corporations/brandFacilityLoss";
 import { buildPrimeRateMap, computeSectorNpvSum } from "@/lib/bonds/corporateBondDefault";
 import { isStateOwned, resolveNationalCorporationForSector } from "./nationalCorporation";
@@ -53,9 +50,7 @@ import { seedPlantLedger, splitWholePlantCount } from "@/lib/corporations/plantL
 import { getCorporateSectorLaneQuery } from "@/lib/corporations/sectorLocation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 export { SECTOR_SCOPE_LABELS, type SectorScope };
 
 export interface NationalizeSectorWideParams {
@@ -73,21 +68,20 @@ export interface NationalizeSectorWideParams {
 export interface NationalizeSectorWideResult {
   affectedCorps: number;
   sectorsCarved: number;
-  unownedCarved: number;
   /** Total compensation paid out (₳). */
   totalCompensationAnchor: number;
 }
 
-/** Defaults for a fresh NatCorp sector grown from the unowned market (no donor). */
-const UNOWNED_DEFAULT_MARGIN = 20;
+/** Margin for a carved sector whose donor row recorded none. */
+const DEFAULT_CARVE_MARGIN = 20;
 
 /**
  * Industry-wide sector nationalization: carve `carveFraction` of every in-scope
  * `sectorType` holding in the country into the country's National Corporation.
- * Two pools, gated by `scope`:
- *   - corp-held (non-state-owned, player + NPC): donor compensated
- *     `applyTier(fraction × sectorNPV)` and its row shrunk (or removed at 100%);
- *   - unowned market: capacity moved with NO compensation (no owner).
+ * Holders are non-state-owned corporations (player + NPC), gated by `scope`:
+ * the donor is compensated `applyTier(fraction × sectorNPV)` and its row shrunk
+ * (or removed at 100%). There is no free slice: a sector only ever holds plants
+ * that somebody built.
  * Carves merge into the NatCorp's existing (type, region) sector or create one.
  * Politics + ledger fire once for the aggregate taking. The passed bill is the
  * authority: there is no per-corp eligibility gate.
@@ -99,7 +93,7 @@ export async function nationalizeSectorWide(
   const now = new Date();
   const f = Math.min(1, Math.max(0, params.carveFraction));
   if (f <= 0) {
-    return { affectedCorps: 0, sectorsCarved: 0, unownedCarved: 0, totalCompensationAnchor: 0 };
+    return { affectedCorps: 0, sectorsCarved: 0, totalCompensationAnchor: 0 };
   }
 
   const sectors = corporateSectorsCollection(db);
@@ -144,7 +138,7 @@ export async function nationalizeSectorWide(
   const destRate = fxByCurrency.get(destCurrency) ?? 1;
 
   // All-zero plant fold for a taking whose donor carries no capital state
-  // (unowned pool, or a legacy corp row predating the plants migration).
+  // (a legacy corp row predating the plants migration).
   // `capitalStock` is filled in by the caller.
   //
   // `survivor` is the NatCorp row being folded into, or null on create. It
@@ -336,10 +330,9 @@ export async function nationalizeSectorWide(
 
   let totalPayoutAnchor = 0;
   let sectorsCarved = 0;
-  let unownedCarved = 0;
   const affectedCorpIds = new Set<string>();
 
-  // ── 1. Corp-held pool (scope: all | corporations) ──
+  // ── Corp-held plants (scope: all | corporations | npp_unowned) ──
   if (params.scope !== "unowned") {
     const corpSectors = await sectors
       .find({ countryId: params.countryId, ...sectorLane })
@@ -556,7 +549,7 @@ export async function nationalizeSectorWide(
         carvedRevAnchor,
         carvedWorkers,
         carvedGrowthAnchor,
-        sec.profitMargin ?? UNOWNED_DEFAULT_MARGIN,
+        sec.profitMargin ?? DEFAULT_CARVE_MARGIN,
         sec.targetGrowthRate ?? 1,
         sec.currentGrowthRate ?? 1,
         carvedPlant
@@ -618,141 +611,6 @@ export async function nationalizeSectorWide(
     }
   }
 
-  // ── 2. Unowned market pool (scope: all | unowned) — free, no owner. ──
-  if (params.scope !== "corporations") {
-    const unowned = await unownedSectorsCollection(db)
-      .find({ countryId: params.countryId, ...sectorLane })
-      .toArray();
-    for (const u of unowned) {
-      // unownedSectors.revenue is ₳-native (Task 9) — already an anchor, so pass
-      // it straight through; addToNatCorp denominates into the NatCorp's currency.
-      const carvedRevAnchor = Math.round((u.revenue ?? 0) * f);
-      if (carvedRevAnchor <= 0) continue;
-      // No donor plant doc to slice — an unowned pool row carries `revenue` and a
-      // derived `headroomUnits`, not `capitalStock`. `addToNatCorp` therefore
-      // derives the capacity leg from this same ₳ figure.
-      await addToNatCorp(u.stateId, carvedRevAnchor, 0, 0, UNOWNED_DEFAULT_MARGIN, 1, 1, null);
-      if (f >= 1) {
-        await unownedSectorsCollection(db).deleteOne({ _id: u._id });
-      } else {
-        await unownedSectorsCollection(db).updateOne(
-          { _id: u._id },
-          {
-            $set: {
-              revenue: Math.round((u.revenue ?? 0) * (1 - f)),
-              // The pool's own capacity view. `headroomUnits` is the units form
-              // of `revenue`, so a drawdown that scaled one and not the other
-              // would leave the pool claiming headroom the state has taken.
-              // Gated: below plants the field is unused and must not appear.
-              ...(plantsEnabled && typeof u.headroomUnits === "number"
-                ? { headroomUnits: u.headroomUnits * (1 - f) }
-                : {}),
-              updatedAt: now,
-            },
-          }
-        );
-      }
-      unownedCarved += 1;
-    }
-  }
-
-  // ── 2b. Fill the GDP-derived market headroom (scope: all | unowned). ──
-  // Parity with the split/capture mechanic: a maxed-out split builds production
-  // up to the GDP-derived market ceiling — the capture base in the economy/attack
-  // route falls back to `ceiling − owned` when no unowned doc remains, so a corp
-  // can grow into the otherwise-empty headroom and reach 100%. A 100% taking must
-  // reach the same 100%, so after seizing the corp-held + persisted-unowned pools
-  // we top up each nationalized region's NatCorp production to `f × ceiling`. The
-  // built headroom takes NO compensation and NO revenue haircut (it is fresh
-  // capacity, not a disrupted transfer) — mirroring a split, which builds raw
-  // captured revenue. Without this, a take below the ceiling leaves a permanent
-  // "unowned" gap the state alone could never close.
-  if (params.scope !== "corporations") {
-    const natSectors = await sectors.find({ corporationId: dest._id, ...sectorLane }).toArray();
-    if (natSectors.length > 0) {
-      const stateIds = [...new Set(natSectors.map((s) => s.stateId))];
-      const [stateDocs, remainingUnowned, preset] = await Promise.all([
-        statesCollection(db)
-          .find({ _id: { $in: stateIds } }, { projection: { _id: 1, gdp: 1, countryId: 1 } })
-          .toArray(),
-        unownedSectorsCollection(db)
-          .find({
-            countryId: params.countryId,
-            ...sectorLane,
-            stateId: { $in: stateIds },
-          })
-          .toArray(),
-        loadWorldPreset(db),
-      ]);
-      const gdpById = new Map(stateDocs.map((s) => [String(s._id), s.gdp ?? 0]));
-      // Guard against a sector mis-tagged into a foreign state (data anomaly, e.g.
-      // a state-id collision): the GDP ceiling must use the state's own economy, so
-      // skip any region whose country doesn't match this taking's country.
-      const stateCountryById = new Map(stateDocs.map((s) => [String(s._id), s.countryId]));
-      // unownedSectors.revenue is ₳-native (Task 9).
-      const poolByState = new Map(remainingUnowned.map((u) => [String(u.stateId), u.revenue ?? 0]));
-      const destCurrency = dest.liquidCurrencyCode ?? "USD";
-      const destRate = fxByCurrency.get(destCurrency) ?? 1;
-      for (const ns of natSectors) {
-        if (stateCountryById.get(String(ns.stateId)) !== params.countryId) continue;
-        const ceilingAnchor = gdpDerivedMarketAnchor(
-          gdpById.get(String(ns.stateId)) ?? 0,
-          params.countryId,
-          preset
-        );
-        const ownedAnchor = readCorpEconomicAnchor(ns.revenue ?? 0, destCurrency, destRate);
-        const poolAnchor = poolByState.get(String(ns.stateId)) ?? 0;
-        const headroomAnchor = Math.max(0, ceilingAnchor - ownedAnchor - poolAnchor);
-        const captureAnchor = Math.round(headroomAnchor * f);
-        if (captureAnchor <= 0) continue;
-        const captureLocal = Math.round(
-          writeCorpEconomicLocal(captureAnchor, destCurrency, destRate)
-        );
-        if (captureLocal <= 0) continue;
-        // PLANTS LOCKSTEP. This is the second un-gated revenue writer: under
-        // plants a bare `$inc: { revenue }` is restated away on the next tick and
-        // the whole headroom capture evaporates, leaving a 100% taking stuck
-        // permanently below the GDP-derived ceiling. The capture has to land on
-        // capacity, derived from the SAME ₳ figure (`captureAnchor`, not the
-        // FX-denominated `captureLocal` — `capitalStock` is currency free).
-        //
-        // NO haircut here, matching the revenue leg: built headroom is fresh
-        // capacity mirroring a split's build-out, not a disrupted transfer, so
-        // there is no donor and nothing to lose in transition.
-        const captureUnits = plantsEnabled
-          ? computeSectorImpliedUnits(
-              params.sectorType,
-              captureAnchor,
-              ns.strategyId,
-              sweepEraUnitScale
-            )
-          : 0;
-        await sectors.updateOne(
-          { _id: ns._id },
-          {
-            $inc: {
-              revenue: captureLocal,
-              ...(captureUnits > 0 ? { capitalStock: captureUnits } : {}),
-            },
-            $set: {
-              ...(captureUnits > 0
-                ? seedPlantLedger(
-                    { ...params, strategyId: ns.strategyId },
-                    (ns.capitalStock ?? 0) + captureUnits
-                  )
-                : {}),
-              nationalizedAtTurn: params.consequence.turn,
-              nationalizationTransitionMultiplier: transitionMultiplier,
-              sectorNationalizationScope: params.scope,
-              sectorNationalizationCarveFraction: f,
-              updatedAt: now,
-            },
-          }
-        );
-      }
-    }
-  }
-
   // ── Politics + investor confidence, once for the aggregate taking. ──
   const consequenceResult = await applyNationalizationConsequences(db, {
     countryId: params.countryId,
@@ -793,7 +651,6 @@ export async function nationalizeSectorWide(
   return {
     affectedCorps: affectedCorpIds.size,
     sectorsCarved,
-    unownedCarved,
     totalCompensationAnchor: totalPayoutAnchor,
   };
 }

@@ -5,14 +5,21 @@ import { CAPACITY_BUILD_CANCEL_REFUND } from "@/lib/constants/capacityEconomy";
 export interface ConstructionBuildEffects {
   transition: BankingTransition;
   feeLocal: number;
-  pool?: {
-    id: string;
-    bucket: import("@/lib/market/unownedPoolDraw").UnownedPoolBucket;
-    eraUnitScale: number;
-    /** Market-entry share claimed; absent on older claims where all order units were drawn. */
-    units?: number;
-  };
+  /** Present on persisted claims from before the market pool was retired; never read. */
+  pool?: unknown;
   quotedAt: Date;
+}
+
+const RETIRED_PROJECTION_COLLECTIONS: ReadonlySet<string> = new Set(["unownedSectors"]);
+
+/** Drop projections that target a collection that no longer exists, so older claims still settle. */
+export function withoutRetiredProjections(transition: BankingTransition): BankingTransition {
+  const projections = transition.projections.filter(
+    (projection) => !RETIRED_PROJECTION_COLLECTIONS.has(projection.collection)
+  );
+  return projections.length === transition.projections.length
+    ? transition
+    : { ...transition, projections };
 }
 
 /** A frozen, single-build claim. Only the settlement shell constructs this quote. */

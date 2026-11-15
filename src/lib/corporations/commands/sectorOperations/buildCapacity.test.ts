@@ -155,12 +155,6 @@ function sectorSet(): Record<string, unknown> {
   return (call?.[1] as { $set: Record<string, unknown> }).$set;
 }
 
-/** The pipeline stages the command sent to the unowned pool. */
-function poolPipeline(): Array<{ $set: Record<string, unknown> }> {
-  const call = db.collectionMocks.unownedSectors.updateOne.mock.calls[0];
-  return call?.[1] as Array<{ $set: Record<string, unknown> }>;
-}
-
 describe("buildCapacity — build", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -170,7 +164,6 @@ describe("buildCapacity — build", () => {
     db.collection("characters");
     db.collection("gameState");
     db.collection("gameConfig");
-    db.collection("unownedSectors");
   });
 
   it("routes an explicitly consented term loan to the funded build shell without a cash-only debit", async () => {
@@ -201,9 +194,7 @@ describe("buildCapacity — build", () => {
         termTurns: 48,
         maximumRatePercent: 5,
         order: expect.objectContaining({ unitsOrdered: 1000 }),
-        buildContext: expect.objectContaining({
-          bucket: expect.objectContaining({ industryModel: undefined }),
-        }),
+        buildContext: { destinationCurrency: expect.any(String) },
       })
     );
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
@@ -261,7 +252,7 @@ describe("buildCapacity — build", () => {
     const writes = db.collectionMocks.corporations.updateOne.mock.calls;
     expect(writes).toHaveLength(2);
     expect(writes[0][1].$inc.liquidCapital + writes[1][1].$inc.liquidCapital).toBe(0);
-    expect(db.collectionMocks.unownedSectors.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
   it("withdraws only the borrower's exact noncash request, including recovery while new finance is disabled", async () => {
     const bankId = new ObjectId();
@@ -334,29 +325,16 @@ describe("buildCapacity — build", () => {
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
   });
 
-  // ─── unowned-pool drawdown ──────────────────────────────────────
+  // ─── no market pool ─────────────────────────────────────────────
   //
-  // Building on an EXISTING plant used to leave the pool untouched, so every
-  // post-founding unit counted as owned while its demand stayed claimable. The
-  // pie read "unowned" on a market that was already built out.
+  // Building is limited by cash and the goods market, never by a stored
+  // market size, so an order neither reads nor writes any pool document.
 
-  it("draws the ordered units down from the unowned pool", async () => {
+  it("queues an order without touching any market pool", async () => {
     await wireMocks(sectorDoc());
-    await buildCapacity(request({ action: "build", units: 1_000 }), { params });
-
-    const call = db.collectionMocks.unownedSectors.updateOne.mock.calls[0];
-    expect(call[0]).toEqual({
-      stateId: "US-CA",
-      sectorType: "manufacturing",
-      industryModel: null,
-      mediaDiscriminator: null,
-    });
-    expect(call[2]).toEqual({ upsert: true });
-    // Negative delta, clamped so a pool smaller than the order cannot go under.
-    expect(JSON.stringify(poolPipeline()[0].$set.headroomUnits)).toContain("-1000");
-    expect(JSON.stringify(poolPipeline()[0].$set.headroomUnits)).toContain("$max");
-    // `revenue` is restated FROM the post-draw units in its own stage.
-    expect(JSON.stringify(poolPipeline()[1].$set.revenue)).toContain("$headroomUnits");
+    const res = await buildCapacity(request({ action: "build", units: 1_000 }), { params });
+    expect(res.status).toBe(201);
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
 
   it("pauses new Retail capacity during the demand unwind", async () => {
@@ -373,34 +351,6 @@ describe("buildCapacity — build", () => {
     expect(body.error).toContain("144 turns remaining");
     expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
-  });
-
-  it("does not touch the pool when the order never queues", async () => {
-    // The queue write is the commit point. If it loses its CAS the money is
-    // handed back, so the market claim must not stand either.
-    await wireMocks(sectorDoc());
-    db.collectionMocks.corporateSectors.updateOne.mockResolvedValue({
-      matchedCount: 0,
-      modifiedCount: 0,
-    });
-    const res = await buildCapacity(request({ action: "build", units: 1_000 }), { params });
-    expect(res.status).toBe(409);
-    expect(db.collectionMocks.unownedSectors.updateOne).not.toHaveBeenCalled();
-  });
-
-  it("previews without drawing the pool down", async () => {
-    await wireMocks(sectorDoc());
-    await buildCapacity(request({ action: "build", units: 500, preview: true }), { params });
-    expect(db.collectionMocks.unownedSectors.updateOne).not.toHaveBeenCalled();
-  });
-
-  it("still queues the order when the pool write fails", async () => {
-    // Post-commit and best-effort: the cash and the queue write have landed, so
-    // a pool failure must not 500 the caller into re-ordering.
-    await wireMocks(sectorDoc());
-    db.collectionMocks.unownedSectors.updateOne.mockRejectedValue(new Error("pool down"));
-    const res = await buildCapacity(request({ action: "build", units: 1_000 }), { params });
-    expect(res.status).toBe(201);
   });
 
   it("queues an order and charges computeBuildCost while leaving CIP to the turn", async () => {
@@ -716,7 +666,6 @@ describe("buildCapacity — cancel", () => {
     db.collection("corporateSectors");
     db.collection("characters");
     db.collection("gameState");
-    db.collection("unownedSectors");
   });
 
   const outstanding = {
@@ -726,31 +675,13 @@ describe("buildCapacity — cancel", () => {
     onlineTurn: CURRENT_TURN + 50,
   };
 
-  it("returns the cancelled units to the unowned pool", async () => {
+  it("cancelling an order never touches any market pool", async () => {
     await wireMocks(
       sectorDoc({ buildQueue: [outstanding], constructionInProgressAnchor: 400_000 })
     );
-    await buildCapacity(request({ action: "cancel", orderIndex: 0 }), { params });
-
-    // A legacy (non-smooth) order has delivered nothing, so the whole claim
-    // comes back: a positive delta, not the build's negative one.
-    const headroom = JSON.stringify(poolPipeline()[0].$set.headroomUnits);
-    expect(headroom).toContain("1000");
-    expect(headroom).not.toContain("-1000");
-  });
-
-  it("returns only the UNDELIVERED units of a half-built smooth order", async () => {
-    // Delivered capacity stays in `capitalStock` and keeps counting against
-    // market share, so returning the full order would resurrect headroom the
-    // corp is still occupying.
-    await wireMocks(
-      sectorDoc({
-        buildQueue: [{ ...outstanding, startTurn: CURRENT_TURN - 50, smooth: true }],
-        constructionInProgressAnchor: 400_000,
-      })
-    );
-    await buildCapacity(request({ action: "cancel", orderIndex: 0 }), { params });
-    expect(JSON.stringify(poolPipeline()[0].$set.headroomUnits)).toContain("500");
+    const res = await buildCapacity(request({ action: "cancel", orderIndex: 0 }), { params });
+    expect(res.status).toBe(200);
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
 
   it("removes the order and refunds the documented share — never all of it", async () => {
@@ -869,70 +800,6 @@ describe("buildCapacity — mothball / reactivate", () => {
   });
 });
 
-// ─── unowned-pool country attribution ─────────────────────────────
-//
-// The pool row is keyed by state and sector, but it CARRIES a countryId that
-// every reader filters on. A sector with no stored countryId resolved it from
-// the corporation and then fell through to a literal "US", so a US-domiciled
-// corp building in a foreign state minted a pool row filed under the United
-// States: unreachable to the country the capacity is physically in, and counted
-// as American headroom by the sector browser and the commodity supply math.
-describe("buildCapacity — unowned pool country attribution", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    db = createMockDb();
-    db.collection("corporations");
-    db.collection("corporateSectors");
-    db.collection("characters");
-    db.collection("gameState");
-    db.collection("gameConfig");
-    db.collection("unownedSectors");
-    db.collection("states");
-  });
-
-  it("files the pool row under the country the STATE is in, not the corp's", async () => {
-    await wireMocks(sectorDoc({ countryId: undefined, stateId: "UKR_WES" }));
-    db.collectionMocks.states.findOne.mockResolvedValue({ _id: "UKR_WES", countryId: "UKR" });
-
-    await buildCapacity(request({ action: "build", units: 100 }), { params });
-
-    expect(JSON.stringify(poolPipeline()[0].$set.countryId)).toContain("UKR");
-    expect(JSON.stringify(poolPipeline()[0].$set.countryId)).not.toContain('"US"');
-  });
-
-  it("prefers the state even over a countryId already stored on the sector", async () => {
-    // The precedence `getSectorOperatingCountryId` sets for the rest of the
-    // codebase. A stored country left stale by a region changing hands is the
-    // case that helper exists for, so taking it first would reintroduce this
-    // bug in its other form. Fails on the old order, which read the sector's
-    // value first and never looked at the state.
-    await wireMocks(sectorDoc({ countryId: "US", stateId: "UKR_WES" }));
-    db.collectionMocks.states.findOne.mockResolvedValue({ _id: "UKR_WES", countryId: "UKR" });
-
-    await buildCapacity(request({ action: "build", units: 100 }), { params });
-
-    expect(JSON.stringify(poolPipeline()[0].$set.countryId)).toContain("UKR");
-    expect(JSON.stringify(poolPipeline()[0].$set.countryId)).not.toContain('"US"');
-  });
-
-  it("never invents the United States when nothing at all resolves", async () => {
-    // EVERY source cleared: no state row, no sector country, no corporation
-    // country. That is the only shape that reached the old chain's `?? "US"`
-    // literal, so it is the only shape that can prove the literal is gone.
-    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
-    await wireMocks(sectorDoc({ countryId: undefined, stateId: "PL_MAZ" }));
-    vi.mocked(resolveCorporation).mockResolvedValue({
-      ok: true,
-      corporation: { ...corporation, countryId: undefined },
-    } as never);
-    db.collectionMocks.states.findOne.mockResolvedValue(null);
-
-    await buildCapacity(request({ action: "build", units: 100 }), { params });
-
-    expect(JSON.stringify(poolPipeline()[0].$set.countryId)).not.toContain('"US"');
-  });
-});
-
 describe("capacity recovery route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -943,7 +810,6 @@ describe("capacity recovery route", () => {
       "characters",
       "gameState",
       "gameConfig",
-      "unownedSectors",
       "states",
     ])
       db.collection(name);

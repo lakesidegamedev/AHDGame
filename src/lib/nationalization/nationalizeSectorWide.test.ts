@@ -83,13 +83,7 @@ describe("nationalizeSectorWide", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of [
-      "corporateSectors",
-      "corporations",
-      "unownedSectors",
-      "centralBanks",
-      "bankMoneyMoves",
-    ])
+    for (const n of ["corporateSectors", "corporations", "centralBanks", "bankMoneyMoves"])
       db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporations.findOne.mockImplementation((q: { _id: ObjectId }) => {
@@ -100,7 +94,6 @@ describe("nationalizeSectorWide", () => {
       return Promise.resolve(null);
     });
     db.collectionMocks.corporateSectors.findOne.mockResolvedValue(null); // NatCorp has no existing row
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
   });
 
   function seedCorpSectors() {
@@ -243,7 +236,6 @@ describe("nationalizeSectorWide", () => {
       ])
     );
     db.collectionMocks.corporateSectors.findOne.mockResolvedValue(null);
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
 
     const { nationalizeSectorWide } = await import("./nationalizeSectorWide");
     await nationalizeSectorWide(db as unknown as Db, {
@@ -347,18 +339,7 @@ describe("nationalizeSectorWide", () => {
     expect(db.collectionMocks.corporateSectors.deleteOne).not.toHaveBeenCalled();
   });
 
-  it("unowned scope carves the unowned market for free (no compensation)", async () => {
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([
-        {
-          _id: new ObjectId(),
-          countryId: "CN",
-          stateId: "DB",
-          sectorType: "technology",
-          revenue: 500,
-        },
-      ])
-    );
+  it("the retired unowned scope sweeps nothing and pays nothing", async () => {
     const { nationalizeSectorWide } = await import("./nationalizeSectorWide");
     const { debitTreasuryCompensation } = await import("./treasury");
     const res = await nationalizeSectorWide(db as unknown as Db, {
@@ -369,59 +350,41 @@ describe("nationalizeSectorWide", () => {
       tier: "fair",
       consequence,
     });
-    expect(res.unownedCarved).toBe(1);
     expect(res.affectedCorps).toBe(0);
-    expect(vi.mocked(debitTreasuryCompensation)).not.toHaveBeenCalled(); // free
-    expect(db.collectionMocks.unownedSectors.deleteOne).toHaveBeenCalled();
-    expect(db.collectionMocks.corporateSectors.insertOne).toHaveBeenCalledTimes(1);
+    expect(res.sectorsCarved).toBe(0);
+    expect(vi.mocked(debitTreasuryCompensation)).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
 
-  it("records the sweep scope in the ledger label so a 100%-but-unowned-only taking isn't read as a full nationalization", async () => {
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([
-        {
-          _id: new ObjectId(),
-          countryId: "CN",
-          stateId: "DB",
-          sectorType: "technology",
-          revenue: 500,
-        },
-      ])
-    );
+  it("records the sweep scope in the ledger label", async () => {
     const { nationalizeSectorWide } = await import("./nationalizeSectorWide");
     const { recordNationalizationLedger } = await import("./ledger");
     await nationalizeSectorWide(db as unknown as Db, {
       countryId: "CN",
       sectorType: "technology",
       carveFraction: 1,
-      scope: "unowned",
+      scope: "npp_unowned",
       tier: "fair",
       consequence,
     });
     expect(vi.mocked(recordNationalizationLedger)).toHaveBeenCalledWith(
       db,
       expect.objectContaining({
-        formerCorpName: expect.stringContaining("Unowned market only"),
+        formerCorpName: expect.stringContaining("NPP-run corps only"),
       })
     );
   });
 
-  it("fills the GDP headroom to the ceiling so a 100% take reaches 100% ownership", async () => {
-    // Parity with splitting: a NatCorp sector sitting below the region's GDP-derived
-    // market ceiling gets topped up to the ceiling (no haircut), so the bill view
-    // reads 100% owned instead of leaving an uncloseable "unowned" gap.
+  it("never tops a National Corporation up toward a GDP ceiling", async () => {
     const destId = new ObjectId();
-    const natSectorId = new ObjectId();
     const { resolveNationalCorporationForSector } = await import("./nationalCorporation");
     vi.mocked(resolveNationalCorporationForSector).mockResolvedValueOnce({
       _id: destId,
       liquidCurrencyCode: "USD",
     } as never);
-
-    // Sole holder is the NatCorp (revenue 2000) — step 1 skips it (it IS the dest);
-    // step 2b tops it up by ceiling(5000) − owned(2000) = 3000.
     const natSector = {
-      _id: natSectorId,
+      _id: new ObjectId(),
       corporationId: destId,
       sectorType: "technology",
       stateId: "CN_GD",
@@ -429,11 +392,6 @@ describe("nationalizeSectorWide", () => {
     };
     db.collectionMocks.corporateSectors.find.mockReturnValue(cursor([natSector]));
     db.collectionMocks.corporateSectors.findOne.mockResolvedValue(null);
-    db.collection("states");
-    db.collectionMocks.states.find.mockReturnValue(
-      cursor([{ _id: "CN_GD", gdp: 5000, countryId: "CN" }])
-    );
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
 
     const { nationalizeSectorWide } = await import("./nationalizeSectorWide");
     await nationalizeSectorWide(db as unknown as Db, {
@@ -445,14 +403,10 @@ describe("nationalizeSectorWide", () => {
       consequence,
     });
 
-    const fillCall = db.collectionMocks.corporateSectors.updateOne.mock.calls.find(
-      (c: unknown[]) => (c[1] as { $inc?: { revenue?: number } })?.$inc?.revenue === 3000
-    );
-    expect(fillCall).toBeDefined();
-    expect(fillCall![0]).toEqual({ _id: natSectorId });
+    expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
   });
 
-  it("npp_unowned scope carves NPP-run corps + unowned but spares player corps (#89)", async () => {
+  it("npp_unowned scope carves NPP-run corps but spares player corps", async () => {
     const nppCorpId = new ObjectId();
     const nppSectorId = new ObjectId();
     // Player corp is ceoType "character"; NPP corp is ceoType "npp".
@@ -495,18 +449,6 @@ describe("nationalizeSectorWide", () => {
         },
       ])
     );
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([
-        {
-          _id: new ObjectId(),
-          countryId: "CN",
-          stateId: "DB",
-          sectorType: "technology",
-          revenue: 500,
-        },
-      ])
-    );
-
     const { nationalizeSectorWide } = await import("./nationalizeSectorWide");
     const res = await nationalizeSectorWide(db as unknown as Db, {
       countryId: "CN",
@@ -517,10 +459,9 @@ describe("nationalizeSectorWide", () => {
       consequence,
     });
 
-    // Only the NPP corp is taken; the player corp is spared. Unowned is swept.
+    // Only the NPP corp is taken; the player corp is spared.
     expect(res.affectedCorps).toBe(1);
     expect(res.sectorsCarved).toBe(1);
-    expect(res.unownedCarved).toBe(1);
     expect(db.collectionMocks.corporateSectors.deleteOne).toHaveBeenCalledWith(
       expect.objectContaining({
         _id: nppSectorId,
@@ -530,43 +471,5 @@ describe("nationalizeSectorWide", () => {
     expect(db.collectionMocks.corporateSectors.deleteOne).not.toHaveBeenCalledWith({
       _id: playerSectorId,
     });
-  });
-
-  it("does not fill headroom when production already meets/exceeds the GDP ceiling", async () => {
-    const destId = new ObjectId();
-    const { resolveNationalCorporationForSector } = await import("./nationalCorporation");
-    vi.mocked(resolveNationalCorporationForSector).mockResolvedValueOnce({
-      _id: destId,
-      liquidCurrencyCode: "USD",
-    } as never);
-    const natSector = {
-      _id: new ObjectId(),
-      corporationId: destId,
-      sectorType: "technology",
-      stateId: "CN_GD",
-      revenue: 8000, // already above the 5000 ceiling
-    };
-    db.collectionMocks.corporateSectors.find.mockReturnValue(cursor([natSector]));
-    db.collectionMocks.corporateSectors.findOne.mockResolvedValue(null);
-    db.collection("states");
-    db.collectionMocks.states.find.mockReturnValue(
-      cursor([{ _id: "CN_GD", gdp: 5000, countryId: "CN" }])
-    );
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
-
-    const { nationalizeSectorWide } = await import("./nationalizeSectorWide");
-    await nationalizeSectorWide(db as unknown as Db, {
-      countryId: "CN",
-      sectorType: "technology",
-      carveFraction: 1,
-      scope: "all",
-      tier: "fair",
-      consequence,
-    });
-
-    const fillCall = db.collectionMocks.corporateSectors.updateOne.mock.calls.find(
-      (c: unknown[]) => (c[1] as { $inc?: { revenue?: number } })?.$inc?.revenue
-    );
-    expect(fillCall).toBeUndefined();
   });
 });

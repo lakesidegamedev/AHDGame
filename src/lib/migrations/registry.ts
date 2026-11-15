@@ -173,8 +173,7 @@ export const MIGRATIONS: Migration[] = [
   // orgRegLedger (countryId, stateId, partyId, metric, turn desc) - region-page
   // registration sparkline was a 1M-doc collscan (only the _id index existed)
   orgRegLedgerIndex,
-  // headroomUnits backfill (buildable-sectors P1) - derived field only,
-  // no system reads it yet; see scripts/migrations/backfillUnownedHeadroomUnits.ts
+  // Retired headroomUnits backfill; kept so applied markers stay valid.
   backfillUnownedHeadroomUnits,
   // Seed-sector currency denomination heal. Pairs with the writer fix in
   // `spawnNppCorporation` - the two MUST ship together (see the "honest
@@ -199,8 +198,7 @@ export const MIGRATIONS: Migration[] = [
   // Repairs the active 1953 world as well as future resets: four-country
   // registration pools plus era-relative sovereign debt pricing.
   heal1953SeedBalance,
-  // Command-economy unowned double-seed (~50% SOE ownership +
-  // unreachable 0% remainder sectors). Also runs at end of seedUnownedSectors.
+  // Retired command-economy pool reconcile; kept so applied markers stay valid.
   reconcileCommandEconomyUnowned,
   // The USSR came up on iteration 4 with no SOEs at all and every producing
   // sector on the bare sovereign issuer, so 44 players had no seat to claim.

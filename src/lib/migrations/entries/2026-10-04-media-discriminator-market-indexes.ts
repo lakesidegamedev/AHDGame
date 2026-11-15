@@ -22,12 +22,6 @@ const INDEXES = [
     ],
   },
   {
-    collection: "unownedSectors",
-    keys: { stateId: 1, sectorType: 1, industryModel: 1, mediaDiscriminator: 1 },
-    options: { name: "unowned_state_type_models_unique", unique: true, background: true },
-    legacyNames: ["unowned_state_type_model_unique", "stateId_1_sectorType_1"],
-  },
-  {
     collection: "unions",
     keys: { countryId: 1, sectorType: 1, industryModel: 1, mediaDiscriminator: 1 },
     options: {
@@ -89,7 +83,7 @@ async function run(db: Db, dryRun: boolean): Promise<MigrationResult> {
 
 export const migration: Migration = {
   id: "2026-10-04-media-discriminator-market-indexes",
-  description: "Include media lane identity in sector, unowned market, and seeded union keys.",
+  description: "Include media lane identity in sector and seeded union keys.",
   idempotent: true,
   execute: async (db, ctx) => run(db, ctx.dryRun),
 };

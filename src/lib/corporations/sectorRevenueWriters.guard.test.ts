@@ -189,11 +189,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     reason:
       "Whole-plant split (player route and NPP attacks) is plants-only; a new row starts at zero revenue and the turn derives its revenue from transferred whole plants.",
   },
-  "src/app/api/country/[code]/region/[id]/economy/attack/route.ts": {
-    writeSites: 5,
-    status: "plants-gated",
-    reason: "Unowned split draws headroomUnits down and grants capacity under plants.",
-  },
   "src/lib/turn/nppCorporateAttacks.ts": {
     writeSites: 4,
     status: "plants-gated",
@@ -242,10 +237,10 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     reason: "Nationalization ownership transfer; plants-aware.",
   },
   "src/lib/nationalization/nationalizeSectorWide.ts": {
-    writeSites: 5,
+    writeSites: 3,
     status: "plants-gated",
     reason:
-      "Sector-wide nationalization. Both revenue writers are plants-gated off `plantsEnabled`: the carve into the NatCorp moves the donor's sliced plant state (capitalStock haircut by NATIONALIZATION_REVENUE_HAIRCUT, CIP and build orders at full value) and the donor keeps the 1−f complement, so capacity is conserved; the unowned-headroom capture increments capitalStock from the same ₳ figure as revenue.",
+      "Sector-wide nationalization. The revenue writer is plants-gated off `plantsEnabled`: the carve into the NatCorp moves the donor's sliced plant state (capitalStock haircut by NATIONALIZATION_REVENUE_HAIRCUT, CIP and build orders at full value) and the donor keeps the 1−f complement, so capacity is conserved.",
   },
   "src/lib/nationalization/privatizeAsset.ts": {
     writeSites: 2,
@@ -341,11 +336,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "One-off historical heal, outside the deploy chain. Pre-dates plants and is not " +
       "re-runnable against a plants world; retained for the audit trail only.",
   },
-  "scripts/migrations/heal-dropped-sector-unowned-loss.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason: "One-off historical heal, outside the deploy chain. Pre-dates plants.",
-  },
   "scripts/migrations/heal-sector-revenue-anchor-bug.ts": {
     writeSites: 1,
     status: "plants-gated",
@@ -361,14 +351,6 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "(revenue is derived there and restated in host currency every turn), and any " +
       "individual row with `plantsStartTurn` stamped is skipped by the planner.",
   },
-  "src/lib/banking/constructionBuildEffects.ts": {
-    writeSites: 1,
-    status: "plants-gated",
-    reason:
-      "GREP FALSE POSITIVE: the detected revenue literal initializes an `unownedSectors` " +
-      "construction market bucket at zero. The corporateSectors projection only marks " +
-      "construction financing effects as paid and does not write sector revenue.",
-  },
 };
 
 /** Writers in this sweep's territory: these MUST carry a documented plants gate. */
@@ -376,7 +358,6 @@ const MUST_BE_PLANTS_AWARE = [
   "src/lib/turn/corporation/rdInnovation.ts",
   "src/lib/turn/corporation/corporationSectorShed.ts",
   "src/lib/corporations/commands/plantSectorSplitAttempt.ts",
-  "src/app/api/country/[code]/region/[id]/economy/attack/route.ts",
   "src/lib/turn/nppCorporateAttacks.ts",
   "src/lib/corporations/moveSector.ts",
   // Converted by the ownership/transfer sweep and the P3b audit sweep. Once a

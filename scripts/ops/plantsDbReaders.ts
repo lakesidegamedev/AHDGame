@@ -236,18 +236,6 @@ export async function countCrisisEffectPhysicality(
   return out;
 }
 
-/** Unowned-pool readiness for the plants leading field. */
-export async function readUnownedHeadroomStatus(
-  db: Db
-): Promise<{ total: number; missingHeadroomUnits: number }> {
-  const col = db.collection("unownedSectors");
-  const total = await col.countDocuments({});
-  const missingHeadroomUnits = await col.countDocuments({
-    $or: [{ headroomUnits: { $exists: false } }, { headroomUnits: null }],
-  });
-  return { total, missingHeadroomUnits };
-}
-
 /** Live commodity prices, keyed by commodity. */
 export async function readCommodityPrices(db: Db): Promise<Record<string, number>> {
   const out: Record<string, number> = {};

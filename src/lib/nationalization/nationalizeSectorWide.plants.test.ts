@@ -5,14 +5,13 @@
  * — `sectorTurn` restates it from `capitalStock × mix price` every turn. Both of
  * this file's revenue writers used to be completely un-gated, so a sector-wide
  * nationalization destroyed the seized capacity (donor row shrunk or deleted,
- * NatCorp given only a revenue number the next tick erased) and the unowned
- * headroom capture evaporated entirely.
+ * NatCorp given only a revenue number the next tick erased).
  *
  * These tests pin the three properties that must hold:
  *   (a) below plants every write is byte identical to the pre-P3b behaviour;
  *   (b) under plants the NatCorp GAINS capitalStock and the donor LOSES the
  *       matching capacity;
- *   (c) the headroom capture lands on capacity, not only on revenue.
+ *   (c) no capacity is created from a market ceiling.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
@@ -113,16 +112,9 @@ describe("nationalizeSectorWide — plants capacity conservation", () => {
     vi.clearAllMocks();
     marketMode.value = "capital";
     db = createMockDb();
-    for (const n of [
-      "corporateSectors",
-      "corporations",
-      "unownedSectors",
-      "centralBanks",
-      "states",
-    ])
+    for (const n of ["corporateSectors", "corporations", "centralBanks", "states"])
       db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
     db.collectionMocks.states.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporations.findOne.mockResolvedValue({
       _id: donorCorpId,
@@ -286,8 +278,8 @@ describe("nationalizeSectorWide — plants capacity conservation", () => {
   });
 });
 
-// ── (c) the unowned headroom capture must land on capacity ──
-describe("nationalizeSectorWide — plants headroom capture", () => {
+// ── (c) no capacity is conjured from a market ceiling ──
+describe("nationalizeSectorWide: plants never mint capacity", () => {
   let db: MockDb;
   const natRowId = new ObjectId();
 
@@ -295,23 +287,15 @@ describe("nationalizeSectorWide — plants headroom capture", () => {
     vi.clearAllMocks();
     marketMode.value = "plants";
     db = createMockDb();
-    for (const n of [
-      "corporateSectors",
-      "corporations",
-      "unownedSectors",
-      "centralBanks",
-      "states",
-    ])
+    for (const n of ["corporateSectors", "corporations", "centralBanks", "states"])
       db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporateSectors.findOne.mockResolvedValue(null);
-    // Section 1 finds nothing to carve; section 2b finds the NatCorp's own row.
     db.collectionMocks.corporateSectors.find.mockReturnValue(
       cursor([
         {
           _id: natRowId,
-          corporationId: null, // patched below to the resolved NatCorp id
+          corporationId: null,
           countryId: "US",
           stateId: "CA",
           sectorType: "technology",
@@ -325,100 +309,20 @@ describe("nationalizeSectorWide — plants headroom capture", () => {
     );
   });
 
-  it("increments capitalStock alongside revenue for captured headroom", async () => {
-    await nationalizeSectorWide(db as unknown as Db, {
-      countryId: "US",
-      sectorType: "technology",
-      carveFraction: 1,
-      scope: "unowned",
-      tier: "fair",
-      consequence,
-    });
-    const call = (db.collectionMocks.corporateSectors.updateOne.mock.calls as UpdateCall[]).find(
-      (c) => String(c[0]._id) === String(natRowId)
-    );
-    expect(call).toBeDefined();
-    const inc = call![1].$inc!;
-    // ceiling 1000 − owned 400 − pool 0 = 600 of headroom, taken in full.
-    expect(inc.revenue).toBe(600);
-    // The capture must NOT be revenue-only: without a capitalStock leg the next
-    // sectorTurn restates revenue off unchanged capacity and the capture is gone.
-    expect(inc.capitalStock).toBeGreaterThan(0);
-  });
-});
-
-// ── (d) an absent donor must not change the survivor's operating state ──
-//
-// The unowned pool has no donor doc to slice, so the taking folds a SYNTHETIC
-// all-zero donor into the NatCorp's existing row. `mergeSectorPlantFields` ANDs
-// `mothballed`, so a hardcoded `false` on that synthetic donor silently woke a
-// mothballed NatCorp sector: it started producing and paying full upkeep with
-// no player action behind it.
-describe("nationalizeSectorWide — mothballed survivor absorbing unowned headroom", () => {
-  let db: MockDb;
-  const natRowId = new ObjectId();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    marketMode.value = "plants";
-    db = createMockDb();
-    for (const n of [
-      "corporateSectors",
-      "corporations",
-      "unownedSectors",
-      "centralBanks",
-      "states",
-    ])
-      db.collection(n);
-    db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
-    db.collectionMocks.states.find.mockReturnValue(cursor([]));
-    db.collectionMocks.corporateSectors.find.mockReturnValue(cursor([]));
-    // The NatCorp already operates this (type, region) and has IDLED it.
-    db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
-      _id: natRowId,
-      capitalStock: 100,
-      buildQueue: [],
-      constructionInProgressAnchor: 0,
-      mothballed: true,
-      plantsStartTurn: 7,
-    });
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([
-        {
-          _id: new ObjectId(),
-          countryId: "US",
-          stateId: "CA",
-          sectorType: "technology",
-          revenue: 500,
-        },
-      ])
-    );
-  });
-
-  it("stays mothballed and still absorbs the capacity", async () => {
-    await nationalizeSectorWide(db as unknown as Db, {
-      countryId: "US",
-      sectorType: "technology",
-      carveFraction: 1,
-      scope: "unowned",
-      tier: "fair",
-      consequence,
-    });
-    const merged = (db.collectionMocks.corporateSectors.updateOne.mock.calls as UpdateCall[]).find(
-      (c) => String(c[0]._id) === String(natRowId) && c[1].$set?.mothballed !== undefined
-    )![1].$set!;
-    // The survivor's own operating state is untouched by an absent donor.
-    expect(merged.mothballed).toBe(true);
-    // And the taking still lands: capacity grows past the survivor's own 100.
-    expect(merged.capitalStock as number).toBeGreaterThan(100);
-    // Every other field is the survivor's own, i.e. a true merge identity.
-    expect(merged.plantsStartTurn).toBe(7);
-    expect(merged).not.toHaveProperty("constructionInProgressAnchor");
-    expect(
-      queueUndeliveredCost(
-        merged.buildQueue as Parameters<typeof queueUndeliveredCost>[0],
-        consequence.turn
-      )
-    ).toBe(0);
-  });
+  it.each(["all", "unowned"] as const)(
+    "a %s taking leaves the National Corporation's own row untouched",
+    async (scope) => {
+      await nationalizeSectorWide(db as unknown as Db, {
+        countryId: "US",
+        sectorType: "technology",
+        carveFraction: 1,
+        scope,
+        tier: "fair",
+        consequence,
+      });
+      const calls = db.collectionMocks.corporateSectors.updateOne.mock.calls as UpdateCall[];
+      expect(calls.find((c) => String(c[0]._id) === String(natRowId))).toBeUndefined();
+      expect(db.collectionMocks.unownedSectors).toBeUndefined();
+    }
+  );
 });

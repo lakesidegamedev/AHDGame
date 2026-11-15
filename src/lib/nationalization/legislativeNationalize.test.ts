@@ -28,7 +28,6 @@ vi.mock("./nationalizeSectorWide", () => ({
   nationalizeSectorWide: vi.fn().mockResolvedValue({
     affectedCorps: 2,
     sectorsCarved: 3,
-    unownedCarved: 1,
     totalCompensationAnchor: 1000,
   }),
 }));
