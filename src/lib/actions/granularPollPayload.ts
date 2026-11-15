@@ -5,7 +5,7 @@ import type { Layer1Config } from "@/lib/seeds/stateDemographics";
 import type { EraId } from "@/lib/seeds/presetSelector";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { getRegionCensusData } from "@/lib/seeds/regionCensusData";
-import { getCountryLayer1Model } from "@/lib/seeds/international";
+import { getCountryLayer1Model, regionalElectoratePositions } from "@/lib/seeds/international";
 import {
   getCountrySubstrateForYear,
   getUsSubstrateForYear,
@@ -278,7 +278,8 @@ export function buildGranularElectorateForState({
   }
 
   const dimNames = yearModel?.dims ?? model?.dims ?? [];
-  const modelPositions = yearModel?.positions ?? model?.positions ?? {};
+  const modelPositions =
+    yearModel?.positions ?? (model ? regionalElectoratePositions(model, stateId) : {});
   const modelTurnout = yearModel?.turnoutRates ?? model?.turnoutRates ?? {};
   const dims: GenericGranularDimInput[] = dimNames.map((name) => ({
     name,
