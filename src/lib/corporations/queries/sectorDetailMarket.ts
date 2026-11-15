@@ -3,7 +3,6 @@ import type {
   State,
   CorporateSector,
   Corporation,
-  UnownedSector,
   StateMetrics,
   GameState,
   Tariff,
@@ -57,7 +56,7 @@ import {
 
 /**
  * Market position for the sector's (state, sectorType) bucket: effective
- * market size, market share, competitor rows, and the unowned pool.
+ * market size, market share and competitor rows.
  */
 export function computeSectorMarketPosition(args: {
   state: State | null;
@@ -78,12 +77,6 @@ export function computeSectorMarketPosition(args: {
   >[];
   siblingsSectors: CorporateSector[];
   siblingFxByCurrency: Awaited<ReturnType<typeof loadFxRatesByCurrency>>;
-  unownedDoc: UnownedSector | null;
-  /**
-   * Active world preset, for the era-correct GDP→₳ normalization of the
-   * GDP-derived market size. Omitted = modern base config.
-   */
-  preset?: string;
 }) {
   const {
     sector,
@@ -100,8 +93,7 @@ export function computeSectorMarketPosition(args: {
   // same state as `sector` (same host country), so they share one host currency
   // — normalize each to ₳ at the host rate. Summing LOCAL values across mixed
   // currencies would produce wildly wrong market totals (e.g. a JPY-host sector's
-  // ¥246M next to a USD-host sector's $204K). `unownedSectors.revenue` is already
-  // ₳-native, so it sums directly below.
+  // ¥246M next to a USD-host sector's $204K).
   const hostCode = resolveSectorHostCurrencyCode({ countryId: sectorCountryId }, corporation);
   const hostRate = fxRateForSectorHostFromMap(
     { countryId: sectorCountryId },
@@ -122,9 +114,8 @@ export function computeSectorMarketPosition(args: {
     0
   );
 
-  // Market = the TOTAL real revenue produced in this (state, sectorType) cell
-  //. No unowned pool, no GDP floor: a sector's share is its
-  // revenue over what every producer actually earns, and the shares add to 100%.
+  // Market = the total revenue produced in this (state, lane) bucket, so shares
+  // add to 100%.
   const effectiveMarket = Math.max(0, Math.round(totalOwnedRevenue));
   // Focal sector's own revenue in ₳ for market-share + competitor ratios.
   const sectorRevenueAnchor = siblingRevenueAnchorById.get(sector._id.toString()) ?? 0;
@@ -150,20 +141,12 @@ export function computeSectorMarketPosition(args: {
         // than swept into the NPP mass, because guessing the other way would
         // quietly hide a real rival.
         isNpp: isNppOwned(comp),
-        // Return revenue in ₳ so the UI's `formatAmountIn(value, sectorCurrency)`
-        // formats to the sector's country-home currency consistently across
-        // cross-currency competitors. Pre-fix this was LOCAL (each competitor's
-        // own corp currency), which compared incoherently against the anchor-
-        // denominated `totalMarket` / `unownedRevenue`.
+        // Anchor-denominated so cross-currency competitors format consistently
+        // in the sector's home currency.
         revenue: Math.round(revAnchor),
         marketShare: shareOf(revAnchor),
       };
     });
-
-  // No unclaimed market any more: every bit of the cell's revenue belongs to a
-  // real producer, so the "unowned" slice is gone.
-  const unownedRevenue = 0;
-  const unownedPercent = 0;
 
   // The defender's side of a sector split: what the strongest-marketing rival
   // in this market would take from this sector, and its odds, with the same
@@ -209,8 +192,6 @@ export function computeSectorMarketPosition(args: {
     marketShare,
     competitors,
     attackExposure,
-    unownedRevenue,
-    unownedPercent,
     siblingRevenueAnchorById,
   };
 }

@@ -21,7 +21,7 @@ export interface WorldsimCorporationBootstrapOptions {
 export interface WorldsimCorporationBootstrapResult {
   countriesSeeded: number;
   spawnedByCountry: Record<string, number>;
-  /** Requested slots that could not be filled from the remaining unowned pool. */
+  /** Requested slots that could not be spawned. */
   unfilledByCountry: Record<string, number>;
   /** Planned economies skipped BEFORE any spawn attempt (zero attempts, zero noise). */
   skippedBlocked: string[];
@@ -36,8 +36,8 @@ export interface WorldsimCorporationBootstrapResult {
 /**
  * Sim-only NPP corporation bootstrap for the headless world harness
  * (scripts/sim/runWorld.ts). Preset bootstrap may seed historical producers or
- * finance NPPs. This sim-only augmentation fills remaining producer slots from
- * conserved unowned capacity, once, using the production admin spawn tool.
+ * finance NPPs. This sim-only augmentation fills remaining producer slots at the
+ * standard opening size, once, using the production admin spawn tool.
  *
  * Eligibility is determined BEFORE any creation attempt, using the same
  * marketization-dial gate the production creation paths enforce
@@ -119,7 +119,6 @@ export async function bootstrapWorldsimCorporations(
             };
           }),
           perSectorCount: count,
-          limitToUnownedPool: true,
         });
         spawnedCount += spawned.length;
       }
@@ -127,7 +126,7 @@ export async function bootstrapWorldsimCorporations(
       const unfilled = missing.reduce((sum, { count }) => sum + count, 0) - spawnedCount;
       if (unfilled > 0) {
         result.unfilledByCountry[countryId] = unfilled;
-        log(`  ${countryId}: ${unfilled} requested NPP slots lacked unowned capacity`);
+        log(`  ${countryId}: ${unfilled} requested NPP slots could not be spawned`);
       }
       if (spawnedCount > 0) {
         log(`  ${countryId}: spawned ${spawnedCount} NPP corporations`);

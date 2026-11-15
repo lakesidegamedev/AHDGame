@@ -32,12 +32,6 @@ const FOLLOW_UP_STEPS: ChecklistStep[] = [
     linkLabel: "Politics · Elections",
   },
   {
-    title: "Seed unowned sectors",
-    desc: "Populate sector slots so the corporate economy has something to run on (auto re-seed only covers gates left on).",
-    href: "/control/economy/sector-seed",
-    linkLabel: "Economy · Sector Seed",
-  },
-  {
     title: "Review kill switches & feature gates",
     desc: "Registration, random events, transfers, and gates carry over — make sure the world posture matches the new iteration.",
     href: "/control/overview/dashboard",

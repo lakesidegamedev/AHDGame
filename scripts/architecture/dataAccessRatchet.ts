@@ -46,7 +46,6 @@ export const FRONT_DOOR_COLLECTIONS = [
   "gameConfig",
   "macroMetrics",
   "stateDemographics",
-  "unownedSectors",
   "statePolicies",
   "cabinetMembers",
   "stateDemographicTurnout",

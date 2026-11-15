@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError } from "@/lib/api/errors";
-import type { CorporateSector, State, UnownedSector } from "@/lib/db/types";
 import {
   OPERATING_SECTOR_TYPES,
   OPERATING_SECTOR_TYPE_LABELS,
@@ -23,16 +22,13 @@ import {
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { loadCountryPresentationOverrides } from "@/lib/country/countryIdentity";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export type SectorView = "unowned" | "owned" | "forSale";
 export type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
@@ -65,7 +61,7 @@ const PAGE_SIZE = 50;
 
 // GET /api/sectors — Global sector listing with filters
 // Query params:
-//   view=unowned|owned|forSale (default: unowned)
+//   view=owned|forSale (default: owned). view=unowned is accepted and returns an empty list.
 //   type=<OperatingSectorType> (optional filter)
 //   country=<CountryId> (optional filter)
 //   sort=revenue|type|state|country|margin|growth (default: revenue)
@@ -76,8 +72,11 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const sp = url.searchParams;
 
+    // `unowned` once listed stored market cells. Nothing is stored any more, so
+    // the request stays valid for older clients and answers with an empty list.
+    const requestedView = sp.get("view");
     const view: SectorView =
-      sp.get("view") === "owned" ? "owned" : sp.get("view") === "forSale" ? "forSale" : "unowned";
+      requestedView === "unowned" ? "unowned" : requestedView === "forSale" ? "forSale" : "owned";
 
     const requestedType = sp.get("type");
     const sectorTypeFilter = isOperatingSectorType(requestedType) ? requestedType : null;
@@ -168,100 +167,10 @@ export async function GET(request: Request) {
     // Load FX rates for anchor normalization
     const fxByCurrency = await loadFxRatesByCurrency(db);
 
-    // Command economies (USSR, East Germany, etc) run production through the
-    // state — an "unowned" market there isn't a private-capture opportunity.
-    // Computed once for the whole request; only the "unowned" view (and its
-    // count badge) consult it — owned/forSale sectors may legitimately be
-    // held by a National Corporation (SOE) in these countries.
-    // Derived from the states actually in play plus any explicit country filter,
-    // NOT from COUNTRY_ORDER: that list omits BLR, BAL and UKR, so asking it
-    // would never ask about the union republics and their unowned markets would
-    // be advertised as capture opportunities that `expandSector` then refuses.
-    // Harmless while those countries were unblocked; a real gap now they are not.
-    const commandEconomyBlockedCountries = await loadCommandEconomyBlockedCountries(db, [
-      ...new Set([...states.map((s) => s.countryId), ...(countryFilter ? [countryFilter] : [])]),
-    ]);
-    const blockedStateIds = states
-      .filter((s) => commandEconomyBlockedCountries.has(s.countryId))
-      .map((s) => s._id);
-
-    // The unowned view's scope, blocked-country handling included, so its rows
-    // and its badge are literally the same query. Filtering by a command economy
-    // yields nothing at all: leg two of `countryScopedFilter` would otherwise
-    // still surface a stateless row stamped with that country, which the badge
-    // (correctly) counts as zero.
-    const unownedScopedFilter: Record<string, unknown> =
-      filteredStateIds && commandEconomyBlockedCountries.has(countryFilter as CountryId)
-        ? { stateId: { $in: [] } }
-        : countryScopedFilter;
-
     const rows: SectorRow[] = [];
 
     if (view === "unowned") {
-      // Query persisted unowned sectors
-      const unownedFilter: Record<string, unknown> = {};
-      if (sectorTypeFilter) Object.assign(unownedFilter, operatingSectorFilter(sectorTypeFilter));
-      Object.assign(unownedFilter, unownedScopedFilter);
-
-      const unownedSectors = (
-        await unownedSectorsCollection(db)
-          .find(unownedFilter, {
-            projection: {
-              sectorType: 1,
-              industryModel: 1,
-              mediaDiscriminator: 1,
-              stateId: 1,
-              countryId: 1,
-              revenue: 1,
-            },
-          })
-          .toArray()
-      )
-        // NO stored-country fallback in the BLOCK test, deliberately, even though
-        // the row label below has one. The badge counts with
-        // `stateId $nin <blocked states>`, which knows nothing about a stored
-        // country, so falling back here would drop a row from the list that the
-        // badge still counted: badge N+1, list N. A pool row on a dissolved
-        // region belongs to no state and so is blocked by nobody, which is
-        // exactly the answer the count gives.
-        .filter(
-          (u) =>
-            !commandEconomyBlockedCountries.has(stateMap.get(u.stateId)?.countryId as CountryId)
-        );
-
-      for (const us of unownedSectors) {
-        const st = stateMap.get(us.stateId);
-        rows.push({
-          id: us._id.toString(),
-          sectorType: getOperatingSectorType(
-            us.sectorType,
-            us.industryModel,
-            us.mediaDiscriminator
-          ),
-          mediaDiscriminator: us.mediaDiscriminator ?? null,
-          sectorTypeLabel:
-            OPERATING_SECTOR_TYPE_LABELS[
-              getOperatingSectorType(us.sectorType, us.industryModel, us.mediaDiscriminator)
-            ],
-          stateId: us.stateId,
-          stateName: st?.name ?? us.stateId,
-          countryId: hostCountryOf(us.stateId, us.countryId),
-          countryName: countryNameOf(hostCountryOf(us.stateId, us.countryId)),
-          countryFlag: countryFlagOf(hostCountryOf(us.stateId, us.countryId)),
-          owned: false,
-          corporationId: null,
-          corporationName: null,
-          corporationSequentialId: null,
-          corporationLogoUrl: null,
-          revenue: Math.round(us.revenue),
-          revenueAnchor: Math.round(us.revenue),
-          margin: null,
-          growthRate: null,
-          workers: null,
-          forSale: false,
-          forSalePrice: null,
-        });
-      }
+      // Retired view: no rows.
     } else {
       // Owned or forSale — query corporateSectors
       const corpFilter: Record<string, unknown> = {};
@@ -390,22 +299,10 @@ export async function GET(request: Request) {
     const start = (clampedPage - 1) * PAGE_SIZE;
     const pageItems = rows.slice(start, start + PAGE_SIZE);
 
-    // Summary counts for tab badges. The unowned count excludes command-economy
-    // countries the same way the row query above does — an explicit country
-    // filter that itself points at a blocked country correctly counts to 0
-    // rather than falling back to the unfiltered total.
-    //
-    // Counted on the same state-first basis the rows and the filter use, so a
-    // badge can never disagree with the list under it.
-    const unownedCountFilter: Record<string, unknown> = filteredStateIds
-      ? { ...unownedScopedFilter }
-      : blockedStateIds.length > 0
-        ? { stateId: { $nin: blockedStateIds } }
-        : {};
+    // Summary counts for tab badges, on the same state-first basis the rows use.
     const corpCountFilter = { ...countryScopedFilter };
 
-    const [unownedCount, ownedCount, forSaleCount] = await Promise.all([
-      unownedSectorsCollection<Document>(db).countDocuments(unownedCountFilter),
+    const [ownedCount, forSaleCount] = await Promise.all([
       corporateSectorsCollection<Document>(db).countDocuments(corpCountFilter),
       corporateSectorsCollection<Document>(db).countDocuments({
         forSale: { $ne: null },
@@ -413,15 +310,14 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    // Under plants a market is entered by building, so the unowned view's
-    // revenue is a legacy pool figure, not an amount available to buy. The
-    // page labels it that way; room to build lives on the state board and the
-    // expansion screen.
-    const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-
     return NextResponse.json({
       view,
-      plantsMode,
+      ...(view === "unowned"
+        ? {
+            deprecated:
+              "view=unowned is retired: markets are entered by building, so there is no unowned list. Use view=owned or view=forSale.",
+          }
+        : {}),
       sort,
       dir,
       page: clampedPage,
@@ -429,7 +325,7 @@ export async function GET(request: Request) {
       totalItems,
       sectors: pageItems,
       counts: {
-        unowned: unownedCount,
+        unowned: 0,
         owned: ownedCount,
         forSale: forSaleCount,
       },

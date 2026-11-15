@@ -112,23 +112,17 @@ interface EconomySector {
   label: string;
   totalMarket: number;
   ownedRevenue: number;
-  unownedRevenue: number;
-  unownedPercent: number;
-  /** Plants tier: unmet demand in this market, output units per day. */
-  headroomUnits?: number | null;
+  /** Unmet demand in this market, output units per day. */
+  roomToBuildUnits?: number | null;
   /** "country" when that room is one figure shared across the whole country. */
-  headroomScope?: "state" | "country" | null;
-  splitCost: number;
-  estimatedCapture: number;
-  estimatedCapturePercent: number;
+  roomToBuildScope?: "state" | "country" | null;
   owners: SectorOwner[];
 }
 
 interface EconomyData {
   /**
-   * True under `marketSystemMode >= "plants"`. The unowned pool is presented as
-   * UNMET DEMAND in units there, because ₳ of "unowned revenue" is not a thing
-   * a player can buy any more — they build against the demand instead.
+   * True when capacity is the growth lever, so unmet demand in units is what a
+   * player builds against.
    */
   plantsMode?: boolean;
   stateId: string;
@@ -149,7 +143,6 @@ interface EconomyData {
     secondaryLabel: string;
     secondaryBonus: number;
   } | null;
-  totalMarketPerSector: number;
   sectors: EconomySector[];
   userCorporationId: string | null;
   userCorporationSectorType?: OperatingSectorType | null;
@@ -157,8 +150,6 @@ interface EconomyData {
   userLiquidCapitalAnchor?: number;
   /** MS charged by the owned-sector attack route. */
   attackMsCost?: number;
-  /** MS charged by the retired unowned split action in legacy worlds. */
-  splitMsCost: number;
   stateResources?: Partial<Record<ExtractableResource, number>> | null;
 }
 
@@ -186,10 +177,6 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
     validUrlSector ?? "financial"
   );
   const hasAppliedInitialSector = useRef(false);
-  const [splitting, setSplitting] = useState(false);
-  const [splitMsg, setSplitMsg] = useState("");
-  const [splitError, setSplitError] = useState("");
-  const [splitStrength, setSplitStrength] = useState<"full" | "half">("full");
   const [attackingId, setAttackingId] = useState<string | null>(null);
   const [attackMsg, setAttackMsg] = useState("");
   const [attackError, setAttackError] = useState("");
@@ -238,30 +225,6 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
     fetchEconomy();
   }, [fetchEconomy]);
   useGameEvents(() => void fetchEconomy(true), ["turn_complete", "market_tick"]);
-
-  async function handleSplit(strength: "full" | "half" = "full") {
-    setSplitting(true);
-    setSplitError("");
-    setSplitMsg("");
-    try {
-      const res = await fetch(`${regionApiSubUrl(countryId, stateId, "economy/attack")}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectorType: selectedType, splitStrength: strength }),
-      });
-      const result = await res.json();
-      if (res.ok) {
-        setSplitMsg(result.message);
-        fetchEconomy();
-      } else {
-        setSplitError(apiErrorText(result, "Split failed"));
-      }
-    } catch {
-      setSplitError("Network error");
-    } finally {
-      setSplitting(false);
-    }
-  }
 
   async function handleAttackSector(sectorId: string) {
     setAttackingId(sectorId);
@@ -370,9 +333,6 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
 
   const selectSector = (type: OperatingSectorType) => {
     setSelectedType(type);
-    setSplitStrength("full");
-    setSplitMsg("");
-    setSplitError("");
     setAttackMsg("");
     setAttackError("");
     setAdjustMsg("");
@@ -429,10 +389,8 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
           </span>
         </div>
         {/* Active Sectors — how many of this state's sectors anyone operates in.
-            Replaces a "Market Control" average that averaged 100 - unownedPercent
-            and so read 100.0% on every board under plants, empty sectors
-            included (ticket #1162). An average of per-sector leading shares
-            would be no more meaningful, so this reports occupancy instead. */}
+            Reports occupancy: an average of per-sector leading shares would not
+            mean much. */}
         <div className="flex min-w-max flex-1 flex-col justify-center px-4 py-2.5">
           <span className="block text-body-sm font-medium text-muted">Active sectors</span>
           <span className="mt-0.5 text-sm font-bold text-foreground tabular-nums">
@@ -582,7 +540,7 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
         {/* Market share pie chart */}
         <div className="mb-4 flex flex-col sm:flex-row items-center gap-4">
           <div className="shrink-0">
-            <MarketSharePie owners={pieOwners} unownedPercent={sector.unownedPercent} />
+            <MarketSharePie owners={pieOwners} />
           </div>
           <div className="flex-1 space-y-1.5 text-xs w-full">
             <div className="flex justify-between text-muted">
@@ -620,15 +578,6 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                 </span>
               </div>
             ))}
-            {sector.unownedPercent > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0 bg-muted/30" />
-                <span className="text-muted">Unowned</span>
-                <span className="ml-auto tabular-nums text-muted font-medium">
-                  {sector.unownedPercent.toFixed(1)}%
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -645,36 +594,19 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
               <span className="text-[10px] font-normal text-muted">/day</span>
             </span>
           </div>
-          {data.plantsMode ? (
-            // Under plants a market is entered by building, so the figure that
-            // matters is room to build, the same one the expansion screen shows.
-            // Legacy unowned revenue does not limit building and is not shown.
-            <div>
-              <Tooltip content={roomToBuildNote(sector.headroomScope)}>
-                <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
-                  Room to build
-                </span>
-              </Tooltip>
-              <span
-                className="text-sm font-bold text-foreground tabular-nums"
-                title={`${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
-              >
-                {roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })}
+          <div>
+            <Tooltip content={roomToBuildNote(sector.roomToBuildScope)}>
+              <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
+                Room to build
               </span>
-            </div>
-          ) : (
-            <div>
-              <Tooltip content={marketCurrencyNote}>
-                <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
-                  Unowned revenue
-                </span>
-              </Tooltip>
-              <span className="text-sm font-bold text-foreground tabular-nums">
-                {fmtMarket(sector.unownedRevenue)}
-                <span className="text-[10px] font-normal text-muted">/day</span>
-              </span>
-            </div>
-          )}
+            </Tooltip>
+            <span
+              className="text-sm font-bold text-foreground tabular-nums"
+              title={`${formatUnits(sector.roomToBuildUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
+            >
+              {roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })}
+            </span>
+          </div>
           <div>
             <span className="block text-body-sm font-medium text-muted">Corporations</span>
             <span className="text-sm font-bold text-foreground">{playerOwners.length}</span>
@@ -979,7 +911,7 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                               </span>{" "}
                               +{" "}
                               <span className="font-medium text-foreground">
-                                {data.attackMsCost ?? data.splitMsCost} MS
+                                {data.attackMsCost ?? 0} MS
                               </span>
                             </span>
                             {owner.attackEstimatedCapture != null &&
@@ -996,12 +928,12 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                             onClick={() => handleAttackSector(owner.sectorId)}
                             disabled={
                               attackingId === owner.sectorId ||
-                              data.userMarketingStrength < (data.attackMsCost ?? data.splitMsCost)
+                              data.userMarketingStrength < (data.attackMsCost ?? 0)
                             }
                             className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
                             title={
-                              data.userMarketingStrength < (data.attackMsCost ?? data.splitMsCost)
-                                ? `Need ${data.attackMsCost ?? data.splitMsCost} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
+                              data.userMarketingStrength < (data.attackMsCost ?? 0)
+                                ? `Need ${data.attackMsCost ?? 0} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
                                 : "Attack this sector to capture market share"
                             }
                           >
@@ -1028,70 +960,36 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
           );
         })()}
 
-        {/* Unowned sector card.
-            Under plants this stops being a pool of money sitting unclaimed and
-            becomes what it actually is: demand in this market that nobody is
-            currently serving. The pie still works — capacity shares and revenue
-            shares are the same partition of the same market — but the headline
-            number changes from "% share of a pool" to "units/day nobody is
-            meeting", because that is the figure a player sizes a build against. */}
-        {/* Under plants the route forces unownedRevenue to 0 for every sector
-            (#1145), so gating on it hid this panel on every board in a plants
-            world — the one panel that tells a player how much room a build has.
-            Gate on the figure the panel actually shows in each mode (#1162). */}
-        {(data.plantsMode ? (sector.headroomUnits ?? 0) > 0 : sector.unownedRevenue > 0) && (
+        {/* Room to build: demand in this market that nobody is currently
+            serving, in units/day, the figure a player sizes a build against. */}
+        {(sector.roomToBuildUnits ?? 0) > 0 && (
           <div className="rounded-xl border border-card-border bg-card overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-4 pb-3">
-              <span
-                className={`font-semibold text-sm ${data.plantsMode ? "text-foreground" : "text-muted"}`}
-              >
-                {data.plantsMode ? "Room to build" : "Unowned market"}
-              </span>
+              <span className="font-semibold text-sm text-foreground">Room to build</span>
               <div className="text-right">
-                <div
-                  className={`text-xl font-bold tabular-nums leading-none ${data.plantsMode ? "text-foreground" : "text-muted"}`}
-                >
-                  {data.plantsMode
-                    ? plantsOfRoom(sector.headroomUnits, { sectorType: sector.type }) >= 1
-                      ? plantsOfRoom(sector.headroomUnits, {
-                          sectorType: sector.type,
-                        }).toLocaleString("en-US")
-                      : "<1"
-                    : `${sector.unownedPercent.toFixed(1)}%`}
+                <div className="text-xl font-bold tabular-nums leading-none text-foreground">
+                  {plantsOfRoom(sector.roomToBuildUnits, { sectorType: sector.type }) >= 1
+                    ? plantsOfRoom(sector.roomToBuildUnits, {
+                        sectorType: sector.type,
+                      }).toLocaleString("en-US")
+                    : "<1"}
                 </div>
                 <div
                   className="text-body-sm font-medium text-muted mt-0.5"
-                  title={
-                    data.plantsMode
-                      ? `${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`
-                      : undefined
-                  }
+                  title={`${formatUnits(sector.roomToBuildUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
                 >
-                  {data.plantsMode ? `new ${facilityPlural(sector.type)}` : "share"}
+                  {`new ${facilityPlural(sector.type)}`}
                 </div>
               </div>
             </div>
 
             {data.plantsMode && (
               <p className="px-4 pb-3 text-xs leading-snug text-muted">
-                {sector.headroomScope === "country"
-                  ? `Buyers across this country want more than they are getting, enough to keep ${roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })} busy, after plants already under construction. Every state in the country shares this figure.`
-                  : `Buyers in ${data.stateName} want more than they are getting, enough to keep ${roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })} busy, after plants already under construction.`}
+                {sector.roomToBuildScope === "country"
+                  ? `Buyers across this country want more than they are getting, enough to keep ${roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })} busy, after plants already under construction. Every state in the country shares this figure.`
+                  : `Buyers in ${data.stateName} want more than they are getting, enough to keep ${roomInPlantsLabel(sector.roomToBuildUnits, { sectorType: sector.type })} busy, after plants already under construction.`}
               </p>
-            )}
-
-            {/* Stats row. Legacy pool revenue only: under plants it is always
-                zero here and is not what a build is sized against. */}
-            {!data.plantsMode && (
-              <div className="flex border-t border-card-border/40">
-                <div className="flex flex-col px-4 py-2.5">
-                  <span className="text-body-sm font-medium text-muted mb-1">Revenue</span>
-                  <span className="text-xs font-semibold text-muted tabular-nums leading-tight">
-                    {fmtMarket(sector.unownedRevenue)}/day
-                  </span>
-                </div>
-              </div>
             )}
 
             {/* Build-here affordance. Deep-links into the corp expand modal with
@@ -1107,117 +1005,6 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                 </Link>
               </div>
             )}
-
-            {/* Split controls — legacy unowned-pool capture. Hidden under plants;
-                capacity is built, not split. */}
-            {!data.plantsMode && data.userCorporationId && sector.splitCost > 0 && (
-              <div className="border-t border-card-border/50">
-                {splitError && (
-                  <div className="mx-4 mt-2 rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
-                    {splitError}
-                  </div>
-                )}
-                {splitMsg && (
-                  <div className="mx-4 mt-2 rounded-lg border border-success/30 bg-success/10 p-2 text-xs text-success">
-                    {splitMsg}
-                  </div>
-                )}
-
-                {/* Strength selector */}
-                <div className="px-4 pt-2">
-                  <div className="mb-1 text-body-sm font-medium text-muted">Split strength</div>
-                  <div className="flex gap-1 max-w-[200px]">
-                    <button
-                      onClick={() => setSplitStrength("full")}
-                      className={`flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                        splitStrength === "full"
-                          ? "border-primary/60 bg-primary/15 text-primary"
-                          : "border-card-border/60 bg-background text-muted hover:text-foreground"
-                      }`}
-                    >
-                      Full
-                    </button>
-                    <button
-                      onClick={() => setSplitStrength("half")}
-                      className={`flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                        splitStrength === "half"
-                          ? "border-primary/60 bg-primary/15 text-primary"
-                          : "border-card-border/60 bg-background text-muted hover:text-foreground"
-                      }`}
-                    >
-                      Half
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-4 px-4 py-2">
-                  <div className="flex items-center gap-3 text-xs text-muted flex-wrap">
-                    <span>
-                      Cost:{" "}
-                      <span className="text-foreground font-medium">
-                        {formatAmount(
-                          splitStrength === "half"
-                            ? Math.round(sector.splitCost * 0.5)
-                            : sector.splitCost
-                        )}
-                      </span>{" "}
-                      +{" "}
-                      <span className="text-foreground font-medium">
-                        {splitStrength === "half"
-                          ? Math.max(1, Math.floor(data.splitMsCost * 0.5))
-                          : data.splitMsCost}{" "}
-                        MS
-                      </span>
-                    </span>
-                    <span>
-                      Est. capture:{" "}
-                      <span className="text-success font-medium">
-                        {formatAmount(
-                          splitStrength === "half"
-                            ? Math.round(sector.estimatedCapture * 0.5)
-                            : sector.estimatedCapture
-                        )}
-                        /day
-                      </span>
-                      {sector.unownedRevenue > 0 && (
-                        <span className="text-muted ml-1">
-                          (
-                          {Math.round(
-                            ((splitStrength === "half"
-                              ? Math.round(sector.estimatedCapture * 0.5)
-                              : sector.estimatedCapture) /
-                              sector.unownedRevenue) *
-                              100
-                          )}
-                          % of unowned)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleSplit(splitStrength)}
-                    disabled={
-                      splitting ||
-                      data.userMarketingStrength <
-                        (splitStrength === "half"
-                          ? Math.max(1, Math.floor(data.splitMsCost * 0.5))
-                          : data.splitMsCost)
-                    }
-                    className="rounded border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-40 shrink-0"
-                    title={
-                      data.userMarketingStrength <
-                      (splitStrength === "half"
-                        ? Math.max(1, Math.floor(data.splitMsCost * 0.5))
-                        : data.splitMsCost)
-                        ? `Need ${splitStrength === "half" ? Math.max(1, Math.floor(data.splitMsCost * 0.5)) : data.splitMsCost} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
-                        : undefined
-                    }
-                  >
-                    {splitting ? "Splitting..." : `Split${splitStrength !== "full" ? " Half" : ""}`}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1226,8 +1013,8 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
             available when there is no untapped-market card to carry it. */}
         {data.plantsMode &&
           data.userCorporationId &&
-          sector.headroomUnits != null &&
-          sector.headroomUnits <= 0 && (
+          sector.roomToBuildUnits != null &&
+          sector.roomToBuildUnits <= 0 && (
             <div className="rounded-xl border border-card-border bg-card px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -1256,7 +1043,7 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
         )}
 
         {/* Empty state */}
-        {sector.owners.length === 0 && sector.unownedRevenue === 0 && (
+        {sector.owners.length === 0 && (
           <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
             No market activity in this sector.
           </div>
@@ -1391,15 +1178,12 @@ function splitNppOwners(owners: SectorOwner[]): {
 /**
  * Leading corporation's share of a sector, or null when nobody operates there.
  *
- * Do not derive this from `unownedPercent`: it is hardcoded to 0 under plants,
- * so 100 - unownedPercent reads as total control in every sector, including
- * empty ones.
  */
-/** Tooltip for the plants-tier room-to-build figure. */
+/** Tooltip for the room-to-build figure. */
 function roomToBuildNote(scope: "state" | "country" | null | undefined): string {
   return scope === "country"
-    ? "Demand buyers in this country are not getting, less plants already under construction. Shared by every state in the country, and the same figure the expansion screen shows. Legacy unowned revenue does not limit building."
-    : "Demand buyers in this state are not getting, less plants already under construction. The same figure the expansion screen shows. Legacy unowned revenue does not limit building.";
+    ? "Demand buyers in this country are not getting, less plants already under construction. Shared by every state in the country, and the same figure the expansion screen shows."
+    : "Demand buyers in this state are not getting, less plants already under construction. The same figure the expansion screen shows.";
 }
 
 function largestSharePercent(owners: { marketShare: number }[]): number | null {
@@ -1407,20 +1191,14 @@ function largestSharePercent(owners: { marketShare: number }[]): number | null {
   return owners.reduce((max, o) => Math.max(max, o.marketShare), 0);
 }
 
-function MarketSharePie({
-  owners,
-  unownedPercent,
-}: {
-  owners: SectorOwner[];
-  unownedPercent: number;
-}) {
+function MarketSharePie({ owners }: { owners: SectorOwner[] }) {
   const size = 120;
   const radius = 48;
   const cx = size / 2;
   const cy = size / 2;
   const strokeWidth = 24;
 
-  // Build segments: owners + unowned
+  // Build segments: one per owner
   const segments: { percent: number; color: string; label: string }[] = [];
   owners.forEach((owner, i) => {
     if (owner.marketShare > 0) {
@@ -1431,13 +1209,6 @@ function MarketSharePie({
       });
     }
   });
-  if (unownedPercent > 0) {
-    segments.push({
-      percent: unownedPercent,
-      color: "#6b7280",
-      label: "Unowned",
-    });
-  }
 
   // Calculate SVG arc paths
   const circumference = 2 * Math.PI * radius;
@@ -1474,11 +1245,6 @@ function MarketSharePie({
         className="fill-foreground text-sm font-bold"
         fontSize="14"
       >
-        {/* Summed owner shares, not 100 - unownedPercent: under plants the
-            latter is always 100 because unownedPercent is hardcoded to 0, so an
-            empty pie with no segments still read "100% owned" (#1162). This
-            works unchanged in legacy split worlds, where the owner shares sum to
-            exactly 100 - unownedPercent. */}
         {owners.reduce((sum, o) => sum + o.marketShare, 0).toFixed(0)}%
       </text>
       <text x={cx} y={cy + 10} textAnchor="middle" className="fill-muted text-[9px]" fontSize="9">

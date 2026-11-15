@@ -35,7 +35,6 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
@@ -348,16 +347,15 @@ export async function finalizeResetGameWorld(
     );
   }
 
-  // Orphan region-keyed row purge. `unownedSectors` and `regionDemographics` are
-  // manifest `reference` collections the runtime sweep never touches, and their
-  // seeders are upsert-only fills over the CURRENT `states` roster, so a preset
-  // switch strands every row from the outgoing region scheme. Stale ids of this
+  // Orphan region-keyed row purge. `regionDemographics` is a manifest
+  // `reference` collection the runtime sweep never touches, and its seeder is an
+  // upsert-only fill over the CURRENT `states` roster, so a preset switch
+  // strands every row from the outgoing region scheme. Stale ids of this
   // shape have crashed the corporation turn.
   //
   // Runs after every region seeder above, so `states` is the final roster.
-  // `regionDemographics._id` IS the region id (matches `states._id`);
-  // `unownedSectors` keys on `stateId`. Guarded on a non-empty roster so a
-  // half-failed seed can never empty either collection. Region rows for
+  // `regionDemographics._id` IS the region id (matches `states._id`). Guarded on
+  // a non-empty roster so a half-failed seed can never empty the collection. Region rows for
   // countries the new preset does not seed at all go first, so the orphan
   // sweep below sees the final roster.
   const absentPurge = await purgeAbsentCountryRegions(db, preset);
@@ -372,12 +370,8 @@ export async function finalizeResetGameWorld(
       .find({}, { projection: { _id: 1 } })
       .toArray()
   ).map((s) => s._id as string);
-  let orphanUnownedSectorsDeleted = 0;
   let orphanRegionDemographicsDeleted = 0;
   if (seededStateIds.length > 0) {
-    orphanUnownedSectorsDeleted = (
-      await unownedSectorsCollection<Document>(db).deleteMany({ stateId: { $nin: seededStateIds } })
-    ).deletedCount;
     orphanRegionDemographicsDeleted =
       // Typed on `_id: string` — this collection keys on the region id, not the
       // default ObjectId, so an untyped handle rejects the string `$nin`.
@@ -386,10 +380,10 @@ export async function finalizeResetGameWorld(
           _id: { $nin: seededStateIds },
         })
       ).deletedCount;
-    if (orphanUnownedSectorsDeleted > 0 || orphanRegionDemographicsDeleted > 0) {
+    if (orphanRegionDemographicsDeleted > 0) {
       logCollector(
-        `Purged orphan region rows: ${orphanUnownedSectorsDeleted} unownedSectors, ` +
-          `${orphanRegionDemographicsDeleted} regionDemographics (regions absent from the ${preset} roster).`
+        `Purged orphan region rows: ${orphanRegionDemographicsDeleted} regionDemographics ` +
+          `(regions absent from the ${preset} roster).`
       );
     }
   }

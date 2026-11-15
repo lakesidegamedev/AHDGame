@@ -16,8 +16,7 @@ export interface SectorBoardTile {
   totalMarket: number;
   /**
    * Leading corporation's share of the market, 0-100, or 0 when nobody
-   * operates here. Was the corporate-owned share, which under plants is always
-   * 100 because the unowned pool is out of the denominator (ticket #1162).
+   * operates here.
    */
   ownedPercent: number;
   /** Regional specialization mark (primary/secondary + margin bonus in pp). */

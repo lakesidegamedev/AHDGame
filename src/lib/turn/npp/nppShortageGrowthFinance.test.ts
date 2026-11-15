@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  uniformDemandSignals,
+} from "./__fixtures__/marketCandidates";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { ceoArchetypeModifiers } from "../ceoArchetype";
 import type { NppCorpDecisionContext } from "./corpDecisionTypes";
@@ -64,14 +69,7 @@ function decide(
       products: [{ commodity: "retail", book: "US", deliveredUnits: capacityPerTurn }],
     },
   } as unknown as CorporateSector;
-  const pool = {
-    _id: new ObjectId(),
-    countryId: "US",
-    stateId: "NY",
-    sectorType: "retail",
-    revenue: 100_000,
-    headroomUnits: 1_000,
-  } as UnownedSector;
+  const pool = candidate({ stateId: "NY", sectorType: "retail" });
   const ctx: NppCorpDecisionContext = {
     corp,
     groupRootId: "root",
@@ -91,15 +89,22 @@ function decide(
         }
       : {}),
   };
-  const decision = makeNppCorpDecision(ctx, new Map([["US", [pool]]]), new Set(), () => 2, {
-    enabled: true,
-    eraUnitScale: 1,
-    year: CAPACITY_ANCHOR_YEAR,
-    preset: "2019-default",
-    primeRateOf: () => 0,
-    costOfLivingOf: () => null,
-    ...(options.floorHold ? { holdExpansionAtCashFloor: true } : {}),
-  });
+  const decision = makeNppCorpDecision(
+    ctx,
+    candidatesByCountry([pool]),
+    new Set(),
+    () => 2,
+    {
+      enabled: true,
+      eraUnitScale: 1,
+      year: CAPACITY_ANCHOR_YEAR,
+      preset: "2019-default",
+      primeRateOf: () => 0,
+      costOfLivingOf: () => null,
+      ...(options.floorHold ? { holdExpansionAtCashFloor: true } : {}),
+    },
+    uniformDemandSignals(1000)
+  );
   return { decision, cash };
 }
 

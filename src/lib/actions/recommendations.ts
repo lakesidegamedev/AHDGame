@@ -1,7 +1,6 @@
 import { regionUrl } from "@/lib/urls";
 // src/lib/actions/recommendations.ts
 import type { Character, PartyBudget, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
-import type { CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { orgBuildCashPrice } from "@/lib/politicalStrength/buildOrgFunding";
 import { BUILD_ORG_BASE_PS_COST } from "@/lib/politicalStrength/strengthConstants";
@@ -56,30 +55,10 @@ export interface ActionRecommendation {
     targetDemographic?: { category: string; group: string };
     estimatedCost: { ap: number; funds: number };
     estimatedBenefit: string;
-    targetUnownedRevenue?: number; // For unowned sector opportunities
     targetPartyName?: string; // Human-readable party name
   };
   link: string; // Deep link to relevant page
   expiresAt?: number; // Turn number when recommendation expires
-}
-
-interface StateEconomySector {
-  type: string;
-  label: string;
-  totalMarket: number;
-  ownedRevenue: number;
-  unownedRevenue: number;
-  unownedPercent: number;
-  splitCost: number;
-  estimatedCapture: number;
-  estimatedCapturePercent: number;
-}
-
-export interface StateEconomyData {
-  stateId: string;
-  stateName: string;
-  countryId: CountryId;
-  sectors: StateEconomySector[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -376,119 +355,6 @@ export function checkStatThresholds(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Unowned Sector Opportunities
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface UnownedSectorOpportunity {
-  sectorType: string;
-  sectorLabel: string;
-  stateId: string;
-  stateName: string;
-  countryId: CountryId;
-  unownedRevenue: number;
-  unownedPercent: number;
-  splitCost: number;
-  estimatedCapturePercent: number;
-}
-
-/**
- * Find and consolidate large unowned sector opportunities.
- * Returns top 5 largest unowned sectors globally, filtered by user's corp types.
- */
-export function findUnownedOpportunities(
-  economyData: StateEconomyData[],
-  character: Character,
-  userCorpSectorTypes: string[] = [] // Primary + secondary types from user's corporations
-): ActionRecommendation[] {
-  const allOpportunities: UnownedSectorOpportunity[] = [];
-
-  // Collect all unowned sectors from all states
-  for (const economy of economyData) {
-    for (const sector of economy.sectors) {
-      // Only include sectors matching user's corp types
-      if (userCorpSectorTypes.length > 0 && !userCorpSectorTypes.includes(sector.type)) {
-        continue;
-      }
-
-      // Only include significant opportunities (>30% unowned or >$100M)
-      const isSignificant = sector.unownedPercent > 30 || sector.unownedRevenue > 100_000_000;
-
-      if (isSignificant && sector.unownedRevenue > 0) {
-        allOpportunities.push({
-          sectorType: sector.type,
-          sectorLabel: sector.label,
-          stateId: economy.stateId,
-          stateName: economy.stateName,
-          countryId: economy.countryId,
-          unownedRevenue: sector.unownedRevenue,
-          unownedPercent: Math.round(sector.unownedPercent * 100) / 100,
-          splitCost: Math.round(sector.splitCost / 1_000_000) * 1_000_000, // Round to nearest $1M
-          estimatedCapturePercent: Math.round(sector.estimatedCapturePercent * 100) / 100,
-        });
-      }
-    }
-  }
-
-  // Sort by unowned revenue (largest first)
-  allOpportunities.sort((a, b) => b.unownedRevenue - a.unownedRevenue);
-
-  // Take top 5
-  const top5 = allOpportunities.slice(0, 5);
-
-  // Group by sector type for consolidated recommendations
-  const byType = new Map<string, UnownedSectorOpportunity[]>();
-  for (const opp of top5) {
-    const existing = byType.get(opp.sectorType) ?? [];
-    existing.push(opp);
-    byType.set(opp.sectorType, existing);
-  }
-
-  const recommendations: ActionRecommendation[] = [];
-
-  // Create one consolidated recommendation per sector type
-  for (const [sectorType, opportunities] of byType.entries()) {
-    const totalUnowned = opportunities.reduce((sum, o) => sum + o.unownedRevenue, 0);
-    const states = opportunities.map((o) => o.stateName).join(", ");
-
-    // Format large numbers appropriately (B for billions, M for millions)
-    const formatMoney = (value: number): string => {
-      if (value >= 1_000_000_000) {
-        return `$${(value / 1_000_000_000).toFixed(2)}B`;
-      } else if (value >= 1_000_000) {
-        return `$${(value / 1_000_000).toFixed(2)}M`;
-      } else {
-        return `$${value.toLocaleString()}`;
-      }
-    };
-
-    const topOpp = opportunities[0];
-    const countryPath = topOpp.countryId.toLowerCase();
-    recommendations.push({
-      id: `unowned-consolidated-${sectorType}-${character._id.toString()}`,
-      priority: opportunities.length >= 3 ? "high" : "medium",
-      category: "market-opportunity",
-      title: `Split Unowned ${topOpp.sectorLabel} Sectors`,
-      why: `${opportunities.length} state${opportunities.length > 1 ? "s" : ""} with ${formatMoney(totalUnowned)} unowned ${topOpp.sectorLabel.toLowerCase()} (${states}). Top opportunity: ${topOpp.stateName} (${formatMoney(topOpp.unownedRevenue)}, ${topOpp.unownedPercent}% unowned).`,
-      action: {
-        type: "split",
-        targetState: topOpp.stateId,
-        targetStateName: topOpp.stateName,
-        targetSectorType: sectorType as OperatingSectorType,
-        estimatedCost: {
-          ap: 0,
-          funds: topOpp.splitCost,
-        },
-        estimatedBenefit: `${topOpp.estimatedCapturePercent}% market share per split`,
-        targetUnownedRevenue: topOpp.unownedRevenue,
-      },
-      link: `${regionUrl(countryPath, topOpp.stateId.toUpperCase())}?tab=economy&sector=${sectorType}`,
-    });
-  }
-
-  return recommendations;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Competitive Market Position
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -630,8 +496,6 @@ export function checkPartyActions(
 
 interface GenerateRecommendationsInput {
   character: Character;
-  homeStateEconomy?: StateEconomyData;
-  allStateEconomies?: StateEconomyData[];
   party?: PoliticalParty | null;
   partyBudget?: PartyBudget | null;
   statePartyOrg?: StatePartyOrg | null;
@@ -649,12 +513,6 @@ interface GenerateRecommendationsInput {
   hasVoted?: boolean; // Whether the player has voted on any bill
   hasActiveCandidacy?: boolean; // Whether the player has an active election candidacy
   forexEnabled?: boolean;
-  /**
-   * Plants tier: market splitting is retired, so every "split the unowned
-   * pool" recommendation is advice for a control the player no longer has.
-   * Capacity is the growth lever there instead.
-   */
-  plantsEnabled?: boolean;
 }
 
 /**
@@ -665,19 +523,16 @@ export function generateRecommendations(
 ): ActionRecommendation[] {
   const {
     character,
-    allStateEconomies,
     party,
     partyBudget,
     statePartyOrg,
     marketPositions,
-    userCorpSectorTypes = [],
     corporations = [],
     vacantPositions = [],
     partyName,
     hasVoted = false,
     hasActiveCandidacy = false,
     forexEnabled = false,
-    plantsEnabled = false,
   } = input;
 
   const countryPath = character.countryId.toLowerCase();
@@ -689,41 +544,6 @@ export function generateRecommendations(
 
   // 2. Stat-based recommendations (always included)
   recommendations.push(...checkStatThresholds(character, character.homeState, forexEnabled));
-
-  // Unowned sector opportunities (consolidated, filtered by user's corp types).
-  // Skipped under plants: splitting is retired there, so targets would 403.
-  if (!plantsEnabled && allStateEconomies && allStateEconomies.length > 0) {
-    recommendations.push(
-      ...findUnownedOpportunities(allStateEconomies, character, userCorpSectorTypes)
-    );
-
-    // National opportunities (states with >50% unowned in any sector) - only for matching types
-    for (const economy of allStateEconomies) {
-      if (economy.stateId !== character.homeState && userCorpSectorTypes.length > 0) {
-        for (const sector of economy.sectors) {
-          if (sector.unownedPercent > 50 && sector.unownedRevenue > 1_000_000_000) {
-            recommendations.push({
-              id: `unowned-national-${economy.stateId}-${sector.type}-${character._id.toString()}`,
-              priority: "low",
-              category: "market-opportunity",
-              title: `National Opportunity: ${sector.label} in ${economy.stateName}`,
-              why: `${sector.label} in ${economy.stateName} has ${sector.unownedPercent.toFixed(1)}% unowned ($${(sector.unownedRevenue / 1_000_000_000).toFixed(1)}B). Consider expanding operations.`,
-              action: {
-                type: "split",
-                targetState: economy.stateId,
-                targetStateName: economy.stateName,
-                targetSectorType: sector.type as OperatingSectorType,
-                estimatedCost: { ap: 0, funds: sector.splitCost },
-                estimatedBenefit: `${sector.estimatedCapturePercent.toFixed(1)}% market share`,
-                targetUnownedRevenue: sector.unownedRevenue,
-              },
-              link: `${regionUrl(economy.countryId.toLowerCase(), economy.stateId.toUpperCase())}?tab=economy`,
-            });
-          }
-        }
-      }
-    }
-  }
 
   // 4. Competitive market position
   if (marketPositions && marketPositions.length > 0) {
@@ -784,7 +604,7 @@ export function generateRecommendations(
       priority: "medium",
       category: "market-opportunity",
       title: "Found Your First Corporation",
-      why: "You don't own any corporations yet. Founding a corporation lets you capture unowned market sectors and earn passive income.",
+      why: "You don't own any corporations yet. Founding a corporation lets you build plants, sell into the market and earn passive income.",
       action: {
         type: "foundCorporation",
         estimatedCost: { ap: 0, funds: 1_000_000 }, // Approximate founding cost

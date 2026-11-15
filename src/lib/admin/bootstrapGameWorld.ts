@@ -8,6 +8,7 @@ import { withCampaignRules } from "@/lib/campaignTargeting/rules";
 import type { Db } from "mongodb";
 import type { ResetRunRecord } from "@/lib/admin/resetRunRecord";
 import { runSeed } from "@/lib/admin/seed";
+import { reconcileCommandEconomySoes } from "@/lib/admin/seed/reconcileCommandEconomySoes";
 import { seedCohortVectors } from "@/lib/admin/seed/seedCohortVectors";
 import { initializeGameState, ensurePerpetualElections, ensureUKElections } from "@/lib/turnSystem";
 import {
@@ -66,7 +67,6 @@ import {
   seedUkBudgets,
   seedSeats,
   seedPartyBudgets,
-  seedUnownedSectors,
   seedUnions,
   seedSovereignBondInstruments,
   seedScotus,
@@ -234,7 +234,6 @@ import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { seatsCollection } from "@/lib/db/repositories/seats";
 import { partyBudgetCollection } from "@/lib/db/repositories/partyBudget";
 import { federationSettlementApplicationsCollection } from "@/lib/db/repositories/federationSettlementApplications";
@@ -647,7 +646,7 @@ export async function seedAllCountryData(
 
   // Normalize regional gdp so Σ state.gdp matches each country's authored
   // national GDP (pre-1999 eras only, tolerance-guarded). Must run after every
-  // region seeder above and BEFORE the state-budget seeders / seedUnownedSectors,
+  // region seeder above and BEFORE the state-budget seeders,
   // which derive absolute values from state.gdp.
   const { reconcileStateGdpWithNationalSeeds } = await import("./seed/reconcileStateGdp");
   await reconcileStateGdpWithNationalSeeds(db, log, preset);
@@ -858,12 +857,11 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // by this point. Seed registration shares + non-party pool from the
   // curated lane templates for the active preset. Unknown presets skip.
   await seedRegistrationLanes(db, preset, log);
-  // Refresh markets on a hard reference reset so they track the GDP the region
-  // seeders just $set above. Without this, a preset/GDP switch on an existing
-  // world leaves the $setOnInsert market docs frozen at the old scale (the
-  // 2026-05 1991-reset bug). A soft idempotent fill (resetReference=false)
-  // stays insert-only so any captured pools on a live world are preserved.
-  await guarded("seedUnownedSectors", () => seedUnownedSectors(db, log, 1, preset, resetReference));
+  // Command-economy state enterprises need plant coverage in every sector, so
+  // they are completed once the region GDP seeders above have run.
+  await guarded("reconcileCommandEconomySoes", async () => {
+    await reconcileCommandEconomySoes(db, { preset, log });
+  });
   await guarded("seedUnions", () => seedUnions(db, log, preset, resetReference));
   await seedIndexes(db, log);
   await seedCountyMapData(log);
@@ -885,12 +883,10 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   // `initializeGameState` running first; every caller already seeds the doc.
   await guarded("seedForex", () => seedForex(db, log, preset));
 
-  // Seed NPP-run market corporations now that the unowned-sector pool, commodity
-  // prices, and forex all exist. Player-enabled countries get 1 corp/sector,
+  // Seed NPP-run market corporations now that commodity prices and forex exist. Player-enabled countries get 1 corp/sector,
   // econ-preview market democracies get 2/sector; planned economies are excluded
-  // (their SOEs come from the budget seeders). MUST stay below seedUnownedSectors
-  // + seedForex (each corp captures from the unowned pool and converts through
-  // getCorpFxRate) and above generateStockExchangeSnapshots so the corps appear
+  // (their SOEs come from the budget seeders). MUST stay below seedForex (each
+  // corp converts through getCorpFxRate) and above generateStockExchangeSnapshots so the corps appear
   // in the initial exchange snapshot. Runs before the seedOnly gate so seed-only
   // worlds are populated too — corps are economic, not political.
   await guarded("seedNppCorporations", async () => {
@@ -994,12 +990,6 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
       "2026-06-01-index-fund-seed",
       "2026-06-02-index-fund-real-bonds",
       "2026-09-03-equity-market-pools",
-      // Derived headroomUnits on every unowned pool. seedUnownedSectors (above)
-      // now writes the field inline, so on a clean bootstrap this is a no-op;
-      // it stays here to cover pools created by paths that do not go through
-      // that seeder (nationalization redirects, restores) and to keep a fresh
-      // world byte-identical to a backfilled one. Idempotent + derived-only.
-      "2026-08-01-backfill-unowned-headroom-units",
     ],
   });
   log(`Bootstrap migrations: ran ${indexFundBootstrap.ranIds.length}`);
@@ -1451,21 +1441,15 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     }
   }
 
-  const [
-    stateCount,
-    seatCount,
-    electionCount,
-    officialCount,
-    partyBudgetCount,
-    unownedSectorCount,
-  ] = await Promise.all([
-    statesCollection<Document>(db).countDocuments(),
-    seatsCollection<Document>(db).countDocuments(),
-    electionsCollection<Document>(db).countDocuments(),
-    electedOfficialsCollection<Document>(db).countDocuments(),
-    partyBudgetCollection<Document>(db).countDocuments(),
-    unownedSectorsCollection<Document>(db).countDocuments(),
-  ]);
+  const [stateCount, seatCount, electionCount, officialCount, partyBudgetCount] = await Promise.all(
+    [
+      statesCollection<Document>(db).countDocuments(),
+      seatsCollection<Document>(db).countDocuments(),
+      electionsCollection<Document>(db).countDocuments(),
+      electedOfficialsCollection<Document>(db).countDocuments(),
+      partyBudgetCollection<Document>(db).countDocuments(),
+    ]
+  );
 
   const summary = {
     states: stateCount,
@@ -1473,7 +1457,6 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
     elections: electionCount,
     electedOfficials: officialCount,
     partyBudget: partyBudgetCount,
-    unownedSectors: unownedSectorCount,
   };
 
   log("Bootstrap summary:");
@@ -1482,7 +1465,6 @@ export async function bootstrapGameWorld(options: BootstrapOptions) {
   log(`- elections: ${summary.elections}`);
   log(`- electedOfficials: ${summary.electedOfficials}`);
   log(`- partyBudget: ${summary.partyBudget}`);
-  log(`- unownedSectors: ${summary.unownedSectors}`);
 
   return summary;
 }

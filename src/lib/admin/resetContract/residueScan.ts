@@ -93,7 +93,6 @@ const YEAR_GUARDS = [
 ] as const;
 
 const TURN_GUARDS = [
-  "lastAutoSeedTurn",
   "lastExtractionAutoStrategyTurn",
   "coldWarEndedTurn",
   "buildDeliverySettledTurn",

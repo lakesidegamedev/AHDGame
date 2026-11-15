@@ -45,8 +45,8 @@ vi.mock("@/lib/corporations/releaseHeldSharesToFloat", () => ({
 vi.mock("@/lib/corporations/distributeCrossEquityInKind", () => ({
   distributeCrossEquityInKind: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/corporations/restoreSectorsToUnowned", () => ({
-  restoreSectorsToUnowned: vi.fn().mockResolvedValue(undefined),
+vi.mock("@/lib/corporations/deleteDisposedSectors", () => ({
+  deleteDisposedSectors: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/financialTxLog/emit", () => ({
   emitTxBulk: vi.fn().mockResolvedValue(undefined),

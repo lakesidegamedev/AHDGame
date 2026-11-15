@@ -11,7 +11,7 @@ import { useAuthMe } from "@/contexts/AuthDataContext";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { regionUrl } from "@/lib/urls";
 
-type SectorView = "unowned" | "owned" | "forSale";
+type SectorView = "owned" | "forSale";
 type SectorSort = "revenue" | "type" | "state" | "country" | "margin" | "growth";
 
 type SectorRow = {
@@ -39,15 +39,13 @@ type SectorRow = {
 
 type SectorsResponse = {
   view: SectorView;
-  /** Plants worlds enter markets by building; unowned revenue is a legacy figure. */
-  plantsMode?: boolean;
   sort: SectorSort;
   dir: "asc" | "desc";
   page: number;
   totalPages: number;
   totalItems: number;
   sectors: SectorRow[];
-  counts: { unowned: number; owned: number; forSale: number };
+  counts: { owned: number; forSale: number };
   filters: {
     sectorTypes: { value: OperatingSectorType; label: string }[];
     countries: { value: CountryId; label: string; flag: string }[];
@@ -55,7 +53,6 @@ type SectorsResponse = {
 };
 
 const VIEW_TABS: { key: SectorView; label: string }[] = [
-  { key: "unowned", label: "Unowned" },
   { key: "owned", label: "Owned" },
   { key: "forSale", label: "For sale" },
 ];
@@ -81,7 +78,7 @@ export default function SectorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [view, setView] = useState<SectorView>("unowned");
+  const [view, setView] = useState<SectorView>("owned");
   const [sort, setSort] = useState<SectorSort>("revenue");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [typeFilter, setTypeFilter] = useState<string>("");
@@ -272,7 +269,7 @@ export default function SectorsPage() {
           {/* Sector cards grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.sectors.map((s) => (
-              <SectorCard key={s.id} sector={s} view={view} plantsMode={data.plantsMode === true} />
+              <SectorCard key={s.id} sector={s} view={view} />
             ))}
           </div>
 
@@ -312,23 +309,10 @@ export default function SectorsPage() {
   );
 }
 
-function SectorCard({
-  sector,
-  view,
-  plantsMode,
-}: {
-  sector: SectorRow;
-  view: SectorView;
-  plantsMode: boolean;
-}) {
-  // Under plants nobody buys into the unowned pool any more: a market is
-  // entered by building a plant, sized by room to build. Say so, so this
-  // figure is not read as the amount available to a new entrant.
-  const legacyPool = view === "unowned" && plantsMode;
-  const sectorHref =
-    view !== "unowned" && sector.corporationId
-      ? `/corporation/${sector.corporationSequentialId ?? sector.corporationId}/sector/${sector.id}`
-      : regionUrl(sector.countryId, sector.stateId);
+function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
+  const sectorHref = sector.corporationId
+    ? `/corporation/${sector.corporationSequentialId ?? sector.corporationId}/sector/${sector.id}`
+    : regionUrl(sector.countryId, sector.stateId);
 
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden transition-colors hover:bg-card/80">
@@ -351,16 +335,14 @@ function SectorCard({
             <div className="text-lg font-bold tabular-nums leading-none text-foreground">
               ₳{formatNumber(sector.revenueAnchor)}
             </div>
-            <div className="text-body-sm font-medium text-muted mt-0.5">
-              {legacyPool ? "unclaimed legacy revenue /day" : "/day"}
-            </div>
+            <div className="text-body-sm font-medium text-muted mt-0.5">/day</div>
           </div>
         </div>
       </Link>
 
       {/* Stats row */}
       <div className="flex border-t border-card-border/40 divide-x divide-card-border/40">
-        {view !== "unowned" && sector.corporationId && (
+        {sector.corporationId && (
           <div className="flex flex-col px-4 py-2.5 min-w-0">
             <span className="text-body-sm font-medium text-muted mb-1">Corporation</span>
             <div className="flex items-center gap-2.5">
@@ -377,14 +359,6 @@ function SectorCard({
                 {sector.corporationName}
               </Link>
             </div>
-          </div>
-        )}
-        {view === "unowned" && (
-          <div className="flex flex-col px-4 py-2.5">
-            <span className="text-body-sm font-medium text-muted mb-1">Status</span>
-            <span className="text-xs text-muted leading-tight">
-              {legacyPool ? "Enter by building a plant" : "Available"}
-            </span>
           </div>
         )}
         {sector.margin != null && (
@@ -418,7 +392,7 @@ function SectorCard({
       </div>
 
       {/* Footer link */}
-      {view !== "unowned" && sector.corporationId && (
+      {sector.corporationId && (
         <div className="border-t border-card-border/50 px-4 py-2">
           <Link
             href={`/corporation/${sector.corporationSequentialId ?? sector.corporationId}/sector/${sector.id}`}

@@ -2,14 +2,9 @@
 import * as Sentry from "@sentry/nextjs";
 import { type ObjectId, type AnyBulkWriteOperation, type Document, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import {
-  appendNppReinvestCapexRows,
-  buildNppFoundedSectorInserts,
-  depleteUnownedPoolsForDraws,
-  type NppUnownedDrawList,
-} from "./capacityWriteback";
+import { appendNppReinvestCapexRows, buildNppFoundedSectorInserts } from "./capacityWriteback";
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import type { PlacementSignals } from "./marketSignals";
 import type { Corporation } from "@/lib/db/types";
 import { buildNppCorpUpdateOp } from "./nppCashWrite";
 import { mergeCorporationCashOps } from "@/lib/turn/corporation/mergeCorporationCashOps";
@@ -86,9 +81,7 @@ export function buildNppDecisionCashWrites(args: {
   decision: NppCorpDecision;
   corporation: Pick<Corporation, "_id" | "name" | "sequentialId">;
   capexRows: BuildCapexTxInput[];
-  unownedDraws: NppUnownedDrawList;
-  unownedIndex: Map<string, UnownedSector>;
-  eraUnitScale: number;
+  claimDemandUnits?: PlacementSignals["claimDemandUnits"];
   currencyCode: CurrencyCode | null | undefined;
   rate: number;
   shadowEnabled: boolean;
@@ -105,9 +98,10 @@ export function buildNppDecisionCashWrites(args: {
       now: args.now,
     });
   }
-  if (args.decision.unownedDraws) {
-    args.unownedDraws.push(...args.decision.unownedDraws);
-    depleteUnownedPoolsForDraws(args.unownedIndex, args.decision.unownedDraws, args.eraUnitScale);
+  // Claimed only for the decision that is applied, so a credit retry that
+  // discards its first pass does not count the same capacity twice.
+  for (const claim of args.decision.demandClaims ?? []) {
+    args.claimDemandUnits?.(claim, claim.units);
   }
   // Cash-only decisions are gated inside the builder, even when no field is set.
   // The founded sector's existing business id doubles as the atomic audit key.

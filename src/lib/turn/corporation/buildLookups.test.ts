@@ -546,7 +546,6 @@ describe("buildCorporationLookups — sovereign default contagion FX normalizati
       "exchangeRates",
       "stateResourceCapacity",
       "freeTradeAgreements",
-      "unownedSectors",
     ]) {
       db.collection(name);
     }

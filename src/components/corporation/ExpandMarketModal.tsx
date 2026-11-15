@@ -12,7 +12,6 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
 } from "@/lib/constants/corporationsClient";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { regionUrl } from "@/lib/urls";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -57,15 +56,10 @@ interface Suggestion {
   stateId: string;
   stateName: string;
   countryId: string;
-  unownedRevenue: number;
-  splitCost: number;
-  estimatedRevenueCapture: number;
   canAfford: boolean;
   ownedSectorId: string | null;
   competitors: Competitor[];
   totalCompetitorRevenue: number;
-  /** Plants tier: untapped demand in this market, output units per day. */
-  headroomUnits?: number | null;
   /** Plants tier: what the starter plant costs to build HERE (₳). */
   starterBuildCostAnchor?: number | null;
   /** Plants tier: entry fee + starter build, the all-in price (₳). */
@@ -232,8 +226,8 @@ export default function ExpandMarketModal({
       setCountryDemandEstimates(
         Object.fromEntries(
           (
-            (data.countryDemandEstimates as { countryId: string; headroomUnits: number }[]) ?? []
-          ).map(({ countryId, headroomUnits }) => [countryId, headroomUnits])
+            (data.countryDemandEstimates as { countryId: string; roomToBuildUnits: number }[]) ?? []
+          ).map(({ countryId, roomToBuildUnits }) => [countryId, roomToBuildUnits])
         )
       );
       setAvailableCountries(
@@ -246,7 +240,7 @@ export default function ExpandMarketModal({
       }
       setLiquidCurrencyCode((data.liquidCurrencyCode as CurrencyCode | null) ?? null);
       setFoundingQuote(
-        data.plantsMode === true && typeof data.starterUnits === "number"
+        typeof data.starterUnits === "number"
           ? {
               starterUnits: data.starterUnits as number,
               foundingFeeAnchor: (data.foundingFeeAnchor as number) ?? 0,
@@ -326,7 +320,7 @@ export default function ExpandMarketModal({
     s.buildDemand
       ? (s.roomToBuildUnits ?? null)
       : (s.roomToBuildUnits ??
-        (countrySharedDemand ? countryDemandEstimates[s.countryId] : s.headroomUnits) ??
+        (countrySharedDemand ? countryDemandEstimates[s.countryId] : undefined) ??
         null);
   const activeDemandUnits = activeSuggestion ? roomFor(activeSuggestion) : null;
   const activeCanEnter = activeSuggestion ? canEnterNow(activeSuggestion) : false;
@@ -999,87 +993,6 @@ export default function ExpandMarketModal({
                         </div>
                       )}
 
-                      {/* The state market lists can still show a leftover legacy
-                          revenue pool here. Name it so the two screens read the
-                          same, and say it is not what entry is sized against. */}
-                      {plantsMode &&
-                        !activeSuggestion.buildDemand &&
-                        activeSuggestion.unownedRevenue > 0 && (
-                          <p
-                            className="text-[11px] leading-snug text-muted"
-                            title={marketCurrencyTitle}
-                          >
-                            Unclaimed legacy revenue here:{" "}
-                            {formatMarketAmount(activeSuggestion.unownedRevenue)}/day. You enter by
-                            building, so room to build is the figure that matters.
-                          </p>
-                        )}
-
-                      {/* Stats row */}
-                      <div className={`${plantsMode ? "hidden" : "grid"} grid-cols-3 gap-2`}>
-                        <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
-                          <p
-                            className="text-body-sm font-medium text-muted"
-                            title={marketCurrencyTitle}
-                          >
-                            Unowned pool
-                          </p>
-                          <p className="text-sm font-bold text-foreground">
-                            {activeSuggestion.unownedRevenue > 0
-                              ? formatMarketAmount(Math.round(activeSuggestion.unownedRevenue / 24))
-                              : "none"}
-                          </p>
-                          <p className="text-[10px] text-muted">/turn revenue</p>
-                        </div>
-                        <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
-                          <p
-                            className="text-body-sm font-medium text-muted"
-                            title={marketCurrencyTitle}
-                          >
-                            Split cost
-                          </p>
-                          <p
-                            className={`text-sm font-bold ${
-                              activeSuggestion.unownedRevenue === 0
-                                ? "text-muted"
-                                : activeSuggestion.canAfford
-                                  ? "text-foreground"
-                                  : "text-error"
-                            }`}
-                          >
-                            {activeSuggestion.unownedRevenue > 0
-                              ? formatMarketAmount(activeSuggestion.splitCost)
-                              : "No pool"}
-                          </p>
-                          {!activeSuggestion.canAfford && activeSuggestion.unownedRevenue > 0 && (
-                            <p className="text-[10px] text-error">
-                              short{" "}
-                              {formatTreasuryAmount(
-                                activeSuggestion.splitCost - fetchedLiquidCapital
-                              )}
-                            </p>
-                          )}
-                        </div>
-                        <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
-                          <p
-                            className="text-body-sm font-medium text-muted"
-                            title={marketCurrencyTitle}
-                          >
-                            Est. new revenue
-                          </p>
-                          <p
-                            className={`text-sm font-bold ${activeSuggestion.unownedRevenue > 0 ? "text-success" : "text-muted"}`}
-                          >
-                            {activeSuggestion.unownedRevenue > 0
-                              ? formatMarketAmount(
-                                  Math.round(activeSuggestion.estimatedRevenueCapture / 24)
-                                )
-                              : "none"}
-                          </p>
-                          <p className="text-[10px] text-muted">/turn (pre-margin)</p>
-                        </div>
-                      </div>
-
                       {/* Player corp mode: total competitor revenue */}
                       {suggestionMode === "playerCorp" &&
                         activeSuggestion.totalCompetitorRevenue > 0 && (
@@ -1098,14 +1011,6 @@ export default function ExpandMarketModal({
                             </span>
                           </div>
                         )}
-
-                      {/* Revenue vs profit note */}
-                      {!plantsMode && activeSuggestion.unownedRevenue > 0 && (
-                        <p className="text-[11px] text-muted leading-snug">
-                          Capture estimate is new per-turn revenue before your effective margin is
-                          applied. Actual profit depends on your margins in this state.
-                        </p>
-                      )}
 
                       {/* Competitors */}
                       {activeSuggestion.competitors.length > 0 && (
@@ -1294,36 +1199,7 @@ export default function ExpandMarketModal({
                           )}
                         </div>
                       )}
-
-                      {/* CTA */}
-                      {!plantsMode &&
-                        (activeSuggestion.ownedSectorId ||
-                          (activeSuggestion.unownedRevenue > 0 && activeSuggestion.canAfford)) && (
-                          <div className="pt-1">
-                            {activeSuggestion.ownedSectorId ? (
-                              <Link
-                                href={`/corporation/${corpId}/sector/${activeSuggestion.ownedSectorId}`}
-                                onClick={onClose}
-                                className="block w-full rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-center text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
-                              >
-                                View your sector
-                              </Link>
-                            ) : (
-                              <Link
-                                href={`${regionUrl(activeSuggestion.countryId, activeSuggestion.stateId)}?tab=economy&sector=${encodeURIComponent(selectedType)}`}
-                                onClick={onClose}
-                                className="block w-full rounded-lg border border-card-border bg-card-elevated/50 px-4 py-2 text-center text-sm font-medium text-foreground hover:bg-card-elevated transition-colors"
-                              >
-                                View state economy to split
-                              </Link>
-                            )}
-                          </div>
-                        )}
                     </div>
-                  )}
-
-                  {!plantsMode && suggestions.some((s) => !s.canAfford && s.unownedRevenue > 0) && (
-                    <p className="text-[11px] text-muted">* Insufficient capital for this split.</p>
                   )}
                 </>
               )}

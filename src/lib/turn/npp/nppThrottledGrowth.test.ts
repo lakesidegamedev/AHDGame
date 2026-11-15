@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  uniformDemandSignals,
+} from "./__fixtures__/marketCandidates";
 import { computeBuildCost, CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { ceoArchetypeModifiers } from "../ceoArchetype";
@@ -68,14 +73,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: F
     ...(demandThrottleFactor === null ? {} : { demandThrottleFactor }),
     ...(funded ? fundedFields(plantUnits, funded) : {}),
   } as unknown as CorporateSector;
-  const pool = {
-    _id: new ObjectId(),
-    countryId: "US",
-    stateId: "NY",
-    sectorType: "retail",
-    revenue: 100000,
-    headroomUnits: 1000,
-  } as UnownedSector;
+  const pool = candidate({ stateId: "NY", sectorType: "retail" });
   return makeNppCorpDecision(
     {
       corp,
@@ -87,7 +85,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: F
       strategyLoopEnabled: false,
       ...(funded ? { transitionFirstFundedTurn: 2, fundedWorldEpoch: EPOCH } : {}),
     },
-    new Map([["US", [pool]]]),
+    candidatesByCountry([pool]),
     new Set(),
     () => 2,
     {
@@ -97,7 +95,8 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: F
       preset: "2019-default",
       primeRateOf: () => 0,
       costOfLivingOf: () => null,
-    }
+    },
+    uniformDemandSignals(1000)
   );
 }
 

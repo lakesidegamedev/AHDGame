@@ -47,7 +47,7 @@ const providers = {
       { revenue: 400, sectorType: "technology" },
       { revenue: 300, sectorType: "financial" },
     ],
-    unowned: [],
+    background: [],
     federalSalesTax: 0,
     stateSalesTax: 0,
     countryId: "US",

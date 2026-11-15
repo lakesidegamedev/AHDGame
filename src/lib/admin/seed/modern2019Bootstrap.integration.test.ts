@@ -24,7 +24,6 @@ it("builds the five 2019 transition countries before region-derived stages", asy
     expect(await db.collection("politicalParties").countDocuments({ countryId })).toBeGreaterThan(
       0
     );
-    expect(await db.collection("unownedSectors").countDocuments({ countryId })).toBeGreaterThan(0);
     expect(await db.collection("federalBudget").countDocuments({ countryId })).toBe(1);
     expect(await db.collection("stateBudgets").countDocuments({ countryId })).toBe(regionCount);
   }

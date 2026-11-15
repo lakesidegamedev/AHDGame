@@ -42,8 +42,7 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
-    for (const n of ["centralBanks", "corporateSectors", "corporations", "unownedSectors"])
-      db.collection(n);
+    for (const n of ["centralBanks", "corporateSectors", "corporations"]) db.collection(n);
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     // Corps for the sector pool arrive in ONE batched `$in` query (perf audit
     // 2026-08-03); this was a findOne per corp.
@@ -59,7 +58,7 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });
 
-  it("estimates per-corp compensation + the free unowned slice for the whole industry", async () => {
+  it("estimates per-corp compensation for the whole industry", async () => {
     db.collectionMocks.corporateSectors.find.mockReturnValue(
       cursor([
         {
@@ -88,18 +87,6 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
         },
       ])
     );
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([
-        {
-          _id: new ObjectId(),
-          countryId: "CN",
-          stateId: "DB",
-          sectorType: "technology",
-          revenue: 500,
-        },
-      ])
-    );
-
     const { GET } = await import("./route");
     const res = await GET(
       new Request(
@@ -118,8 +105,7 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
       estCompensationLocal: 2000,
     });
     expect(b.totalCompensationLocal).toBe(2000);
-    // Unowned slice (free) = revenue × fraction.
-    expect(b.unownedSliceRevenuePerTurn).toBe(500);
+    expect(b).not.toHaveProperty("unownedSliceRevenuePerTurn");
   });
 
   it("excludes a corp within the re-nationalization cooldown (matches the engine)", async () => {
@@ -145,7 +131,6 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
         },
       ])
     );
-    db.collectionMocks.unownedSectors.find.mockReturnValue(cursor([]));
     const { GET } = await import("./route");
     const res = await GET(
       new Request(
@@ -160,17 +145,6 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
 
   it("scope=unowned reports no affected corps and zero compensation", async () => {
     db.collectionMocks.corporateSectors.find.mockReturnValue(cursor([]));
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      cursor([
-        {
-          _id: new ObjectId(),
-          countryId: "CN",
-          stateId: "DB",
-          sectorType: "technology",
-          revenue: 400,
-        },
-      ])
-    );
     const { GET } = await import("./route");
     const res = await GET(
       new Request(
@@ -181,6 +155,5 @@ describe("GET /api/country/[code]/sector-nationalization-preview", () => {
     const b = await res.json();
     expect(b.affectedCount).toBe(0);
     expect(b.totalCompensationLocal).toBe(0);
-    expect(b.unownedSliceRevenuePerTurn).toBe(200); // 400 × 0.5
   });
 });

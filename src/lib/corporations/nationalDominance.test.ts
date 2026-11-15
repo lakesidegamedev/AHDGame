@@ -9,7 +9,7 @@ import {
 import type { CountryId } from "@/lib/constants/countries";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 
 const TYPE: CorporationType = "energy";
 const fx = new Map<CurrencyCode, number>([["USD" as CurrencyCode, 1]]);
@@ -30,11 +30,10 @@ const sector = (id: string, corpId: string, stateId: string, revenue: number): C
     revenue,
   }) as unknown as CorporateSector;
 
-const build = (sectors: CorporateSector[], unowned: UnownedSector[] = []) =>
+const build = (sectors: CorporateSector[]) =>
   buildNationalDominanceShareBySectorId({
     sectors,
     stateById: stateById(),
-    unownedSectors: unowned,
     exchangeRatesByCurrency: fx,
   });
 

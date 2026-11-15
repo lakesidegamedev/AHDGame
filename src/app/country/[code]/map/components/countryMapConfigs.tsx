@@ -81,12 +81,7 @@ function logisticsRegionData<R extends { id?: string; _id?: string; name: string
     const intensity = entry?.capacity || entry?.total || 0;
     result[id] = entry
       ? {
-          color:
-            intensity > 0
-              ? interpolateGreen(intensity / maxCapacity)
-              : entry.openMarket > 0
-                ? "#c7842a"
-                : "#374151",
+          color: intensity > 0 ? interpolateGreen(intensity / maxCapacity) : "#374151",
           label: freightHaulLoadLabel(entry),
           tooltip: freightHaulLoadTooltip(id, entry),
         }

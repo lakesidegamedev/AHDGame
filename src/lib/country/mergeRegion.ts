@@ -72,9 +72,9 @@ async function uniqueIndexesOver(
  *
  * A transfer can always re-point: the region keeps its identity under a new
  * owner. A FUSE cannot, because two regions become one and any UNIQUE index
- * over the region field then has two rows competing for a single key. Both
- * `stateResourceCapacity` (unique on `stateId`) and `unownedSectors` (unique on
- * `{stateId, sectorType}`) threw mid-merge on a live reunification.
+ * over the region field then has two rows competing for a single key.
+ * `stateResourceCapacity` (unique on `stateId`) threw mid-merge on a live
+ * reunification.
  *
  * Only rows a unique index ACTUALLY constrains are considered: a partial index
  * binds the rows matching its filter and no others.

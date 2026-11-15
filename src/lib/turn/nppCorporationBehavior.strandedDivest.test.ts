@@ -18,7 +18,8 @@ import { ceoArchetypeModifiers } from "./ceoArchetype";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
 import { STRANDED_DIVEST_TURNS } from "@/lib/corporations/strandedPlant";
 import type { PlacementSignals } from "@/lib/turn/npp/marketSignals";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { MarketCandidate } from "./npp/marketCandidates";
 
 const noState = new Set<string>();
 const TURN = 100;
@@ -77,7 +78,7 @@ function decide(
       now: new Date(),
       modifiers: ceoArchetypeModifiers("cautious"),
     },
-    new Map<string, UnownedSector[]>(),
+    new Map<string, MarketCandidate[]>(),
     noState,
     priceRatioOf,
     plants ?? undefined,
@@ -125,7 +126,7 @@ describe("NPP stranded-plant divest (section 1b)", () => {
           modifiers: ceoArchetypeModifiers("cautious"),
           fundedWorldEpoch: EPOCH,
         },
-        new Map<string, UnownedSector[]>(),
+        new Map<string, MarketCandidate[]>(),
         noState,
         atBase,
         plantsCtx,

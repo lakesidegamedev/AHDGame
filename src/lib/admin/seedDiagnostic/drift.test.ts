@@ -32,7 +32,6 @@ function makeDriftDb(opts: {
   budgets?: unknown[];
   exchangeRates?: unknown[];
   centralBanks?: unknown[];
-  unownedSectors?: unknown[];
   corporations?: unknown[];
   commodityPrices?: unknown[];
   baseline?: Record<string, unknown> | null;
@@ -54,7 +53,6 @@ function makeDriftDb(opts: {
   getColl("federalBudget").find.mockReturnValue(cursorOf(opts.budgets ?? []));
   getColl("exchangeRates").find.mockReturnValue(cursorOf(opts.exchangeRates ?? []));
   getColl("centralBanks").find.mockReturnValue(cursorOf(opts.centralBanks ?? []));
-  getColl("unownedSectors").find.mockReturnValue(cursorOf(opts.unownedSectors ?? []));
   getColl("corporations").find.mockReturnValue(cursorOf(opts.corporations ?? []));
   getColl("commodityPrices").find.mockReturnValue(cursorOf(opts.commodityPrices ?? []));
   getColl("seedDiagnosticBaselines").findOne.mockResolvedValue(opts.baseline ?? null);

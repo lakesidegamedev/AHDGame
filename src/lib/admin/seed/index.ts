@@ -23,7 +23,6 @@ export { seedJpBudgets } from "./seedJpBudgets";
 export { seedSovereignBondInstruments } from "./seedSovereignBondInstruments";
 export { seedSeats } from "./seedSeats";
 export { seedPartyBudgets } from "./seedPartyBudgets";
-export { seedUnownedSectors } from "./seedUnownedSectors";
 export { seedUnions } from "./seedUnions";
 export { seedScotus } from "@/lib/scotus/seedScotus";
 export { seedStateResourceCapacity } from "./seedStateResourceCapacity";

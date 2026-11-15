@@ -52,7 +52,7 @@ const STATES_BY_COUNTRY: Record<string, string[]> = {
   ES: ["MAD", "CAT", "AND", "VAL", "GAL", "PVA"],
   SE: ["STO", "VGO", "SKN", "UPP", "OST", "DAL"],
   TR: ["IST", "ANK", "IZM", "BUR", "ANT", "KON"],
-  IE: ["DUB", "COR", "GAL", "LIM", "WAT", "KIL"],
+  IE: ["DUB", "COR", "GLW", "LIM", "WAT", "KIL"],
 };
 
 const CURRENCY_BY_COUNTRY: Record<string, string> = {
@@ -173,30 +173,11 @@ function commodityPriceDocs(rng: () => number): Record<string, unknown>[] {
   return docs;
 }
 
-function unownedSectorDocs(rng: () => number): Record<string, unknown>[] {
-  const docs: Record<string, unknown>[] = [];
-  let n = 0;
-  for (const country of countries()) {
-    for (const state of STATES_BY_COUNTRY[country] ?? []) {
-      for (const sectorType of CORPORATION_TYPES) {
-        const pools = 3 + Math.floor(rng() * 5);
-        for (let pool = 0; pool < pools; pool += 1) {
-          const revenue = 200_000 + rng() * 3_000_000;
-          docs.push({
-            _id: idFor(90, n++),
-            stateId: state,
-            countryId: country,
-            sectorType,
-            revenue,
-            headroomUnits: 200 + Math.floor(rng() * 4_000),
-            createdAt: new Date("2026-10-01T00:00:00Z"),
-            updatedAt: new Date("2026-10-01T00:00:00Z"),
-          });
-        }
-      }
-    }
-  }
-  return docs;
+/** One region doc per state; every region x lane is a candidate market. */
+function stateDocs(): Record<string, unknown>[] {
+  return countries().flatMap((country) =>
+    (STATES_BY_COUNTRY[country] ?? []).map((state) => ({ _id: state, countryId: country, gdp: 1 }))
+  );
 }
 
 function corporationDoc(
@@ -372,7 +353,7 @@ export async function seedNppDecisionsWorld(
 
   await db.collection("corporations").insertMany(corpDocs as never[]);
   await db.collection("corporateSectors").insertMany(sectorDocsAll as never[]);
-  await db.collection("unownedSectors").insertMany(unownedSectorDocs(rng) as never[]);
+  await db.collection("states").insertMany(stateDocs() as never[]);
   await db.collection("commodityPrices").insertMany(commodityPriceDocs(rng) as never[]);
   await db.collection("npps").insertMany(nppDocs(nppCorporations) as never[]);
   await db.collection("exchangeRates").insertMany(

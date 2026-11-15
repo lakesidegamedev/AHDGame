@@ -163,7 +163,6 @@ const REFERENCE: CollectionEntry[] = [
     seededBy: "seedStateSectorSpecializations",
   },
   { name: "partyBudget", category: "reference", seededBy: "seedPartyBudgets" },
-  { name: "unownedSectors", category: "reference", seededBy: "seedUnownedSectors" },
   {
     name: "unions",
     category: "runtime",

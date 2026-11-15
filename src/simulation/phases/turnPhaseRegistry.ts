@@ -95,7 +95,6 @@ import { isFiscalYearEnd, calculateFiscalYear, processFiscalYear } from "@/lib/b
 import { processAutoDisasterTurn } from "@/lib/turn/autoDisasterTurn";
 import { processAutoCrisisTurn } from "@/lib/turn/autoCrisisTurn";
 import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
-import { processAutoSectorSeed } from "@/lib/turn/autoSectorSeed";
 import { processExtractionAutoStrategy } from "@/lib/turn/extractionAutoStrategy";
 import { processCorporationTurn } from "@/lib/turn/corporationTurn";
 
@@ -269,14 +268,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         await runtime.runPhase("coldWarTension", () =>
           processColdWarTensionTurn(context.db, newTurn, gameState)
         );
-        await runtime.runPhase("autoSectorSeed", () =>
-          processAutoSectorSeed(context.db, newTurn, gameState)
-        );
         // Extraction auto strategy adoption (remediation Phase 1a). Runs right
-        // after auto-seed and BEFORE the corporation turn so a newly-adopted
+        // BEFORE the corporation turn so a newly-adopted
         // focused mining strategy is in effect when this turn's supply/revenue
-        // is computed. Reads the prior turn's commodity S/D (one-turn lag, same
-        // as auto-seed); writes only sector strategy fields.
+        // is computed. Reads the prior turn's commodity S/D (one-turn lag); writes only sector strategy fields.
         const extractionAutoStrategyResult = await runtime.runPhase("extractionAutoStrategy", () =>
           processExtractionAutoStrategy(context.db, newTurn, gameState)
         );

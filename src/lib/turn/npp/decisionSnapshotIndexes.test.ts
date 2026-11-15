@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { deriveCeoArchetype } from "@/lib/turn/ceoArchetype";
 import {
   buildNppCorporationDecisionIndexes,
-  indexOpenUnownedSectors,
   nppDecisionCohortIds,
 } from "./decisionSnapshotIndexes";
 
@@ -59,35 +58,5 @@ describe("buildNppCorporationDecisionIndexes", () => {
     expect(indexes.sectorsByCorp.get(corpId.toString())?.[0]).toBe(firstSector);
     expect(indexes.priceByCommodity.get("iron")).toBe(prices[2]);
     expect(indexes.priceByCommodity.get("coal")).toBe(prices[3]);
-  });
-});
-
-describe("indexOpenUnownedSectors", () => {
-  it("keeps manufacturing models and media lanes in distinct pool buckets", () => {
-    const generic = { countryId: "US", stateId: "CA", sectorType: "manufacturing" };
-    const vehicles = { ...generic, industryModel: "vehicles" as const };
-    const media = { countryId: "US", stateId: "CA", sectorType: "media" };
-    const entertainment = { ...media, mediaDiscriminator: "entertainment" as const };
-    const indexes = indexOpenUnownedSectors([generic, vehicles, media, entertainment]);
-
-    expect(indexes.unownedIndex.size).toBe(4);
-    expect(indexes.unownedIndex.get("CA:manufacturing")).toBe(generic);
-    expect(indexes.unownedIndex.get("CA:manufacturing:vehicles")).toBe(vehicles);
-    expect(indexes.unownedIndex.get("CA:media")).toBe(media);
-    expect(indexes.unownedIndex.get("CA:media:generic:entertainment")).toBe(entertainment);
-  });
-
-  it("preserves country list order and points duplicate buckets at the last document", () => {
-    const first = { countryId: "country-a", stateId: "state-1", sectorType: "energy" };
-    const second = { countryId: "country-b", stateId: "state-2", sectorType: "industry" };
-    const replacement = { countryId: "country-a", stateId: "state-1", sectorType: "energy" };
-
-    const indexes = indexOpenUnownedSectors([first, second, replacement]);
-
-    expect(indexes.unownedByCountry.get("country-a")).toEqual([first, replacement]);
-    expect(indexes.unownedByCountry.get("country-a")?.[0]).toBe(first);
-    expect(indexes.unownedByCountry.get("country-b")).toEqual([second]);
-    expect(indexes.unownedIndex.get("state-1:energy")).toBe(replacement);
-    expect(indexes.unownedIndex.get("state-2:industry")).toBe(second);
   });
 });

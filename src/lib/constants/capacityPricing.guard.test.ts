@@ -61,11 +61,6 @@ const REGISTRY: Record<string, { count: number; expect: Expectation; why: string
     expect: "sector",
     why: "The reset scenario prices the exact standard recipe used for its capacity and operating outputs.",
   },
-  "src/lib/corporations/capacityCapture.ts": {
-    count: 3,
-    expect: "sector",
-    why: "Attack book transfer and the attack price floor value real, existing plants on both sides.",
-  },
   "src/lib/corporations/commands/sectorOperations/buildCapacity.ts": {
     count: 1,
     expect: "sector",

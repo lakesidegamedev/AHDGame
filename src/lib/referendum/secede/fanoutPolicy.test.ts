@@ -20,10 +20,9 @@ describe("SECEDE_FANOUT", () => {
     expect(f.countVectorFields).toEqual(["ages.male", "ages.female"]);
   });
 
-  it("sectors distribute by GDP; pool re-keys; characters re-home", () => {
+  it("sectors distribute by GDP; registration pool re-keys; characters re-home", () => {
     const policyOf = (c: string) => SECEDE_FANOUT.find((x) => x.collection === c)!.policy;
     expect(policyOf("corporateSectors")).toBe("partitionGdp");
-    expect(policyOf("unownedSectors")).toBe("partitionGdp");
     expect(policyOf("stateRegistrationPool")).toBe("rekeyCopyShares");
     expect(policyOf("characters")).toBe("rehomeCapital");
     expect(policyOf("statePolicies")).toBe("rehomeCapital");

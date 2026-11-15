@@ -44,7 +44,6 @@ const BASE_ARGS = {
   hostCostOfLivingIndex: 100,
   techGrowthCostMultiplier: 1,
   corpCapitalAnchor: 10_000_000,
-  headroomUnits: 500,
   workers: 100,
   money: {
     realizedRevenueAnchor: 1_000,
@@ -834,23 +833,6 @@ describe("buildSectorPlantsSection: room to build agrees with the engine (ticket
       sector: sectorFixture({ demandThrottleFactor: 0.1, mothballed: true }),
     });
     expect(s.roomHeldByOwnIdle).toBe(false);
-  });
-
-  it("states unclaimed share from the same pool that bounds a build", () => {
-    // 500 unowned units beside 1,500 owned: a quarter of the market is unclaimed.
-    const s = buildSectorPlantsSection({
-      eraUnitScale: 1,
-      ...BASE_ARGS,
-      ownedCellCapacityUnits: 1_500,
-      sector: sectorFixture(),
-    });
-    expect(s.unclaimedSharePct).toBe(25);
-    const unknown = buildSectorPlantsSection({
-      eraUnitScale: 1,
-      ...BASE_ARGS,
-      sector: sectorFixture(),
-    });
-    expect(unknown.unclaimedSharePct).toBeUndefined();
   });
 });
 

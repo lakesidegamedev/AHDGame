@@ -66,7 +66,6 @@ beforeEach(async () => {
   db.collection("characters");
   db.collection("corporations");
   db.collection("corporateSectors");
-  db.collection("unownedSectors");
   db.collection("exchangeRates");
   db.collection("gameConfig");
   db.collectionMocks.gameConfig.findOne.mockResolvedValue({

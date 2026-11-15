@@ -25,28 +25,18 @@ vi.mock("@/components/Tooltip", () => ({
 
 const attackInfo: AttackInfo = {
   attackCost: 100,
-  splitCost: 100,
-  splitMsCost: 20,
-  splitEstimatedCapture: 1000,
   userLiquidCapital: 1000,
   userMarketingStrength: 100,
   stateId: "US-CA",
 };
 const attackProps = {
   attackInfo,
-  plantsMode: false,
   targetName: "Test corporation",
   showAttack: true,
-  showSplit: true,
   attacking: false,
   attackError: "",
   attackMsg: "",
   onAttack: vi.fn().mockResolvedValue(true),
-  splitting: false,
-  splitError: "",
-  splitMsg: "",
-  onSplit: vi.fn(),
-  sectorCurrencyCode: "USD" as const,
 };
 
 const saleProps = {
@@ -156,28 +146,24 @@ describe("sector action visibility", () => {
     expect(screen.queryByRole("button", { name: "Auto" })).toBeNull();
   });
 
-  it.each([
-    { userLiquidCapital: 0 },
-    { userMarketingStrength: 0 },
-    { canAttack: false, canSplit: false },
-  ])("hides market actions when they cannot succeed: %j", (unavailable) => {
-    const { container } = render(
-      <AttackPanel {...attackProps} attackInfo={{ ...attackInfo, ...unavailable }} />
-    );
-    expect(container.textContent).toBe("");
-    expect(screen.queryByRole("button")).toBeNull();
-  });
+  it.each([{ userLiquidCapital: 0 }, { userMarketingStrength: 0 }, { canAttack: false }])(
+    "hides market actions when they cannot succeed: %j",
+    (unavailable) => {
+      const { container } = render(
+        <AttackPanel {...attackProps} attackInfo={{ ...attackInfo, ...unavailable }} />
+      );
+      expect(container.textContent).toBe("");
+      expect(screen.queryByRole("button")).toBeNull();
+    }
+  );
 
   it("uses the whole-plant quote to hide an unaffordable rival split", () => {
     const { container } = render(
       <AttackPanel
         {...attackProps}
-        plantsMode
-        showSplit={false}
         attackInfo={{
           ...attackInfo,
           attackCost: 0,
-          splitMsCost: 0,
           plantCount: 100,
           plantSplitQuote: {
             seizureFraction: 0.1,
@@ -191,32 +177,6 @@ describe("sector action visibility", () => {
       />
     );
     expect(container.textContent).toBe("");
-  });
-
-  it("offers an affordable half split without the unavailable full strength choice", () => {
-    const onSplit = vi.fn();
-    const strength = {
-      splitCost: 2000,
-      splitMsCost: 20,
-      splitEstimatedCapture: 1000,
-      splitEstimatedNetIncome: 100,
-      projectedMarketShare: 10,
-      exceedsDominanceThreshold: false,
-    };
-    render(
-      <AttackPanel
-        {...attackProps}
-        showAttack={false}
-        onSplit={onSplit}
-        attackInfo={{
-          ...attackInfo,
-          splitStrengths: { full: strength, half: { ...strength, splitCost: 500 } },
-        }}
-      />
-    );
-    expect(screen.queryByRole("button", { name: "Full" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Split Half" }));
-    expect(onSplit).toHaveBeenCalledWith("half");
   });
 
   it.each([

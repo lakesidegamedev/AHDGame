@@ -1,16 +1,14 @@
 import type { Db } from "mongodb";
 import type { CommodityPrice } from "@/lib/db/types";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { GameState } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { buildMarketShareBySectorId } from "@/lib/corporations/marketShare";
-import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 export interface MarketViewContext {
   marketShareBySectorId: Map<string, number>;
@@ -110,12 +108,9 @@ export async function loadMarketViewContext(
         }
       : null;
 
-  const [siblingSectors, unownedSectors] = bucketFilter
-    ? await Promise.all([
-        corporateSectorsCollection(db).find(bucketFilter).toArray(),
-        unownedSectorsCollection(db).find(bucketFilter).toArray(),
-      ])
-    : [[] as CorporateSector[], [] as UnownedSector[]];
+  const siblingSectors = bucketFilter
+    ? await corporateSectorsCollection(db).find(bucketFilter).toArray()
+    : ([] as CorporateSector[]);
 
   const siblingCorpIds = [...new Set(siblingSectors.map((s) => s.corporationId.toString()))];
   const siblingCorps =
@@ -148,11 +143,7 @@ export async function loadMarketViewContext(
     sectors: siblingSectors.length > 0 ? siblingSectors : sectors,
     corpById,
     stateById,
-    unownedSectors,
     exchangeRatesByCurrency: fxByCurrency,
-    // Era-correct GDP→₳ normalization for the GDP-derived market fallback
-    //. `gameState` is already projected with `preset` above.
-    preset: resolvePresetIdFromGameState(gameState),
   });
 
   const globalPriceRatioByCommodity = new Map<CommodityType, number>();

@@ -149,7 +149,7 @@ describe("rescopeRegionToCountry", () => {
     expect(names).toContain("stateRegistrationPool");
     // Sectors operate IN the region, so they follow it across the border…
     expect(names).toContain("corporateSectors");
-    expect(names).toContain("unownedSectors");
+    expect(names).not.toContain("unownedSectors");
     // The per-state fiscal budget, demographics, and registration pool follow too:
     expect(names).toContain("stateBudgets");
     expect(names).toContain("stateDemographics");

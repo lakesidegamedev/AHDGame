@@ -32,7 +32,6 @@ const CHECK_LABELS: Record<string, string> = {
   elections: "Elections",
   seats: "Seats",
   partyBudgets: "Party Budgets",
-  unownedSectors: "Unowned Sectors",
 };
 
 interface ImfSeedStatus {

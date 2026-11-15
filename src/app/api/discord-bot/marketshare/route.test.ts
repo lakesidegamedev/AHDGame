@@ -57,13 +57,6 @@ describe("GET /api/discord-bot/marketshare", () => {
       ])
     );
 
-    db.collectionMocks.unownedSectors = db.collection("unownedSectors");
-    db.collectionMocks.unownedSectors.find.mockReturnValue(
-      makeCursor([
-        { _id: new ObjectId(), stateId: "JP-13", sectorType: "defense", revenue: 50_000 },
-      ])
-    );
-
     db.collectionMocks.exchangeRates = db.collection("exchangeRates");
     db.collectionMocks.exchangeRates.find.mockReturnValue(
       makeCursor([
@@ -159,9 +152,6 @@ describe("GET /api/discord-bot/marketshare", () => {
         },
       ])
     );
-
-    db.collectionMocks.unownedSectors = db.collection("unownedSectors");
-    db.collectionMocks.unownedSectors.find.mockReturnValue(makeCursor([]));
 
     db.collectionMocks.exchangeRates = db.collection("exchangeRates");
     db.collectionMocks.exchangeRates.find.mockReturnValue(

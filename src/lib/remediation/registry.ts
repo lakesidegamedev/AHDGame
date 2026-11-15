@@ -27,11 +27,9 @@ import { defect as injectedBankRestoration } from "./defects/AHD-1694-injected-b
 import { defect as greenbaumRestoration } from "./defects/AHD-1694-greenbaum-restoration";
 import { defect as monroeBankRestoration } from "./defects/AHD-1749-monroe-bank-restoration";
 import { defect as mergedStateExtraction } from "./defects/AHD-1271-merged-state-extraction";
-import { defect as poolCountryAttribution } from "./defects/AHD-1271-pool-country-attribution";
 import { defect as natCorpSplitSectorType } from "./defects/AHD-1271-natcorp-split-sector-type";
 import { defect as mergedPartyOrg } from "./defects/AHD-1372-merged-party-org";
 import { defect as freightOverbillingRestitution } from "./defects/AHD-1448-freight-overbilling-restitution";
-import { defect as dissolutionNppSuccessors } from "./defects/AHD-dissolution-npp-successors";
 import { defect as sovereignMaturityStrandedPayout } from "./defects/AHD-sovereign-maturity-stranded-payout";
 import { defect as sovereignMaturityUnfundedRollover } from "./defects/AHD-sovereign-maturity-unfunded-rollover";
 import { defect as sovereignCouponArrears } from "./defects/AHD-sovereign-coupon-arrears";
@@ -82,9 +80,6 @@ export const DEFECTS: Defect[] = [
   // absorbs. Reunification left the eleven western Laender with no extraction
   // sector and the Ruhr, the Saar and the Niedersachsen gas fields unreachable.
   mergedStateExtraction,
-  // Same ticket, second shape: `buildCapacity` filed unowned pool rows under the
-  // corporation's country and fell through to a literal "US".
-  poolCountryAttribution,
   // Same ticket, third shape: split-off National Corporations inherited the
   // sovereign issuer's `type: "financial"` instead of the sector they operate.
   natCorpSplitSectorType,
@@ -95,9 +90,6 @@ export const DEFECTS: Defect[] = [
   // Canonical freight billing charged a full day's bill every
   // hourly turn. Credits overcharged buyers once; haulers keep their surplus.
   freightOverbillingRestitution,
-  // Dissolutions used to delete their plants into the unowned pool. Rebuilds
-  // NPP successors for past exits from the restore tokens they left behind.
-  dissolutionNppSuccessors,
   // Sovereign maturity payouts whose unapplied credit legs named a shared
   // central bank by country id or a deleted holder stayed partial forever;
   // this re-points any that still strand.

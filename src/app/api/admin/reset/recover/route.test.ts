@@ -31,7 +31,6 @@ beforeEach(() => {
     runId,
     preset: "1991-default",
     startingParties: "none",
-    unownedSectors: 2791,
   });
   vi.mocked(recover1991Bootstrap).mockResolvedValue({
     status: "succeeded",

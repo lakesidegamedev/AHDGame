@@ -30,9 +30,14 @@ import {
   strategyEvaluationDue,
   strategyStateNeedsPersist,
 } from "./rules/strategyCadence";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  candidate,
+  candidatesByCountry,
+  uniformDemandSignals,
+} from "./__fixtures__/marketCandidates";
+import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import { CAPACITY_ANCHOR_YEAR } from "@/lib/constants/capacityEconomy";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 
 const GOLDEN = join(__dirname, "__fixtures__", "strategyCadence.golden.json");
 const TURNS = 120;
@@ -61,16 +66,8 @@ const plantsCtx: NppPlantsContext = {
   costOfLivingOf: () => null,
 };
 
-const POOL_REVENUE = 40_000_000;
-const pool = (): UnownedSector =>
-  ({
-    _id: oid(9000),
-    stateId: "NY",
-    countryId: "US",
-    sectorType: "manufacturing",
-    revenue: POOL_REVENUE,
-    headroomUnits: computeUnownedHeadroomUnits("manufacturing", POOL_REVENUE, 1),
-  }) as unknown as UnownedSector;
+const ROOM_UNITS = foundingStarterUnits("manufacturing") * 40;
+const pool = () => candidate({ stateId: "NY" });
 
 interface Fixture {
   name: string;
@@ -259,10 +256,11 @@ function replay(
         debtServiceAnchor: f.debtServiceAnchor,
         caretakerMandate: "active",
       },
-      new Map<string, UnownedSector[]>([["US", f.headroom ? [pool()] : []]]),
+      candidatesByCountry(f.headroom ? [pool()] : []),
       new Set<string>(),
       () => null,
-      plantsCtx
+      plantsCtx,
+      uniformDemandSignals(f.headroom ? ROOM_UNITS : 0)
     );
     const normalized = normalize({ turn, eligible, decision });
     trace.push([

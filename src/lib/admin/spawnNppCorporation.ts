@@ -5,7 +5,7 @@ import {
   realCompanyLogoUrl,
   type RealNameKind,
 } from "@/lib/corporations/names/realNames";
-import type { Db, Document, WithId } from "mongodb";
+import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, GameState, NPP } from "@/lib/db/types";
 import { chooseNppCorpCeo, type NppCorpCeoAffiliation } from "./nppCorpCeoSelection";
@@ -52,7 +52,7 @@ import {
 import { writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { randomBrandColor } from "@/lib/corporations/brandColor";
-import { computeUnownedSeedRevenue } from "@/lib/admin/seed/seedUnownedSectors";
+import { nppOpeningUnits } from "@/lib/admin/seed/rules/nppOpeningSize";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { createNPP } from "@/lib/npp/generator";
 import {
@@ -60,13 +60,8 @@ import {
   insertCorporationWithTickerRetry,
 } from "@/lib/corporations/tickerSymbol";
 import { witnessCorporationStartingGrant } from "@/lib/corporations/startingGrantLedger";
-import {
-  computeUnownedHeadroomUnits,
-  unownedHeadroomUnitsPerAnchor,
-} from "@/lib/market/unownedHeadroom";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { capacityRescaleRatio, revenuePerCapacityUnit } from "@/lib/constants/capacityEconomy";
-import { foundingStarterUnits } from "@/lib/corporations/foundingPlant";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { JP_GEOGRAPHY } from "@/lib/countries/jp/geography";
 import { US_NPP_CAPITAL_STATE } from "@/lib/countries/us/geographyFacts";
@@ -104,7 +99,6 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 /**
  * Default founding book for an admin/NPP-spawned corporation, in ₳ at MODERN
@@ -162,7 +156,7 @@ export const NPP_CAPITAL_STATES: Record<CountryId, string> = {
 export interface SpawnNppCorporationInput {
   /** Human-readable name for the corporation */
   name: string;
-  /** Sector type — determines which unowned market it captures from */
+  /** Sector type of the corporation and its founding sector */
   type: CorporationType;
   industryModel?: ManufacturingIndustryModel | null;
   mediaDiscriminator?: MediaDiscriminator | null;
@@ -172,7 +166,7 @@ export interface SpawnNppCorporationInput {
   headquartersState: string;
   /** Starting liquid capital in the country's local currency (default: 2_000_000) */
   startingCapital?: number;
-  /** Starting revenue for the initial sector (default: derived from unowned market) */
+  /** Starting revenue for the initial sector (default: the standard opening plant for the lane) */
   startingRevenue?: number;
   /** Optional maximum daily revenue in anchor currency, for deposit-limited seeds. */
   maximumStartingRevenue?: number;
@@ -201,11 +195,7 @@ export interface SpawnNppCorporationInput {
   foundedAtTurn?: number;
   /** Initial operating strategy for the founding sector. Defaults to standard. */
   initialStrategyId?: string;
-  /** Never grant more opening plant capacity than the unowned pool holds. */
-  limitToUnownedPool?: boolean;
 }
-
-class UnownedSeedCapacityExhaustedError extends Error {}
 
 /**
  * Gather the per-affiliation inputs {@link chooseNppCorpCeo} needs for one
@@ -317,7 +307,7 @@ async function resolveNppCorporationName(
 /**
  * Insert an NPP-run corporation with no sectors: CEO selection, founding book,
  * tech grants, share structure, and the witnessed starting grant. Shared by the
- * admin/seed spawn (which then grants a founding sector out of the unowned pool)
+ * admin/seed spawn (which then grants the standard opening sector)
  * and dissolution succession (which re-parents the dissolved corporation's live
  * sectors instead).
  */
@@ -508,7 +498,7 @@ export async function createNppCorporationShell(
   };
 }
 
-export interface GrantNppSectorFromUnownedPoolInput {
+export interface GrantNppSectorInput {
   corpDoc: Pick<Corporation, "_id" | "countryId" | "liquidCurrencyCode">;
   stateId: string;
   /** Country the state belongs to (the sector's host). */
@@ -516,25 +506,24 @@ export interface GrantNppSectorFromUnownedPoolInput {
   type: CorporationType;
   industryModel: ManufacturingIndustryModel | null;
   mediaDiscriminator: MediaDiscriminator | null;
-  /** Market captured, in ₳ on the standard strategy basis. */
+  /** Opening revenue in ₳ on the standard strategy basis. */
   startingRevenue: number;
+  /** Opening capacity in output units/day on the standard strategy basis. */
+  startingCapacityUnitsStandard: number;
   profitMargin: number;
   initialStrategyId?: string;
   foundedAtTurn?: number;
   plantsEnabled: boolean;
-  eraUnitScale: number;
-  /** The pool row already loaded by the caller, if any. */
-  pool?: WithId<Document> | null;
   now: Date;
 }
 
 /**
- * Insert one NPP sector granted directly from the unowned pool (capacity
- * instant, no build window) and draw the pool down by what it took.
+ * Insert one NPP sector with its opening capacity granted instantly (no
+ * build window).
  */
-async function grantNppSectorFromUnownedPool(
+async function grantNppSector(
   db: Db,
-  input: GrantNppSectorFromUnownedPoolInput
+  input: GrantNppSectorInput
 ): Promise<{ sectorId: ObjectId; capacityUnits: number }> {
   const {
     corpDoc,
@@ -546,31 +535,15 @@ async function grantNppSectorFromUnownedPool(
     startingRevenue,
     profitMargin,
     plantsEnabled,
-    eraUnitScale,
+    startingCapacityUnitsStandard: standardUnits,
     now,
   } = input;
 
-  // ─── Plants: the founding sector is GRANTED capacity, not a revenue line ──
-  //
-  // This is the SEED/ADMIN path, not a player action, and it is deliberately
-  // NOT the founding-build flow `expandSector` and the NPP turn behaviour use.
-  // A world is seeded at t0: there is no turn on which a build queue could
-  // drain, and a spawned corp whose plants are all still under construction
-  // would start a world producing nothing. So the capacity is granted directly
-  // into `capitalStock` — instant, in UNITS — and drawn out of the unowned pool
-  // it captures, exactly as the founding build draws its own starter capacity.
-  // The grant is sized from the same `startingRevenue` the legacy path used, so
-  // a seeded world's opening capacity is unchanged; only its BASIS changes from
-  // ₳/day to units/day.
-  const startingCapacityUnitsStandard = plantsEnabled
-    ? computeUnownedHeadroomUnits(
-        type,
-        startingRevenue,
-        eraUnitScale,
-        industryModel,
-        mediaDiscriminator
-      )
-    : 0;
+  // The seed/admin path grants capacity directly into `capitalStock` (instant,
+  // in units): a world is seeded at t0, so no build queue could drain and a
+  // corporation whose plants were all under construction would start a world
+  // producing nothing.
+  const startingCapacityUnitsStandard = plantsEnabled ? standardUnits : 0;
   const startingCapacityUnits = plantsEnabled
     ? startingCapacityUnitsStandard *
       capacityRescaleRatio(
@@ -645,55 +618,6 @@ async function grantNppSectorFromUnownedPool(
 
   await corporateSectorsCollection(db).insertOne(sectorDoc as CorporateSector);
 
-  // Reduce the unowned sector pool to reflect market capture.
-  const unownedSector =
-    input.pool ??
-    (await unownedSectorsCollection<Document>(db).findOne({
-      stateId,
-      sectorType: type,
-      industryModel,
-      ...(type === "media" ? { mediaDiscriminator } : {}),
-    }));
-  if (unownedSector) {
-    const captureAmount = startingRevenue;
-    const newRevenue = Math.max(0, unownedSector.revenue - captureAmount);
-    // `headroomUnits` was NOT being decremented here: the spawn captured ₳
-    // revenue out of the pool while leaving its unit view at the pre-capture
-    // figure. Under plants that view is what market share and the founding
-    // build are sized against, so every spawned corp permanently inflated the
-    // headroom of the market it had just taken a bite out of. Decrement in
-    // lockstep. Non-plants worlds get the same fix: `headroomUnits` is a derived
-    // view of `revenue` and must never disagree with it.
-    // The pool is denominated on the sector type's standard strategy. A focused
-    // founding holds a D9-rescaled stock but consumes the same standard-basis
-    // market entry that its unchanged starting revenue represents.
-    const unitsCaptured = plantsEnabled
-      ? startingCapacityUnitsStandard
-      : computeUnownedHeadroomUnits(
-          type,
-          captureAmount,
-          eraUnitScale,
-          industryModel,
-          mediaDiscriminator
-        );
-    const priorUnits =
-      typeof unownedSector.headroomUnits === "number" &&
-      Number.isFinite(unownedSector.headroomUnits)
-        ? unownedSector.headroomUnits
-        : unownedHeadroomUnitsPerAnchor(type, eraUnitScale, industryModel, mediaDiscriminator) *
-          (unownedSector.revenue ?? 0);
-    await unownedSectorsCollection<Document>(db).updateOne(
-      { _id: unownedSector._id },
-      {
-        $set: {
-          revenue: newRevenue,
-          headroomUnits: Math.max(0, priorUnits - unitsCaptured),
-          updatedAt: now,
-        },
-      }
-    );
-  }
-
   return { sectorId, capacityUnits: startingCapacityUnits };
 }
 
@@ -704,7 +628,7 @@ async function grantNppSectorFromUnownedPool(
  * - Creates a corporation with the NPP as ceoId and ceoType="npp".
  * - Allocates shares: 51% to NPP CEO, 49% to public float (purchasable by players).
  * - Creates one initial sector in the HQ state matching the corp type.
- * - Captures revenue from the unowned market.
+ * - Opens at the standard size for its lane, the same in every country.
  * - Does NOT charge founding costs — admin-spawned, no player wallet involved.
  */
 export async function spawnNppCorporation(
@@ -732,13 +656,6 @@ export async function spawnNppCorporation(
   ) {
     throw new Error("Maximum seed revenue must be positive and finite");
   }
-  const marketFilter = {
-    stateId: headquartersState,
-    sectorType: type,
-    industryModel,
-    ...(type === "media" ? { mediaDiscriminator } : {}),
-  };
-
   // A planned economy has no private sector to spawn into. Throws rather than
   // returning a sentinel because every caller already handles a throw:
   // `batchSpawnNppCorporations` catches per-spawn and continues to the next
@@ -760,28 +677,6 @@ export async function spawnNppCorporation(
     );
   }
   const eraUnitScale = await loadWorldEraUnitScale(db);
-  const boundedPool = input.limitToUnownedPool
-    ? await unownedSectorsCollection<Document>(db).findOne(marketFilter)
-    : null;
-  // Reject before allocating an NPP CEO or corporation when the sim pool is
-  // exhausted. The regular admin spawn path retains its historical floor.
-  const boundedPoolRevenue = boundedPool
-    ? Math.min(
-        boundedPool.revenue,
-        typeof boundedPool.headroomUnits === "number" && Number.isFinite(boundedPool.headroomUnits)
-          ? Math.floor(
-              Math.max(0, boundedPool.headroomUnits) /
-                unownedHeadroomUnitsPerAnchor(type, eraUnitScale, industryModel, mediaDiscriminator)
-            )
-          : boundedPool.revenue
-      )
-    : 0;
-  if (input.limitToUnownedPool && !(boundedPoolRevenue > 0)) {
-    throw new UnownedSeedCapacityExhaustedError(
-      `No unowned ${type} capacity remains in ${headquartersState}`
-    );
-  }
-
   // Get currency for the country (preset-aware: 2027 euro members spawn EUR corps)
   const spawnPreset = await loadWorldPreset(db);
   const currencyCode =
@@ -792,46 +687,33 @@ export async function spawnNppCorporation(
 
   const preset = spawnPreset;
 
-  // Determine starting revenue: use custom, or derive from unowned market.
-  //
-  // DENOMINATION: `startingRevenue` is ₳ (anchor) throughout this function. Every
-  // source it can come from is ₳-native — `unownedSectors.revenue` is ₳ by
-  // documented convention, `computeUnownedSeedRevenue` returns ₳,
-  // `DEFAULT_SECTOR_STARTING_REVENUE` is a ₳ constant, and the admin route's
-  // `startingRevenue` override is specified in ₳. It stays ₳ because the two
-  // other things it feeds — `computeUnownedHeadroomUnits` and the unowned-pool
-  // drawdown — both require ₳. It is converted to the sector's HOST-state
-  // currency exactly once, at the `corporateSectors` insert below.
+  // DENOMINATION: `startingRevenue` is ₳ (anchor) throughout this function and
+  // is converted to the sector's HOST-state currency exactly once, at the
+  // `corporateSectors` insert.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+  const lane = getOperatingSectorType(type, industryModel, mediaDiscriminator);
+  const revenuePerUnit = revenuePerCapacityUnit(
+    type,
+    eraUnitScale,
+    industryModel,
+    mediaDiscriminator
+  );
+  // Every opening corporation gets the same standard plants for its lane. An
+  // explicit admin revenue or a deposit ceiling can only change that size.
   let startingRevenue: number;
-  if (customRevenue !== undefined) {
-    startingRevenue = customRevenue;
-  } else {
-    const unowned =
-      boundedPool ?? (await unownedSectorsCollection<Document>(db).findOne(marketFilter));
-    if (unowned?.revenue) {
-      startingRevenue = Math.round(unowned.revenue * 0.25);
-    } else {
-      startingRevenue = computeUnownedSeedRevenue({
-        gdp: state.gdp,
-        countryId,
-        stateId: headquartersState,
-        sectorType: getOperatingSectorType(type, industryModel, mediaDiscriminator),
-        preset,
-      });
+  let startingUnits = 0;
+  if (plantsEnabled) {
+    startingUnits =
+      customRevenue !== undefined ? customRevenue / revenuePerUnit : nppOpeningUnits(lane);
+    if (input.maximumStartingRevenue !== undefined) {
+      startingUnits = Math.min(startingUnits, input.maximumStartingRevenue / revenuePerUnit);
     }
-  }
-
-  const revenueFloor = plantsEnabled
-    ? foundingStarterUnits(type, industryModel, mediaDiscriminator) *
-      revenuePerCapacityUnit(type, eraUnitScale, industryModel, mediaDiscriminator)
-    : DEFAULT_SECTOR_STARTING_REVENUE;
-  startingRevenue = Math.max(startingRevenue, revenueFloor);
-  if (input.limitToUnownedPool && boundedPool) {
-    startingRevenue = Math.min(startingRevenue, boundedPoolRevenue);
-  }
-  if (input.maximumStartingRevenue !== undefined) {
-    startingRevenue = Math.min(startingRevenue, input.maximumStartingRevenue);
+    startingRevenue = startingUnits * revenuePerUnit;
+  } else {
+    startingRevenue = Math.min(
+      customRevenue ?? DEFAULT_SECTOR_STARTING_REVENUE,
+      input.maximumStartingRevenue ?? Infinity
+    );
   }
   const profitMargin = customMargin ?? DEFAULT_PROFIT_MARGIN;
 
@@ -854,7 +736,7 @@ export async function spawnNppCorporation(
       now,
     });
 
-  const { sectorId } = await grantNppSectorFromUnownedPool(db, {
+  const { sectorId } = await grantNppSector(db, {
     corpDoc,
     stateId: headquartersState,
     countryId,
@@ -862,12 +744,11 @@ export async function spawnNppCorporation(
     industryModel,
     mediaDiscriminator,
     startingRevenue,
+    startingCapacityUnitsStandard: startingUnits,
     profitMargin,
     initialStrategyId: input.initialStrategyId,
     foundedAtTurn: input.foundedAtTurn,
     plantsEnabled,
-    eraUnitScale,
-    pool: boundedPool,
     now,
   });
 
@@ -913,16 +794,10 @@ export async function batchSpawnNppCorporations(
     headquartersState?: string;
     /**
      * How many competing corps to spawn per sector type (default: 1). Each
-     * sector's revenue is a shared, bounded market (see
-     * buildMarketShareBySectorId in marketShare.ts — owned revenue across
-     * ALL corps in a (state, sectorType) bucket is ratioed against a
-     * GDP-derived market anchor, not summed unboundedly), so multiple corps
-     * per sector model real intra-sector competition rather than inflating
-     * aggregate economic output.
+     * one opens at the same standard size, so several per sector model real
+     * intra-sector competition.
      */
     perSectorCount?: number;
-    /** Bound reset and simulation grants by the currently available unowned pool. */
-    limitToUnownedPool?: boolean;
   }
 ): Promise<SpawnNppCorporationResult[]> {
   const defaultHq = NPP_CAPITAL_STATES[countryId];
@@ -989,13 +864,9 @@ export async function batchSpawnNppCorporations(
           startingCapital: options?.startingCapital,
           initialStrategyId: options?.initialStrategyId,
           maximumStartingRevenue: options?.maximumStartingRevenue,
-          limitToUnownedPool: options?.limitToUnownedPool,
         });
         results.push(result);
       } catch (err) {
-        if (options?.limitToUnownedPool && err instanceof UnownedSeedCapacityExhaustedError) {
-          break;
-        }
         console.error(`[spawnNpp] Failed to spawn ${lane} corp for ${countryId}:`, err);
         // Continue with other sectors/slots
       }

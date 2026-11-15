@@ -21,6 +21,17 @@ import type { MockDb } from "@/lib/test-utils/mockDb";
  * each their own scenario so the port can't silently regress them.
  */
 
+/**
+ * Background-economy mass (₳) the scenarios weight against owned sectors, by
+ * region. The real term is derived from regional GDP; scenarios pin it so the
+ * weighting arithmetic stays checkable by hand.
+ */
+export const GOLDEN_BACKGROUND_REVENUE: Readonly<Record<string, number>> = {
+  s1: 500,
+  s6: 500,
+  s7: 500,
+};
+
 export interface GoldenStateOut {
   _id: string;
   /** The cyclical sector signal (parity-preserved; the old gdpGrowth value). */
@@ -123,7 +134,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
           corporationId: undefined,
         },
       ]);
-      setupCollection(db, "unownedSectors", [{ _id: "uA", stateId: "s1", revenue: 500 }]);
       setupCollection(db, "macroMetrics", []); // no prev → cold-start
       db.collectionMocks.stateMetrics = db.collectionMocks.macroMetrics!;
       setupCollection(db, "corporations", []);
@@ -150,7 +160,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
           corporationId: undefined,
         },
       ]);
-      setupCollection(db, "unownedSectors", []);
       // prev value 15 vs baseline 2 → rawPolicyDelta 13, capped to 4 (v0 #2),
       // then eroded by policyDeltaDecay 0.9 → 3.6
       setupCollection(db, "macroMetrics", [
@@ -186,7 +195,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
           corporationId: undefined,
         },
       ]);
-      setupCollection(db, "unownedSectors", []);
       setupCollection(db, "macroMetrics", [
         {
           _id: "s3",
@@ -227,7 +235,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
           corporationId: "corpUSD",
         },
       ]);
-      setupCollection(db, "unownedSectors", []);
       setupCollection(db, "macroMetrics", []);
       db.collectionMocks.stateMetrics = db.collectionMocks.macroMetrics!;
       setupCollection(db, "corporations", [
@@ -255,7 +262,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
       setupCollection(db, "corporateSectors", [
         { _id: "secE", stateId: "s5", revenue: 1000, growthRate: 5, corporationId: undefined },
       ]);
-      setupCollection(db, "unownedSectors", []);
       setupCollection(db, "macroMetrics", []);
       db.collectionMocks.stateMetrics = db.collectionMocks.macroMetrics!;
       setupCollection(db, "corporations", []);
@@ -269,7 +275,7 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
   },
   // ── P2/D7: plants mode ──────────────────────────────────────────────────
   // Under `marketSystemMode = "plants"` the owned contribution is the region's
-  // ANNUALIZED realized-revenue delta (unowned mass excluded), not the now
+  // ANNUALIZED realized-revenue delta (background mass excluded), not the now
   // vestigial `currentGrowthRate`. These scenarios are ADDITIVE — every case
   // above runs with no gameConfig (mode "off") and keeps its frozen value.
   {
@@ -277,7 +283,7 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
     turn: 10,
     seed: (db) => {
       // prev Σ realized 1000 @ turn 6 → now 1010 over 4 turns:
-      // (1010/1000 − 1) × 100 × (48/4) = 12. currentGrowthRate 3 and the unowned
+      // (1010/1000 − 1) × 100 × (48/4) = 12. currentGrowthRate 3 and the background
       // 0.5 pin are both ignored.
       setupCollection(db, "states", [
         { ...state("s6"), sectorRealizedRevenue: 1000, sectorRealizedRevenueTurn: 6 },
@@ -291,7 +297,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
           corporationId: undefined,
         },
       ]);
-      setupCollection(db, "unownedSectors", [{ _id: "uF", stateId: "s6", revenue: 500 }]);
       setupCollection(db, "macroMetrics", []); // cold-start → value = raw signal
       db.collectionMocks.stateMetrics = db.collectionMocks.macroMetrics!;
       setupCollection(db, "corporations", []);
@@ -325,7 +330,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
           corporationId: undefined,
         },
       ]);
-      setupCollection(db, "unownedSectors", [{ _id: "uG", stateId: "s7", revenue: 500 }]);
       setupCollection(db, "macroMetrics", []);
       db.collectionMocks.stateMetrics = db.collectionMocks.macroMetrics!;
       setupCollection(db, "corporations", []);
@@ -360,7 +364,6 @@ export const GDP_GROWTH_SCENARIOS: GoldenScenario[] = [
           corporationId: undefined,
         },
       ]);
-      setupCollection(db, "unownedSectors", []);
       setupCollection(db, "macroMetrics", []);
       db.collectionMocks.stateMetrics = db.collectionMocks.macroMetrics!;
       setupCollection(db, "corporations", []);

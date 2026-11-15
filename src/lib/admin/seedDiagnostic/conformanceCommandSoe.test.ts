@@ -7,7 +7,6 @@ const huOwner = new ObjectId("7000000000000000000000a1");
 const ruOwner = new ObjectId("7000000000000000000000a2");
 
 function fixture(missingRuSoe = false): Db {
-  const unowned = [{ countryId: "HU", sectorType: "extraction", revenue: 1 }];
   const owners = [
     { _id: huOwner, countryOwnerId: "HU" },
     ...(!missingRuSoe ? [{ _id: ruOwner, countryOwnerId: "RU" }] : []),
@@ -23,14 +22,7 @@ function fixture(missingRuSoe = false): Db {
       : []),
   ];
   const rows = (name: string, filter: Record<string, unknown>) => {
-    const source =
-      name === "unownedSectors"
-        ? unowned
-        : name === "corporations"
-          ? owners
-          : name === "corporateSectors"
-            ? owned
-            : [];
+    const source = name === "corporations" ? owners : name === "corporateSectors" ? owned : [];
     return source.filter((row) => {
       if ("countryId" in filter && !("countryId" in row && row.countryId === filter.countryId))
         return false;
@@ -61,18 +53,18 @@ function fixture(missingRuSoe = false): Db {
   } as unknown as Db;
 }
 
-it("checks command-era 1953 production in owned SOEs and retains strict market checks", async () => {
+it("checks command-era 1953 production in owned SOEs and the opening size elsewhere", async () => {
   const checks = await checkSectors(fixture(), buildSeedExpectations("1953-default"));
   for (const id of [
     "sectors.HU.weightDist",
     "sectors.RU.weightDist",
-    "sectors.RU.unowned",
     "sectors.HU.commandSoe",
     "sectors.RU.commandSoe",
   ]) {
     expect(checks.find((check) => check.id === id)?.severity, id).toBe("ok");
   }
-  expect(checks.find((check) => check.id === "sectors.US.unowned")?.severity).toBe("critical");
+  expect(checks.find((check) => check.id === "sectors.RU.openingSize")).toBeUndefined();
+  expect(checks.find((check) => check.id === "sectors.US.openingSize")?.severity).toBe("ok");
 });
 
 it("still rejects a command-era seed without producing country-owned SOEs", async () => {

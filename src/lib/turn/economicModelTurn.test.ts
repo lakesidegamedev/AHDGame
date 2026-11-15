@@ -54,7 +54,7 @@ describe("processEconomicModelTurn", () => {
         ["us1", [{ revenue: 70, currentGrowthRate: 2, sectorType: "defense" }]],
         ["us2", [{ revenue: 50, currentGrowthRate: 2, sectorType: "defense" }]],
       ]),
-      unownedByState: new Map([
+      backgroundByState: new Map([
         ["us1", [{ revenue: 30, sectorType: "retail" }]],
         ["us2", [{ revenue: 50, sectorType: "retail" }]],
       ]),

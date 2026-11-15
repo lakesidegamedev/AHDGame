@@ -14,8 +14,6 @@ export type FreightHaulLoadEntry = {
   total: number;
   /** Freight TEU supply in-state; 0 when unknown. */
   capacity?: number;
-  /** Unowned logistics market. This is an opportunity, not freight supply. */
-  openMarket?: number;
 };
 
 export const FREIGHT_HAUL_LOAD_MODE_DESCRIPTION =
@@ -59,7 +57,6 @@ export function freightHaulLoadTooltip(stateId: string, entry: FreightHaulLoadEn
   } else {
     lines.push(`No operating freight capacity`);
   }
-  if ((entry.openMarket ?? 0) > 0) lines.push("Open logistics market available");
   lines.push(`Bulk load: ${bulk} TEU/turn`);
   lines.push(`Special load: ${special} TEU/turn`);
   lines.push(
@@ -90,6 +87,5 @@ export function freightHaulLoadLabel(entry: FreightHaulLoadEntry | number): stri
   if (capacity > 0) {
     return `${formatFreightTeu(capacity)} TEU`;
   }
-  if ((entry.openMarket ?? 0) > 0) return "Open market";
   return `${formatFreightTeu(entry.total)} TEU`;
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
-import { findBestUnownedSector, type PlacementSignals } from "./marketSignals";
+import { findBestMarketCandidate, type PlacementSignals } from "./marketSignals";
 import {
   extractionGrowthHeadroom,
   fragileReinvestmentPriority,
@@ -12,9 +12,9 @@ import {
   extractionHeadroomForSupply,
 } from "@/lib/turn/nppExtractionOpportunity";
 import type { CorporateSector } from "@/lib/db/types";
-import type { UnownedSector } from "@/lib/db/types/unownedSector";
+import { candidate } from "./__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./marketCandidates";
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
-import type { CountryId } from "@/lib/constants/countries";
 
 // A timber-only state next to a rare earth state, with rare earth critically
 // short. Before the fix the timber state's aggregate deposit room qualified it
@@ -35,15 +35,7 @@ const signals = (overrides: Partial<PlacementSignals> = {}): PlacementSignals =>
   ...overrides,
 });
 
-const mine = (stateId: string): UnownedSector =>
-  ({
-    _id: new ObjectId(),
-    stateId,
-    countryId: "US" as CountryId,
-    sectorType: "extraction",
-    revenue: 100_000,
-    headroomUnits: 100_000,
-  }) as UnownedSector;
+const mine = (stateId: string): MarketCandidate => candidate({ stateId, sectorType: "extraction" });
 
 const sector = (stateId: string, strategyId: string): CorporateSector =>
   ({
@@ -58,7 +50,7 @@ const sector = (stateId: string, strategyId: string): CorporateSector =>
 describe("fragile market supply respects the deposit a mine would extract", () => {
   it("routes a rare earth founding to the state that holds rare earth", () => {
     const pool = new Map([["US", [mine("TIMBER"), mine("RARE")]]]);
-    const pick = findBestUnownedSector(
+    const pick = findBestMarketCandidate(
       "US",
       "TIMBER",
       "extraction",

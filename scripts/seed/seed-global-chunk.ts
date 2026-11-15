@@ -86,12 +86,6 @@ async function run() {
     await seedPartyBudgets(db, false, log);
   }
 
-  // 8. Unowned sectors
-  {
-    const { seedUnownedSectors } = await import("@/lib/admin/seed/seedUnownedSectors");
-    await seedUnownedSectors(db, log);
-  }
-
   // 9. Indexes
   {
     const { seedIndexes } = await import("@/lib/admin/seed/seedIndexes");

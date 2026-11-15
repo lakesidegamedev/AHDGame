@@ -40,7 +40,7 @@ const ctx = (over: Partial<EngineNodeContext>): EngineNodeContext => ({
 
 const payload = (over: Partial<SectorRevenueTaxPayload> = {}): SectorRevenueTaxPayload => ({
   owned: [{ revenue: 1000, currentGrowthRate: 3 }],
-  unowned: [{ revenue: 500 }],
+  background: [{ revenue: 500 }],
   federalSalesTax: 0,
   stateSalesTax: 6,
   countryId: "US",
@@ -102,7 +102,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
         providers: {
           sectorRevenueTax: payload({
             owned: [{ revenue: 1000, currentGrowthRate: 2 }],
-            unowned: [],
+            background: [],
           }),
         },
         policyValue: 15,
@@ -116,7 +116,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
   });
 
   it("heals a resolved crisis shock instead of freezing it at the cap", () => {
-    const owned = { owned: [{ revenue: 1000, currentGrowthRate: 2 }], unowned: [] };
+    const owned = { owned: [{ revenue: 1000, currentGrowthRate: 2 }], background: [] };
     let value = 2 - 4;
     let baseline = 2;
     for (let turn = 0; turn < 24; turn++) {
@@ -144,7 +144,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
         providers: {
           sectorRevenueTax: payload({
             owned: [{ revenue: 1000, currentGrowthRate: 20 }],
-            unowned: [],
+            background: [],
           }),
         },
         policyValue: 20,
@@ -169,7 +169,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
             turnsSincePrev: 1,
             revenueEmaNow: 1100,
             revenueTrendBaseline: { value: 1000, spanTurns: 48 },
-            unowned: [],
+            background: [],
           }),
         },
       }),
@@ -191,7 +191,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
             turnsSincePrev: 1,
             revenueEmaNow: 1100,
             revenueTrendBaseline: null,
-            unowned: [],
+            background: [],
           }),
         },
       }),
@@ -214,7 +214,7 @@ describe("sectorGrowthNode (the cyclical signal — old gdpGrowth logic)", () =>
             countryId: "UK",
             federalSalesTax: 20,
             stateSalesTax: 0,
-            unowned: [],
+            background: [],
           }),
         },
       }),

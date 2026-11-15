@@ -547,13 +547,6 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
     { name: "corporateSectors_corporation_state" },
     log
   );
-  await ensureIndex(
-    db,
-    "unownedSectors",
-    { stateId: 1, sectorType: 1 },
-    { name: "unownedSectors_state_sectorType" },
-    log
-  );
 
   // ipGeoCache — TTL index auto-removes expired IP lookups (30-day cache)
   await ensureIndex(

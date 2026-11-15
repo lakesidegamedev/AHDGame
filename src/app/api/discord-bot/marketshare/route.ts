@@ -226,7 +226,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // Market share is revenue over total owned revenue, so shares sum to 100% with no unowned pool.
+    // Market share is revenue over total owned revenue, so shares sum to 100%.
     const effectiveMarket = totalOwnedRevenue;
     for (const company of companies) {
       company.marketSharePercent = roundMarketSharePercent(company.revenueAnchor, effectiveMarket);
@@ -237,8 +237,6 @@ export async function GET(request: Request) {
     );
 
     const totalMarket = totalOwnedRevenue;
-    const unownedRevenue = 0;
-    const unownedPercent = 0;
 
     const totalItems = companies.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
@@ -259,8 +257,9 @@ export async function GET(request: Request) {
       },
       totalMarket: Math.round(totalMarket),
       totalOwnedRevenue: Math.round(totalOwnedRevenue),
-      unownedRevenue: Math.round(unownedRevenue),
-      unownedPercent,
+      // Kept at 0 so bot clients written against the old payload keep parsing.
+      unownedRevenue: 0,
+      unownedPercent: 0,
       page: clampedPage,
       totalPages,
       totalItems,

@@ -2,53 +2,42 @@
  * P3b: NPP founding parity under plants.
  *
  * Under plants both sides price the founding build through `computeBuildCost`
- * with the founding discount, size it to one facility (`foundingStarterUnits`),
- * and draw that headroom down instead of minting it.
+ * with the founding discount, size it from the bucket's unmet demand, and claim
+ * the founded units against that demand instead of minting room.
  *
  * The non-plants path (no plants context) must be byte-identical to before.
  */
 import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
+import { NPP_FOUNDING_UNMET_SHARE } from "./npp/rules/marketSaturation";
+import { MAX_BUILD_UNITS_PER_ORDER } from "@/lib/constants/capacityEconomy";
+import { candidate, candidatesByCountry, demandSignals } from "./npp/__fixtures__/marketCandidates";
+import type { MarketCandidate } from "./npp/marketCandidates";
 import {
   makeNppCorpDecision,
-  NPP_FOUNDING_HEADROOM_SHARE,
   type CommodityPriceRatioFn,
   type NppPlantsContext,
 } from "./nppCorporationBehavior";
 import { ceoArchetypeModifiers } from "./ceoArchetype";
-import type { Corporation, CorporateSector, UnownedSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   CAPACITY_ANCHOR_YEAR,
   CAPACITY_BUILD_TURNS,
   computeBuildCost,
 } from "@/lib/constants/capacityEconomy";
 import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 
 const noPrices: CommodityPriceRatioFn = () => null;
 const noState = new Set<string>();
 const TURN = 100;
 
-/** The unowned market the corp will expand into. Manufacturing, in-country. */
-const POOL_REVENUE = 40_000_000;
-const POOL_UNITS = computeUnownedHeadroomUnits("manufacturing", POOL_REVENUE, 1);
+/** Unmet demand in the bucket the corp will expand into: manufacturing, in-country. */
+const ROOM_UNITS = foundingStarterUnits("manufacturing") * 40;
 
-function unownedPool(overrides: Partial<UnownedSector> = {}): UnownedSector {
-  return {
-    _id: new ObjectId(),
-    stateId: "CA",
-    countryId: "US",
-    sectorType: "manufacturing",
-    revenue: POOL_REVENUE,
-    headroomUnits: POOL_UNITS,
-    ...overrides,
-  } as unknown as UnownedSector;
-}
-
-function unownedByCountry(pools: UnownedSector[]) {
-  return new Map<string, UnownedSector[]>([["US", pools]]);
-}
+const MANUFACTURING_CA = candidate({ stateId: "CA" });
+const roomSignals = (room = ROOM_UNITS, stateId = "CA") =>
+  demandSignals({ [`${stateId}:manufacturing`]: room });
 
 /**
  * A corp healthy enough to clear every generic expansion gate (profitable,
@@ -102,8 +91,9 @@ const plants1953Ctx: NppPlantsContext = {
 function decide(
   c: Corporation,
   sectors: CorporateSector[],
-  pools: UnownedSector[],
-  plants?: NppPlantsContext
+  candidates: MarketCandidate[],
+  plants?: NppPlantsContext,
+  signals = roomSignals()
 ) {
   return makeNppCorpDecision(
     {
@@ -113,21 +103,22 @@ function decide(
       now: new Date(),
       modifiers: ceoArchetypeModifiers("cautious"),
     },
-    unownedByCountry(pools),
+    candidatesByCountry(candidates),
     noState,
     noPrices,
-    plants
+    plants,
+    signals
   );
 }
 
 /**
- * Founding build a neutral, cash-ample NPP should be charged. Deployment now
+ * Founding build a neutral, cash-ample NPP should be charged. Deployment
  * scales to available capital, so with the default 500M-liquid corp the bind is
- * the founding headroom share, not a single facility. Floored at one facility.
+ * the unmet-demand share, not a single facility. Floored at one facility.
  */
 const EXPECTED_UNITS = Math.max(
   foundingStarterUnits("manufacturing"),
-  Math.floor(POOL_UNITS * NPP_FOUNDING_HEADROOM_SHARE)
+  Math.floor(Math.min(ROOM_UNITS * NPP_FOUNDING_UNMET_SHARE, MAX_BUILD_UNITS_PER_ORDER))
 );
 const EXPECTED_FEE = sectorEntryFeeAnchor("2019-default");
 const EXPECTED_BUILD = computeBuildCost({
@@ -147,7 +138,7 @@ describe("NPP expansion under plants — price parity", () => {
     const decision = decide(
       c,
       [sector({ revenue: 1_000, realizedRevenue: 1_000 })],
-      [unownedPool()],
+      [MANUFACTURING_CA],
       plants1953Ctx
     );
 
@@ -182,13 +173,13 @@ describe("NPP expansion under plants — price parity", () => {
         turn: TURN - 1,
       },
     });
-    const decision = decide(corp(), [losing], [unownedPool()], plantsCtx);
+    const decision = decide(corp(), [losing], [MANUFACTURING_CA], plantsCtx);
 
     expect(decision.newSectors).toBeUndefined();
   });
 
   it("keeps a shareholder return while funding productive investment", () => {
-    const decision = decide(corp({ dividendRate: 8 }), [sector()], [unownedPool()], plantsCtx);
+    const decision = decide(corp({ dividendRate: 8 }), [sector()], [MANUFACTURING_CA], plantsCtx);
 
     expect(decision.newSectors).toHaveLength(1);
     expect(decision.updates.dividendRate as number).toBeGreaterThan(0);
@@ -196,7 +187,7 @@ describe("NPP expansion under plants — price parity", () => {
 
   it("charges the entry fee plus a real founding build, not a flat 500k", () => {
     const c = corp();
-    const decision = decide(c, [sector()], [unownedPool()], plantsCtx);
+    const decision = decide(c, [sector()], [MANUFACTURING_CA], plantsCtx);
 
     expect(decision.newSectors).toHaveLength(1);
     const spent = -decision.liquidCapitalDelta;
@@ -205,7 +196,7 @@ describe("NPP expansion under plants — price parity", () => {
   });
 
   it("queues the capacity instead of granting it", () => {
-    const decision = decide(corp(), [sector()], [unownedPool()], plantsCtx);
+    const decision = decide(corp(), [sector()], [MANUFACTURING_CA], plantsCtx);
     const order = decision.newSectors![0].starterOrder!;
     expect(order.unitsOrdered).toBeCloseTo(EXPECTED_UNITS, 6);
     expect(order.costPaidAnchor).toBeCloseTo(EXPECTED_BUILD, 2);
@@ -213,16 +204,14 @@ describe("NPP expansion under plants — price parity", () => {
     expect(order.onlineTurn).toBe(TURN + CAPACITY_BUILD_TURNS("manufacturing", true));
   });
 
-  it("draws the founded capacity out of the unowned pool", () => {
-    const decision = decide(corp(), [sector()], [unownedPool()], plantsCtx);
-    expect(decision.unownedDraws).toEqual([
-      // `countryId` rides along so the drawdown can UPSERT a pool row that does
-      // not exist yet — without it the draw matched nothing and the NPP took its
-      // starter capacity for free.
+  it("claims the founded capacity against the bucket's unmet demand", () => {
+    const decision = decide(corp(), [sector()], [MANUFACTURING_CA], plantsCtx);
+    expect(decision.demandClaims).toEqual([
       {
         stateId: "CA",
         sectorType: "manufacturing",
         industryModel: null,
+        mediaDiscriminator: null,
         units: EXPECTED_UNITS,
         countryId: "US",
       },
@@ -234,13 +223,13 @@ describe("NPP expansion under plants — price parity", () => {
     // facility and idled the rest, while a player deploys their treasury into
     // dozens of plants. Founding now sizes to a bounded share of surplus.
     const c = corp({ liquidCapital: 2_000_000 });
-    const decision = decide(c, [sector()], [unownedPool()], plantsCtx);
+    const decision = decide(c, [sector()], [MANUFACTURING_CA], plantsCtx);
     const order = decision.newSectors![0].starterOrder!;
     // Many facilities, not one.
     expect(order.unitsOrdered).toBeGreaterThan(foundingStarterUnits("manufacturing"));
-    // Bounded by the founding headroom share so it cannot vacuum a fresh market.
+    // Bounded by the unmet-demand share so it cannot vacuum a fresh market.
     expect(order.unitsOrdered).toBeLessThanOrEqual(
-      Math.floor(POOL_UNITS * NPP_FOUNDING_HEADROOM_SHARE)
+      Math.floor(ROOM_UNITS * NPP_FOUNDING_UNMET_SHARE)
     );
     // Never spent below the cash floor.
     expect((c.liquidCapital ?? 0) + decision.liquidCapitalDelta).toBeGreaterThan(0);
@@ -248,7 +237,7 @@ describe("NPP expansion under plants — price parity", () => {
 
   it("pays the same price a player's founding build pays for the same units", () => {
     // Parity with `expandSector`: same function, same discount, same inputs.
-    const decision = decide(corp(), [sector()], [unownedPool()], plantsCtx);
+    const decision = decide(corp(), [sector()], [MANUFACTURING_CA], plantsCtx);
     const order = decision.newSectors![0].starterOrder!;
     const playerPrice = computeBuildCost({
       strategyId: null,
@@ -263,34 +252,46 @@ describe("NPP expansion under plants — price parity", () => {
     expect(order.costPaidAnchor).toBeCloseTo(playerPrice, 6);
   });
 
-  it("refuses when the market has no room for one facility", () => {
-    const emptyPool = unownedPool({ revenue: 0, headroomUnits: 0 });
-    const decision = decide(corp(), [sector()], [emptyPool], plantsCtx);
+  it("refuses when the market has no unmet demand for one facility", () => {
+    const decision = decide(
+      corp(),
+      [sector()],
+      [MANUFACTURING_CA],
+      plantsCtx,
+      roomSignals(foundingStarterUnits("manufacturing") * 0.5)
+    );
 
     expect(decision.newSectors).toBeUndefined();
-    expect(decision.unownedDraws).toBeUndefined();
+    expect(decision.demandClaims).toBeUndefined();
     expect(decision.liquidCapitalDelta).toBe(0);
   });
 
-  it("ranks candidate markets by headroom units, not by ₳ revenue", () => {
-    // Two markets whose ₳ revenue ordering is the OPPOSITE of their unit
-    // ordering (a stale/hand-set headroom figure, exactly what a drawn-down pool
-    // looks like). Plants must follow the units.
-    const richRevenueThinPool = unownedPool({
-      _id: new ObjectId(),
-      stateId: "NY",
-      revenue: POOL_REVENUE * 10,
-      headroomUnits: POOL_UNITS * 0.1,
-    });
-    const leanRevenueDeepPool = unownedPool({
-      _id: new ObjectId(),
-      stateId: "TX",
-      revenue: POOL_REVENUE,
-      headroomUnits: POOL_UNITS * 50,
-    });
-    // HQ state is CA, and neither candidate is there, so ranking decides.
+  it("founds in a bucket that has no stored document at all", () => {
+    const decision = decide(
+      corp(),
+      [sector()],
+      [candidate({ stateId: "TX" })],
+      plantsCtx,
+      roomSignals(ROOM_UNITS, "TX")
+    );
+    expect(decision.newSectors![0].stateId).toBe("TX");
+  });
+
+  it("ranks candidate markets by unmet demand, not by any stored revenue", () => {
+    const thin = candidate({ stateId: "NY" });
+    const deep = candidate({ stateId: "TX" });
+    // HQ state is WA and neither candidate is there, so ranking decides.
     const c = corp({ headquartersState: "WA" });
-    const decision = decide(c, [sector()], [richRevenueThinPool, leanRevenueDeepPool], plantsCtx);
+    const decision = decide(
+      c,
+      [sector()],
+      [thin, deep],
+      plantsCtx,
+      demandSignals({
+        "NY:manufacturing": ROOM_UNITS * 0.1,
+        "TX:manufacturing": ROOM_UNITS * 50,
+      })
+    );
     expect(decision.newSectors![0].stateId).toBe("TX");
   });
 });
@@ -307,7 +308,7 @@ describe("NPP growth targets under plants — retired", () => {
       profitMargin: -5,
       effectiveProfitMargin: -5,
     });
-    const decision = decide(corp(), [losing], [unownedPool()], plantsCtx);
+    const decision = decide(corp(), [losing], [MANUFACTURING_CA], plantsCtx);
     expect(growthWritesOf(decision)).toHaveLength(0);
   });
 
@@ -317,41 +318,20 @@ describe("NPP growth targets under plants — retired", () => {
       profitMargin: -5,
       effectiveProfitMargin: -5,
     });
-    const decision = decide(corp(), [losing], [unownedPool()]);
+    const decision = decide(corp(), [losing], [MANUFACTURING_CA]);
     expect(growthWritesOf(decision).length).toBeGreaterThan(0);
   });
 });
 
-describe("NPP expansion without plants — unchanged", () => {
-  it("still pays the flat 500k and receives free revenue", () => {
+describe("NPP expansion without plants", () => {
+  it("still pays the flat 500k and receives a starter nameplate", () => {
     const c = corp();
-    const decision = decide(c, [sector()], [unownedPool()]);
+    const decision = decide(c, [sector()], [MANUFACTURING_CA]);
 
     expect(decision.newSectors).toHaveLength(1);
     expect(decision.newSectors![0].starterOrder).toBeUndefined();
-    expect(decision.newSectors![0].revenue).toBe(Math.round(POOL_REVENUE * 0.25));
+    expect(decision.newSectors![0].revenue).toBeGreaterThan(0);
     expect(-decision.liquidCapitalDelta).toBe(500_000);
-    expect(decision.unownedDraws).toBeUndefined();
-  });
-
-  it("still ranks candidate markets by ₳ revenue", () => {
-    const richRevenueThinPool = unownedPool({
-      _id: new ObjectId(),
-      stateId: "NY",
-      revenue: POOL_REVENUE * 10,
-      headroomUnits: POOL_UNITS * 0.1,
-    });
-    const leanRevenueDeepPool = unownedPool({
-      _id: new ObjectId(),
-      stateId: "TX",
-      revenue: POOL_REVENUE,
-      headroomUnits: POOL_UNITS * 50,
-    });
-    const decision = decide(
-      corp({ headquartersState: "WA" }),
-      [sector()],
-      [richRevenueThinPool, leanRevenueDeepPool]
-    );
-    expect(decision.newSectors![0].stateId).toBe("NY");
+    expect(decision.demandClaims).toBeUndefined();
   });
 });

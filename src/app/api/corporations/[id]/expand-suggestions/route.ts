@@ -13,24 +13,16 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import {
-  SPLIT_BASE_CAPTURE_FRACTION,
-  UNOWNED_CAPTURE_BONUS_MULTIPLIER,
-  MS_CAPTURE_DIVISOR,
-  isOperatingSectorType,
-  operatingSectorIdentity,
-} from "@/lib/constants/corporations";
+import { isOperatingSectorType, operatingSectorIdentity } from "@/lib/constants/corporations";
+import { enumerateCandidateBuckets, laneIdentities } from "@/lib/market/marketBuckets";
 import type {
   CorporateSector,
   GameState,
   SectorBuildOrder,
   StateMetrics,
-  UnownedSector,
   State,
   GameConfig,
 } from "@/lib/db/types";
-import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolveCountryPrimeRates } from "@/lib/corporations/sectorGrowthCost";
@@ -51,10 +43,8 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
 import type { CountryId } from "@/lib/constants/countries";
-import { calculateSplitCostAnchor } from "@/lib/corporations/marketActionCosts";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { pinStateInTopSuggestions } from "@/lib/corporations/expandSuggestionPin";
@@ -70,7 +60,6 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -82,7 +71,8 @@ type OwnershipFilter = "all" | "owned" | "unowned";
 /**
  * GET /api/corporations/[id]/expand-suggestions?sectorType=xxx&mode=unowned|playerCorp&ownership=all|owned|unowned
  * Returns up to 5 states with the best market opportunity for the sector type.
- * mode=unowned (default): ranked by estimated capture from the unowned pool.
+ * mode=unowned (default, the "new markets" list): every region of the world is a
+ *   candidate; ranked by enterability, then room to build.
  * mode=playerCorp: ranked by total competitor revenue, i.e. markets with active player corps.
  * ownership (default all): owned = states this corp already operates in; unowned =
  *   states it has not entered. Applied BEFORE the top-N slice so the best owned/new
@@ -90,9 +80,8 @@ type OwnershipFilter = "all" | "owned" | "unowned";
  * state (optional): pin this stateId into the returned top-N (Build-here deep link).
  * Includes competitor corporations already operating in each state.
  *
- * Plant worlds also return, per market, the entry verdict from
- * `evaluateMarketEntry` (the rules the founding command enforces) and the room
- * to build in capacity units, kept apart from the legacy unowned revenue pool.
+ * Each market carries the entry verdict from `evaluateMarketEntry` (the rules the
+ * founding command enforces) and the room to build in capacity units.
  * CEO only.
  */
 export async function GET(request: Request, { params }: RouteParams) {
@@ -137,7 +126,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
     const gameStateDoc = await gameStateCollection(db).findOne({ _id: "current" });
     const currentTurn = gameStateDoc?.currentTurn ?? 0;
 
@@ -148,7 +136,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // still available because sector attacks transfer existing plants; its rows
     // carry the pause as their entry verdict instead.
     let retailPauseTurnsRemaining: number | null = null;
-    if (plantsMode && sectorType === "retail") {
+    if (sectorType === "retail") {
       const transition = await gameConfigCollection(db).findOne(
         { _id: "default" },
         {
@@ -171,7 +159,6 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Funded markets use the same per-output sizing as local expansion below.
     // The legacy weighted appetite remains only for worlds without funded books.
-    // Unclaimed market share is never treated as measured buyer demand.
     const supplyMix = getEffectiveStrategyRatesForOperatingModel(
       sectorType,
       "standard",
@@ -183,7 +170,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       resolvePresetIdFromGameState(gameStateDoc),
       gameStateDoc?.hardwareInputReliefStartTurn
     ).supply;
-    const buildRoom = plantsMode ? await loadBuildRoomContext(db) : null;
+    const buildRoom = await loadBuildRoomContext(db);
     const candidateOutputMultiplier = buildAdviceOutputMultiplier({
       sector: { sectorType, industryModel, mediaDiscriminator },
       supply: supplyMix,
@@ -192,12 +179,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       turn: currentTurn,
       preset: resolvePresetIdFromGameState(gameStateDoc),
     });
-    const countrySharedDemand =
-      plantsMode && supplyMixSharesCountryDemand(supplyMix, buildRoom?.funded);
+    const countrySharedDemand = supplyMixSharesCountryDemand(supplyMix, buildRoom?.funded);
     const demandGapUnitsByState = new Map<string, number>();
     const demandGapUnitsByCountry = new Map<string, number>();
     const demandGapUnitsFor = (stateId: string, countryId: string): number => {
-      if (!buildRoom) return Number.POSITIVE_INFINITY;
       const cache = countrySharedDemand ? demandGapUnitsByCountry : demandGapUnitsByState;
       const key = countrySharedDemand ? countryId : stateId;
       const cached = cache.get(key);
@@ -208,9 +193,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     };
 
     const { ObjectId } = await import("mongodb");
-    const ms = corporation.marketingStrength ?? 0;
     const liquidCapital = corporation.liquidCapital ?? 0;
-    const captureMultiplier = 1 + ms / MS_CAPTURE_DIVISOR;
     const fxByCurrency = await loadFxRatesByCurrency(db);
     const corpFx = fxRateForCorpFromMap(corporation, fxByCurrency);
     const liquidCurrencyCode = resolveCorpLiquidCurrencyCode(corporation);
@@ -219,6 +202,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     const liquidCapitalAnchor = Math.round(liquidCapitalAnchorExact);
 
     let stateIds: string[];
+    // New-market mode reads every region once and reuses the rows below.
+    let allStates: Pick<State, "_id" | "name" | "countryId">[] | null = null;
 
     if (mode === "playerCorp") {
       // Find states where competitor corps operate in this sector type
@@ -232,16 +217,16 @@ export async function GET(request: Request, { params }: RouteParams) {
 
       stateIds = [...new Set(competitorSectors.map((s) => s.stateId))];
     } else {
-      // Find states with unowned revenue pools
-      const unownedIds = await unownedSectorsCollection(db)
-        // A plants market can be a valid greenfield build even before it earns
-        // revenue. Filtering those rows out made zero-revenue markets vanish
-        // from the only UI that can found their first plant.
-        .find(plantsMode ? marketFilter : { ...marketFilter, revenue: { $gt: 0 } })
-        .project<{ stateId: string }>({ stateId: 1 })
+      // Every region is a candidate: the goods market decides whether it pays.
+      allStates = await statesCollection(db)
+        .find({}, { projection: { _id: 1, name: 1, countryId: 1 } })
         .toArray();
-
-      stateIds = [...new Set(unownedIds.map((u) => u.stateId))];
+      const laneId = laneIdentities().filter((l) => l.lane === lane);
+      stateIds = enumerateCandidateBuckets(
+        allStates.map((st) => st._id),
+        new Set(),
+        laneId
+      ).map((b) => b.stateId);
     }
 
     if (stateIds.length === 0) {
@@ -254,10 +239,12 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Fetch all relevant data for the candidate states in parallel
-    const [states, ownedSectors, siblingCorpSectors, unownedSectors] = await Promise.all([
-      statesCollection(db)
-        .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
-        .toArray(),
+    const [states, ownedSectors, siblingCorpSectors] = await Promise.all([
+      allStates
+        ? Promise.resolve(allStates)
+        : statesCollection(db)
+            .find({ _id: { $in: stateIds } }, { projection: { _id: 1, name: 1, countryId: 1 } })
+            .toArray(),
       corporateSectorsCollection(db)
         .find({ corporationId: corporation._id, ...marketFilter, stateId: { $in: stateIds } })
         .project<{ _id: string; stateId: string }>({ _id: 1, stateId: 1 })
@@ -276,20 +263,14 @@ export async function GET(request: Request, { params }: RouteParams) {
           buildQueue: 1,
         })
         .toArray(),
-      unownedSectorsCollection(db)
-        .find({ ...marketFilter, stateId: { $in: stateIds } })
-        .toArray(),
     ]);
 
-    // Loaded in competitor mode too under plants: a command-economy row there
-    // is still shown, but its entry verdict must say it is closed.
-    const commandEconomyBlockedCountries =
-      mode === "unowned" || plantsMode
-        ? await loadCommandEconomyBlockedCountries(
-            db,
-            states.map((s) => s.countryId)
-          )
-        : new Set<CountryId>();
+    // Loaded in competitor mode too: a command-economy row there is still shown,
+    // but its entry verdict must say it is closed.
+    const commandEconomyBlockedCountries = await loadCommandEconomyBlockedCountries(
+      db,
+      states.map((s) => s.countryId)
+    );
 
     // Fetch competitor corporation details by ObjectId
     const competitorCorpIds = [
@@ -336,19 +317,11 @@ export async function GET(request: Request, { params }: RouteParams) {
       ])
     );
 
-    // Command economies (USSR, East Germany, etc — and China pre-reform when
-    // the marketization feature is on) run production through the state, not
-    // private corporations. An "unowned" market there isn't a private-capture
-    // opportunity, it's a modeling gap — exclude those states from the
-    // unowned-mode candidate pool BEFORE building stateMap/availableCountries
-    // so neither the suggestions nor the country filter chips surface them.
-    // playerCorp mode is untouched — seeing which corps (including SOEs)
-    // already compete somewhere is legitimate info either way.
-    // Cross-border founding is allowed under plants (as it already was pre-plants):
-    // the founding command and buildCapacity both price the host country's prime
-    // rate and charge the cross-currency spread, so a foreign market is a real,
-    // fully-modelled option. The only hard exclusion is command-economy countries,
-    // whose "unowned" markets are a modeling gap rather than a capture opportunity.
+    // Command economies run production through the state, not private
+    // corporations, so their states are not new-market candidates. Competitor
+    // mode keeps them: seeing which corps (including SOEs) compete is useful.
+    // Cross-border founding is allowed: the founding command prices the host
+    // country's prime rate and the cross-currency spread.
     const eligibleStates = states.filter(
       (state) =>
         mode !== "unowned" || !commandEconomyBlockedCountries.has(state.countryId as CountryId)
@@ -363,23 +336,21 @@ export async function GET(request: Request, { params }: RouteParams) {
       ...new Set(eligibleStates.map((s) => s.countryId).filter(Boolean)),
     ].sort();
     const ownedStateMap = new Map(ownedSectors.map((s) => [s.stateId, s._id.toString()]));
-    const unownedMap = new Map(unownedSectors.map((u) => [u.stateId, u]));
 
     // ─── Plants: what entering this market actually costs and delivers ───────
     //
-    // Under plants, founding is a FIRST BUILD (see expandSector): an entry fee
+    // Founding is a FIRST BUILD (see expandSector): an entry fee
     // plus a discounted starter build that ARRIVES after a construction lag.
     //
     // Priced through `quoteFoundingEntry` with tech effects from
     // `loadFoundingTechEffects`, the exact pair expandSector charges with, so
     // the modal's quote and the command's charge cannot drift. A preview that
     // disagrees with the confirm is worse than no preview.
-    const eraUnitScale = await loadWorldEraUnitScale(db);
 
     let envelopeQuote: FoundingQuote | null = null;
     const quoteByState = new Map<string, FoundingQuote>();
 
-    if (plantsMode) {
+    {
       const currentYear =
         gameStateDoc?.currentYear ??
         STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
@@ -481,89 +452,44 @@ export async function GET(request: Request, { params }: RouteParams) {
         const state = stateMap.get(stateId);
         if (!state) return null;
 
-        const unownedDoc = unownedMap.get(stateId);
-        const unownedRevenue = Math.round(unownedDoc?.revenue ?? 0);
-        // Unowned splits are retired under plants — zero the legacy quote so
-        // clients never see a "Split cost" for an action that 403s.
-        const splitCost = plantsMode ? 0 : calculateSplitCostAnchor(unownedRevenue);
-        const estimatedRevenueCapture = plantsMode
-          ? 0
-          : Math.min(
-              Math.round(
-                unownedRevenue *
-                  SPLIT_BASE_CAPTURE_FRACTION *
-                  captureMultiplier *
-                  UNOWNED_CAPTURE_BONUS_MULTIPLIER
-              ),
-              unownedRevenue
-            );
-        // Untapped demand, in output units per day. Self-healed from the ₳
-        // pool for rows that predate the `headroomUnits` backfill — a bare 0
-        // fallback would read as "no demand here" for a market that has plenty.
-        const poolHeadroomUnits = plantsMode
-          ? unownedDoc?.headroomUnits != null && Number.isFinite(unownedDoc.headroomUnits)
-            ? unownedDoc.headroomUnits
-            : computeUnownedHeadroomUnits(
-                sectorType,
-                unownedRevenue,
-                eraUnitScale,
-                industryModel,
-                mediaDiscriminator
-              )
-          : null;
         // Room to build: demand buyers here are not getting, less capacity
-        // already under construction for it. The unowned pool is legacy market
-        // share, not physical demand, so it no longer caps this figure (a
-        // market can be short with an empty pool).
-        const countryDemandEstimate =
-          countrySharedDemand && poolHeadroomUnits != null
-            ? (countryDemandEstimateByCountry.get(state.countryId) ??
-              buildRoomUnits(
-                demandGapUnitsFor(state._id, state.countryId),
-                queuedUnitsByCountry.get(state.countryId) ?? 0
-              ))
-            : null;
+        // already under construction for it.
+        const countryDemandEstimate = countrySharedDemand
+          ? (countryDemandEstimateByCountry.get(state.countryId) ??
+            buildRoomUnits(
+              demandGapUnitsFor(state._id, state.countryId),
+              queuedUnitsByCountry.get(state.countryId) ?? 0
+            ))
+          : null;
         if (countryDemandEstimate != null && !countryDemandEstimateByCountry.has(state.countryId)) {
           countryDemandEstimateByCountry.set(state.countryId, countryDemandEstimate);
         }
-        const headroomUnits =
-          poolHeadroomUnits != null && !countrySharedDemand
-            ? buildRoomUnits(
-                demandGapUnitsFor(state._id, state.countryId),
-                queuedUnitsByState.get(state._id) ?? 0
-              )
-            : null;
-        const stateQuote = plantsMode ? quoteByState.get(stateId) : undefined;
-        const starterBuildCostAnchor = plantsMode ? (stateQuote?.starterBuildAnchor ?? 0) : null;
-        // Under plants the price of entry is fee + starter build, not the split
-        // cost — so afford must be checked against what is actually charged.
-        const foundingBaseAnchor = plantsMode ? (stateQuote?.baseCostAnchor ?? 0) : null;
-        const foundingTotalAnchor =
-          foundingBaseAnchor == null
-            ? null
-            : foundingBaseAnchor +
-              corpToSectorCountrySpread(corporation, state.countryId, foundingBaseAnchor)
-                .spreadAnchor;
-        const canAfford =
-          foundingTotalAnchor != null
-            ? liquidCapitalAnchorExact >= foundingTotalAnchor
-            : splitCost === 0
-              ? false
-              : liquidCapitalAnchor >= splitCost;
-        const ownedSectorId = ownedStateMap.get(stateId) ?? null;
-        // The founding command's own rules, in its order. Plants only: legacy
-        // worlds enter markets by splitting the pool, which has its own route.
-        const entry = plantsMode
-          ? evaluateMarketEntry({
-              actionsPausedMessage: actionsPause?.message ?? null,
-              nppControlled: corporation.ceoType === "npp",
-              commandEconomy: commandEconomyBlockedCountries.has(state.countryId as CountryId),
-              alreadyOperating: ownedSectorId != null,
-              retailPauseTurnsRemaining,
-              liquidCapitalAnchor: liquidCapitalAnchorExact,
-              entryCostAnchor: foundingTotalAnchor,
-            })
+        const stateRoomUnits = !countrySharedDemand
+          ? buildRoomUnits(
+              demandGapUnitsFor(state._id, state.countryId),
+              queuedUnitsByState.get(state._id) ?? 0
+            )
           : null;
+        const stateQuote = quoteByState.get(stateId);
+        const starterBuildCostAnchor = stateQuote?.starterBuildAnchor ?? 0;
+        // The price of entry is fee + starter build, so afford is checked
+        // against what is actually charged.
+        const foundingBaseAnchor = stateQuote?.baseCostAnchor ?? 0;
+        const foundingTotalAnchor =
+          foundingBaseAnchor +
+          corpToSectorCountrySpread(corporation, state.countryId, foundingBaseAnchor).spreadAnchor;
+        const canAfford = liquidCapitalAnchorExact >= foundingTotalAnchor;
+        const ownedSectorId = ownedStateMap.get(stateId) ?? null;
+        // The founding command's own rules, in its order.
+        const entry = evaluateMarketEntry({
+          actionsPausedMessage: actionsPause?.message ?? null,
+          nppControlled: corporation.ceoType === "npp",
+          commandEconomy: commandEconomyBlockedCountries.has(state.countryId as CountryId),
+          alreadyOperating: ownedSectorId != null,
+          retailPauseTurnsRemaining,
+          liquidCapitalAnchor: liquidCapitalAnchorExact,
+          entryCostAnchor: foundingTotalAnchor,
+        });
 
         // Build competitor list for this state
         const stateSiblings = siblingsByState.get(stateId) ?? [];
@@ -594,11 +520,9 @@ export async function GET(request: Request, { params }: RouteParams) {
         );
         const roomToBuildUnits = buildDemand
           ? fullMixBuildRoom(buildDemand)
-          : plantsMode
-            ? countrySharedDemand
-              ? (countryDemandEstimate ?? 0)
-              : (headroomUnits ?? 0)
-            : null;
+          : countrySharedDemand
+            ? (countryDemandEstimate ?? 0)
+            : (stateRoomUnits ?? 0);
 
         if (buildDemand && countrySharedDemand && roomToBuildUnits != null) {
           countryDemandEstimateByCountry.set(state.countryId, roomToBuildUnits);
@@ -607,24 +531,16 @@ export async function GET(request: Request, { params }: RouteParams) {
           stateId,
           stateName: state.name,
           countryId: state.countryId,
-          unownedRevenue,
-          splitCost,
-          estimatedRevenueCapture,
-          // Plants-tier fields; null in every other world.
-          ...(countrySharedDemand ? {} : { headroomUnits }),
-          starterBuildCostAnchor:
-            starterBuildCostAnchor == null ? null : Math.round(starterBuildCostAnchor),
+          starterBuildCostAnchor: Math.round(starterBuildCostAnchor),
           foundingTotalAnchor,
           canAfford,
           ownedSectorId,
           competitors,
           totalCompetitorRevenue,
-          // Plants: whether the founding command would accept this market now,
-          // and why not. Legacy unowned revenue above is a separate figure that
-          // does not limit building.
+          // Whether the founding command would accept this market now, and why not.
           entry,
           roomToBuildUnits,
-          roomScope: plantsMode ? (countrySharedDemand ? "country" : "state") : null,
+          roomScope: countrySharedDemand ? "country" : "state",
           buildDemand,
           buildDemandTurn: buildRoom?.demandTurn,
         };
@@ -644,13 +560,11 @@ export async function GET(request: Request, { params }: RouteParams) {
       .sort((a, b) =>
         mode === "playerCorp"
           ? b.totalCompetitorRevenue - a.totalCompetitorRevenue
-          : plantsMode
-            ? // A market the corporation cannot enter now (cannot afford, or
-              // closed by a rule) is not the best next sector. Keep enterable
-              // markets first, then compare the room to build.
-              Number(b.entry?.canEnter ?? false) - Number(a.entry?.canEnter ?? false) ||
-              (b.roomToBuildUnits ?? 0) - (a.roomToBuildUnits ?? 0)
-            : b.estimatedRevenueCapture - a.estimatedRevenueCapture
+          : // A market the corporation cannot enter now (cannot afford, or closed
+            // by a rule) is not the best next sector. Keep enterable markets
+            // first, then compare the room to build.
+            Number(b.entry.canEnter) - Number(a.entry.canEnter) ||
+            (b.roomToBuildUnits ?? 0) - (a.roomToBuildUnits ?? 0)
       );
     const suggestions = pinStateInTopSuggestions(ranked, pinStateId, 5);
 
@@ -658,17 +572,16 @@ export async function GET(request: Request, { params }: RouteParams) {
       suggestions,
       countrySharedDemand,
       countryDemandEstimates: countrySharedDemand
-        ? [...countryDemandEstimateByCountry].map(([countryId, headroomUnits]) => ({
+        ? [...countryDemandEstimateByCountry].map(([countryId, roomToBuildUnits]) => ({
             countryId,
-            headroomUnits,
+            roomToBuildUnits,
           }))
         : [],
       availableCountries,
       liquidCapital: liquidCapitalAnchor,
       liquidCurrencyCode,
-      // Plants-tier founding quote. Constant across states, unlike the build
-      // cost, so it rides on the envelope rather than being repeated per row.
-      plantsMode,
+      // Founding quote. Constant across states, unlike the build cost, so it
+      // rides on the envelope rather than being repeated per row.
       starterUnits: envelopeQuote ? Math.round(envelopeQuote.starterUnits) : null,
       foundingFeeAnchor: envelopeQuote ? envelopeQuote.entryFeeAnchor : null,
       foundingBuildTurns: envelopeQuote ? envelopeQuote.buildTurns : null,
