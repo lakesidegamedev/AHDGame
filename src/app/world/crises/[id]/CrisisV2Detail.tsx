@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
 import type { CrisisV2Detail as Detail, CrisisV2ScarView } from "@/lib/crises/queries/crisisV2View";
+import { noResponseText } from "@/components/crises/crisisV2Format";
 import { STAGE_LABEL, type LedgerRowView } from "@/lib/crises/v2/ledgerView";
 
 const SCAR_LABEL: Record<CrisisV2ScarView["kind"], string> = {
@@ -88,7 +89,7 @@ export default function CrisisV2Detail({ crisisId, detail }: { crisisId: string;
         </h2>
         <CrisisV2Strip crisisId={crisisId} v2={detail} onPulled={() => router.refresh()} />
         {!ended && detail.levers.length === 0 && (
-          <p className="mt-2 text-xs text-muted">You have no response to make on this crisis.</p>
+          <p className="mt-2 text-xs text-muted">{noResponseText(detail.responders)}</p>
         )}
       </section>
       <WhoDidWhat rows={detail.ledger} />

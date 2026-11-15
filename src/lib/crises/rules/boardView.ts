@@ -4,7 +4,7 @@
  * into which. Plain data in, plain data out.
  */
 import type { Crisis } from "@/lib/db/types/crisis";
-import { crisisSeverity, type CrisisSeverity } from "@/lib/crises/severity";
+import { crisisSeverity } from "@/lib/crises/severity";
 
 export type CrisisKind = "war" | "disaster" | "economic" | "political" | "opportunity";
 
@@ -82,17 +82,6 @@ export function boardGroup(facts: BoardCrisisFacts): CrisisBoardGroup {
   const fresh = currentTurn - crisis.startTurn < NEW_CRISIS_TURNS;
   if (crisisSeverity(crisis) === "high" || decisionOpen || fresh) return "escalating";
   return "ongoing";
-}
-
-const SEVERITY_RANK: Record<CrisisSeverity, number> = { high: 3, medium: 2, low: 1 };
-
-/** Worst first, then newest. Stable for equal keys via the caller's id tiebreak. */
-export function compareBoardCrises(
-  a: { severity: CrisisSeverity; startTurn: number },
-  b: { severity: CrisisSeverity; startTurn: number }
-): number {
-  const bySeverity = SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity];
-  return bySeverity !== 0 ? bySeverity : b.startTurn - a.startTurn;
 }
 
 function sectorHit(

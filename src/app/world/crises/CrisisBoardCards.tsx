@@ -1,106 +1,161 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
+import {
+  BAND_ROW_CLASS,
+  CrisisEffectChip,
+  CrisisThumb,
+  SeverityTag,
+} from "@/components/crises/CrisisRowParts";
+import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import { crisisImageUrl } from "@/lib/crises/crisisImages";
 import type { BoardCrisis } from "@/lib/crises/queries/crisisBoard";
-import type { CrisisBoardGroup } from "@/lib/crises/rules/boardView";
+import { crisisPlaceLabel } from "@/lib/crises/rules/crisisRow";
+import { STAGE_LABEL } from "@/lib/crises/v2/ledgerView";
 import {
   KIND_COLOR,
   KIND_LABEL,
   REASON_LABEL,
-  SEVERITY_BADGE,
-  SEVERITY_LABEL,
   formatDeadline,
   formatTurnsLeft,
 } from "./crisisBoardStyle";
 
-export const GROUP_META: Record<CrisisBoardGroup, { title: string; hint: string }> = {
-  needsResponse: { title: "Needs your response", hint: "You can act on these now." },
-  escalating: { title: "Escalating", hint: "Severe, new, or waiting on a decision." },
-  ongoing: { title: "Ongoing", hint: "Running their course." },
-  windingDown: { title: "Winding down", hint: "Ending within two turns." },
-  history: { title: "Recent history", hint: "Resolved in the last 48 turns." },
-};
+export function stageText(crisis: BoardCrisis): string {
+  if (crisis.status === "resolved") return "Resolved";
+  return crisis.v2 ? STAGE_LABEL[crisis.v2.stage] : "Ongoing";
+}
 
-export const GROUP_ORDER: CrisisBoardGroup[] = [
-  "needsResponse",
-  "escalating",
-  "ongoing",
-  "windingDown",
-  "history",
-];
+function whoCanRespondText(crisis: BoardCrisis): string {
+  if (crisis.viewerCanAct) return "You can respond now.";
+  if (crisis.status === "resolved") return "This crisis is over.";
+  if (crisis.whoCanAct) return `Waiting on a response from: ${crisis.whoCanAct}.`;
+  const roles = crisis.v2?.responders.map((r) => r.role) ?? [];
+  if (roles.length > 0) {
+    return `No response for you. Can be answered by: ${roles.join(", ")}.`;
+  }
+  return "Nobody can respond directly. It runs its course.";
+}
 
 export function BoardCard({
   crisis,
   selected,
-  onFocus,
+  regionNames,
   onPulled,
 }: {
   crisis: BoardCrisis;
   selected: boolean;
-  onFocus?: (id: string) => void;
+  regionNames: Record<string, string>;
   onPulled?: () => void;
 }) {
+  // Collapsed until clicked; picking the crisis on the map opens it.
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const open = toggled ?? selected;
+  const countryName = useCountryDisplayName();
+
   const resolved = crisis.status === "resolved";
   const deadline = formatDeadline(crisis.decisionDeadline);
+  const place = crisisPlaceLabel(crisis, {
+    country: (id) => countryName(id as CountryId),
+    region: (id) => regionNames[id] ?? id,
+  });
+  const band = resolved ? "low" : crisis.severity;
+
   return (
     <div
       id={`crisis-${crisis.id}`}
-      className={`rounded-lg border bg-card p-3 text-sm ${
+      className={`overflow-hidden rounded-lg border bg-card text-sm ${BAND_ROW_CLASS[band]} ${
         selected ? "border-primary" : "border-card-border"
       } ${resolved ? "opacity-70" : ""}`}
     >
-      <div className="flex items-start gap-2">
-        <span
-          className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ background: KIND_COLOR[crisis.kind] }}
-          title={KIND_LABEL[crisis.kind]}
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setToggled(!open)}
+        className="flex w-full items-center gap-3 p-2.5 text-left hover:bg-card-elevated/60"
+      >
+        <CrisisThumb
+          src={crisisImageUrl(
+            { name: crisis.name, templateKey: crisis.templateKey, kind: crisis.kind },
+            320
+          )}
         />
-        <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={() => onFocus?.(crisis.id)}
-            className="block w-full text-left font-semibold leading-snug text-foreground hover:text-primary"
-          >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold leading-snug text-foreground">
             {crisis.name}
-          </button>
-          <p className="mt-0.5 line-clamp-2 text-xs text-muted">{crisis.description}</p>
-        </div>
-        {!resolved && (
-          <span
-            className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${SEVERITY_BADGE[crisis.severity]}`}
-          >
-            {SEVERITY_LABEL[crisis.severity]}
+          </span>
+          <span className="block truncate text-xs text-muted">
+            {place} · {stageText(crisis)}
+          </span>
+        </span>
+        {crisis.viewerCanAct && (
+          <span className="hidden shrink-0 text-xs font-medium text-success sm:inline">
+            You can respond
           </span>
         )}
-      </div>
-      {crisis.v2 && !resolved && (
-        <div className="mt-2">
-          <CrisisV2Strip crisisId={crisis.id} v2={crisis.v2} onPulled={onPulled} />
+        {!resolved && <SeverityTag band={crisis.severity} score={crisis.severityScore} />}
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
+      </button>
+
+      {open && (
+        <div className="space-y-3 border-t border-card-border p-3">
+          <div className="flex items-center gap-2 text-xs text-muted">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ background: KIND_COLOR[crisis.kind] }}
+            />
+            <span>{KIND_LABEL[crisis.kind]}</span>
+            <span>·</span>
+            <span>{resolved ? "Resolved" : formatTurnsLeft(crisis.turnsLeft)}</span>
+            {deadline && !resolved && <span className="text-warning">{deadline}</span>}
+          </div>
+
+          <p className="text-sm text-foreground">{crisis.description}</p>
+
+          {crisis.effects.length > 0 && (
+            <div>
+              <h3 className="mb-1 text-xs font-semibold text-muted">What it does</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {crisis.effects.map((effect, i) => (
+                  <CrisisEffectChip key={i} effect={effect} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {crisis.v2 && !resolved && (
+            <CrisisV2Strip crisisId={crisis.id} v2={crisis.v2} onPulled={onPulled} />
+          )}
+
+          <p className="text-xs text-muted">{whoCanRespondText(crisis)}</p>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            {crisis.exposure
+              .filter((r) => r !== "office")
+              .map((r) => (
+                <span key={r} className="rounded border border-card-border px-1.5 py-px">
+                  {REASON_LABEL[r]}
+                </span>
+              ))}
+            <Link
+              href={crisis.href}
+              className={`ml-auto rounded-md px-2.5 py-1 font-medium ${
+                crisis.viewerCanAct
+                  ? "bg-primary text-white hover:opacity-90"
+                  : "border border-card-border text-foreground hover:border-foreground/30"
+              }`}
+            >
+              {crisis.viewerCanAct ? "Respond" : "Full details"}
+            </Link>
+          </div>
         </div>
       )}
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-        <span>{resolved ? "Resolved" : formatTurnsLeft(crisis.turnsLeft)}</span>
-        {crisis.whoCanAct && <span>Acts: {crisis.whoCanAct}</span>}
-        {deadline && !resolved && <span className="text-warning">{deadline}</span>}
-        {crisis.exposure
-          .filter((r) => r !== "office")
-          .map((r) => (
-            <span key={r} className="rounded border border-card-border px-1.5 py-px">
-              {REASON_LABEL[r]}
-            </span>
-          ))}
-        <Link
-          href={crisis.href}
-          className={`ml-auto rounded-md px-2.5 py-1 font-medium ${
-            crisis.viewerCanAct
-              ? "bg-primary text-white hover:opacity-90"
-              : "border border-card-border text-foreground hover:border-foreground/30"
-          }`}
-        >
-          {crisis.viewerCanAct ? "Respond" : "Details"}
-        </Link>
-      </div>
     </div>
   );
 }

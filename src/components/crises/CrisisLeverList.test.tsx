@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CrisisLeverList } from "./CrisisLeverList";
-import { forecastText, sparklinePoints } from "./crisisV2Format";
+import { forecastText, noResponseText, sparklinePoints } from "./crisisV2Format";
 import type { CrisisV2Lever } from "@/lib/crises/queries/crisisV2View";
 
 const lever = (overrides: Partial<CrisisV2Lever> = {}): CrisisV2Lever => ({
@@ -197,5 +197,27 @@ describe("crisisV2Format", () => {
       "/api/crises/c1/levers",
       expect.objectContaining({ body: JSON.stringify({ leverId: "aid", pctGdp: 0.005 }) }),
     ]);
+  });
+});
+
+describe("noResponseText and forecast copy", () => {
+  it("names who can respond when the viewer cannot", () => {
+    const text = noResponseText([
+      { role: "Head of state", actions: ["Declare emergency"] },
+      { role: "Central bank chair", actions: ["Inject liquidity"] },
+    ]);
+    expect(text).toContain("head of state (Declare emergency)");
+    expect(text).toContain("central bank chair (Inject liquidity)");
+    expect(text).toContain("keeps escalating");
+  });
+
+  it("says plainly when nobody holds a response", () => {
+    expect(noResponseText([])).toContain("Nobody can respond");
+  });
+
+  it("adds the grace period to the forecast", () => {
+    expect(forecastText(40, [42, 50, 61], 2)).toBe(
+      "If nobody acts: 40 now, about 61 in 3 turns. Doing nothing for more than 2 turns makes it worse."
+    );
   });
 });
