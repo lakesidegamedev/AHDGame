@@ -273,39 +273,63 @@ describe("CrisisActionCard — ambient crises the character cannot answer", () =
     );
   }
 
-  it("shows the crisis and what it is doing to the player", async () => {
+  it("folds the crisis into a collapsed summary row", async () => {
     stubAmbientFeed(null);
     render(<CrisisActionCard />);
 
-    expect(await screen.findByText("Recession")).toBeTruthy();
-    expect(screen.getByText(/GDP contraction from recession/)).toBeTruthy();
+    expect(await screen.findByText("1 active crisis")).toBeTruthy();
+    // Collapsed: the crisis row itself is not on screen until expanded.
+    expect(screen.queryByRole("link", { name: /Recession/ })).toBeNull();
+    const toggle = screen.getByRole("button", { expanded: false });
+    expect(toggle).toBeTruthy();
+  });
+
+  it("expands to a compact row that links to the crisis page", async () => {
+    stubAmbientFeed(null);
+    render(<CrisisActionCard />);
+
+    fireEvent.click(await screen.findByRole("button", { expanded: false }));
+    const row = await screen.findByRole("link", { name: /Recession/ });
+    expect(row.getAttribute("href")).toBe("/world/crises/65b0000000000000000000bb");
+    expect(screen.getByText("No response for you")).toBeTruthy();
+  });
+
+  it("remembers the expanded choice", async () => {
+    stubAmbientFeed(null);
+    const { unmount } = render(<CrisisActionCard />);
+    fireEvent.click(await screen.findByRole("button", { expanded: false }));
+    expect(window.localStorage.getItem("ahd:crisisListExpanded")).toBe("1");
+    unmount();
+
+    render(<CrisisActionCard />);
+    expect(await screen.findByRole("link", { name: /Recession/ })).toBeTruthy();
   });
 
   it("offers no decision controls", async () => {
     stubAmbientFeed(null);
     render(<CrisisActionCard />);
 
-    await screen.findByText("Recession");
+    await screen.findByText("1 active crisis");
     expect(screen.queryByText("Recession response")).toBeNull();
     expect(screen.queryByRole("button", { name: /Austerity/ })).toBeNull();
   });
 
-  it("does not run a decision countdown on a card with no decision", async () => {
+  it("does not run a decision countdown on a crisis with no decision", async () => {
     // The feed can still carry a deadline from an interaction that has since
     // been answered. Rendering it here would read as the crisis expiring.
     stubAmbientFeed(0);
     render(<CrisisActionCard />);
 
-    await screen.findByText("Recession");
+    await screen.findByText("1 active crisis");
     expect(screen.queryByText("Expired")).toBeNull();
   });
 
-  it("can be dismissed like any other card", async () => {
+  it("never surfaces a crisis the player cannot act on as a full card", async () => {
     stubAmbientFeed(null);
     render(<CrisisActionCard />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Dismiss crisis from Actions" }));
-    expect(screen.queryByText("Recession")).toBeNull();
+    await screen.findByText("1 active crisis");
+    expect(screen.queryByRole("button", { name: "Dismiss crisis from Actions" })).toBeNull();
   });
 });
 
@@ -332,8 +356,8 @@ describe("CrisisActionCard — reading what a crisis is doing to you", () => {
                 })),
               },
               interaction: null,
-              currentNode: null,
-              canInteract: false,
+              currentNode: CURRENT_NODE,
+              canInteract: true,
               timeRemainingMinutes: null,
               hasContributed: false,
               optionAvailability: null,
@@ -352,8 +376,8 @@ describe("CrisisActionCard — reading what a crisis is doing to you", () => {
     ]);
     render(<CrisisActionCard />);
 
-    expect(await screen.findByText(/-0\.66 GDP contraction from recession/)).toBeTruthy();
-    expect(screen.getByText(/\+0\.45 Unemployment from business contraction/)).toBeTruthy();
+    expect(await screen.findByText("-0.66 pp")).toBeTruthy();
+    expect(screen.getByText("+0.45 pp")).toBeTruthy();
     expect(screen.queryByText(/0\.6599999999999999/)).toBeNull();
   });
 
@@ -373,7 +397,7 @@ describe("CrisisActionCard — reading what a crisis is doing to you", () => {
     stubEffectsFeed([{ value: -0.1, label: "margins" }]);
     render(<CrisisActionCard />);
 
-    await screen.findByText(/margins/);
+    await screen.findByText("-0.1 pp");
     expect(screen.queryByText(/more$/)).toBeNull();
   });
 
@@ -422,8 +446,8 @@ describe("CrisisActionCard — severity agrees with the crises page", () => {
                 effects,
               },
               interaction: null,
-              currentNode: null,
-              canInteract: false,
+              currentNode: CURRENT_NODE,
+              canInteract: true,
               timeRemainingMinutes: null,
               hasContributed: false,
               optionAvailability: null,
@@ -440,7 +464,7 @@ describe("CrisisActionCard — severity agrees with the crises page", () => {
 
     // shared crisisSeverity scores this 1.70 → medium. The card's old private
     // copy summed ticks only (3.66) and called it high.
-    expect(await screen.findByText("Recession")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Recession" })).toBeTruthy();
     expect(crisisSeverity({ effects: RECESSION_EFFECTS as never })).toBe("medium");
     expect(document.querySelector('[class*="border-amber-500/40"]')).toBeTruthy();
     expect(document.querySelector('[class*="border-rose-500/40"]')).toBeNull();
@@ -454,7 +478,7 @@ describe("CrisisActionCard — severity agrees with the crises page", () => {
     stubSeverityFeed(gdpLoss);
     render(<CrisisActionCard />);
 
-    await screen.findByText("Recession");
+    await screen.findByRole("heading", { name: "Recession" });
     expect(crisisSeverity({ effects: gdpLoss as never })).toBe("high");
     expect(document.querySelector('[class*="border-rose-500/40"]')).toBeTruthy();
   });
