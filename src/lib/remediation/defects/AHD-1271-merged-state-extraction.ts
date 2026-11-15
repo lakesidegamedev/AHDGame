@@ -16,7 +16,7 @@
 // re-pointed at the country's EXISTING extraction enterprise. That is the
 // state the world would have been in had the gate not misfired, and it sizes
 // the new plants on the same basis as the sibling sectors already there
-// (`computeUnownedSeedRevenue` is per state, so scoping the input produces
+// (the seed sizing is per state, so scoping the input produces
 // byte-identical values to a full run).
 //
 // The enterprise is NOT created if missing: a country with deposits and no
@@ -47,7 +47,6 @@ import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import type { Document } from "mongodb";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import { stateResourceCapacityCollection } from "@/lib/db/repositories/stateResourceCapacity";
 
 export const DEFECT_ID = "AHD-1271-merged-state-extraction";
@@ -132,7 +131,7 @@ async function survey(db: Db): Promise<Survey> {
   if (commandStates.length === 0) return empty;
 
   const stateIds = commandStates.map((s) => s._id as string);
-  const [capacities, ownedStateIds, unownedStateIds] = await Promise.all([
+  const [capacities, ownedStateIds] = await Promise.all([
     stateResourceCapacityCollection<{ stateId: string; resources?: Record<string, number> }>(db)
       .find({ stateId: { $in: stateIds } }, { projection: { stateId: 1, resources: 1 } })
       .toArray(),
@@ -140,13 +139,9 @@ async function survey(db: Db): Promise<Survey> {
       stateId: { $in: stateIds },
       sectorType: "extraction",
     }),
-    unownedSectorsCollection<Document>(db).distinct("stateId", {
-      stateId: { $in: stateIds },
-      sectorType: "extraction",
-    }),
   ]);
 
-  const covered = new Set<string>([...ownedStateIds, ...unownedStateIds] as string[]);
+  const covered = new Set<string>(ownedStateIds as string[]);
   const depositsByState = new Map(
     capacities
       .filter((c) => Object.keys(c.resources ?? {}).length > 0)
@@ -437,22 +432,13 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
 
   // Re-check emptiness per state inside apply. The approved plan is the source
   // of WHAT to write, but a sector that appeared between plan and apply (a
-  // concurrent reconcile, a second operator) must not be duplicated. Both
-  // collections are consulted, matching `survey`: an unowned extraction market
-  // that appeared in the meantime is coverage too, and inserting an owned plant
-  // beside it would count the same capacity twice.
+  // concurrent reconcile, a second operator) must not be duplicated.
   const stateIds = docs.map((d) => d.stateId as string);
-  const [ownedNow, unownedNow] = await Promise.all([
-    corporateSectorsCollection<Document>(db).distinct("stateId", {
-      stateId: { $in: stateIds },
-      sectorType: "extraction",
-    }),
-    unownedSectorsCollection<Document>(db).distinct("stateId", {
-      stateId: { $in: stateIds },
-      sectorType: "extraction",
-    }),
-  ]);
-  const alreadyCovered = new Set([...ownedNow, ...unownedNow] as string[]);
+  const ownedNow = await corporateSectorsCollection<Document>(db).distinct("stateId", {
+    stateId: { $in: stateIds },
+    sectorType: "extraction",
+  });
+  const alreadyCovered = new Set(ownedNow as string[]);
 
   const toInsert = docs.filter((d) => !alreadyCovered.has(d.stateId as string));
   const skipped = docs.length - toInsert.length;
@@ -565,7 +551,7 @@ export const defect: Defect = {
   // carried the same bare-key lookup and would have wiped the deposits of every
   // merged-in state on re-seed; fixed upstream in the same change.
   //
-  // OPERATOR HAZARD: now that the gate is fixed, `reconcileCommandEconomyUnowned`
+  // OPERATOR HAZARD: now that the gate is fixed, the command-economy reconcile
   // will build these same plants itself if re-run, but from the raw seed path:
   // no `plantsStartTurn`, no `capacityBookAnchor`, i.e. a full list-price salvage
   // basis. Worse, running it AFTER this heal `$set`s `capitalStock` back to the

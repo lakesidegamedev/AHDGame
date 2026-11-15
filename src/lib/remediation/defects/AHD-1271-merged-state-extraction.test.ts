@@ -21,8 +21,6 @@ interface WorldOptions {
   contestedEnterprise?: boolean;
   /** States that already carry an owned extraction sector. */
   ownedExtractionStates?: string[];
-  /** States that already carry an unowned extraction market. */
-  unownedExtractionStates?: string[];
   commandEconomyEnabled?: boolean;
   /** The world's market tier. The three plants stamps only apply at "plants". */
   marketSystemMode?: string;
@@ -45,7 +43,6 @@ function productionIncidentDb(options: WorldOptions = {}): {
     withoutEnterprise = false,
     contestedEnterprise = false,
     ownedExtractionStates = ["SN", "BE"],
-    unownedExtractionStates = [],
     commandEconomyEnabled = true,
     marketSystemMode = "plants",
     failInsertsFor = [],
@@ -141,7 +138,6 @@ function productionIncidentDb(options: WorldOptions = {}): {
         ),
       distinct: async () => {
         if (name === "corporateSectors") return [...ownedNow];
-        if (name === "unownedSectors") return unownedExtractionStates;
         return [];
       },
       insertOne: async (doc: Record<string, unknown>) => {
@@ -179,14 +175,13 @@ describe(DEFECT_ID, () => {
     ]);
   });
 
-  it("leaves alone a state that already mines, owned or unowned", async () => {
-    const { db } = productionIncidentDb({ unownedExtractionStates: ["NW"] });
+  it("leaves alone a state that already mines", async () => {
+    const { db } = productionIncidentDb();
     const result = await defect.detect(db, ctx);
 
     const stateIds = (result.sample as { stateId: string }[]).map((s) => s.stateId);
-    expect(stateIds).not.toContain("NW");
     expect(stateIds).not.toContain("SN");
-    expect(result.affected).toBe(2);
+    expect(result.affected).toBe(3);
   });
 
   it("names the states and the owning enterprise in the summary the token binds to", async () => {
