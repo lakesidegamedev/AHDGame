@@ -67,8 +67,7 @@ export type RegionCollectionName =
   | "statePolicies"
   | "stateRegistrationPool"
   | "stateResourceCapacity"
-  | "subsidies"
-  | "unownedSectors";
+  | "subsidies";
 
 export interface RegionScope {
   collection: RegionCollectionName;
@@ -103,13 +102,12 @@ export const REGION_SCOPED_COLLECTIONS: RegionScope[] = [
   { collection: "characterStateOrg", key: "stateIdField" },
   { collection: "nppInfluenceAttempts", key: "stateIdField" },
   { collection: "subsidies", key: "stateIdField" },
-  // Sectors (corp-owned and unowned) are keyed to where they OPERATE, so a sector
+  // Sectors are keyed to where they OPERATE, so a sector
   // in the transferred region follows it across the border — its `countryId` must
   // track the region's owner for tax/tariff/metric resolution. An owning corp
   // keeps its own HQ country; a sector left behind in the source country stays put.
   // (Strategic-sector designations are country-level, not region-scoped, so absent.)
   { collection: "corporateSectors", key: "stateIdField" },
-  { collection: "unownedSectors", key: "stateIdField" },
   // ── one-doc-per-region (_id IS the region id) ───────────────────────────────
   // Both halves of a region's metrics. The political board carries `countryId`
   // too, and the dynamics phase drives regions by that field — a transferred

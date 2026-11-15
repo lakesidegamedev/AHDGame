@@ -18,16 +18,11 @@ import {
   anchorToCorpLiquidCapital,
 } from "@/lib/currency/corporationCapital";
 import { emitBuildCapexTxBulk, type BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
-import { unownedPoolCredit } from "@/lib/market/unownedPoolDraw";
-import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
-import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
 import { quoteConversionConstructionRefund } from "./rules/constructionRefund";
 import { cancelConversionUnderwriting } from "@/lib/banking/cancelConversionUnderwriting";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
-import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { unownedSectorsCollection } from "@/lib/db/repositories/unownedSectors";
 import type { Document } from "mongodb";
 import { infraProjectsCollection } from "@/lib/db/repositories/infraProjects";
 import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
@@ -143,11 +138,8 @@ export async function refundConversionConstruction(
   // Foreign sector owners keep their unrelated corporate underwriting; only their local builds cancel.
   await cancelConversionUnderwriting(db, ids, turn);
   const fx = await loadFxRatesByCurrency(db);
-  const gameState = await gameStateCollection(db).findOne({ _id: "current" });
-  const era = getEraUnitScale(resolvePresetIdFromGameState(gameState));
   const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = [];
   const refunds = new Map<string, number>();
-  const poolOps: AnyBulkWriteOperation[] = [];
   const logs: BuildCapexTxInput[] = [];
   // An asking price cannot survive removal of the capacity it advertised. No sale cash is prepaid.
   const pendingIds = sectors
@@ -246,31 +238,6 @@ export async function refundConversionConstruction(
       },
     });
     refunds.set(String(owner._id), (refunds.get(String(owner._id)) ?? 0) + local);
-    const credit = unownedPoolCredit(
-      {
-        stateId: sector.stateId,
-        countryId: sector.countryId,
-        sectorType: sector.sectorType,
-        industryModel: sector.industryModel,
-        mediaDiscriminator: sector.mediaDiscriminator,
-      },
-      quote.units,
-      new Date(),
-      era
-    );
-    if (credit)
-      poolOps.push({
-        updateOne: {
-          filter: {
-            stateId: sector.stateId,
-            sectorType: sector.sectorType,
-            industryModel: sector.industryModel ?? null,
-            mediaDiscriminator: sector.mediaDiscriminator ?? null,
-          },
-          update: credit,
-          upsert: true,
-        },
-      });
     if (quote.anchor > 0)
       logs.push({
         corporationId: owner._id,
@@ -301,7 +268,6 @@ export async function refundConversionConstruction(
         },
       }))
     );
-  if (poolOps.length) await unownedSectorsCollection<Document>(db).bulkWrite(poolOps);
   if (logs.length) await emitBuildCapexTxBulk(db, logs);
   // Infrastructure construction reserves a budget envelope, not prepaid cash.
   // Cancelling releases that commitment; there is no cash debit to refund.
