@@ -8,6 +8,7 @@ import { loadRecentIdentityValues } from "@/lib/identityHistory/recentValues";
 import { hashSensitiveSignal } from "@/lib/utils/hashSignal";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
+import { isAppleLinked } from "@/lib/admin/appleLink";
 import { usersCollection } from "@/lib/db/repositories/users";
 
 /** Hash a list of identity values, dropping any that hash to null. The client
@@ -100,6 +101,7 @@ export async function GET() {
           createdAt: u.createdAt.toISOString(),
           discordId: null,
           discordUsername: u.discordUsername ?? null,
+          appleLinked: isAppleLinked(u),
           modNote: u.modNote ?? null,
           latestModNote: u.modNotes?.at(-1)?.text ?? u.modNote ?? null,
           vpnFlag: u.ipDetails ? u.ipDetails.isVpn || u.ipDetails.isProxy : null,
