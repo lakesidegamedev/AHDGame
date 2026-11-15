@@ -23,9 +23,7 @@ import {
   explainOwnSupplyReach,
 } from "@/lib/corporations/queries/sectorDetailOwnSupply";
 import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
-import {
-  buildNationalDominanceShareBySectorId,
-} from "@/lib/corporations/marketShare";
+import { buildNationalDominanceShareBySectorId } from "@/lib/corporations/marketShare";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { supportsCostPlusPricing, validCostPlusBasis } from "@/lib/market/costPlusPricing/rules";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";

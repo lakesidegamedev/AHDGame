@@ -247,20 +247,16 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // see computeSectorMarketPosition.
     const sectorDetailPreset = resolvePresetIdFromGameState(gameState);
     const sectorDetailUnitScale = getEraUnitScale(sectorDetailPreset);
-    const {
-      effectiveMarket,
-      marketShare,
-      competitors,
-      attackExposure,
-    } = computeSectorMarketPosition({
-      state,
-      sector,
-      sectorCountryId,
-      corporation,
-      siblingCorps,
-      siblingsSectors,
-      siblingFxByCurrency,
-    });
+    const { effectiveMarket, marketShare, competitors, attackExposure } =
+      computeSectorMarketPosition({
+        state,
+        sector,
+        sectorCountryId,
+        corporation,
+        siblingCorps,
+        siblingsSectors,
+        siblingFxByCurrency,
+      });
 
     const stateCountryMap = new Map<string, string>(
       allStates.map((s) => [String(s._id), s.countryId])
@@ -866,7 +862,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               viewerCorporation?._id.toString() !== corporation._id.toString() &&
               !corporation.countryOwnerId &&
               !corporation.suspended,
-            canSplit: !plantsEnabled,
           }
         : null,
       forSaleInfo,

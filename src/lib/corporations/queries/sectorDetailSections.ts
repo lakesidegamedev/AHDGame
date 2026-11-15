@@ -28,9 +28,7 @@ import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
-import {
-  calculateAttackCostFromLocalRevenue,
-} from "@/lib/corporations/marketActionCosts";
+import { calculateAttackCostFromLocalRevenue } from "@/lib/corporations/marketActionCosts";
 import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
@@ -236,14 +234,6 @@ export function buildSectorAttackInfo(args: {
     mods,
     plantsMode = false,
   } = args;
-  const zeroSplit = {
-    splitCost: 0,
-    splitMsCost: 0,
-    splitEstimatedCapture: 0,
-    splitEstimatedNetIncome: 0,
-    projectedMarketShare: 0,
-    exceedsDominanceThreshold: false,
-  };
   const userLiquidCapitalAnchor = Math.round(
     corpLiquidCapitalToAnchor(
       viewerCorporation.liquidCapital ?? 0,
@@ -273,10 +263,6 @@ export function buildSectorAttackInfo(args: {
       sectorHostLiquidCode,
       sectorHostFxRate
     ),
-    // Flat split fields are always 0; attackCost above is the only market action.
-    splitCost: 0,
-    splitEstimatedCapture: 0,
-    splitMsCost: 0,
     userMarketingStrength: roundMarketingStrength(viewerCorporation.marketingStrength ?? 0),
     userLiquidCapital: userLiquidCapitalAnchor,
     userLiquidCurrencyCode: resolveCorpLiquidCurrencyCode(viewerCorporation),
@@ -284,7 +270,6 @@ export function buildSectorAttackInfo(args: {
     countryId: sectorCountryId,
     ...(plantsMode && hasPersistedPlantLedger ? { plantCount: sector.plantCount } : {}),
     ...(plantSplitQuote ? { plantSplitQuote } : {}),
-    splitStrengths: { full: zeroSplit, half: zeroSplit },
     sectorEffectiveMargin: mods.effective,
   };
 }
