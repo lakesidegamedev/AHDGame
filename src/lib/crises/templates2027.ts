@@ -170,7 +170,7 @@ const HEAT_DOME = modernCrisis({
   name: "Heat Dome Emergency",
   heroImage: HERO.heat,
   description:
-    "A stalled high pressure system parks over the country for weeks. Overnight temperatures never drop, hospitals fill with heat stroke cases, rail lines buckle and the cooling load pushes the grid to its limit.",
+    "A stalled high-pressure system sits over {location} for weeks. Nights never cool, hospitals fill with heat stroke cases, rails buckle and air conditioners push the power grid to its limit. For about 4 turns growth falls from lost working hours, grid reliability drops and approval falls as people judge the response.",
   durationTurns: 4,
   fromYear: 2027,
   untilYear: 2040,
@@ -180,8 +180,9 @@ const HEAT_DOME = modernCrisis({
     fx("tick", "metric", "infrastructure", "power", -0.02, "Cooling demand strains the grid"),
     fx("tick", "approval", "government", "overall", -0.03, "Anger at the heat response"),
   ],
-  wireStart: "A heat dome has settled over the country. Hospitals report record admissions.",
-  wireEnd: "The heat dome breaks. Cooling centers close and the grid steadies.",
+  wireStart:
+    "A heat dome has settled over {location}. Hospitals report record heat illness admissions and the grid is near its limit.",
+  wireEnd: "The heat dome has broken. Cooling centers close and the grid recovers.",
   prompt: {
     title: "Heat emergency response",
     description:
@@ -236,7 +237,7 @@ const WET_BULB_HEAT = modernCrisis({
   name: "Lethal Humid Heat Wave",
   heroImage: HERO.heat,
   description:
-    "Heat and humidity climb past the point where the human body can cool itself outdoors. Outdoor work stops, crops wilt in the field and the old and the poor are at mortal risk without air conditioning.",
+    "Heat and humidity have passed the point where the body can cool itself outdoors across {location}. Construction and farm work stop, crops fail in the fields, and old and poor people without air conditioning are at risk of dying. For about 5 turns growth falls, food prices rise, people feel less safe and approval drops with the death toll.",
   durationTurns: 5,
   fromYear: 2038,
   untilYear: 2050,
@@ -247,8 +248,8 @@ const WET_BULB_HEAT = modernCrisis({
     fx("tick", "metric", "publicsafety", "confidence", -0.03, "Fear of the next heat wave"),
     fx("tick", "approval", "government", "overall", -0.03, "Anger at the mortality toll"),
   ],
-  wireStart: "Dangerous humid heat has gripped the country. Outdoor work has been suspended.",
-  wireEnd: "The humid heat lifts. Work resumes and mortality figures are published.",
+  wireStart: "Dangerous humid heat has settled over {location}. Outdoor work has been suspended.",
+  wireEnd: "The humid heat has lifted. Work resumes and the death toll is published.",
   prompt: {
     title: "Humid heat response",
     description:
@@ -303,7 +304,7 @@ const MEGAFIRE_SEASON = modernCrisis({
   name: "Megafire Season",
   heroImage: HERO.fire,
   description:
-    "A season of linked wildfires burns for weeks across forest and suburb alike. Smoke closes airports, insurers pull out of fire zones and whole towns are evacuated.",
+    "Linked wildfires have been burning across {location} for weeks, jumping from forest into suburbs. Smoke has closed airports, insurers are dropping homes in the fire zone and whole towns have been told to leave with whatever fits in the car. Output drops about 1.2% at once. For about 6 turns property values in fire zones fall, people feel less safe and approval drops with every lost street.",
   durationTurns: 6,
   fromYear: 2027,
   untilYear: 2045,
@@ -314,8 +315,9 @@ const MEGAFIRE_SEASON = modernCrisis({
     fx("tick", "metric", "publicsafety", "confidence", -0.03, "Smoke and evacuation fear"),
     fx("tick", "approval", "government", "overall", -0.025, "Anger at the fire response"),
   ],
-  wireStart: "A megafire season has begun. Evacuation orders cover several districts.",
-  wireEnd: "Rain finally smothers the fires. The count of lost homes is released.",
+  wireStart:
+    "Wildfires in {location} have merged into a single front. Whole towns are being ordered out and the smoke has closed the airports.",
+  wireEnd: "Rain has put the fires out. The count of lost homes is published.",
   prompt: {
     title: "Fire season response",
     description: "The fires are outrunning the crews. What is the emergency posture?",
@@ -369,7 +371,7 @@ const MEGADROUGHT = modernCrisis({
   name: "Megadrought",
   heroImage: HERO.drought,
   description:
-    "A drought now in its fifth year has emptied reservoirs and aquifers. Farms fallow, river barges run aground and cities argue over every cubic meter of water.",
+    "Five dry years have emptied the reservoirs and the aquifers under {location}. Farms sit unplanted, river barges sit on the mud and cities argue over every cubic meter. For about 10 turns growth and crop exports fall, food prices rise and approval drops as water becomes the argument in every town.",
   durationTurns: 10,
   fromYear: 2031,
   untilYear: 2050,
@@ -380,8 +382,9 @@ const MEGADROUGHT = modernCrisis({
     fx("tick", "metric", "economy", "exports", -0.015, "Lost crop exports"),
     fx("tick", "approval", "government", "overall", -0.02, "Public anger over water"),
   ],
-  wireStart: "Reservoirs are at record lows. The multi-year drought is now a national emergency.",
-  wireEnd: "Rains return and reservoirs begin to recover. The drought emergency is lifted.",
+  wireStart:
+    "Reservoirs in {location} are at record lows. The multi-year drought is now a national emergency.",
+  wireEnd: "The rains are back and reservoirs are refilling. The drought emergency is lifted.",
   prompt: {
     title: "Drought strategy",
     description: "The drought shows no sign of ending. What is the long-term response?",
@@ -436,7 +439,7 @@ const WATER_RATIONING = modernCrisis({
   name: "Municipal Water Rationing",
   heroImage: HERO.water,
   description:
-    "Supply from the main reservoirs falls below demand. Cities impose strict rationing, factories cut shifts, and politicians argue over who gets cut off first.",
+    "Reservoirs can no longer cover what cities use. Cities have imposed strict rationing, factories are cutting shifts and councils are fighting over who is cut off first. For about 6 turns industry loses margin, growth dips, people worry about supply and approval falls with every dry tap.",
   durationTurns: 6,
   fromYear: 2033,
   untilYear: 2050,
@@ -447,8 +450,8 @@ const WATER_RATIONING = modernCrisis({
     fx("tick", "approval", "government", "overall", -0.03, "Anger at rationing"),
     marginShock(-3, "Industrial water cuts", "financial", "manufacturing"),
   ],
-  wireStart: "Cities have begun water rationing. Industrial users face mandatory cuts.",
-  wireEnd: "Reservoirs recover and rationing ends.",
+  wireStart: "Cities in {location} have started rationing water. Factories face mandatory cuts.",
+  wireEnd: "The reservoirs have recovered and rationing is over.",
   prompt: {
     title: "Water allocation",
     description: "There is not enough water for everyone. Who is protected first?",
@@ -502,7 +505,7 @@ const GRID_EMERGENCY = modernCrisis({
   name: "Grid Emergency",
   heroImage: HERO.grid,
   description:
-    "Peak demand from data centers, electric heating and cooling meets a thin reserve margin. Operators warn of cascading failure unless load is shed within hours.",
+    "Demand from data centers, heating and cooling has run into a thin reserve margin. Operators say the grid will fail in a cascade unless load is cut within hours. For about 3 turns grid reliability falls, scheduled outages hold back output and cut margins, and the public blames the government for the blackouts.",
   durationTurns: 3,
   fromYear: 2028,
   untilYear: 2050,
@@ -513,8 +516,8 @@ const GRID_EMERGENCY = modernCrisis({
     marginShock(-3, "Curtailed power supply", "physical"),
     fx("tick", "approval", "government", "overall", -0.025, "Anger at the outages"),
   ],
-  wireStart: "Grid operators have declared an emergency. Controlled outages may follow tonight.",
-  wireEnd: "Reserve margins are restored. The grid emergency is over.",
+  wireStart: "Grid operators have declared an emergency. Rolling outages could start tonight.",
+  wireEnd: "Reserve margins are back and the emergency is over.",
   prompt: {
     title: "Grid emergency response",
     description: "The system has hours before forced blackouts. What takes priority?",
@@ -567,7 +570,7 @@ const SOLAR_STORM = modernCrisis({
   name: "Severe Solar Storm",
   heroImage: HERO.grid,
   description:
-    "The strongest geomagnetic storm in generations induces currents in long power lines and transformers. Satellites tumble, navigation fails and parts of the grid trip offline.",
+    "The strongest geomagnetic storm in generations is sending currents through long power lines and transformers. Satellites are tumbling, navigation is failing and sections of the grid are tripping offline. Over about 4 turns grid reliability drops sharply, satellite and navigation outages hold back growth and cut margins, and the public is alarmed.",
   scope: "global",
   durationTurns: 4,
   fromYear: 2027,
@@ -586,8 +589,8 @@ const SOLAR_STORM = modernCrisis({
     marginShock(-3, "Power and logistics disruption", "financial"),
     fx("tick", "approval", "government", "overall", -0.015, "Public alarm"),
   ],
-  wireStart: "A severe solar storm is hitting Earth. Power and satellite services are failing.",
-  wireEnd: "The storm has passed. Operators are restoring power and replacing satellites.",
+  wireStart: "A severe solar storm is hitting Earth. Power grids and satellites are failing.",
+  wireEnd: "The storm has passed. Crews are restoring power and replacing satellites.",
   prompt: {
     title: "Solar storm response",
     description:
@@ -641,7 +644,7 @@ const ORBITAL_DEBRIS = modernCrisis({
   name: "Orbital Debris Outage",
   heroImage: HERO.cyber,
   description:
-    "A collision in a crowded orbit throws off a cloud of fragments that takes out a cluster of communications and navigation satellites. Phones, shipping and aviation lose service across the region.",
+    "Two satellites collided in a crowded orbit and the debris has taken out a cluster of communications and navigation satellites. Phones, shipping and flights over {location} lose service. For about 5 turns growth and trade fall, consumers lose confidence and approval slips with the outage.",
   durationTurns: 5,
   fromYear: 2040,
   untilYear: 2050,
@@ -652,8 +655,8 @@ const ORBITAL_DEBRIS = modernCrisis({
     fx("tick", "metric", "economy", "consumerConfidence", -0.015, "Connectivity loss"),
     fx("tick", "approval", "government", "overall", -0.02, "Anger at the outage"),
   ],
-  wireStart: "A satellite collision has knocked out regional communications and navigation.",
-  wireEnd: "Replacement satellites are in service. Connectivity is restored.",
+  wireStart: "A satellite collision has cut communications and navigation across {location}.",
+  wireEnd: "Replacement satellites are working. Phones, ships and flights have service again.",
   prompt: {
     title: "Orbital debris response",
     description: "Services are failing and more collisions are possible. What is the response?",
@@ -708,7 +711,7 @@ const HOUSING_RATE_RESET = modernCrisis({
   name: "Housing Rate Reset Crash",
   heroImage: HERO.housing,
   description:
-    "A wave of cheap fixed-rate mortgages ends at once and household payments jump. Forced sales climb, prices fall and builders stop work on half-finished estates.",
+    "A wave of cheap fixed-rate mortgages across {location} has ended in the same season and monthly payments have jumped. Households are forced to sell, prices fall and builders stop work on half-built estates. For about 8 turns property values fall, consumers spend less, construction jobs go and margins in mortgage lending and building drop.",
   durationTurns: 8,
   fromYear: 2027,
   untilYear: 2036,
@@ -719,8 +722,9 @@ const HOUSING_RATE_RESET = modernCrisis({
     fx("tick", "metric", "economy", "unemployment", 0.01, "Construction layoffs"),
     marginShock(-4, "Mortgage and construction losses", "financial", "financial"),
   ],
-  wireStart: "Mortgage payments are resetting sharply higher. Home prices are falling fast.",
-  wireEnd: "Prices stabilize and forced sales ebb.",
+  wireStart:
+    "Mortgage payments in {location} are jumping as cheap fixed rates expire. Home prices are falling and builders are stopping work.",
+  wireEnd: "Prices have stopped falling and forced sales are drying up.",
   prompt: {
     title: "Housing crash response",
     description: "Households cannot pay and prices are falling. What does the government do?",
@@ -774,7 +778,7 @@ const PENSION_CLIFF = modernCrisis({
   name: "Pension Funding Cliff",
   heroImage: HERO.bank,
   description:
-    "The public pension fund's reserves run out years before projected as retirees outnumber contributors. Benefits must be cut, contributions raised or the shortfall borrowed.",
+    "The public pension fund will run dry years before planned because there are too many retirees per contributor. Every fix is unpopular: raise contributions, cut benefits or borrow. For about 10 turns bond investors price in the shortfall, retirees lose confidence in their incomes and approval falls on both sides of the generational argument.",
   durationTurns: 10,
   fromYear: 2032,
   untilYear: 2048,
@@ -791,8 +795,8 @@ const PENSION_CLIFF = modernCrisis({
     fx("tick", "metric", "economy", "consumerConfidence", -0.015, "Retirees fear for incomes"),
     fx("tick", "approval", "government", "overall", -0.03, "Anger across generations"),
   ],
-  wireStart: "The pension fund is running dry years early. Reform talks have begun.",
-  wireEnd: "A pension settlement is agreed. The funding gap is closed on paper.",
+  wireStart: "The public pension fund is running dry years early. Reform talks have begun.",
+  wireEnd: "A pension deal is agreed. The gap is closed on paper.",
   prompt: {
     title: "Pension settlement",
     description: "The fund cannot pay what has been promised. Who bears the cost?",
@@ -848,7 +852,7 @@ const TECH_LENDER_RUN = modernCrisis({
   name: "Run on a Tech Lender",
   heroImage: HERO.bank,
   description:
-    "A bank that lends mainly to start-ups and holds long bonds loses depositors in a single weekend. Companies cannot make payroll and the fear spreads to similar lenders.",
+    "A bank that lends to start-ups and holds long bonds lost its depositors in a single weekend. Companies cannot meet payroll and investors fear similar lenders are next. For about 5 turns investor confidence falls, new business formation stalls as credit to start-ups freezes, lenders lose margin and approval slips on talk of a rescue.",
   durationTurns: 5,
   fromYear: 2027,
   untilYear: 2038,
@@ -866,8 +870,9 @@ const TECH_LENDER_RUN = modernCrisis({
     marginShock(-5, "Tech lender losses", "financial", "financial"),
     fx("tick", "approval", "government", "overall", -0.02, "Public anger at bank rescue talk"),
   ],
-  wireStart: "Depositors are pulling money out of a major tech lender. Regulators are meeting.",
-  wireEnd: "The lender is resolved and deposits are secure. Fear in the market subsides.",
+  wireStart:
+    "Depositors are pulling their money out of a major tech lender. Regulators are meeting.",
+  wireEnd: "The lender is resolved and deposits are safe. Market fear is easing.",
   prompt: {
     title: "Tech lender resolution",
     description: "Hours remain before Monday's open. Do you guarantee deposits or let losses fall?",
@@ -924,7 +929,7 @@ const INSURANCE_RETREAT = modernCrisis({
   name: "Climate Insurance Retreat",
   heroImage: HERO.tide,
   description:
-    "After repeated disasters, major insurers withdraw from coastal and fire-prone districts. Mortgages cannot be written, property values slide and the state is pushed into the role of insurer of last resort.",
+    "After repeated disasters, big insurers are leaving coastal and fire-prone districts of {location}. Lenders cannot write mortgages on uninsured homes, so property values fall and the state is pushed toward becoming the insurer of last resort. For about 8 turns property values and investor confidence slip, insurers lose margin and homeowners left exposed turn on the government.",
   durationTurns: 8,
   fromYear: 2036,
   untilYear: 2050,
@@ -935,8 +940,9 @@ const INSURANCE_RETREAT = modernCrisis({
     marginShock(-3, "Insurance withdrawal", "financial", "financial"),
     fx("tick", "approval", "government", "overall", -0.02, "Homeowners left exposed"),
   ],
-  wireStart: "Major insurers are pulling out of high-risk districts. Property values are sliding.",
-  wireEnd: "A public insurance backstop is in place. Mortgage lending resumes.",
+  wireStart:
+    "Major insurers are withdrawing from high-risk districts of {location}. Property values are falling.",
+  wireEnd: "A public insurance backstop is in place and mortgage lending resumes.",
   prompt: {
     title: "Insurance backstop",
     description: "Whole districts are becoming uninsurable. What is the state's role?",
@@ -998,7 +1004,7 @@ const CHIP_FAB_FIRE = modernCrisis({
   name: "Chip Fab Fire",
   heroImage: HERO.industry,
   description:
-    "A fire shuts a leading chip fabrication plant. Carmakers, phone makers and defense contractors that depend on its output face weeks of idle lines, and spot prices for chips spike.",
+    "A fire has shut one of the leading chip plants. Carmakers, phone makers and defense contractors that rely on it face weeks of idle lines, and chip prices have spiked. For about 6 turns margins fall in the industries that need chips, electronics exports stall, prices rise a little and layoffs at idled plants cost the government approval.",
   durationTurns: 6,
   fromYear: 2027,
   untilYear: 2040,
@@ -1009,8 +1015,9 @@ const CHIP_FAB_FIRE = modernCrisis({
     fx("tick", "metric", "economy", "inflation", 0.006, "Component prices spike"),
     fx("tick", "approval", "government", "overall", -0.015, "Layoffs at idled plants"),
   ],
-  wireStart: "A fire has shut a major chip plant. Manufacturers are warning of idle lines.",
-  wireEnd: "The plant restarts. Chip deliveries return to normal.",
+  wireStart:
+    "A fire has shut a major chip plant. Manufacturers are warning of idle production lines.",
+  wireEnd: "The plant is back online and chip deliveries have returned to normal.",
   prompt: {
     title: "Chip supply response",
     description: "Industries are queuing for scarce chips. How does the government respond?",
@@ -1064,7 +1071,7 @@ const AI_MODEL_FAILURE = modernCrisis({
   name: "AI Model Failure Scandal",
   heroImage: HERO.info,
   description:
-    "A widely deployed AI system is found to have been making flawed decisions for months in benefits, lending and hiring. Thousands were wrongly refused, and nobody can say who is accountable.",
+    "An AI system used widely in benefits, lending and hiring has been making flawed decisions for months. Thousands of people were wrongly turned down, and no one can say who is responsible. For about 5 turns public trust in automated decisions falls, investors worry about liability and approval drops with each case that comes out.",
   durationTurns: 5,
   fromYear: 2027,
   untilYear: 2044,
@@ -1081,7 +1088,7 @@ const AI_MODEL_FAILURE = modernCrisis({
     fx("tick", "metric", "economy", "investorConfidence", -0.01, "Liability uncertainty"),
     fx("tick", "approval", "government", "overall", -0.03, "Anger at the wrongful refusals"),
   ],
-  wireStart: "A flawed AI system is found to have wrongly refused thousands of claims.",
+  wireStart: "A widely used AI system is found to have wrongly refused thousands of claims.",
   wireEnd: "Affected people are being compensated and the system has been withdrawn.",
   prompt: {
     title: "Automated decision failure",
@@ -1144,7 +1151,7 @@ const PORT_STRIKE = modernCrisis({
   name: "Port Workers Strike",
   heroImage: HERO.port,
   description:
-    "Dockworkers walk out over automation of terminal handling and the loss of jobs it brings. Ships queue at anchor and shelves empty inland.",
+    "Dockworkers have walked out over automation of terminal handling and the jobs it removes. Ships are queuing at anchor and shelves inland are emptying. For about 4 turns port margins fall, trade is held up at the quay, prices rise a little and the public gets frustrated.",
   durationTurns: 4,
   fromYear: 2027,
   untilYear: 2038,
@@ -1155,8 +1162,9 @@ const PORT_STRIKE = modernCrisis({
     fx("tick", "metric", "economy", "inflation", 0.004, "Shortages lift prices"),
     fx("tick", "approval", "government", "overall", -0.015, "Public frustration"),
   ],
-  wireStart: "Port workers have walked out over automation. Ships are queuing outside the harbors.",
-  wireEnd: "The port strike ends with a new automation agreement.",
+  wireStart:
+    "Dockworkers have walked out over automation. Ships are queuing outside the harbors of {location}.",
+  wireEnd: "The port strike is over with a new automation agreement.",
   prompt: {
     title: "Port strike response",
     description:
@@ -1210,7 +1218,7 @@ const DEPOT_LOCKOUT = modernCrisis({
   name: "Robotic Depot Lockout",
   heroImage: HERO.labor,
   description:
-    "Logistics firms lock out unionized staff as they switch warehouses and trucking to autonomous fleets. Delivery networks seize up and the dispute becomes a national argument about who owns the gains from automation.",
+    "Logistics firms have locked out their union staff to move warehouses and trucking to autonomous fleets. Delivery networks are seizing up, and the dispute has become a national argument over who keeps the gains from automation. For about 5 turns distribution margins fall, unemployment rises, wages come under pressure and approval drops among people who lost their jobs.",
   durationTurns: 5,
   fromYear: 2039,
   untilYear: 2050,
@@ -1221,7 +1229,7 @@ const DEPOT_LOCKOUT = modernCrisis({
     fx("tick", "metric", "economy", "realWages", -0.01, "Wage pressure from automation"),
     fx("tick", "approval", "government", "overall", -0.025, "Anger over lost jobs"),
   ],
-  wireStart: "Logistics firms have locked out staff in a shift to autonomous fleets.",
+  wireStart: "Logistics firms in {location} have locked out staff to switch to autonomous fleets.",
   wireEnd: "The lockout ends with a transition agreement.",
   prompt: {
     title: "Automation lockout response",

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/types/crisis";
 // The one severity calculation, shared with the crises list and detail pages.
@@ -18,7 +18,7 @@ import {
   SEVERITY_BAND_LABEL,
 } from "@/lib/crises/rules/crisisRow";
 import { STAGE_LABEL } from "@/lib/crises/v2/ledgerView";
-import { CrisisEffectChip } from "@/components/crises/CrisisRowParts";
+import { CrisisEffectChip, CrisisThumb, SeverityTag } from "@/components/crises/CrisisRowParts";
 import { CrisisCollapsedList, type CrisisListRow } from "./CrisisCollapsedList";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
@@ -151,6 +151,8 @@ export default function CrisisActionCard() {
   const [error, setError] = useState<{ crisisId: string; message: string } | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [regionNames, setRegionNames] = useState<Record<string, string>>({});
+  // Cards start as one row; the player opens the ones they want to read.
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const { showToast } = useToast();
 
   // Load dismissed crisis IDs from localStorage on mount.
@@ -227,6 +229,14 @@ export default function CrisisActionCard() {
     }
   };
 
+  const toggleOpen = useCallback((crisisId: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(crisisId)) next.add(crisisId);
+      return next;
+    });
+  }, []);
+
   const handleDismiss = useCallback((crisisId: string) => {
     setDismissedIds((prev) => {
       const next = new Set(prev);
@@ -269,19 +279,66 @@ export default function CrisisActionCard() {
           crisisSeverityScore({ v2Severity: v2?.severity, legacyBand: crisisSeverity(crisis) })
         );
         const styles = SEVERITY_STYLES[severity];
+        const crisisId = crisis._id.toString();
+        const needsDecision = canInteract && !!currentNode;
+        const image = crisisImageUrl(
+          { name: crisis.name, templateKey: crisis.templateKey, kind: crisisKind(crisis) },
+          960
+        );
+
+        if (!openIds.has(crisisId)) {
+          return (
+            <article
+              key={crisisId}
+              data-event-item="crisis"
+              className={`order-1 overflow-hidden rounded-lg border bg-background/40 ${styles.border}`}
+            >
+              <button
+                type="button"
+                aria-expanded={false}
+                onClick={() => toggleOpen(crisisId)}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-card-elevated"
+              >
+                <CrisisThumb
+                  src={crisisImageUrl(
+                    {
+                      name: crisis.name,
+                      templateKey: crisis.templateKey,
+                      kind: crisisKind(crisis),
+                    },
+                    320
+                  )}
+                  className="h-9 w-14"
+                />
+                <span className="min-w-0 flex-1 truncate text-body font-semibold text-foreground">
+                  {crisis.name}
+                </span>
+                <SeverityTag band={severity} />
+                {needsDecision && (
+                  <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-body-xs font-semibold text-warning">
+                    Your decision
+                  </span>
+                )}
+                {needsDecision && timeRemainingMinutes !== null && timeRemainingMinutes > 0 && (
+                  <span className="shrink-0 text-body-sm font-semibold text-warning tabular-nums">
+                    {formatTimeRemaining(timeRemainingMinutes)} left
+                  </span>
+                )}
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+              </button>
+            </article>
+          );
+        }
 
         return (
           <EventItem
             key={crisis._id.toString()}
             kind="crisis"
-            status={canInteract && currentNode ? "decision" : "active"}
+            status={needsDecision ? "decision" : "active"}
             tone={styles.tone}
             className={styles.border}
             title={crisis.name}
-            image={crisisImageUrl(
-              { name: crisis.name, templateKey: crisis.templateKey, kind: crisisKind(crisis) },
-              960
-            )}
+            image={image}
             tags={
               <>
                 <span
@@ -297,15 +354,27 @@ export default function CrisisActionCard() {
               </>
             }
             aside={
-              <button
-                type="button"
-                onClick={() => handleDismiss(crisis._id.toString())}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-muted backdrop-blur-sm transition-colors hover:bg-card-elevated hover:text-foreground"
-                title="Dismiss from actions"
-                aria-label="Dismiss crisis from Actions"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
+              <>
+                <button
+                  type="button"
+                  aria-expanded
+                  onClick={() => toggleOpen(crisisId)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-muted backdrop-blur-sm transition-colors hover:bg-card-elevated hover:text-foreground"
+                  title="Collapse"
+                  aria-label={`Collapse ${crisis.name}`}
+                >
+                  <ChevronUp className="h-4 w-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDismiss(crisis._id.toString())}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-muted backdrop-blur-sm transition-colors hover:bg-card-elevated hover:text-foreground"
+                  title="Dismiss from actions"
+                  aria-label="Dismiss crisis from Actions"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              </>
             }
           >
             <p className="text-body-sm text-muted">{crisis.description}</p>
